@@ -3,9 +3,15 @@
  * Помогает протестировать галерею и функционал без реальных файлов
  */
 
-import { v4 as uuidv4 } from 'uuid';
 import type { Card, Tag, Category, Collection } from '../types';
 import { addCard, addTag, addCategory, addCollection } from '../services/db';
+
+/**
+ * Генерация уникального ID
+ */
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 /**
  * Генерация случайного изображения через Unsplash
@@ -39,28 +45,28 @@ function generateRandomDimensions(): { width: number; height: number } {
 export async function generateMockCategories(): Promise<Category[]> {
   const categories: Category[] = [
     {
-      id: uuidv4(),
+      id: generateId(),
       name: 'Стиль',
       color: '#F48683',
       dateCreated: new Date(),
       tagIds: []
     },
     {
-      id: uuidv4(),
+      id: generateId(),
       name: 'Цвет',
       color: '#7ED6A8',
       dateCreated: new Date(),
       tagIds: []
     },
     {
-      id: uuidv4(),
+      id: generateId(),
       name: 'Тип',
       color: '#F2D98D',
       dateCreated: new Date(),
       tagIds: []
     },
     {
-      id: uuidv4(),
+      id: generateId(),
       name: 'Тема',
       color: '#93919A',
       dateCreated: new Date(),
@@ -93,7 +99,7 @@ export async function generateMockTags(categories: Category[]): Promise<Tag[]> {
     
     for (const tagName of tagNames) {
       const tag: Tag = {
-        id: uuidv4(),
+        id: generateId(),
         name: tagName,
         categoryId: category.id,
         color: category.color,
@@ -134,7 +140,7 @@ export async function generateMockCards(tags: Tag[], count: number = 50): Promis
     }
 
     const card: Card = {
-      id: uuidv4(),
+      id: generateId(),
       fileName: `reference_${i + 1}.${format}`,
       filePath: `/mock/images/reference_${i + 1}.${format}`,
       type: 'image',
@@ -171,7 +177,7 @@ export async function generateMockCards(tags: Tag[], count: number = 50): Promis
 export async function generateMockCollections(cards: Card[]): Promise<Collection[]> {
   const collections: Collection[] = [
     {
-      id: uuidv4(),
+      id: generateId(),
       name: 'Дизайн интерьеров',
       description: 'Референсы для проектов интерьеров',
       dateCreated: new Date(),
@@ -180,7 +186,7 @@ export async function generateMockCollections(cards: Card[]): Promise<Collection
       thumbnails: cards.slice(0, 4).map(c => c.thumbnailUrl || '')
     },
     {
-      id: uuidv4(),
+      id: generateId(),
       name: 'Цветовые палитры',
       description: 'Интересные цветовые сочетания',
       dateCreated: new Date(),
@@ -189,7 +195,7 @@ export async function generateMockCollections(cards: Card[]): Promise<Collection
       thumbnails: cards.slice(12, 16).map(c => c.thumbnailUrl || '')
     },
     {
-      id: uuidv4(),
+      id: generateId(),
       name: 'Типографика',
       description: 'Примеры работы со шрифтами',
       dateCreated: new Date(),

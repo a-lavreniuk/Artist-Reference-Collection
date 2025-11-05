@@ -17,3 +17,6 @@ export type { CardProps } from './Card';
 export { OnboardingScreen } from './OnboardingScreen';
 export type { OnboardingScreenProps } from './OnboardingScreen';
 
+export { Modal } from './Modal';
+export type { ModalProps } from './Modal';
+

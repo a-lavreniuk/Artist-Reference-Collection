@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import {
   CardsPage,
   CollectionsPage,
+  CollectionDetailPage,
   TagsPage,
   MoodboardPage,
   SettingsPage,
@@ -93,6 +94,7 @@ function App() {
       <Routes>
         <Route path="/" element={<CardsPage />} />
         <Route path="/collections" element={<CollectionsPage />} />
+        <Route path="/collections/:id" element={<CollectionDetailPage />} />
         <Route path="/tags" element={<TagsPage />} />
         <Route path="/moodboard" element={<MoodboardPage />} />
         <Route path="/add" element={<AddPage />} />

@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
-import { MasonryGrid } from '../components/gallery';
+import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards } from '../services/db';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
@@ -18,6 +18,10 @@ export const CardsPage = () => {
   // Состояние данных
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Модальное окно просмотра
+  const [viewingCard, setViewingCard] = useState<Card | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Загрузка карточек при монтировании
   useEffect(() => {
@@ -76,8 +80,37 @@ export const CardsPage = () => {
 
   // Обработчик клика по карточке
   const handleCardClick = (card: Card) => {
-    console.log('Clicked card:', card);
-    // Здесь будет открытие модального окна просмотра
+    setViewingCard(card);
+    setIsModalOpen(true);
+  };
+
+  // Обработчик закрытия модального окна
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setViewingCard(null), 300);
+  };
+
+  // Обработчик обновления карточки
+  const handleCardUpdated = async () => {
+    // Перезагружаем карточки
+    const allCards = await getAllCards();
+    setCards(allCards);
+    
+    // Обновляем просматриваемую карточку
+    if (viewingCard) {
+      const updatedCard = allCards.find(c => c.id === viewingCard.id);
+      if (updatedCard) {
+        setViewingCard(updatedCard);
+      }
+    }
+  };
+
+  // Обработчик удаления карточки
+  const handleCardDeleted = async () => {
+    const allCards = await getAllCards();
+    setCards(allCards);
+    setViewingCard(null);
+    setIsModalOpen(false);
   };
 
   // Обработчик выбора карточки
@@ -132,6 +165,15 @@ export const CardsPage = () => {
         onCardClick={handleCardClick}
         onCardSelect={handleCardSelect}
         selectedCards={selectedCards}
+      />
+
+      {/* Модальное окно просмотра карточки */}
+      <CardViewModal
+        isOpen={isModalOpen}
+        card={viewingCard}
+        onClose={handleCloseModal}
+        onCardUpdated={handleCardUpdated}
+        onCardDeleted={handleCardDeleted}
       />
     </Layout>
   );
