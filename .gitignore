@@ -58,6 +58,8 @@ env/
 
 .idea/
 
+.cursor/
+
 *.swp
 
 *.swo
