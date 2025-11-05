@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
-import { CategorySection } from '../components/tags';
+import { CategorySection, CreateCategoryModal, CreateTagModal } from '../components/tags';
 import { getAllCategories, getAllTags, deleteTag, deleteCategory } from '../services/db';
 import type { Category, Tag } from '../types';
 import './TagsPage.css';
