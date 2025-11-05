@@ -3,7 +3,7 @@
  * Drag & Drop, очередь, настройка меток для каждого файла
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button, Tag, Input } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag } from '../../services/db';
 import type { Card, Tag as TagType, Category, Collection } from '../../types';
@@ -42,11 +42,6 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Загрузка данных при монтировании
-  useState(() => {
-    loadData();
-  });
-
   const loadData = async () => {
     const [tags, categories, collections] = await Promise.all([
       getAllTags(),
@@ -57,6 +52,11 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
     setAllCategories(categories);
     setAllCollections(collections);
   };
+
+  // Загрузка данных при монтировании
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
