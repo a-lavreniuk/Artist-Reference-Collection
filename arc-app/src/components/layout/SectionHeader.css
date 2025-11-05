@@ -1,0 +1,209 @@
+/**
+ * Стили для компонента SectionHeader
+ */
+
+.section-header {
+  /* Отображение */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-xl);
+  
+  /* Размеры */
+  min-height: var(--height-header);
+  padding: var(--spacing-l) var(--spacing-xl);
+  
+  /* Оформление */
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  
+  /* Сброс */
+  flex-shrink: 0;
+}
+
+/* ========== ЛЕВАЯ И ПРАВАЯ ЧАСТИ ========== */
+
+.section-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-l);
+  flex: 1;
+  min-width: 0;
+}
+
+.section-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-m);
+  flex-shrink: 0;
+}
+
+/* ========== ЗАГОЛОВОК ========== */
+
+.section-header__title {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h1);
+  color: var(--text-primary);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ========== РАЗДЕЛИТЕЛЬ ========== */
+
+.section-header__divider {
+  width: 1px;
+  height: 32px;
+  background-color: var(--border-default);
+  flex-shrink: 0;
+}
+
+/* ========== ПЕРЕКЛЮЧАТЕЛЬ ВИДА ========== */
+
+.section-header__view-mode {
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: 2px;
+  background-color: var(--bg-button-secondary);
+  border-radius: var(--radius-s);
+}
+
+.section-header__view-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.section-header__view-button:hover {
+  background-color: var(--bg-button-secondary-hover);
+  color: var(--text-primary);
+}
+
+.section-header__view-button--active {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-s);
+}
+
+.section-header__view-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ========== ФИЛЬТР КОНТЕНТА ========== */
+
+.section-header__content-filter {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.section-header__filter-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-s);
+  height: 40px;
+  padding: 0 var(--spacing-l);
+  background-color: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-s);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-input);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.section-header__filter-button:hover {
+  background-color: var(--bg-button-secondary);
+  border-color: var(--border-hover);
+}
+
+.section-header__filter-button--active {
+  background-color: var(--bg-button-primary);
+  border-color: var(--bg-button-primary);
+  color: var(--text-light);
+}
+
+.section-header__filter-button svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.section-header__filter-button span {
+  white-space: nowrap;
+}
+
+/* Счётчик в кнопке фильтра */
+.section-header__filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.section-header__filter-button:not(.section-header__filter-button--active) 
+.section-header__filter-count {
+  background-color: var(--color-grayscale-200);
+  color: var(--text-secondary);
+}
+
+/* ========== ДОПОЛНИТЕЛЬНЫЕ ДЕЙСТВИЯ ========== */
+
+.section-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-s);
+}
+
+/* ========== АДАПТАЦИЯ ПОД ШИРИНУ ОКНА ========== */
+
+@media (max-width: 2200px) {
+  .section-header {
+    padding: var(--spacing-m) var(--spacing-l);
+  }
+  
+  .section-header__title {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 1920px) {
+  .section-header {
+    padding: var(--spacing-m) var(--spacing-l);
+    gap: var(--spacing-l);
+  }
+  
+  .section-header__title {
+    font-size: 28px;
+  }
+  
+  .section-header__filter-button span {
+    display: none;
+  }
+  
+  .section-header__filter-button {
+    padding: 0 var(--spacing-m);
+  }
+}
+
