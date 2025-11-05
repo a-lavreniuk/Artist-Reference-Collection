@@ -14,6 +14,11 @@ export const TagsPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Модальные окна
+  const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
+  const [isCreateTagModalOpen, setIsCreateTagModalOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   // Загрузка категорий и меток
   useEffect(() => {
@@ -69,8 +74,16 @@ export const TagsPage = () => {
   };
 
   const handleAddTag = (categoryId: string) => {
-    console.log('Добавление метки в категорию:', categoryId);
-    // Здесь будет модальное окно создания метки
+    setSelectedCategoryId(categoryId);
+    setIsCreateTagModalOpen(true);
+  };
+
+  const handleCategoryCreated = () => {
+    loadData();
+  };
+
+  const handleTagCreated = () => {
+    loadData();
   };
 
   if (isLoading) {
@@ -94,7 +107,11 @@ export const TagsPage = () => {
       headerProps={{
         title: 'Категории и метки',
         actions: (
-          <Button variant="primary" size="medium">
+          <Button
+            variant="primary"
+            size="medium"
+            onClick={() => setIsCreateCategoryModalOpen(true)}
+          >
             Добавить категорию
           </Button>
         )
@@ -126,11 +143,32 @@ export const TagsPage = () => {
           <Button
             variant="primary"
             size="large"
+            onClick={() => setIsCreateCategoryModalOpen(true)}
             style={{ marginTop: '16px' }}
           >
             Создать категорию
           </Button>
         </div>
+      )}
+
+      {/* Модальные окна */}
+      <CreateCategoryModal
+        isOpen={isCreateCategoryModalOpen}
+        onClose={() => setIsCreateCategoryModalOpen(false)}
+        onCategoryCreated={handleCategoryCreated}
+      />
+
+      {selectedCategoryId && (
+        <CreateTagModal
+          isOpen={isCreateTagModalOpen}
+          categoryId={selectedCategoryId}
+          categoryColor={categories.find(c => c.id === selectedCategoryId)?.color}
+          onClose={() => {
+            setIsCreateTagModalOpen(false);
+            setSelectedCategoryId(null);
+          }}
+          onTagCreated={handleTagCreated}
+        />
       )}
     </Layout>
   );
