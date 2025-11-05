@@ -2,15 +2,108 @@
  * Страница карточек - главная страница приложения
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
-import type { ViewMode, ContentFilter } from '../types';
+import { MasonryGrid } from '../components/gallery';
+import { getAllCards } from '../services/db';
+import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const CardsPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [searchValue, setSearchValue] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCards, setSelectedCards] = useState<string[]>([]);
+  
+  // Состояние данных
+  const [cards, setCards] = useState<Card[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Загрузка карточек при монтировании
+  useEffect(() => {
+    const loadCards = async () => {
+      try {
+        setIsLoading(true);
+        const allCards = await getAllCards();
+        setCards(allCards);
+      } catch (error) {
+        console.error('Ошибка загрузки карточек:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCards();
+  }, []);
+
+  // Фильтрация карточек
+  const filteredCards = useMemo(() => {
+    let filtered = [...cards];
+
+    // Фильтр по типу контента
+    if (contentFilter === 'images') {
+      filtered = filtered.filter(card => card.type === 'image');
+    } else if (contentFilter === 'videos') {
+      filtered = filtered.filter(card => card.type === 'video');
+    }
+
+    // Фильтр по меткам
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(card =>
+        selectedTags.every(tagId => card.tags.includes(tagId))
+      );
+    }
+
+    // Сортировка по дате добавления (новые сверху)
+    filtered.sort((a, b) => 
+      new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()
+    );
+
+    return filtered;
+  }, [cards, contentFilter, selectedTags]);
+
+  // Подсчёт карточек по типам
+  const counts = useMemo(() => {
+    const imageCards = cards.filter(c => c.type === 'image');
+    const videoCards = cards.filter(c => c.type === 'video');
+    
+    return {
+      all: cards.length,
+      images: imageCards.length,
+      videos: videoCards.length
+    };
+  }, [cards]);
+
+  // Обработчик клика по карточке
+  const handleCardClick = (card: Card) => {
+    console.log('Clicked card:', card);
+    // Здесь будет открытие модального окна просмотра
+  };
+
+  // Обработчик выбора карточки
+  const handleCardSelect = (card: Card, selected: boolean) => {
+    if (selected) {
+      setSelectedCards(prev => [...prev, card.id]);
+    } else {
+      setSelectedCards(prev => prev.filter(id => id !== card.id));
+    }
+  };
+
+  // Состояние загрузки
+  if (isLoading) {
+    return (
+      <Layout
+        headerProps={{
+          title: 'Карточки'
+        }}
+      >
+        <div className="layout__loading">
+          <div className="layout__spinner" />
+          <p className="layout__loading-text">Загрузка карточек...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout
@@ -22,11 +115,7 @@ export const CardsPage = () => {
         },
         contentFilter: {
           current: contentFilter,
-          counts: {
-            all: 0,
-            images: 0,
-            videos: 0
-          },
+          counts,
           onChange: setContentFilter
         }
       }}
@@ -37,22 +126,13 @@ export const CardsPage = () => {
         onTagsChange: setSelectedTags
       }}
     >
-      <div className="layout__empty-state">
-        <div className="layout__empty-icon">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 4H10V10H4V4ZM14 4H20V10H14V4ZM14 14H20V20H14V14ZM4 14H10V20H4V14Z"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <h3 className="layout__empty-title">Карточек пока нет</h3>
-        <p className="layout__empty-text text-m">
-          Добавьте первую карточку, чтобы начать работу с коллекцией референсов
-        </p>
-      </div>
+      <MasonryGrid
+        cards={filteredCards}
+        viewMode={viewMode}
+        onCardClick={handleCardClick}
+        onCardSelect={handleCardSelect}
+        selectedCards={selectedCards}
+      />
     </Layout>
   );
 };
