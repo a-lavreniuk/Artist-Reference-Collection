@@ -2,43 +2,51 @@
  * Страница настроек
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
-import { initializeMockData } from '../utils/mockData';
-import { getStatistics } from '../services/db';
+import { useFileSystem } from '../hooks';
+import { getStatistics, db } from '../services/db';
 import type { AppStatistics } from '../types';
 
 export const SettingsPage = () => {
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { directoryHandle, requestDirectory } = useFileSystem();
   const [stats, setStats] = useState<AppStatistics | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const handleGenerateMockData = async () => {
-    try {
-      setIsGenerating(true);
-      setMessage(null);
-      
-      await initializeMockData(50);
-      
-      // Получаем статистику
-      const newStats = await getStatistics();
-      setStats(newStats);
-      setMessage('✅ Тестовые данные успешно созданы! Обновите страницу карточек.');
-    } catch (error) {
-      console.error('Ошибка генерации данных:', error);
-      setMessage('❌ Ошибка при создании тестовых данных');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  useEffect(() => {
+    loadStats();
+  }, []);
 
-  const handleLoadStats = async () => {
+  const loadStats = async () => {
     try {
       const newStats = await getStatistics();
       setStats(newStats);
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
+    }
+  };
+
+  const handleChangeDirectory = async () => {
+    await requestDirectory();
+    setMessage('✅ Рабочая папка обновлена');
+    setTimeout(() => setMessage(null), 2000);
+  };
+
+  const handleClearCache = async () => {
+    if (!confirm('Очистить весь кеш? Это удалит все данные из базы.')) {
+      return;
+    }
+
+    try {
+      await db.delete();
+      await db.open();
+      setMessage('✅ Кеш очищен');
+      await loadStats();
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error) {
+      console.error('Ошибка очистки:', error);
+      setMessage('❌ Ошибка очистки кеша');
     }
   };
 
@@ -50,33 +58,37 @@ export const SettingsPage = () => {
       showSearch={false}
     >
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px' }}>
+        {/* Хранилище */}
         <div style={{ 
           padding: '24px', 
           backgroundColor: 'var(--bg-secondary)', 
           borderRadius: 'var(--radius-l)',
           marginBottom: '24px'
         }}>
-          <h3 className="h3" style={{ marginBottom: '16px' }}>🧪 Тестовые данные</h3>
-          <p className="text-m" style={{ marginBottom: '24px', color: 'var(--text-secondary)' }}>
-            Сгенерируйте тестовые данные для проверки работы приложения.
-            <br />
-            Будет создано: 4 категории, 20 меток, 50 карточек, 3 коллекции.
-          </p>
+          <h3 className="h3" style={{ marginBottom: '16px' }}>💾 Хранилище</h3>
           
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+              Рабочая папка
+            </p>
+            <p className="text-m">
+              {directoryHandle ? 'Папка выбрана' : 'Не выбрана'}
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             <Button
-              variant="primary"
-              onClick={handleGenerateMockData}
-              loading={isGenerating}
+              variant="secondary"
+              onClick={handleChangeDirectory}
             >
-              Создать тестовые данные
+              {directoryHandle ? 'Изменить папку' : 'Выбрать папку'}
             </Button>
             
             <Button
-              variant="secondary"
-              onClick={handleLoadStats}
+              variant="danger"
+              onClick={handleClearCache}
             >
-              Показать статистику
+              Очистить базу данных
             </Button>
           </div>
 
@@ -92,6 +104,7 @@ export const SettingsPage = () => {
           )}
         </div>
 
+        {/* Статистика */}
         {stats && (
           <div style={{ 
             padding: '24px', 
@@ -149,6 +162,19 @@ export const SettingsPage = () => {
             </div>
           </div>
         )}
+
+        {/* Информация */}
+        <div style={{ 
+          padding: '24px', 
+          backgroundColor: 'var(--color-yellow-100)', 
+          borderRadius: 'var(--radius-l)',
+          marginTop: '24px'
+        }}>
+          <p className="text-m">
+            💡 <strong>Совет:</strong> Начните с создания категорий и меток в разделе "Метки", 
+            затем добавьте карточки через раздел "Добавить".
+          </p>
+        </div>
       </div>
     </Layout>
   );
