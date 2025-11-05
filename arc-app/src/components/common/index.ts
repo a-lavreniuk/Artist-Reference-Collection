@@ -20,3 +20,6 @@ export type { OnboardingScreenProps } from './OnboardingScreen';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
 
+export { UpdateNotification } from './UpdateNotification';
+export type { UpdateNotificationProps } from './UpdateNotification';
+

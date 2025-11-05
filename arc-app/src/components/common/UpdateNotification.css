@@ -1,0 +1,75 @@
+/**
+ * Стили для компонента UpdateNotification
+ */
+
+.update-notification {
+  /* Позиционирование */
+  position: fixed;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-xl);
+  z-index: var(--z-toast);
+  
+  /* Анимация */
+  animation: update-notification-enter var(--transition-base);
+}
+
+@keyframes update-notification-enter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.update-notification__content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-l);
+  padding: var(--spacing-l);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-xl);
+  min-width: 400px;
+}
+
+.update-notification__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-green-100);
+  border-radius: var(--radius-s);
+  color: var(--color-green-600);
+}
+
+.update-notification__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.update-notification__title {
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.update-notification__description {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.update-notification__actions {
+  display: flex;
+  gap: var(--spacing-s);
+  flex-shrink: 0;
+}
+

@@ -14,8 +14,8 @@ import {
   SettingsPage,
   AddPage
 } from './pages';
-import { OnboardingScreen } from './components/common';
-import { useFileSystem } from './hooks';
+import { OnboardingScreen, UpdateNotification } from './components/common';
+import { useFileSystem, usePWA } from './hooks';
 
 function App() {
   const {
@@ -26,7 +26,13 @@ function App() {
     requestDirectory
   } = useFileSystem();
 
+  const {
+    needRefresh,
+    updateServiceWorker
+  } = usePWA();
+
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
   // Проверяем нужно ли показать онбординг
   useEffect(() => {
@@ -44,6 +50,21 @@ function App() {
   // Обработчик пропуска (можно настроить позже в настройках)
   const handleSkip = () => {
     setShowOnboarding(false);
+  };
+
+  // Показываем уведомление об обновлении
+  useEffect(() => {
+    setShowUpdateNotification(needRefresh);
+  }, [needRefresh]);
+
+  // Обработчик применения обновления
+  const handleUpdate = async () => {
+    await updateServiceWorker(true);
+  };
+
+  // Обработчик отмены обновления
+  const handleDismissUpdate = () => {
+    setShowUpdateNotification(false);
   };
 
   // Показываем загрузку пока проверяем handle
@@ -90,17 +111,26 @@ function App() {
 
   // Основное приложение
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<CardsPage />} />
-        <Route path="/collections" element={<CollectionsPage />} />
-        <Route path="/collections/:id" element={<CollectionDetailPage />} />
-        <Route path="/tags" element={<TagsPage />} />
-        <Route path="/moodboard" element={<MoodboardPage />} />
-        <Route path="/add" element={<AddPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
-    </Router>
+    <>
+      <Router>
+        <Routes>
+          <Route path="/" element={<CardsPage />} />
+          <Route path="/collections" element={<CollectionsPage />} />
+          <Route path="/collections/:id" element={<CollectionDetailPage />} />
+          <Route path="/tags" element={<TagsPage />} />
+          <Route path="/moodboard" element={<MoodboardPage />} />
+          <Route path="/add" element={<AddPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </Router>
+
+      {/* Уведомление об обновлении */}
+      <UpdateNotification
+        show={showUpdateNotification}
+        onUpdate={handleUpdate}
+        onDismiss={handleDismissUpdate}
+      />
+    </>
   );
 }
 
