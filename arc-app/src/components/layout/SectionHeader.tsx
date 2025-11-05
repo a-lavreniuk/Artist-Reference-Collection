@@ -3,7 +3,7 @@
  * Отображает заголовок раздела и кнопки действий
  */
 
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Button } from '../common';
 import type { ViewMode, ContentFilter } from '../../types';
 import './SectionHeader.css';

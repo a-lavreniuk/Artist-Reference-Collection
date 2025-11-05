@@ -3,11 +3,11 @@
  * Отображает название, описание и превью (первые 4 изображения)
  */
 
-import { HTMLAttributes } from 'react';
+import type { HTMLAttributes } from 'react';
 import type { Collection } from '../../types';
 import './CollectionCard.css';
 
-export interface CollectionCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'id'> {
+export interface CollectionCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'id' | 'onClick'> {
   /** Данные коллекции */
   collection: Collection;
   

@@ -3,7 +3,7 @@
  * Объединяет Sidebar, SearchBar, SectionHeader и основной контент
  */
 
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { SearchBar } from './SearchBar';
 import type { SectionHeaderProps } from './SectionHeader';

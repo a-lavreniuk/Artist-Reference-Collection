@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
 
 interface UsePWAReturn {
   /** Можно ли установить PWA */
@@ -38,22 +37,44 @@ export function usePWA(): UsePWAReturn {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [needRefresh, setNeedRefresh] = useState(false);
 
-  // PWA регистрация через vite-plugin-pwa
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker
-  } = useRegisterSW({
-    onRegistered(registration) {
-      console.log('[PWA] Service Worker зарегистрирован:', registration);
-    },
-    onRegisterError(error) {
-      console.error('[PWA] Ошибка регистрации Service Worker:', error);
-    },
-    onNeedRefresh() {
-      console.log('[PWA] Доступно обновление');
+  // Функция обновления Service Worker
+  const updateServiceWorker = async (reloadPage?: boolean) => {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration && registration.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        if (reloadPage) {
+          window.location.reload();
+        }
+      }
     }
-  });
+  };
+
+  // Проверка обновлений Service Worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(
+        (registration: any) => {
+          console.log('[PWA] Service Worker зарегистрирован:', registration);
+          
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            newWorker?.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                setNeedRefresh(true);
+                console.log('[PWA] Доступно обновление');
+              }
+            });
+          });
+        },
+        (error: any) => {
+          console.error('[PWA] Ошибка регистрации Service Worker:', error);
+        }
+      );
+    }
+  }, []);
 
   // Слушаем событие beforeinstallprompt
   useEffect(() => {

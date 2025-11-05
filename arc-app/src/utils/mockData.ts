@@ -130,7 +130,7 @@ export async function generateMockCards(tags: Tag[], count: number = 50): Promis
     const format = imageFormats[Math.floor(Math.random() * imageFormats.length)];
     
     // Случайно выбираем 1-3 метки
-    const cardTags = [];
+    const cardTags: string[] = [];
     const tagCount = Math.floor(Math.random() * 3) + 1;
     for (let j = 0; j < tagCount; j++) {
       const randomTag = tags[Math.floor(Math.random() * tags.length)];

@@ -3,11 +3,12 @@
  * Отображает превью с базовой информацией и действиями
  */
 
-import { HTMLAttributes, useState } from 'react';
+import { useState } from 'react';
+import type { HTMLAttributes } from 'react';
 import type { Card as CardType } from '../../types';
 import './Card.css';
 
-export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'id'> {
+export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'id' | 'onClick' | 'onSelect'> {
   /** Данные карточки */
   card: CardType;
   

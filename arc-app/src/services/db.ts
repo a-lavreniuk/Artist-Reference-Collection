@@ -119,7 +119,8 @@ export async function searchCards(filters: {
 
   // Фильтр по мудборду
   if (filters.inMoodboard !== undefined) {
-    query = db.cards.where('inMoodboard').equals(filters.inMoodboard);
+    const cards = await query.toArray();
+    return cards.filter(card => card.inMoodboard === filters.inMoodboard);
   }
 
   return await query.toArray();
@@ -271,9 +272,10 @@ export async function getMoodboard(): Promise<Moodboard> {
 export async function addToMoodboard(cardId: string): Promise<void> {
   const moodboard = await getMoodboard();
   if (!moodboard.cardIds.includes(cardId)) {
-    moodboard.cardIds.push(cardId);
-    moodboard.dateModified = new Date();
-    await db.moodboard.update('default', moodboard);
+    await db.moodboard.update('default', {
+      cardIds: [...moodboard.cardIds, cardId],
+      dateModified: new Date()
+    });
     await updateCard(cardId, { inMoodboard: true });
   }
 }
@@ -283,9 +285,10 @@ export async function addToMoodboard(cardId: string): Promise<void> {
  */
 export async function removeFromMoodboard(cardId: string): Promise<void> {
   const moodboard = await getMoodboard();
-  moodboard.cardIds = moodboard.cardIds.filter(id => id !== cardId);
-  moodboard.dateModified = new Date();
-  await db.moodboard.update('default', moodboard);
+  await db.moodboard.update('default', {
+    cardIds: moodboard.cardIds.filter(id => id !== cardId),
+    dateModified: new Date()
+  });
   await updateCard(cardId, { inMoodboard: false });
 }
 
@@ -298,9 +301,10 @@ export async function clearMoodboard(): Promise<void> {
   for (const cardId of moodboard.cardIds) {
     await updateCard(cardId, { inMoodboard: false });
   }
-  moodboard.cardIds = [];
-  moodboard.dateModified = new Date();
-  await db.moodboard.update('default', moodboard);
+  await db.moodboard.update('default', {
+    cardIds: [],
+    dateModified: new Date()
+  });
 }
 
 // ========== СТАТИСТИКА ==========

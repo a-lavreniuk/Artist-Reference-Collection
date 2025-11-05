@@ -3,7 +3,7 @@
  * Поддерживает различные варианты, размеры и состояния
  */
 
-import { HTMLAttributes, ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import './Tag.css';
 
 export interface TagProps extends HTMLAttributes<HTMLDivElement> {
