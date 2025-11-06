@@ -1,0 +1,54 @@
+{
+  "name": "arc-electron",
+  "version": "1.0.0",
+  "description": "ARC - Artist Reference Collection Desktop Application",
+  "main": "main/main.js",
+  "author": "Александр Лавренюк",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npm run build:renderer:dev & npm run electron:dev",
+    "electron:dev": "electron .",
+    "build:renderer:dev": "cd renderer && npm run dev",
+    "build:renderer": "cd renderer && npm run build",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:preload": "tsc -p tsconfig.preload.json",
+    "build": "npm run build:main && npm run build:preload && npm run build:renderer",
+    "electron:build": "npm run build && electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "typescript": "^5.3.3"
+  },
+  "build": {
+    "appId": "com.arc.app",
+    "productName": "ARC",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "main/**/*",
+      "preload/**/*",
+      "renderer/dist/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico"
+    }
+  }
+}
+

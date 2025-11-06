@@ -1,0 +1,235 @@
+/**
+ * Стили для компонента Modal
+ */
+
+/* ========== OVERLAY ========== */
+
+.modal-overlay {
+  /* Позиционирование */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-overlay);
+  
+  /* Отображение */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  
+  /* Оформление */
+  background-color: var(--bg-overlay);
+  backdrop-filter: var(--backdrop-blur);
+  
+  /* Анимация */
+  animation: modal-overlay-enter var(--transition-base);
+}
+
+@keyframes modal-overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== МОДАЛЬНОЕ ОКНО ========== */
+
+.modal {
+  /* Позиционирование */
+  position: relative;
+  z-index: var(--z-modal);
+  
+  /* Отображение */
+  display: flex;
+  flex-direction: column;
+  
+  /* Размеры */
+  width: 100%;
+  max-height: 90vh;
+  
+  /* Оформление */
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-xl);
+  
+  /* Overflow */
+  overflow: hidden;
+  
+  /* Анимация */
+  animation: modal-enter var(--transition-base);
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ========== РАЗМЕРЫ ========== */
+
+.modal--small {
+  max-width: 400px;
+}
+
+.modal--medium {
+  max-width: 600px;
+}
+
+.modal--large {
+  max-width: 900px;
+}
+
+.modal--fullscreen {
+  max-width: 95vw;
+  max-height: 95vh;
+}
+
+/* ========== ШАПКА ========== */
+
+.modal__header {
+  /* Отображение */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-l);
+  
+  /* Размеры */
+  padding: var(--spacing-xl);
+  
+  /* Оформление */
+  border-bottom: 1px solid var(--border-default);
+  
+  /* Сброс */
+  flex-shrink: 0;
+}
+
+.modal__title {
+  flex: 1;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.modal__close {
+  /* Размеры */
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  
+  /* Отображение */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  
+  /* Оформление */
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  color: var(--icon-default);
+  cursor: pointer;
+  
+  /* Переходы */
+  transition: all var(--transition-fast);
+}
+
+.modal__close:hover {
+  background-color: var(--bg-button-secondary);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.modal__close:active {
+  transform: scale(0.95);
+}
+
+.modal__close svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ========== СОДЕРЖИМОЕ ========== */
+
+.modal__content {
+  /* Отображение */
+  flex: 1;
+  
+  /* Overflow */
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  /* Размеры */
+  padding: var(--spacing-xl);
+}
+
+/* Scrollbar для модального окна */
+.modal__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal__content::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
+}
+
+.modal__content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grayscale-400);
+}
+
+/* ========== ФУТЕР ========== */
+
+.modal__footer {
+  /* Отображение */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-m);
+  
+  /* Размеры */
+  padding: var(--spacing-xl);
+  
+  /* Оформление */
+  border-top: 1px solid var(--border-default);
+  
+  /* Сброс */
+  flex-shrink: 0;
+}
+
+/* ========== АДАПТАЦИЯ ========== */
+
+@media (max-width: 1920px) {
+  .modal-overlay {
+    padding: var(--spacing-l);
+  }
+  
+  .modal__header {
+    padding: var(--spacing-l);
+  }
+  
+  .modal__content {
+    padding: var(--spacing-l);
+  }
+  
+  .modal__footer {
+    padding: var(--spacing-l);
+  }
+}
+
+@media (max-height: 800px) {
+  .modal {
+    max-height: 95vh;
+  }
+}
+
