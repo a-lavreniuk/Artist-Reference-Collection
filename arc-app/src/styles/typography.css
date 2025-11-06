@@ -5,33 +5,15 @@
 
 /* ========== ПОДКЛЮЧЕНИЕ ШРИФТОВ ========== */
 
-/* YS Music - фирменный шрифт для заголовков */
-@font-face {
-  font-family: 'YS Music';
-  src: url('/fonts/YSMusic-HeadlineBold.woff2') format('woff2'),
-       url('/fonts/YSMusic-HeadlineBold.woff') format('woff'),
-       url('/fonts/YSMusic-HeadlineBold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* Geologica - основной шрифт для текста */
-@font-face {
-  font-family: 'Geologica';
-  src: url('/fonts/Geologica-VariableFont.woff2') format('woff2'),
-       url('/fonts/Geologica-VariableFont.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+/* Временно используем системные шрифты пока не добавлены файлы шрифтов */
+/* TODO: Добавить YS Music и Geologica в public/fonts/ */
 
 /* ========== ПЕРЕМЕННЫЕ ШРИФТОВ ========== */
 
 :root {
   /* Семейства шрифтов */
-  --font-family-heading: 'YS Music', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-family-body: 'Geologica', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  --font-family-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
   
   /* Размеры шрифтов для заголовков */
   --font-size-h1: 40px;

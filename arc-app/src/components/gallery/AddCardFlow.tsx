@@ -6,6 +6,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button, Tag, Input } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag } from '../../services/db';
+import { createFile, readFileAsDataURL } from '../../services/fileSystem';
+import { useFileSystem } from '../../hooks';
 import type { Card, Tag as TagType, Category, Collection } from '../../types';
 import './AddCardFlow.css';
 
@@ -41,6 +43,9 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
   const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Получаем доступ к файловой системе
+  const { directoryHandle, hasPermission } = useFileSystem();
 
   const loadData = async () => {
     const [tags, categories, collections] = await Promise.all([
@@ -245,32 +250,64 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
       return;
     }
 
+    // Проверяем доступ к директории
+    if (!directoryHandle || !hasPermission) {
+      setMessage('❌ Нет доступа к рабочей папке. Перейдите в настройки и выберите папку.');
+      return;
+    }
+
     try {
-      setMessage('💾 Сохранение карточек...');
+      setMessage('💾 Сохранение файлов в рабочую папку...');
       
       const createdCards: Card[] = [];
       
-      for (const item of queue) {
-        const card: Card = {
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          fileName: item.file.name,
-          filePath: `/${item.file.name}`,
-          type: item.file.type.startsWith('video/') ? 'video' : 'image',
-          format: item.file.name.split('.').pop()?.toLowerCase() as any,
-          dateAdded: new Date(),
-          dateModified: new Date(),
-          fileSize: item.file.size,
-          thumbnailUrl: item.preview,
-          tags: item.tags,
-          collections: item.collections,
-          inMoodboard: false
-        };
+      for (let i = 0; i < queue.length; i++) {
+        const item = queue[i];
+        setMessage(`💾 Сохранение ${i + 1}/${queue.length}: ${item.file.name}`);
+        
+        try {
+          // Копируем файл в рабочую директорию
+          const fileHandle = await createFile(
+            directoryHandle,
+            item.file.name,
+            item.file
+          );
 
-        await addCard(card);
-        createdCards.push(card);
+          // Читаем файл как Data URL для thumbnail
+          const thumbnailUrl = await readFileAsDataURL(fileHandle);
+
+          // Создаём карточку с правильным путём
+          const card: Card = {
+            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            fileName: item.file.name,
+            filePath: item.file.name, // Относительный путь в рабочей директории
+            type: item.file.type.startsWith('video/') ? 'video' : 'image',
+            format: item.file.name.split('.').pop()?.toLowerCase() as any,
+            dateAdded: new Date(),
+            dateModified: new Date(),
+            fileSize: item.file.size,
+            thumbnailUrl, // Data URL для отображения
+            tags: item.tags,
+            collections: item.collections,
+            inMoodboard: false
+          };
+
+          await addCard(card);
+          createdCards.push(card);
+        } catch (fileError) {
+          console.error(`Ошибка сохранения файла ${item.file.name}:`, fileError);
+          // Продолжаем с следующим файлом
+          setMessage(`⚠️ Не удалось сохранить ${item.file.name}`);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
       }
 
-      setMessage(`✅ Добавлено ${createdCards.length} карточек!`);
+      if (createdCards.length === 0) {
+        setMessage('❌ Не удалось сохранить ни один файл');
+        return;
+      }
+
+      setMessage(`✅ Добавлено ${createdCards.length} из ${queue.length} карточек!`);
       setTimeout(() => onComplete(createdCards), 1000);
     } catch (error) {
       console.error('Ошибка сохранения:', error);

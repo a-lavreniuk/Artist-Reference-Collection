@@ -14,7 +14,7 @@ import {
   SettingsPage,
   AddPage
 } from './pages';
-import { OnboardingScreen, UpdateNotification } from './components/common';
+import { OnboardingScreen, UpdateNotification, ErrorBoundary } from './components/common';
 import { useFileSystem, usePWA } from './hooks';
 
 function App() {
@@ -113,15 +113,17 @@ function App() {
   return (
     <>
       <Router>
-        <Routes>
-          <Route path="/" element={<CardsPage />} />
-          <Route path="/collections" element={<CollectionsPage />} />
-          <Route path="/collections/:id" element={<CollectionDetailPage />} />
-          <Route path="/tags" element={<TagsPage />} />
-          <Route path="/moodboard" element={<MoodboardPage />} />
-          <Route path="/add" element={<AddPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<CardsPage />} />
+            <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/collections/:id" element={<CollectionDetailPage />} />
+            <Route path="/tags" element={<TagsPage />} />
+            <Route path="/moodboard" element={<MoodboardPage />} />
+            <Route path="/add" element={<AddPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Routes>
+        </ErrorBoundary>
       </Router>
 
       {/* Уведомление об обновлении */}
