@@ -1,0 +1,62 @@
+# Конфигурация electron-builder для ARC
+
+appId: com.arc.app
+productName: ARC
+copyright: Copyright © 2025 Александр Лавренюк
+
+# Директории
+directories:
+  output: release
+  buildResources: resources
+
+# Файлы для включения в сборку
+files:
+  - main/**/*
+  - preload/**/*
+  - renderer/dist/**/*
+  - package.json
+
+# Файлы для исключения
+files:
+  - "!**/.git/*"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+  - "!**/node_modules/.bin"
+  - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
+  - "!.editorconfig"
+  - "!**/._*"
+  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+
+# Настройки для Windows
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: resources/icon.ico
+  artifactName: "${productName}-Setup-${version}.${ext}"
+  publisherName: Александр Лавренюк
+
+# Настройки установщика NSIS
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ARC
+  perMachine: false
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  license: null
+  language: "1049" # Русский язык
+
+# Публикация обновлений (для будущего)
+publish:
+  provider: generic
+  url: https://example.com/updates/
+  
+# Сжатие
+compression: normal
+
+# Удалять ли предыдущую версию при обновлении
+asar: true
+

@@ -1,0 +1,223 @@
+/**
+ * Типографика для приложения ARC
+ * Шрифты, размеры, межстрочные интервалы
+ */
+
+/* ========== ПОДКЛЮЧЕНИЕ ШРИФТОВ ========== */
+
+/* Временно используем системные шрифты пока не добавлены файлы шрифтов */
+/* TODO: Добавить YS Music и Geologica в public/fonts/ */
+
+/* ========== ПЕРЕМЕННЫЕ ШРИФТОВ ========== */
+
+:root {
+  /* Семейства шрифтов */
+  --font-family-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  --font-family-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  
+  /* Размеры шрифтов для заголовков */
+  --font-size-h1: 40px;
+  --font-size-h2: 32px;
+  --font-size-h3: 28px;
+  --font-size-h4: 22px;
+  
+  /* Размеры шрифтов для текста */
+  --font-size-l: 18px;
+  --font-size-m: 16px;
+  --font-size-s: 12px;
+  --font-size-input: 16px;
+  
+  /* Межстрочные интервалы */
+  --line-height-h1: 40px;
+  --line-height-h2: 32px;
+  --line-height-h3: 28px;
+  --line-height-h4: 22px;
+  --line-height-l: 24px;
+  --line-height-m: 22px;
+  --line-height-s: 12px;
+  --line-height-input: 16px;
+  
+  /* Веса шрифтов */
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+}
+
+/* ========== ЗАГОЛОВКИ ========== */
+
+h1, .h1 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h1);
+  font-style: normal;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h1);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+h2, .h2 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-style: normal;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+h3, .h3 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h3);
+  font-style: normal;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h3);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+h4, .h4 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h4);
+  font-style: normal;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h4);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* ========== ТЕКСТОВЫЕ СТИЛИ ========== */
+
+/* Large - для выделенных и ключевых текстов */
+.text-l {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-l);
+  font-style: normal;
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-l);
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+/* Medium - основной текст */
+.text-m, p {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  font-style: normal;
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Small - подписи и метки */
+.text-s {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-s);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-s);
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+/* Input - текст в полях ввода и кнопках */
+.text-input,
+input,
+button,
+textarea,
+select {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-input);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-input);
+  letter-spacing: 0;
+}
+
+/* ========== ВАРИАЦИИ ЦВЕТА ТЕКСТА ========== */
+
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-light {
+  color: var(--text-light);
+}
+
+.text-disabled {
+  color: var(--text-disabled);
+}
+
+.text-success {
+  color: var(--text-success);
+}
+
+.text-warning {
+  color: var(--text-warning);
+}
+
+.text-error {
+  color: var(--text-error);
+}
+
+/* ========== ВАРИАЦИИ НАЧЕРТАНИЯ ========== */
+
+.text-bold {
+  font-weight: var(--font-weight-bold);
+}
+
+.text-regular {
+  font-weight: var(--font-weight-regular);
+}
+
+.text-light-weight {
+  font-weight: var(--font-weight-light);
+}
+
+/* ========== ВЫРАВНИВАНИЕ ========== */
+
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+/* ========== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ========== */
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-no-wrap {
+  white-space: nowrap;
+}
+
+.text-uppercase {
+  text-transform: uppercase;
+}
+
+.text-lowercase {
+  text-transform: lowercase;
+}
+
+.text-capitalize {
+  text-transform: capitalize;
+}
+

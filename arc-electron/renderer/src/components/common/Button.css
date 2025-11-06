@@ -1,0 +1,273 @@
+/**
+ * Стили для компонента Button
+ */
+
+.button {
+  /* Базовые стили */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-s);
+  
+  /* Типографика */
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-input);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-input);
+  text-align: center;
+  
+  /* Размеры */
+  height: var(--height-button);
+  padding: 0 var(--spacing-l);
+  
+  /* Оформление */
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  user-select: none;
+  
+  /* Переходы */
+  transition: all var(--transition-fast);
+  
+  /* Сброс */
+  background: none;
+  outline: none;
+  white-space: nowrap;
+}
+
+/* ========== ВАРИАНТЫ ========== */
+
+/* Primary - основная кнопка */
+.button--primary {
+  background-color: var(--bg-button-primary);
+  border-color: var(--bg-button-primary);
+  color: var(--text-light);
+}
+
+.button--primary:hover:not(:disabled) {
+  background-color: var(--bg-button-primary-hover);
+  border-color: var(--bg-button-primary-hover);
+}
+
+.button--primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Secondary - второстепенная кнопка */
+.button--secondary {
+  background-color: var(--bg-button-secondary);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.button--secondary:hover:not(:disabled) {
+  background-color: var(--bg-button-secondary-hover);
+  border-color: var(--border-hover);
+}
+
+.button--secondary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Ghost - прозрачная кнопка */
+.button--ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+}
+
+.button--ghost:hover:not(:disabled) {
+  background-color: var(--bg-button-secondary);
+}
+
+.button--ghost:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Danger - кнопка для опасных действий */
+.button--danger {
+  background-color: var(--bg-error);
+  border-color: var(--bg-error);
+  color: var(--text-light);
+}
+
+.button--danger:hover:not(:disabled) {
+  background-color: var(--bg-error-hover);
+  border-color: var(--bg-error-hover);
+}
+
+.button--danger:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Success - кнопка для успешных действий */
+.button--success {
+  background-color: var(--bg-success);
+  border-color: var(--bg-success);
+  color: var(--text-light);
+}
+
+.button--success:hover:not(:disabled) {
+  background-color: var(--bg-success-hover);
+  border-color: var(--bg-success-hover);
+}
+
+.button--success:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* ========== РАЗМЕРЫ ========== */
+
+.button--small {
+  height: 32px;
+  padding: 0 var(--spacing-m);
+  font-size: 14px;
+  gap: var(--spacing-xs);
+}
+
+.button--medium {
+  height: var(--height-button);
+  padding: 0 var(--spacing-l);
+}
+
+.button--large {
+  height: 48px;
+  padding: 0 var(--spacing-xl);
+  font-size: 18px;
+  gap: var(--spacing-m);
+}
+
+/* ========== МОДИФИКАТОРЫ ========== */
+
+/* Полная ширина */
+.button--full-width {
+  width: 100%;
+}
+
+/* Только иконка */
+.button--icon-only {
+  padding: 0;
+  aspect-ratio: 1;
+}
+
+.button--icon-only.button--small {
+  width: 32px;
+}
+
+.button--icon-only.button--medium {
+  width: var(--height-button);
+}
+
+.button--icon-only.button--large {
+  width: 48px;
+}
+
+/* Состояние загрузки */
+.button--loading {
+  pointer-events: none;
+  position: relative;
+}
+
+.button--loading .button__text,
+.button--loading .button__icon {
+  opacity: 0;
+}
+
+/* Отключенная кнопка */
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background-color: var(--bg-button-disabled);
+  border-color: var(--border-default);
+  color: var(--text-disabled);
+}
+
+/* ========== ЭЛЕМЕНТЫ ========== */
+
+/* Иконки */
+.button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.button--small .button__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.button--large .button__icon {
+  width: 24px;
+  height: 24px;
+}
+
+.button__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Текст */
+.button__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Лоадер */
+.button__loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button__spinner {
+  width: 20px;
+  height: 20px;
+  animation: button-spin 0.8s linear infinite;
+}
+
+.button__spinner-circle {
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-dasharray: 1, 150;
+  stroke-dashoffset: 0;
+  animation: button-dash 1.5s ease-in-out infinite;
+}
+
+@keyframes button-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes button-dash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
+}
+
+/* ========== ФОКУС ========== */
+
+.button:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
