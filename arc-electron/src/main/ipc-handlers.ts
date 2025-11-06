@@ -6,6 +6,7 @@
 import { ipcMain, dialog, Notification, app } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import sharp from 'sharp';
 
 /**
  * Регистрация всех IPC handlers
@@ -200,7 +201,8 @@ export function registerIPCHandlers(): void {
 
   /**
    * Создать превью для изображения или видео
-   * TODO: Реализовать генерацию превью через sharp или ffmpeg
+   * Для изображений - sharp (512px по широкой стороне)
+   * Для видео - пока копия оригинала (TODO: ffmpeg)
    */
   ipcMain.handle('generate-thumbnail', async (_event, filePath: string, workingDir: string) => {
     try {
@@ -211,19 +213,41 @@ export function registerIPCHandlers(): void {
       await fs.mkdir(thumbsDir, { recursive: true });
 
       // Генерируем имя для превью
-      const ext = path.extname(filePath);
-      const isVideo = ['.mp4', '.webm'].includes(ext.toLowerCase());
+      const ext = path.extname(filePath).toLowerCase();
+      const isVideo = ['.mp4', '.webm'].includes(ext);
       const fileName = path.basename(filePath, ext);
       const thumbName = `${fileName}_thumb.jpg`;
       const thumbPath = path.join(thumbsDir, thumbName);
 
-      // TODO: Реализовать генерацию превью
-      // Сейчас просто копируем оригинал как заглушку для изображений
-      if (!isVideo) {
-        await fs.copyFile(filePath, thumbPath);
+      if (isVideo) {
+        // TODO: Реализовать генерацию кадра из видео через ffmpeg
+        // Пока просто копируем первый кадр (заглушка)
+        console.log('[IPC] Видео файл - превью пока не генерируется');
+        // Возвращаем путь к несуществующему файлу, будет показан placeholder
+        return thumbPath;
+      } else {
+        // Генерируем превью для изображения через sharp
+        // 512px по широкой стороне, сохраняя пропорции
+        await sharp(filePath)
+          .resize(512, 512, {
+            fit: 'inside', // Вписать внутрь, сохраняя пропорции
+            withoutEnlargement: true // Не увеличивать если меньше 512px
+          })
+          .jpeg({
+            quality: 85, // Хорошее качество
+            progressive: true // Progressive JPEG для быстрой загрузки
+          })
+          .toFile(thumbPath);
+
+        console.log('[IPC] Превью создано:', thumbPath);
+        
+        // Получаем размер превью
+        const thumbStats = await fs.stat(thumbPath);
+        const originalStats = await fs.stat(filePath);
+        const compressionRatio = Math.round((1 - thumbStats.size / originalStats.size) * 100);
+        console.log(`[IPC] Размер превью: ${Math.round(thumbStats.size / 1024)}KB (сжатие ${compressionRatio}%)`);
       }
 
-      console.log('[IPC] Превью создано:', thumbPath);
       return thumbPath;
     } catch (error) {
       console.error('[IPC] Ошибка генерации превью:', error);
@@ -233,14 +257,32 @@ export function registerIPCHandlers(): void {
 
   /**
    * Получить file:// URL для локального файла
+   * Читает файл и возвращает как Data URL (base64)
    */
   ipcMain.handle('get-file-url', async (_event, filePath: string) => {
     try {
-      // Конвертируем путь Windows в file:// URL
-      const fileUrl = `file:///${filePath.replace(/\\/g, '/')}`;
-      return fileUrl;
+      console.log('[IPC] Чтение файла для Data URL:', filePath);
+      
+      // Читаем файл
+      const fileBuffer = await fs.readFile(filePath);
+      
+      // Определяем MIME тип по расширению
+      const ext = path.extname(filePath).toLowerCase();
+      let mimeType = 'image/jpeg';
+      
+      if (ext === '.png') mimeType = 'image/png';
+      else if (ext === '.webp') mimeType = 'image/webp';
+      else if (ext === '.mp4') mimeType = 'video/mp4';
+      else if (ext === '.webm') mimeType = 'video/webm';
+      
+      // Конвертируем в base64 Data URL
+      const base64 = fileBuffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      
+      console.log('[IPC] Data URL создан, размер:', Math.round(base64.length / 1024), 'KB');
+      return dataUrl;
     } catch (error) {
-      console.error('[IPC] Ошибка создания file URL:', error);
+      console.error('[IPC] Ошибка чтения файла:', error);
       throw error;
     }
   });
