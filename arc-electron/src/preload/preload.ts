@@ -52,6 +52,15 @@ export interface ElectronAPI {
   organizeFile: (sourcePath: string, workingDir: string) => Promise<string>;
   
   /**
+   * Сохранить файл из ArrayBuffer в рабочую папку
+   * @param buffer - Данные файла как ArrayBuffer
+   * @param fileName - Имя файла
+   * @param workingDir - Рабочая директория
+   * @returns Путь к сохранённому файлу
+   */
+  saveFileFromBuffer: (buffer: ArrayBuffer, fileName: string, workingDir: string) => Promise<string>;
+  
+  /**
    * Создать превью для изображения или видео
    * @param filePath - Путь к файлу
    * @param workingDir - Рабочая директория
@@ -140,6 +149,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fileExists: (filePath: string) => ipcRenderer.invoke('file-exists', filePath),
   organizeFile: (sourcePath: string, workingDir: string) => 
     ipcRenderer.invoke('organize-file', sourcePath, workingDir),
+  saveFileFromBuffer: (buffer: ArrayBuffer, fileName: string, workingDir: string) => 
+    ipcRenderer.invoke('save-file-from-buffer', Buffer.from(buffer), fileName, workingDir),
   generateThumbnail: (filePath: string, workingDir: string) => 
     ipcRenderer.invoke('generate-thumbnail', filePath, workingDir),
   getFileURL: (filePath: string) => ipcRenderer.invoke('get-file-url', filePath),

@@ -14,6 +14,7 @@ interface ElectronAPI {
   }>;
   fileExists: (filePath: string) => Promise<boolean>;
   organizeFile: (sourcePath: string, workingDir: string) => Promise<string>;
+  saveFileFromBuffer: (buffer: ArrayBuffer, fileName: string, workingDir: string) => Promise<string>;
   generateThumbnail: (filePath: string, workingDir: string) => Promise<string>;
   getFileURL: (filePath: string) => Promise<string>;
   

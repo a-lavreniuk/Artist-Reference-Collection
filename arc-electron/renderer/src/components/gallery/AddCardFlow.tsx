@@ -265,21 +265,38 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
         setMessage(`💾 Сохранение ${i + 1}/${queue.length}: ${item.file.name}`);
         
         try {
-          // TODO: Реализовать полную интеграцию с Electron API
-          // Пока используем превью как временное решение
-          const thumbnailUrl = item.preview;
+          // Читаем файл как ArrayBuffer
+          const arrayBuffer = await item.file.arrayBuffer();
+          
+          // Сохраняем файл в рабочую папку через Electron API
+          const savedFilePath = await window.electronAPI.saveFileFromBuffer(
+            arrayBuffer,
+            item.file.name,
+            directoryPath
+          );
+          console.log('[AddCardFlow] Файл сохранён:', savedFilePath);
+          
+          // Генерируем превью
+          const thumbnailPath = await window.electronAPI.generateThumbnail(
+            savedFilePath,
+            directoryPath
+          );
+          console.log('[AddCardFlow] Превью создано:', thumbnailPath);
+          
+          // Получаем file:// URL для превью
+          const thumbnailUrl = await window.electronAPI.getFileURL(thumbnailPath);
 
-          // Создаём карточку с правильным путём
+          // Создаём карточку с правильными путями
           const card: Card = {
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             fileName: item.file.name,
-            filePath: item.file.name, // Относительный путь в рабочей директории
+            filePath: savedFilePath, // Полный путь к файлу
             type: item.file.type.startsWith('video/') ? 'video' : 'image',
             format: item.file.name.split('.').pop()?.toLowerCase() as any,
             dateAdded: new Date(),
             dateModified: new Date(),
             fileSize: item.file.size,
-            thumbnailUrl, // Data URL для отображения
+            thumbnailUrl, // file:// URL для превью
             tags: item.tags,
             collections: item.collections,
             inMoodboard: false

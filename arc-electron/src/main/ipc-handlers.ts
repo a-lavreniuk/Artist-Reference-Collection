@@ -160,6 +160,45 @@ export function registerIPCHandlers(): void {
   });
 
   /**
+   * Сохранить файл из ArrayBuffer в рабочую папку с организацией по дате
+   */
+  ipcMain.handle('save-file-from-buffer', async (_event, buffer: Buffer, fileName: string, workingDir: string) => {
+    try {
+      console.log('[IPC] Сохранение файла из буфера:', fileName);
+
+      // Создаём структуру папок год/месяц/день
+      const now = new Date();
+      const year = now.getFullYear().toString();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+
+      const targetDir = path.join(workingDir, year, month, day);
+      await fs.mkdir(targetDir, { recursive: true });
+      console.log('[IPC] Создана директория:', targetDir);
+
+      // Сохраняем файл
+      let targetPath = path.join(targetDir, fileName);
+      
+      // Если файл с таким именем уже существует, добавляем счётчик
+      let counter = 1;
+      while (await fileExists(targetPath)) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        targetPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
+        counter++;
+      }
+
+      await fs.writeFile(targetPath, buffer);
+      console.log('[IPC] Файл сохранён:', targetPath);
+
+      return targetPath;
+    } catch (error) {
+      console.error('[IPC] Ошибка сохранения файла из буфера:', error);
+      throw error;
+    }
+  });
+
+  /**
    * Создать превью для изображения или видео
    * TODO: Реализовать генерацию превью через sharp или ffmpeg
    */
