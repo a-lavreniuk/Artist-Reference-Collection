@@ -392,6 +392,58 @@ export async function getViewHistory(): Promise<ViewHistory[]> {
   return await db.viewHistory.orderBy('timestamp').reverse().limit(15).toArray();
 }
 
+// ========== ПОИСК КАРТОЧЕК ==========
+
+/**
+ * Поиск карточек по меткам, категориям и ID
+ * @param query - Поисковый запрос
+ * @returns Массив найденных карточек
+ */
+export async function searchCardsAdvanced(query: string): Promise<Card[]> {
+  if (!query || query.trim().length === 0) {
+    return await getAllCards();
+  }
+
+  const searchLower = query.toLowerCase().trim();
+  
+  // 1. Поиск по ID (точное совпадение)
+  const cardById = await db.cards.get(searchLower);
+  if (cardById) {
+    console.log(`[DB] Найдена карточка по ID: ${cardById.id}`);
+    return [cardById];
+  }
+
+  // 2. Поиск по меткам и категориям
+  const allTags = await getAllTags();
+  const allCategories = await getAllCategories();
+  const allCards = await getAllCards();
+
+  // Находим метки, соответствующие запросу
+  const matchingTags = allTags.filter(tag => 
+    tag.name.toLowerCase().includes(searchLower)
+  );
+
+  // Находим категории, соответствующие запросу
+  const matchingCategories = allCategories.filter(cat =>
+    cat.name.toLowerCase().includes(searchLower)
+  );
+
+  // Собираем ID всех меток (напрямую + через категории)
+  const tagIds = new Set<string>();
+  matchingTags.forEach(tag => tagIds.add(tag.id));
+  matchingCategories.forEach(cat => {
+    cat.tagIds.forEach(tagId => tagIds.add(tagId));
+  });
+
+  // Находим карточки с этими метками
+  const results = allCards.filter(card =>
+    card.tags.some(tagId => tagIds.has(tagId))
+  );
+
+  console.log(`[DB] Найдено карточек по запросу "${query}": ${results.length}`);
+  return results;
+}
+
 // ========== ПОХОЖИЕ КАРТОЧКИ ==========
 
 /**
