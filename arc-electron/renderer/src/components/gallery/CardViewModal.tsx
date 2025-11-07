@@ -6,8 +6,8 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button, Tag } from '../common';
-import type { Card, Tag as TagType } from '../../types';
-import { updateCard, getAllTags, addToMoodboard, removeFromMoodboard, deleteCard } from '../../services/db';
+import type { Card, Tag as TagType, Collection } from '../../types';
+import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard } from '../../services/db';
 import './CardViewModal.css';
 
 export interface CardViewModalProps {
@@ -38,15 +38,18 @@ export const CardViewModal = ({
   onCardDeleted
 }: CardViewModalProps) => {
   const [allTags, setAllTags] = useState<TagType[]>([]);
+  const [allCollections, setAllCollections] = useState<Collection[]>([]);
   const [isAddingTag, setIsAddingTag] = useState(false);
+  const [isAddingCollection, setIsAddingCollection] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [videoDataUrl, setVideoDataUrl] = useState<string | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
 
-  // Загрузка всех меток при открытии
+  // Загрузка всех меток и коллекций при открытии
   useEffect(() => {
     if (isOpen) {
       loadTags();
+      loadCollections();
     }
   }, [isOpen]);
 
@@ -82,6 +85,15 @@ export const CardViewModal = ({
       setAllTags(tags);
     } catch (error) {
       console.error('Ошибка загрузки меток:', error);
+    }
+  };
+
+  const loadCollections = async () => {
+    try {
+      const collections = await getAllCollections();
+      setAllCollections(collections);
+    } catch (error) {
+      console.error('Ошибка загрузки коллекций:', error);
     }
   };
 
@@ -148,6 +160,68 @@ export const CardViewModal = ({
       onCardUpdated?.();
     } catch (error) {
       console.error('Ошибка удаления метки:', error);
+    }
+  };
+
+  // Добавление метки к карточке
+  const handleAddTag = async (tagId: string) => {
+    try {
+      if (card.tags.includes(tagId)) {
+        return; // Метка уже добавлена
+      }
+      const newTags = [...card.tags, tagId];
+      await updateCard(card.id, { tags: newTags });
+      setIsAddingTag(false);
+      onCardUpdated?.();
+    } catch (error) {
+      console.error('Ошибка добавления метки:', error);
+    }
+  };
+
+  // Добавление коллекции к карточке
+  const handleAddCollection = async (collectionId: string) => {
+    try {
+      if (card.collections.includes(collectionId)) {
+        return; // Коллекция уже добавлена
+      }
+      
+      // Добавляем коллекцию к карточке
+      const newCollections = [...card.collections, collectionId];
+      await updateCard(card.id, { collections: newCollections });
+      
+      // Добавляем карточку в коллекцию
+      const collection = await getCollection(collectionId);
+      if (collection) {
+        await updateCollection(collectionId, {
+          cardIds: [...collection.cardIds, card.id]
+        });
+      }
+      
+      setIsAddingCollection(false);
+      onCardUpdated?.();
+    } catch (error) {
+      console.error('Ошибка добавления коллекции:', error);
+    }
+  };
+
+  // Удаление коллекции из карточки
+  const handleRemoveCollection = async (collectionId: string) => {
+    try {
+      // Удаляем коллекцию из карточки
+      const newCollections = card.collections.filter(id => id !== collectionId);
+      await updateCard(card.id, { collections: newCollections });
+      
+      // Удаляем карточку из коллекции
+      const collection = await getCollection(collectionId);
+      if (collection) {
+        await updateCollection(collectionId, {
+          cardIds: collection.cardIds.filter(id => id !== card.id)
+        });
+      }
+      
+      onCardUpdated?.();
+    } catch (error) {
+      console.error('Ошибка удаления коллекции:', error);
     }
   };
 
@@ -253,6 +327,79 @@ export const CardViewModal = ({
                 </p>
               )}
             </div>
+
+            {/* UI добавления метки */}
+            {isAddingTag && (
+              <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {allTags
+                  .filter(tag => !card.tags.includes(tag.id))
+                  .map(tag => (
+                    <Tag
+                      key={tag.id}
+                      variant="default"
+                      onClick={() => handleAddTag(tag.id)}
+                      color={tag.color}
+                      role="button"
+                    >
+                      {tag.name}
+                    </Tag>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Коллекции */}
+          <div className="card-view__section">
+            <div className="card-view__section-header">
+              <h4 className="card-view__section-title">Коллекции</h4>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => setIsAddingCollection(!isAddingCollection)}
+              >
+                {isAddingCollection ? 'Отмена' : '+ Добавить'}
+              </Button>
+            </div>
+
+            <div className="card-view__tags">
+              {card.collections.length > 0 ? (
+                card.collections.map((collectionId) => {
+                  const collection = allCollections.find(c => c.id === collectionId);
+                  return collection ? (
+                    <Tag
+                      key={collectionId}
+                      variant="active"
+                      removable
+                      onRemove={() => handleRemoveCollection(collectionId)}
+                    >
+                      {collection.name}
+                    </Tag>
+                  ) : null;
+                })
+              ) : (
+                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                  Коллекций нет.
+                </p>
+              )}
+            </div>
+
+            {/* UI добавления коллекции */}
+            {isAddingCollection && (
+              <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {allCollections
+                  .filter(coll => !card.collections.includes(coll.id))
+                  .map(coll => (
+                    <Tag
+                      key={coll.id}
+                      variant="default"
+                      onClick={() => handleAddCollection(coll.id)}
+                      role="button"
+                    >
+                      {coll.name}
+                    </Tag>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Действия */}
