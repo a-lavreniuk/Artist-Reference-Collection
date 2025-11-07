@@ -5,7 +5,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button, Tag, Input } from '../common';
-import { getAllTags, getAllCategories, getAllCollections, addCard, addTag } from '../../services/db';
+import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
 import { useFileSystem } from '../../hooks';
 import type { Card, Tag as TagType, Category, Collection } from '../../types';
 import './AddCardFlow.css';
@@ -303,6 +303,17 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
           };
 
           await addCard(card);
+          
+          // Обновляем коллекции - добавляем ID карточки в каждую коллекцию
+          for (const collectionId of item.collections) {
+            const collection = await getCollection(collectionId);
+            if (collection) {
+              await updateCollection(collectionId, {
+                cardIds: [...collection.cardIds, card.id]
+              });
+            }
+          }
+          
           createdCards.push(card);
         } catch (fileError) {
           console.error(`Ошибка сохранения файла ${item.file.name}:`, fileError);

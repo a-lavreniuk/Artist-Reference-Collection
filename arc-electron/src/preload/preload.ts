@@ -107,11 +107,20 @@ export interface ElectronAPI {
   
   /**
    * Восстановить данные из резервной копии
-   * @param archivePath - Путь к архиву
+   * @param archivePath - Путь к архиву (или к первой части)
    * @param targetDir - Целевая директория
-   * @returns Успешность восстановления
+   * @returns Успешность восстановления и JSON базы данных
    */
-  restoreBackup: (archivePath: string, targetDir: string) => Promise<boolean>;
+  restoreBackup: (archivePath: string, targetDir: string) => Promise<{
+    success: boolean;
+    databaseJson: string | null;
+  }>;
+  
+  /**
+   * Открыть диалог выбора архива для восстановления
+   * @returns Путь к выбранному архиву или undefined если отменено
+   */
+  selectArchivePath: () => Promise<string | undefined>;
   
   // === СИСТЕМНЫЕ ФУНКЦИИ ===
   
@@ -179,6 +188,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   restoreBackup: (archivePath: string, targetDir: string) => 
     ipcRenderer.invoke('restore-backup', archivePath, targetDir),
+  selectArchivePath: () => ipcRenderer.invoke('select-archive-path'),
   
   // Системные функции
   showNotification: (title: string, body: string) => 

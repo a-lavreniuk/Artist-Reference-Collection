@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { useFileSystem } from '../hooks';
-import { getStatistics, db, exportDatabase } from '../services/db';
+import { getStatistics, db, exportDatabase, importDatabase } from '../services/db';
 import type { AppStatistics } from '../types';
 
 export const SettingsPage = () => {
@@ -17,6 +17,8 @@ export const SettingsPage = () => {
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8>(1);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadStats();
@@ -125,6 +127,81 @@ export const SettingsPage = () => {
     }
   };
 
+  const handleRestoreBackup = async () => {
+    if (!window.electronAPI) {
+      setRestoreMessage('❌ Electron API недоступен');
+      return;
+    }
+
+    const confirmRestore = confirm(
+      '⚠️ ВНИМАНИЕ!\n\n' +
+      'Восстановление из резервной копии:\n' +
+      '- Заменит ВСЕ текущие файлы\n' +
+      '- Заменит ВСЮ базу данных\n' +
+      '- Это действие НЕОБРАТИМО\n\n' +
+      'Вы уверены?'
+    );
+
+    if (!confirmRestore) {
+      return;
+    }
+
+    try {
+      setIsRestoring(true);
+      setRestoreMessage('🔄 Выбор архива...');
+
+      // 1. Выбираем архив для восстановления
+      const archivePath = await window.electronAPI.selectArchivePath();
+      
+      if (!archivePath) {
+        setIsRestoring(false);
+        setRestoreMessage(null);
+        return;
+      }
+
+      setRestoreMessage('🔄 Восстановление файлов...');
+
+      // 2. Выбираем целевую папку
+      const targetPath = await window.electronAPI.selectWorkingDirectory();
+      
+      if (!targetPath) {
+        setIsRestoring(false);
+        setRestoreMessage(null);
+        return;
+      }
+
+      // 3. Восстанавливаем файлы и получаем БД
+      const result = await window.electronAPI.restoreBackup(archivePath, targetPath);
+
+      if (!result.success) {
+        setRestoreMessage('❌ Ошибка восстановления');
+        setIsRestoring(false);
+        return;
+      }
+
+      setRestoreMessage('🔄 Восстановление базы данных...');
+
+      // 4. Импортируем базу данных
+      if (result.databaseJson) {
+        await importDatabase(result.databaseJson);
+        console.log('[Settings] База данных импортирована');
+      }
+
+      setRestoreMessage('✅ Восстановление завершено! Обновите страницу.');
+      await loadStats();
+      
+      setTimeout(() => {
+        // Перезагружаем страницу чтобы обновить все данные
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error('Ошибка восстановления:', error);
+      setRestoreMessage('❌ Ошибка восстановления: ' + (error as Error).message);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   return (
     <Layout
       headerProps={{
@@ -211,13 +288,23 @@ export const SettingsPage = () => {
               </div>
             </div>
 
-            <Button
-              variant="primary"
-              onClick={handleCreateBackup}
-              disabled={isCreatingBackup || !directoryPath}
-            >
-              {isCreatingBackup ? 'Создание...' : 'Создать backup'}
-            </Button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Button
+                variant="primary"
+                onClick={handleCreateBackup}
+                disabled={isCreatingBackup || isRestoring || !directoryPath}
+              >
+                {isCreatingBackup ? 'Создание...' : 'Создать backup'}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={handleRestoreBackup}
+                disabled={isCreatingBackup || isRestoring}
+              >
+                {isRestoring ? 'Восстановление...' : 'Восстановить'}
+              </Button>
+            </div>
 
             {isCreatingBackup && (
               <div style={{ marginTop: '16px' }}>
@@ -249,6 +336,17 @@ export const SettingsPage = () => {
                 marginTop: '16px'
               }}>
                 <p className="text-s">{backupMessage}</p>
+              </div>
+            )}
+
+            {restoreMessage && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: restoreMessage.includes('✅') ? 'var(--color-green-100)' : restoreMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
+                borderRadius: 'var(--radius-s)',
+                marginTop: '16px'
+              }}>
+                <p className="text-s">{restoreMessage}</p>
               </div>
             )}
           </div>

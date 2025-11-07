@@ -12,6 +12,7 @@ import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import archiver from 'archiver';
+import extract from 'extract-zip';
 
 // Настраиваем путь к ffmpeg бинарнику
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -59,7 +60,8 @@ export function registerIPCHandlers(): void {
         title: 'Сохранить резервную копию',
         defaultPath: defaultFileName,
         filters: [
-          { name: 'ZIP архивы', extensions: ['zip'] }
+          { name: 'ZIP архивы', extensions: ['zip'] },
+          { name: 'ARC архивы', extensions: ['arc'] }
         ]
       });
 
@@ -72,6 +74,34 @@ export function registerIPCHandlers(): void {
       return result.filePath;
     } catch (error) {
       console.error('[IPC] Ошибка выбора пути:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Открыть диалог выбора архива для восстановления
+   */
+  ipcMain.handle('select-archive-path', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Выберите архив для восстановления',
+        properties: ['openFile'],
+        filters: [
+          { name: 'ZIP архивы', extensions: ['zip'] },
+          { name: 'Части архива', extensions: ['part01', 'part02', 'part03', 'part04', 'part05', 'part06', 'part07', 'part08'] },
+          { name: 'Все файлы', extensions: ['*'] }
+        ]
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        console.log('[IPC] Выбор архива отменён');
+        return undefined;
+      }
+
+      console.log('[IPC] Выбран архив:', result.filePaths[0]);
+      return result.filePaths[0];
+    } catch (error) {
+      console.error('[IPC] Ошибка выбора архива:', error);
       throw error;
     }
   });
@@ -487,16 +517,92 @@ export function registerIPCHandlers(): void {
 
   /**
    * Восстановить данные из резервной копии
-   * TODO: Реализовать восстановление из ZIP
+   * Распаковывает архив и возвращает JSON базы данных
    */
-  ipcMain.handle('restore-backup', async (_event, archivePath: string, targetDir: string) => {
+  ipcMain.handle('restore-backup', async (event, archivePath: string, targetDir: string) => {
     try {
       console.log('[IPC] Восстановление из backup...');
       console.log('[IPC] Архив:', archivePath);
       console.log('[IPC] Целевая директория:', targetDir);
 
-      // TODO: Реализовать восстановление
-      return true;
+      // 1. Проверяем тип файла (одиночный или части)
+      let zipPath = archivePath;
+      const isPart = archivePath.includes('.arc.part');
+      
+      if (isPart) {
+        // Объединяем части в один файл
+        console.log('[IPC] Обнаружены части архива, объединяем...');
+        zipPath = await mergeFileParts(archivePath);
+      }
+
+      // 2. Создаём временную папку для распаковки
+      const tempDir = path.join(app.getPath('temp'), `arc_restore_${Date.now()}`);
+      await fs.mkdir(tempDir, { recursive: true });
+      console.log('[IPC] Временная папка:', tempDir);
+
+      // 3. Распаковываем архив
+      console.log('[IPC] Распаковка архива...');
+      await extract(zipPath, { dir: tempDir });
+      console.log('[IPC] Архив распакован');
+
+      // 4. Читаем базу данных из архива
+      const dbPath = path.join(tempDir, '_database', 'arc_database.json');
+      let databaseJson: string | null = null;
+      
+      try {
+        databaseJson = await fs.readFile(dbPath, 'utf-8');
+        console.log('[IPC] База данных прочитана из архива');
+      } catch {
+        console.log('[IPC] База данных не найдена в архиве');
+      }
+
+      // 5. Создаём целевую директорию если не существует
+      await fs.mkdir(targetDir, { recursive: true });
+
+      // 6. Копируем файлы из временной папки в целевую
+      console.log('[IPC] Копирование файлов...');
+      
+      async function copyDirectory(src: string, dest: string): Promise<void> {
+        const entries = await fs.readdir(src, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          
+          // Пропускаем папку _database (она не нужна в рабочей папке)
+          if (entry.name === '_database') {
+            continue;
+          }
+          
+          if (entry.isDirectory()) {
+            await fs.mkdir(destPath, { recursive: true });
+            await copyDirectory(srcPath, destPath);
+          } else if (entry.isFile()) {
+            await fs.copyFile(srcPath, destPath);
+          }
+        }
+      }
+      
+      await copyDirectory(tempDir, targetDir);
+      console.log('[IPC] Файлы скопированы');
+
+      // 7. Очищаем временную папку
+      await fs.rm(tempDir, { recursive: true, force: true });
+      console.log('[IPC] Временная папка удалена');
+      
+      // 8. Если был создан merged файл, удаляем его
+      if (isPart && zipPath.includes('_merged.zip')) {
+        await fs.unlink(zipPath);
+        console.log('[IPC] Временный объединенный файл удален');
+      }
+
+      console.log('[IPC] Восстановление завершено');
+      
+      // Возвращаем JSON базы данных для импорта в renderer
+      return {
+        success: true,
+        databaseJson: databaseJson
+      };
     } catch (error) {
       console.error('[IPC] Ошибка восстановления:', error);
       throw error;
@@ -597,5 +703,45 @@ async function splitFile(filePath: string, parts: number): Promise<string[]> {
   console.log('[IPC] Оригинальный файл удалён');
   
   return partPaths;
+}
+
+/**
+ * Объединить части архива в один файл
+ * @param firstPartPath - Путь к первой части (.part01)
+ * @returns Путь к объединенному файлу
+ */
+async function mergeFileParts(firstPartPath: string): Promise<string> {
+  console.log('[IPC] Объединение частей архива...');
+  
+  // Определяем базовое имя и ищем все части
+  const basePath = firstPartPath.replace(/\.arc\.part\d+$/, '');
+  const dir = path.dirname(firstPartPath);
+  const files = await fs.readdir(dir);
+  
+  // Находим все части
+  const partFiles = files
+    .filter(f => f.startsWith(path.basename(basePath)) && f.includes('.arc.part'))
+    .sort();
+  
+  console.log(`[IPC] Найдено частей: ${partFiles.length}`);
+  
+  // Объединяем в один файл
+  const outputPath = `${basePath}_merged.zip`;
+  const outputStream = fsSync.createWriteStream(outputPath);
+  
+  for (const partFile of partFiles) {
+    const partPath = path.join(dir, partFile);
+    const partBuffer = await fs.readFile(partPath);
+    outputStream.write(partBuffer);
+    console.log(`[IPC] Добавлена часть: ${partFile}`);
+  }
+  
+  outputStream.end();
+  
+  // Ждем завершения записи
+  await new Promise<void>((resolve) => outputStream.on('finish', () => resolve()));
+  
+  console.log('[IPC] Файл объединен:', outputPath);
+  return outputPath;
 }
 
