@@ -95,6 +95,11 @@
 /* ========== ШАПКА ========== */
 
 .modal__header {
+  /* Позиционирование */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  
   /* Отображение */
   display: flex;
   align-items: center;
@@ -105,7 +110,9 @@
   padding: var(--spacing-xl);
   
   /* Оформление */
+  background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-default);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   
   /* Сброс */
   flex-shrink: 0;
