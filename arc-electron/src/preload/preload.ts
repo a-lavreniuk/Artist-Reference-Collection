@@ -91,7 +91,7 @@ export interface ElectronAPI {
    * @param parts - Количество частей архива (1, 2, 4, 8)
    * @returns Информация о созданном бэкапе
    */
-  createBackup: (outputPath: string, workingDir: string, parts: number) => Promise<{
+  createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{
     success: boolean;
     size: number;
     filesCount: number;
@@ -172,8 +172,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getFileURL: (filePath: string) => ipcRenderer.invoke('get-file-url', filePath),
   
   // Резервное копирование
-  createBackup: (outputPath: string, workingDir: string, parts: number) => 
-    ipcRenderer.invoke('create-backup', outputPath, workingDir, parts),
+  createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => 
+    ipcRenderer.invoke('create-backup', outputPath, workingDir, parts, databaseJson),
   onBackupProgress: (callback: (data: { percent: number; processed: number; total: number }) => void) => {
     ipcRenderer.on('backup-progress', (_event, data) => callback(data));
   },

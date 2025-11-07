@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { useFileSystem } from '../hooks';
-import { getStatistics, db } from '../services/db';
+import { getStatistics, db, exportDatabase } from '../services/db';
 import type { AppStatistics } from '../types';
 
 export const SettingsPage = () => {
@@ -16,6 +16,7 @@ export const SettingsPage = () => {
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
+  const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8>(1);
 
   useEffect(() => {
     loadStats();
@@ -75,14 +76,21 @@ export const SettingsPage = () => {
     try {
       setIsCreatingBackup(true);
       setBackupProgress(0);
-      setBackupMessage('🔄 Создание резервной копии...');
+      setBackupMessage('🔄 Экспорт базы данных...');
 
-      // Генерируем имя файла с датой
+      // 1. Экспортируем базу данных
+      const databaseJson = await exportDatabase();
+      console.log('[Settings] База данных экспортирована');
+
+      setBackupMessage('🔄 Выбор места сохранения...');
+
+      // 2. Генерируем имя файла с датой
       const date = new Date();
       const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      const fileName = `ARC_backup_${dateStr}.zip`;
+      const extension = backupParts === 1 ? '.zip' : '.arc';
+      const fileName = `ARC_backup_${dateStr}${extension}`;
       
-      // Выбираем путь для сохранения через dialog
+      // 3. Выбираем путь для сохранения через dialog
       const selectedPath = await window.electronAPI.selectBackupPath(fileName);
 
       if (!selectedPath) {
@@ -91,11 +99,14 @@ export const SettingsPage = () => {
         return;
       }
 
-      // Создаём backup
+      setBackupMessage('🔄 Создание архива...');
+
+      // 4. Создаём backup с базой данных
       const response = await window.electronAPI.createBackup(
         selectedPath,
         directoryPath,
-        1 // Пока всегда создаём 1 файл
+        backupParts,
+        databaseJson
       );
 
       if (response.success) {
@@ -179,6 +190,26 @@ export const SettingsPage = () => {
             <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
               Создайте полную резервную копию всех файлов и базы данных
             </p>
+
+            {/* Выбор количества частей */}
+            <div style={{ marginBottom: '16px' }}>
+              <p className="text-s" style={{ marginBottom: '8px', fontWeight: 'var(--font-weight-bold)' }}>
+                Разбиение архива:
+              </p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {([1, 2, 4, 8] as const).map((num) => (
+                  <Button
+                    key={num}
+                    variant={backupParts === num ? 'primary' : 'secondary'}
+                    size="small"
+                    onClick={() => setBackupParts(num)}
+                    disabled={isCreatingBackup}
+                  >
+                    {num === 1 ? 'Одним файлом' : `${num} части`}
+                  </Button>
+                ))}
+              </div>
+            </div>
 
             <Button
               variant="primary"

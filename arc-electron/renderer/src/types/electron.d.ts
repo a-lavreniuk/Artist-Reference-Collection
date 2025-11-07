@@ -20,7 +20,7 @@ interface ElectronAPI {
   getFileURL: (filePath: string) => Promise<string>;
   
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
-  createBackup: (outputPath: string, workingDir: string, parts: number) => Promise<{
+  createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{
     success: boolean;
     size: number;
     filesCount: number;

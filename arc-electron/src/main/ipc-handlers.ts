@@ -354,9 +354,9 @@ export function registerIPCHandlers(): void {
 
   /**
    * Создать резервную копию данных
-   * Создаёт ZIP архив с содержимым рабочей папки
+   * Создаёт ZIP архив с содержимым рабочей папки + база данных
    */
-  ipcMain.handle('create-backup', async (event, outputPath: string, workingDir: string, parts: number) => {
+  ipcMain.handle('create-backup', async (event, outputPath: string, workingDir: string, parts: number, databaseJson: string) => {
     try {
       console.log('[IPC] Создание резервной копии...');
       console.log('[IPC] Выходной путь:', outputPath);
@@ -415,6 +415,18 @@ export function registerIPCHandlers(): void {
           console.log(`[IPC] Архив создан: ${Math.round(archiveSize / 1024 / 1024)} MB`);
           console.log(`[IPC] Время создания: ${duration} сек`);
           
+          // Разбиваем на части если нужно
+          let finalPaths: string[] = [outputPath];
+          if (parts > 1) {
+            try {
+              finalPaths = await splitFile(outputPath, parts);
+              console.log(`[IPC] Файл разбит на ${parts} частей`);
+            } catch (splitError) {
+              console.error('[IPC] Ошибка разбиения на части:', splitError);
+              // Продолжаем с одним файлом
+            }
+          }
+          
           // Создаём manifest.json
           const manifest = {
             version: '1.0',
@@ -423,7 +435,8 @@ export function registerIPCHandlers(): void {
             totalSize: archiveSize,
             filesCount: filesCount,
             parts: parts,
-            archiveName: archiveName
+            archiveName: parts > 1 ? path.basename(finalPaths[0]) : archiveName,
+            partFiles: finalPaths.map(p => path.basename(p))
           };
 
           resolve({
@@ -455,8 +468,13 @@ export function registerIPCHandlers(): void {
         // Подключаем поток
         archive.pipe(output);
 
-        // Добавляем всю рабочую папку в архив
+        // 1. Добавляем базу данных как JSON файл
+        archive.append(databaseJson, { name: '_database/arc_database.json' });
+        console.log('[IPC] База данных добавлена в архив');
+
+        // 2. Добавляем всю рабочую папку в архив
         archive.directory(workingDir, false);
+        console.log('[IPC] Файлы добавлены в архив');
 
         // Завершаем архивирование
         archive.finalize();
@@ -541,5 +559,43 @@ async function fileExists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Разбить файл на части
+ * @param filePath - Путь к файлу для разбиения
+ * @param parts - Количество частей (2, 4, 8)
+ * @returns Массив путей к частям
+ */
+async function splitFile(filePath: string, parts: number): Promise<string[]> {
+  console.log(`[IPC] Разбиение файла на ${parts} частей...`);
+  
+  // Читаем файл
+  const fileBuffer = await fs.readFile(filePath);
+  const fileSize = fileBuffer.length;
+  const partSize = Math.ceil(fileSize / parts);
+  
+  const partPaths: string[] = [];
+  const basePath = filePath.replace(/\.(arc|zip)$/, '');
+  
+  for (let i = 0; i < parts; i++) {
+    const start = i * partSize;
+    const end = Math.min(start + partSize, fileSize);
+    const partBuffer = fileBuffer.slice(start, end);
+    
+    const partNum = (i + 1).toString().padStart(2, '0');
+    const partPath = `${basePath}.arc.part${partNum}`;
+    
+    await fs.writeFile(partPath, partBuffer);
+    partPaths.push(partPath);
+    
+    console.log(`[IPC] Создана часть ${partNum}: ${Math.round(partBuffer.length / 1024 / 1024)} MB`);
+  }
+  
+  // Удаляем оригинальный файл
+  await fs.unlink(filePath);
+  console.log('[IPC] Оригинальный файл удалён');
+  
+  return partPaths;
 }
 
