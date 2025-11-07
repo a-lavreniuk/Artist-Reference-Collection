@@ -178,6 +178,9 @@ export const CollectionDetailPage = () => {
         onClose={() => setIsModalOpen(false)}
         onCardUpdated={() => id && loadCollection(id)}
         onCardDeleted={() => id && loadCollection(id)}
+        onSimilarCardClick={(card) => {
+          setViewingCard(card);
+        }}
       />
     </Layout>
   );

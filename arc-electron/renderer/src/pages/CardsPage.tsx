@@ -174,6 +174,9 @@ export const CardsPage = () => {
         onClose={handleCloseModal}
         onCardUpdated={handleCardUpdated}
         onCardDeleted={handleCardDeleted}
+        onSimilarCardClick={(card) => {
+          setViewingCard(card);
+        }}
       />
     </Layout>
   );

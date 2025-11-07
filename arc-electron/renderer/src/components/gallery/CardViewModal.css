@@ -110,12 +110,65 @@
   border-top: 1px solid var(--border-default);
 }
 
+/* ========== ПОХОЖИЕ ИЗОБРАЖЕНИЯ ========== */
+
+.card-view__similar {
+  grid-column: 1 / -1;
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--border-default);
+}
+
+.card-view__similar-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--spacing-m);
+  margin-top: var(--spacing-m);
+}
+
+.card-view__similar-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.card-view__similar-item:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-m);
+}
+
+.card-view__similar-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  padding: 2px 6px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 10px;
+  border-radius: var(--radius-xs);
+}
+
+.card-view__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--text-secondary);
+}
+
 /* ========== АДАПТАЦИЯ ========== */
 
 @media (max-width: 1920px) {
   .card-view {
     grid-template-columns: 1fr 350px;
     gap: var(--spacing-l);
+  }
+  
+  .card-view__similar-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -127,6 +180,10 @@
   
   .card-view__preview {
     min-height: 300px;
+  }
+  
+  .card-view__similar-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

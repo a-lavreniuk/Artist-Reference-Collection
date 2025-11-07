@@ -6,8 +6,8 @@
 import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button, Tag } from '../common';
-import type { Card, Tag as TagType } from '../../types';
-import { updateCard, getAllTags, addToMoodboard, removeFromMoodboard, deleteCard } from '../../services/db';
+import type { Card, Tag as TagType, Collection } from '../../types';
+import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards } from '../../services/db';
 import './CardViewModal.css';
 
 export interface CardViewModalProps {
@@ -25,6 +25,9 @@ export interface CardViewModalProps {
   
   /** Обработчик удаления карточки */
   onCardDeleted?: () => void;
+
+  /** Обработчик клика по похожей карточке */
+  onSimilarCardClick?: (card: Card) => void;
 }
 
 /**
@@ -35,20 +38,26 @@ export const CardViewModal = ({
   card,
   onClose,
   onCardUpdated,
-  onCardDeleted
+  onCardDeleted,
+  onSimilarCardClick
 }: CardViewModalProps) => {
   const [allTags, setAllTags] = useState<TagType[]>([]);
+  const [allCollections, setAllCollections] = useState<Collection[]>([]);
   const [isAddingTag, setIsAddingTag] = useState(false);
+  const [isAddingCollection, setIsAddingCollection] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [videoDataUrl, setVideoDataUrl] = useState<string | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [similarCards, setSimilarCards] = useState<Array<Card & { matchCount: number }>>([]);
 
-  // Загрузка всех меток при открытии
+  // Загрузка всех меток, коллекций и похожих карточек при открытии
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && card) {
       loadTags();
+      loadCollections();
+      loadSimilarCards();
     }
-  }, [isOpen]);
+  }, [isOpen, card?.id]);
 
   // Загрузка Data URL для видео при открытии
   useEffect(() => {
@@ -82,6 +91,27 @@ export const CardViewModal = ({
       setAllTags(tags);
     } catch (error) {
       console.error('Ошибка загрузки меток:', error);
+    }
+  };
+
+  const loadCollections = async () => {
+    try {
+      const collections = await getAllCollections();
+      setAllCollections(collections);
+    } catch (error) {
+      console.error('Ошибка загрузки коллекций:', error);
+    }
+  };
+
+  const loadSimilarCards = async () => {
+    if (!card) return;
+    
+    try {
+      const similar = await getSimilarCards(card.id, 5);
+      setSimilarCards(similar);
+      console.log('[CardViewModal] Найдено похожих карточек:', similar.length);
+    } catch (error) {
+      console.error('Ошибка загрузки похожих карточек:', error);
     }
   };
 
@@ -151,12 +181,113 @@ export const CardViewModal = ({
     }
   };
 
+  // Добавление метки к карточке
+  const handleAddTag = async (tagId: string) => {
+    try {
+      if (card.tags.includes(tagId)) {
+        return; // Метка уже добавлена
+      }
+      const newTags = [...card.tags, tagId];
+      await updateCard(card.id, { tags: newTags });
+      setIsAddingTag(false);
+      onCardUpdated?.();
+    } catch (error) {
+      console.error('Ошибка добавления метки:', error);
+    }
+  };
+
+  // Добавление коллекции к карточке
+  const handleAddCollection = async (collectionId: string) => {
+    try {
+      if (card.collections.includes(collectionId)) {
+        return; // Коллекция уже добавлена
+      }
+      
+      // Добавляем коллекцию к карточке
+      const newCollections = [...card.collections, collectionId];
+      await updateCard(card.id, { collections: newCollections });
+      
+      // Добавляем карточку в коллекцию
+      const collection = await getCollection(collectionId);
+      if (collection) {
+        await updateCollection(collectionId, {
+          cardIds: [...collection.cardIds, card.id]
+        });
+      }
+      
+      setIsAddingCollection(false);
+      onCardUpdated?.();
+    } catch (error) {
+      console.error('Ошибка добавления коллекции:', error);
+    }
+  };
+
+  // Удаление коллекции из карточки
+  const handleRemoveCollection = async (collectionId: string) => {
+    try {
+      // Удаляем коллекцию из карточки
+      const newCollections = card.collections.filter(id => id !== collectionId);
+      await updateCard(card.id, { collections: newCollections });
+      
+      // Удаляем карточку из коллекции
+      const collection = await getCollection(collectionId);
+      if (collection) {
+        await updateCollection(collectionId, {
+          cardIds: collection.cardIds.filter(id => id !== card.id)
+        });
+      }
+      
+      onCardUpdated?.();
+    } catch (error) {
+      console.error('Ошибка удаления коллекции:', error);
+    }
+  };
+
+  // Копирование ID в буфер
+  const handleCopyId = async () => {
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.copyToClipboard(card.id);
+        alert('ID скопирован в буфер обмена');
+      } catch (error) {
+        console.error('Ошибка копирования ID:', error);
+      }
+    }
+  };
+
+  // Открытие папки с файлом
+  const handleOpenLocation = async () => {
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.openFileLocation(card.filePath);
+      } catch (error) {
+        console.error('Ошибка открытия папки:', error);
+        alert('Не удалось открыть папку');
+      }
+    }
+  };
+
+  // Экспорт файла
+  const handleExport = async () => {
+    if (window.electronAPI) {
+      try {
+        const exportedPath = await window.electronAPI.exportFile(card.filePath, card.fileName);
+        if (exportedPath) {
+          alert('Файл экспортирован: ' + exportedPath);
+        }
+      } catch (error) {
+        console.error('Ошибка экспорта файла:', error);
+        alert('Не удалось экспортировать файл');
+      }
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       size="large"
-      title={card.fileName}
+      title={`ID: ${card.id}`}
     >
       <div className="card-view">
         {/* Превью изображения/видео */}
@@ -253,10 +384,107 @@ export const CardViewModal = ({
                 </p>
               )}
             </div>
+
+            {/* UI добавления метки */}
+            {isAddingTag && (
+              <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {allTags
+                  .filter(tag => !card.tags.includes(tag.id))
+                  .map(tag => (
+                    <Tag
+                      key={tag.id}
+                      variant="default"
+                      onClick={() => handleAddTag(tag.id)}
+                      color={tag.color}
+                      role="button"
+                    >
+                      {tag.name}
+                    </Tag>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Коллекции */}
+          <div className="card-view__section">
+            <div className="card-view__section-header">
+              <h4 className="card-view__section-title">Коллекции</h4>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => setIsAddingCollection(!isAddingCollection)}
+              >
+                {isAddingCollection ? 'Отмена' : '+ Добавить'}
+              </Button>
+            </div>
+
+            <div className="card-view__tags">
+              {card.collections.length > 0 ? (
+                card.collections.map((collectionId) => {
+                  const collection = allCollections.find(c => c.id === collectionId);
+                  return collection ? (
+                    <Tag
+                      key={collectionId}
+                      variant="active"
+                      removable
+                      onRemove={() => handleRemoveCollection(collectionId)}
+                    >
+                      {collection.name}
+                    </Tag>
+                  ) : null;
+                })
+              ) : (
+                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                  Коллекций нет.
+                </p>
+              )}
+            </div>
+
+            {/* UI добавления коллекции */}
+            {isAddingCollection && (
+              <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {allCollections
+                  .filter(coll => !card.collections.includes(coll.id))
+                  .map(coll => (
+                    <Tag
+                      key={coll.id}
+                      variant="default"
+                      onClick={() => handleAddCollection(coll.id)}
+                      role="button"
+                    >
+                      {coll.name}
+                    </Tag>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Действия */}
           <div className="card-view__actions">
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleCopyId}
+            >
+              Копировать ID
+            </Button>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleOpenLocation}
+            >
+              Открыть расположение
+            </Button>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleExport}
+            >
+              Экспортировать файл
+            </Button>
+
             <Button
               variant={card.inMoodboard ? 'secondary' : 'primary'}
               fullWidth
@@ -296,6 +524,31 @@ export const CardViewModal = ({
             </Button>
           </div>
         </div>
+
+        {/* Похожие изображения */}
+        {similarCards.length > 0 && (
+          <div className="card-view__similar">
+            <h4 className="card-view__section-title">Похожие изображения</h4>
+            <div className="card-view__similar-grid">
+              {similarCards.slice(0, 12).map((similarCard) => (
+                <div
+                  key={similarCard.id}
+                  className="card-view__similar-item"
+                  onClick={() => onSimilarCardClick?.(similarCard)}
+                >
+                  <img 
+                    src={similarCard.thumbnailUrl || similarCard.filePath} 
+                    alt={similarCard.fileName}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div className="card-view__similar-badge">
+                    {similarCard.matchCount} совпадений
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

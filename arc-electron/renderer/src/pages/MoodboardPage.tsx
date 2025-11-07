@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
-import { MasonryGrid } from '../components/gallery';
+import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards } from '../services/db';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
@@ -17,6 +17,10 @@ export const MoodboardPage = () => {
   // Состояние данных
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Модальное окно просмотра
+  const [viewingCard, setViewingCard] = useState<Card | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Загрузка карточек в мудборде
   useEffect(() => {
@@ -65,6 +69,40 @@ export const MoodboardPage = () => {
   // Обработчик клика по карточке
   const handleCardClick = (card: Card) => {
     console.log('Clicked moodboard card:', card);
+    setViewingCard(card);
+    setIsModalOpen(true);
+  };
+
+  // Обработчик закрытия модального окна
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setViewingCard(null);
+  };
+
+  // Обработчик обновления карточки
+  const handleCardUpdated = async () => {
+    // Перезагружаем карточки после обновления
+    const allCards = await getAllCards();
+    const moodboardCards = allCards.filter(card => card.inMoodboard);
+    setCards(moodboardCards);
+    
+    // Обновляем просматриваемую карточку
+    if (viewingCard) {
+      const updatedCard = allCards.find(c => c.id === viewingCard.id);
+      if (updatedCard) {
+        setViewingCard(updatedCard);
+      }
+    }
+  };
+
+  // Обработчик удаления карточки
+  const handleCardDeleted = async () => {
+    setIsModalOpen(false);
+    setViewingCard(null);
+    // Перезагружаем список
+    const allCards = await getAllCards();
+    const moodboardCards = allCards.filter(card => card.inMoodboard);
+    setCards(moodboardCards);
   };
 
   // Обработчик выбора карточки
@@ -125,6 +163,18 @@ export const MoodboardPage = () => {
         onCardClick={handleCardClick}
         onCardSelect={handleCardSelect}
         selectedCards={selectedCards}
+      />
+
+      {/* Модальное окно просмотра карточки */}
+      <CardViewModal
+        isOpen={isModalOpen}
+        card={viewingCard}
+        onClose={handleCloseModal}
+        onCardUpdated={handleCardUpdated}
+        onCardDeleted={handleCardDeleted}
+        onSimilarCardClick={(card) => {
+          setViewingCard(card);
+        }}
       />
     </Layout>
   );

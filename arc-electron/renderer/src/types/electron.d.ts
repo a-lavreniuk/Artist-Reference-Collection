@@ -19,6 +19,11 @@ interface ElectronAPI {
   generateThumbnail: (filePath: string, workingDir: string) => Promise<string>;
   getFileURL: (filePath: string) => Promise<string>;
   
+  // === СИСТЕМНЫЕ ОПЕРАЦИИ ===
+  openFileLocation: (filePath: string) => Promise<boolean>;
+  exportFile: (sourcePath: string, defaultFileName: string) => Promise<string | null>;
+  copyToClipboard: (text: string) => Promise<boolean>;
+  
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{
     success: boolean;

@@ -392,6 +392,42 @@ export async function getViewHistory(): Promise<ViewHistory[]> {
   return await db.viewHistory.orderBy('timestamp').reverse().limit(15).toArray();
 }
 
+// ========== ПОХОЖИЕ КАРТОЧКИ ==========
+
+/**
+ * Найти похожие карточки по совпадающим меткам
+ * @param cardId - ID текущей карточки
+ * @param minMatches - Минимальное количество совпадающих меток (по умолчанию 5)
+ * @returns Массив похожих карточек, отсортированных по количеству совпадений
+ */
+export async function getSimilarCards(cardId: string, minMatches: number = 5): Promise<Array<Card & { matchCount: number }>> {
+  // Получаем текущую карточку
+  const currentCard = await getCard(cardId);
+  if (!currentCard || currentCard.tags.length === 0) {
+    return [];
+  }
+
+  // Получаем все карточки кроме текущей
+  const allCards = await db.cards.where('id').notEqual(cardId).toArray();
+  
+  // Находим карточки с совпадающими метками
+  const similarCards = allCards
+    .map(card => {
+      // Считаем количество совпадающих меток
+      const matchCount = card.tags.filter(tagId => currentCard.tags.includes(tagId)).length;
+      return {
+        ...card,
+        matchCount
+      };
+    })
+    .filter(card => card.matchCount >= minMatches) // Минимум N совпадений
+    .sort((a, b) => b.matchCount - a.matchCount); // Сортировка по убыванию
+
+  console.log(`[DB] Найдено ${similarCards.length} похожих карточек для ${cardId}`);
+  
+  return similarCards;
+}
+
 // ========== ЭКСПОРТ/ИМПОРТ БАЗЫ ДАННЫХ ==========
 
 /**
@@ -419,8 +455,10 @@ export async function exportDatabase(): Promise<string> {
 /**
  * Импортировать базу данных из JSON
  * Для восстановления из резервной копии
+ * @param jsonData - JSON строка с данными
+ * @param newWorkingDir - Новая рабочая папка (для обновления путей)
  */
-export async function importDatabase(jsonData: string): Promise<void> {
+export async function importDatabase(jsonData: string, newWorkingDir?: string): Promise<void> {
   const data = JSON.parse(jsonData);
   
   // Очищаем текущую базу
@@ -433,6 +471,28 @@ export async function importDatabase(jsonData: string): Promise<void> {
   await db.searchHistory.clear();
   await db.viewHistory.clear();
   await db.thumbnailCache.clear();
+  
+  // Обновляем пути если указана новая рабочая папка
+  if (newWorkingDir && data.cards) {
+    for (const card of data.cards) {
+      // Извлекаем относительный путь из старого пути
+      // Ищем структуру год/месяц/день
+      const match = card.filePath.match(/(\d{4}[\\/]\d{2}[\\/]\d{2}[\\/].+)$/);
+      if (match) {
+        // Формируем новый путь
+        card.filePath = newWorkingDir + '\\' + match[1].replace(/\//g, '\\');
+      }
+      
+      // Обновляем путь к превью
+      if (card.thumbnailUrl && card.thumbnailUrl.startsWith('data:')) {
+        // Data URL не требует обновления
+      } else if (card.thumbnailUrl) {
+        // Обновляем путь к превью тоже не нужно, так как это Data URL
+      }
+    }
+    
+    console.log('[DB] Пути к файлам обновлены для новой рабочей папки');
+  }
   
   // Импортируем данные
   if (data.cards) await db.cards.bulkAdd(data.cards);
