@@ -9,8 +9,11 @@ import { useFileSystem } from '../hooks';
 import { getStatistics, db, exportDatabase, importDatabase } from '../services/db';
 import type { AppStatistics } from '../types';
 
+type SettingsTab = 'storage' | 'statistics' | 'history';
+
 export const SettingsPage = () => {
   const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
