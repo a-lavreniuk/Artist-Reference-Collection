@@ -3,7 +3,7 @@
  * Отображает превью с базовой информацией и действиями
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { HTMLAttributes } from 'react';
 import type { Card as CardType } from '../../types';
 import './Card.css';
@@ -43,6 +43,33 @@ export const Card = ({
 }: CardProps) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer для lazy loading
+  useEffect(() => {
+    if (!cardRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        rootMargin: '200px' // Загружаем за 200px до появления в viewport
+      }
+    );
+
+    observer.observe(cardRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   const classNames = [
     'card',
@@ -81,6 +108,7 @@ export const Card = ({
 
   return (
     <div
+      ref={cardRef}
       className={classNames}
       onClick={handleClick}
       role="button"
@@ -92,8 +120,8 @@ export const Card = ({
         <div className="card__skeleton skeleton" />
       )}
 
-      {/* Превью изображения */}
-      {!imageError && (
+      {/* Превью изображения - загружается только когда видимо */}
+      {!imageError && isVisible && (
         <img
           src={card.thumbnailUrl || card.filePath}
           alt={card.fileName}
