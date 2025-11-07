@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards } from '../services/db';
+import { getAllCards, searchCardsAdvanced } from '../services/db';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const CardsPage = () => {
@@ -39,6 +39,35 @@ export const CardsPage = () => {
 
     loadCards();
   }, []);
+
+  // Поиск с debounce (300мс)
+  useEffect(() => {
+    if (!searchValue.trim()) {
+      return; // Если поиск пустой, используем все карточки
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const results = await searchCardsAdvanced(searchValue);
+        setCards(results);
+      } catch (error) {
+        console.error('Ошибка поиска:', error);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchValue]);
+
+  // Сброс поиска при очистке
+  useEffect(() => {
+    if (!searchValue.trim()) {
+      const resetCards = async () => {
+        const allCards = await getAllCards();
+        setCards(allCards);
+      };
+      resetCards();
+    }
+  }, [searchValue]);
 
   // Фильтрация карточек
   const filteredCards = useMemo(() => {
