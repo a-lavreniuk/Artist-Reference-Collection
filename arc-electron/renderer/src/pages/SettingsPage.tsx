@@ -10,12 +10,22 @@ import { getStatistics, db } from '../services/db';
 import type { AppStatistics } from '../types';
 
 export const SettingsPage = () => {
-  const { directoryHandle, requestDirectory } = useFileSystem();
+  const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
   const [stats, setStats] = useState<AppStatistics | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [backupProgress, setBackupProgress] = useState(0);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadStats();
+    
+    // Подписываемся на прогресс backup
+    if (window.electronAPI?.onBackupProgress) {
+      window.electronAPI.onBackupProgress((data) => {
+        setBackupProgress(data.percent);
+      });
+    }
   }, []);
 
   const loadStats = async () => {
@@ -47,6 +57,60 @@ export const SettingsPage = () => {
     } catch (error) {
       console.error('Ошибка очистки:', error);
       setMessage('❌ Ошибка очистки кеша');
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    if (!directoryPath) {
+      setBackupMessage('❌ Сначала выберите рабочую папку');
+      setTimeout(() => setBackupMessage(null), 3000);
+      return;
+    }
+
+    if (!window.electronAPI) {
+      setBackupMessage('❌ Electron API недоступен');
+      return;
+    }
+
+    try {
+      setIsCreatingBackup(true);
+      setBackupProgress(0);
+      setBackupMessage('🔄 Создание резервной копии...');
+
+      // Генерируем имя файла с датой
+      const date = new Date();
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+      const fileName = `ARC_backup_${dateStr}.zip`;
+      
+      // Выбираем путь для сохранения через dialog
+      const selectedPath = await window.electronAPI.selectBackupPath(fileName);
+
+      if (!selectedPath) {
+        setIsCreatingBackup(false);
+        setBackupMessage(null);
+        return;
+      }
+
+      // Создаём backup
+      const response = await window.electronAPI.createBackup(
+        selectedPath,
+        directoryPath,
+        1 // Пока всегда создаём 1 файл
+      );
+
+      if (response.success) {
+        const sizeMB = Math.round(response.size / 1024 / 1024);
+        setBackupMessage(`✅ Backup создан! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
+        setTimeout(() => setBackupMessage(null), 5000);
+      } else {
+        setBackupMessage('❌ Ошибка создания backup');
+      }
+    } catch (error) {
+      console.error('Ошибка создания backup:', error);
+      setBackupMessage('❌ Ошибка создания backup');
+    } finally {
+      setIsCreatingBackup(false);
+      setBackupProgress(0);
     }
   };
 
@@ -102,6 +166,61 @@ export const SettingsPage = () => {
               <p className="text-s">{message}</p>
             </div>
           )}
+
+          {/* Резервное копирование */}
+          <div style={{ 
+            marginTop: '32px',
+            paddingTop: '24px',
+            borderTop: '1px solid var(--border-default)'
+          }}>
+            <h4 className="text-l" style={{ marginBottom: '12px', fontWeight: 'var(--font-weight-bold)' }}>
+              💾 Резервное копирование
+            </h4>
+            <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+              Создайте полную резервную копию всех файлов и базы данных
+            </p>
+
+            <Button
+              variant="primary"
+              onClick={handleCreateBackup}
+              disabled={isCreatingBackup || !directoryPath}
+            >
+              {isCreatingBackup ? 'Создание...' : 'Создать backup'}
+            </Button>
+
+            {isCreatingBackup && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  backgroundColor: 'var(--color-grayscale-200)',
+                  borderRadius: 'var(--radius-s)',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${backupProgress}%`,
+                    height: '100%',
+                    backgroundColor: 'var(--bg-button-primary)',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
+                  {backupProgress}%
+                </p>
+              </div>
+            )}
+
+            {backupMessage && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: backupMessage.includes('✅') ? 'var(--color-green-100)' : backupMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
+                borderRadius: 'var(--radius-s)',
+                marginTop: '16px'
+              }}>
+                <p className="text-s">{backupMessage}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Статистика */}
