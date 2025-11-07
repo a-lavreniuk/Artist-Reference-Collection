@@ -455,8 +455,10 @@ export async function exportDatabase(): Promise<string> {
 /**
  * Импортировать базу данных из JSON
  * Для восстановления из резервной копии
+ * @param jsonData - JSON строка с данными
+ * @param newWorkingDir - Новая рабочая папка (для обновления путей)
  */
-export async function importDatabase(jsonData: string): Promise<void> {
+export async function importDatabase(jsonData: string, newWorkingDir?: string): Promise<void> {
   const data = JSON.parse(jsonData);
   
   // Очищаем текущую базу
@@ -469,6 +471,28 @@ export async function importDatabase(jsonData: string): Promise<void> {
   await db.searchHistory.clear();
   await db.viewHistory.clear();
   await db.thumbnailCache.clear();
+  
+  // Обновляем пути если указана новая рабочая папка
+  if (newWorkingDir && data.cards) {
+    for (const card of data.cards) {
+      // Извлекаем относительный путь из старого пути
+      // Ищем структуру год/месяц/день
+      const match = card.filePath.match(/(\d{4}[\\/]\d{2}[\\/]\d{2}[\\/].+)$/);
+      if (match) {
+        // Формируем новый путь
+        card.filePath = newWorkingDir + '\\' + match[1].replace(/\//g, '\\');
+      }
+      
+      // Обновляем путь к превью
+      if (card.thumbnailUrl && card.thumbnailUrl.startsWith('data:')) {
+        // Data URL не требует обновления
+      } else if (card.thumbnailUrl) {
+        // Обновляем путь к превью тоже не нужно, так как это Data URL
+      }
+    }
+    
+    console.log('[DB] Пути к файлам обновлены для новой рабочей папки');
+  }
   
   // Импортируем данные
   if (data.cards) await db.cards.bulkAdd(data.cards);
