@@ -3,7 +3,7 @@
  * Здесь регистрируются все handlers для работы с файловой системой и системными функциями
  */
 
-import { ipcMain, dialog, Notification, app } from 'electron';
+import { ipcMain, dialog, Notification, app, shell, clipboard } from 'electron';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
@@ -376,6 +376,69 @@ export function registerIPCHandlers(): void {
       return dataUrl;
     } catch (error) {
       console.error('[IPC] Ошибка чтения файла:', error);
+      throw error;
+    }
+  });
+
+  // === СИСТЕМНЫЕ ОПЕРАЦИИ С ФАЙЛАМИ ===
+
+  /**
+   * Открыть папку с файлом в проводнике Windows
+   */
+  ipcMain.handle('open-file-location', async (_event, filePath: string) => {
+    try {
+      console.log('[IPC] Открытие папки с файлом:', filePath);
+      // shell.showItemInFolder открывает проводник и выделяет файл
+      shell.showItemInFolder(filePath);
+      return true;
+    } catch (error) {
+      console.error('[IPC] Ошибка открытия папки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Экспортировать файл в выбранную папку
+   */
+  ipcMain.handle('export-file', async (_event, sourcePath: string, defaultFileName: string) => {
+    try {
+      console.log('[IPC] Экспорт файла:', sourcePath);
+      
+      // Диалог выбора места сохранения
+      const result = await dialog.showSaveDialog({
+        title: 'Экспорт файла',
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'Все файлы', extensions: ['*'] }
+        ]
+      });
+
+      if (result.canceled || !result.filePath) {
+        console.log('[IPC] Экспорт отменён');
+        return null;
+      }
+
+      // Копируем файл
+      await fs.copyFile(sourcePath, result.filePath);
+      console.log('[IPC] Файл экспортирован:', result.filePath);
+      
+      return result.filePath;
+    } catch (error) {
+      console.error('[IPC] Ошибка экспорта файла:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Скопировать текст в буфер обмена
+   */
+  ipcMain.handle('copy-to-clipboard', async (_event, text: string) => {
+    try {
+      clipboard.writeText(text);
+      console.log('[IPC] Текст скопирован в буфер:', text.substring(0, 50) + '...');
+      return true;
+    } catch (error) {
+      console.error('[IPC] Ошибка копирования в буфер:', error);
       throw error;
     }
   });

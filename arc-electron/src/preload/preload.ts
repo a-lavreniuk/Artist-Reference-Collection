@@ -82,6 +82,30 @@ export interface ElectronAPI {
    */
   getFileURL: (filePath: string) => Promise<string>;
   
+  // === СИСТЕМНЫЕ ОПЕРАЦИИ ===
+  
+  /**
+   * Открыть папку с файлом в проводнике
+   * @param filePath - Путь к файлу
+   * @returns true если успешно
+   */
+  openFileLocation: (filePath: string) => Promise<boolean>;
+  
+  /**
+   * Экспортировать файл в выбранную папку
+   * @param sourcePath - Путь к исходному файлу
+   * @param defaultFileName - Имя файла по умолчанию
+   * @returns Путь к экспортированному файлу или null если отменено
+   */
+  exportFile: (sourcePath: string, defaultFileName: string) => Promise<string | null>;
+  
+  /**
+   * Скопировать текст в буфер обмена
+   * @param text - Текст для копирования
+   * @returns true если успешно
+   */
+  copyToClipboard: (text: string) => Promise<boolean>;
+  
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   
   /**
@@ -179,6 +203,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   generateThumbnail: (filePath: string, workingDir: string) => 
     ipcRenderer.invoke('generate-thumbnail', filePath, workingDir),
   getFileURL: (filePath: string) => ipcRenderer.invoke('get-file-url', filePath),
+  
+  // Системные операции
+  openFileLocation: (filePath: string) => ipcRenderer.invoke('open-file-location', filePath),
+  exportFile: (sourcePath: string, defaultFileName: string) => 
+    ipcRenderer.invoke('export-file', sourcePath, defaultFileName),
+  copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
   
   // Резервное копирование
   createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => 

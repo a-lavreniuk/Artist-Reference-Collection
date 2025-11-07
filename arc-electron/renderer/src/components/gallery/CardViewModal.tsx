@@ -243,6 +243,45 @@ export const CardViewModal = ({
     }
   };
 
+  // Копирование ID в буфер
+  const handleCopyId = async () => {
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.copyToClipboard(card.id);
+        alert('ID скопирован в буфер обмена');
+      } catch (error) {
+        console.error('Ошибка копирования ID:', error);
+      }
+    }
+  };
+
+  // Открытие папки с файлом
+  const handleOpenLocation = async () => {
+    if (window.electronAPI) {
+      try {
+        await window.electronAPI.openFileLocation(card.filePath);
+      } catch (error) {
+        console.error('Ошибка открытия папки:', error);
+        alert('Не удалось открыть папку');
+      }
+    }
+  };
+
+  // Экспорт файла
+  const handleExport = async () => {
+    if (window.electronAPI) {
+      try {
+        const exportedPath = await window.electronAPI.exportFile(card.filePath, card.fileName);
+        if (exportedPath) {
+          alert('Файл экспортирован: ' + exportedPath);
+        }
+      } catch (error) {
+        console.error('Ошибка экспорта файла:', error);
+        alert('Не удалось экспортировать файл');
+      }
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -422,6 +461,30 @@ export const CardViewModal = ({
 
           {/* Действия */}
           <div className="card-view__actions">
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleCopyId}
+            >
+              Копировать ID
+            </Button>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleOpenLocation}
+            >
+              Открыть расположение
+            </Button>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={handleExport}
+            >
+              Экспортировать файл
+            </Button>
+
             <Button
               variant={card.inMoodboard ? 'secondary' : 'primary'}
               fullWidth
