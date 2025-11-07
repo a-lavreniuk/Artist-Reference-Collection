@@ -283,8 +283,15 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
           );
           console.log('[AddCardFlow] Превью создано:', thumbnailPath);
           
-          // Получаем file:// URL для превью
+          // Получаем Data URL для превью
           const thumbnailUrl = await window.electronAPI.getFileURL(thumbnailPath);
+
+          // Обновляем preview в очереди для видео (чтобы показать кадр вместо плеера)
+          if (item.file.type.startsWith('video/')) {
+            const newQueue = [...queue];
+            newQueue[i].preview = thumbnailUrl;
+            setQueue(newQueue);
+          }
 
           // Создаём карточку с правильными путями
           const card: Card = {
