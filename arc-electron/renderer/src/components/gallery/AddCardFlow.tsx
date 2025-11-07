@@ -283,7 +283,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
           );
           console.log('[AddCardFlow] Превью создано:', thumbnailPath);
           
-          // Получаем file:// URL для превью
+          // Получаем Data URL для превью
           const thumbnailUrl = await window.electronAPI.getFileURL(thumbnailPath);
 
           // Создаём карточку с правильными путями
@@ -379,7 +379,11 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
               className={`add-card-flow__queue-item ${index === currentIndex ? 'add-card-flow__queue-item--active' : ''}`}
               onClick={() => setCurrentIndex(index)}
             >
-              <img src={item.preview} alt="" />
+              {item.file.type.startsWith('video/') ? (
+                <video src={item.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <img src={item.preview} alt="" />
+              )}
               {item.configured && (
                 <div className="add-card-flow__queue-check">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -420,7 +424,6 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
         {/* Настройки */}
         <div className="add-card-flow__settings">
           <div className="add-card-flow__header">
-            <h4 className="h4">{currentFile.file.name}</h4>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button size="small" variant="secondary" onClick={handleCopySettings}>
                 Копировать

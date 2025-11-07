@@ -3,7 +3,7 @@
  * Отображает полноразмерное изображение/видео с метаданными
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button, Tag } from '../common';
 import type { Card, Tag as TagType } from '../../types';
@@ -40,13 +40,41 @@ export const CardViewModal = ({
   const [allTags, setAllTags] = useState<TagType[]>([]);
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [videoDataUrl, setVideoDataUrl] = useState<string | null>(null);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
 
   // Загрузка всех меток при открытии
-  useState(() => {
+  useEffect(() => {
     if (isOpen) {
       loadTags();
     }
-  });
+  }, [isOpen]);
+
+  // Загрузка Data URL для видео при открытии
+  useEffect(() => {
+    if (isOpen && card && card.type === 'video' && window.electronAPI) {
+      loadVideoDataUrl();
+    }
+    return () => {
+      setVideoDataUrl(null);
+    };
+  }, [isOpen, card]);
+
+  const loadVideoDataUrl = async () => {
+    if (!card) return;
+    
+    try {
+      setIsLoadingVideo(true);
+      console.log('[CardViewModal] Загрузка Data URL для видео:', card.filePath);
+      const dataUrl = await window.electronAPI.getFileURL(card.filePath);
+      setVideoDataUrl(dataUrl);
+      console.log('[CardViewModal] Data URL загружен');
+    } catch (error) {
+      console.error('[CardViewModal] Ошибка загрузки Data URL:', error);
+    } finally {
+      setIsLoadingVideo(false);
+    }
+  };
 
   const loadTags = async () => {
     try {
@@ -131,7 +159,7 @@ export const CardViewModal = ({
       title={card.fileName}
     >
       <div className="card-view">
-        {/* Превью изображения */}
+        {/* Превью изображения/видео */}
         <div className="card-view__preview">
           {card.type === 'image' ? (
             <img
@@ -140,11 +168,23 @@ export const CardViewModal = ({
               className="card-view__image"
             />
           ) : (
-            <video
-              src={card.filePath}
-              controls
-              className="card-view__video"
-            />
+            <>
+              {isLoadingVideo ? (
+                <div className="card-view__loading">
+                  <p>Загрузка видео...</p>
+                </div>
+              ) : videoDataUrl ? (
+                <video
+                  src={videoDataUrl}
+                  controls
+                  className="card-view__video"
+                />
+              ) : (
+                <div className="card-view__loading">
+                  <p>Не удалось загрузить видео</p>
+                </div>
+              )}
+            </>
           )}
         </div>
 

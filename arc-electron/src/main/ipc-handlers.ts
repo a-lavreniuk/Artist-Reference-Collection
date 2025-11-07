@@ -7,6 +7,11 @@ import { ipcMain, dialog, Notification, app } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import sharp from 'sharp';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+
+// Настраиваем путь к ffmpeg бинарнику
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 /**
  * Регистрация всех IPC handlers
@@ -220,11 +225,40 @@ export function registerIPCHandlers(): void {
       const thumbPath = path.join(thumbsDir, thumbName);
 
       if (isVideo) {
-        // TODO: Реализовать генерацию кадра из видео через ffmpeg
-        // Пока просто копируем первый кадр (заглушка)
-        console.log('[IPC] Видео файл - превью пока не генерируется');
-        // Возвращаем путь к несуществующему файлу, будет показан placeholder
-        return thumbPath;
+        // Генерируем превью для видео через ffmpeg
+        console.log('[IPC] Генерация превью для видео через ffmpeg...');
+        
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg(filePath)
+            .screenshots({
+              count: 1,
+              folder: thumbsDir,
+              filename: thumbName,
+              size: '512x?', // 512px по ширине, высота автоматически
+              timemarks: ['00:00:01.000'] // Кадр на 1-й секунде
+            })
+            .on('end', () => {
+              console.log('[IPC] Превью видео создано:', thumbPath);
+              resolve();
+            })
+            .on('error', (err) => {
+              console.error('[IPC] Ошибка генерации превью видео:', err);
+              // Если не удалось создать превью, возвращаем путь к несуществующему файлу
+              // UI покажет placeholder
+              resolve();
+            });
+        });
+
+        // Проверяем, создалось ли превью
+        const thumbExists = await fileExists(thumbPath);
+        if (thumbExists) {
+          const thumbStats = await fs.stat(thumbPath);
+          const originalStats = await fs.stat(filePath);
+          const compressionRatio = Math.round((1 - thumbStats.size / originalStats.size) * 100);
+          console.log(`[IPC] Размер превью видео: ${Math.round(thumbStats.size / 1024)}KB (сжатие ${compressionRatio}%)`);
+        } else {
+          console.log('[IPC] Превью видео не создано, будет показан placeholder');
+        }
       } else {
         // Генерируем превью для изображения через sharp
         // 512px по широкой стороне, сохраняя пропорции
