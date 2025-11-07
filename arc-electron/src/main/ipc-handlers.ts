@@ -87,8 +87,9 @@ export function registerIPCHandlers(): void {
         title: 'Выберите архив для восстановления',
         properties: ['openFile'],
         filters: [
-          { name: 'Архивы ARC', extensions: ['zip', 'arc'] },
-          { name: 'Части архива', extensions: ['part01', 'part02', 'part03', 'part04', 'part05', 'part06', 'part07', 'part08'] }
+          { name: 'ZIP архивы', extensions: ['zip'] },
+          { name: 'Части архива', extensions: ['part01', 'part02', 'part03', 'part04', 'part05', 'part06', 'part07', 'part08'] },
+          { name: 'Все файлы', extensions: ['*'] }
         ]
       });
 
