@@ -230,7 +230,7 @@ export const CardViewModal = ({
       isOpen={isOpen}
       onClose={onClose}
       size="large"
-      title={card.fileName}
+      title={`ID: ${card.id}`}
     >
       <div className="card-view">
         {/* Превью изображения/видео */}
