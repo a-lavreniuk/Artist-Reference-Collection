@@ -47,6 +47,17 @@ export const CreateTagModal = ({
       setIsCreating(true);
       setError(null);
 
+      // Проверяем дубликаты
+      const { getAllTags } = await import('../../services/db');
+      const existingTags = await getAllTags();
+      const duplicate = existingTags.find(t => t.name.toLowerCase() === name.trim().toLowerCase() && t.categoryId === categoryId);
+      
+      if (duplicate) {
+        setError('Метка с таким названием уже существует в этой категории');
+        setIsCreating(false);
+        return;
+      }
+
       const tag: Tag = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: name.trim(),
