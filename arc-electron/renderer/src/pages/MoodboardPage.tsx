@@ -172,6 +172,9 @@ export const MoodboardPage = () => {
         onClose={handleCloseModal}
         onCardUpdated={handleCardUpdated}
         onCardDeleted={handleCardDeleted}
+        onSimilarCardClick={(card) => {
+          setViewingCard(card);
+        }}
       />
     </Layout>
   );

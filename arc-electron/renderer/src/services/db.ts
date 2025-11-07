@@ -392,6 +392,42 @@ export async function getViewHistory(): Promise<ViewHistory[]> {
   return await db.viewHistory.orderBy('timestamp').reverse().limit(15).toArray();
 }
 
+// ========== ПОХОЖИЕ КАРТОЧКИ ==========
+
+/**
+ * Найти похожие карточки по совпадающим меткам
+ * @param cardId - ID текущей карточки
+ * @param minMatches - Минимальное количество совпадающих меток (по умолчанию 5)
+ * @returns Массив похожих карточек, отсортированных по количеству совпадений
+ */
+export async function getSimilarCards(cardId: string, minMatches: number = 5): Promise<Array<Card & { matchCount: number }>> {
+  // Получаем текущую карточку
+  const currentCard = await getCard(cardId);
+  if (!currentCard || currentCard.tags.length === 0) {
+    return [];
+  }
+
+  // Получаем все карточки кроме текущей
+  const allCards = await db.cards.where('id').notEqual(cardId).toArray();
+  
+  // Находим карточки с совпадающими метками
+  const similarCards = allCards
+    .map(card => {
+      // Считаем количество совпадающих меток
+      const matchCount = card.tags.filter(tagId => currentCard.tags.includes(tagId)).length;
+      return {
+        ...card,
+        matchCount
+      };
+    })
+    .filter(card => card.matchCount >= minMatches) // Минимум N совпадений
+    .sort((a, b) => b.matchCount - a.matchCount); // Сортировка по убыванию
+
+  console.log(`[DB] Найдено ${similarCards.length} похожих карточек для ${cardId}`);
+  
+  return similarCards;
+}
+
 // ========== ЭКСПОРТ/ИМПОРТ БАЗЫ ДАННЫХ ==========
 
 /**

@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button, Tag } from '../common';
 import type { Card, Tag as TagType, Collection } from '../../types';
-import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard } from '../../services/db';
+import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards } from '../../services/db';
 import './CardViewModal.css';
 
 export interface CardViewModalProps {
@@ -25,6 +25,9 @@ export interface CardViewModalProps {
   
   /** Обработчик удаления карточки */
   onCardDeleted?: () => void;
+
+  /** Обработчик клика по похожей карточке */
+  onSimilarCardClick?: (card: Card) => void;
 }
 
 /**
@@ -35,7 +38,8 @@ export const CardViewModal = ({
   card,
   onClose,
   onCardUpdated,
-  onCardDeleted
+  onCardDeleted,
+  onSimilarCardClick
 }: CardViewModalProps) => {
   const [allTags, setAllTags] = useState<TagType[]>([]);
   const [allCollections, setAllCollections] = useState<Collection[]>([]);
@@ -44,14 +48,16 @@ export const CardViewModal = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [videoDataUrl, setVideoDataUrl] = useState<string | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [similarCards, setSimilarCards] = useState<Array<Card & { matchCount: number }>>([]);
 
-  // Загрузка всех меток и коллекций при открытии
+  // Загрузка всех меток, коллекций и похожих карточек при открытии
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && card) {
       loadTags();
       loadCollections();
+      loadSimilarCards();
     }
-  }, [isOpen]);
+  }, [isOpen, card?.id]);
 
   // Загрузка Data URL для видео при открытии
   useEffect(() => {
@@ -94,6 +100,18 @@ export const CardViewModal = ({
       setAllCollections(collections);
     } catch (error) {
       console.error('Ошибка загрузки коллекций:', error);
+    }
+  };
+
+  const loadSimilarCards = async () => {
+    if (!card) return;
+    
+    try {
+      const similar = await getSimilarCards(card.id, 5);
+      setSimilarCards(similar);
+      console.log('[CardViewModal] Найдено похожих карточек:', similar.length);
+    } catch (error) {
+      console.error('Ошибка загрузки похожих карточек:', error);
     }
   };
 
@@ -443,6 +461,31 @@ export const CardViewModal = ({
             </Button>
           </div>
         </div>
+
+        {/* Похожие изображения */}
+        {similarCards.length > 0 && (
+          <div className="card-view__similar">
+            <h4 className="card-view__section-title">Похожие изображения</h4>
+            <div className="card-view__similar-grid">
+              {similarCards.slice(0, 12).map((similarCard) => (
+                <div
+                  key={similarCard.id}
+                  className="card-view__similar-item"
+                  onClick={() => onSimilarCardClick?.(similarCard)}
+                >
+                  <img 
+                    src={similarCard.thumbnailUrl || similarCard.filePath} 
+                    alt={similarCard.fileName}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div className="card-view__similar-badge">
+                    {similarCard.matchCount} совпадений
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );
