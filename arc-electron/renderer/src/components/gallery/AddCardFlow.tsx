@@ -424,7 +424,6 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
         {/* Настройки */}
         <div className="add-card-flow__settings">
           <div className="add-card-flow__header">
-            <h4 className="h4">{currentFile.file.name}</h4>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button size="small" variant="secondary" onClick={handleCopySettings}>
                 Копировать

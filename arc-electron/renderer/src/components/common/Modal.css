@@ -21,7 +21,6 @@
   
   /* Оформление */
   background-color: var(--bg-overlay);
-  backdrop-filter: var(--backdrop-blur);
   
   /* Анимация */
   animation: modal-overlay-enter var(--transition-base);
@@ -85,7 +84,7 @@
 }
 
 .modal--large {
-  max-width: 900px;
+  max-width: 1350px;
 }
 
 .modal--fullscreen {
