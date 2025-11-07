@@ -5,6 +5,7 @@
 interface ElectronAPI {
   // === ФАЙЛОВАЯ СИСТЕМА ===
   selectWorkingDirectory: () => Promise<string | undefined>;
+  selectBackupPath: (defaultFileName: string) => Promise<string | undefined>;
   scanDirectory: (dirPath: string) => Promise<string[]>;
   getFileInfo: (filePath: string) => Promise<{
     name: string;
@@ -19,11 +20,14 @@ interface ElectronAPI {
   getFileURL: (filePath: string) => Promise<string>;
   
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
-  createBackup: (outputPath: string, workingDir: string, parts: number) => Promise<{
+  createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{
     success: boolean;
     size: number;
     filesCount: number;
+    duration?: number;
+    manifest?: any;
   }>;
+  onBackupProgress: (callback: (data: { percent: number; processed: number; total: number }) => void) => void;
   restoreBackup: (archivePath: string, targetDir: string) => Promise<boolean>;
   
   // === СИСТЕМНЫЕ ФУНКЦИИ ===

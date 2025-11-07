@@ -5,10 +5,13 @@
 
 import { ipcMain, dialog, Notification, app } from 'electron';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import archiver from 'archiver';
 
 // Настраиваем путь к ffmpeg бинарнику
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -43,6 +46,32 @@ export function registerIPCHandlers(): void {
       return selectedPath;
     } catch (error) {
       console.error('[IPC] Ошибка выбора папки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Открыть диалог выбора пути для сохранения backup
+   */
+  ipcMain.handle('select-backup-path', async (_event, defaultFileName: string) => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Сохранить резервную копию',
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'ZIP архивы', extensions: ['zip'] }
+        ]
+      });
+
+      if (result.canceled || !result.filePath) {
+        console.log('[IPC] Выбор пути отменён');
+        return undefined;
+      }
+
+      console.log('[IPC] Выбран путь для backup:', result.filePath);
+      return result.filePath;
+    } catch (error) {
+      console.error('[IPC] Ошибка выбора пути:', error);
       throw error;
     }
   });
@@ -325,22 +354,131 @@ export function registerIPCHandlers(): void {
 
   /**
    * Создать резервную копию данных
-   * TODO: Реализовать создание ZIP архива
+   * Создаёт ZIP архив с содержимым рабочей папки + база данных
    */
-  ipcMain.handle('create-backup', async (_event, outputPath: string, workingDir: string, parts: number) => {
+  ipcMain.handle('create-backup', async (event, outputPath: string, workingDir: string, parts: number, databaseJson: string) => {
     try {
       console.log('[IPC] Создание резервной копии...');
       console.log('[IPC] Выходной путь:', outputPath);
       console.log('[IPC] Рабочая директория:', workingDir);
       console.log('[IPC] Количество частей:', parts);
 
-      // TODO: Реализовать создание backup с использованием archiver
-      // Сейчас возвращаем заглушку
-      return {
-        success: true,
-        size: 0,
-        filesCount: 0
-      };
+      // 1. Проверка доступности рабочей директории
+      try {
+        await fs.access(workingDir);
+      } catch {
+        throw new Error('Рабочая директория недоступна');
+      }
+
+      // 2. Подсчёт размера рабочей папки
+      let totalSize = 0;
+      let filesCount = 0;
+
+      async function calculateSize(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await calculateSize(fullPath);
+          } else if (entry.isFile()) {
+            const stats = await fs.stat(fullPath);
+            totalSize += stats.size;
+            filesCount++;
+          }
+        }
+      }
+
+      await calculateSize(workingDir);
+      console.log(`[IPC] Размер рабочей папки: ${Math.round(totalSize / 1024 / 1024)} MB, файлов: ${filesCount}`);
+
+      // 3. Создание архива
+      const archiveName = path.basename(outputPath);
+      const archiveDir = path.dirname(outputPath);
+      
+      // Создаём выходную директорию если не существует
+      await fs.mkdir(archiveDir, { recursive: true });
+
+      return new Promise((resolve, reject) => {
+        const output = fsSync.createWriteStream(outputPath);
+        const archive = archiver('zip', {
+          zlib: { level: 9 } // Максимальное сжатие
+        });
+
+        let processedSize = 0;
+        const startTime = Date.now();
+
+        // Обработка событий
+        output.on('close', async () => {
+          const archiveSize = archive.pointer();
+          const duration = Math.round((Date.now() - startTime) / 1000);
+          
+          console.log(`[IPC] Архив создан: ${Math.round(archiveSize / 1024 / 1024)} MB`);
+          console.log(`[IPC] Время создания: ${duration} сек`);
+          
+          // Разбиваем на части если нужно
+          let finalPaths: string[] = [outputPath];
+          if (parts > 1) {
+            try {
+              finalPaths = await splitFile(outputPath, parts);
+              console.log(`[IPC] Файл разбит на ${parts} частей`);
+            } catch (splitError) {
+              console.error('[IPC] Ошибка разбиения на части:', splitError);
+              // Продолжаем с одним файлом
+            }
+          }
+          
+          // Создаём manifest.json
+          const manifest = {
+            version: '1.0',
+            date: new Date().toISOString(),
+            workingDir: workingDir,
+            totalSize: archiveSize,
+            filesCount: filesCount,
+            parts: parts,
+            archiveName: parts > 1 ? path.basename(finalPaths[0]) : archiveName,
+            partFiles: finalPaths.map(p => path.basename(p))
+          };
+
+          resolve({
+            success: true,
+            size: archiveSize,
+            filesCount: filesCount,
+            duration: duration,
+            manifest: manifest
+          });
+        });
+
+        archive.on('error', (err) => {
+          console.error('[IPC] Ошибка архивирования:', err);
+          reject(err);
+        });
+
+        archive.on('progress', (progress) => {
+          processedSize = progress.fs.processedBytes;
+          const percent = Math.round((processedSize / totalSize) * 100);
+          
+          // Отправляем прогресс в renderer
+          event.sender.send('backup-progress', {
+            percent: percent,
+            processed: processedSize,
+            total: totalSize
+          });
+        });
+
+        // Подключаем поток
+        archive.pipe(output);
+
+        // 1. Добавляем базу данных как JSON файл
+        archive.append(databaseJson, { name: '_database/arc_database.json' });
+        console.log('[IPC] База данных добавлена в архив');
+
+        // 2. Добавляем всю рабочую папку в архив
+        archive.directory(workingDir, false);
+        console.log('[IPC] Файлы добавлены в архив');
+
+        // Завершаем архивирование
+        archive.finalize();
+      });
     } catch (error) {
       console.error('[IPC] Ошибка создания backup:', error);
       throw error;
@@ -421,5 +559,43 @@ async function fileExists(filePath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Разбить файл на части
+ * @param filePath - Путь к файлу для разбиения
+ * @param parts - Количество частей (2, 4, 8)
+ * @returns Массив путей к частям
+ */
+async function splitFile(filePath: string, parts: number): Promise<string[]> {
+  console.log(`[IPC] Разбиение файла на ${parts} частей...`);
+  
+  // Читаем файл
+  const fileBuffer = await fs.readFile(filePath);
+  const fileSize = fileBuffer.length;
+  const partSize = Math.ceil(fileSize / parts);
+  
+  const partPaths: string[] = [];
+  const basePath = filePath.replace(/\.(arc|zip)$/, '');
+  
+  for (let i = 0; i < parts; i++) {
+    const start = i * partSize;
+    const end = Math.min(start + partSize, fileSize);
+    const partBuffer = fileBuffer.slice(start, end);
+    
+    const partNum = (i + 1).toString().padStart(2, '0');
+    const partPath = `${basePath}.arc.part${partNum}`;
+    
+    await fs.writeFile(partPath, partBuffer);
+    partPaths.push(partPath);
+    
+    console.log(`[IPC] Создана часть ${partNum}: ${Math.round(partBuffer.length / 1024 / 1024)} MB`);
+  }
+  
+  // Удаляем оригинальный файл
+  await fs.unlink(filePath);
+  console.log('[IPC] Оригинальный файл удалён');
+  
+  return partPaths;
 }
 

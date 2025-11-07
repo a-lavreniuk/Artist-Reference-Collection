@@ -18,6 +18,13 @@ export interface ElectronAPI {
   selectWorkingDirectory: () => Promise<string | undefined>;
   
   /**
+   * Открыть диалог выбора пути для сохранения backup
+   * @param defaultFileName - Имя файла по умолчанию
+   * @returns Путь для сохранения или undefined если отменено
+   */
+  selectBackupPath: (defaultFileName: string) => Promise<string | undefined>;
+  
+  /**
    * Сканировать директорию и получить список медиафайлов
    * @param dirPath - Путь к папке для сканирования
    * @returns Массив путей к файлам
@@ -84,11 +91,19 @@ export interface ElectronAPI {
    * @param parts - Количество частей архива (1, 2, 4, 8)
    * @returns Информация о созданном бэкапе
    */
-  createBackup: (outputPath: string, workingDir: string, parts: number) => Promise<{
+  createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{
     success: boolean;
     size: number;
     filesCount: number;
+    duration?: number;
+    manifest?: any;
   }>;
+  
+  /**
+   * Подписаться на прогресс создания backup
+   * @param callback - Функция обратного вызова с данными прогресса
+   */
+  onBackupProgress: (callback: (data: { percent: number; processed: number; total: number }) => void) => void;
   
   /**
    * Восстановить данные из резервной копии
@@ -144,6 +159,7 @@ export interface ElectronAPI {
 contextBridge.exposeInMainWorld('electronAPI', {
   // Файловая система
   selectWorkingDirectory: () => ipcRenderer.invoke('select-working-directory'),
+  selectBackupPath: (defaultFileName: string) => ipcRenderer.invoke('select-backup-path', defaultFileName),
   scanDirectory: (dirPath: string) => ipcRenderer.invoke('scan-directory', dirPath),
   getFileInfo: (filePath: string) => ipcRenderer.invoke('get-file-info', filePath),
   fileExists: (filePath: string) => ipcRenderer.invoke('file-exists', filePath),
@@ -156,8 +172,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getFileURL: (filePath: string) => ipcRenderer.invoke('get-file-url', filePath),
   
   // Резервное копирование
-  createBackup: (outputPath: string, workingDir: string, parts: number) => 
-    ipcRenderer.invoke('create-backup', outputPath, workingDir, parts),
+  createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => 
+    ipcRenderer.invoke('create-backup', outputPath, workingDir, parts, databaseJson),
+  onBackupProgress: (callback: (data: { percent: number; processed: number; total: number }) => void) => {
+    ipcRenderer.on('backup-progress', (_event, data) => callback(data));
+  },
   restoreBackup: (archivePath: string, targetDir: string) => 
     ipcRenderer.invoke('restore-backup', archivePath, targetDir),
   

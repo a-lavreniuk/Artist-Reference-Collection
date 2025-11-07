@@ -392,5 +392,65 @@ export async function getViewHistory(): Promise<ViewHistory[]> {
   return await db.viewHistory.orderBy('timestamp').reverse().limit(15).toArray();
 }
 
+// ========== ЭКСПОРТ/ИМПОРТ БАЗЫ ДАННЫХ ==========
+
+/**
+ * Экспортировать всю базу данных в JSON
+ * Для резервного копирования
+ */
+export async function exportDatabase(): Promise<string> {
+  const data = {
+    cards: await db.cards.toArray(),
+    tags: await db.tags.toArray(),
+    categories: await db.categories.toArray(),
+    collections: await db.collections.toArray(),
+    moodboard: await db.moodboard.toArray(),
+    settings: await db.settings.toArray(),
+    searchHistory: await db.searchHistory.toArray(),
+    viewHistory: await db.viewHistory.toArray(),
+    thumbnailCache: await db.thumbnailCache.toArray(),
+    exportDate: new Date().toISOString(),
+    version: '1.0'
+  };
+  
+  return JSON.stringify(data, null, 2);
+}
+
+/**
+ * Импортировать базу данных из JSON
+ * Для восстановления из резервной копии
+ */
+export async function importDatabase(jsonData: string): Promise<void> {
+  const data = JSON.parse(jsonData);
+  
+  // Очищаем текущую базу
+  await db.cards.clear();
+  await db.tags.clear();
+  await db.categories.clear();
+  await db.collections.clear();
+  await db.moodboard.clear();
+  await db.settings.clear();
+  await db.searchHistory.clear();
+  await db.viewHistory.clear();
+  await db.thumbnailCache.clear();
+  
+  // Импортируем данные
+  if (data.cards) await db.cards.bulkAdd(data.cards);
+  if (data.tags) await db.tags.bulkAdd(data.tags);
+  if (data.categories) await db.categories.bulkAdd(data.categories);
+  if (data.collections) await db.collections.bulkAdd(data.collections);
+  if (data.moodboard) await db.moodboard.bulkAdd(data.moodboard);
+  if (data.settings) await db.settings.bulkAdd(data.settings);
+  if (data.searchHistory) await db.searchHistory.bulkAdd(data.searchHistory);
+  if (data.viewHistory) await db.viewHistory.bulkAdd(data.viewHistory);
+  if (data.thumbnailCache) await db.thumbnailCache.bulkAdd(data.thumbnailCache);
+  
+  console.log('[DB] База данных импортирована:', {
+    cards: data.cards?.length,
+    tags: data.tags?.length,
+    collections: data.collections?.length
+  });
+}
+
 export default db;
 
