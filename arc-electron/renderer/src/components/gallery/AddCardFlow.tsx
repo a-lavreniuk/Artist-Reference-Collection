@@ -286,13 +286,6 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
           // Получаем Data URL для превью
           const thumbnailUrl = await window.electronAPI.getFileURL(thumbnailPath);
 
-          // Обновляем preview в очереди для видео (чтобы показать кадр вместо плеера)
-          if (item.file.type.startsWith('video/')) {
-            const newQueue = [...queue];
-            newQueue[i].preview = thumbnailUrl;
-            setQueue(newQueue);
-          }
-
           // Создаём карточку с правильными путями
           const card: Card = {
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -386,7 +379,11 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
               className={`add-card-flow__queue-item ${index === currentIndex ? 'add-card-flow__queue-item--active' : ''}`}
               onClick={() => setCurrentIndex(index)}
             >
-              <img src={item.preview} alt="" />
+              {item.file.type.startsWith('video/') ? (
+                <video src={item.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <img src={item.preview} alt="" />
+              )}
               {item.configured && (
                 <div className="add-card-flow__queue-check">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
