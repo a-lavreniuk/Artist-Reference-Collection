@@ -28,7 +28,11 @@ interface ElectronAPI {
     manifest?: any;
   }>;
   onBackupProgress: (callback: (data: { percent: number; processed: number; total: number }) => void) => void;
-  restoreBackup: (archivePath: string, targetDir: string) => Promise<boolean>;
+  restoreBackup: (archivePath: string, targetDir: string) => Promise<{
+    success: boolean;
+    databaseJson: string | null;
+  }>;
+  selectArchivePath: () => Promise<string | undefined>;
   
   // === СИСТЕМНЫЕ ФУНКЦИИ ===
   showNotification: (title: string, body: string) => Promise<void>;
