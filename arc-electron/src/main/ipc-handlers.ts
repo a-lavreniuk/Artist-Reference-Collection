@@ -582,14 +582,28 @@ export function registerIPCHandlers(): void {
         console.log('[IPC] База данных добавлена в архив');
 
         // 2. Добавляем всю рабочую папку в архив
-        // Используем glob для надёжного добавления всех файлов
+        // Вручную добавляем все файлы и папки рекурсивно
         console.log('[IPC] Добавление файлов в архив...');
-        archive.glob('**/*', {
-          cwd: workingDir,
-          dot: true, // Включая скрытые файлы
-          ignore: [] // Не игнорируем ничего
-        });
-        console.log('[IPC] Команда добавления файлов выполнена');
+        
+        async function addDirectoryToArchive(dirPath: string, archivePath: string = '') {
+          const entries = await fs.readdir(dirPath, { withFileTypes: true });
+          
+          for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            const archiveEntryPath = archivePath ? path.join(archivePath, entry.name) : entry.name;
+            
+            if (entry.isDirectory()) {
+              // Рекурсивно добавляем содержимое папки
+              await addDirectoryToArchive(fullPath, archiveEntryPath);
+            } else if (entry.isFile()) {
+              // Добавляем файл
+              archive.file(fullPath, { name: archiveEntryPath });
+            }
+          }
+        }
+        
+        await addDirectoryToArchive(workingDir);
+        console.log('[IPC] Все файлы добавлены в архив');
 
         // Завершаем архивирование
         archive.finalize();
