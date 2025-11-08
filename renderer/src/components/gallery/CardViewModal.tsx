@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { Button, Tag } from '../common';
 import type { Card, Tag as TagType, Collection } from '../../types';
-import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards } from '../../services/db';
+import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
 import './CardViewModal.css';
 
@@ -57,6 +57,11 @@ export const CardViewModal = ({
       loadTags();
       loadCollections();
       loadSimilarCards();
+      
+      // Добавляем карточку в историю просмотров
+      addViewHistory(card.id).catch(error => {
+        console.error('[CardViewModal] Ошибка сохранения в историю просмотров:', error);
+      });
     }
   }, [isOpen, card?.id]);
 

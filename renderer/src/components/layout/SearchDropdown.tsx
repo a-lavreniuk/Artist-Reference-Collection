@@ -82,6 +82,8 @@ export const SearchDropdown = ({
         
         // Получаем недавно просмотренные карточки
         const recentCardIds = viewHistory.slice(0, 23).map(h => h.cardId);
+        console.log('[SearchDropdown] История просмотров:', viewHistory.length, 'записей');
+        
         const cards: Card[] = [];
         for (const cardId of recentCardIds) {
           const card = await getCard(cardId);
@@ -89,6 +91,7 @@ export const SearchDropdown = ({
             cards.push(card);
           }
         }
+        console.log('[SearchDropdown] Загружено недавно просмотренных карточек:', cards.length);
         setRecentCards(cards);
         
       } catch (error) {
