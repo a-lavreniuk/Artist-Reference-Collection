@@ -38,8 +38,11 @@ export const SettingsPage = () => {
   } | null>(null);
 
   useEffect(() => {
-    loadStats();
-    loadDirectorySizes();
+    // Загружаем статистику и размеры при первом открытии или смене папки
+    if (activeTab === 'storage' || activeTab === 'statistics') {
+      loadStats();
+      loadDirectorySizes();
+    }
     
     // Подписываемся на прогресс backup
     if (window.electronAPI?.onBackupProgress) {
@@ -47,10 +50,14 @@ export const SettingsPage = () => {
         setBackupProgress(data.percent);
       });
     }
-  }, [directoryPath]);
+  }, [directoryPath, activeTab]);
 
   const loadStats = async () => {
     try {
+      // Автоматически пересчитываем счётчики меток при открытии статистики
+      // Это быстрая операция, которая гарантирует актуальность данных
+      await recalculateTagCounts();
+      
       const newStats = await getStatistics();
       setStats(newStats);
       
@@ -106,21 +113,16 @@ export const SettingsPage = () => {
     }
   };
 
-  const handleRecalculateTagCounts = async () => {
-    if (!confirm('Пересчитать счётчики меток?\n\nЭто может занять несколько секунд для больших баз данных.')) {
-      return;
-    }
-
-    try {
-      setMessage('🔄 Пересчёт счётчиков...');
-      await recalculateTagCounts();
-      await loadStats();
-      setMessage('✅ Счётчики пересчитаны');
-      setTimeout(() => setMessage(null), 3000);
-    } catch (error) {
-      console.error('Ошибка пересчёта:', error);
-      setMessage('❌ Ошибка пересчёта счётчиков');
-      setTimeout(() => setMessage(null), 3000);
+  // Вспомогательная функция для форматирования размера
+  const formatSize = (bytes: number): string => {
+    const mb = bytes / 1024 / 1024;
+    if (mb < 1) {
+      return '< 1 МБ';
+    } else if (mb < 1024) {
+      return `${Math.round(mb)} МБ`;
+    } else {
+      const gb = mb / 1024;
+      return `${gb.toFixed(1)} ГБ`;
     }
   };
 
@@ -494,18 +496,23 @@ export const SettingsPage = () => {
               <p className="text-s" style={{ marginBottom: '8px', fontWeight: 'var(--font-weight-bold)' }}>
                 Разбиение архива:
               </p>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {([1, 2, 4, 8] as const).map((num) => (
-                  <Button
-                    key={num}
-                    variant={backupParts === num ? 'primary' : 'secondary'}
-                    size="small"
-                    onClick={() => setBackupParts(num)}
-                    disabled={isCreatingBackup}
-                  >
-                    {num === 1 ? 'Одним файлом' : `${num} части`}
-                  </Button>
-                ))}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {([1, 2, 4, 8] as const).map((num) => {
+                  const partSize = directorySizes ? directorySizes.totalSize / num : 0;
+                  const sizeLabel = directorySizes ? ` (${formatSize(partSize)})` : '';
+                  
+                  return (
+                    <Button
+                      key={num}
+                      variant={backupParts === num ? 'primary' : 'secondary'}
+                      size="small"
+                      onClick={() => setBackupParts(num)}
+                      disabled={isCreatingBackup}
+                    >
+                      {num === 1 ? `Одним файлом${sizeLabel}` : `${num} части${sizeLabel}`}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 
@@ -629,32 +636,6 @@ export const SettingsPage = () => {
                 </p>
                 <p className="h2">{stats.categoryCount}</p>
               </div>
-            </div>
-
-            {/* Кнопка пересчёта счётчиков */}
-            <div style={{ 
-              marginTop: '24px',
-              padding: '16px',
-              backgroundColor: 'var(--color-yellow-100)',
-              borderRadius: 'var(--radius-m)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div>
-                <p className="text-m" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '4px' }}>
-                  Пересчёт счётчиков меток
-                </p>
-                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-                  Если видите 0 напротив меток, нажмите эту кнопку для обновления
-                </p>
-              </div>
-              <Button
-                variant="primary"
-                onClick={handleRecalculateTagCounts}
-              >
-                Пересчитать
-              </Button>
             </div>
 
             {/* Топ метки */}
