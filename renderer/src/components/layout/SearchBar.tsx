@@ -121,11 +121,15 @@ export const SearchBar = ({
     }
   };
 
-  // Обработчик выбора из истории
-  const handleHistorySelect = (query: string, tagIds: string[]) => {
-    setSearchValue(query);
-    onChange?.(query);
+  // Обработчик выбора меток из истории
+  const handleHistoryTagSelect = (tagIds: string[]) => {
     onTagsChange?.(tagIds);
+    setIsOpen(false);
+  };
+
+  // Обработчик клика по недавно просмотренной карточке
+  const handleRecentCardClick = () => {
+    // Закрываем меню
     setIsOpen(false);
   };
 
@@ -198,10 +202,10 @@ export const SearchBar = ({
 
       {/* Выпадающее меню с метками */}
       <SearchDropdown
-        searchQuery={searchValue}
         selectedTags={selectedTags}
         onTagSelect={handleTagSelect}
-        onHistorySelect={handleHistorySelect}
+        onHistoryTagSelect={handleHistoryTagSelect}
+        onRecentCardClick={handleRecentCardClick}
         isVisible={isOpen}
       />
     </div>
