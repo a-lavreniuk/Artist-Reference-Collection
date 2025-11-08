@@ -38,12 +38,12 @@
   justify-content: stretch;
   
   /* Размеры */
-  min-height: calc(var(--height-header) + var(--spacing-l));
-  padding: var(--spacing-l) var(--spacing-xl);
+  min-height: var(--height-header);
+  padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
   
   /* Оформление */
   background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-default);
+  /* border-bottom убран для единого меню */
   
   /* Сброс */
   flex-shrink: 0;
@@ -84,7 +84,8 @@
 
 @media (max-width: 2560px) {
   .layout__header {
-    padding: var(--spacing-l);
+    /* Сохраняем 32px со всех сторон, кроме низа 16px */
+    padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
   }
   
   .layout__content {
@@ -94,7 +95,8 @@
 
 @media (max-width: 2200px) {
   .layout__header {
-    padding: var(--spacing-m) var(--spacing-l);
+    /* Сохраняем 32px со всех сторон, кроме низа 16px */
+    padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
   }
   
   .layout__content {
@@ -104,8 +106,9 @@
 
 @media (max-width: 1920px) {
   .layout__header {
-    padding: var(--spacing-m);
-    min-height: calc(var(--height-header) + var(--spacing-m));
+    /* Сохраняем 32px со всех сторон, кроме низа 16px */
+    padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
+    min-height: var(--height-header);
   }
   
   .layout__content {

@@ -11,7 +11,7 @@
   
   /* Размеры */
   min-height: var(--height-header);
-  padding: var(--spacing-l) var(--spacing-xl);
+  padding: var(--spacing-l) var(--spacing-2xl) var(--spacing-2xl);
   
   /* Оформление */
   background-color: var(--bg-secondary);
