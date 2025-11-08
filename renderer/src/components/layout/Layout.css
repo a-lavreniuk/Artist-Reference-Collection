@@ -67,7 +67,7 @@
   overflow-x: hidden;
   
   /* Оформление */
-  padding: var(--spacing-xl);
+  padding: var(--spacing-2xl);
   
   /* Позиционирование */
   position: relative;
