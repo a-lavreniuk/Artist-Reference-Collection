@@ -564,5 +564,52 @@ export async function importDatabase(jsonData: string, newWorkingDir?: string): 
   });
 }
 
+/**
+ * Получить топ самых используемых меток
+ * @param limit - Количество меток (по умолчанию 10)
+ */
+export async function getTopTags(limit: number = 10) {
+  const tags = await db.tags
+    .orderBy('cardCount')
+    .reverse()
+    .limit(limit)
+    .toArray();
+  
+  // Дополнительно получаем категории для каждой метки
+  const tagsWithCategories = await Promise.all(
+    tags.map(async (tag) => {
+      const category = tag.categoryId 
+        ? await db.categories.get(tag.categoryId)
+        : null;
+      
+      return {
+        ...tag,
+        categoryName: category?.name || 'Без категории'
+      };
+    })
+  );
+  
+  return tagsWithCategories;
+}
+
+/**
+ * Получить самые большие коллекции
+ * @param limit - Количество коллекций (по умолчанию 10)
+ */
+export async function getTopCollections(limit: number = 10) {
+  const collections = await db.collections.toArray();
+  
+  // Сортируем по количеству карточек
+  const sortedCollections = collections
+    .map(collection => ({
+      ...collection,
+      cardCount: collection.cardIds?.length || 0
+    }))
+    .sort((a, b) => b.cardCount - a.cardCount)
+    .slice(0, limit);
+  
+  return sortedCollections;
+}
+
 export default db;
 

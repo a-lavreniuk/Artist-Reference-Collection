@@ -6,12 +6,20 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { useFileSystem } from '../hooks';
-import { getStatistics, db, exportDatabase, importDatabase } from '../services/db';
-import type { AppStatistics } from '../types';
+import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections } from '../services/db';
+import type { AppStatistics, Tag, Collection } from '../types';
+
+type SettingsTab = 'storage' | 'statistics' | 'history';
+
+type TagWithCategory = Tag & { categoryName: string };
+type CollectionWithCount = Collection & { cardCount: number };
 
 export const SettingsPage = () => {
   const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
+  const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
+  const [topTags, setTopTags] = useState<TagWithCategory[]>([]);
+  const [topCollections, setTopCollections] = useState<CollectionWithCount[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
@@ -35,6 +43,13 @@ export const SettingsPage = () => {
     try {
       const newStats = await getStatistics();
       setStats(newStats);
+      
+      // Загружаем топ метки и коллекции
+      const tags = await getTopTags(10);
+      const collections = await getTopCollections(10);
+      
+      setTopTags(tags);
+      setTopCollections(collections);
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
     }
@@ -209,15 +224,76 @@ export const SettingsPage = () => {
       }}
       showSearch={false}
     >
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px' }}>
-        {/* Хранилище */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
+        {/* Табы */}
         <div style={{ 
-          padding: '24px', 
-          backgroundColor: 'var(--bg-secondary)', 
-          borderRadius: 'var(--radius-l)',
-          marginBottom: '24px'
+          display: 'flex', 
+          gap: '8px', 
+          marginBottom: '32px',
+          borderBottom: '1px solid var(--border-default)',
+          paddingBottom: '0'
         }}>
-          <h3 className="h3" style={{ marginBottom: '16px' }}>💾 Хранилище</h3>
+          <button
+            onClick={() => setActiveTab('storage')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: activeTab === 'storage' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'storage' ? 'var(--font-weight-bold)' : 'normal',
+              borderBottom: activeTab === 'storage' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              fontSize: 'var(--font-size-m)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            💾 Хранилище
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('statistics')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: activeTab === 'statistics' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'statistics' ? 'var(--font-weight-bold)' : 'normal',
+              borderBottom: activeTab === 'statistics' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              fontSize: 'var(--font-size-m)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            📊 Статистика
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('history')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              background: 'transparent',
+              color: activeTab === 'history' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'history' ? 'var(--font-weight-bold)' : 'normal',
+              borderBottom: activeTab === 'history' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
+              cursor: 'pointer',
+              fontSize: 'var(--font-size-m)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            📜 История
+          </button>
+        </div>
+
+        {/* Таб: Хранилище */}
+        {activeTab === 'storage' && (
+          <div style={{ 
+            padding: '24px', 
+            backgroundColor: 'var(--bg-secondary)', 
+            borderRadius: 'var(--radius-l)',
+            marginBottom: '24px'
+          }}>
+            <h3 className="h3" style={{ marginBottom: '16px' }}>💾 Хранилище</h3>
           
           <div style={{ marginBottom: '16px' }}>
             <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
@@ -350,10 +426,11 @@ export const SettingsPage = () => {
               </div>
             )}
           </div>
-        </div>
+          </div>
+        )}
 
-        {/* Статистика */}
-        {stats && (
+        {/* Таб: Статистика */}
+        {activeTab === 'statistics' && stats && (
           <div style={{ 
             padding: '24px', 
             backgroundColor: 'var(--bg-secondary)', 
@@ -408,21 +485,147 @@ export const SettingsPage = () => {
                 <p className="h2">{stats.categoryCount}</p>
               </div>
             </div>
+
+            {/* Топ метки */}
+            {topTags.length > 0 && (
+              <div style={{ marginTop: '32px' }}>
+                <h4 className="text-l" style={{ marginBottom: '16px', fontWeight: 'var(--font-weight-bold)' }}>
+                  🏆 Самые используемые метки
+                </h4>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: '12px' 
+                }}>
+                  {topTags.map((tag, index) => (
+                    <div 
+                      key={tag.id}
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: 'var(--radius-m)',
+                        border: '1px solid var(--border-default)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div>
+                        <span style={{ 
+                          marginRight: '8px',
+                          color: 'var(--text-secondary)',
+                          fontWeight: 'var(--font-weight-bold)'
+                        }}>
+                          #{index + 1}
+                        </span>
+                        <span className="text-m" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                          {tag.name}
+                        </span>
+                        <p className="text-s" style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {tag.categoryName}
+                        </p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                          {tag.cardCount}
+                        </p>
+                        <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                          карточек
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Топ коллекции */}
+            {topCollections.length > 0 && (
+              <div style={{ marginTop: '32px' }}>
+                <h4 className="text-l" style={{ marginBottom: '16px', fontWeight: 'var(--font-weight-bold)' }}>
+                  📚 Самые большие коллекции
+                </h4>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: '12px' 
+                }}>
+                  {topCollections.map((collection, index) => (
+                    <div 
+                      key={collection.id}
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: 'var(--radius-m)',
+                        border: '1px solid var(--border-default)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ 
+                          marginRight: '8px',
+                          color: 'var(--text-secondary)',
+                          fontWeight: 'var(--font-weight-bold)'
+                        }}>
+                          #{index + 1}
+                        </span>
+                        <span className="text-m" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                          {collection.name}
+                        </span>
+                        {collection.description && (
+                          <p className="text-s" style={{ 
+                            color: 'var(--text-secondary)', 
+                            marginTop: '2px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {collection.description}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right', marginLeft: '12px' }}>
+                        <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                          {collection.cardCount}
+                        </p>
+                        <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                          карточек
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Информация */}
-        <div style={{ 
-          padding: '24px', 
-          backgroundColor: 'var(--color-yellow-100)', 
-          borderRadius: 'var(--radius-l)',
-          marginTop: '24px'
-        }}>
-          <p className="text-m">
-            💡 <strong>Совет:</strong> Начните с создания категорий и меток в разделе "Метки", 
-            затем добавьте карточки через раздел "Добавить".
-          </p>
-        </div>
+        {/* Таб: История */}
+        {activeTab === 'history' && (
+          <div style={{ 
+            padding: '24px', 
+            backgroundColor: 'var(--bg-secondary)', 
+            borderRadius: 'var(--radius-l)' 
+          }}>
+            <h3 className="h3" style={{ marginBottom: '16px' }}>📜 История действий</h3>
+            
+            <div style={{ 
+              textAlign: 'center',
+              padding: '60px 24px',
+              color: 'var(--text-secondary)'
+            }}>
+              <p className="text-l" style={{ marginBottom: '12px' }}>
+                🚧 В разработке
+              </p>
+              <p className="text-m">
+                Здесь будет отображаться история ваших действий:<br/>
+                добавление карточек, создание коллекций, изменение меток.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
