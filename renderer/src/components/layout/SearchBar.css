@@ -23,6 +23,21 @@
 
 .searchbar__input-wrapper {
   width: 100%;
+  flex: 1;
+  min-width: 0; /* Важно для правильной работы flex */
+}
+
+/* Растягиваем сам input на всю ширину */
+.searchbar__input-wrapper .input-wrapper {
+  width: 100%;
+}
+
+.searchbar__input-wrapper .input-container {
+  width: 100%;
+}
+
+.searchbar__input-wrapper .input {
+  width: 100%;
 }
 
 /* ========== ВЫБРАННЫЕ МЕТКИ ========== */
