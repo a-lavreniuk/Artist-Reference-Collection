@@ -239,6 +239,12 @@ export interface ElectronAPI {
   onUpdateReady: (callback: () => void) => void;
   
   /**
+   * Подписаться на событие навигации от системного трея
+   * @param callback - Функция обратного вызова с путём для навигации
+   */
+  onNavigate: (callback: (path: string) => void) => void;
+  
+  /**
    * Установить загруженное обновление
    */
   installUpdate: () => Promise<void>;
@@ -301,6 +307,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onUpdateReady: (callback: () => void) => {
     ipcRenderer.on('update-ready', callback);
+  },
+  onNavigate: (callback: (path: string) => void) => {
+    ipcRenderer.on('navigate-to', (_event, path: string) => callback(path));
   },
   installUpdate: () => ipcRenderer.invoke('install-update')
 } as ElectronAPI);

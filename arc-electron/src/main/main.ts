@@ -135,13 +135,50 @@ function createTray(): void {
       type: 'separator'
     },
     {
-      label: 'Настройки',
+      label: 'Карточки',
       click: () => {
         if (mainWindow) {
           mainWindow.show();
           mainWindow.focus();
-          // Отправляем событие для навигации в настройки
-          mainWindow.webContents.send('navigate-to-settings');
+          mainWindow.webContents.send('navigate-to', '/cards');
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      label: 'Коллекции',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('navigate-to', '/collections');
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      label: 'Метки',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('navigate-to', '/tags');
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      label: 'Мудборд',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('navigate-to', '/moodboard');
+        } else {
+          createWindow();
         }
       }
     },
@@ -149,7 +186,22 @@ function createTray(): void {
       type: 'separator'
     },
     {
-      label: 'Выход',
+      label: 'Добавить',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('navigate-to', '/add');
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Закрыть ARC',
       click: () => {
         // Принудительный выход (не сворачиваем в трей)
         isQuitting = true;

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import {
   CardsPage,
   CollectionsPage,
@@ -16,6 +16,25 @@ import {
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary } from './components/common';
 import { useFileSystem, usePWA } from './hooks';
+
+/**
+ * Компонент для обработки навигации от системного трея
+ */
+function NavigationListener() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Подписываемся на события навигации от main процесса
+    if (window.electronAPI?.onNavigate) {
+      window.electronAPI.onNavigate((path: string) => {
+        console.log('[App] Навигация от трея:', path);
+        navigate(path);
+      });
+    }
+  }, [navigate]);
+
+  return null;
+}
 
 function App() {
   const {
@@ -114,8 +133,10 @@ function App() {
     <>
       <Router>
         <ErrorBoundary>
+          <NavigationListener />
           <Routes>
             <Route path="/" element={<CardsPage />} />
+            <Route path="/cards" element={<CardsPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/collections/:id" element={<CollectionDetailPage />} />
             <Route path="/tags" element={<TagsPage />} />

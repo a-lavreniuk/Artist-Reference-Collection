@@ -68,6 +68,7 @@ interface ElectronAPI {
   // === СОБЫТИЯ ===
   onUpdateAvailable: (callback: () => void) => void;
   onUpdateReady: (callback: () => void) => void;
+  onNavigate: (callback: (path: string) => void) => void;
   installUpdate: () => Promise<void>;
 }
 
