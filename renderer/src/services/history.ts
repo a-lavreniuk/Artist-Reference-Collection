@@ -6,6 +6,16 @@
 import type { HistoryActionType } from '../types';
 
 /**
+ * Получить рабочую директорию из localStorage
+ */
+function getWorkingDirectory(): string | undefined {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return undefined;
+  }
+  return localStorage.getItem('arc_working_directory') || undefined;
+}
+
+/**
  * Базовая функция для добавления записи в историю
  */
 async function logAction(
@@ -14,7 +24,8 @@ async function logAction(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    console.log('[History] Попытка записи в историю:', { action, description, metadata });
+    const workingDir = getWorkingDirectory();
+    console.log('[History] Попытка записи в историю:', { action, description, metadata, workingDir });
     
     if (!window.electronAPI) {
       console.error('[History] Electron API недоступен!');
@@ -26,7 +37,7 @@ async function logAction(
       return;
     }
     
-    await window.electronAPI.addHistoryEntry({
+    await window.electronAPI.addHistoryEntry(workingDir, {
       action,
       description,
       metadata
@@ -193,8 +204,9 @@ export async function getHistory(): Promise<Array<{
   metadata?: any;
 }>> {
   try {
+    const workingDir = getWorkingDirectory();
     if (window.electronAPI?.getHistory) {
-      return await window.electronAPI.getHistory();
+      return await window.electronAPI.getHistory(workingDir);
     }
     return [];
   } catch (error) {
@@ -208,8 +220,9 @@ export async function getHistory(): Promise<Array<{
  */
 export async function clearHistory(): Promise<void> {
   try {
+    const workingDir = getWorkingDirectory();
     if (window.electronAPI?.clearHistory) {
-      await window.electronAPI.clearHistory();
+      await window.electronAPI.clearHistory(workingDir);
       console.log('[History] История очищена');
     }
   } catch (error) {

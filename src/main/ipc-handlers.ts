@@ -1013,11 +1013,14 @@ export function registerIPCHandlers(): void {
 
   /**
    * Получить путь к файлу истории
-   * Файл history.json хранится в userData приложения
+   * Файл history.json хранится в рабочей папке рядом с данными
    */
-  function getHistoryFilePath(): string {
-    // Используем стандартную папку userData для хранения истории
-    // Это гарантирует, что файл всегда доступен независимо от рабочей папки
+  function getHistoryFilePath(workingDir?: string): string {
+    if (workingDir) {
+      // Храним в рабочей папке рядом с данными
+      return path.join(workingDir, 'history.json');
+    }
+    // Fallback на userData если рабочая папка не указана
     const userDataPath = app.getPath('userData');
     return path.join(userDataPath, 'history.json');
   }
@@ -1025,9 +1028,9 @@ export function registerIPCHandlers(): void {
   /**
    * Получить историю действий из JSON файла
    */
-  ipcMain.handle('get-history', async () => {
+  ipcMain.handle('get-history', async (_event, workingDir?: string) => {
     try {
-      const historyPath = getHistoryFilePath();
+      const historyPath = getHistoryFilePath(workingDir);
       console.log('[IPC] Чтение истории из:', historyPath);
 
       // Проверяем существование файла
@@ -1054,15 +1057,16 @@ export function registerIPCHandlers(): void {
    * Добавить запись в историю действий
    * Сохраняет максимум 1000 последних записей
    */
-  ipcMain.handle('add-history-entry', async (_event, entry: {
+  ipcMain.handle('add-history-entry', async (_event, workingDir: string | undefined, entry: {
     action: string;
     description: string;
     metadata?: any;
   }) => {
     try {
-      const historyPath = getHistoryFilePath();
+      const historyPath = getHistoryFilePath(workingDir);
       console.log('[IPC] Добавление записи в историю:', entry.description);
       console.log('[IPC] Путь к файлу истории:', historyPath);
+      console.log('[IPC] Рабочая директория:', workingDir);
 
       // Убеждаемся что директория существует
       const historyDir = path.dirname(historyPath);
@@ -1116,10 +1120,11 @@ export function registerIPCHandlers(): void {
   /**
    * Очистить всю историю действий
    */
-  ipcMain.handle('clear-history', async () => {
+  ipcMain.handle('clear-history', async (_event, workingDir?: string) => {
     try {
-      const historyPath = getHistoryFilePath();
+      const historyPath = getHistoryFilePath(workingDir);
       console.log('[IPC] Очистка истории');
+      console.log('[IPC] Путь к файлу истории:', historyPath);
 
       // Проверяем существование файла
       const exists = await fileExists(historyPath);
