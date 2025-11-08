@@ -36,6 +36,10 @@ function createWindow(): void {
   const initialWidth = Math.min(Math.max(screenWidth, MIN_WIDTH), MAX_WIDTH);
   const initialHeight = Math.min(Math.max(screenHeight, MIN_HEIGHT), MAX_HEIGHT);
 
+  const windowIconPath = path.join(__dirname, '../resources/icon.ico');
+  console.log('[WINDOW] Icon path:', windowIconPath);
+  console.log('[WINDOW] Icon exists:', require('fs').existsSync(windowIconPath));
+
   mainWindow = new BrowserWindow({
     width: initialWidth,
     height: initialHeight,
@@ -53,7 +57,7 @@ function createWindow(): void {
     },
     backgroundColor: '#0A0A0A', // Фон из палитры ARC (grayscale-950)
     title: 'ARC - Artist Reference Collection',
-    icon: path.join(__dirname, '../../resources/icon.ico')
+    icon: windowIconPath
   });
 
   // Загружаем React приложение
@@ -106,10 +110,13 @@ function createWindow(): void {
  */
 function createTray(): void {
   // Путь к иконке для трея (используем PNG для лучшей поддержки)
-  const iconPath = path.join(__dirname, '../../resources/icon.png');
+  const iconPath = path.join(__dirname, '../resources/icon.png');
+  console.log('[TRAY] Icon path:', iconPath);
+  console.log('[TRAY] Icon exists:', require('fs').existsSync(iconPath));
   
   // Загружаем иконку и устанавливаем размер 16x16 для трея
   const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+  console.log('[TRAY] Icon loaded, size:', icon.getSize());
   
   // Создаём трей
   tray = new Tray(icon);
