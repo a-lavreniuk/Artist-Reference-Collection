@@ -776,6 +776,7 @@ export function registerIPCHandlers(): void {
       async function calculateSize(dir: string, isCache: boolean = false): Promise<void> {
         try {
           const entries = await fs.readdir(dir, { withFileTypes: true });
+          console.log(`[IPC] Сканирование: ${dir} (найдено ${entries.length} элементов)`);
           
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
@@ -783,6 +784,7 @@ export function registerIPCHandlers(): void {
             if (entry.isDirectory()) {
               // Рекурсивно обходим папки
               const isCacheDir = entry.name === '_cache' || isCache;
+              console.log(`[IPC] Обход папки: ${entry.name} (isCache: ${isCacheDir})`);
               await calculateSize(fullPath, isCacheDir);
             } else if (entry.isFile()) {
               try {
@@ -793,24 +795,28 @@ export function registerIPCHandlers(): void {
                 
                 if (isCache) {
                   cacheSize += stats.size;
+                  console.log(`[IPC] Файл кэша: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
                 } else if (imageExtensions.includes(ext)) {
                   imagesSize += stats.size;
                   imageCount++;
+                  console.log(`[IPC] Изображение: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
                 } else if (videoExtensions.includes(ext)) {
                   videosSize += stats.size;
                   videoCount++;
+                  console.log(`[IPC] Видео: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
                 }
               } catch (error) {
                 // Пропускаем файлы с ошибками доступа
-                console.warn(`[IPC] Не удалось прочитать файл: ${fullPath}`);
+                console.warn(`[IPC] Не удалось прочитать файл: ${fullPath}`, error);
               }
             }
           }
         } catch (error) {
-          console.warn(`[IPC] Не удалось прочитать директорию: ${dir}`);
+          console.error(`[IPC] ОШИБКА чтения директории: ${dir}`, error);
         }
       }
       
+      console.log('[IPC] Начало сканирования:', workingDir);
       await calculateSize(workingDir);
       
       console.log('[IPC] Подсчёт завершён:', {
