@@ -48,34 +48,8 @@ export const CardsPage = () => {
     loadCards();
   }, []);
 
-  // Поиск с debounce (300мс)
-  useEffect(() => {
-    if (!searchValue.trim()) {
-      return; // Если поиск пустой, используем все карточки
-    }
-
-    const timeoutId = setTimeout(async () => {
-      try {
-        const results = await searchCardsAdvanced(searchValue);
-        setCards(results);
-      } catch (error) {
-        console.error('Ошибка поиска:', error);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchValue]);
-
-  // Сброс поиска при очистке
-  useEffect(() => {
-    if (!searchValue.trim()) {
-      const resetCards = async () => {
-        const allCards = await getAllCards();
-        setCards(allCards);
-      };
-      resetCards();
-    }
-  }, [searchValue]);
+  // Убираем поиск по тексту - теперь searchValue используется только для фильтрации меток в SearchDropdown
+  // Фильтрация карточек происходит только через selectedTags
 
   // Фильтрация карточек
   const filteredCards = useMemo(() => {

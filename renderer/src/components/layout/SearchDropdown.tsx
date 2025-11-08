@@ -16,6 +16,9 @@ import type { Tag, Category, Card } from '../../types';
 import './SearchDropdown.css';
 
 export interface SearchDropdownProps {
+  /** Поисковый запрос для фильтрации меток */
+  searchQuery: string;
+  
   /** Выбранные метки */
   selectedTags: string[];
   
@@ -41,6 +44,7 @@ interface CategoryWithTags extends Category {
  * Компонент SearchDropdown
  */
 export const SearchDropdown = ({
+  searchQuery,
   selectedTags,
   onTagSelect,
   onHistoryTagSelect,
@@ -176,9 +180,9 @@ export const SearchDropdown = ({
           <div className="search-dropdown__section search-dropdown__section--viewed">
             <h3 className="search-dropdown__title text-m">Недавно просмотренные</h3>
             <div className="search-dropdown__cards-row">
-              {recentCards.map((card) => (
+              {recentCards.map((card, index) => (
                 <button
-                  key={card.id}
+                  key={`recent-card-${card.id}-${index}`}
                   className="search-dropdown__card-thumb"
                   onClick={() => handleRecentCardClick(card)}
                   style={{ 
@@ -199,26 +203,52 @@ export const SearchDropdown = ({
 
         {/* Категории с метками */}
         <div className="search-dropdown__categories-section">
-          {categoriesWithTags.map((category) => (
-            <div key={category.id} className="search-dropdown__category-block">
-              <h3 className="search-dropdown__category-title text-m">{category.name}</h3>
-              <div className="search-dropdown__tags-row">
-                {category.tags.map((tag) => {
-                  const isSelected = selectedTags.includes(tag.id);
-                  
-                  return (
-                    <button
-                      key={tag.id}
-                      className={`search-dropdown__tag-button ${isSelected ? 'search-dropdown__tag-button--selected' : ''}`}
-                      onClick={() => onTagSelect(tag.id)}
-                    >
-                      <span className="text-s">{tag.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          {categoriesWithTags
+            .filter(category => {
+              // Фильтрация категорий по поисковому запросу
+              if (!searchQuery.trim()) return true;
+              const query = searchQuery.toLowerCase();
+              
+              // Показываем категорию если её название или хотя бы одна метка содержит запрос
+              const categoryMatches = category.name.toLowerCase().includes(query);
+              const hasMatchingTag = category.tags.some(tag => 
+                tag.name.toLowerCase().includes(query)
+              );
+              
+              return categoryMatches || hasMatchingTag;
+            })
+            .map((category) => {
+              // Фильтруем метки внутри категории по поисковому запросу
+              const filteredTags = searchQuery.trim()
+                ? category.tags.filter(tag => 
+                    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                : category.tags;
+              
+              // Не показываем категорию если в ней нет меток после фильтрации
+              if (filteredTags.length === 0) return null;
+              
+              return (
+                <div key={category.id} className="search-dropdown__category-block">
+                  <h3 className="search-dropdown__category-title text-m">{category.name}</h3>
+                  <div className="search-dropdown__tags-row">
+                    {filteredTags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag.id);
+                      
+                      return (
+                        <button
+                          key={tag.id}
+                          className={`search-dropdown__tag-button ${isSelected ? 'search-dropdown__tag-button--selected' : ''}`}
+                          onClick={() => onTagSelect(tag.id)}
+                        >
+                          <span className="text-s">{tag.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
         </div>
 
         {/* Пустое состояние */}

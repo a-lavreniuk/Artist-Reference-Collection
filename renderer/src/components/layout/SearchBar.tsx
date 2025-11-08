@@ -42,9 +42,11 @@ export const SearchBar = ({
   onSearchAction
 }: SearchBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState(value);
   const [tags, setTags] = useState<Tag[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
+  
+  // Используем значение из пропсов (из глобального контекста)
+  const searchValue = value || '';
 
   // Загрузка меток для отображения названий
   useEffect(() => {
@@ -74,7 +76,6 @@ export const SearchBar = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setSearchValue(newValue);
     onChange?.(newValue);
     
     // Открываем выпадающее меню при вводе
@@ -93,7 +94,6 @@ export const SearchBar = ({
   };
 
   const handleClear = () => {
-    setSearchValue('');
     onChange?.('');
   };
 
@@ -103,7 +103,6 @@ export const SearchBar = ({
   };
 
   const handleClearAll = async () => {
-    setSearchValue('');
     onChange?.('');
     onTagsChange?.([]);
     
@@ -142,6 +141,8 @@ export const SearchBar = ({
     // Вызываем навигацию на страницу карточек
     onSearchAction?.();
     
+    // Очищаем поисковый запрос и устанавливаем метки
+    onChange?.('');
     onTagsChange?.(tagIds);
     setIsOpen(false);
   };
@@ -226,6 +227,7 @@ export const SearchBar = ({
 
       {/* Выпадающее меню с метками */}
       <SearchDropdown
+        searchQuery={searchValue}
         selectedTags={selectedTags}
         onTagSelect={handleTagSelect}
         onHistoryTagSelect={handleHistoryTagSelect}

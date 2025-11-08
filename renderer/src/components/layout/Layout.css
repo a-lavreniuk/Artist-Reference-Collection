@@ -35,7 +35,7 @@
   /* Отображение */
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: stretch;
   
   /* Размеры */
   min-height: calc(var(--height-header) + var(--spacing-l));
@@ -52,6 +52,8 @@
 .layout__search {
   /* Поисковая строка на всю ширину header */
   width: 100%;
+  flex: 1;
+  display: flex;
 }
 
 /* ========== КОНТЕНТ ========== */
