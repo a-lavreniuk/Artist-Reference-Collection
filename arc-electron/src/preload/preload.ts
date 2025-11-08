@@ -120,6 +120,24 @@ export interface ElectronAPI {
     videoCount: number;
   }>;
   
+  /**
+   * Переместить рабочую папку в новое место
+   * Копирует все файлы из старой папки в новую
+   * @param oldDir - Старая рабочая папка
+   * @param newDir - Новая рабочая папка
+   * @returns Результат переноса
+   */
+  moveWorkingDirectory: (oldDir: string, newDir: string) => Promise<{
+    success: boolean;
+    copiedFiles: number;
+  }>;
+  
+  /**
+   * Подписаться на событие прогресса переноса папки
+   * @param callback - Функция обратного вызова с данными о прогрессе
+   */
+  onMoveDirectoryProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => void;
+  
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   
   /**
@@ -224,6 +242,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('export-file', sourcePath, defaultFileName),
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
   getDirectorySize: (workingDir: string) => ipcRenderer.invoke('get-directory-size', workingDir),
+  moveWorkingDirectory: (oldDir: string, newDir: string) => ipcRenderer.invoke('move-working-directory', oldDir, newDir),
+  onMoveDirectoryProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => {
+    ipcRenderer.on('move-directory-progress', (_event, data) => callback(data));
+  },
   
   // Резервное копирование
   createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => 

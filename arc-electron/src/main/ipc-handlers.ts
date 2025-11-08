@@ -756,6 +756,88 @@ export function registerIPCHandlers(): void {
   });
 
   /**
+   * Переместить рабочую папку в новое место
+   * Копирует все файлы и папки из старой директории в новую
+   */
+  ipcMain.handle('move-working-directory', async (event, oldDir: string, newDir: string) => {
+    try {
+      console.log('[IPC] Перенос рабочей папки...');
+      console.log('[IPC] Из:', oldDir);
+      console.log('[IPC] В:', newDir);
+
+      // Проверяем что старая папка существует
+      try {
+        await fs.access(oldDir);
+      } catch {
+        throw new Error('Старая рабочая папка недоступна');
+      }
+
+      // Создаём новую папку
+      await fs.mkdir(newDir, { recursive: true });
+
+      // Подсчитываем количество файлов для прогресса
+      let totalFiles = 0;
+      let copiedFiles = 0;
+
+      async function countFiles(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await countFiles(fullPath);
+          } else {
+            totalFiles++;
+          }
+        }
+      }
+
+      await countFiles(oldDir);
+      console.log(`[IPC] Найдено файлов для копирования: ${totalFiles}`);
+
+      // Рекурсивное копирование с прогрессом
+      async function copyDirectory(src: string, dest: string): Promise<void> {
+        const entries = await fs.readdir(src, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          
+          if (entry.isDirectory()) {
+            await fs.mkdir(destPath, { recursive: true });
+            await copyDirectory(srcPath, destPath);
+          } else if (entry.isFile()) {
+            await fs.copyFile(srcPath, destPath);
+            copiedFiles++;
+            
+            const percent = Math.round((copiedFiles / totalFiles) * 100);
+            event.sender.send('move-directory-progress', {
+              percent,
+              copied: copiedFiles,
+              total: totalFiles
+            });
+            
+            if (copiedFiles % 10 === 0) {
+              console.log(`[IPC] Скопировано: ${copiedFiles}/${totalFiles} (${percent}%)`);
+            }
+          }
+        }
+      }
+
+      await copyDirectory(oldDir, newDir);
+      
+      console.log('[IPC] Все файлы скопированы');
+      
+      return {
+        success: true,
+        copiedFiles: copiedFiles
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка переноса папки:', error);
+      throw error;
+    }
+  });
+
+  /**
    * Получить информацию о размерах файлов в рабочей папке
    * Подсчитывает размеры изображений, видео и превью
    */

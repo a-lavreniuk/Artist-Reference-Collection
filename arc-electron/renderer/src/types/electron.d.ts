@@ -31,6 +31,11 @@ interface ElectronAPI {
     imageCount: number;
     videoCount: number;
   }>;
+  moveWorkingDirectory: (oldDir: string, newDir: string) => Promise<{
+    success: boolean;
+    copiedFiles: number;
+  }>;
+  onMoveDirectoryProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => void;
   
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{

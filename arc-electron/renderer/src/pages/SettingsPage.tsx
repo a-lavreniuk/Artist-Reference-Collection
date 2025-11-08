@@ -36,6 +36,9 @@ export const SettingsPage = () => {
     imageCount: number;
     videoCount: number;
   } | null>(null);
+  const [isMovingDirectory, setIsMovingDirectory] = useState(false);
+  const [moveProgress, setMoveProgress] = useState(0);
+  const [moveMessage, setMoveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Загружаем статистику и размеры при первом открытии или смене папки
@@ -48,6 +51,13 @@ export const SettingsPage = () => {
     if (window.electronAPI?.onBackupProgress) {
       window.electronAPI.onBackupProgress((data) => {
         setBackupProgress(data.percent);
+      });
+    }
+    
+    // Подписываемся на прогресс переноса папки
+    if (window.electronAPI?.onMoveDirectoryProgress) {
+      window.electronAPI.onMoveDirectoryProgress((data) => {
+        setMoveProgress(data.percent);
       });
     }
   }, [directoryPath, activeTab]);
@@ -91,35 +101,98 @@ export const SettingsPage = () => {
   const handleChangeDirectory = async () => {
     const hasCards = stats && stats.totalCards > 0;
     
+    if (!window.electronAPI) {
+      setMessage('❌ Electron API недоступен');
+      return;
+    }
+
+    // Если есть карточки, предлагаем перенос
     if (hasCards && directoryPath) {
-      // Если есть карточки, предупреждаем о последствиях
       const confirmed = confirm(
-        '⚠️ ВНИМАНИЕ! Смена рабочей папки\n\n' +
-        'У вас уже есть карточки в текущей папке.\n\n' +
-        'Смена папки:\n' +
-        '✅ Создаст новую папку для НОВЫХ файлов\n' +
-        '❌ НЕ перенесёт существующие файлы\n' +
-        '❌ Старые карточки перестанут работать\n\n' +
-        'Рекомендация:\n' +
-        '1. Создайте backup перед сменой папки\n' +
-        '2. Вручную переместите файлы в новую папку\n' +
-        '3. Восстановите backup в новой папке\n\n' +
-        'Продолжить смену папки?'
+        '📦 Перенос рабочей папки\n\n' +
+        `Текущая папка: ${directoryPath}\n` +
+        `Карточек: ${stats.totalCards}\n\n` +
+        'Система автоматически:\n' +
+        '✅ Скопирует ВСЕ файлы в новую папку\n' +
+        '✅ Обновит пути в базе данных\n' +
+        '✅ Сохранит работоспособность карточек\n\n' +
+        'Это может занять несколько минут.\n\n' +
+        'Продолжить?'
       );
       
       if (!confirmed) {
         return;
       }
-    }
-    
-    const oldPath = directoryPath;
-    await requestDirectory();
-    
-    // Если папка изменилась, перезагружаем данные
-    if (directoryPath !== oldPath) {
+
+      try {
+        setIsMovingDirectory(true);
+        setMoveProgress(0);
+        setMoveMessage('🔄 Выбор новой папки...');
+
+        // 1. Выбираем новую папку
+        const newPath = await window.electronAPI.selectWorkingDirectory();
+        
+        if (!newPath) {
+          setIsMovingDirectory(false);
+          setMoveMessage(null);
+          return;
+        }
+
+        if (newPath === directoryPath) {
+          setIsMovingDirectory(false);
+          setMoveMessage('❌ Выбрана та же папка');
+          setTimeout(() => setMoveMessage(null), 2000);
+          return;
+        }
+
+        setMoveMessage(`🔄 Копирование файлов из\n${directoryPath}\nв\n${newPath}`);
+
+        // 2. Копируем все файлы
+        const result = await window.electronAPI.moveWorkingDirectory(directoryPath, newPath);
+
+        if (!result.success) {
+          setMoveMessage('❌ Ошибка переноса файлов');
+          setIsMovingDirectory(false);
+          return;
+        }
+
+        setMoveMessage('🔄 Обновление путей в базе данных...');
+
+        // 3. Обновляем пути в базе данных
+        const allCards = await db.cards.toArray();
+        for (const card of allCards) {
+          // Извлекаем относительный путь (год/месяц/день/файл)
+          const match = card.filePath.match(/(\d{4}[\\/]\d{2}[\\/]\d{2}[\\/].+)$/);
+          if (match) {
+            const newFilePath = newPath + '\\' + match[1].replace(/\//g, '\\');
+            await db.cards.update(card.id, { filePath: newFilePath });
+          }
+        }
+
+        console.log(`[Settings] Обновлено путей: ${allCards.length}`);
+
+        // 4. Обновляем рабочую папку в настройках
+        localStorage.setItem('arc-working-directory', newPath);
+        
+        setMoveMessage(`✅ Перенос завершён! Скопировано файлов: ${result.copiedFiles}`);
+        
+        setTimeout(() => {
+          // Перезагружаем страницу для обновления всех данных
+          window.location.reload();
+        }, 2000);
+        
+      } catch (error) {
+        console.error('[Settings] Ошибка переноса папки:', error);
+        setMoveMessage('❌ Ошибка переноса: ' + (error as Error).message);
+      } finally {
+        setIsMovingDirectory(false);
+      }
+    } else {
+      // Если нет карточек, просто выбираем папку
+      await requestDirectory();
       await loadDirectorySizes();
-      setMessage('✅ Рабочая папка обновлена. Используйте Backup для переноса файлов.');
-      setTimeout(() => setMessage(null), 5000);
+      setMessage('✅ Рабочая папка установлена');
+      setTimeout(() => setMessage(null), 2000);
     }
   };
 
@@ -483,30 +556,53 @@ export const SettingsPage = () => {
             <Button
               variant="secondary"
               onClick={handleChangeDirectory}
+              disabled={isMovingDirectory}
             >
-              {directoryHandle ? 'Изменить папку' : 'Выбрать папку'}
+              {isMovingDirectory ? 'Перенос...' : (directoryHandle ? 'Перенести папку' : 'Выбрать папку')}
             </Button>
             
             <Button
               variant="danger"
               onClick={handleClearCache}
+              disabled={isMovingDirectory}
             >
               Очистить базу данных
             </Button>
           </div>
 
-          {/* Предупреждение о смене папки */}
-          {directoryHandle && stats && stats.totalCards > 0 && (
+          {/* Прогресс переноса */}
+          {isMovingDirectory && (
+            <div style={{ marginTop: '16px' }}>
+              <div style={{
+                width: '100%',
+                height: '8px',
+                backgroundColor: 'var(--color-grayscale-200)',
+                borderRadius: 'var(--radius-s)',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${moveProgress}%`,
+                  height: '100%',
+                  backgroundColor: 'var(--bg-button-primary)',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+              <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
+                {moveProgress}%
+              </p>
+            </div>
+          )}
+
+          {/* Сообщение о переносе */}
+          {moveMessage && (
             <div style={{
               padding: '12px 16px',
-              backgroundColor: 'var(--color-yellow-100)',
+              backgroundColor: moveMessage.includes('✅') ? 'var(--color-green-100)' : moveMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
               borderRadius: 'var(--radius-s)',
-              marginTop: '16px'
+              marginTop: '16px',
+              whiteSpace: 'pre-line'
             }}>
-              <p className="text-s">
-                ⚠️ <strong>Важно:</strong> Смена папки НЕ переносит существующие файлы. 
-                Используйте Backup → Восстановить для переноса в новое место.
-              </p>
+              <p className="text-s">{moveMessage}</p>
             </div>
           )}
 
