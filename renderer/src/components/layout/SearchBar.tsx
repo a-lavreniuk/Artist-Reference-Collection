@@ -5,6 +5,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Input } from '../common';
+import { SearchDropdown } from './SearchDropdown';
+import { addSearchHistory, getAllTags } from '../../services/db';
+import type { Tag } from '../../types';
 import './SearchBar.css';
 
 export interface SearchBarProps {
@@ -32,7 +35,22 @@ export const SearchBar = ({
 }: SearchBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(value);
+  const [tags, setTags] = useState<Tag[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Загрузка меток для отображения названий
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const allTags = await getAllTags();
+        setTags(allTags);
+      } catch (error) {
+        console.error('[SearchBar] Ошибка загрузки меток:', error);
+      }
+    };
+
+    loadTags();
+  }, []);
 
   // Закрытие при клике вне компонента
   useEffect(() => {
@@ -50,6 +68,11 @@ export const SearchBar = ({
     const newValue = e.target.value;
     setSearchValue(newValue);
     onChange?.(newValue);
+    
+    // Открываем выпадающее меню при вводе
+    if (!isOpen) {
+      setIsOpen(true);
+    }
   };
 
   const handleInputFocus = () => {
@@ -66,10 +89,50 @@ export const SearchBar = ({
     onTagsChange?.(newTags);
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     setSearchValue('');
     onChange?.('');
     onTagsChange?.([]);
+    
+    // Сохраняем в историю если были метки
+    if (selectedTags.length > 0) {
+      try {
+        await addSearchHistory('', selectedTags);
+      } catch (error) {
+        console.error('[SearchBar] Ошибка сохранения истории:', error);
+      }
+    }
+  };
+
+  // Обработчик выбора метки из выпадающего меню
+  const handleTagSelect = (tagId: string) => {
+    if (selectedTags.includes(tagId)) {
+      // Убираем метку
+      handleRemoveTag(tagId);
+    } else {
+      // Добавляем метку
+      const newTags = [...selectedTags, tagId];
+      onTagsChange?.(newTags);
+      
+      // Сохраняем в историю
+      addSearchHistory(searchValue, newTags).catch(error => {
+        console.error('[SearchBar] Ошибка сохранения истории:', error);
+      });
+    }
+  };
+
+  // Обработчик выбора из истории
+  const handleHistorySelect = (query: string, tagIds: string[]) => {
+    setSearchValue(query);
+    onChange?.(query);
+    onTagsChange?.(tagIds);
+    setIsOpen(false);
+  };
+
+  // Получить название метки по ID
+  const getTagName = (tagId: string): string => {
+    const tag = tags.find(t => t.id === tagId);
+    return tag?.name || `Метка ${tagId}`;
   };
 
   return (
@@ -105,7 +168,7 @@ export const SearchBar = ({
           <div className="searchbar__selected-tags">
             {selectedTags.map((tagId) => (
               <div key={tagId} className="searchbar__selected-tag">
-                <span className="searchbar__tag-text">Метка {tagId}</span>
+                <span className="searchbar__tag-text">{getTagName(tagId)}</span>
                 <button
                   className="searchbar__tag-remove"
                   onClick={() => handleRemoveTag(tagId)}
@@ -133,18 +196,14 @@ export const SearchBar = ({
         )}
       </div>
 
-      {/* Выпадающее меню с метками (будет реализовано позже) */}
-      {isOpen && (
-        <div className="searchbar__dropdown">
-          <div className="searchbar__dropdown-content">
-            <p className="searchbar__empty-message text-s">
-              Меню поиска будет реализовано в следующих этапах.
-              <br />
-              Здесь будут отображаться категории, метки и история поиска.
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Выпадающее меню с метками */}
+      <SearchDropdown
+        searchQuery={searchValue}
+        selectedTags={selectedTags}
+        onTagSelect={handleTagSelect}
+        onHistorySelect={handleHistorySelect}
+        isVisible={isOpen}
+      />
     </div>
   );
 };
