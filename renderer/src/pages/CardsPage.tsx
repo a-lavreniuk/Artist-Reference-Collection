@@ -5,17 +5,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards, searchCardsAdvanced } from '../services/db';
+import { getAllCards } from '../services/db';
 import { useSearch } from '../contexts';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const CardsPage = () => {
   // Используем глобальный контекст поиска
   const {
-    searchValue,
-    setSearchValue,
     selectedTags,
-    setSelectedTags,
     viewingCard,
     isModalOpen,
     handleCardClick: handleSearchCardClick,
@@ -99,22 +96,13 @@ export const CardsPage = () => {
     // Перезагружаем карточки
     const allCards = await getAllCards();
     setCards(allCards);
-    
-    // Обновляем просматриваемую карточку
-    if (viewingCard) {
-      const updatedCard = allCards.find(c => c.id === viewingCard.id);
-      if (updatedCard) {
-        setViewingCard(updatedCard);
-      }
-    }
   };
 
   // Обработчик удаления карточки
   const handleCardDeleted = async () => {
     const allCards = await getAllCards();
     setCards(allCards);
-    setViewingCard(null);
-    setIsModalOpen(false);
+    handleCloseModal();
   };
 
   // Обработчик выбора карточки
@@ -174,7 +162,7 @@ export const CardsPage = () => {
         onCardUpdated={handleCardUpdated}
         onCardDeleted={handleCardDeleted}
         onSimilarCardClick={(card) => {
-          setViewingCard(card);
+          handleSearchCardClick(card);
         }}
       />
     </Layout>

@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
-import { Button, Input } from '../components/common';
+import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getCollection, getAllCards, deleteCollection, updateCollection } from '../services/db';
 import { logDeleteCollection, logRenameCollection } from '../services/history';
@@ -27,10 +27,6 @@ export const CollectionDetailPage = () => {
   
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Состояние редактирования
-  const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState('');
 
   // Загрузка коллекции и карточек
   useEffect(() => {
