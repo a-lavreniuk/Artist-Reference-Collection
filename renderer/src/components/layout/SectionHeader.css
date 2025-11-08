@@ -181,20 +181,12 @@
 /* Примечание: отступы НЕ меняются на разных разрешениях */
 /* Меняются только размеры контента */
 
-@media (max-width: 2200px) {
-  .section-header__title {
-    font-size: 32px;
-  }
-}
+/* Размеры текста и элементов НЕ меняются на разных разрешениях */
 
 @media (max-width: 1920px) {
-  .section-header__title {
-    font-size: 28px;
-  }
-  
-  /* Скрываем текст в кнопках фильтров, оставляем только иконки */
-  .section-header__filter-button span {
+  /* Можно скрыть текст в кнопках фильтров если нужно больше места */
+  /* .section-header__filter-button span {
     display: none;
-  }
+  } */
 }
 

@@ -243,28 +243,8 @@ img {
 
 /* ========== АДАПТИВНОСТЬ ========== */
 
-@media (max-width: 1920px) {
-  body {
-    font-size: 15px;
-  }
-}
+/* Размеры шрифтов НЕ меняются на разных разрешениях */
+/* Приложение работает на всех разрешениях от 1920×1080 до 2560×1440 */
 
-/* Минимальный размер окна */
-@media (max-width: 1919px), (max-height: 1079px) {
-  body::before {
-    content: 'Минимальное разрешение: 1920×1080';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--bg-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-l);
-    color: var(--text-secondary);
-    z-index: 9999;
-  }
-}
+/* Минимальный размер окна убран - приложение работает всегда */
 
