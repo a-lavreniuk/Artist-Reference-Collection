@@ -185,7 +185,8 @@ export const CardsPage = () => {
         value: searchValue,
         onChange: setSearchValue,
         selectedTags,
-        onTagsChange: setSelectedTags
+        onTagsChange: setSelectedTags,
+        onCardClick: handleCardClick
       }}
     >
       <MasonryGrid

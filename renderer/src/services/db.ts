@@ -453,8 +453,13 @@ export async function addSearchHistory(query: string, tagIds: string[]): Promise
 
 /**
  * Добавить запись в историю просмотров
+ * Удаляет старые записи для той же карточки, чтобы избежать дубликатов
  */
 export async function addViewHistory(cardId: string): Promise<void> {
+  // Удаляем все старые записи для этой карточки
+  await db.viewHistory.where('cardId').equals(cardId).delete();
+  
+  // Добавляем новую запись
   const history: ViewHistory = {
     id: `view_${Date.now()}`,
     cardId,

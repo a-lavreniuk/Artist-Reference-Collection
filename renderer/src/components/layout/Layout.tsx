@@ -26,6 +26,7 @@ export interface LayoutProps {
     onChange?: (value: string) => void;
     selectedTags?: string[];
     onTagsChange?: (tags: string[]) => void;
+    onCardClick?: (card: any) => void;
   };
 }
 

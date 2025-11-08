@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Input } from '../common';
 import { SearchDropdown } from './SearchDropdown';
 import { addSearchHistory, getAllTags } from '../../services/db';
-import type { Tag } from '../../types';
+import type { Tag, Card } from '../../types';
 import './SearchBar.css';
 
 export interface SearchBarProps {
@@ -22,6 +22,9 @@ export interface SearchBarProps {
   
   /** Обработчик выбора меток */
   onTagsChange?: (tags: string[]) => void;
+  
+  /** Обработчик клика по карточке из истории */
+  onCardClick?: (card: Card) => void;
 }
 
 /**
@@ -31,7 +34,8 @@ export const SearchBar = ({
   value = '',
   onChange,
   selectedTags = [],
-  onTagsChange
+  onTagsChange,
+  onCardClick
 }: SearchBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(value);
@@ -128,9 +132,11 @@ export const SearchBar = ({
   };
 
   // Обработчик клика по недавно просмотренной карточке
-  const handleRecentCardClick = () => {
+  const handleRecentCardClick = (card: Card) => {
     // Закрываем меню
     setIsOpen(false);
+    // Открываем карточку
+    onCardClick?.(card);
   };
 
   // Получить название метки по ID
