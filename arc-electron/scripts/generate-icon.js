@@ -34,7 +34,7 @@ async function generateIcon() {
       const pngBuffer = await sharp(svgBuffer)
         .resize(size, size, {
           fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 0 } // Прозрачный фон
+          background: { r: 255, g: 255, b: 255, alpha: 1 } // Белый фон для лучшей видимости
         })
         .png()
         .toBuffer();
