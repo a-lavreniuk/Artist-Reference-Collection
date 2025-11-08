@@ -87,7 +87,7 @@
 .sidebar__item:hover .sidebar__tooltip {
   opacity: 1;
   visibility: visible;
-  transform: translateX(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 /* Active */
@@ -133,11 +133,10 @@
 
 .sidebar__tooltip {
   /* Позиционирование */
-  position: absolute;
-  left: calc(100% + var(--spacing-m));
-  top: 50%;
+  position: fixed; /* Изменено с absolute на fixed для выхода из stacking context sidebar */
+  left: calc(var(--width-sidebar) + var(--spacing-m));
   transform: translateY(-50%) translateX(-8px);
-  z-index: 1000; /* Выше всех элементов включая поисковую строку */
+  z-index: var(--z-tooltip); /* Выше всех элементов */
   
   /* Типографика */
   font-size: var(--font-size-s);

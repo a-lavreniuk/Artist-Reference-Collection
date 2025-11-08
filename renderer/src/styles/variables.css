@@ -149,12 +149,13 @@
   /* ========== Z-INDEX ========== */
   
   --z-base: 0;
-  --z-sidebar: 10;
   --z-header: 20;
   --z-dropdown: 30;
   --z-modal: 40;
   --z-overlay: 39;
   --z-toast: 50;
+  --z-sidebar: 100; /* Sidebar и его тултипы выше всего кроме модалов и toast */
+  --z-tooltip: 110;
 
   /* ========== ГАЛЕРЕЯ ========== */
   
