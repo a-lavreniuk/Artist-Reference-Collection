@@ -582,11 +582,18 @@ export function registerIPCHandlers(): void {
         console.log('[IPC] База данных добавлена в архив');
 
         // 2. Добавляем всю рабочую папку в архив
-        archive.directory(workingDir, false);
-        console.log('[IPC] Файлы добавлены в архив');
+        // Используем glob для надёжного добавления всех файлов
+        console.log('[IPC] Добавление файлов в архив...');
+        archive.glob('**/*', {
+          cwd: workingDir,
+          dot: true, // Включая скрытые файлы
+          ignore: [] // Не игнорируем ничего
+        });
+        console.log('[IPC] Команда добавления файлов выполнена');
 
         // Завершаем архивирование
         archive.finalize();
+        console.log('[IPC] Finalize вызван, ждём завершения...');
       });
     } catch (error) {
       console.error('[IPC] Ошибка создания backup:', error);
