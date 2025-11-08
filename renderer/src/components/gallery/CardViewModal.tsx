@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
-import { Button, Tag } from '../common';
+import { Button, Tag, Icon } from '../common';
 import type { Card, Tag as TagType, Collection } from '../../types';
 import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
@@ -508,14 +508,11 @@ export const CardViewModal = ({
               fullWidth
               onClick={handleToggleMoodboard}
               iconLeft={
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z"
-                    fill={card.inMoodboard ? 'currentColor' : 'none'}
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  />
-                </svg>
+                <Icon 
+                  name={card.inMoodboard ? 'bookmark-minus' : 'bookmark-plus'} 
+                  size={24} 
+                  variant="border" 
+                />
               }
             >
               {card.inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}

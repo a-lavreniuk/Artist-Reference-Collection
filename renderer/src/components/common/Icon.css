@@ -1,0 +1,84 @@
+/**
+ * Стили для компонента Icon
+ */
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: currentColor;
+  vertical-align: middle;
+  transition: color var(--transition-fast);
+  line-height: 0;
+}
+
+/* Размеры */
+.icon--16 {
+  width: 16px;
+  height: 16px;
+}
+
+.icon--24 {
+  width: 24px;
+  height: 24px;
+}
+
+/* Стили обводки/заливки управляются через currentColor в SVG */
+.icon--border {
+  /* Стиль с обводкой (stroke) - все элементы с stroke="currentColor" */
+}
+
+.icon--fill {
+  /* Стиль с заливкой (fill) - все элементы с fill="currentColor" */
+}
+
+/* SVG внутри иконки - полный размер контейнера */
+.icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+}
+
+/* Все SVG элементы должны наследовать цвет */
+.icon svg path,
+.icon svg circle,
+.icon svg rect,
+.icon svg line,
+.icon svg polyline,
+.icon svg polygon {
+  /* Цвет наследуется через currentColor в атрибутах stroke/fill */
+  color: inherit;
+}
+
+/* Адаптация под разные контексты */
+.button .icon,
+.sidebar__icon .icon {
+  transition: transform 0.2s ease, color var(--transition-fast);
+}
+
+.button:hover .icon,
+.sidebar__item:hover .icon {
+  transform: scale(1.05);
+}
+
+.button:active .icon,
+.sidebar__item:active .icon {
+  transform: scale(0.95);
+}
+
+/* Для анимации загрузки */
+@keyframes icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.icon--spinning {
+  animation: icon-spin 1s linear infinite;
+}
+

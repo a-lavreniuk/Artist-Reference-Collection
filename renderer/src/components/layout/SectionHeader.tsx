@@ -4,7 +4,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { Button } from '../common';
+import { Button, Icon } from '../common';
 import type { ViewMode, ContentFilter } from '../../types';
 import './SectionHeader.css';
 
@@ -64,17 +64,7 @@ export const SectionHeader = ({
             variant="ghost"
             size="medium"
             onClick={backButton.onClick}
-            iconLeft={
-              <svg viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M19 12H5M5 12L12 19M5 12L12 5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            }
+            iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
           >
             {backButton.label}
           </Button>
@@ -95,12 +85,7 @@ export const SectionHeader = ({
               onClick={() => viewMode.onChange('standard')}
               title="Стандартный вид"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="7" height="7" stroke="currentColor" strokeWidth="2" />
-                <rect x="14" y="3" width="7" height="7" stroke="currentColor" strokeWidth="2" />
-                <rect x="3" y="14" width="7" height="7" stroke="currentColor" strokeWidth="2" />
-                <rect x="14" y="14" width="7" height="7" stroke="currentColor" strokeWidth="2" />
-              </svg>
+              <Icon name="grid-default" size={24} variant="border" />
             </button>
             <button
               className={`section-header__view-button ${
@@ -109,17 +94,7 @@ export const SectionHeader = ({
               onClick={() => viewMode.onChange('compact')}
               title="Компактный вид"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="10" y="3" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="17" y="3" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="3" y="10" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="10" y="10" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="17" y="10" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="3" y="17" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="10" y="17" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-                <rect x="17" y="17" width="4" height="4" stroke="currentColor" strokeWidth="2" />
-              </svg>
+              <Icon name="grid-small" size={24} variant="border" />
             </button>
           </div>
         )}
@@ -138,9 +113,7 @@ export const SectionHeader = ({
               }`}
               onClick={() => contentFilter.onChange('all')}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
-              </svg>
+              <Icon name="images" size={24} variant="border" />
               <span>Всё</span>
               {contentFilter.counts && contentFilter.counts.all > 0 && (
                 <span className="section-header__filter-count">
@@ -154,14 +127,7 @@ export const SectionHeader = ({
               }`}
               onClick={() => contentFilter.onChange('images')}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Icon name="image" size={24} variant="border" />
               <span>Изображения</span>
               {contentFilter.counts && contentFilter.counts.images > 0 && (
                 <span className="section-header__filter-count">
@@ -175,14 +141,7 @@ export const SectionHeader = ({
               }`}
               onClick={() => contentFilter.onChange('videos')}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M8 5V19L19 12L8 5Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Icon name="play-circle" size={24} variant="border" />
               <span>Видео</span>
               {contentFilter.counts && contentFilter.counts.videos > 0 && (
                 <span className="section-header__filter-count">

@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Button, Tag, Input } from '../common';
+import { Button, Tag, Input, Icon } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
 import { logImportFiles } from '../../services/history';
 import { useFileSystem } from '../../hooks';
@@ -352,15 +352,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
           onClick={() => fileInputRef.current?.click()}
         >
           <div className="add-card-flow__dropzone-content">
-            <svg width="96" height="96" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M21 15V19C21 19.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V16M17 8L12 3M12 3L7 8M12 3V15"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <Icon name="import" size={24} variant="border" style={{ width: 96, height: 96 }} />
             <h3 className="h3">Перетащите файлы сюда</h3>
             <p className="text-m" style={{ color: 'var(--text-secondary)' }}>
               или нажмите чтобы выбрать файлы
@@ -401,9 +393,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
               )}
               {item.configured && (
                 <div className="add-card-flow__queue-check">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M13 4L6 11L3 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <Icon name="check" size={16} variant="border" />
                 </div>
               )}
               <button
@@ -413,9 +403,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
                   handleRemoveFromQueue(index);
                 }}
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+                <Icon name="x" size={16} variant="border" />
               </button>
             </div>
           ))}

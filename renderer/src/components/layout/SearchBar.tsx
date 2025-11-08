@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Input } from '../common';
+import { Input, Icon } from '../common';
 import { SearchDropdown } from './SearchDropdown';
 import { addSearchHistory, getAllTags } from '../../services/db';
 import type { Tag, Card } from '../../types';
@@ -201,17 +201,7 @@ export const SearchBar = ({
             onClear={handleClear}
             clearable
             fullWidth
-            iconLeft={
-              <svg viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            }
+            iconLeft={<Icon name="search" size={24} variant="border" />}
           />
         </div>
 
@@ -226,15 +216,7 @@ export const SearchBar = ({
                   onClick={() => handleRemoveTag(tagId)}
                   aria-label="Удалить метку"
                 >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <path
-                      d="M9 3L3 9M3 3L9 9"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <Icon name="x" size={16} variant="border" />
                 </button>
               </div>
             ))}

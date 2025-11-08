@@ -97,9 +97,9 @@
   box-shadow: var(--shadow-s);
 }
 
-.section-header__view-button svg {
-  width: 20px;
-  height: 20px;
+.section-header__view-button .icon {
+  width: 24px;
+  height: 24px;
 }
 
 /* ========== ФИЛЬТР КОНТЕНТА ========== */
@@ -137,9 +137,9 @@
   color: var(--text-light);
 }
 
-.section-header__filter-button svg {
-  width: 20px;
-  height: 20px;
+.section-header__filter-button .icon {
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
 }
 
