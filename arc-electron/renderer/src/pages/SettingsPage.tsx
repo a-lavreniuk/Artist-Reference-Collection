@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { useFileSystem } from '../hooks';
@@ -15,6 +16,7 @@ type TagWithCategory = Tag & { categoryName: string };
 type CollectionWithCount = Collection & { cardCount: number };
 
 export const SettingsPage = () => {
+  const navigate = useNavigate();
   const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
@@ -174,12 +176,12 @@ export const SettingsPage = () => {
         // 4. Обновляем рабочую папку в настройках (правильный ключ!)
         localStorage.setItem('arc_working_directory', newPath);
         
-        setMoveMessage(`✅ Перенос завершён! Скопировано файлов: ${result.copiedFiles}`);
+        setMoveMessage(`✅ Перенос завершён! Скопировано файлов: ${result.copiedFiles}. Переход в галерею...`);
         
         setTimeout(() => {
-          // Перезагружаем страницу для обновления всех данных
-          window.location.reload();
-        }, 2000);
+          // Переходим в галерею для просмотра карточек
+          navigate('/cards');
+        }, 1500);
         
       } catch (error) {
         console.error('[Settings] Ошибка переноса папки:', error);
@@ -295,6 +297,10 @@ export const SettingsPage = () => {
       if (response.success) {
         const sizeMB = Math.round(response.size / 1024 / 1024);
         setBackupMessage(`✅ Backup создан! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
+        
+        // Открываем папку с backup в проводнике
+        await window.electronAPI.openFileLocation(selectedPath);
+        
         setTimeout(() => setBackupMessage(null), 5000);
       } else {
         setBackupMessage('❌ Ошибка создания backup');
@@ -372,13 +378,13 @@ export const SettingsPage = () => {
       localStorage.setItem('arc_working_directory', targetPath);
       console.log('[Settings] Рабочая папка обновлена в localStorage:', targetPath);
 
-      setRestoreMessage('✅ Восстановление завершено! Обновите страницу.');
+      setRestoreMessage('✅ Восстановление завершено! Переход в галерею...');
       await loadStats();
       
       setTimeout(() => {
-        // Перезагружаем страницу чтобы обновить все данные
-        window.location.reload();
-      }, 2000);
+        // Переходим в галерею для просмотра восстановленных карточек
+        navigate('/cards');
+      }, 1500);
     } catch (error) {
       console.error('Ошибка восстановления:', error);
       setRestoreMessage('❌ Ошибка восстановления: ' + (error as Error).message);
