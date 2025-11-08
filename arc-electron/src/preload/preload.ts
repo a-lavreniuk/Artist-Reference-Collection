@@ -138,6 +138,25 @@ export interface ElectronAPI {
    */
   onMoveDirectoryProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => void;
   
+  /**
+   * Экспортировать мудборд в отдельную папку
+   * @param filePaths - Массив путей к файлам для экспорта
+   * @param targetDir - Целевая папка для экспорта
+   * @returns Результат экспорта
+   */
+  exportMoodboard: (filePaths: string[], targetDir: string) => Promise<{
+    success: boolean;
+    copiedCount: number;
+    failedCount: number;
+    failedFiles: string[];
+  }>;
+  
+  /**
+   * Подписаться на событие прогресса экспорта
+   * @param callback - Функция обратного вызова с данными о прогрессе
+   */
+  onExportProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => void;
+  
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   
   /**
@@ -245,6 +264,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   moveWorkingDirectory: (oldDir: string, newDir: string) => ipcRenderer.invoke('move-working-directory', oldDir, newDir),
   onMoveDirectoryProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => {
     ipcRenderer.on('move-directory-progress', (_event, data) => callback(data));
+  },
+  exportMoodboard: (filePaths: string[], targetDir: string) => 
+    ipcRenderer.invoke('export-moodboard', filePaths, targetDir),
+  onExportProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => {
+    ipcRenderer.on('export-progress', (_event, data) => callback(data));
   },
   
   // Резервное копирование

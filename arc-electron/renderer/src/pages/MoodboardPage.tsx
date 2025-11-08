@@ -22,6 +22,11 @@ export const MoodboardPage = () => {
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Состояние экспорта
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
+
   // Загрузка карточек в мудборде
   useEffect(() => {
     const loadMoodboardCards = async () => {
@@ -39,6 +44,13 @@ export const MoodboardPage = () => {
     };
 
     loadMoodboardCards();
+
+    // Подписываемся на прогресс экспорта
+    if (window.electronAPI?.onExportProgress) {
+      window.electronAPI.onExportProgress((data) => {
+        setExportProgress(data.percent);
+      });
+    }
   }, []);
 
   // Фильтрация карточек по типу
@@ -114,6 +126,64 @@ export const MoodboardPage = () => {
     }
   };
 
+  // Обработчик экспорта мудборда
+  const handleExportMoodboard = async () => {
+    if (cards.length === 0) {
+      setExportMessage('❌ Мудборд пуст');
+      setTimeout(() => setExportMessage(null), 2000);
+      return;
+    }
+
+    if (!window.electronAPI) {
+      setExportMessage('❌ Electron API недоступен');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      setExportProgress(0);
+      setExportMessage('🔄 Выбор папки для экспорта...');
+
+      // 1. Выбираем папку для экспорта
+      const targetDir = await window.electronAPI.selectWorkingDirectory();
+      
+      if (!targetDir) {
+        setIsExporting(false);
+        setExportMessage(null);
+        return;
+      }
+
+      setExportMessage(`🔄 Экспорт ${cards.length} файлов...`);
+
+      // 2. Собираем пути к файлам
+      const filePaths = cards.map(card => card.filePath);
+
+      // 3. Экспортируем файлы
+      const result = await window.electronAPI.exportMoodboard(filePaths, targetDir);
+
+      if (result.success) {
+        setExportMessage(`✅ Экспорт завершён! Скопировано: ${result.copiedCount} из ${cards.length}`);
+        
+        if (result.failedCount > 0) {
+          setExportMessage(prev => prev + `\n⚠️ Не удалось скопировать: ${result.failedCount} файлов`);
+        }
+
+        // Открываем папку с экспортом
+        await window.electronAPI.openFileLocation(targetDir);
+        
+        setTimeout(() => setExportMessage(null), 5000);
+      } else {
+        setExportMessage('❌ Ошибка экспорта');
+      }
+    } catch (error) {
+      console.error('[Moodboard] Ошибка экспорта:', error);
+      setExportMessage('❌ Ошибка экспорта: ' + (error as Error).message);
+    } finally {
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   // Состояние загрузки
   if (isLoading) {
     return (
@@ -146,8 +216,13 @@ export const MoodboardPage = () => {
         },
         actions: (
           <>
-            <Button variant="secondary" size="medium">
-              Выгрузить мудборд
+            <Button 
+              variant="secondary" 
+              size="medium"
+              onClick={handleExportMoodboard}
+              disabled={isExporting || cards.length === 0}
+            >
+              {isExporting ? 'Экспорт...' : 'Выгрузить мудборд'}
             </Button>
             <Button variant="danger" size="medium">
               Удалить мудборд
@@ -164,6 +239,60 @@ export const MoodboardPage = () => {
         onCardSelect={handleCardSelect}
         selectedCards={selectedCards}
       />
+
+      {/* Прогресс экспорта */}
+      {isExporting && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '320px',
+          padding: '16px',
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: 'var(--radius-l)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          zIndex: 100
+        }}>
+          <p className="text-s" style={{ marginBottom: '12px', fontWeight: 'var(--font-weight-bold)' }}>
+            Экспорт мудборда
+          </p>
+          <div style={{
+            width: '100%',
+            height: '8px',
+            backgroundColor: 'var(--color-grayscale-200)',
+            borderRadius: 'var(--radius-s)',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${exportProgress}%`,
+              height: '100%',
+              backgroundColor: 'var(--bg-button-primary)',
+              transition: 'width 0.3s ease'
+            }} />
+          </div>
+          <p className="text-s" style={{ marginTop: '8px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            {exportProgress}%
+          </p>
+        </div>
+      )}
+
+      {/* Сообщение о экспорте */}
+      {exportMessage && !isExporting && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '320px',
+          padding: '16px',
+          backgroundColor: exportMessage.includes('✅') ? 'var(--color-green-100)' : exportMessage.includes('⚠️') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
+          borderRadius: 'var(--radius-l)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          zIndex: 100,
+          whiteSpace: 'pre-line'
+        }}>
+          <p className="text-s">{exportMessage}</p>
+        </div>
+      )}
 
       {/* Модальное окно просмотра карточки */}
       <CardViewModal

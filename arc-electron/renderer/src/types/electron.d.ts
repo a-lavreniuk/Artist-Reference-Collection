@@ -36,6 +36,13 @@ interface ElectronAPI {
     copiedFiles: number;
   }>;
   onMoveDirectoryProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => void;
+  exportMoodboard: (filePaths: string[], targetDir: string) => Promise<{
+    success: boolean;
+    copiedCount: number;
+    failedCount: number;
+    failedFiles: string[];
+  }>;
+  onExportProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => void;
   
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{

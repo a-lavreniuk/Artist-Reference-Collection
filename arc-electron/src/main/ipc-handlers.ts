@@ -838,6 +838,70 @@ export function registerIPCHandlers(): void {
   });
 
   /**
+   * Экспортировать мудборд в отдельную папку
+   * Копирует все файлы из мудборда в выбранную папку
+   */
+  ipcMain.handle('export-moodboard', async (event, filePaths: string[], targetDir: string) => {
+    try {
+      console.log('[IPC] Экспорт мудборда...');
+      console.log('[IPC] Файлов для экспорта:', filePaths.length);
+      console.log('[IPC] Целевая папка:', targetDir);
+
+      // Создаём целевую папку
+      await fs.mkdir(targetDir, { recursive: true });
+
+      let copiedCount = 0;
+      const failedFiles: string[] = [];
+
+      for (let i = 0; i < filePaths.length; i++) {
+        const sourcePath = filePaths[i];
+        
+        try {
+          // Проверяем существование файла
+          const exists = await fileExists(sourcePath);
+          if (!exists) {
+            console.warn(`[IPC] Файл не найден: ${sourcePath}`);
+            failedFiles.push(sourcePath);
+            continue;
+          }
+
+          // Копируем файл с оригинальным именем
+          const fileName = path.basename(sourcePath);
+          const targetPath = path.join(targetDir, fileName);
+          
+          await fs.copyFile(sourcePath, targetPath);
+          copiedCount++;
+          
+          // Отправляем прогресс
+          const percent = Math.round(((i + 1) / filePaths.length) * 100);
+          event.sender.send('export-progress', {
+            percent,
+            copied: copiedCount,
+            total: filePaths.length
+          });
+          
+          console.log(`[IPC] Экспортирован ${i + 1}/${filePaths.length}: ${fileName}`);
+        } catch (error) {
+          console.error(`[IPC] Ошибка копирования файла ${sourcePath}:`, error);
+          failedFiles.push(sourcePath);
+        }
+      }
+
+      console.log(`[IPC] Экспорт завершён. Скопировано: ${copiedCount}, ошибок: ${failedFiles.length}`);
+      
+      return {
+        success: true,
+        copiedCount,
+        failedCount: failedFiles.length,
+        failedFiles
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка экспорта мудборда:', error);
+      throw error;
+    }
+  });
+
+  /**
    * Получить информацию о размерах файлов в рабочей папке
    * Подсчитывает размеры изображений, видео и превью
    */
