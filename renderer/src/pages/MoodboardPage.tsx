@@ -279,7 +279,7 @@ export const MoodboardPage = () => {
           </>
         )
       }}
-      showSearch={false}
+      searchProps={searchProps}
     >
       <MasonryGrid
         cards={filteredCards}

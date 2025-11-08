@@ -200,7 +200,7 @@ export const CollectionDetailPage = () => {
           </>
         )
       }}
-      showSearch={false}
+      searchProps={searchProps}
     >
       <MasonryGrid
         cards={filteredCards}

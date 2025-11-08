@@ -169,7 +169,7 @@ export const TagsPage = () => {
           </Button>
         )
       }}
-      showSearch={false}
+      searchProps={searchProps}
     >
       {categories.length > 0 ? (
         <div className="tags-page">
