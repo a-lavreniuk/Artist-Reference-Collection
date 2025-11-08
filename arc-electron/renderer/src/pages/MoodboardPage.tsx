@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards } from '../services/db';
+import { getAllCards, updateCard } from '../services/db';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const MoodboardPage = () => {
@@ -184,6 +184,44 @@ export const MoodboardPage = () => {
     }
   };
 
+  // Обработчик очистки мудборда
+  const handleClearMoodboard = async () => {
+    if (cards.length === 0) {
+      return;
+    }
+
+    const confirmed = confirm(
+      `Очистить мудборд?\n\n` +
+      `Будет удалено из мудборда: ${cards.length} карточек\n\n` +
+      `⚠️ Сами карточки НЕ будут удалены, только убраны из мудборда.\n\n` +
+      `Продолжить?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setExportMessage('🔄 Очистка мудборда...');
+
+      // Снимаем флаг inMoodboard со всех карточек
+      for (const card of cards) {
+        await updateCard(card.id, { inMoodboard: false });
+      }
+
+      console.log(`[Moodboard] Очищено карточек: ${cards.length}`);
+
+      // Обновляем список
+      setCards([]);
+      setExportMessage('✅ Мудборд очищен');
+      setTimeout(() => setExportMessage(null), 2000);
+    } catch (error) {
+      console.error('[Moodboard] Ошибка очистки:', error);
+      setExportMessage('❌ Ошибка очистки мудборда');
+      setTimeout(() => setExportMessage(null), 3000);
+    }
+  };
+
   // Состояние загрузки
   if (isLoading) {
     return (
@@ -224,8 +262,13 @@ export const MoodboardPage = () => {
             >
               {isExporting ? 'Экспорт...' : 'Выгрузить мудборд'}
             </Button>
-            <Button variant="danger" size="medium">
-              Удалить мудборд
+            <Button 
+              variant="danger" 
+              size="medium"
+              onClick={handleClearMoodboard}
+              disabled={cards.length === 0}
+            >
+              Очистить мудборд
             </Button>
           </>
         )
