@@ -5,9 +5,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
-import { Button } from '../components/common';
+import { Button, Input } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getCollection, getAllCards, deleteCollection } from '../services/db';
+import { getCollection, getAllCards, deleteCollection, updateCollection } from '../services/db';
+import { logDeleteCollection, logRenameCollection } from '../services/history';
 import type { Collection, Card, ViewMode, ContentFilter } from '../types';
 
 export const CollectionDetailPage = () => {
@@ -24,6 +25,10 @@ export const CollectionDetailPage = () => {
   
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Состояние редактирования
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
 
   // Загрузка коллекции и карточек
   useEffect(() => {
@@ -91,9 +96,36 @@ export const CollectionDetailPage = () => {
 
     try {
       await deleteCollection(collection.id);
+      
+      // Логируем удаление коллекции
+      await logDeleteCollection(collection.name);
+      
       navigate('/collections');
     } catch (error) {
       console.error('Ошибка удаления коллекции:', error);
+    }
+  };
+
+  const handleRenameCollection = async () => {
+    if (!collection) return;
+    
+    const newName = prompt('Новое название коллекции:', collection.name);
+    
+    if (!newName || newName.trim() === '' || newName.trim() === collection.name) {
+      return;
+    }
+
+    try {
+      const oldName = collection.name;
+      await updateCollection(collection.id, { name: newName.trim() });
+      
+      // Логируем переименование
+      await logRenameCollection(oldName, newName.trim());
+      
+      // Перезагружаем коллекцию
+      await loadCollection(collection.id);
+    } catch (error) {
+      console.error('Ошибка переименования коллекции:', error);
     }
   };
 
@@ -149,7 +181,11 @@ export const CollectionDetailPage = () => {
         },
         actions: (
           <>
-            <Button variant="secondary" size="medium">
+            <Button 
+              variant="secondary" 
+              size="medium"
+              onClick={handleRenameCollection}
+            >
               Переименовать
             </Button>
             <Button

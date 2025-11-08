@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Modal, Button, Input } from '../common';
 import type { Collection } from '../../types';
 import { addCollection } from '../../services/db';
+import { logCreateCollection } from '../../services/history';
 
 export interface CreateCollectionModalProps {
   /** Открыто ли модальное окно */
@@ -56,6 +57,9 @@ export const CreateCollectionModal = ({
       };
 
       await addCollection(collection);
+      
+      // Логируем создание коллекции
+      await logCreateCollection(collection.name, collection.cardIds.length);
       
       // Очищаем форму
       setName('');

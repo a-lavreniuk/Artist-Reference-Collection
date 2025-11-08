@@ -126,3 +126,38 @@ export interface AppStatistics {
   categoryCount: number;               // Количество категорий
 }
 
+// Типы действий для истории
+export type HistoryActionType =
+  | 'import_files'              // Импорт файлов
+  | 'delete_cards'              // Удаление карточек
+  | 'move_storage'              // Перенос хранилища
+  | 'create_collection'         // Создание коллекции
+  | 'delete_collection'         // Удаление коллекции
+  | 'rename_collection'         // Переименование коллекции
+  | 'create_category'           // Создание категории
+  | 'delete_category'           // Удаление категории
+  | 'rename_category'           // Переименование категории
+  | 'create_backup'             // Создание бэкапа
+  | 'clear_cache'               // Очистка кэша
+  | 'clear_moodboard'           // Очистка мудборда
+  | 'rename_tag';               // Переименование метки
+
+// Запись истории действий пользователя
+export interface HistoryEntry {
+  id: string;                          // Уникальный ID записи
+  timestamp: Date;                     // Время действия
+  action: HistoryActionType;           // Тип действия
+  description: string;                 // Описание действия (для отображения)
+  metadata?: {                         // Дополнительные данные
+    count?: number;                    // Количество элементов
+    size?: number;                     // Размер в байтах
+    name?: string;                     // Название (коллекции, категории и т.д.)
+    oldName?: string;                  // Старое название (для переименования)
+    newName?: string;                  // Новое название (для переименования)
+    parts?: number;                    // Количество частей (для бэкапа)
+  };
+}
+
+// Период фильтрации истории
+export type HistoryPeriod = 'today' | 'week' | 'month' | 'all';
+

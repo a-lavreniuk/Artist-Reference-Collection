@@ -8,6 +8,7 @@ import { Modal } from '../common/Modal';
 import { Button, Tag } from '../common';
 import type { Card, Tag as TagType, Collection } from '../../types';
 import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards } from '../../services/db';
+import { logDeleteCards } from '../../services/history';
 import './CardViewModal.css';
 
 export interface CardViewModalProps {
@@ -160,7 +161,19 @@ export const CardViewModal = ({
 
     try {
       setIsDeleting(true);
+      
+      // Получаем название коллекции если карточка в коллекции
+      let collectionName: string | undefined;
+      if (card.collections.length > 0) {
+        const collection = await getCollection(card.collections[0]);
+        collectionName = collection?.name;
+      }
+      
       await deleteCard(card.id);
+      
+      // Логируем удаление карточки
+      await logDeleteCards(1, collectionName);
+      
       onCardDeleted?.();
       onClose();
     } catch (error) {

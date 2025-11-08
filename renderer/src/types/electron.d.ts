@@ -65,6 +65,21 @@ interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   checkForUpdates: () => Promise<void>;
   
+  // === ИСТОРИЯ ДЕЙСТВИЙ ===
+  getHistory: (workingDir?: string) => Promise<Array<{
+    id: string;
+    timestamp: string;
+    action: string;
+    description: string;
+    metadata?: any;
+  }>>;
+  addHistoryEntry: (workingDir: string | undefined, entry: {
+    action: string;
+    description: string;
+    metadata?: any;
+  }) => Promise<void>;
+  clearHistory: (workingDir?: string) => Promise<void>;
+  
   // === СОБЫТИЯ ===
   onUpdateAvailable: (callback: () => void) => void;
   onUpdateReady: (callback: () => void) => void;

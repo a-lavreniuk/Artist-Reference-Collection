@@ -7,6 +7,7 @@ import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards, updateCard } from '../services/db';
+import { logClearMoodboard } from '../services/history';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const MoodboardPage = () => {
@@ -210,6 +211,9 @@ export const MoodboardPage = () => {
       }
 
       console.log(`[Moodboard] Очищено карточек: ${cards.length}`);
+
+      // Логируем очистку мудборда
+      await logClearMoodboard();
 
       // Обновляем список
       setCards([]);

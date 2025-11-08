@@ -23,6 +23,12 @@ export interface CategorySectionProps {
   
   /** Обработчик добавления метки */
   onAddTag?: (categoryId: string) => void;
+  
+  /** Обработчик переименования категории */
+  onCategoryRename?: (categoryId: string) => void;
+  
+  /** Обработчик переименования метки */
+  onTagRename?: (tagId: string) => void;
 }
 
 /**
@@ -33,7 +39,9 @@ export const CategorySection = ({
   tags,
   onTagRemove,
   onCategoryDelete,
-  onAddTag
+  onAddTag,
+  onCategoryRename,
+  onTagRename
 }: CategorySectionProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -83,7 +91,31 @@ export const CategorySection = ({
           <Button
             variant="ghost"
             size="small"
+            onClick={() => onCategoryRename?.(category.id)}
+            title="Переименовать категорию"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M18.5 2.50023C18.8978 2.1024 19.4374 1.87891 20 1.87891C20.5626 1.87891 21.1022 2.1024 21.5 2.50023C21.8978 2.89805 22.1213 3.43762 22.1213 4.00023C22.1213 4.56284 21.8978 5.1024 21.5 5.50023L12 15.0002L8 16.0002L9 12.0002L18.5 2.50023Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Button>
+          <Button
+            variant="ghost"
+            size="small"
             onClick={() => onCategoryDelete?.(category.id)}
+            title="Удалить категорию"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path
@@ -104,16 +136,19 @@ export const CategorySection = ({
           {tags.length > 0 ? (
             <div className="category-section__tags">
               {tags.map((tag) => (
-                <Tag
-                  key={tag.id}
-                  variant="default"
-                  removable
-                  count={tag.cardCount}
-                  color={tag.color}
-                  onRemove={() => onTagRemove?.(tag.id)}
-                >
-                  {tag.name}
-                </Tag>
+                <div key={tag.id} style={{ position: 'relative', display: 'inline-block' }}>
+                  <Tag
+                    variant="default"
+                    removable
+                    count={tag.cardCount}
+                    color={tag.color}
+                    onRemove={() => onTagRemove?.(tag.id)}
+                    onClick={() => onTagRename?.(tag.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {tag.name}
+                  </Tag>
+                </div>
               ))}
             </div>
           ) : (

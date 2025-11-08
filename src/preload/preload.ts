@@ -224,6 +224,38 @@ export interface ElectronAPI {
    */
   checkForUpdates: () => Promise<void>;
   
+  // === ИСТОРИЯ ДЕЙСТВИЙ ===
+  
+  /**
+   * Получить историю действий пользователя
+   * @param workingDir - Путь к рабочей папке (опционально)
+   * @returns Массив записей истории
+   */
+  getHistory: (workingDir?: string) => Promise<Array<{
+    id: string;
+    timestamp: string;
+    action: string;
+    description: string;
+    metadata?: any;
+  }>>;
+  
+  /**
+   * Добавить запись в историю действий
+   * @param workingDir - Путь к рабочей папке (опционально)
+   * @param entry - Запись истории
+   */
+  addHistoryEntry: (workingDir: string | undefined, entry: {
+    action: string;
+    description: string;
+    metadata?: any;
+  }) => Promise<void>;
+  
+  /**
+   * Очистить всю историю действий
+   * @param workingDir - Путь к рабочей папке (опционально)
+   */
+  clearHistory: (workingDir?: string) => Promise<void>;
+  
   // === СОБЫТИЯ ===
   
   /**
@@ -300,6 +332,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('show-notification', title, body),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  
+  // История действий
+  getHistory: (workingDir?: string) => ipcRenderer.invoke('get-history', workingDir),
+  addHistoryEntry: (workingDir: string | undefined, entry: { action: string; description: string; metadata?: any }) => 
+    ipcRenderer.invoke('add-history-entry', workingDir, entry),
+  clearHistory: (workingDir?: string) => ipcRenderer.invoke('clear-history', workingDir),
   
   // События
   onUpdateAvailable: (callback: () => void) => {
