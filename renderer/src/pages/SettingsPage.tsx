@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
-import { useSearchNavigation } from '../hooks';
+import { useSearch } from '../contexts';
 import { Button } from '../components/common';
 import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
@@ -20,7 +20,7 @@ type CollectionWithCount = Collection & { cardCount: number };
 
 export const SettingsPage = () => {
   const navigate = useNavigate();
-  const { searchProps } = useSearchNavigation();
+  const { searchProps } = useSearch();
   const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);

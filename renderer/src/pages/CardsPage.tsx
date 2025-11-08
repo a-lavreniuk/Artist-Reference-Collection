@@ -6,11 +6,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards, searchCardsAdvanced } from '../services/db';
-import { useSearchNavigation } from '../hooks';
+import { useSearch } from '../contexts';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const CardsPage = () => {
-  // Используем хук для управления поиском
+  // Используем глобальный контекст поиска
   const {
     searchValue,
     setSearchValue,
@@ -21,7 +21,7 @@ export const CardsPage = () => {
     handleCardClick: handleSearchCardClick,
     handleCloseModal,
     searchProps
-  } = useSearchNavigation();
+  } = useSearch();
   
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');

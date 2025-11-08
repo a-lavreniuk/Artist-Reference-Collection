@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
-import { useSearchNavigation } from '../hooks';
+import { useSearch } from '../contexts';
 import { Button, Input } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getCollection, getAllCards, deleteCollection, updateCollection } from '../services/db';
@@ -15,7 +15,7 @@ import type { Collection, Card, ViewMode, ContentFilter } from '../types';
 export const CollectionDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { searchProps } = useSearchNavigation();
+  const { searchProps } = useSearch();
   
   const [collection, setCollection] = useState<Collection | null>(null);
   const [cards, setCards] = useState<Card[]>([]);

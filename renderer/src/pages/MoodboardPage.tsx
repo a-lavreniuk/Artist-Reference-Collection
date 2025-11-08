@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
-import { useSearchNavigation } from '../hooks';
+import { useSearch } from '../contexts';
 import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards, updateCard } from '../services/db';
@@ -12,7 +12,7 @@ import { logClearMoodboard } from '../services/history';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const MoodboardPage = () => {
-  const { searchProps } = useSearchNavigation();
+  const { searchProps } = useSearch();
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [selectedCards, setSelectedCards] = useState<string[]>([]);

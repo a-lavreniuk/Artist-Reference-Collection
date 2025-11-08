@@ -8,13 +8,13 @@ import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { CollectionCard, CreateCollectionModal } from '../components/collections';
 import { getAllCollections } from '../services/db';
-import { useSearchNavigation } from '../hooks';
+import { useSearch } from '../contexts';
 import type { Collection } from '../types';
 import './CollectionsPage.css';
 
 export const CollectionsPage = () => {
   const navigate = useNavigate();
-  const { searchProps } = useSearchNavigation();
+  const { searchProps } = useSearch();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

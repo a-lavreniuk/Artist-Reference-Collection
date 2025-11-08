@@ -6,11 +6,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { AddCardFlow } from '../components/gallery';
-import { useSearchNavigation } from '../hooks';
+import { useSearch } from '../contexts';
 
 export const AddPage = () => {
   const navigate = useNavigate();
-  const { searchProps } = useSearchNavigation();
+  const { searchProps } = useSearch();
 
   const handleComplete = () => {
     navigate('/');

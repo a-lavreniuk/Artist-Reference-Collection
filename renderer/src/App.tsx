@@ -16,6 +16,7 @@ import {
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary } from './components/common';
 import { useFileSystem, useElectronUpdates } from './hooks';
+import { SearchProvider } from './contexts';
 
 /**
  * Компонент для обработки навигации от системного трея
@@ -132,19 +133,21 @@ function App() {
   return (
     <>
       <Router>
-        <ErrorBoundary>
-          <NavigationListener />
-          <Routes>
-            <Route path="/" element={<CardsPage />} />
-            <Route path="/cards" element={<CardsPage />} />
-            <Route path="/collections" element={<CollectionsPage />} />
-            <Route path="/collections/:id" element={<CollectionDetailPage />} />
-            <Route path="/tags" element={<TagsPage />} />
-            <Route path="/moodboard" element={<MoodboardPage />} />
-            <Route path="/add" element={<AddPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
-        </ErrorBoundary>
+        <SearchProvider>
+          <ErrorBoundary>
+            <NavigationListener />
+            <Routes>
+              <Route path="/" element={<CardsPage />} />
+              <Route path="/cards" element={<CardsPage />} />
+              <Route path="/collections" element={<CollectionsPage />} />
+              <Route path="/collections/:id" element={<CollectionDetailPage />} />
+              <Route path="/tags" element={<TagsPage />} />
+              <Route path="/moodboard" element={<MoodboardPage />} />
+              <Route path="/add" element={<AddPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Routes>
+          </ErrorBoundary>
+        </SearchProvider>
       </Router>
 
       {/* Уведомление об обновлении */}
