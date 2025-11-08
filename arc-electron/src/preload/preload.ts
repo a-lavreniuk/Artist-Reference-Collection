@@ -106,6 +106,20 @@ export interface ElectronAPI {
    */
   copyToClipboard: (text: string) => Promise<boolean>;
   
+  /**
+   * Получить информацию о размерах файлов в рабочей папке
+   * @param workingDir - Рабочая директория
+   * @returns Объект с размерами файлов
+   */
+  getDirectorySize: (workingDir: string) => Promise<{
+    totalSize: number;
+    imagesSize: number;
+    videosSize: number;
+    cacheSize: number;
+    imageCount: number;
+    videoCount: number;
+  }>;
+  
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   
   /**
@@ -209,6 +223,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportFile: (sourcePath: string, defaultFileName: string) => 
     ipcRenderer.invoke('export-file', sourcePath, defaultFileName),
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
+  getDirectorySize: (workingDir: string) => ipcRenderer.invoke('get-directory-size', workingDir),
   
   // Резервное копирование
   createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => 

@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { useFileSystem } from '../hooks';
-import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections } from '../services/db';
+import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag } from '../services/db';
 import type { AppStatistics, Tag, Collection } from '../types';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
@@ -20,6 +20,7 @@ export const SettingsPage = () => {
   const [stats, setStats] = useState<AppStatistics | null>(null);
   const [topTags, setTopTags] = useState<TagWithCategory[]>([]);
   const [topCollections, setTopCollections] = useState<CollectionWithCount[]>([]);
+  const [underusedTags, setUnderusedTags] = useState<TagWithCategory[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
@@ -27,9 +28,18 @@ export const SettingsPage = () => {
   const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8>(1);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  const [directorySizes, setDirectorySizes] = useState<{
+    totalSize: number;
+    imagesSize: number;
+    videosSize: number;
+    cacheSize: number;
+    imageCount: number;
+    videoCount: number;
+  } | null>(null);
 
   useEffect(() => {
     loadStats();
+    loadDirectorySizes();
     
     // Подписываемся на прогресс backup
     if (window.electronAPI?.onBackupProgress) {
@@ -37,7 +47,7 @@ export const SettingsPage = () => {
         setBackupProgress(data.percent);
       });
     }
-  }, []);
+  }, [directoryPath]);
 
   const loadStats = async () => {
     try {
@@ -47,11 +57,27 @@ export const SettingsPage = () => {
       // Загружаем топ метки и коллекции
       const tags = await getTopTags(10);
       const collections = await getTopCollections(10);
+      const unused = await getUnderusedTags(3, 20);
       
       setTopTags(tags);
       setTopCollections(collections);
+      setUnderusedTags(unused);
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
+    }
+  };
+
+  const loadDirectorySizes = async () => {
+    if (!directoryPath || !window.electronAPI?.getDirectorySize) {
+      return;
+    }
+
+    try {
+      const sizes = await window.electronAPI.getDirectorySize(directoryPath);
+      setDirectorySizes(sizes);
+      console.log('[Settings] Размеры загружены:', sizes);
+    } catch (error) {
+      console.error('[Settings] Ошибка загрузки размеров:', error);
     }
   };
 
@@ -59,6 +85,24 @@ export const SettingsPage = () => {
     await requestDirectory();
     setMessage('✅ Рабочая папка обновлена');
     setTimeout(() => setMessage(null), 2000);
+  };
+
+  const handleDeleteTag = async (tagId: string, tagName: string) => {
+    if (!confirm(`Удалить метку "${tagName}"? Это действие необратимо.`)) {
+      return;
+    }
+
+    try {
+      await deleteTag(tagId);
+      // Обновляем список
+      await loadStats();
+      setMessage('✅ Метка удалена');
+      setTimeout(() => setMessage(null), 2000);
+    } catch (error) {
+      console.error('Ошибка удаления метки:', error);
+      setMessage('❌ Ошибка удаления метки');
+      setTimeout(() => setMessage(null), 2000);
+    }
   };
 
   const handleClearCache = async () => {
@@ -293,16 +337,98 @@ export const SettingsPage = () => {
             borderRadius: 'var(--radius-l)',
             marginBottom: '24px'
           }}>
-            <h3 className="h3" style={{ marginBottom: '16px' }}>💾 Хранилище</h3>
+            <h3 className="h3" style={{ marginBottom: '24px' }}>💾 Хранилище</h3>
           
-          <div style={{ marginBottom: '16px' }}>
-            <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+          {/* Путь к рабочей папке */}
+          <div style={{ 
+            marginBottom: '24px',
+            padding: '16px',
+            backgroundColor: 'var(--bg-primary)',
+            borderRadius: 'var(--radius-m)',
+            border: '1px solid var(--border-default)'
+          }}>
+            <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
               Рабочая папка
             </p>
-            <p className="text-m">
-              {directoryHandle ? 'Папка выбрана' : 'Не выбрана'}
+            <p className="text-m" style={{ 
+              fontFamily: 'monospace',
+              wordBreak: 'break-all'
+            }}>
+              {directoryPath || 'Не выбрана'}
             </p>
           </div>
+
+          {/* Размеры файлов */}
+          {directorySizes && (
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '12px',
+              marginBottom: '24px'
+            }}>
+              <div style={{
+                padding: '16px',
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: 'var(--radius-m)',
+                border: '1px solid var(--border-default)'
+              }}>
+                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Всего занято
+                </p>
+                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                  {Math.round(directorySizes.totalSize / 1024 / 1024)} МБ
+                </p>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: 'var(--radius-m)',
+                border: '1px solid var(--border-default)'
+              }}>
+                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Изображения
+                </p>
+                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                  {Math.round(directorySizes.imagesSize / 1024 / 1024)} МБ
+                </p>
+                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                  {directorySizes.imageCount} файлов
+                </p>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: 'var(--radius-m)',
+                border: '1px solid var(--border-default)'
+              }}>
+                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Видео
+                </p>
+                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                  {Math.round(directorySizes.videosSize / 1024 / 1024)} МБ
+                </p>
+                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                  {directorySizes.videoCount} файлов
+                </p>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: 'var(--bg-primary)',
+                borderRadius: 'var(--radius-m)',
+                border: '1px solid var(--border-default)'
+              }}>
+                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Кэш превью
+                </p>
+                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                  {Math.round(directorySizes.cacheSize / 1024 / 1024)} МБ
+                </p>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             <Button
@@ -594,6 +720,54 @@ export const SettingsPage = () => {
                           карточек
                         </p>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Малоиспользуемые метки */}
+            {underusedTags.length > 0 && (
+              <div style={{ marginTop: '32px' }}>
+                <h4 className="text-l" style={{ marginBottom: '8px', fontWeight: 'var(--font-weight-bold)' }}>
+                  🔍 Малоиспользуемые метки
+                </h4>
+                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                  Метки с малым количеством использований (≤3 карточки)
+                </p>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: '12px' 
+                }}>
+                  {underusedTags.map((tag) => (
+                    <div 
+                      key={tag.id}
+                      style={{
+                        padding: '12px 16px',
+                        backgroundColor: 'var(--bg-primary)',
+                        borderRadius: 'var(--radius-m)',
+                        border: '1px solid var(--border-default)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div>
+                        <span className="text-m" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                          {tag.name}
+                        </span>
+                        <p className="text-s" style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {tag.categoryName} • {tag.cardCount} карточек
+                        </p>
+                      </div>
+                      <Button
+                        variant="danger"
+                        size="small"
+                        onClick={() => handleDeleteTag(tag.id, tag.name)}
+                      >
+                        Удалить
+                      </Button>
                     </div>
                   ))}
                 </div>

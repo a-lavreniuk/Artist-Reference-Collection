@@ -731,6 +731,85 @@ export function registerIPCHandlers(): void {
     // TODO: Реализовать установку обновления
   });
 
+  /**
+   * Получить информацию о размерах файлов в рабочей папке
+   * Подсчитывает размеры изображений, видео и превью
+   */
+  ipcMain.handle('get-directory-size', async (_event, workingDir: string) => {
+    try {
+      console.log('[IPC] Подсчёт размеров для:', workingDir);
+      
+      let totalSize = 0;
+      let imagesSize = 0;
+      let videosSize = 0;
+      let cacheSize = 0;
+      let imageCount = 0;
+      let videoCount = 0;
+      
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi'];
+      
+      async function calculateSize(dir: string, isCache: boolean = false): Promise<void> {
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            
+            if (entry.isDirectory()) {
+              // Рекурсивно обходим папки
+              const isCacheDir = entry.name === '_cache' || isCache;
+              await calculateSize(fullPath, isCacheDir);
+            } else if (entry.isFile()) {
+              try {
+                const stats = await fs.stat(fullPath);
+                const ext = path.extname(entry.name).toLowerCase();
+                
+                totalSize += stats.size;
+                
+                if (isCache) {
+                  cacheSize += stats.size;
+                } else if (imageExtensions.includes(ext)) {
+                  imagesSize += stats.size;
+                  imageCount++;
+                } else if (videoExtensions.includes(ext)) {
+                  videosSize += stats.size;
+                  videoCount++;
+                }
+              } catch (error) {
+                // Пропускаем файлы с ошибками доступа
+                console.warn(`[IPC] Не удалось прочитать файл: ${fullPath}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`[IPC] Не удалось прочитать директорию: ${dir}`);
+        }
+      }
+      
+      await calculateSize(workingDir);
+      
+      console.log('[IPC] Подсчёт завершён:', {
+        total: Math.round(totalSize / 1024 / 1024) + ' MB',
+        images: Math.round(imagesSize / 1024 / 1024) + ' MB',
+        videos: Math.round(videosSize / 1024 / 1024) + ' MB',
+        cache: Math.round(cacheSize / 1024 / 1024) + ' MB'
+      });
+      
+      return {
+        totalSize,
+        imagesSize,
+        videosSize,
+        cacheSize,
+        imageCount,
+        videoCount
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка подсчёта размеров:', error);
+      throw error;
+    }
+  });
+
   console.log('[IPC] Все IPC handlers зарегистрированы');
 }
 

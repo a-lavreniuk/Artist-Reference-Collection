@@ -60,7 +60,21 @@ export const db = new ARCDatabase();
  * Добавить карточку
  */
 export async function addCard(card: Card): Promise<string> {
-  return await db.cards.add(card);
+  const cardId = await db.cards.add(card);
+  
+  // Обновляем счётчик использования для всех меток карточки
+  if (card.tags && card.tags.length > 0) {
+    for (const tagId of card.tags) {
+      const tag = await db.tags.get(tagId);
+      if (tag) {
+        await db.tags.update(tagId, {
+          cardCount: (tag.cardCount || 0) + 1
+        });
+      }
+    }
+  }
+  
+  return cardId;
 }
 
 /**
@@ -81,6 +95,32 @@ export async function getAllCards(): Promise<Card[]> {
  * Обновить карточку
  */
 export async function updateCard(id: string, changes: Partial<Card>): Promise<number> {
+  // Если изменяются метки, обновляем счётчики
+  if (changes.tags) {
+    const oldCard = await db.cards.get(id);
+    if (oldCard && oldCard.tags) {
+      // Уменьшаем счётчик для старых меток
+      for (const tagId of oldCard.tags) {
+        const tag = await db.tags.get(tagId);
+        if (tag && tag.cardCount > 0) {
+          await db.tags.update(tagId, {
+            cardCount: tag.cardCount - 1
+          });
+        }
+      }
+      
+      // Увеличиваем счётчик для новых меток
+      for (const tagId of changes.tags) {
+        const tag = await db.tags.get(tagId);
+        if (tag) {
+          await db.tags.update(tagId, {
+            cardCount: (tag.cardCount || 0) + 1
+          });
+        }
+      }
+    }
+  }
+  
   return await db.cards.update(id, changes);
 }
 
@@ -88,6 +128,19 @@ export async function updateCard(id: string, changes: Partial<Card>): Promise<nu
  * Удалить карточку
  */
 export async function deleteCard(id: string): Promise<void> {
+  // Уменьшаем счётчик для всех меток карточки
+  const card = await db.cards.get(id);
+  if (card && card.tags) {
+    for (const tagId of card.tags) {
+      const tag = await db.tags.get(tagId);
+      if (tag && tag.cardCount > 0) {
+        await db.tags.update(tagId, {
+          cardCount: tag.cardCount - 1
+        });
+      }
+    }
+  }
+  
   await db.cards.delete(id);
   // Также удаляем превью из кеша
   await db.thumbnailCache.where('cardId').equals(id).delete();
@@ -609,6 +662,34 @@ export async function getTopCollections(limit: number = 10) {
     .slice(0, limit);
   
   return sortedCollections;
+}
+
+/**
+ * Получить малоиспользуемые метки (с 0 или малым числом использований)
+ * @param maxUsage - Максимальное количество использований (по умолчанию 3)
+ * @param limit - Количество меток (по умолчанию 20)
+ */
+export async function getUnderusedTags(maxUsage: number = 3, limit: number = 20) {
+  const tags = await db.tags
+    .where('cardCount')
+    .belowOrEqual(maxUsage)
+    .sortBy('cardCount');
+  
+  // Получаем категории для каждой метки
+  const tagsWithCategories = await Promise.all(
+    tags.slice(0, limit).map(async (tag) => {
+      const category = tag.categoryId 
+        ? await db.categories.get(tag.categoryId)
+        : null;
+      
+      return {
+        ...tag,
+        categoryName: category?.name || 'Без категории'
+      };
+    })
+  );
+  
+  return tagsWithCategories;
 }
 
 export default db;

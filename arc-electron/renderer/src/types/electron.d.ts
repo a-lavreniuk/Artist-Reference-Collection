@@ -23,6 +23,14 @@ interface ElectronAPI {
   openFileLocation: (filePath: string) => Promise<boolean>;
   exportFile: (sourcePath: string, defaultFileName: string) => Promise<string | null>;
   copyToClipboard: (text: string) => Promise<boolean>;
+  getDirectorySize: (workingDir: string) => Promise<{
+    totalSize: number;
+    imagesSize: number;
+    videosSize: number;
+    cacheSize: number;
+    imageCount: number;
+    videoCount: number;
+  }>;
   
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
   createBackup: (outputPath: string, workingDir: string, parts: number, databaseJson: string) => Promise<{
