@@ -206,14 +206,18 @@ export async function updateTag(id: string, changes: Partial<Tag>): Promise<numb
  * Удалить метку
  */
 export async function deleteTag(id: string): Promise<void> {
-  await db.tags.delete(id);
   // Удаляем метку из всех карточек
-  const cards = await db.cards.where('tags').equals(id).toArray();
-  for (const card of cards) {
+  const allCards = await db.cards.toArray();
+  const cardsWithTag = allCards.filter(card => card.tags && card.tags.includes(id));
+  
+  for (const card of cardsWithTag) {
     await updateCard(card.id, {
       tags: card.tags.filter(tagId => tagId !== id)
     });
   }
+  
+  // Удаляем саму метку
+  await db.tags.delete(id);
 }
 
 // ========== CRUD ОПЕРАЦИИ ДЛЯ КАТЕГОРИЙ ==========
@@ -690,6 +694,44 @@ export async function getUnderusedTags(maxUsage: number = 3, limit: number = 20)
   );
   
   return tagsWithCategories;
+}
+
+/**
+ * Пересчитать счётчики использования меток
+ * Необходимо вызвать один раз для существующих баз данных
+ * после обновления логики подсчёта
+ */
+export async function recalculateTagCounts(): Promise<void> {
+  console.log('[DB] Начало пересчёта счётчиков меток...');
+  
+  // Получаем все метки и карточки
+  const allTags = await db.tags.toArray();
+  const allCards = await db.cards.toArray();
+  
+  // Создаём Map для подсчёта
+  const tagCountMap = new Map<string, number>();
+  
+  // Инициализируем все метки с 0
+  for (const tag of allTags) {
+    tagCountMap.set(tag.id, 0);
+  }
+  
+  // Подсчитываем использование по карточкам
+  for (const card of allCards) {
+    if (card.tags && card.tags.length > 0) {
+      for (const tagId of card.tags) {
+        const currentCount = tagCountMap.get(tagId) || 0;
+        tagCountMap.set(tagId, currentCount + 1);
+      }
+    }
+  }
+  
+  // Обновляем счётчики в базе
+  for (const [tagId, count] of tagCountMap.entries()) {
+    await db.tags.update(tagId, { cardCount: count });
+  }
+  
+  console.log('[DB] Пересчёт завершён. Обновлено меток:', tagCountMap.size);
 }
 
 export default db;

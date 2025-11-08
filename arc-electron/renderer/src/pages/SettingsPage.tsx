@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { useFileSystem } from '../hooks';
-import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag } from '../services/db';
+import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
 import type { AppStatistics, Tag, Collection } from '../types';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
@@ -83,6 +83,7 @@ export const SettingsPage = () => {
 
   const handleChangeDirectory = async () => {
     await requestDirectory();
+    await loadDirectorySizes(); // Загружаем размеры после смены папки
     setMessage('✅ Рабочая папка обновлена');
     setTimeout(() => setMessage(null), 2000);
   };
@@ -102,6 +103,24 @@ export const SettingsPage = () => {
       console.error('Ошибка удаления метки:', error);
       setMessage('❌ Ошибка удаления метки');
       setTimeout(() => setMessage(null), 2000);
+    }
+  };
+
+  const handleRecalculateTagCounts = async () => {
+    if (!confirm('Пересчитать счётчики меток?\n\nЭто может занять несколько секунд для больших баз данных.')) {
+      return;
+    }
+
+    try {
+      setMessage('🔄 Пересчёт счётчиков...');
+      await recalculateTagCounts();
+      await loadStats();
+      setMessage('✅ Счётчики пересчитаны');
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error('Ошибка пересчёта:', error);
+      setMessage('❌ Ошибка пересчёта счётчиков');
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
@@ -610,6 +629,32 @@ export const SettingsPage = () => {
                 </p>
                 <p className="h2">{stats.categoryCount}</p>
               </div>
+            </div>
+
+            {/* Кнопка пересчёта счётчиков */}
+            <div style={{ 
+              marginTop: '24px',
+              padding: '16px',
+              backgroundColor: 'var(--color-yellow-100)',
+              borderRadius: 'var(--radius-m)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <p className="text-m" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '4px' }}>
+                  Пересчёт счётчиков меток
+                </p>
+                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                  Если видите 0 напротив меток, нажмите эту кнопку для обновления
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                onClick={handleRecalculateTagCounts}
+              >
+                Пересчитать
+              </Button>
             </div>
 
             {/* Топ метки */}
