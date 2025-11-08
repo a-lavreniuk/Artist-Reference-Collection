@@ -3,14 +3,18 @@
  * Управляет окном приложения и системными функциями
  */
 
-import { app, BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, screen, Tray, Menu, nativeImage } from 'electron';
 import * as path from 'path';
 import { registerIPCHandlers } from './ipc-handlers';
 import { initializeAutoUpdater } from './auto-updater';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
 
-// Хранилище главного окна
+// Хранилище главного окна и трея
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+
+// Флаг для отслеживания принудительного выхода
+let isQuitting = false;
 
 /**
  * Создание главного окна приложения
@@ -73,7 +77,17 @@ function createWindow(): void {
     }
   });
 
-  // Обработка закрытия окна
+  // Обработка закрытия окна - сворачиваем в трей
+  mainWindow.on('close', (event) => {
+    // Если не принудительный выход, сворачиваем в трей
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+      console.log('[MAIN] Окно свернуто в трей');
+      return false;
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -88,6 +102,80 @@ function createWindow(): void {
 }
 
 /**
+ * Создание системного трея
+ */
+function createTray(): void {
+  // Путь к иконке для трея (используем ту же что и для окна)
+  const iconPath = path.join(__dirname, '../../resources/icon.ico');
+  const icon = nativeImage.createFromPath(iconPath);
+  
+  // Создаём трей
+  tray = new Tray(icon);
+  
+  // Подсказка при наведении
+  tray.setToolTip('ARC - Artist Reference Collection');
+  
+  // Контекстное меню
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Открыть ARC',
+      click: () => {
+        if (mainWindow) {
+          if (mainWindow.isMinimized()) {
+            mainWindow.restore();
+          }
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Настройки',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+          // Отправляем событие для навигации в настройки
+          mainWindow.webContents.send('navigate-to-settings');
+        }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Выход',
+      click: () => {
+        // Принудительный выход (не сворачиваем в трей)
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+  
+  tray.setContextMenu(contextMenu);
+  
+  // Двойной клик на иконку - показать/скрыть окно
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+  
+  console.log('[MAIN] Системный трей создан');
+}
+
+/**
  * Инициализация приложения
  */
 app.whenReady().then(() => {
@@ -98,6 +186,9 @@ app.whenReady().then(() => {
   
   // Регистрируем IPC handlers перед созданием окна
   registerIPCHandlers();
+  
+  // Создаём системный трей
+  createTray();
   
   createWindow();
   
@@ -116,13 +207,34 @@ app.whenReady().then(() => {
 
 /**
  * Выход из приложения когда все окна закрыты (кроме macOS)
+ * Если окно свернуто в трей, не выходим
  */
 app.on('window-all-closed', () => {
   // Отменяем регистрацию горячих клавиш
   unregisterShortcuts();
   
+  // Не выходим если окно свернуто в трей
+  if (!isQuitting && process.platform === 'win32') {
+    console.log('[MAIN] Приложение свернуто в трей, не выходим');
+    return;
+  }
+  
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+/**
+ * Очистка при выходе из приложения
+ */
+app.on('before-quit', () => {
+  isQuitting = true;
+  
+  // Удаляем трей
+  if (tray) {
+    tray.destroy();
+    tray = null;
+    console.log('[MAIN] Системный трей удалён');
   }
 });
 
