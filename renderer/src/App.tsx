@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import {
   CardsPage,
   CollectionsPage,
@@ -15,7 +15,26 @@ import {
   AddPage
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary } from './components/common';
-import { useFileSystem, usePWA } from './hooks';
+import { useFileSystem, useElectronUpdates } from './hooks';
+
+/**
+ * Компонент для обработки навигации от системного трея
+ */
+function NavigationListener() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Подписываемся на события навигации от main процесса
+    if (window.electronAPI?.onNavigate) {
+      window.electronAPI.onNavigate((path: string) => {
+        console.log('[App] Навигация от трея:', path);
+        navigate(path);
+      });
+    }
+  }, [navigate]);
+
+  return null;
+}
 
 function App() {
   const {
@@ -29,7 +48,7 @@ function App() {
   const {
     needRefresh,
     updateServiceWorker
-  } = usePWA();
+  } = useElectronUpdates();
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
@@ -67,7 +86,7 @@ function App() {
     setShowUpdateNotification(false);
   };
 
-  // Показываем загрузку пока проверяем handle
+  // Показываем загрузку пока проверяем рабочую папку
   if (isLoading) {
     return (
       <div className="layout__loading">
@@ -77,7 +96,7 @@ function App() {
     );
   }
 
-  // Проверка поддержки File System API
+  // Проверка доступности Electron API (на случай запуска в браузере)
   if (!isSupported) {
     return (
       <div className="layout__error">
@@ -88,11 +107,11 @@ function App() {
             <circle cx="12" cy="16" r="1" fill="currentColor" />
           </svg>
         </div>
-        <h2 className="layout__error-title">Браузер не поддерживается</h2>
+        <h2 className="layout__error-title">Ошибка запуска</h2>
         <p className="layout__error-text text-m">
-          Для работы ARC требуется современный браузер на базе Chromium.
+          ARC должен запускаться как Electron приложение.
           <br />
-          Пожалуйста, используйте Google Chrome, Microsoft Edge или Яндекс Браузер.
+          Пожалуйста, используйте установленную версию приложения.
         </p>
       </div>
     );
@@ -114,8 +133,10 @@ function App() {
     <>
       <Router>
         <ErrorBoundary>
+          <NavigationListener />
           <Routes>
             <Route path="/" element={<CardsPage />} />
+            <Route path="/cards" element={<CardsPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/collections/:id" element={<CollectionDetailPage />} />
             <Route path="/tags" element={<TagsPage />} />

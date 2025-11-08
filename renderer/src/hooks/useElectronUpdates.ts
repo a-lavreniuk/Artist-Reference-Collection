@@ -6,23 +6,8 @@
 import { useState, useEffect } from 'react';
 
 interface UseElectronUpdatesReturn {
-  /** Можно ли установить приложение (не используется в Electron) */
-  canInstall: boolean;
-  
-  /** Процесс установки (не используется) */
-  isInstalling: boolean;
-  
-  /** Приложение установлено (всегда true в Electron) */
-  isInstalled: boolean;
-  
   /** Доступно обновление */
   needRefresh: boolean;
-  
-  /** Офлайн режим (не используется в Electron) */
-  isOffline: boolean;
-  
-  /** Установить приложение (не используется в Electron) */
-  install: () => Promise<boolean>;
   
   /** Применить обновление и перезапустить */
   updateServiceWorker: (reloadPage?: boolean) => Promise<void>;
@@ -30,9 +15,8 @@ interface UseElectronUpdatesReturn {
 
 /**
  * Hook для работы с автообновлениями Electron
- * Сохранён старое имя usePWA для обратной совместимости
  */
-export function usePWA(): UseElectronUpdatesReturn {
+export function useElectronUpdates(): UseElectronUpdatesReturn {
   // В Electron эти состояния упрощены
   const [needRefresh, setNeedRefresh] = useState(false);
 
@@ -76,24 +60,10 @@ export function usePWA(): UseElectronUpdatesReturn {
     }
   }, []);
 
-  /**
-   * Заглушка для установки (не используется в десктопном приложении)
-   */
-  const install = async (): Promise<boolean> => {
-    console.warn('[Install] Функция не применима для десктопного приложения');
-    return false;
-  };
-
   return {
-    canInstall: false, // В Electron приложение уже "установлено"
-    isInstalling: false,
-    isInstalled: true, // Всегда true в Electron
     needRefresh,
-    isOffline: false, // Electron приложение всегда "онлайн"
-    install,
     updateServiceWorker
   };
 }
 
-export default usePWA;
-
+export default useElectronUpdates;
