@@ -507,7 +507,7 @@ export function registerIPCHandlers(): void {
       // Создаём выходную директорию если не существует
       await fs.mkdir(archiveDir, { recursive: true });
 
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const output = fsSync.createWriteStream(outputPath);
         const archive = archiver('zip', {
           zlib: { level: 9 } // Максимальное сжатие
@@ -587,6 +587,7 @@ export function registerIPCHandlers(): void {
         
         async function addDirectoryToArchive(dirPath: string, archivePath: string = '') {
           const entries = await fs.readdir(dirPath, { withFileTypes: true });
+          console.log(`[IPC] Сканирование папки: ${dirPath} (найдено ${entries.length} элементов)`);
           
           for (const entry of entries) {
             const fullPath = path.join(dirPath, entry.name);
@@ -594,16 +595,18 @@ export function registerIPCHandlers(): void {
             
             if (entry.isDirectory()) {
               // Рекурсивно добавляем содержимое папки
+              console.log(`[IPC] Обход папки: ${entry.name}`);
               await addDirectoryToArchive(fullPath, archiveEntryPath);
             } else if (entry.isFile()) {
               // Добавляем файл
+              console.log(`[IPC] Добавление файла: ${archiveEntryPath}`);
               archive.file(fullPath, { name: archiveEntryPath });
             }
           }
         }
         
         await addDirectoryToArchive(workingDir);
-        console.log('[IPC] Все файлы добавлены в архив');
+        console.log('[IPC] Все файлы добавлены в очередь архива');
 
         // Завершаем архивирование
         archive.finalize();
