@@ -98,14 +98,14 @@
 
   /* ========== ОТСТУПЫ (Padding) ========== */
   
+  --spacing-2xs: 2px;
   --spacing-xs: 4px;
   --spacing-s: 8px;
   --spacing-m: 12px;
   --spacing-l: 16px;
   --spacing-xl: 24px;
   --spacing-2xl: 32px;
-  --spacing-3xl: 48px;
-  --spacing-4xl: 64px;
+  --spacing-3xl: 40px;
 
   /* ========== СКРУГЛЕНИЯ (Border Radius) ========== */
   

@@ -28,7 +28,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xl);
-  padding: var(--spacing-xl);
+  padding: var(--spacing-2xl);
   max-height: 860px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -67,7 +67,7 @@
 .search-dropdown__tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--spacing-xs);
   align-items: center;
 }
 
@@ -104,7 +104,7 @@
 
 .search-dropdown__cards-row {
   display: flex;
-  gap: 4px;
+  gap: var(--spacing-xs);
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: var(--spacing-xs);

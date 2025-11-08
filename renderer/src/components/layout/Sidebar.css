@@ -28,7 +28,7 @@
   flex-direction: column;
   justify-content: space-between;
   height: 100%;
-  padding: var(--spacing-l) 0;
+  padding: var(--spacing-2xl) 0;
 }
 
 /* ========== ГРУППЫ ========== */

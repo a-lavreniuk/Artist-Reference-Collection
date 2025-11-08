@@ -121,7 +121,7 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  padding: var(--spacing-4xl);
+  padding: var(--spacing-3xl);
   text-align: center;
 }
 
@@ -185,7 +185,7 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  padding: var(--spacing-4xl);
+  padding: var(--spacing-3xl);
   text-align: center;
 }
 

@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../common';
 import { getHistory, clearHistory } from '../../services/history';
-import type { HistoryEntry, HistoryPeriod } from '../../types';
+import type { HistoryEntry, HistoryPeriod, HistoryActionType } from '../../types';
 import './HistorySection.css';
 
 export const HistorySection = () => {
@@ -37,6 +37,7 @@ export const HistorySection = () => {
       // Преобразуем timestamp из string в Date
       const entries: HistoryEntry[] = data.map((item) => ({
         ...item,
+        action: item.action as HistoryActionType,
         timestamp: new Date(item.timestamp)
       }));
       
