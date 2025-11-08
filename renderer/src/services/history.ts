@@ -14,16 +14,27 @@ async function logAction(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    if (window.electronAPI?.addHistoryEntry) {
-      await window.electronAPI.addHistoryEntry({
-        action,
-        description,
-        metadata
-      });
-      console.log('[History] Записано:', description);
+    console.log('[History] Попытка записи в историю:', { action, description, metadata });
+    
+    if (!window.electronAPI) {
+      console.error('[History] Electron API недоступен!');
+      return;
     }
+    
+    if (!window.electronAPI.addHistoryEntry) {
+      console.error('[History] addHistoryEntry не найден в Electron API!');
+      return;
+    }
+    
+    await window.electronAPI.addHistoryEntry({
+      action,
+      description,
+      metadata
+    });
+    
+    console.log('[History] ✅ Успешно записано:', description);
   } catch (error) {
-    console.error('[History] Ошибка записи в историю:', error);
+    console.error('[History] ❌ Ошибка записи в историю:', error);
   }
 }
 

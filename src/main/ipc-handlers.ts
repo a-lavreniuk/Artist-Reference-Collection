@@ -1013,11 +1013,13 @@ export function registerIPCHandlers(): void {
 
   /**
    * Получить путь к файлу истории
-   * Файл history.json хранится в корне рабочей папки
+   * Файл history.json хранится в userData приложения
    */
   function getHistoryFilePath(): string {
-    const workingDir = process.env.ARC_WORKING_DIR || app.getPath('userData');
-    return path.join(workingDir, 'history.json');
+    // Используем стандартную папку userData для хранения истории
+    // Это гарантирует, что файл всегда доступен независимо от рабочей папки
+    const userDataPath = app.getPath('userData');
+    return path.join(userDataPath, 'history.json');
   }
 
   /**
@@ -1060,6 +1062,12 @@ export function registerIPCHandlers(): void {
     try {
       const historyPath = getHistoryFilePath();
       console.log('[IPC] Добавление записи в историю:', entry.description);
+      console.log('[IPC] Путь к файлу истории:', historyPath);
+
+      // Убеждаемся что директория существует
+      const historyDir = path.dirname(historyPath);
+      await fs.mkdir(historyDir, { recursive: true });
+      console.log('[IPC] Директория истории проверена:', historyDir);
 
       // Читаем текущую историю
       let history: any[] = [];
@@ -1069,10 +1077,13 @@ export function registerIPCHandlers(): void {
         try {
           const content = await fs.readFile(historyPath, 'utf-8');
           history = JSON.parse(content);
+          console.log('[IPC] Прочитано записей из файла:', history.length);
         } catch (parseError) {
           console.warn('[IPC] Не удалось прочитать историю, создаём новую:', parseError);
           history = [];
         }
+      } else {
+        console.log('[IPC] Файл истории не существует, создаём новый');
       }
 
       // Добавляем новую запись в начало
@@ -1085,6 +1096,7 @@ export function registerIPCHandlers(): void {
       };
 
       history.unshift(newEntry);
+      console.log('[IPC] Новая запись добавлена:', newEntry);
 
       // Ограничиваем лимитом в 1000 записей
       if (history.length > 1000) {
@@ -1094,9 +1106,9 @@ export function registerIPCHandlers(): void {
 
       // Сохраняем обратно в файл
       await fs.writeFile(historyPath, JSON.stringify(history, null, 2), 'utf-8');
-      console.log('[IPC] История сохранена, всего записей:', history.length);
+      console.log('[IPC] История успешно сохранена, всего записей:', history.length);
     } catch (error) {
-      console.error('[IPC] Ошибка добавления записи в историю:', error);
+      console.error('[IPC] ОШИБКА добавления записи в историю:', error);
       throw error;
     }
   });
