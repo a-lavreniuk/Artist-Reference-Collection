@@ -43,7 +43,18 @@ async function generateIcon() {
       console.log(`✅ PNG ${size}x${size} создан`);
     }
     
-    // 4. Объединяем PNG буферы в .ico файл
+    // 4. Создаём также PNG версию 256x256 для Electron
+    const iconPngPath = path.join(__dirname, '../resources/icon.png');
+    await sharp(svgBuffer)
+      .resize(256, 256, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      })
+      .png()
+      .toFile(iconPngPath);
+    console.log('✅ icon.png создан (256x256)');
+    
+    // 5. Объединяем PNG буферы в .ico файл
     console.log('🔄 Создание .ico файла...');
     const icoBuffer = await toIco(pngBuffers);
     await fs.writeFile(iconPath, icoBuffer);

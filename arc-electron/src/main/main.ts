@@ -105,9 +105,11 @@ function createWindow(): void {
  * Создание системного трея
  */
 function createTray(): void {
-  // Путь к иконке для трея (используем ту же что и для окна)
-  const iconPath = path.join(__dirname, '../../resources/icon.ico');
-  const icon = nativeImage.createFromPath(iconPath);
+  // Путь к иконке для трея (используем PNG для лучшей поддержки)
+  const iconPath = path.join(__dirname, '../../resources/icon.png');
+  
+  // Загружаем иконку и устанавливаем размер 16x16 для трея
+  const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
   
   // Создаём трей
   tray = new Tray(icon);
