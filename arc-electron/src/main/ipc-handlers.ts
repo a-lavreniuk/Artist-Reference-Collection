@@ -507,7 +507,7 @@ export function registerIPCHandlers(): void {
       // Создаём выходную директорию если не существует
       await fs.mkdir(archiveDir, { recursive: true });
 
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const output = fsSync.createWriteStream(outputPath);
         const archive = archiver('zip', {
           zlib: { level: 9 } // Максимальное сжатие
@@ -582,11 +582,35 @@ export function registerIPCHandlers(): void {
         console.log('[IPC] База данных добавлена в архив');
 
         // 2. Добавляем всю рабочую папку в архив
-        archive.directory(workingDir, false);
-        console.log('[IPC] Файлы добавлены в архив');
+        // Вручную добавляем все файлы и папки рекурсивно
+        console.log('[IPC] Добавление файлов в архив...');
+        
+        async function addDirectoryToArchive(dirPath: string, archivePath: string = '') {
+          const entries = await fs.readdir(dirPath, { withFileTypes: true });
+          console.log(`[IPC] Сканирование папки: ${dirPath} (найдено ${entries.length} элементов)`);
+          
+          for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            const archiveEntryPath = archivePath ? path.join(archivePath, entry.name) : entry.name;
+            
+            if (entry.isDirectory()) {
+              // Рекурсивно добавляем содержимое папки
+              console.log(`[IPC] Обход папки: ${entry.name}`);
+              await addDirectoryToArchive(fullPath, archiveEntryPath);
+            } else if (entry.isFile()) {
+              // Добавляем файл
+              console.log(`[IPC] Добавление файла: ${archiveEntryPath}`);
+              archive.file(fullPath, { name: archiveEntryPath });
+            }
+          }
+        }
+        
+        await addDirectoryToArchive(workingDir);
+        console.log('[IPC] Все файлы добавлены в очередь архива');
 
         // Завершаем архивирование
         archive.finalize();
+        console.log('[IPC] Finalize вызван, ждём завершения...');
       });
     } catch (error) {
       console.error('[IPC] Ошибка создания backup:', error);
@@ -729,6 +753,173 @@ export function registerIPCHandlers(): void {
   ipcMain.handle('install-update', async () => {
     console.log('[IPC] Установка обновления...');
     // TODO: Реализовать установку обновления
+  });
+
+  /**
+   * Переместить рабочую папку в новое место
+   * Копирует все файлы и папки из старой директории в новую
+   */
+  ipcMain.handle('move-working-directory', async (event, oldDir: string, newDir: string) => {
+    try {
+      console.log('[IPC] Перенос рабочей папки...');
+      console.log('[IPC] Из:', oldDir);
+      console.log('[IPC] В:', newDir);
+
+      // Проверяем что старая папка существует
+      try {
+        await fs.access(oldDir);
+      } catch {
+        throw new Error('Старая рабочая папка недоступна');
+      }
+
+      // Создаём новую папку
+      await fs.mkdir(newDir, { recursive: true });
+
+      // Подсчитываем количество файлов для прогресса
+      let totalFiles = 0;
+      let copiedFiles = 0;
+
+      async function countFiles(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await countFiles(fullPath);
+          } else {
+            totalFiles++;
+          }
+        }
+      }
+
+      await countFiles(oldDir);
+      console.log(`[IPC] Найдено файлов для копирования: ${totalFiles}`);
+
+      // Рекурсивное копирование с прогрессом
+      async function copyDirectory(src: string, dest: string): Promise<void> {
+        const entries = await fs.readdir(src, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          
+          if (entry.isDirectory()) {
+            await fs.mkdir(destPath, { recursive: true });
+            await copyDirectory(srcPath, destPath);
+          } else if (entry.isFile()) {
+            await fs.copyFile(srcPath, destPath);
+            copiedFiles++;
+            
+            const percent = Math.round((copiedFiles / totalFiles) * 100);
+            event.sender.send('move-directory-progress', {
+              percent,
+              copied: copiedFiles,
+              total: totalFiles
+            });
+            
+            if (copiedFiles % 10 === 0) {
+              console.log(`[IPC] Скопировано: ${copiedFiles}/${totalFiles} (${percent}%)`);
+            }
+          }
+        }
+      }
+
+      await copyDirectory(oldDir, newDir);
+      
+      console.log('[IPC] Все файлы скопированы');
+      
+      return {
+        success: true,
+        copiedFiles: copiedFiles
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка переноса папки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Получить информацию о размерах файлов в рабочей папке
+   * Подсчитывает размеры изображений, видео и превью
+   */
+  ipcMain.handle('get-directory-size', async (_event, workingDir: string) => {
+    try {
+      console.log('[IPC] Подсчёт размеров для:', workingDir);
+      
+      let totalSize = 0;
+      let imagesSize = 0;
+      let videosSize = 0;
+      let cacheSize = 0;
+      let imageCount = 0;
+      let videoCount = 0;
+      
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi'];
+      
+      async function calculateSize(dir: string, isCache: boolean = false): Promise<void> {
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          console.log(`[IPC] Сканирование: ${dir} (найдено ${entries.length} элементов)`);
+          
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            
+            if (entry.isDirectory()) {
+              // Рекурсивно обходим папки
+              const isCacheDir = entry.name === '_cache' || isCache;
+              console.log(`[IPC] Обход папки: ${entry.name} (isCache: ${isCacheDir})`);
+              await calculateSize(fullPath, isCacheDir);
+            } else if (entry.isFile()) {
+              try {
+                const stats = await fs.stat(fullPath);
+                const ext = path.extname(entry.name).toLowerCase();
+                
+                totalSize += stats.size;
+                
+                if (isCache) {
+                  cacheSize += stats.size;
+                  console.log(`[IPC] Файл кэша: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
+                } else if (imageExtensions.includes(ext)) {
+                  imagesSize += stats.size;
+                  imageCount++;
+                  console.log(`[IPC] Изображение: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
+                } else if (videoExtensions.includes(ext)) {
+                  videosSize += stats.size;
+                  videoCount++;
+                  console.log(`[IPC] Видео: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
+                }
+              } catch (error) {
+                // Пропускаем файлы с ошибками доступа
+                console.warn(`[IPC] Не удалось прочитать файл: ${fullPath}`, error);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`[IPC] ОШИБКА чтения директории: ${dir}`, error);
+        }
+      }
+      
+      console.log('[IPC] Начало сканирования:', workingDir);
+      await calculateSize(workingDir);
+      
+      console.log('[IPC] Подсчёт завершён:', {
+        total: Math.round(totalSize / 1024 / 1024) + ' MB',
+        images: Math.round(imagesSize / 1024 / 1024) + ' MB',
+        videos: Math.round(videosSize / 1024 / 1024) + ' MB',
+        cache: Math.round(cacheSize / 1024 / 1024) + ' MB'
+      });
+      
+      return {
+        totalSize,
+        imagesSize,
+        videosSize,
+        cacheSize,
+        imageCount,
+        videoCount
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка подсчёта размеров:', error);
+      throw error;
+    }
   });
 
   console.log('[IPC] Все IPC handlers зарегистрированы');

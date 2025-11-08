@@ -110,7 +110,6 @@ export const CreateTagModal = ({
             onChange={(e) => setName(e.target.value)}
             error={error || undefined}
             fullWidth
-            autoFocus
           />
 
           <div className="modal__footer" style={{ padding: 0, border: 'none' }}>

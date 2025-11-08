@@ -96,7 +96,6 @@ export const CreateCategoryModal = ({
             onChange={(e) => setName(e.target.value)}
             error={error || undefined}
             fullWidth
-            autoFocus
           />
 
           <div>
