@@ -133,8 +133,10 @@ export type HistoryActionType =
   | 'move_storage'              // Перенос хранилища
   | 'create_collection'         // Создание коллекции
   | 'delete_collection'         // Удаление коллекции
+  | 'rename_collection'         // Переименование коллекции
   | 'create_category'           // Создание категории
   | 'delete_category'           // Удаление категории
+  | 'rename_category'           // Переименование категории
   | 'create_backup'             // Создание бэкапа
   | 'clear_cache'               // Очистка кэша
   | 'clear_moodboard'           // Очистка мудборда

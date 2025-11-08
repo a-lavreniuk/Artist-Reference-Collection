@@ -122,6 +122,17 @@ export async function logDeleteCollection(name: string): Promise<void> {
 }
 
 /**
+ * Переименование коллекции
+ */
+export async function logRenameCollection(oldName: string, newName: string): Promise<void> {
+  await logAction(
+    'rename_collection',
+    `Переименована коллекция «${oldName}» → «${newName}»`,
+    { oldName, newName }
+  );
+}
+
+/**
  * Создание категории
  */
 export async function logCreateCategory(name: string, tagCount: number): Promise<void> {
@@ -140,6 +151,17 @@ export async function logDeleteCategory(name: string): Promise<void> {
     'delete_category',
     `Удалена категория «${name}»`,
     { name }
+  );
+}
+
+/**
+ * Переименование категории
+ */
+export async function logRenameCategory(oldName: string, newName: string): Promise<void> {
+  await logAction(
+    'rename_category',
+    `Переименована категория «${oldName}» → «${newName}»`,
+    { oldName, newName }
   );
 }
 

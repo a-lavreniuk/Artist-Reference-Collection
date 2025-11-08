@@ -6,8 +6,8 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { CategorySection, CreateCategoryModal, CreateTagModal } from '../components/tags';
-import { getAllCategories, getAllTags, deleteTag, deleteCategory } from '../services/db';
-import { logDeleteCategory } from '../services/history';
+import { getAllCategories, getAllTags, deleteTag, deleteCategory, updateCategory, updateTag } from '../services/db';
+import { logDeleteCategory, logRenameCategory, logRenameTag } from '../services/history';
 import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
@@ -83,6 +83,52 @@ export const TagsPage = () => {
     setIsCreateTagModalOpen(true);
   };
 
+  const handleCategoryRename = async (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    const newName = prompt('Новое название категории:', category.name);
+    
+    if (!newName || newName.trim() === '' || newName.trim() === category.name) {
+      return;
+    }
+
+    try {
+      const oldName = category.name;
+      await updateCategory(categoryId, { name: newName.trim() });
+      
+      // Логируем переименование
+      await logRenameCategory(oldName, newName.trim());
+      
+      await loadData();
+    } catch (error) {
+      console.error('Ошибка переименования категории:', error);
+    }
+  };
+
+  const handleTagRename = async (tagId: string) => {
+    const tag = tags.find(t => t.id === tagId);
+    if (!tag) return;
+
+    const newName = prompt('Новое название метки:', tag.name);
+    
+    if (!newName || newName.trim() === '' || newName.trim() === tag.name) {
+      return;
+    }
+
+    try {
+      const oldName = tag.name;
+      await updateTag(tagId, { name: newName.trim() });
+      
+      // Логируем переименование
+      await logRenameTag(oldName, newName.trim());
+      
+      await loadData();
+    } catch (error) {
+      console.error('Ошибка переименования метки:', error);
+    }
+  };
+
   const handleCategoryCreated = () => {
     loadData();
   };
@@ -135,6 +181,8 @@ export const TagsPage = () => {
                 onTagRemove={handleTagRemove}
                 onCategoryDelete={handleCategoryDelete}
                 onAddTag={handleAddTag}
+                onCategoryRename={handleCategoryRename}
+                onTagRename={handleTagRename}
               />
             );
           })}
