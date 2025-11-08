@@ -181,23 +181,14 @@
 
 /* ========== АДАПТАЦИЯ ПОД ВЫСОТУ ОКНА ========== */
 
+/* Примечание: отступы НЕ меняются даже на маленьких экранах */
+/* Меняются только размеры элементов если необходимо */
+
 @media (max-height: 800px) {
-  .sidebar {
-    padding: var(--spacing-m) 0;
-  }
-  
-  .sidebar__group {
-    gap: var(--spacing-xs);
-  }
-  
+  /* Размеры элементов можно уменьшить при необходимости */
   .sidebar__item {
-    width: 44px;
-    height: 44px;
-  }
-  
-  .sidebar__icon {
-    width: 20px;
-    height: 20px;
+    width: 52px;
+    height: 52px;
   }
 }
 

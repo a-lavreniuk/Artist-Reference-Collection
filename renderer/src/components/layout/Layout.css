@@ -82,38 +82,19 @@
 
 /* ========== АДАПТАЦИЯ ПОД РАЗМЕР ОКНА ========== */
 
+/* Примечание: отступы НЕ меняются на разных разрешениях */
+/* Меняются только размеры контента (width, height, font-size) */
+
 @media (max-width: 2560px) {
-  .layout__header {
-    /* Сохраняем 32px со всех сторон, кроме низа 16px */
-    padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
-  }
-  
-  .layout__content {
-    padding: var(--spacing-l);
-  }
+  /* Без изменений отступов */
 }
 
 @media (max-width: 2200px) {
-  .layout__header {
-    /* Сохраняем 32px со всех сторон, кроме низа 16px */
-    padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
-  }
-  
-  .layout__content {
-    padding: var(--spacing-l);
-  }
+  /* Без изменений отступов */
 }
 
 @media (max-width: 1920px) {
-  .layout__header {
-    /* Сохраняем 32px со всех сторон, кроме низа 16px */
-    padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
-    min-height: var(--height-header);
-  }
-  
-  .layout__content {
-    padding: var(--spacing-m);
-  }
+  /* Без изменений отступов */
 }
 
 /* ========== ПУСТЫЕ СОСТОЯНИЯ ========== */

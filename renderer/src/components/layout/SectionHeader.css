@@ -178,32 +178,23 @@
 
 /* ========== АДАПТАЦИЯ ПОД ШИРИНУ ОКНА ========== */
 
+/* Примечание: отступы НЕ меняются на разных разрешениях */
+/* Меняются только размеры контента */
+
 @media (max-width: 2200px) {
-  .section-header {
-    padding: var(--spacing-m) var(--spacing-l);
-  }
-  
   .section-header__title {
     font-size: 32px;
   }
 }
 
 @media (max-width: 1920px) {
-  .section-header {
-    padding: var(--spacing-m) var(--spacing-l);
-    gap: var(--spacing-l);
-  }
-  
   .section-header__title {
     font-size: 28px;
   }
   
+  /* Скрываем текст в кнопках фильтров, оставляем только иконки */
   .section-header__filter-button span {
     display: none;
-  }
-  
-  .section-header__filter-button {
-    padding: 0 var(--spacing-m);
   }
 }
 

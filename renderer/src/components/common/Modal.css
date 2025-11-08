@@ -215,23 +215,8 @@
 
 /* ========== АДАПТАЦИЯ ========== */
 
-@media (max-width: 1920px) {
-  .modal-overlay {
-    padding: var(--spacing-l);
-  }
-  
-  .modal__header {
-    padding: var(--spacing-l);
-  }
-  
-  .modal__content {
-    padding: var(--spacing-l);
-  }
-  
-  .modal__footer {
-    padding: var(--spacing-l);
-  }
-}
+/* Примечание: отступы НЕ меняются на разных разрешениях */
+/* Padding остаётся 24px (var(--spacing-xl)) всегда */
 
 @media (max-height: 800px) {
   .modal {

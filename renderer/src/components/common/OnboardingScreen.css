@@ -144,19 +144,11 @@
 /* ========== АДАПТАЦИЯ ========== */
 
 @media (max-height: 900px) {
-  .onboarding__container {
-    padding: var(--spacing-2xl);
-  }
-  
+  /* Размеры элементов можно изменить, но не отступы */
   .onboarding__icon {
     width: 96px;
     height: 96px;
-    margin-bottom: var(--spacing-xl);
   }
-  
-  .onboarding__features {
-    padding: var(--spacing-l);
-    gap: var(--spacing-m);
-  }
+  /* Все padding, margin, gap остаются как в основных стилях */
 }
 

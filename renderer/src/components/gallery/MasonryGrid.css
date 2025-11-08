@@ -81,51 +81,8 @@
 
 /* ========== АДАПТАЦИЯ ПОД РАЗМЕР ОКНА ========== */
 
-@media (max-width: 2400px) {
-  .masonry-grid--standard .masonry-grid__container {
-    gap: var(--spacing-m);
-  }
-  
-  .masonry-grid--standard .masonry-grid__column {
-    gap: var(--spacing-m);
-  }
-}
-
-@media (max-width: 2000px) {
-  .masonry-grid--standard .masonry-grid__container {
-    gap: var(--spacing-m);
-  }
-  
-  .masonry-grid--standard .masonry-grid__column {
-    gap: var(--spacing-m);
-  }
-  
-  .masonry-grid--compact .masonry-grid__container {
-    gap: var(--spacing-s);
-  }
-  
-  .masonry-grid--compact .masonry-grid__column {
-    gap: var(--spacing-s);
-  }
-}
-
-@media (max-width: 1920px) {
-  .masonry-grid--standard .masonry-grid__container {
-    gap: var(--spacing-m);
-  }
-  
-  .masonry-grid--standard .masonry-grid__column {
-    gap: var(--spacing-m);
-  }
-  
-  .masonry-grid--compact .masonry-grid__container {
-    gap: var(--spacing-s);
-  }
-  
-  .masonry-grid--compact .masonry-grid__column {
-    gap: var(--spacing-s);
-  }
-}
+/* Примечание: отступы (gap) НЕ меняются на разных разрешениях */
+/* Gap остаётся константным: 16px для standard, 12px для compact */
 
 /* ========== АНИМАЦИИ ========== */
 

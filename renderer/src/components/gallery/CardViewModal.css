@@ -164,7 +164,7 @@
 @media (max-width: 1920px) {
   .card-view {
     grid-template-columns: 1fr 350px;
-    gap: var(--spacing-l);
+    /* gap остаётся как в основных стилях */
   }
   
   .card-view__similar-grid {
@@ -175,7 +175,7 @@
 @media (max-width: 1400px) {
   .card-view {
     grid-template-columns: 1fr;
-    gap: var(--spacing-l);
+    /* gap остаётся как в основных стилях */
   }
   
   .card-view__preview {

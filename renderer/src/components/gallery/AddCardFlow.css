@@ -204,7 +204,7 @@
 @media (max-width: 1920px) {
   .add-card-flow__main {
     grid-template-columns: 1fr 350px;
-    gap: var(--spacing-l);
+    /* gap остаётся как в основных стилях */
   }
 }
 
