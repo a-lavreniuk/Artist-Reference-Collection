@@ -171,8 +171,8 @@ export const SettingsPage = () => {
 
         console.log(`[Settings] Обновлено путей: ${allCards.length}`);
 
-        // 4. Обновляем рабочую папку в настройках
-        localStorage.setItem('arc-working-directory', newPath);
+        // 4. Обновляем рабочую папку в настройках (правильный ключ!)
+        localStorage.setItem('arc_working_directory', newPath);
         
         setMoveMessage(`✅ Перенос завершён! Скопировано файлов: ${result.copiedFiles}`);
         
@@ -367,6 +367,10 @@ export const SettingsPage = () => {
         await importDatabase(result.databaseJson, targetPath);
         console.log('[Settings] База данных импортирована с обновленными путями');
       }
+
+      // 5. Обновляем рабочую папку в настройках (правильный ключ!)
+      localStorage.setItem('arc_working_directory', targetPath);
+      console.log('[Settings] Рабочая папка обновлена в localStorage:', targetPath);
 
       setRestoreMessage('✅ Восстановление завершено! Обновите страницу.');
       await loadStats();
