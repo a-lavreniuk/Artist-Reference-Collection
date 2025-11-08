@@ -51,6 +51,7 @@ export const SearchBar = ({
 }: SearchBarProps) => {
   const [tags, setTags] = useState<Tag[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Используем значение из пропсов (из глобального контекста)
   const searchValue = value || '';
@@ -81,6 +82,19 @@ export const SearchBar = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [setIsMenuOpen]);
+
+  // Сохранение фокуса при навигации
+  useEffect(() => {
+    // Если меню открыто и есть текст в поиске, восстанавливаем фокус
+    if (isOpen && searchValue) {
+      // Небольшая задержка чтобы дождаться завершения навигации
+      const timeoutId = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen, searchValue]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -178,6 +192,7 @@ export const SearchBar = ({
         {/* Поле ввода */}
         <div className="searchbar__input-wrapper">
           <Input
+            ref={inputRef}
             type="search"
             placeholder="Поиск по меткам или ID карточки"
             value={searchValue}

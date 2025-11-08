@@ -137,7 +137,7 @@
   left: calc(100% + var(--spacing-m));
   top: 50%;
   transform: translateY(-50%) translateX(-8px);
-  z-index: 100;
+  z-index: 1000; /* Выше всех элементов включая поисковую строку */
   
   /* Типографика */
   font-size: var(--font-size-s);
