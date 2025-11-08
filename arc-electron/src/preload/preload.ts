@@ -107,6 +107,13 @@ export interface ElectronAPI {
   copyToClipboard: (text: string) => Promise<boolean>;
   
   /**
+   * Удалить файл с диска
+   * @param filePath - Путь к файлу
+   * @returns true если успешно
+   */
+  deleteFile: (filePath: string) => Promise<boolean>;
+  
+  /**
    * Получить информацию о размерах файлов в рабочей папке
    * @param workingDir - Рабочая директория
    * @returns Объект с размерами файлов
@@ -260,6 +267,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportFile: (sourcePath: string, defaultFileName: string) => 
     ipcRenderer.invoke('export-file', sourcePath, defaultFileName),
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),
+  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
   getDirectorySize: (workingDir: string) => ipcRenderer.invoke('get-directory-size', workingDir),
   moveWorkingDirectory: (oldDir: string, newDir: string) => ipcRenderer.invoke('move-working-directory', oldDir, newDir),
   onMoveDirectoryProgress: (callback: (data: { percent: number; copied: number; total: number }) => void) => {

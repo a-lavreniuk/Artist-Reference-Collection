@@ -23,6 +23,7 @@ interface ElectronAPI {
   openFileLocation: (filePath: string) => Promise<boolean>;
   exportFile: (sourcePath: string, defaultFileName: string) => Promise<string | null>;
   copyToClipboard: (text: string) => Promise<boolean>;
+  deleteFile: (filePath: string) => Promise<boolean>;
   getDirectorySize: (workingDir: string) => Promise<{
     totalSize: number;
     imagesSize: number;

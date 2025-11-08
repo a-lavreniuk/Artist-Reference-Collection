@@ -126,23 +126,60 @@ export async function updateCard(id: string, changes: Partial<Card>): Promise<nu
 
 /**
  * Удалить карточку
+ * Удаляет запись из БД + физические файлы (исходник и превью)
  */
 export async function deleteCard(id: string): Promise<void> {
-  // Уменьшаем счётчик для всех меток карточки
+  // Получаем карточку для доступа к путям файлов
   const card = await db.cards.get(id);
-  if (card && card.tags) {
-    for (const tagId of card.tags) {
-      const tag = await db.tags.get(tagId);
-      if (tag && tag.cardCount > 0) {
-        await db.tags.update(tagId, {
-          cardCount: tag.cardCount - 1
-        });
+  
+  if (card) {
+    // Уменьшаем счётчик для всех меток карточки
+    if (card.tags) {
+      for (const tagId of card.tags) {
+        const tag = await db.tags.get(tagId);
+        if (tag && tag.cardCount > 0) {
+          await db.tags.update(tagId, {
+            cardCount: tag.cardCount - 1
+          });
+        }
+      }
+    }
+
+    // Удаляем физические файлы через Electron API
+    if (window.electronAPI?.deleteFile) {
+      try {
+        // Удаляем исходник
+        await window.electronAPI.deleteFile(card.filePath);
+        console.log('[DB] Удалён исходник:', card.filePath);
+        
+        // Удаляем превью (извлекаем путь из thumbnailUrl если это не Data URL)
+        if (card.thumbnailUrl && !card.thumbnailUrl.startsWith('data:')) {
+          await window.electronAPI.deleteFile(card.thumbnailUrl);
+          console.log('[DB] Удалено превью:', card.thumbnailUrl);
+        } else {
+          // Если thumbnailUrl это Data URL, ищем файл превью по имени
+          const fileName = card.filePath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '');
+          if (fileName) {
+            const thumbName = `${fileName}_thumb.jpg`;
+            // Путь к превью: рабочая_папка/_cache/thumbs/имя_thumb.jpg
+            const workingDir = localStorage.getItem('arc_working_directory');
+            if (workingDir) {
+              const thumbPath = `${workingDir}\\_cache\\thumbs\\${thumbName}`;
+              await window.electronAPI.deleteFile(thumbPath);
+              console.log('[DB] Удалено превью:', thumbPath);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[DB] Ошибка удаления файлов:', error);
+        // Продолжаем удаление из БД даже если не удалось удалить файлы
       }
     }
   }
   
+  // Удаляем запись из БД
   await db.cards.delete(id);
-  // Также удаляем превью из кеша
+  // Также удаляем превью из кеша БД
   await db.thumbnailCache.where('cardId').equals(id).delete();
 }
 

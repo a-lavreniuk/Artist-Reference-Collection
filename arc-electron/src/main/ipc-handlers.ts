@@ -459,6 +459,29 @@ export function registerIPCHandlers(): void {
     }
   });
 
+  /**
+   * Удалить файл с диска
+   * @param filePath - Путь к файлу для удаления
+   * @returns true если успешно
+   */
+  ipcMain.handle('delete-file', async (_event, filePath: string) => {
+    try {
+      // Проверяем существование файла
+      const exists = await fileExists(filePath);
+      if (!exists) {
+        console.log('[IPC] Файл не найден (пропускаем):', filePath);
+        return true; // Возвращаем true так как файла уже нет
+      }
+
+      await fs.unlink(filePath);
+      console.log('[IPC] Файл удалён:', filePath);
+      return true;
+    } catch (error) {
+      console.error('[IPC] Ошибка удаления файла:', error);
+      throw error;
+    }
+  });
+
   // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
 
   /**
