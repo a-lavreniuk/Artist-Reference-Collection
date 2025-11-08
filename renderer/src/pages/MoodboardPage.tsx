@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
+import { useSearchNavigation } from '../hooks';
 import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards, updateCard } from '../services/db';
@@ -11,6 +12,7 @@ import { logClearMoodboard } from '../services/history';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const MoodboardPage = () => {
+  const { searchProps } = useSearchNavigation();
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
@@ -233,7 +235,7 @@ export const MoodboardPage = () => {
         headerProps={{
           title: 'Мудборд'
         }}
-        showSearch={false}
+        searchProps={searchProps}
       >
         <div className="layout__loading">
           <div className="layout__spinner" />

@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
+import { useSearchNavigation } from '../hooks';
 import { Button } from '../components/common';
 import { CategorySection, CreateCategoryModal, CreateTagModal } from '../components/tags';
 import { getAllCategories, getAllTags, deleteTag, deleteCategory, updateCategory, updateTag } from '../services/db';
@@ -12,6 +13,7 @@ import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
 export const TagsPage = () => {
+  const { searchProps } = useSearchNavigation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -143,7 +145,7 @@ export const TagsPage = () => {
         headerProps={{
           title: 'Категории и метки'
         }}
-        showSearch={false}
+        searchProps={searchProps}
       >
         <div className="layout__loading">
           <div className="layout__spinner" />

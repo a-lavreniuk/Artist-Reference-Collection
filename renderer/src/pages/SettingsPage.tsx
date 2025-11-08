@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
+import { useSearchNavigation } from '../hooks';
 import { Button } from '../components/common';
 import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
@@ -19,6 +20,7 @@ type CollectionWithCount = Collection & { cardCount: number };
 
 export const SettingsPage = () => {
   const navigate = useNavigate();
+  const { searchProps } = useSearchNavigation();
   const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
@@ -415,7 +417,7 @@ export const SettingsPage = () => {
       headerProps={{
         title: 'Настройки'
       }}
-      showSearch={false}
+      searchProps={searchProps}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
         {/* Табы */}

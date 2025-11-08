@@ -6,22 +6,30 @@ import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards, searchCardsAdvanced } from '../services/db';
+import { useSearchNavigation } from '../hooks';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const CardsPage = () => {
+  // Используем хук для управления поиском
+  const {
+    searchValue,
+    setSearchValue,
+    selectedTags,
+    setSelectedTags,
+    viewingCard,
+    isModalOpen,
+    handleCardClick: handleSearchCardClick,
+    handleCloseModal,
+    searchProps
+  } = useSearchNavigation();
+  
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
-  const [searchValue, setSearchValue] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   
   // Состояние данных
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Модальное окно просмотра
-  const [viewingCard, setViewingCard] = useState<Card | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Загрузка карточек при монтировании
   useEffect(() => {
@@ -107,16 +115,9 @@ export const CardsPage = () => {
     };
   }, [cards]);
 
-  // Обработчик клика по карточке
+  // Обработчик клика по карточке из галереи
   const handleCardClick = (card: Card) => {
-    setViewingCard(card);
-    setIsModalOpen(true);
-  };
-
-  // Обработчик закрытия модального окна
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setTimeout(() => setViewingCard(null), 300);
+    handleSearchCardClick(card);
   };
 
   // Обработчик обновления карточки
@@ -181,13 +182,7 @@ export const CardsPage = () => {
           onChange: setContentFilter
         }
       }}
-      searchProps={{
-        value: searchValue,
-        onChange: setSearchValue,
-        selectedTags,
-        onTagsChange: setSelectedTags,
-        onCardClick: handleCardClick
-      }}
+      searchProps={searchProps}
     >
       <MasonryGrid
         cards={filteredCards}

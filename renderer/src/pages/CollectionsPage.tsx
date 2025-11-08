@@ -13,6 +13,7 @@ import './CollectionsPage.css';
 
 export const CollectionsPage = () => {
   const navigate = useNavigate();
+  const { searchProps } = useSearchNavigation();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -48,7 +49,7 @@ export const CollectionsPage = () => {
         headerProps={{
           title: 'Коллекции'
         }}
-        showSearch={false}
+        searchProps={searchProps}
       >
         <div className="layout__loading">
           <div className="layout__spinner" />
@@ -72,7 +73,7 @@ export const CollectionsPage = () => {
           </Button>
         )
       }}
-      showSearch={false}
+      searchProps={searchProps}
     >
       {collections.length > 0 ? (
         <div className="collections-grid">

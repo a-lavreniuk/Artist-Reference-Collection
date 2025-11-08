@@ -6,9 +6,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { AddCardFlow } from '../components/gallery';
+import { useSearchNavigation } from '../hooks';
 
 export const AddPage = () => {
   const navigate = useNavigate();
+  const { searchProps } = useSearchNavigation();
 
   const handleComplete = () => {
     navigate('/');
@@ -25,7 +27,7 @@ export const AddPage = () => {
       headerProps={{
         title: 'Добавить карточки'
       }}
-      showSearch={false}
+      searchProps={searchProps}
     >
       <AddCardFlow
         onComplete={handleComplete}

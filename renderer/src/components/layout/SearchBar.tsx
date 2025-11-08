@@ -25,6 +25,9 @@ export interface SearchBarProps {
   
   /** Обработчик клика по карточке из истории */
   onCardClick?: (card: Card) => void;
+  
+  /** Обработчик любого действия в поиске (для навигации на страницу карточек) */
+  onSearchAction?: () => void;
 }
 
 /**
@@ -35,7 +38,8 @@ export const SearchBar = ({
   onChange,
   selectedTags = [],
   onTagsChange,
-  onCardClick
+  onCardClick,
+  onSearchAction
 }: SearchBarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(value);
@@ -77,6 +81,11 @@ export const SearchBar = ({
     if (!isOpen) {
       setIsOpen(true);
     }
+    
+    // Если начался ввод - вызываем навигацию
+    if (newValue.trim()) {
+      onSearchAction?.();
+    }
   };
 
   const handleInputFocus = () => {
@@ -110,6 +119,9 @@ export const SearchBar = ({
 
   // Обработчик выбора метки из выпадающего меню
   const handleTagSelect = (tagId: string) => {
+    // Вызываем навигацию на страницу карточек
+    onSearchAction?.();
+    
     if (selectedTags.includes(tagId)) {
       // Убираем метку
       handleRemoveTag(tagId);
@@ -127,12 +139,18 @@ export const SearchBar = ({
 
   // Обработчик выбора меток из истории
   const handleHistoryTagSelect = (tagIds: string[]) => {
+    // Вызываем навигацию на страницу карточек
+    onSearchAction?.();
+    
     onTagsChange?.(tagIds);
     setIsOpen(false);
   };
 
   // Обработчик клика по недавно просмотренной карточке
   const handleRecentCardClick = (card: Card) => {
+    // Вызываем навигацию на страницу карточек
+    onSearchAction?.();
+    
     // Закрываем меню
     setIsOpen(false);
     // Открываем карточку
