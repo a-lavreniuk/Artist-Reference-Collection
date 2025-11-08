@@ -7,6 +7,7 @@ import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { CategorySection, CreateCategoryModal, CreateTagModal } from '../components/tags';
 import { getAllCategories, getAllTags, deleteTag, deleteCategory } from '../services/db';
+import { logDeleteCategory } from '../services/history';
 import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
@@ -67,6 +68,10 @@ export const TagsPage = () => {
 
     try {
       await deleteCategory(categoryId);
+      
+      // Логируем удаление категории
+      await logDeleteCategory(category.name);
+      
       await loadData();
     } catch (error) {
       console.error('Ошибка удаления категории:', error);

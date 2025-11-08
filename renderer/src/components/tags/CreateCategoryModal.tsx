@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Modal, Button, Input } from '../common';
 import type { Category } from '../../types';
 import { addCategory } from '../../services/db';
+import { logCreateCategory } from '../../services/history';
 
 export interface CreateCategoryModalProps {
   /** Открыто ли модальное окно */
@@ -60,6 +61,9 @@ export const CreateCategoryModal = ({
       };
 
       await addCategory(category);
+      
+      // Логируем создание категории
+      await logCreateCategory(category.name, category.tagIds.length);
       
       setName('');
       setColor('#93919A');

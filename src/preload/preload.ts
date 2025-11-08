@@ -224,6 +224,35 @@ export interface ElectronAPI {
    */
   checkForUpdates: () => Promise<void>;
   
+  // === ИСТОРИЯ ДЕЙСТВИЙ ===
+  
+  /**
+   * Получить историю действий пользователя
+   * @returns Массив записей истории
+   */
+  getHistory: () => Promise<Array<{
+    id: string;
+    timestamp: string;
+    action: string;
+    description: string;
+    metadata?: any;
+  }>>;
+  
+  /**
+   * Добавить запись в историю действий
+   * @param entry - Запись истории
+   */
+  addHistoryEntry: (entry: {
+    action: string;
+    description: string;
+    metadata?: any;
+  }) => Promise<void>;
+  
+  /**
+   * Очистить всю историю действий
+   */
+  clearHistory: () => Promise<void>;
+  
   // === СОБЫТИЯ ===
   
   /**
@@ -300,6 +329,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('show-notification', title, body),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  
+  // История действий
+  getHistory: () => ipcRenderer.invoke('get-history'),
+  addHistoryEntry: (entry: { action: string; description: string; metadata?: any }) => 
+    ipcRenderer.invoke('add-history-entry', entry),
+  clearHistory: () => ipcRenderer.invoke('clear-history'),
   
   // События
   onUpdateAvailable: (callback: () => void) => {

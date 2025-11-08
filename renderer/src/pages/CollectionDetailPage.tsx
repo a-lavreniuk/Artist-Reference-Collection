@@ -8,6 +8,7 @@ import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getCollection, getAllCards, deleteCollection } from '../services/db';
+import { logDeleteCollection } from '../services/history';
 import type { Collection, Card, ViewMode, ContentFilter } from '../types';
 
 export const CollectionDetailPage = () => {
@@ -91,6 +92,10 @@ export const CollectionDetailPage = () => {
 
     try {
       await deleteCollection(collection.id);
+      
+      // Логируем удаление коллекции
+      await logDeleteCollection(collection.name);
+      
       navigate('/collections');
     } catch (error) {
       console.error('Ошибка удаления коллекции:', error);

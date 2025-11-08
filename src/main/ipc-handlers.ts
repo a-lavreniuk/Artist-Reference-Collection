@@ -1009,6 +1009,121 @@ export function registerIPCHandlers(): void {
     }
   });
 
+  // === ИСТОРИЯ ДЕЙСТВИЙ ===
+
+  /**
+   * Получить путь к файлу истории
+   * Файл history.json хранится в корне рабочей папки
+   */
+  function getHistoryFilePath(): string {
+    const workingDir = process.env.ARC_WORKING_DIR || app.getPath('userData');
+    return path.join(workingDir, 'history.json');
+  }
+
+  /**
+   * Получить историю действий из JSON файла
+   */
+  ipcMain.handle('get-history', async () => {
+    try {
+      const historyPath = getHistoryFilePath();
+      console.log('[IPC] Чтение истории из:', historyPath);
+
+      // Проверяем существование файла
+      const exists = await fileExists(historyPath);
+      if (!exists) {
+        console.log('[IPC] Файл истории не найден, возвращаем пустой массив');
+        return [];
+      }
+
+      // Читаем и парсим JSON
+      const content = await fs.readFile(historyPath, 'utf-8');
+      const history = JSON.parse(content);
+
+      console.log(`[IPC] Прочитано ${history.length} записей истории`);
+      return history;
+    } catch (error) {
+      console.error('[IPC] Ошибка чтения истории:', error);
+      // Возвращаем пустой массив в случае ошибки
+      return [];
+    }
+  });
+
+  /**
+   * Добавить запись в историю действий
+   * Сохраняет максимум 1000 последних записей
+   */
+  ipcMain.handle('add-history-entry', async (_event, entry: {
+    action: string;
+    description: string;
+    metadata?: any;
+  }) => {
+    try {
+      const historyPath = getHistoryFilePath();
+      console.log('[IPC] Добавление записи в историю:', entry.description);
+
+      // Читаем текущую историю
+      let history: any[] = [];
+      const exists = await fileExists(historyPath);
+      
+      if (exists) {
+        try {
+          const content = await fs.readFile(historyPath, 'utf-8');
+          history = JSON.parse(content);
+        } catch (parseError) {
+          console.warn('[IPC] Не удалось прочитать историю, создаём новую:', parseError);
+          history = [];
+        }
+      }
+
+      // Добавляем новую запись в начало
+      const newEntry = {
+        id: `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        action: entry.action,
+        description: entry.description,
+        metadata: entry.metadata || {}
+      };
+
+      history.unshift(newEntry);
+
+      // Ограничиваем лимитом в 1000 записей
+      if (history.length > 1000) {
+        history = history.slice(0, 1000);
+        console.log('[IPC] История обрезана до 1000 записей');
+      }
+
+      // Сохраняем обратно в файл
+      await fs.writeFile(historyPath, JSON.stringify(history, null, 2), 'utf-8');
+      console.log('[IPC] История сохранена, всего записей:', history.length);
+    } catch (error) {
+      console.error('[IPC] Ошибка добавления записи в историю:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Очистить всю историю действий
+   */
+  ipcMain.handle('clear-history', async () => {
+    try {
+      const historyPath = getHistoryFilePath();
+      console.log('[IPC] Очистка истории');
+
+      // Проверяем существование файла
+      const exists = await fileExists(historyPath);
+      if (exists) {
+        // Удаляем файл истории
+        await fs.unlink(historyPath);
+        console.log('[IPC] Файл истории удалён');
+      } else {
+        console.log('[IPC] Файл истории не существует, очистка не требуется');
+      }
+    } catch (error) {
+      console.error('[IPC] Ошибка очистки истории:', error);
+      throw error;
+    }
+  });
+
   console.log('[IPC] Все IPC handlers зарегистрированы');
 }
 

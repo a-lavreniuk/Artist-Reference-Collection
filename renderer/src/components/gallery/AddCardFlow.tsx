@@ -6,6 +6,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button, Tag, Input } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
+import { logImportFiles } from '../../services/history';
 import { useFileSystem } from '../../hooks';
 import type { Card, Tag as TagType, Category, Collection } from '../../types';
 import './AddCardFlow.css';
@@ -327,6 +328,9 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
         setMessage('❌ Не удалось сохранить ни один файл');
         return;
       }
+
+      // Логируем импорт файлов
+      await logImportFiles(createdCards.length);
 
       setMessage(`✅ Добавлено ${createdCards.length} из ${queue.length} карточек!`);
       setTimeout(() => onComplete(createdCards), 1000);

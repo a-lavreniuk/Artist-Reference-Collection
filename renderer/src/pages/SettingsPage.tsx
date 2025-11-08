@@ -6,8 +6,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { Button } from '../components/common';
+import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
 import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
+import { logCreateBackup, logClearCache, logMoveStorage } from '../services/history';
 import type { AppStatistics, Tag, Collection } from '../types';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
@@ -176,6 +178,10 @@ export const SettingsPage = () => {
         // 4. Обновляем рабочую папку в настройках (правильный ключ!)
         localStorage.setItem('arc_working_directory', newPath);
         
+        // 5. Логируем перенос хранилища
+        const totalSize = directorySizes?.totalSize || 0;
+        await logMoveStorage(totalSize);
+        
         setMoveMessage(`✅ Перенос завершён! Скопировано файлов: ${result.copiedFiles}. Переход в галерею...`);
         
         setTimeout(() => {
@@ -235,8 +241,15 @@ export const SettingsPage = () => {
     }
 
     try {
+      // Получаем размер кэша перед очисткой
+      const cacheSize = directorySizes?.cacheSize || 0;
+      
       await db.delete();
       await db.open();
+      
+      // Логируем очистку кэша
+      await logClearCache(cacheSize);
+      
       setMessage('✅ Кеш очищен');
       await loadStats();
       setTimeout(() => setMessage(null), 2000);
@@ -296,6 +309,10 @@ export const SettingsPage = () => {
 
       if (response.success) {
         const sizeMB = Math.round(response.size / 1024 / 1024);
+        
+        // Логируем создание бэкапа
+        await logCreateBackup(response.size, backupParts);
+        
         setBackupMessage(`✅ Backup создан! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
         
         // Открываем папку с backup в проводнике
@@ -953,27 +970,7 @@ export const SettingsPage = () => {
 
         {/* Таб: История */}
         {activeTab === 'history' && (
-          <div style={{ 
-            padding: '24px', 
-            backgroundColor: 'var(--bg-secondary)', 
-            borderRadius: 'var(--radius-l)' 
-          }}>
-            <h3 className="h3" style={{ marginBottom: '16px' }}>📜 История действий</h3>
-            
-            <div style={{ 
-              textAlign: 'center',
-              padding: '60px 24px',
-              color: 'var(--text-secondary)'
-            }}>
-              <p className="text-l" style={{ marginBottom: '12px' }}>
-                🚧 В разработке
-              </p>
-              <p className="text-m">
-                Здесь будет отображаться история ваших действий:<br/>
-                добавление карточек, создание коллекций, изменение меток.
-              </p>
-            </div>
-          </div>
+          <HistorySection />
         )}
       </div>
     </Layout>
