@@ -28,6 +28,12 @@ export interface SearchBarProps {
   
   /** Обработчик любого действия в поиске (для навигации на страницу карточек) */
   onSearchAction?: () => void;
+  
+  /** Состояние открытости меню (из глобального контекста) */
+  isMenuOpen?: boolean;
+  
+  /** Обработчик изменения состояния меню */
+  setIsMenuOpen?: (isOpen: boolean) => void;
 }
 
 /**
@@ -39,14 +45,16 @@ export const SearchBar = ({
   selectedTags = [],
   onTagsChange,
   onCardClick,
-  onSearchAction
+  onSearchAction,
+  isMenuOpen = false,
+  setIsMenuOpen
 }: SearchBarProps) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   
   // Используем значение из пропсов (из глобального контекста)
   const searchValue = value || '';
+  const isOpen = isMenuOpen;
 
   // Загрузка меток для отображения названий
   useEffect(() => {
@@ -66,13 +74,13 @@ export const SearchBar = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setIsMenuOpen?.(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [setIsMenuOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -80,7 +88,7 @@ export const SearchBar = ({
     
     // Открываем выпадающее меню при вводе
     if (!isOpen) {
-      setIsOpen(true);
+      setIsMenuOpen?.(true);
     }
     
     // Если начался ввод - вызываем навигацию
@@ -90,7 +98,7 @@ export const SearchBar = ({
   };
 
   const handleInputFocus = () => {
-    setIsOpen(true);
+    setIsMenuOpen?.(true);
   };
 
   const handleClear = () => {
@@ -144,7 +152,7 @@ export const SearchBar = ({
     // Очищаем поисковый запрос и устанавливаем метки
     onChange?.('');
     onTagsChange?.(tagIds);
-    setIsOpen(false);
+    setIsMenuOpen?.(false);
   };
 
   // Обработчик клика по недавно просмотренной карточке
@@ -153,7 +161,7 @@ export const SearchBar = ({
     onSearchAction?.();
     
     // Закрываем меню
-    setIsOpen(false);
+    setIsMenuOpen?.(false);
     // Открываем карточку
     onCardClick?.(card);
   };

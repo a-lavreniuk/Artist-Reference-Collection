@@ -14,6 +14,10 @@ interface SearchContextType {
   selectedTags: string[];
   setSelectedTags: (tags: string[]) => void;
   
+  // Состояние выпадающего меню
+  isSearchMenuOpen: boolean;
+  setIsSearchMenuOpen: (isOpen: boolean) => void;
+  
   // Состояние модального окна
   viewingCard: Card | null;
   isModalOpen: boolean;
@@ -31,6 +35,8 @@ interface SearchContextType {
     onTagsChange: (tags: string[]) => void;
     onCardClick: (card: Card) => void;
     onSearchAction: () => void;
+    isMenuOpen: boolean;
+    setIsMenuOpen: (isOpen: boolean) => void;
   };
 }
 
@@ -44,6 +50,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [searchValue, setSearchValue] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -82,6 +89,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setSearchValue,
     selectedTags,
     setSelectedTags,
+    isSearchMenuOpen,
+    setIsSearchMenuOpen,
     viewingCard,
     isModalOpen,
     handleSearchAction,
@@ -93,7 +102,9 @@ export function SearchProvider({ children }: { children: ReactNode }) {
       selectedTags,
       onTagsChange: setSelectedTags,
       onCardClick: handleCardClick,
-      onSearchAction: handleSearchAction
+      onSearchAction: handleSearchAction,
+      isMenuOpen: isSearchMenuOpen,
+      setIsMenuOpen: setIsSearchMenuOpen
     }
   };
 
