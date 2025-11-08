@@ -27,17 +27,19 @@
   min-width: 0; /* Важно для правильной работы flex */
 }
 
-/* Растягиваем сам input на всю ширину */
-.searchbar__input-wrapper .input-wrapper {
-  width: 100%;
+/* Растягиваем сам input на всю ширину - более специфичные селекторы */
+.searchbar .searchbar__input-wrapper .input-wrapper {
+  width: 100% !important;
+  display: flex !important;
 }
 
-.searchbar__input-wrapper .input-container {
-  width: 100%;
+.searchbar .searchbar__input-wrapper .input-container {
+  width: 100% !important;
 }
 
-.searchbar__input-wrapper .input {
-  width: 100%;
+.searchbar .searchbar__input-wrapper .input {
+  width: 100% !important;
+  flex: 1;
 }
 
 /* ========== ВЫБРАННЫЕ МЕТКИ ========== */
