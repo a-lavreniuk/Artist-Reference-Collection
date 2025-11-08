@@ -89,10 +89,38 @@ export const SettingsPage = () => {
   };
 
   const handleChangeDirectory = async () => {
+    const hasCards = stats && stats.totalCards > 0;
+    
+    if (hasCards && directoryPath) {
+      // Если есть карточки, предупреждаем о последствиях
+      const confirmed = confirm(
+        '⚠️ ВНИМАНИЕ! Смена рабочей папки\n\n' +
+        'У вас уже есть карточки в текущей папке.\n\n' +
+        'Смена папки:\n' +
+        '✅ Создаст новую папку для НОВЫХ файлов\n' +
+        '❌ НЕ перенесёт существующие файлы\n' +
+        '❌ Старые карточки перестанут работать\n\n' +
+        'Рекомендация:\n' +
+        '1. Создайте backup перед сменой папки\n' +
+        '2. Вручную переместите файлы в новую папку\n' +
+        '3. Восстановите backup в новой папке\n\n' +
+        'Продолжить смену папки?'
+      );
+      
+      if (!confirmed) {
+        return;
+      }
+    }
+    
+    const oldPath = directoryPath;
     await requestDirectory();
-    await loadDirectorySizes(); // Загружаем размеры после смены папки
-    setMessage('✅ Рабочая папка обновлена');
-    setTimeout(() => setMessage(null), 2000);
+    
+    // Если папка изменилась, перезагружаем данные
+    if (directoryPath !== oldPath) {
+      await loadDirectorySizes();
+      setMessage('✅ Рабочая папка обновлена. Используйте Backup для переноса файлов.');
+      setTimeout(() => setMessage(null), 5000);
+    }
   };
 
   const handleDeleteTag = async (tagId: string, tagName: string) => {
@@ -466,6 +494,21 @@ export const SettingsPage = () => {
               Очистить базу данных
             </Button>
           </div>
+
+          {/* Предупреждение о смене папки */}
+          {directoryHandle && stats && stats.totalCards > 0 && (
+            <div style={{
+              padding: '12px 16px',
+              backgroundColor: 'var(--color-yellow-100)',
+              borderRadius: 'var(--radius-s)',
+              marginTop: '16px'
+            }}>
+              <p className="text-s">
+                ⚠️ <strong>Важно:</strong> Смена папки НЕ переносит существующие файлы. 
+                Используйте Backup → Восстановить для переноса в новое место.
+              </p>
+            </div>
+          )}
 
           {message && (
             <div style={{
