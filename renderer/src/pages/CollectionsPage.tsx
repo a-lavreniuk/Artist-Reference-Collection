@@ -8,6 +8,7 @@ import { Layout } from '../components/layout';
 import { Button } from '../components/common';
 import { CollectionCard, CreateCollectionModal } from '../components/collections';
 import { getAllCollections } from '../services/db';
+import { useSearchNavigation } from '../hooks';
 import type { Collection } from '../types';
 import './CollectionsPage.css';
 
