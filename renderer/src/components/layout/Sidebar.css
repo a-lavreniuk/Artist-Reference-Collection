@@ -98,7 +98,7 @@
 .sidebar__item--active {
   background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
   border-color: transparent;
-  color: var(--color-grayscale-500); /* #93919a - цвет иконки */
+  color: var(--color-grayscale-200); /* #d5d3d9 - цвет иконки светлее для контраста */
 }
 
 .sidebar__item--active:hover {
