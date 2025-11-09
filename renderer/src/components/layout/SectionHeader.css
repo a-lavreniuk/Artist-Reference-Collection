@@ -15,7 +15,7 @@
   
   /* Оформление */
   background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 2px solid var(--color-grayscale-100); /* Толщина 2px, цвет grayscale-100 */
   
   /* Сброс */
   flex-shrink: 0;
