@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
-import { Button } from '../components/common';
+import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getCollection, getAllCards, deleteCollection, updateCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
 import { logDeleteCollection, logRenameCollection } from '../services/history';
@@ -197,19 +197,21 @@ export const CollectionDetailPage = () => {
         actions: (
           <>
             <Button 
-              variant="secondary" 
+              variant="border" 
               size="L"
+              iconOnly
+              iconLeft={<Icon name="pencil" size={24} variant="border" />}
               onClick={handleRenameCollection}
-            >
-              Переименовать
-            </Button>
-            <Button
-              variant="error"
+              title="Переименовать коллекцию"
+            />
+            <Button 
+              variant="border" 
               size="L"
+              iconOnly
+              iconLeft={<Icon name="trash" size={24} variant="border" />}
               onClick={handleDeleteCollection}
-            >
-              Удалить коллекцию
-            </Button>
+              title="Удалить коллекцию"
+            />
           </>
         )
       }}
