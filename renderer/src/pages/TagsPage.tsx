@@ -219,7 +219,6 @@ export const TagsPage = () => {
         <CreateTagModal
           isOpen={isCreateTagModalOpen}
           categoryId={selectedCategoryId}
-          categoryColor={categories.find(c => c.id === selectedCategoryId)?.color}
           onClose={() => {
             setIsCreateTagModalOpen(false);
             setSelectedCategoryId(null);

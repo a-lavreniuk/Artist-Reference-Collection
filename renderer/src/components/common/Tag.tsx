@@ -56,11 +56,7 @@ export const Tag = ({
     className
   ].filter(Boolean).join(' ');
 
-  const tagStyle = {
-    ...style,
-    ...(color && variant === 'default' ? { borderColor: color } : {}),
-    ...(color && variant === 'active' ? { backgroundColor: color, borderColor: color } : {})
-  };
+  const tagStyle = style;
 
   const handleRemoveClick = (e: React.MouseEvent) => {
     e.stopPropagation();

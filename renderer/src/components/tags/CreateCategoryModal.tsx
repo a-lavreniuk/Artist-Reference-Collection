@@ -28,17 +28,8 @@ export const CreateCategoryModal = ({
   onCategoryCreated
 }: CreateCategoryModalProps) => {
   const [name, setName] = useState('');
-  const [color, setColor] = useState('#93919A');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const colors = [
-    { value: '#F48683', label: 'Красный' },
-    { value: '#F2D98D', label: 'Жёлтый' },
-    { value: '#7ED6A8', label: 'Зелёный' },
-    { value: '#93919A', label: 'Серый' },
-    { value: '#A9A7AF', label: 'Светло-серый' }
-  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +46,6 @@ export const CreateCategoryModal = ({
       const category: Category = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: name.trim(),
-        color,
         dateCreated: new Date(),
         tagIds: []
       };
@@ -66,7 +56,6 @@ export const CreateCategoryModal = ({
       await logCreateCategory(category.name, category.tagIds.length);
       
       setName('');
-      setColor('#93919A');
       onCategoryCreated?.(category);
       onClose();
     } catch (err) {
@@ -79,7 +68,6 @@ export const CreateCategoryModal = ({
 
   const handleClose = () => {
     setName('');
-    setColor('#93919A');
     setError(null);
     onClose();
   };
@@ -101,31 +89,6 @@ export const CreateCategoryModal = ({
             error={error || undefined}
             fullWidth
           />
-
-          <div>
-            <label className="input-label" style={{ marginBottom: '12px', display: 'block' }}>
-              Цвет категории
-            </label>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {colors.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => setColor(c.value)}
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '8px',
-                    border: color === c.value ? '3px solid var(--color-grayscale-900)' : '1px solid var(--border-default)',
-                    backgroundColor: c.value,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                  title={c.label}
-                />
-              ))}
-            </div>
-          </div>
 
           <div className="modal__footer" style={{ padding: 0, border: 'none' }}>
             <Button

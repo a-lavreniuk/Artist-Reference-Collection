@@ -251,7 +251,6 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: newTagName.trim(),
         categoryId,
-        color: category?.color,
         dateCreated: new Date(),
         cardCount: 0
       };
@@ -541,7 +540,6 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
                           key={tag.id}
                           variant={currentFile.tags.includes(tag.id) ? 'active' : 'default'}
                           onClick={() => handleTagToggle(tag.id)}
-                          color={tag.color}
                           role="button"
                         >
                           {tag.name}
