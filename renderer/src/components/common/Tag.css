@@ -1,5 +1,8 @@
 /**
  * Стили для компонента Tag
+ * 
+ * Метка - ключевой элемент для категоризации и классификации контента.
+ * Поддерживает три состояния (default, hover, active) и два стиля (default, blurred).
  */
 
 .tag {
@@ -29,23 +32,25 @@
   
   /* Сброс */
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* ========== ВАРИАНТЫ ========== */
+/* ========== ВАРИАНТЫ (СТИЛИ) ========== */
 
-/* Default - обычная метка */
+/* Default - обычная метка на монотонном фоне */
 .tag--default {
   background-color: var(--bg-button-secondary);
   border-color: var(--border-default);
   color: var(--text-primary);
 }
 
+/* Hover - при наведении курсора */
 .tag--default:hover {
   background-color: var(--bg-button-secondary-hover);
   border-color: var(--border-hover);
 }
 
-/* Active - активная/выбранная метка */
+/* Active - выбранная/используемая метка */
 .tag--active {
   background-color: var(--bg-button-primary);
   border-color: var(--bg-button-primary);
@@ -57,15 +62,15 @@
   border-color: var(--bg-button-primary-hover);
 }
 
-/* Overlay - метка поверх изображения */
-.tag--overlay {
+/* Blurred - метка с размытием для размещения поверх изображений */
+.tag--blurred {
   background-color: var(--bg-overlay-image);
   backdrop-filter: var(--backdrop-blur);
   border-color: transparent;
   color: var(--text-light);
 }
 
-.tag--overlay:hover {
+.tag--blurred:hover {
   background-color: var(--bg-overlay-image-hover);
 }
 
@@ -179,7 +184,7 @@
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-.tag--overlay .tag__remove:hover {
+.tag--blurred .tag__remove:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
