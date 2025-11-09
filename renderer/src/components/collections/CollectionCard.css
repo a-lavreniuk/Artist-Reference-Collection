@@ -22,11 +22,6 @@
   background-color: var(--color-grayscale-100);
   overflow: hidden;
   border-radius: 16px;
-  transition: transform var(--transition-fast);
-}
-
-.collection-card:hover .collection-card__preview {
-  transform: translateY(-2px);
 }
 
 /* ========== СЕТКА ПРЕВЬЮ (3 слота) ========== */
