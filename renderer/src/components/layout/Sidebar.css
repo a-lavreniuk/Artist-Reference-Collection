@@ -118,6 +118,12 @@
   border-color: var(--color-grayscale-200); /* Обводка совпадает с фоном на hover */
 }
 
+/* Активная кнопка "Добавить" сохраняет grayscale-900 при hover */
+.sidebar__item--active.sidebar__item--border:hover {
+  background-color: var(--color-grayscale-900); /* #3b3946 - как у других активных кнопок */
+  border-color: transparent;
+}
+
 /* ========== ИКОНКА ========== */
 
 .sidebar__icon {
