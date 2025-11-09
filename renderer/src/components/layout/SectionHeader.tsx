@@ -62,7 +62,7 @@ export const SectionHeader = ({
         {backButton && (
           <Button
             variant="ghost"
-            size="medium"
+            size="L"
             onClick={backButton.onClick}
             iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
           >
