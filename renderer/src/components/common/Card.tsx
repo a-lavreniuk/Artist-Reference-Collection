@@ -178,16 +178,6 @@ export const Card = ({
           />
         </button>
       )}
-
-      {/* Оверлей с информацией о файле */}
-      {showActions && imageLoaded && !compact && (
-        <div className="card__overlay">
-          <div className="card__info">
-            <p className="card__filename">{card.fileName}</p>
-            <p className="card__size">{formatFileSize(card.fileSize)}</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
