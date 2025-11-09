@@ -111,9 +111,9 @@
   color: var(--color-grayscale-500); /* #93919a - неактивная кнопка */
 }
 
-/* Иконка в активной кнопке - светлее для контраста на темном фоне */
+/* Иконка в активной кнопке - тот же цвет grayscale-500 */
 .section-header__view-button--active .icon {
-  color: var(--color-grayscale-200); /* #d5d3d9 - светлее, хорошо видно на grayscale-800 */
+  color: var(--color-grayscale-500); /* #93919a */
 }
 
 /* ========== ФИЛЬТР КОНТЕНТА ========== */
@@ -171,9 +171,9 @@
   color: var(--color-grayscale-500); /* #93919a - иконки в неактивных кнопках */
 }
 
-/* Иконка в активной кнопке фильтра - светлее для контраста */
+/* Иконка в активной кнопке фильтра - тот же цвет grayscale-500 */
 .section-header__filter-button--active .icon {
-  color: var(--color-grayscale-200); /* #d5d3d9 - светлее, хорошо видно на grayscale-800 */
+  color: var(--color-grayscale-500); /* #93919a */
 }
 
 .section-header__filter-button span {
