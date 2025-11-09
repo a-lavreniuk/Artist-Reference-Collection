@@ -1,140 +1,211 @@
 /**
  * Стили для компонента Button
+ * Дизайн-система согласно Figma спецификации
  */
 
+/* ========== БАЗОВЫЕ СТИЛИ ========== */
+
 .button {
-  /* Базовые стили */
+  /* Базовый layout */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-s);
   
   /* Типографика */
   font-family: var(--font-family-body);
-  font-size: var(--font-size-input);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-input);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 16px;
   text-align: center;
+  letter-spacing: 0;
   
-  /* Размеры */
-  height: var(--height-button);
-  padding: 0 var(--spacing-l);
-  
-  /* Оформление */
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-s);
+  /* Убираем стандартные стили кнопки */
+  border: none;
+  background: none;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
   
   /* Переходы */
   transition: all var(--transition-fast);
   
-  /* Сброс */
-  background: none;
+  /* Убираем outline, но добавим focus-visible */
   outline: none;
-  white-space: nowrap;
 }
 
-/* ========== ВАРИАНТЫ ========== */
+/* ========== РАЗМЕРЫ ========== */
 
-/* Primary - основная кнопка */
+/* Size L - большая кнопка (56px) */
+.button--L {
+  height: 56px;
+  padding: 16px 32px;
+  gap: 8px;
+  border-radius: 16px;
+}
+
+/* Size S - малая кнопка (40px) */
+.button--S {
+  height: 40px;
+  padding: 14px 18px;
+  gap: 8px;
+  border-radius: 12px;
+}
+
+/* ========== ВАРИАНТЫ (СТИЛИ) ========== */
+
+/* --- PRIMARY --- */
 .button--primary {
-  background-color: var(--bg-button-primary);
-  border-color: var(--bg-button-primary);
-  color: var(--text-light);
+  background-color: #514f5b; /* var(--background/dark/default) */
+  color: #f5f4f7; /* var(--text/light/default) */
 }
 
 .button--primary:hover:not(:disabled) {
-  background-color: var(--bg-button-primary-hover);
-  border-color: var(--bg-button-primary-hover);
+  background-color: #3b3946; /* var(--background/dark/hover) */
 }
 
 .button--primary:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* Secondary - второстепенная кнопка */
+.button--primary:disabled {
+  background-color: #ebe9ee; /* var(--background/dark/disabled) */
+  color: #d5d3d9; /* var(--text/light/disabled) */
+}
+
+/* --- SECONDARY --- */
 .button--secondary {
-  background-color: var(--bg-button-secondary);
-  border-color: var(--border-default);
-  color: var(--text-primary);
+  background-color: #ebe9ee; /* var(--background/light/default) */
+  color: #3b3946; /* var(--text/default/default) */
 }
 
 .button--secondary:hover:not(:disabled) {
-  background-color: var(--bg-button-secondary-hover);
-  border-color: var(--border-hover);
+  background-color: #d5d3d9; /* var(--background/light/hover) */
 }
 
 .button--secondary:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* Ghost - прозрачная кнопка */
+.button--secondary:disabled {
+  background-color: #ebe9ee; /* var(--background/light/disabled) */
+  color: #d5d3d9; /* var(--text/default/disabled) */
+}
+
+.button--secondary .button__counter {
+  color: #93919a; /* var(--text/secondary/default) */
+}
+
+.button--secondary:disabled .button__counter {
+  color: #d5d3d9; /* var(--text/secondary/disabled) */
+}
+
+/* --- BORDER --- */
+.button--border {
+  background-color: transparent;
+  border: 2px solid #ebe9ee; /* var(--border/default) */
+  color: #3b3946; /* var(--text/default/default) */
+}
+
+.button--border:hover:not(:disabled) {
+  background-color: #d5d3d9; /* var(--background/light/hover) */
+  border-color: #d5d3d9; /* var(--border/hover) */
+}
+
+.button--border:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button--border:disabled {
+  border-color: #ebe9ee; /* var(--border/default) */
+  color: #d5d3d9; /* var(--text/default/disabled) */
+}
+
+.button--border .button__counter {
+  color: #93919a; /* var(--text/secondary/default) */
+}
+
+.button--border:disabled .button__counter {
+  color: #d5d3d9; /* var(--text/secondary/disabled) */
+}
+
+/* --- GHOST --- */
 .button--ghost {
   background-color: transparent;
-  border-color: transparent;
-  color: var(--text-primary);
+  color: #3b3946; /* var(--text/default/default) */
 }
 
 .button--ghost:hover:not(:disabled) {
-  background-color: var(--bg-button-secondary);
+  background-color: #d5d3d9; /* var(--background/light/hover) */
 }
 
 .button--ghost:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* Danger - кнопка для опасных действий */
-.button--danger {
-  background-color: var(--bg-error);
-  border-color: var(--bg-error);
-  color: var(--text-light);
+.button--ghost:disabled {
+  color: #d5d3d9; /* var(--text/default/disabled) */
 }
 
-.button--danger:hover:not(:disabled) {
-  background-color: var(--bg-error-hover);
-  border-color: var(--bg-error-hover);
+.button--ghost .button__counter {
+  color: #93919a; /* var(--text/secondary/default) */
 }
 
-.button--danger:active:not(:disabled) {
+.button--ghost:disabled .button__counter {
+  color: #d5d3d9; /* var(--text/secondary/disabled) */
+}
+
+/* --- ERROR (DANGER) --- */
+.button--error {
+  background-color: #b61a17; /* var(--background/danger/default) */
+  color: #fde8e8; /* var(--text/danger/light) */
+}
+
+.button--error:hover:not(:disabled) {
+  background-color: #811210; /* var(--background/danger/hover) */
+}
+
+.button--error:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* Success - кнопка для успешных действий */
+.button--error .button__counter {
+  color: #fde8e8; /* var(--text/danger/light) */
+}
+
+/* --- WARNING --- */
+.button--warning {
+  background-color: #b39027; /* var(--background/warning/default) */
+  color: #fcf7e8; /* var(--text/warning/light) */
+}
+
+.button--warning:hover:not(:disabled) {
+  background-color: #7f661b; /* var(--background/warning/hover) */
+}
+
+.button--warning:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button--warning .button__counter {
+  color: #fcf7e8; /* var(--text/warning/light) */
+}
+
+/* --- SUCCESS --- */
 .button--success {
-  background-color: var(--bg-success);
-  border-color: var(--bg-success);
-  color: var(--text-light);
+  background-color: #0f8948; /* var(--background/positive/default) */
+  color: #e8fcf2; /* var(--text/positive/light) */
 }
 
 .button--success:hover:not(:disabled) {
-  background-color: var(--bg-success-hover);
-  border-color: var(--bg-success-hover);
+  background-color: #0b6334; /* var(--background/positive/hover) */
 }
 
 .button--success:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-/* ========== РАЗМЕРЫ ========== */
-
-.button--small {
-  height: 32px;
-  padding: 0 var(--spacing-m);
-  font-size: 14px;
-  gap: var(--spacing-xs);
-}
-
-.button--medium {
-  height: var(--height-button);
-  padding: 0 var(--spacing-l);
-}
-
-.button--large {
-  height: 48px;
-  padding: 0 var(--spacing-xl);
-  font-size: 18px;
-  gap: var(--spacing-m);
+.button--success .button__counter {
+  color: #e8fcf2; /* var(--text/positive/light) */
 }
 
 /* ========== МОДИФИКАТОРЫ ========== */
@@ -150,39 +221,23 @@
   aspect-ratio: 1;
 }
 
-.button--icon-only.button--small {
-  width: 32px;
+.button--icon-only.button--L {
+  width: 56px;
+  padding: 16px;
 }
 
-.button--icon-only.button--medium {
-  width: var(--height-button);
+.button--icon-only.button--S {
+  width: 40px;
+  padding: 12px;
 }
 
-.button--icon-only.button--large {
-  width: 48px;
-}
-
-/* Состояние загрузки */
-.button--loading {
-  pointer-events: none;
-  position: relative;
-}
-
-.button--loading .button__text,
-.button--loading .button__icon {
-  opacity: 0;
-}
-
-/* Отключенная кнопка */
+/* Отключенная кнопка - общие правила */
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
-  background-color: var(--bg-button-disabled);
-  border-color: var(--border-default);
-  color: var(--text-disabled);
+  pointer-events: none;
 }
 
-/* ========== ЭЛЕМЕНТЫ ========== */
+/* ========== ВНУТРЕННИЕ ЭЛЕМЕНТЫ ========== */
 
 /* Иконки */
 .button__icon {
@@ -190,18 +245,16 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
 }
 
-.button--small .button__icon {
-  width: 16px;
-  height: 16px;
-}
-
-.button--large .button__icon {
+.button--L .button__icon {
   width: 24px;
   height: 24px;
+}
+
+.button--S .button__icon {
+  width: 16px;
+  height: 16px;
 }
 
 .button__icon svg {
@@ -209,65 +262,48 @@
   height: 100%;
 }
 
-/* Текст */
-.button__text {
-  flex: 1;
-  min-width: 0;
+/* Иконки disabled состояние */
+.button--primary:disabled .button__icon,
+.button--secondary:disabled .button__icon,
+.button--border:disabled .button__icon,
+.button--ghost:disabled .button__icon {
+  color: #d5d3d9; /* var(--text/secondary/disabled) */
+  opacity: 1;
 }
 
-/* Лоадер */
-.button__loader {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Текст кнопки (Value) */
+.button__value {
+  flex-shrink: 0;
 }
 
-.button__spinner {
-  width: 20px;
-  height: 20px;
-  animation: button-spin 0.8s linear infinite;
+/* Счетчик (Counter badge) */
+.button__counter {
+  flex-shrink: 0;
+  font-family: var(--font-family-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 16px;
 }
 
-.button__spinner-circle {
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-dasharray: 1, 150;
-  stroke-dashoffset: 0;
-  animation: button-dash 1.5s ease-in-out infinite;
+/* По умолчанию счетчик имеет вторичный цвет для Primary кнопок */
+.button--primary .button__counter {
+  color: #93919a; /* var(--text/secondary/default) */
 }
 
-@keyframes button-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes button-dash {
-  0% {
-    stroke-dasharray: 1, 150;
-    stroke-dashoffset: 0;
-  }
-  50% {
-    stroke-dasharray: 90, 150;
-    stroke-dashoffset: -35;
-  }
-  100% {
-    stroke-dasharray: 90, 150;
-    stroke-dashoffset: -124;
-  }
+.button--primary:disabled .button__counter {
+  color: #d5d3d9; /* var(--text/secondary/disabled) */
 }
 
 /* ========== ФОКУС ========== */
 
 .button:focus-visible {
-  outline: 2px solid var(--border-focus);
+  outline: 2px solid #bfbdc4; /* var(--border/focus) */
   outline-offset: 2px;
 }
 
+/* ========== АДАПТАЦИЯ ДЛЯ ТОЛЬКО ИКОНКИ ========== */
+
+/* Когда кнопка содержит только иконку, центрируем её */
+.button--icon-only .button__icon {
+  margin: 0;
+}
