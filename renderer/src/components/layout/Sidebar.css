@@ -79,8 +79,8 @@
 
 /* Hover */
 .sidebar__item:hover {
-  background-color: var(--bg-button-secondary);
-  border-color: transparent; /* Убрали border на hover */
+  background-color: var(--color-grayscale-200); /* #d5d3d9 - согласно макету */
+  border-color: transparent;
 }
 
 .sidebar__item:hover .sidebar__tooltip {
@@ -106,14 +106,16 @@
   border-color: transparent;
 }
 
-/* Ghost вариант (для кнопки "Добавить") */
-.sidebar__item--ghost {
-  /* В стиле ghost нет обводки и фона даже при hover */
+/* Border вариант (для кнопки "Добавить") */
+.sidebar__item--border {
+  /* У кнопки "Добавить" есть обводка по умолчанию */
+  border-width: 2px;
+  border-color: var(--color-grayscale-100); /* #ebe9ee - обводка */
 }
 
-.sidebar__item--ghost:hover {
-  background-color: transparent; /* Убираем фон при hover */
-  border-color: transparent;
+.sidebar__item--border:hover {
+  background-color: var(--color-grayscale-200); /* #d5d3d9 - фон на hover */
+  border-color: var(--color-grayscale-200); /* Обводка совпадает с фоном на hover */
 }
 
 /* ========== ИКОНКА ========== */

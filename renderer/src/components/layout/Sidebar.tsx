@@ -61,7 +61,7 @@ export const Sidebar = () => {
               key={item.id}
               to={item.path}
               className={({ isActive }) =>
-                `sidebar__item ${isActive ? 'sidebar__item--active' : ''} ${item.id === 'add' ? 'sidebar__item--ghost' : ''}`
+                `sidebar__item ${isActive ? 'sidebar__item--active' : ''} ${item.id === 'add' ? 'sidebar__item--border' : ''}`
               }
               title={item.label}
             >
