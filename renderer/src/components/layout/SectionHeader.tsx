@@ -107,7 +107,12 @@ export const SectionHeader = ({
           </div>
         )}
 
-        {/* Дополнительные действия - идут сразу после переключателей вида */}
+        {/* Разделитель между переключателями вида и actions */}
+        {viewMode && actions && (
+          <div className="section-header__divider" />
+        )}
+
+        {/* Дополнительные действия - идут после разделителя */}
         {actions && (
           <div className="section-header__actions">
             {actions}
