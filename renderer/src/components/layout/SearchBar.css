@@ -37,9 +37,32 @@
   width: 100% !important;
 }
 
+/* Специфичные стили для поисковой строки */
 .searchbar .searchbar__input-wrapper .input {
   width: 100% !important;
   flex: 1;
+  height: 56px; /* Высота поисковой строки */
+  padding: 0 16px; /* Базовые отступы 16px */
+}
+
+/* С иконкой слева: 16px + 24px + 16px = 56px */
+.searchbar .searchbar__input-wrapper .input--with-icon-left {
+  padding-left: 56px;
+}
+
+/* С иконкой справа (кнопка очистки): 16px + 24px + 16px = 56px */
+.searchbar .searchbar__input-wrapper .input--with-icon-right {
+  padding-right: 56px;
+}
+
+/* Иконка слева - позиция 16px */
+.searchbar .searchbar__input-wrapper .input__icon--left {
+  left: 16px;
+}
+
+/* Кнопка очистки - позиция 16px справа */
+.searchbar .searchbar__input-wrapper .input__clear {
+  right: 16px;
 }
 
 /* ========== ВЫБРАННЫЕ МЕТКИ ========== */
@@ -48,24 +71,32 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 8px;
   padding: var(--spacing-s);
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-s);
 }
 
+/* Актуальные стили меток */
 .searchbar__selected-tag {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  height: 24px;
-  padding: 0 var(--spacing-s);
-  background-color: var(--bg-button-primary);
-  border-radius: var(--radius-xs);
+  gap: 4px; /* Отступ между элементами */
+  height: 32px; /* Фиксированная высота */
+  padding: 0 10px; /* Отступы слева/справа */
+  background-color: var(--color-grayscale-800);
+  border: none;
+  border-radius: 10px; /* Скругление 10px */
   color: var(--text-light);
+  font-family: var(--font-family-body);
   font-size: var(--font-size-s);
+  font-style: normal;
+  font-weight: 500; /* Medium */
   line-height: var(--line-height-s);
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
@@ -76,25 +107,24 @@
   max-width: 150px;
 }
 
+/* Крестик удаления - без фона, только изменение прозрачности */
 .searchbar__tag-remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   padding: 0;
+  margin-left: 4px;
   background: none;
   border: none;
-  border-radius: var(--radius-xs);
-  color: currentColor;
+  color: var(--text-light);
   cursor: pointer;
-  opacity: 0.7;
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast);
 }
 
 .searchbar__tag-remove:hover {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.8;
 }
 
 .searchbar__tag-remove svg {
@@ -112,12 +142,11 @@
   font-size: var(--font-size-s);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast);
 }
 
 .searchbar__clear-all:hover {
   color: var(--text-primary);
-  background-color: var(--bg-button-secondary);
 }
 
 /* ========== ВЫПАДАЮЩЕЕ МЕНЮ ========== */

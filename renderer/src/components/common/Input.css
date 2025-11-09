@@ -49,12 +49,12 @@
   
   /* Размеры */
   height: var(--height-input);
-  padding: 0 var(--spacing-l);
+  padding: 0 16px;
   
   /* Оформление */
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-s);
+  border-radius: 16px;
   
   /* Переходы */
   transition: all var(--transition-fast);
@@ -109,27 +109,27 @@
 .input--large {
   height: 48px;
   font-size: 18px;
-  padding: 0 var(--spacing-xl);
+  padding: 0 16px;
 }
 
 /* ========== С ИКОНКАМИ ========== */
 
-/* С иконкой слева */
+/* С иконкой слева: 16px отступ + 24px иконка + 16px отступ = 56px */
 .input--with-icon-left {
-  padding-left: 44px;
+  padding-left: 56px;
 }
 
 .input--large.input--with-icon-left {
-  padding-left: 52px;
+  padding-left: 56px;
 }
 
-/* С иконкой справа */
+/* С иконкой справа: 16px отступ + 24px иконка + 16px отступ = 56px */
 .input--with-icon-right {
-  padding-right: 44px;
+  padding-right: 56px;
 }
 
 .input--large.input--with-icon-right {
-  padding-right: 52px;
+  padding-right: 56px;
 }
 
 /* ========== ИКОНКИ ========== */
@@ -141,18 +141,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   color: var(--icon-default);
   pointer-events: none;
 }
 
 .input__icon--left {
-  left: var(--spacing-l);
+  left: 16px;
 }
 
 .input__icon--right {
-  right: var(--spacing-l);
+  right: 16px;
 }
 
 .input--large ~ .input__icon {
@@ -161,11 +161,11 @@
 }
 
 .input--large ~ .input__icon--left {
-  left: var(--spacing-xl);
+  left: 16px;
 }
 
 .input--large ~ .input__icon--right {
-  right: var(--spacing-xl);
+  right: 16px;
 }
 
 .input__icon svg {
@@ -177,14 +177,14 @@
 
 .input__clear {
   position: absolute;
-  right: var(--spacing-m);
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   background: none;
   border: none;
@@ -200,7 +200,7 @@
 }
 
 .input--large ~ .input__clear {
-  right: var(--spacing-l);
+  right: 16px;
   width: 24px;
   height: 24px;
 }
@@ -257,8 +257,7 @@
 
 textarea.input {
   min-height: 80px;
-  padding-top: var(--spacing-m);
-  padding-bottom: var(--spacing-m);
+  padding: 16px;
   resize: vertical;
   line-height: var(--line-height-m);
 }

@@ -67,26 +67,35 @@
 .search-dropdown__tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  gap: 8px;
   align-items: center;
 }
 
+/* Актуальные стили меток - недавние запросы */
 .search-dropdown__tag-chip {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  height: 32px;
-  padding: var(--spacing-s) 10px;
-  background-color: var(--bg-button-secondary);
+  gap: 4px;
+  height: 32px; /* Фиксированная высота */
+  padding: 0 10px; /* Отступы слева/справа */
+  background-color: var(--color-grayscale-100);
   border: none;
-  border-radius: var(--radius-xs);
+  border-radius: 10px;
   color: var(--text-primary);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-s);
+  font-style: normal;
+  font-weight: 500;
+  line-height: var(--line-height-s);
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .search-dropdown__tag-chip:hover {
-  background-color: var(--bg-tertiary);
+  background-color: var(--color-grayscale-200);
 }
 
 .search-dropdown__tag-chip-text {
@@ -97,7 +106,7 @@
   flex-shrink: 0;
   width: 16px;
   height: 16px;
-  color: var(--text-primary);
+  color: var(--color-grayscale-500);
 }
 
 /* ========== НЕДАВНО ПРОСМОТРЕННЫЕ ========== */
@@ -157,32 +166,40 @@
   margin: 0;
 }
 
+/* Актуальные стили меток - метки в категориях */
 .search-dropdown__tag-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  padding: var(--spacing-s) 10px;
-  background-color: var(--bg-button-secondary);
+  height: 32px; /* Фиксированная высота */
+  padding: 0 10px; /* Отступы слева/справа */
+  background-color: var(--color-grayscale-100);
   border: none;
-  border-radius: var(--radius-xs);
+  border-radius: 10px;
   color: var(--text-primary);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-s);
+  font-style: normal;
+  font-weight: 500;
+  line-height: var(--line-height-s);
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: all var(--transition-fast);
-  white-space: nowrap;
 }
 
 .search-dropdown__tag-button:hover {
-  background-color: var(--bg-tertiary);
+  background-color: var(--color-grayscale-200);
 }
 
 .search-dropdown__tag-button--selected {
-  background-color: var(--bg-button-primary);
+  background-color: var(--color-grayscale-800);
   color: var(--text-light);
 }
 
 .search-dropdown__tag-button--selected:hover {
-  background-color: var(--bg-button-primary-hover);
+  background-color: var(--color-grayscale-800);
 }
 
 /* ========== ПУСТОЕ СОСТОЯНИЕ ========== */
