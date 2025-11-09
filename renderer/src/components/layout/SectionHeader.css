@@ -70,7 +70,7 @@
 }
 
 .section-header__view-button {
-  /* Стиль как в сайдбаре */
+  /* Стиль как кнопки фильтров, но без текста */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,37 +80,39 @@
   height: 56px;
   padding: 16px;
   
-  /* Оформление */
+  /* Оформление - border стиль для неактивных */
   background-color: transparent;
-  border: 1px solid transparent;
-  border-radius: 16px; /* Скругление как в сайдбаре */
-  color: var(--color-grayscale-500); /* #93919a - цвет иконки неактивной кнопки */
+  border: 2px solid var(--color-grayscale-100); /* Обводка 2px как у фильтров */
+  border-radius: 16px;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .section-header__view-button:hover {
-  background-color: var(--color-grayscale-200); /* #d5d3d9 - как в сайдбаре */
+  background-color: var(--color-grayscale-200); /* #d5d3d9 - hover */
+  border-color: transparent;
 }
 
+/* Активная кнопка - primary стиль */
 .section-header__view-button--active {
   background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
-  color: var(--color-grayscale-500); /* #93919a - цвет иконки */
+  border-color: transparent;
 }
 
 .section-header__view-button--active:hover {
   background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
+  border-color: transparent;
 }
 
+/* Иконки - всегда grayscale-500 */
 .section-header__view-button .icon {
   width: 24px;
   height: 24px;
-  color: inherit; /* Наследуем цвет от родителя */
+  color: var(--color-grayscale-500); /* #93919a */
 }
 
-/* Иконка в активной кнопке должна быть светлее для контраста */
 .section-header__view-button--active .icon {
-  color: var(--color-grayscale-500); /* #93919a */
+  color: var(--color-grayscale-500); /* #93919a - тот же цвет в активной кнопке */
 }
 
 /* ========== ФИЛЬТР КОНТЕНТА ========== */
