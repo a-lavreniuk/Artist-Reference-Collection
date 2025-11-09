@@ -9,9 +9,9 @@
   justify-content: space-between;
   gap: var(--spacing-xl);
   
-  /* Размеры */
-  min-height: var(--height-header);
-  padding: var(--spacing-l) var(--spacing-2xl) var(--spacing-2xl);
+  /* Размеры - фиксированная высота чтобы избежать скачков */
+  height: 120px; /* Фиксированная высота вместо min-height */
+  padding: 0 var(--spacing-2xl);
   
   /* Оформление */
   background-color: var(--bg-secondary);
