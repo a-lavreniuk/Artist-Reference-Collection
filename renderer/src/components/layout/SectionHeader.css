@@ -34,7 +34,7 @@
 .section-header__right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-m);
+  gap: 32px; /* Отступ между блоками (переключатели, divider, фильтры) */
   flex-shrink: 0;
 }
 
@@ -55,9 +55,9 @@
 /* ========== РАЗДЕЛИТЕЛЬ ========== */
 
 .section-header__divider {
-  width: 1px;
-  height: 32px;
-  background-color: var(--border-default);
+  width: 2px; /* Толщина 2px */
+  height: 56px; /* Высота как у кнопок */
+  background-color: var(--color-grayscale-100); /* #ebe9ee - grayscale-100 */
   flex-shrink: 0;
 }
 
