@@ -108,7 +108,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
             aria-label="Очистить"
             tabIndex={-1}
           >
-            <Icon name="x" size={16} variant="border" />
+            <Icon name="x" size={24} variant="border" />
           </button>
         )}
         
