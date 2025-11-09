@@ -416,28 +416,76 @@ export const SettingsPage = () => {
   const tabActions = (
     <div style={{ display: 'flex', gap: '8px' }}>
       <button
-        className={`section-header__view-button ${activeTab === 'storage' ? 'section-header__view-button--active' : ''}`}
+        className={`section-header__filter-button ${activeTab === 'storage' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('storage')}
-        title="Хранилище"
-        style={{ width: '56px', height: '56px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: activeTab === 'storage' ? 'var(--color-grayscale-800)' : 'transparent', border: activeTab === 'storage' ? 'none' : '2px solid var(--color-grayscale-100)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.15s' }}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          height: '56px',
+          padding: '16px 32px',
+          backgroundColor: activeTab === 'storage' ? 'var(--color-grayscale-800)' : 'transparent',
+          border: activeTab === 'storage' ? 'none' : '2px solid var(--color-grayscale-100)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          fontFamily: 'var(--font-family-body)',
+          fontSize: '16px',
+          fontWeight: 400,
+          lineHeight: '16px',
+          color: activeTab === 'storage' ? 'var(--text-light)' : 'var(--text-primary)'
+        }}
       >
         <Icon name="server" size={24} variant={activeTab === 'storage' ? 'fill' : 'border'} />
+        <span>Хранилище</span>
       </button>
       <button
-        className={`section-header__view-button ${activeTab === 'statistics' ? 'section-header__view-button--active' : ''}`}
+        className={`section-header__filter-button ${activeTab === 'statistics' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('statistics')}
-        title="Статистика"
-        style={{ width: '56px', height: '56px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: activeTab === 'statistics' ? 'var(--color-grayscale-800)' : 'transparent', border: activeTab === 'statistics' ? 'none' : '2px solid var(--color-grayscale-100)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.15s' }}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          height: '56px',
+          padding: '16px 32px',
+          backgroundColor: activeTab === 'statistics' ? 'var(--color-grayscale-800)' : 'transparent',
+          border: activeTab === 'statistics' ? 'none' : '2px solid var(--color-grayscale-100)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          fontFamily: 'var(--font-family-body)',
+          fontSize: '16px',
+          fontWeight: 400,
+          lineHeight: '16px',
+          color: activeTab === 'statistics' ? 'var(--text-light)' : 'var(--text-primary)'
+        }}
       >
         <Icon name="line-chart" size={24} variant={activeTab === 'statistics' ? 'fill' : 'border'} />
+        <span>Статистика</span>
       </button>
       <button
-        className={`section-header__view-button ${activeTab === 'history' ? 'section-header__view-button--active' : ''}`}
+        className={`section-header__filter-button ${activeTab === 'history' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('history')}
-        title="История"
-        style={{ width: '56px', height: '56px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: activeTab === 'history' ? 'var(--color-grayscale-800)' : 'transparent', border: activeTab === 'history' ? 'none' : '2px solid var(--color-grayscale-100)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.15s' }}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          height: '56px',
+          padding: '16px 32px',
+          backgroundColor: activeTab === 'history' ? 'var(--color-grayscale-800)' : 'transparent',
+          border: activeTab === 'history' ? 'none' : '2px solid var(--color-grayscale-100)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          fontFamily: 'var(--font-family-body)',
+          fontSize: '16px',
+          fontWeight: 400,
+          lineHeight: '16px',
+          color: activeTab === 'history' ? 'var(--text-light)' : 'var(--text-primary)'
+        }}
       >
         <Icon name="history" size={24} variant={activeTab === 'history' ? 'fill' : 'border'} />
+        <span>История</span>
       </button>
     </div>
   );
