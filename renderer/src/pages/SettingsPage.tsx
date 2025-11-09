@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
-import { Button } from '../components/common';
+import { Button, Icon } from '../components/common';
 import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
 import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
@@ -412,73 +412,94 @@ export const SettingsPage = () => {
     }
   };
 
+  // Формируем actions для header - кнопки переключения табов
+  const tabActions = (
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <button
+        className={`section-header__filter-button ${activeTab === 'storage' ? 'section-header__filter-button--active' : ''}`}
+        onClick={() => setActiveTab('storage')}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          height: '56px',
+          padding: '16px 32px',
+          backgroundColor: activeTab === 'storage' ? 'var(--color-grayscale-800)' : 'transparent',
+          border: activeTab === 'storage' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          fontFamily: 'var(--font-family-body)',
+          fontSize: '16px',
+          fontWeight: 400,
+          lineHeight: '16px',
+          color: activeTab === 'storage' ? 'var(--text-light)' : 'var(--text-primary)'
+        }}
+      >
+        <Icon name="server" size={24} variant={activeTab === 'storage' ? 'fill' : 'border'} />
+        <span>Хранилище</span>
+      </button>
+      <button
+        className={`section-header__filter-button ${activeTab === 'statistics' ? 'section-header__filter-button--active' : ''}`}
+        onClick={() => setActiveTab('statistics')}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          height: '56px',
+          padding: '16px 32px',
+          backgroundColor: activeTab === 'statistics' ? 'var(--color-grayscale-800)' : 'transparent',
+          border: activeTab === 'statistics' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          fontFamily: 'var(--font-family-body)',
+          fontSize: '16px',
+          fontWeight: 400,
+          lineHeight: '16px',
+          color: activeTab === 'statistics' ? 'var(--text-light)' : 'var(--text-primary)'
+        }}
+      >
+        <Icon name="line-chart" size={24} variant={activeTab === 'statistics' ? 'fill' : 'border'} />
+        <span>Статистика</span>
+      </button>
+      <button
+        className={`section-header__filter-button ${activeTab === 'history' ? 'section-header__filter-button--active' : ''}`}
+        onClick={() => setActiveTab('history')}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          height: '56px',
+          padding: '16px 32px',
+          backgroundColor: activeTab === 'history' ? 'var(--color-grayscale-800)' : 'transparent',
+          border: activeTab === 'history' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+          fontFamily: 'var(--font-family-body)',
+          fontSize: '16px',
+          fontWeight: 400,
+          lineHeight: '16px',
+          color: activeTab === 'history' ? 'var(--text-light)' : 'var(--text-primary)'
+        }}
+      >
+        <Icon name="history" size={24} variant={activeTab === 'history' ? 'fill' : 'border'} />
+        <span>История</span>
+      </button>
+    </div>
+  );
+
   return (
     <Layout
       headerProps={{
-        title: 'Настройки'
+        title: 'Настройки',
+        actions: tabActions
       }}
       searchProps={searchProps}
     >
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
-        {/* Табы */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          marginBottom: '32px',
-          borderBottom: '1px solid var(--border-default)',
-          paddingBottom: '0'
-        }}>
-          <button
-            onClick={() => setActiveTab('storage')}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              background: 'transparent',
-              color: activeTab === 'storage' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontWeight: activeTab === 'storage' ? 'var(--font-weight-bold)' : 'normal',
-              borderBottom: activeTab === 'storage' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: 'var(--font-size-m)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            💾 Хранилище
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('statistics')}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              background: 'transparent',
-              color: activeTab === 'statistics' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontWeight: activeTab === 'statistics' ? 'var(--font-weight-bold)' : 'normal',
-              borderBottom: activeTab === 'statistics' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: 'var(--font-size-m)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            📊 Статистика
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('history')}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              background: 'transparent',
-              color: activeTab === 'history' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontWeight: activeTab === 'history' ? 'var(--font-weight-bold)' : 'normal',
-              borderBottom: activeTab === 'history' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: 'var(--font-size-m)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            📜 История
-          </button>
-        </div>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px', minHeight: 'calc(100vh - 120px - 64px)' }}>
+        {/* Табы перенесены в header */}
 
         {/* Таб: Хранилище */}
         {activeTab === 'storage' && (
@@ -584,6 +605,7 @@ export const SettingsPage = () => {
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             <Button
               variant="secondary"
+              size="L"
               onClick={handleChangeDirectory}
               disabled={isMovingDirectory}
             >
@@ -591,7 +613,8 @@ export const SettingsPage = () => {
             </Button>
             
             <Button
-              variant="danger"
+              variant="error"
+              size="L"
               onClick={handleClearCache}
               disabled={isMovingDirectory}
             >
@@ -673,7 +696,7 @@ export const SettingsPage = () => {
                     <Button
                       key={num}
                       variant={backupParts === num ? 'primary' : 'secondary'}
-                      size="small"
+                      size="S"
                       onClick={() => setBackupParts(num)}
                       disabled={isCreatingBackup}
                     >
@@ -687,6 +710,7 @@ export const SettingsPage = () => {
             <div style={{ display: 'flex', gap: '12px' }}>
               <Button
                 variant="primary"
+                size="L"
                 onClick={handleCreateBackup}
                 disabled={isCreatingBackup || isRestoring || !directoryPath}
               >
@@ -695,6 +719,7 @@ export const SettingsPage = () => {
 
               <Button
                 variant="secondary"
+                size="L"
                 onClick={handleRestoreBackup}
                 disabled={isCreatingBackup || isRestoring}
               >
@@ -956,8 +981,8 @@ export const SettingsPage = () => {
                         </p>
                       </div>
                       <Button
-                        variant="danger"
-                        size="small"
+                        variant="error"
+                        size="S"
                         onClick={() => handleDeleteTag(tag.id, tag.name)}
                       >
                         Удалить

@@ -25,9 +25,18 @@ export interface AddCardFlowProps {
   
   /** Обработчик отмены */
   onCancel: () => void;
+  
+  /** Callback для обновления состояния очереди */
+  onQueueStateChange?: (hasQueue: boolean, configuredCount: number) => void;
+  
+  /** Callback для передачи handleFinish в родительский компонент */
+  onFinishHandlerReady?: (handler: () => void) => void;
+  
+  /** Callback для передачи функции открытия файлового диалога */
+  onOpenFileDialogReady?: (handler: () => void) => void;
 }
 
-export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
+export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady }: AddCardFlowProps) => {
   const [queue, setQueue] = useState<QueueFile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -62,6 +71,31 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const currentFile = queue[currentIndex];
+
+  // Обновление состояния очереди для header
+  useEffect(() => {
+    if (onQueueStateChange) {
+      const configuredCount = queue.filter(f => f.configured).length;
+      onQueueStateChange(queue.length > 0, configuredCount);
+    }
+  }, [queue, onQueueStateChange]);
+
+  // Передаём handleFinish в родительский компонент
+  useEffect(() => {
+    if (onFinishHandlerReady) {
+      onFinishHandlerReady(handleFinish);
+    }
+  }, [queue, directoryPath, hasPermission, onFinishHandlerReady]);
+
+  // Передаём функцию открытия файлового диалога
+  useEffect(() => {
+    if (onOpenFileDialogReady) {
+      const openDialog = () => fileInputRef.current?.click();
+      onOpenFileDialogReady(openDialog);
+    }
+  }, [onOpenFileDialogReady]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -125,8 +159,6 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
     setCurrentIndex(0);
   };
 
-  const currentFile = queue[currentIndex];
-
   const handleTagToggle = (tagId: string) => {
     if (!currentFile) return;
 
@@ -183,11 +215,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
   };
 
   const handleNext = () => {
-    if (!currentFile?.configured) {
-      setMessage('❌ Добавьте хотя бы одну метку');
-      return;
-    }
-    
+    // Просто листаем без проверки меток
     if (currentIndex < queue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
@@ -241,13 +269,26 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
   };
 
   const handleFinish = async () => {
-    // Проверяем все ли файлы настроены
+    // Проверяем сколько файлов настроено
+    const configured = queue.filter(f => f.configured);
     const unconfigured = queue.filter(f => !f.configured);
-    if (unconfigured.length > 0) {
-      const index = queue.findIndex(f => !f.configured);
-      setCurrentIndex(index);
-      setMessage('❌ Не все файлы настроены. Добавьте метки.');
+    
+    if (configured.length === 0) {
+      setMessage('❌ Добавьте метки хотя бы к одной карточке');
       return;
+    }
+
+    // Если не все файлы настроены - спрашиваем подтверждение
+    if (unconfigured.length > 0) {
+      const confirmed = confirm(
+        `Настройки применены к ${configured.length} из ${queue.length} карточек.\n\n` +
+        `Оставшиеся ${unconfigured.length} карточек будут удалены из очереди.\n\n` +
+        `Продолжить?`
+      );
+      
+      if (!confirmed) {
+        return;
+      }
     }
 
     // Проверяем доступ к директории
@@ -261,9 +302,10 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
       
       const createdCards: Card[] = [];
       
-      for (let i = 0; i < queue.length; i++) {
-        const item = queue[i];
-        setMessage(`💾 Сохранение ${i + 1}/${queue.length}: ${item.file.name}`);
+      // Сохраняем только настроенные карточки
+      for (let i = 0; i < configured.length; i++) {
+        const item = configured[i];
+        setMessage(`💾 Сохранение ${i + 1}/${configured.length}: ${item.file.name}`);
         
         try {
           // Читаем файл как ArrayBuffer
@@ -332,7 +374,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
       // Логируем импорт файлов
       await logImportFiles(createdCards.length);
 
-      setMessage(`✅ Добавлено ${createdCards.length} из ${queue.length} карточек!`);
+      setMessage(`✅ Добавлено ${createdCards.length} карточек!`);
       setTimeout(() => onComplete(createdCards), 1000);
     } catch (error) {
       console.error('Ошибка сохранения:', error);
@@ -408,9 +450,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
             </div>
           ))}
         </div>
-        <p className="text-s" style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-          {queue.filter(f => f.configured).length} из {queue.length} настроено
-        </p>
+        {/* Убрали счётчик [число] из [число] */}
       </div>
 
       {/* Основной контент */}
@@ -428,10 +468,10 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
         <div className="add-card-flow__settings">
           <div className="add-card-flow__header">
             <div style={{ display: 'flex', gap: '8px' }}>
-              <Button size="small" variant="secondary" onClick={handleCopySettings}>
+              <Button size="S" variant="secondary" onClick={handleCopySettings}>
                 Копировать
               </Button>
-              <Button size="small" variant="secondary" onClick={handlePasteSettings} disabled={!clipboard}>
+              <Button size="S" variant="secondary" onClick={handlePasteSettings} disabled={!clipboard}>
                 Применить
               </Button>
             </div>
@@ -515,19 +555,18 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
                           placeholder="Название метки"
                           value={newTagName}
                           onChange={(e) => setNewTagName(e.target.value)}
-                          size="medium"
                           autoFocus
                         />
-                        <Button size="small" variant="primary" onClick={() => handleCreateTag(category.id)}>
+                        <Button size="S" variant="primary" onClick={() => handleCreateTag(category.id)}>
                           Добавить
                         </Button>
-                        <Button size="small" variant="ghost" onClick={() => { setShowNewTagInput(null); setNewTagName(''); }}>
+                        <Button size="S" variant="ghost" onClick={() => { setShowNewTagInput(null); setNewTagName(''); }}>
                           ✕
                         </Button>
                       </div>
                     ) : (
                       <Button
-                        size="small"
+                        size="S"
                         variant="ghost"
                         onClick={() => setShowNewTagInput(category.id)}
                       >
@@ -540,33 +579,30 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
             </div>
           </div>
 
-          {/* Навигация */}
-          <div className="add-card-flow__footer">
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button variant="ghost" onClick={onCancel}>
-                Отмена
-              </Button>
-              <Button variant="secondary" onClick={handlePrevious} disabled={currentIndex === 0}>
-                ← Назад
-              </Button>
-            </div>
-            
-            <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-              {currentIndex + 1} из {queue.length}
-            </p>
+          {/* Навигация - показывается только если в очереди больше одного файла */}
+          {queue.length > 1 && (
+            <div className="add-card-flow__footer">
+              <Button 
+                variant="border" 
+                size="L"
+                iconOnly
+                iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
+                onClick={handlePrevious} 
+                disabled={currentIndex === 0}
+                title="Назад"
+              />
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {currentIndex < queue.length - 1 ? (
-                <Button variant="primary" onClick={handleNext}>
-                  Далее →
-                </Button>
-              ) : (
-                <Button variant="success" onClick={handleFinish}>
-                  Завершить
-                </Button>
-              )}
+              <Button 
+                variant="border" 
+                size="L"
+                iconOnly
+                iconLeft={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
+                onClick={handleNext}
+                disabled={currentIndex >= queue.length - 1}
+                title="Далее"
+              />
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

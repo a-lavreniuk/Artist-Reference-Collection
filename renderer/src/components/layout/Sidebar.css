@@ -15,7 +15,7 @@
   
   /* Оформление */
   background-color: var(--bg-secondary);
-  border-right: 1px solid var(--border-default);
+  border-right: 2px solid var(--color-grayscale-100); /* Толщина 2px, цвет grayscale-100 */
   
   /* Сброс */
   user-select: none;
@@ -65,7 +65,7 @@
   /* Оформление */
   background-color: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-s);
+  border-radius: 16px; /* Исправлено: было var(--radius-s) 8px, теперь 16px согласно макету */
   color: var(--icon-default);
   
   /* Переходы */
@@ -79,31 +79,56 @@
 
 /* Hover */
 .sidebar__item:hover {
-  background-color: var(--bg-button-secondary);
-  border-color: var(--border-default);
+  background-color: var(--color-grayscale-200); /* #d5d3d9 - согласно макету */
+  border-color: transparent;
 }
 
 .sidebar__item:hover .sidebar__tooltip {
   opacity: 1;
   visibility: visible;
-  transform: translateY(-50%) translateX(0);
+  transform: translateY(-50%); /* Убрали translateX - тултип выровнен по горизонтали */
 }
 
-/* Active */
+/* Active - убрали увеличение */
 .sidebar__item:active {
-  transform: scale(0.95);
+  /* Убрали transform: scale(0.95); */
 }
 
-/* Активный пункт */
+/* Активный пункт - используем grayscale-800 для фона */
 .sidebar__item--active {
-  background-color: var(--bg-button-primary);
-  border-color: var(--bg-button-primary);
-  color: var(--icon-light);
+  background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
+  border-color: transparent;
+  color: var(--color-grayscale-500); /* #93919a - цвет иконки */
 }
 
 .sidebar__item--active:hover {
-  background-color: var(--bg-button-primary-hover);
-  border-color: var(--bg-button-primary-hover);
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
+  border-color: transparent;
+}
+
+/* Border вариант (для кнопки "Добавить") */
+.sidebar__item--border {
+  /* У кнопки "Добавить" есть обводка по умолчанию */
+  border-width: 2px;
+  border-color: var(--color-grayscale-100); /* #ebe9ee - обводка */
+}
+
+.sidebar__item--border:hover {
+  background-color: var(--color-grayscale-200); /* #d5d3d9 - фон на hover */
+  border-color: transparent; /* Убираем видимость обводки на hover */
+}
+
+/* Активная кнопка "Добавить" - возвращаем стандартную ширину обводки */
+.sidebar__item--active.sidebar__item--border {
+  border-width: 1px; /* Возвращаем к стандартной ширине как у остальных кнопок */
+  border-color: transparent;
+  background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
+}
+
+/* Активная кнопка "Добавить" - темнеет при hover */
+.sidebar__item--active.sidebar__item--border:hover {
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
+  border-color: transparent;
 }
 
 /* ========== ИКОНКА ========== */
@@ -131,23 +156,26 @@
 /* ========== TOOLTIP (ПОДСКАЗКА) ========== */
 
 .sidebar__tooltip {
-  /* Позиционирование */
-  position: fixed; /* Изменено с absolute на fixed для выхода из stacking context sidebar */
-  left: calc(var(--width-sidebar) + var(--spacing-m));
-  transform: translateY(-50%) translateX(-8px);
-  z-index: var(--z-tooltip); /* Выше всех элементов */
+  /* Позиционирование - абсолютное относительно кнопки */
+  position: absolute;
+  /* Расчёт: ширина кнопки (56px) + отступ от кнопки (16px) */
+  left: calc(56px + 16px); /* 72px от левого края кнопки */
+  top: 50%; /* Центр кнопки по вертикали */
+  transform: translateY(-50%); /* Центрирование тултипа по его середине */
+  z-index: var(--z-tooltip);
   
-  /* Типографика */
-  font-size: var(--font-size-s);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-s);
+  /* Типографика - размер S согласно макету */
+  font-family: var(--font-family-body);
+  font-size: 14px; /* text-s */
+  font-weight: 400;
+  line-height: 14px; /* text-s */
   color: var(--text-light);
   white-space: nowrap;
   
-  /* Оформление */
-  padding: var(--spacing-s) var(--spacing-m);
+  /* Оформление - отступы 10px слева и справа, скругление 10px */
+  padding: 8px 10px; /* 8px сверху/снизу, 10px слева/справа */
   background-color: var(--bg-button-primary);
-  border-radius: var(--radius-xs);
+  border-radius: 10px; /* XS скругление 10px вместо 4px */
   box-shadow: var(--shadow-m);
   
   /* Видимость */
@@ -161,8 +189,8 @@
   pointer-events: none;
 }
 
-/* Стрелочка подсказки */
-.sidebar__tooltip::before {
+/* Стрелочка подсказки - убрана согласно макету */
+/* .sidebar__tooltip::before {
   content: '';
   position: absolute;
   right: 100%;
@@ -170,7 +198,7 @@
   transform: translateY(-50%);
   border: 6px solid transparent;
   border-right-color: var(--bg-button-primary);
-}
+} */
 
 /* ========== ФОКУС ========== */
 

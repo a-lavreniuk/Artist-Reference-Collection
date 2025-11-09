@@ -62,7 +62,7 @@ export const SectionHeader = ({
         {backButton && (
           <Button
             variant="ghost"
-            size="medium"
+            size="L"
             onClick={backButton.onClick}
             iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
           >
@@ -85,7 +85,11 @@ export const SectionHeader = ({
               onClick={() => viewMode.onChange('standard')}
               title="Стандартный вид"
             >
-              <Icon name="grid-default" size={24} variant="border" />
+              <Icon 
+                name="grid-default" 
+                size={24} 
+                variant={viewMode.current === 'standard' ? 'fill' : 'border'} 
+              />
             </button>
             <button
               className={`section-header__view-button ${
@@ -94,13 +98,29 @@ export const SectionHeader = ({
               onClick={() => viewMode.onChange('compact')}
               title="Компактный вид"
             >
-              <Icon name="grid-small" size={24} variant="border" />
+              <Icon 
+                name="grid-small" 
+                size={24} 
+                variant={viewMode.current === 'compact' ? 'fill' : 'border'} 
+              />
             </button>
           </div>
         )}
 
-        {/* Разделитель */}
-        {viewMode && contentFilter && (
+        {/* Разделитель между переключателями вида и actions */}
+        {viewMode && actions && (
+          <div className="section-header__divider" />
+        )}
+
+        {/* Дополнительные действия - идут после разделителя */}
+        {actions && (
+          <div className="section-header__actions">
+            {actions}
+          </div>
+        )}
+
+        {/* Разделитель перед фильтрами */}
+        {((viewMode && !actions) || actions) && contentFilter && (
           <div className="section-header__divider" />
         )}
 
@@ -113,7 +133,11 @@ export const SectionHeader = ({
               }`}
               onClick={() => contentFilter.onChange('all')}
             >
-              <Icon name="images" size={24} variant="border" />
+              <Icon 
+                name="images" 
+                size={24} 
+                variant={contentFilter.current === 'all' ? 'fill' : 'border'} 
+              />
               <span>Всё</span>
               {contentFilter.counts && contentFilter.counts.all > 0 && (
                 <span className="section-header__filter-count">
@@ -127,7 +151,11 @@ export const SectionHeader = ({
               }`}
               onClick={() => contentFilter.onChange('images')}
             >
-              <Icon name="image" size={24} variant="border" />
+              <Icon 
+                name="image" 
+                size={24} 
+                variant={contentFilter.current === 'images' ? 'fill' : 'border'} 
+              />
               <span>Изображения</span>
               {contentFilter.counts && contentFilter.counts.images > 0 && (
                 <span className="section-header__filter-count">
@@ -141,7 +169,11 @@ export const SectionHeader = ({
               }`}
               onClick={() => contentFilter.onChange('videos')}
             >
-              <Icon name="play-circle" size={24} variant="border" />
+              <Icon 
+                name="play-circle" 
+                size={24} 
+                variant={contentFilter.current === 'videos' ? 'fill' : 'border'} 
+              />
               <span>Видео</span>
               {contentFilter.counts && contentFilter.counts.videos > 0 && (
                 <span className="section-header__filter-count">
@@ -149,18 +181,6 @@ export const SectionHeader = ({
                 </span>
               )}
             </button>
-          </div>
-        )}
-
-        {/* Разделитель */}
-        {(viewMode || contentFilter) && actions && (
-          <div className="section-header__divider" />
-        )}
-
-        {/* Дополнительные действия */}
-        {actions && (
-          <div className="section-header__actions">
-            {actions}
           </div>
         )}
       </div>

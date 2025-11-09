@@ -75,11 +75,19 @@
   --bg-primary: var(--color-grayscale-50);
   --bg-secondary: var(--color-grayscale-25);
   --bg-overlay: rgba(245, 244, 247, 0.48);
+  
+  /* Фоны для кнопок */
   --bg-button-primary: var(--color-grayscale-800);
   --bg-button-primary-hover: var(--color-grayscale-900);
+  --bg-button-primary-disabled: var(--color-grayscale-100);
+  
   --bg-button-secondary: var(--color-grayscale-100);
   --bg-button-secondary-hover: var(--color-grayscale-200);
-  --bg-button-disabled: var(--color-grayscale-100);
+  --bg-button-secondary-disabled: var(--color-grayscale-100);
+  
+  --bg-button-border-hover: var(--color-grayscale-200);
+  --bg-button-ghost-hover: var(--color-grayscale-200);
+  
   --bg-success: var(--color-green-600);
   --bg-success-hover: var(--color-green-700);
   --bg-warning: var(--color-yellow-600);

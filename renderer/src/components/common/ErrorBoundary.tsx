@@ -98,10 +98,10 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '24px' }}>
-              <Button variant="primary" onClick={this.handleReset}>
+              <Button variant="primary" size="L" onClick={this.handleReset}>
                 Попробовать снова
               </Button>
-              <Button variant="secondary" onClick={() => window.location.href = '/'}>
+              <Button variant="secondary" size="L" onClick={() => window.location.href = '/'}>
                 Вернуться на главную
               </Button>
             </div>

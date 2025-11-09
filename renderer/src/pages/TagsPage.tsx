@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
-import { Button } from '../components/common';
+import { Button, Icon } from '../components/common';
 import { CategorySection, CreateCategoryModal, CreateTagModal } from '../components/tags';
 import { getAllCategories, getAllTags, deleteTag, deleteCategory, updateCategory, updateTag } from '../services/db';
 import { logDeleteCategory, logRenameCategory, logRenameTag } from '../services/history';
@@ -162,7 +162,8 @@ export const TagsPage = () => {
         actions: (
           <Button
             variant="primary"
-            size="medium"
+            size="L"
+            iconLeft={<Icon name="tag-plus" size={24} variant="border" />}
             onClick={() => setIsCreateCategoryModalOpen(true)}
           >
             Добавить категорию
@@ -197,7 +198,8 @@ export const TagsPage = () => {
           </p>
           <Button
             variant="primary"
-            size="large"
+            size="L"
+            iconLeft={<Icon name="tag-plus" size={24} variant="border" />}
             onClick={() => setIsCreateCategoryModalOpen(true)}
             style={{ marginTop: '16px' }}
           >

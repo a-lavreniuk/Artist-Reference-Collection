@@ -9,13 +9,13 @@
   justify-content: space-between;
   gap: var(--spacing-xl);
   
-  /* Размеры */
-  min-height: var(--height-header);
-  padding: var(--spacing-l) var(--spacing-2xl) var(--spacing-2xl);
+  /* Размеры - фиксированная высота чтобы избежать скачков */
+  height: 120px; /* Фиксированная высота вместо min-height */
+  padding: 0 var(--spacing-2xl);
   
   /* Оформление */
   background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 2px solid var(--color-grayscale-100); /* Толщина 2px, цвет grayscale-100 */
   
   /* Сброс */
   flex-shrink: 0;
@@ -34,7 +34,7 @@
 .section-header__right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-m);
+  gap: 32px; /* Отступ между блоками (переключатели, divider, фильтры) */
   flex-shrink: 0;
 }
 
@@ -55,9 +55,9 @@
 /* ========== РАЗДЕЛИТЕЛЬ ========== */
 
 .section-header__divider {
-  width: 1px;
-  height: 32px;
-  background-color: var(--border-default);
+  width: 2px; /* Толщина 2px */
+  height: 56px; /* Высота как у кнопок */
+  background-color: var(--color-grayscale-100); /* #ebe9ee - grayscale-100 */
   flex-shrink: 0;
 }
 
@@ -65,107 +65,134 @@
 
 .section-header__view-mode {
   display: flex;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-2xs);
-  background-color: var(--bg-button-secondary);
-  border-radius: var(--radius-s);
+  gap: 8px; /* Отступ между кнопками 8px */
+  /* Убрана группировка - нет padding и background */
 }
 
 .section-header__view-button {
+  /* Стиль как кнопки фильтров, но без текста */
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
+  
+  /* Размер 56×56px (иконка 24px + отступы) */
+  width: 56px;
+  height: 56px;
+  padding: 16px;
+  
+  /* Оформление - border стиль для неактивных */
   background-color: transparent;
-  border: none;
-  border-radius: var(--radius-xs);
-  color: var(--icon-default);
+  border: 2px solid var(--color-grayscale-100); /* Обводка 2px как у фильтров */
+  border-radius: 16px;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .section-header__view-button:hover {
-  background-color: var(--bg-button-secondary-hover);
-  color: var(--text-primary);
+  background-color: var(--color-grayscale-200); /* #d5d3d9 - hover */
+  border-color: transparent;
 }
 
+/* Активная кнопка - primary стиль */
 .section-header__view-button--active {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-s);
+  background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
+  border-color: transparent;
 }
 
+.section-header__view-button--active:hover {
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
+  border-color: transparent;
+}
+
+/* Иконки в кнопках вида */
 .section-header__view-button .icon {
   width: 24px;
   height: 24px;
+  color: var(--color-grayscale-500); /* #93919a - неактивная кнопка */
+}
+
+/* Иконка в активной кнопке - тот же цвет grayscale-500 */
+.section-header__view-button--active .icon {
+  color: var(--color-grayscale-500); /* #93919a */
 }
 
 /* ========== ФИЛЬТР КОНТЕНТА ========== */
 
 .section-header__content-filter {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: 8px; /* Отступ между кнопками */
 }
 
 .section-header__filter-button {
   display: flex;
   align-items: center;
-  gap: var(--spacing-s);
-  height: 40px;
-  padding: 0 var(--spacing-l);
+  gap: 8px; /* Отступ между элементами внутри (иконка, текст, счётчик) */
+  
+  /* Размеры - padding 16px 32px (сверху/снизу, слева/справа) */
+  height: 56px; /* 16px + 16px + 16px line-height + margin */
+  padding: 16px 32px;
+  
+  /* Оформление */
   background-color: transparent;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-s);
+  border: 2px solid var(--color-grayscale-100); /* Обводка 2px для border стиля */
+  border-radius: 16px; /* Скругление 16px */
+  
+  /* Типографика */
   font-family: var(--font-family-body);
-  font-size: var(--font-size-input);
-  font-weight: var(--font-weight-regular);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 16px;
   color: var(--text-primary);
+  
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .section-header__filter-button:hover {
-  background-color: var(--bg-button-secondary);
-  border-color: var(--border-hover);
+  background-color: var(--color-grayscale-200); /* Hover как в сайдбаре */
+  border-color: transparent;
 }
 
 .section-header__filter-button--active {
-  background-color: var(--bg-button-primary);
-  border-color: var(--bg-button-primary);
+  background-color: var(--color-grayscale-800); /* Активная кнопка - grayscale-800 */
+  border-color: transparent;
   color: var(--text-light);
 }
 
+.section-header__filter-button--active:hover {
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
+}
+
+/* Иконка красится по тем же принципам что и в сайдбаре */
 .section-header__filter-button .icon {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  color: var(--color-grayscale-500); /* #93919a - иконки в неактивных кнопках */
+}
+
+/* Иконка в активной кнопке фильтра - тот же цвет grayscale-500 */
+.section-header__filter-button--active .icon {
+  color: var(--color-grayscale-500); /* #93919a */
 }
 
 .section-header__filter-button span {
   white-space: nowrap;
 }
 
-/* Счётчик в кнопке фильтра */
+/* Счётчик - просто текст того же размера, цвет grayscale-500 */
 .section-header__filter-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-xs);
-  font-size: 11px;
-  font-weight: var(--font-weight-bold);
-  line-height: 1;
+  /* Убран фон и padding - теперь это просто текст */
+  font-family: var(--font-family-body);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--color-grayscale-500); /* #93919a - серый цвет */
 }
 
-.section-header__filter-button:not(.section-header__filter-button--active) 
-.section-header__filter-count {
-  background-color: var(--color-grayscale-200);
-  color: var(--text-secondary);
+/* Для активной кнопки счётчик остаётся grayscale-500 */
+.section-header__filter-button--active .section-header__filter-count {
+  color: var(--color-grayscale-500);
 }
 
 /* ========== ДОПОЛНИТЕЛЬНЫЕ ДЕЙСТВИЯ ========== */
@@ -173,7 +200,7 @@
 .section-header__actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-s);
+  gap: 8px; /* Отступ между кнопками-иконками */
 }
 
 /* ========== АДАПТАЦИЯ ПОД ШИРИНУ ОКНА ========== */

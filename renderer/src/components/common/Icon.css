@@ -55,10 +55,12 @@
 /* Адаптация под разные контексты */
 .button .icon,
 .sidebar__icon .icon {
-  transition: transform 0.2s ease, color var(--transition-fast);
+  /* Убрали transform transition - иконки не должны менять размер */
+  transition: color var(--transition-fast);
 }
 
-.button:hover .icon,
+/* Убрали эффекты увеличения/уменьшения иконок на hover и active */
+/* .button:hover .icon,
 .sidebar__item:hover .icon {
   transform: scale(1.05);
 }
@@ -66,7 +68,7 @@
 .button:active .icon,
 .sidebar__item:active .icon {
   transform: scale(0.95);
-}
+} */
 
 /* Для анимации загрузки */
 @keyframes icon-spin {

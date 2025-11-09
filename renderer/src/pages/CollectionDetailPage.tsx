@@ -181,14 +181,14 @@ export const CollectionDetailPage = () => {
           <>
             <Button 
               variant="secondary" 
-              size="medium"
+              size="L"
               onClick={handleRenameCollection}
             >
               Переименовать
             </Button>
             <Button
-              variant="danger"
-              size="medium"
+              variant="error"
+              size="L"
               onClick={handleDeleteCollection}
             >
               Удалить коллекцию
