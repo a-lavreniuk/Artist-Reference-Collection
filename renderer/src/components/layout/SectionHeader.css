@@ -11,7 +11,7 @@
   
   /* Размеры */
   min-height: var(--height-header);
-  padding: var(--spacing-l) var(--spacing-xl);
+  padding: var(--spacing-l) var(--spacing-2xl) var(--spacing-2xl);
   
   /* Оформление */
   background-color: var(--bg-secondary);
@@ -66,7 +66,7 @@
 .section-header__view-mode {
   display: flex;
   gap: var(--spacing-xs);
-  padding: 2px;
+  padding: var(--spacing-2xs);
   background-color: var(--bg-button-secondary);
   border-radius: var(--radius-s);
 }
@@ -178,32 +178,15 @@
 
 /* ========== АДАПТАЦИЯ ПОД ШИРИНУ ОКНА ========== */
 
-@media (max-width: 2200px) {
-  .section-header {
-    padding: var(--spacing-m) var(--spacing-l);
-  }
-  
-  .section-header__title {
-    font-size: 32px;
-  }
-}
+/* Примечание: отступы НЕ меняются на разных разрешениях */
+/* Меняются только размеры контента */
+
+/* Размеры текста и элементов НЕ меняются на разных разрешениях */
 
 @media (max-width: 1920px) {
-  .section-header {
-    padding: var(--spacing-m) var(--spacing-l);
-    gap: var(--spacing-l);
-  }
-  
-  .section-header__title {
-    font-size: 28px;
-  }
-  
-  .section-header__filter-button span {
+  /* Можно скрыть текст в кнопках фильтров если нужно больше места */
+  /* .section-header__filter-button span {
     display: none;
-  }
-  
-  .section-header__filter-button {
-    padding: 0 var(--spacing-m);
-  }
+  } */
 }
 

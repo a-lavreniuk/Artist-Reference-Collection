@@ -144,7 +144,7 @@
   position: absolute;
   bottom: 4px;
   right: 4px;
-  padding: 2px 6px;
+  padding: var(--spacing-2xs) 6px;
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
   font-size: 10px;
@@ -164,7 +164,7 @@
 @media (max-width: 1920px) {
   .card-view {
     grid-template-columns: 1fr 350px;
-    gap: var(--spacing-l);
+    /* gap остаётся как в основных стилях */
   }
   
   .card-view__similar-grid {
@@ -175,7 +175,7 @@
 @media (max-width: 1400px) {
   .card-view {
     grid-template-columns: 1fr;
-    gap: var(--spacing-l);
+    /* gap остаётся как в основных стилях */
   }
   
   .card-view__preview {

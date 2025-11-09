@@ -36,7 +36,7 @@
   flex-direction: column;
   align-items: center;
   gap: var(--spacing-l);
-  padding: var(--spacing-4xl);
+  padding: var(--spacing-3xl);
   text-align: center;
   color: var(--icon-default);
 }
@@ -204,7 +204,7 @@
 @media (max-width: 1920px) {
   .add-card-flow__main {
     grid-template-columns: 1fr 350px;
-    gap: var(--spacing-l);
+    /* gap остаётся как в основных стилях */
   }
 }
 

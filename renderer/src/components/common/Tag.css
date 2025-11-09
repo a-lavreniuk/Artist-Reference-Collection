@@ -75,7 +75,7 @@
   height: 20px;
   padding: 0 var(--spacing-xs);
   font-size: 11px;
-  gap: 2px;
+  gap: var(--spacing-2xs);
 }
 
 .tag--medium {

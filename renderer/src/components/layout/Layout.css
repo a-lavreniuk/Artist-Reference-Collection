@@ -38,12 +38,12 @@
   justify-content: stretch;
   
   /* Размеры */
-  min-height: calc(var(--height-header) + var(--spacing-l));
-  padding: var(--spacing-l) var(--spacing-xl);
+  min-height: var(--height-header);
+  padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
   
   /* Оформление */
   background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-default);
+  /* border-bottom убран для единого меню */
   
   /* Сброс */
   flex-shrink: 0;
@@ -67,7 +67,7 @@
   overflow-x: hidden;
   
   /* Оформление */
-  padding: var(--spacing-xl);
+  padding: var(--spacing-2xl);
   
   /* Позиционирование */
   position: relative;
@@ -82,35 +82,19 @@
 
 /* ========== АДАПТАЦИЯ ПОД РАЗМЕР ОКНА ========== */
 
+/* Примечание: отступы НЕ меняются на разных разрешениях */
+/* Меняются только размеры контента (width, height, font-size) */
+
 @media (max-width: 2560px) {
-  .layout__header {
-    padding: var(--spacing-l);
-  }
-  
-  .layout__content {
-    padding: var(--spacing-l);
-  }
+  /* Без изменений отступов */
 }
 
 @media (max-width: 2200px) {
-  .layout__header {
-    padding: var(--spacing-m) var(--spacing-l);
-  }
-  
-  .layout__content {
-    padding: var(--spacing-l);
-  }
+  /* Без изменений отступов */
 }
 
 @media (max-width: 1920px) {
-  .layout__header {
-    padding: var(--spacing-m);
-    min-height: calc(var(--height-header) + var(--spacing-m));
-  }
-  
-  .layout__content {
-    padding: var(--spacing-m);
-  }
+  /* Без изменений отступов */
 }
 
 /* ========== ПУСТЫЕ СОСТОЯНИЯ ========== */
@@ -121,7 +105,7 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  padding: var(--spacing-4xl);
+  padding: var(--spacing-3xl);
   text-align: center;
 }
 
@@ -185,7 +169,7 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  padding: var(--spacing-4xl);
+  padding: var(--spacing-3xl);
   text-align: center;
 }
 

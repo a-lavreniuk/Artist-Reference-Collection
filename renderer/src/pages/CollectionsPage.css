@@ -19,7 +19,7 @@
 @media (max-width: 1920px) {
   .collections-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: var(--spacing-l);
+    /* gap остаётся как в основных стилях */
   }
 }
 

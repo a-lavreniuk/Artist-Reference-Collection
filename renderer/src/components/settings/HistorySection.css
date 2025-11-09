@@ -17,7 +17,7 @@
 .history-section__loading,
 .history-section__empty {
   text-align: center;
-  padding: 60px 24px;
+  padding: var(--spacing-3xl) var(--spacing-xl);
   color: var(--text-secondary-default, #93919a);
 }
 
@@ -39,7 +39,7 @@
 
 /* Сообщения */
 .history-section__message {
-  padding: 12px 16px;
+  padding: var(--spacing-m) var(--spacing-l);
   border-radius: var(--s, 12px);
   margin-bottom: var(--16, 16px);
 }
