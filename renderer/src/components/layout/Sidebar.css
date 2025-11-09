@@ -156,10 +156,11 @@
 
 .sidebar__tooltip {
   /* Позиционирование */
-  position: fixed; /* Изменено с absolute на fixed для выхода из stacking context sidebar */
-  left: calc(var(--width-sidebar) + 16px); /* Расстояние от кнопки 16px согласно макету */
+  position: fixed;
+  /* Расчёт: padding sidebar (32px) + ширина кнопки (56px) + отступ от кнопки (16px) */
+  left: calc(var(--spacing-2xl) + 56px + 16px); /* 32px + 56px + 16px = 104px */
   transform: translateY(-50%); /* Только вертикальное выравнивание по центру кнопки */
-  z-index: var(--z-tooltip); /* Выше всех элементов */
+  z-index: var(--z-tooltip);
   
   /* Типографика - размер S согласно макету */
   font-family: var(--font-family-body);
@@ -169,10 +170,10 @@
   color: var(--text-light);
   white-space: nowrap;
   
-  /* Оформление - внутренние отступы 8px согласно макету */
-  padding: 8px; /* Было var(--spacing-s) var(--spacing-m) = 8px 12px */
+  /* Оформление - отступы 10px слева и справа, скругление 10px */
+  padding: 8px 10px; /* 8px сверху/снизу, 10px слева/справа */
   background-color: var(--bg-button-primary);
-  border-radius: var(--radius-xs);
+  border-radius: 10px; /* XS скругление 10px вместо 4px */
   box-shadow: var(--shadow-m);
   
   /* Видимость */
