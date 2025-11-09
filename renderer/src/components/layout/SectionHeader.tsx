@@ -63,11 +63,11 @@ export const SectionHeader = ({
           <Button
             variant="ghost"
             size="L"
+            iconOnly
             onClick={backButton.onClick}
             iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
-          >
-            {backButton.label}
-          </Button>
+            title={backButton.label}
+          />
         )}
         
         {/* Заголовок */}
