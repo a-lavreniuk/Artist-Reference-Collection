@@ -16,6 +16,7 @@ export const AddPage = () => {
   const [configuredCount, setConfiguredCount] = useState(0);
   const [hasQueue, setHasQueue] = useState(false);
   const finishHandlerRef = useRef<(() => void) | null>(null);
+  const openFileDialogRef = useRef<(() => void) | null>(null);
 
   const handleComplete = () => {
     navigate('/');
@@ -33,8 +34,15 @@ export const AddPage = () => {
     }
   };
 
-  // Формируем actions для header - только кнопки Отмена и Добавить
+  const handleOpenFileDialog = () => {
+    if (openFileDialogRef.current) {
+      openFileDialogRef.current();
+    }
+  };
+
+  // Формируем actions для header
   const headerActions = hasQueue ? (
+    // Когда есть очередь - кнопки Отмена и Добавить
     <>
       <Button 
         variant="border" 
@@ -56,7 +64,17 @@ export const AddPage = () => {
         Добавить
       </Button>
     </>
-  ) : null;
+  ) : (
+    // Когда нет очереди (drag-&-drop экран) - кнопка Добавить
+    <Button 
+      variant="primary" 
+      size="L"
+      iconLeft={<Icon name="plus" size={24} variant="border" />}
+      onClick={handleOpenFileDialog}
+    >
+      Добавить
+    </Button>
+  );
 
   return (
     <Layout
@@ -75,6 +93,9 @@ export const AddPage = () => {
         }}
         onFinishHandlerReady={(handler) => {
           finishHandlerRef.current = handler;
+        }}
+        onOpenFileDialogReady={(handler) => {
+          openFileDialogRef.current = handler;
         }}
       />
     </Layout>

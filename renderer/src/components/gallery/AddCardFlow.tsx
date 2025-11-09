@@ -31,9 +31,12 @@ export interface AddCardFlowProps {
   
   /** Callback для передачи handleFinish в родительский компонент */
   onFinishHandlerReady?: (handler: () => void) => void;
+  
+  /** Callback для передачи функции открытия файлового диалога */
+  onOpenFileDialogReady?: (handler: () => void) => void;
 }
 
-export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinishHandlerReady }: AddCardFlowProps) => {
+export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady }: AddCardFlowProps) => {
   const [queue, setQueue] = useState<QueueFile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -85,6 +88,14 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       onFinishHandlerReady(handleFinish);
     }
   }, [queue, directoryPath, hasPermission, onFinishHandlerReady]);
+
+  // Передаём функцию открытия файлового диалога
+  useEffect(() => {
+    if (onOpenFileDialogReady) {
+      const openDialog = () => fileInputRef.current?.click();
+      onOpenFileDialogReady(openDialog);
+    }
+  }, [onOpenFileDialogReady]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
