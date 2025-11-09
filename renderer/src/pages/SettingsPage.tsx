@@ -498,7 +498,7 @@ export const SettingsPage = () => {
       }}
       searchProps={searchProps}
     >
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px', minHeight: 'calc(100vh - 120px - 64px)' }}>
         {/* Табы перенесены в header */}
 
         {/* Таб: Хранилище */}
