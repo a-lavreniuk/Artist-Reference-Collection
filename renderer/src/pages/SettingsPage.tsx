@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
-import { Button } from '../components/common';
+import { Button, Icon } from '../components/common';
 import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
 import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
@@ -412,73 +412,46 @@ export const SettingsPage = () => {
     }
   };
 
+  // Формируем actions для header - кнопки переключения табов
+  const tabActions = (
+    <div style={{ display: 'flex', gap: '8px' }}>
+      <button
+        className={`section-header__view-button ${activeTab === 'storage' ? 'section-header__view-button--active' : ''}`}
+        onClick={() => setActiveTab('storage')}
+        title="Хранилище"
+        style={{ width: '56px', height: '56px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: activeTab === 'storage' ? 'var(--color-grayscale-800)' : 'transparent', border: activeTab === 'storage' ? 'none' : '2px solid var(--color-grayscale-100)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.15s' }}
+      >
+        <Icon name="server" size={24} variant={activeTab === 'storage' ? 'fill' : 'border'} />
+      </button>
+      <button
+        className={`section-header__view-button ${activeTab === 'statistics' ? 'section-header__view-button--active' : ''}`}
+        onClick={() => setActiveTab('statistics')}
+        title="Статистика"
+        style={{ width: '56px', height: '56px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: activeTab === 'statistics' ? 'var(--color-grayscale-800)' : 'transparent', border: activeTab === 'statistics' ? 'none' : '2px solid var(--color-grayscale-100)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.15s' }}
+      >
+        <Icon name="line-chart" size={24} variant={activeTab === 'statistics' ? 'fill' : 'border'} />
+      </button>
+      <button
+        className={`section-header__view-button ${activeTab === 'history' ? 'section-header__view-button--active' : ''}`}
+        onClick={() => setActiveTab('history')}
+        title="История"
+        style={{ width: '56px', height: '56px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: activeTab === 'history' ? 'var(--color-grayscale-800)' : 'transparent', border: activeTab === 'history' ? 'none' : '2px solid var(--color-grayscale-100)', borderRadius: '16px', cursor: 'pointer', transition: 'all 0.15s' }}
+      >
+        <Icon name="history" size={24} variant={activeTab === 'history' ? 'fill' : 'border'} />
+      </button>
+    </div>
+  );
+
   return (
     <Layout
       headerProps={{
-        title: 'Настройки'
+        title: 'Настройки',
+        actions: tabActions
       }}
       searchProps={searchProps}
     >
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
-        {/* Табы */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '8px', 
-          marginBottom: '32px',
-          borderBottom: '1px solid var(--border-default)',
-          paddingBottom: '0'
-        }}>
-          <button
-            onClick={() => setActiveTab('storage')}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              background: 'transparent',
-              color: activeTab === 'storage' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontWeight: activeTab === 'storage' ? 'var(--font-weight-bold)' : 'normal',
-              borderBottom: activeTab === 'storage' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: 'var(--font-size-m)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            💾 Хранилище
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('statistics')}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              background: 'transparent',
-              color: activeTab === 'statistics' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontWeight: activeTab === 'statistics' ? 'var(--font-weight-bold)' : 'normal',
-              borderBottom: activeTab === 'statistics' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: 'var(--font-size-m)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            📊 Статистика
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('history')}
-            style={{
-              padding: '12px 24px',
-              border: 'none',
-              background: 'transparent',
-              color: activeTab === 'history' ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontWeight: activeTab === 'history' ? 'var(--font-weight-bold)' : 'normal',
-              borderBottom: activeTab === 'history' ? '2px solid var(--bg-button-primary)' : '2px solid transparent',
-              cursor: 'pointer',
-              fontSize: 'var(--font-size-m)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            📜 История
-          </button>
-        </div>
+        {/* Табы перенесены в header */}
 
         {/* Таб: Хранилище */}
         {activeTab === 'storage' && (
