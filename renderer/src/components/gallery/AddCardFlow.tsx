@@ -73,6 +73,8 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
     loadData();
   }, []);
 
+  const currentFile = queue[currentIndex];
+
   // Обновление состояния навигации для header
   useEffect(() => {
     if (queue.length > 0 && onNavigationChange) {
@@ -150,8 +152,6 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
     setQueue(newQueue);
     setCurrentIndex(0);
   };
-
-  const currentFile = queue[currentIndex];
 
   const handleTagToggle = (tagId: string) => {
     if (!currentFile) return;
