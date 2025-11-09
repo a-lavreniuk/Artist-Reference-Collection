@@ -154,7 +154,7 @@
   border-radius: var(--radius-l);
   border: 1px solid var(--border-default);
   padding: var(--spacing-l);
-  overflow-y: auto;
+  /* Убран overflow-y: auto - чтобы footer был внизу */
 }
 
 .add-card-flow__header {
@@ -171,12 +171,19 @@
   flex-direction: column;
 }
 
+/* Секция с метками растягивается на всё свободное пространство */
+.add-card-flow__section:last-of-type {
+  flex: 1;
+  min-height: 0;
+}
+
 .add-card-flow__categories {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-l);
-  max-height: 400px;
-  overflow-y: auto;
+  flex: 1; /* Растягивается на всё свободное пространство */
+  overflow-y: auto; /* Скролл внутри categories если не влезают */
+  min-height: 0;
 }
 
 .add-card-flow__category {
@@ -196,7 +203,7 @@
   align-items: center;
   padding-top: var(--spacing-l);
   border-top: 1px solid var(--border-default);
-  margin-top: var(--spacing-l); /* Изменено с auto - убран огромный отступ */
+  margin-top: 0; /* Без отступа - прижат к categories */
 }
 
 /* ========== АДАПТАЦИЯ ========== */
