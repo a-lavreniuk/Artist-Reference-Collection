@@ -3,7 +3,7 @@
  * Drag & Drop, настройка меток, коллекций
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { Button, Icon } from '../components/common';
@@ -13,16 +13,9 @@ import { useSearch } from '../contexts';
 export const AddPage = () => {
   const navigate = useNavigate();
   const { searchProps } = useSearch();
-  const [navigationCallbacks, setNavigationCallbacks] = useState<{
-    onPrevious?: () => void;
-    onNext?: () => void;
-    onFinish?: () => void;
-    canGoPrevious?: boolean;
-    canGoNext?: boolean;
-    isLastItem?: boolean;
-    totalCount?: number;
-    currentIndex?: number;
-  }>({});
+  const [configuredCount, setConfiguredCount] = useState(0);
+  const [hasQueue, setHasQueue] = useState(false);
+  const finishHandlerRef = useRef<(() => void) | null>(null);
 
   const handleComplete = () => {
     navigate('/');
@@ -34,13 +27,14 @@ export const AddPage = () => {
     }
   };
 
-  // Вычисляем количество оставшихся карточек
-  const remainingCount = navigationCallbacks.totalCount 
-    ? navigationCallbacks.totalCount - (navigationCallbacks.currentIndex || 0) - 1 
-    : 0;
+  const handleAddClick = () => {
+    if (finishHandlerRef.current) {
+      finishHandlerRef.current();
+    }
+  };
 
-  // Формируем actions для header на основе текущего состояния
-  const headerActions = navigationCallbacks.onPrevious || navigationCallbacks.onNext || navigationCallbacks.onFinish ? (
+  // Формируем actions для header - только кнопки Отмена и Добавить
+  const headerActions = hasQueue ? (
     <>
       <Button 
         variant="border" 
@@ -52,35 +46,15 @@ export const AddPage = () => {
       />
       
       <Button 
-        variant="border" 
+        variant="success" 
         size="L"
-        iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
-        onClick={navigationCallbacks.onPrevious}
-        disabled={!navigationCallbacks.canGoPrevious}
+        iconLeft={<Icon name="plus" size={24} variant="border" />}
+        counter={configuredCount}
+        disabled={configuredCount === 0}
+        onClick={handleAddClick}
       >
-        Назад
+        Добавить
       </Button>
-      
-      {navigationCallbacks.isLastItem ? (
-        <Button 
-          variant="success" 
-          size="L"
-          iconLeft={<Icon name="plus" size={24} variant="border" />}
-          onClick={navigationCallbacks.onFinish}
-        >
-          Добавить
-        </Button>
-      ) : (
-        <Button 
-          variant="primary" 
-          size="L"
-          iconRight={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
-          onClick={navigationCallbacks.onNext}
-          counter={remainingCount > 0 ? remainingCount : undefined}
-        >
-          Далее
-        </Button>
-      )}
     </>
   ) : null;
 
@@ -95,7 +69,13 @@ export const AddPage = () => {
       <AddCardFlow
         onComplete={handleComplete}
         onCancel={handleCancel}
-        onNavigationChange={setNavigationCallbacks}
+        onQueueStateChange={(hasQueue, configuredCount) => {
+          setHasQueue(hasQueue);
+          setConfiguredCount(configuredCount);
+        }}
+        onFinishHandlerReady={(handler) => {
+          finishHandlerRef.current = handler;
+        }}
       />
     </Layout>
   );

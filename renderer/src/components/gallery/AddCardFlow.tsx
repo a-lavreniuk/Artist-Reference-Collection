@@ -26,20 +26,14 @@ export interface AddCardFlowProps {
   /** Обработчик отмены */
   onCancel: () => void;
   
-  /** Callback для обновления состояния навигации в header */
-  onNavigationChange?: (callbacks: {
-    onPrevious?: () => void;
-    onNext?: () => void;
-    onFinish?: () => void;
-    canGoPrevious?: boolean;
-    canGoNext?: boolean;
-    isLastItem?: boolean;
-    totalCount?: number;
-    currentIndex?: number;
-  }) => void;
+  /** Callback для обновления состояния очереди */
+  onQueueStateChange?: (hasQueue: boolean, configuredCount: number) => void;
+  
+  /** Callback для передачи handleFinish в родительский компонент */
+  onFinishHandlerReady?: (handler: () => void) => void;
 }
 
-export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCardFlowProps) => {
+export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinishHandlerReady }: AddCardFlowProps) => {
   const [queue, setQueue] = useState<QueueFile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -77,23 +71,20 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
 
   const currentFile = queue[currentIndex];
 
-  // Обновление состояния навигации для header
+  // Обновление состояния очереди для header
   useEffect(() => {
-    if (queue.length > 0 && onNavigationChange) {
-      onNavigationChange({
-        onPrevious: handlePrevious,
-        onNext: handleNext,
-        onFinish: handleFinish,
-        canGoPrevious: currentIndex > 0,
-        canGoNext: true, // Всегда можно идти вперёд (проверка меток в handleNext)
-        isLastItem: currentIndex === queue.length - 1,
-        totalCount: queue.length,
-        currentIndex: currentIndex
-      });
-    } else if (onNavigationChange) {
-      onNavigationChange({});
+    if (onQueueStateChange) {
+      const configuredCount = queue.filter(f => f.configured).length;
+      onQueueStateChange(queue.length > 0, configuredCount);
     }
-  }, [queue, currentIndex]);
+  }, [queue, onQueueStateChange]);
+
+  // Передаём handleFinish в родительский компонент
+  useEffect(() => {
+    if (onFinishHandlerReady) {
+      onFinishHandlerReady(handleFinish);
+    }
+  }, [queue, directoryPath, hasPermission, onFinishHandlerReady]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -213,11 +204,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
   };
 
   const handleNext = () => {
-    if (!currentFile?.configured) {
-      setMessage('❌ Добавьте хотя бы одну метку');
-      return;
-    }
-    
+    // Просто листаем без проверки меток
     if (currentIndex < queue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
@@ -271,13 +258,26 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
   };
 
   const handleFinish = async () => {
-    // Проверяем все ли файлы настроены
+    // Проверяем сколько файлов настроено
+    const configured = queue.filter(f => f.configured);
     const unconfigured = queue.filter(f => !f.configured);
-    if (unconfigured.length > 0) {
-      const index = queue.findIndex(f => !f.configured);
-      setCurrentIndex(index);
-      setMessage('❌ Не все файлы настроены. Добавьте метки.');
+    
+    if (configured.length === 0) {
+      setMessage('❌ Добавьте метки хотя бы к одной карточке');
       return;
+    }
+
+    // Если не все файлы настроены - спрашиваем подтверждение
+    if (unconfigured.length > 0) {
+      const confirmed = confirm(
+        `Настройки применены к ${configured.length} из ${queue.length} карточек.\n\n` +
+        `Оставшиеся ${unconfigured.length} карточек будут удалены из очереди.\n\n` +
+        `Продолжить?`
+      );
+      
+      if (!confirmed) {
+        return;
+      }
     }
 
     // Проверяем доступ к директории
@@ -291,9 +291,10 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
       
       const createdCards: Card[] = [];
       
-      for (let i = 0; i < queue.length; i++) {
-        const item = queue[i];
-        setMessage(`💾 Сохранение ${i + 1}/${queue.length}: ${item.file.name}`);
+      // Сохраняем только настроенные карточки
+      for (let i = 0; i < configured.length; i++) {
+        const item = configured[i];
+        setMessage(`💾 Сохранение ${i + 1}/${configured.length}: ${item.file.name}`);
         
         try {
           // Читаем файл как ArrayBuffer
@@ -362,7 +363,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
       // Логируем импорт файлов
       await logImportFiles(createdCards.length);
 
-      setMessage(`✅ Добавлено ${createdCards.length} из ${queue.length} карточек!`);
+      setMessage(`✅ Добавлено ${createdCards.length} карточек!`);
       setTimeout(() => onComplete(createdCards), 1000);
     } catch (error) {
       console.error('Ошибка сохранения:', error);
@@ -566,8 +567,29 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
               })}
             </div>
           </div>
-          
-          {/* Footer с навигацией удалён - кнопки теперь в header */}
+
+          {/* Навигация */}
+          <div className="add-card-flow__footer">
+            <Button 
+              variant="border" 
+              size="L"
+              iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
+              onClick={handlePrevious} 
+              disabled={currentIndex === 0}
+            >
+              Назад
+            </Button>
+
+            <Button 
+              variant="primary" 
+              size="L"
+              iconRight={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
+              onClick={handleNext}
+              disabled={currentIndex >= queue.length - 1}
+            >
+              Далее
+            </Button>
+          </div>
         </div>
       </div>
     </div>
