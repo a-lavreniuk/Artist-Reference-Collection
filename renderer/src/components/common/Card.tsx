@@ -25,6 +25,9 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'id' | '
   /** Обработчик выбора */
   onSelect?: (card: CardType, selected: boolean) => void;
   
+  /** Обработчик добавления/удаления из мудборда */
+  onMoodboardToggle?: (card: CardType) => void;
+  
   /** Показывать ли оверлей с действиями */
   showActions?: boolean;
 }
@@ -38,6 +41,7 @@ export const Card = ({
   selected = false,
   onClick,
   onSelect,
+  onMoodboardToggle,
   showActions = true,
   className = '',
   ...props
@@ -88,6 +92,11 @@ export const Card = ({
   const handleSelectClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelect?.(card, !selected);
+  };
+
+  const handleMoodboardClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onMoodboardToggle?.(card);
   };
 
   const handleImageLoad = () => {
@@ -143,41 +152,40 @@ export const Card = ({
         </div>
       )}
 
-      {/* Оверлей с действиями */}
-      {showActions && imageLoaded && (
-        <div className="card__overlay">
-          {/* Чекбокс выбора */}
-          <button
-            className={`card__checkbox ${selected ? 'card__checkbox--selected' : ''}`}
-            onClick={handleSelectClick}
-            aria-label={selected ? 'Снять выделение' : 'Выбрать'}
-          >
-            {selected && (
-              <Icon name="check" size={16} variant="border" />
-            )}
-          </button>
-
-          {/* Иконка типа файла */}
-          {card.type === 'video' && (
-            <div className="card__type-badge">
-              <Icon name="play" size={24} variant="fill" />
-            </div>
-          )}
-
-          {/* Информация о файле */}
-          {!compact && (
-            <div className="card__info">
-              <p className="card__filename">{card.fileName}</p>
-              <p className="card__size">{formatFileSize(card.fileSize)}</p>
-            </div>
-          )}
+      {/* Иконка типа файла - всегда видна */}
+      {imageLoaded && (
+        <div className="card__type-badge">
+          <Icon 
+            name={card.type === 'video' ? 'play' : 'image'} 
+            size={20} 
+            variant="fill" 
+          />
         </div>
       )}
 
-      {/* Индикатор мудборда */}
-      {card.inMoodboard && (
-        <div className="card__moodboard-badge" title="В мудборде">
-          <Icon name="bookmark" size={16} variant="fill" />
+      {/* Кнопка мудборда - появляется при ховере */}
+      {showActions && imageLoaded && (
+        <button
+          className={`card__moodboard-button ${card.inMoodboard ? 'card__moodboard-button--active' : ''}`}
+          onClick={handleMoodboardClick}
+          aria-label={card.inMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
+          title={card.inMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
+        >
+          <Icon 
+            name="bookmark" 
+            size={20} 
+            variant={card.inMoodboard ? 'fill' : 'border'} 
+          />
+        </button>
+      )}
+
+      {/* Оверлей с информацией о файле */}
+      {showActions && imageLoaded && !compact && (
+        <div className="card__overlay">
+          <div className="card__info">
+            <p className="card__filename">{card.fileName}</p>
+            <p className="card__size">{formatFileSize(card.fileSize)}</p>
+          </div>
         </div>
       )}
     </div>

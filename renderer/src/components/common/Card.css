@@ -10,7 +10,7 @@
   width: 100%;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-m);
+  border-radius: 16px; /* Скругление углов 16 пикселей */
   overflow: hidden;
   cursor: pointer;
   
@@ -23,20 +23,14 @@
 
 /* ========== СОСТОЯНИЯ ========== */
 
-/* Hover */
-.card:hover {
-  border-color: var(--border-hover);
-  box-shadow: var(--shadow-m);
-  transform: translateY(-2px);
-}
-
+/* Hover - показываем оверлей при наведении */
 .card:hover .card__overlay {
   opacity: 1;
 }
 
 /* Active */
 .card:active {
-  transform: translateY(0);
+  /* Без эффектов */
 }
 
 /* Selected */
@@ -127,82 +121,23 @@
   bottom: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: var(--spacing-m);
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(0, 0, 0, 0) 30%,
-    rgba(0, 0, 0, 0) 70%,
-    rgba(0, 0, 0, 0.6) 100%
-  );
   opacity: 0;
   transition: opacity var(--transition-base);
+  pointer-events: none; /* Не блокирует клик по карточке */
 }
 
 .card--compact .card__overlay {
   padding: var(--spacing-s);
 }
 
-/* ========== ЧЕКБОКС ========== */
-
-.card__checkbox {
-  position: absolute;
-  top: var(--spacing-m);
-  left: var(--spacing-m);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  background-color: rgba(255, 255, 255, 0.9);
-  border: 2px solid var(--border-default);
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.card--compact .card__checkbox {
-  top: var(--spacing-s);
-  left: var(--spacing-s);
-  width: 20px;
-  height: 20px;
-}
-
-.card__checkbox:hover {
-  background-color: #ffffff;
-  border-color: var(--border-hover);
-  transform: scale(1.1);
-}
-
-.card__checkbox--selected {
-  background-color: var(--bg-button-primary);
-  border-color: var(--bg-button-primary);
-  color: var(--text-light);
-}
-
-.card__checkbox--selected:hover {
-  background-color: var(--bg-button-primary-hover);
-  border-color: var(--bg-button-primary-hover);
-}
-
-.card__checkbox svg {
-  width: 16px;
-  height: 16px;
-}
-
-.card--compact .card__checkbox svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* ========== БЕЙДЖ ТИПА ФАЙЛА ========== */
+/* ========== БЕЙДЖ ТИПА ФАЙЛА (первая иконка - статичная, всегда видна) ========== */
 
 .card__type-badge {
   position: absolute;
   top: var(--spacing-m);
-  right: var(--spacing-m);
+  left: var(--spacing-m);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -212,11 +147,13 @@
   backdrop-filter: var(--backdrop-blur);
   border-radius: var(--radius-s);
   color: var(--text-light);
+  z-index: 2;
+  /* Всегда видна, не зависит от оверлея */
 }
 
 .card--compact .card__type-badge {
   top: var(--spacing-s);
-  right: var(--spacing-s);
+  left: var(--spacing-s);
   width: 28px;
   height: 28px;
 }
@@ -260,38 +197,66 @@
   opacity: 0.8;
 }
 
-/* ========== БЕЙДЖ МУДБОРДА ========== */
+/* ========== КНОПКА МУДБОРДА (вторая иконка - появляется при ховере) ========== */
 
-.card__moodboard-badge {
+.card__moodboard-button {
   position: absolute;
-  bottom: var(--spacing-m);
+  top: var(--spacing-m);
   right: var(--spacing-m);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  background-color: var(--bg-error);
+  padding: 0;
+  background-color: var(--bg-overlay-image);
+  backdrop-filter: var(--backdrop-blur);
+  border: none;
   border-radius: var(--radius-s);
   color: var(--text-light);
-  pointer-events: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--transition-fast);
+  z-index: 2;
 }
 
-.card--compact .card__moodboard-badge {
-  bottom: var(--spacing-s);
+.card--compact .card__moodboard-button {
+  top: var(--spacing-s);
   right: var(--spacing-s);
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
 }
 
-.card__moodboard-badge svg {
+/* Показываем при наведении на карточку */
+.card:hover .card__moodboard-button {
+  opacity: 1;
+}
+
+/* Всегда показываем, если уже в мудборде */
+.card__moodboard-button--active {
+  opacity: 1;
+  background-color: var(--bg-error);
+}
+
+/* Ховер на саму кнопку */
+.card__moodboard-button:hover {
+  background-color: var(--bg-overlay-image-hover);
+  transform: scale(1.1);
+}
+
+.card__moodboard-button--active:hover {
+  background-color: var(--bg-error-hover);
+  transform: scale(1.1);
+}
+
+.card__moodboard-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.card--compact .card__moodboard-button svg {
   width: 16px;
   height: 16px;
-}
-
-.card--compact .card__moodboard-badge svg {
-  width: 14px;
-  height: 14px;
 }
 
 /* ========== ФОКУС ========== */

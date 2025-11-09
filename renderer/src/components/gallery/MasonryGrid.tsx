@@ -22,6 +22,9 @@ export interface MasonryGridProps {
   /** Обработчик выбора карточки */
   onCardSelect?: (card: CardType, selected: boolean) => void;
   
+  /** Обработчик добавления/удаления из мудборда */
+  onMoodboardToggle?: (card: CardType) => void;
+  
   /** Выбранные карточки */
   selectedCards?: string[];
   
@@ -37,6 +40,7 @@ export const MasonryGrid = ({
   viewMode = 'standard',
   onCardClick,
   onCardSelect,
+  onMoodboardToggle,
   selectedCards = [],
   showActions = true
 }: MasonryGridProps) => {
@@ -99,6 +103,7 @@ export const MasonryGrid = ({
               selected={selectedCards.includes(card.id)}
               onClick={onCardClick}
               onSelect={onCardSelect}
+              onMoodboardToggle={onMoodboardToggle}
               showActions={showActions}
             />
           </div>

@@ -68,6 +68,7 @@
   
   /* Оформление */
   padding: var(--spacing-2xl);
+  background-color: white;
   
   /* Позиционирование */
   position: relative;
