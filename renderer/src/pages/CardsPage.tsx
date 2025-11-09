@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards } from '../services/db';
+import { getAllCards, addCardToMoodboard, removeCardFromMoodboard } from '../services/db';
 import { useSearch } from '../contexts';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
@@ -114,6 +114,22 @@ export const CardsPage = () => {
     }
   };
 
+  // Обработчик добавления/удаления из мудборда
+  const handleMoodboardToggle = async (card: Card) => {
+    try {
+      if (card.inMoodboard) {
+        await removeCardFromMoodboard(card.id);
+      } else {
+        await addCardToMoodboard(card.id);
+      }
+      // Перезагружаем карточки для обновления состояния
+      const allCards = await getAllCards();
+      setCards(allCards);
+    } catch (error) {
+      console.error('Ошибка переключения мудборда:', error);
+    }
+  };
+
   // Состояние загрузки
   if (isLoading) {
     return (
@@ -151,6 +167,7 @@ export const CardsPage = () => {
         viewMode={viewMode}
         onCardClick={handleCardClick}
         onCardSelect={handleCardSelect}
+        onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
       />
 

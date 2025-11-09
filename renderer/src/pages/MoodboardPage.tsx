@@ -7,7 +7,7 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards, updateCard } from '../services/db';
+import { getAllCards, updateCard, addCardToMoodboard, removeCardFromMoodboard } from '../services/db';
 import { logClearMoodboard } from '../services/history';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
@@ -126,6 +126,23 @@ export const MoodboardPage = () => {
       setSelectedCards(prev => [...prev, card.id]);
     } else {
       setSelectedCards(prev => prev.filter(id => id !== card.id));
+    }
+  };
+
+  // Обработчик добавления/удаления из мудборда
+  const handleMoodboardToggle = async (card: Card) => {
+    try {
+      if (card.inMoodboard) {
+        await removeCardFromMoodboard(card.id);
+      } else {
+        await addCardToMoodboard(card.id);
+      }
+      // Перезагружаем карточки мудборда
+      const allCards = await getAllCards();
+      const moodboardCards = allCards.filter(c => c.inMoodboard);
+      setCards(moodboardCards);
+    } catch (error) {
+      console.error('Ошибка переключения мудборда:', error);
     }
   };
 
@@ -288,6 +305,7 @@ export const MoodboardPage = () => {
         viewMode={viewMode}
         onCardClick={handleCardClick}
         onCardSelect={handleCardSelect}
+        onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
       />
 

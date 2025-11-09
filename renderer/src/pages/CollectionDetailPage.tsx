@@ -8,7 +8,7 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getCollection, getAllCards, deleteCollection, updateCollection } from '../services/db';
+import { getCollection, getAllCards, deleteCollection, updateCollection, addCardToMoodboard, removeCardFromMoodboard } from '../services/db';
 import { logDeleteCollection, logRenameCollection } from '../services/history';
 import type { Collection, Card, ViewMode, ContentFilter } from '../types';
 
@@ -140,6 +140,23 @@ export const CollectionDetailPage = () => {
     }
   };
 
+  // Обработчик добавления/удаления из мудборда
+  const handleMoodboardToggle = async (card: Card) => {
+    try {
+      if (card.inMoodboard) {
+        await removeCardFromMoodboard(card.id);
+      } else {
+        await addCardToMoodboard(card.id);
+      }
+      // Перезагружаем карточки коллекции
+      if (id) {
+        await loadCollection(id);
+      }
+    } catch (error) {
+      console.error('Ошибка переключения мудборда:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout
@@ -203,6 +220,7 @@ export const CollectionDetailPage = () => {
         viewMode={viewMode}
         onCardClick={handleCardClick}
         onCardSelect={handleCardSelect}
+        onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
       />
 
