@@ -150,7 +150,7 @@ export const OnboardingScreen = ({
         <div className="onboarding__actions">
           <Button
             variant="primary"
-            size="large"
+            size="L"
             onClick={handleSelectDirectory}
             loading={isSelecting}
             fullWidth
@@ -161,7 +161,7 @@ export const OnboardingScreen = ({
           {onSkip && (
             <Button
               variant="ghost"
-              size="medium"
+              size="S"
               onClick={onSkip}
               disabled={isSelecting}
             >

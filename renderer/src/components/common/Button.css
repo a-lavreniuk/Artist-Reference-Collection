@@ -231,6 +231,18 @@
   padding: 12px;
 }
 
+/* Состояние загрузки */
+.button--loading {
+  pointer-events: none;
+  position: relative;
+}
+
+.button--loading .button__value,
+.button--loading .button__counter,
+.button--loading .button__icon {
+  opacity: 0;
+}
+
 /* Отключенная кнопка - общие правила */
 .button:disabled {
   cursor: not-allowed;
@@ -306,4 +318,59 @@
 /* Когда кнопка содержит только иконку, центрируем её */
 .button--icon-only .button__icon {
   margin: 0;
+}
+
+/* ========== ЛОАДЕР (СПИННЕР) ========== */
+
+.button__loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button__spinner {
+  width: 20px;
+  height: 20px;
+  animation: button-spin 0.8s linear infinite;
+}
+
+.button--L .button__spinner {
+  width: 24px;
+  height: 24px;
+}
+
+.button__spinner-circle {
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-dasharray: 1, 150;
+  stroke-dashoffset: 0;
+  animation: button-dash 1.5s ease-in-out infinite;
+}
+
+@keyframes button-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes button-dash {
+  0% {
+    stroke-dasharray: 1, 150;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -35;
+  }
+  100% {
+    stroke-dasharray: 90, 150;
+    stroke-dashoffset: -124;
+  }
 }

@@ -67,14 +67,14 @@ export const UpdateNotification = ({
         <div className="update-notification__actions">
           <Button
             variant="primary"
-            size="small"
+            size="S"
             onClick={onUpdate}
           >
             Обновить
           </Button>
           <Button
             variant="ghost"
-            size="small"
+            size="S"
             onClick={onDismiss}
           >
             Позже

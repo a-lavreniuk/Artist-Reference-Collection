@@ -36,6 +36,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Полная ширина */
   fullWidth?: boolean;
   
+  /** Состояние загрузки (показывает спиннер) */
+  loading?: boolean;
+  
   /** Иконка слева от текста */
   iconLeft?: ReactNode;
   
@@ -59,6 +62,7 @@ export const Button = ({
   variant = 'primary',
   size = 'L',
   fullWidth = false,
+  loading = false,
   iconLeft,
   iconRight,
   iconOnly = false,
@@ -78,17 +82,34 @@ export const Button = ({
     `button--${size}`,
     fullWidth && 'button--full-width',
     iconOnly && 'button--icon-only',
+    loading && 'button--loading',
     className
   ].filter(Boolean).join(' ');
 
   return (
     <button
       className={classNames}
-      disabled={disabled}
+      disabled={disabled || loading}
       {...props}
     >
+      {/* Лоадер (спиннер) при загрузке */}
+      {loading && (
+        <span className="button__loader">
+          <svg className="button__spinner" viewBox="0 0 24 24">
+            <circle
+              className="button__spinner-circle"
+              cx="12"
+              cy="12"
+              r="10"
+              fill="none"
+              strokeWidth="3"
+            />
+          </svg>
+        </span>
+      )}
+      
       {/* Иконка слева */}
-      {iconLeft && (
+      {!loading && iconLeft && (
         <span className="button__icon button__icon--left">
           {iconLeft}
         </span>
@@ -102,14 +123,14 @@ export const Button = ({
       )}
       
       {/* Счетчик (badge) */}
-      {!iconOnly && formattedCounter && (
+      {!iconOnly && !loading && formattedCounter && (
         <span className="button__counter">
           {formattedCounter}
         </span>
       )}
       
       {/* Иконка справа */}
-      {iconRight && (
+      {!loading && iconRight && (
         <span className="button__icon button__icon--right">
           {iconRight}
         </span>
