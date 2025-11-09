@@ -74,11 +74,17 @@
   height: auto;
   object-fit: cover;
   opacity: 0;
-  transition: opacity var(--transition-base);
+  transition: opacity var(--transition-base), transform var(--transition-base);
+  transform: scale(1);
 }
 
 .card:not(.card--loading) .card__image {
   opacity: 1;
+}
+
+/* Зум изображения при наведении на карточку */
+.card:hover .card__image {
+  transform: scale(1.05);
 }
 
 /* Ошибка загрузки */
@@ -109,8 +115,8 @@
 
 .card__type-badge {
   position: absolute;
-  top: var(--spacing-m);
-  left: var(--spacing-m);
+  top: 16px;
+  left: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,8 +154,8 @@
 
 .card__moodboard-button {
   position: absolute;
-  top: var(--spacing-m);
-  left: calc(var(--spacing-m) + 32px + var(--spacing-xs)); /* Рядом с иконкой типа файла */
+  top: 16px;
+  left: calc(16px + 32px + var(--spacing-xs)); /* Рядом с иконкой типа файла */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,7 +169,7 @@
   color: var(--text-light);
   cursor: pointer;
   opacity: 0;
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast);
   z-index: 2;
 }
 
@@ -182,18 +188,7 @@
 /* Всегда показываем, если уже в мудборде */
 .card__moodboard-button--active {
   opacity: 1;
-  background-color: var(--bg-error);
-}
-
-/* Ховер на саму кнопку */
-.card__moodboard-button:hover {
-  background-color: var(--bg-overlay-image-hover);
-  transform: scale(1.1);
-}
-
-.card__moodboard-button--active:hover {
-  background-color: var(--bg-error-hover);
-  transform: scale(1.1);
+  /* Фон как у обычной метки */
 }
 
 .card__moodboard-button svg {

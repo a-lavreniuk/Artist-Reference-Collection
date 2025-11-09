@@ -172,7 +172,7 @@ export const Card = ({
           title={card.inMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
         >
           <Icon 
-            name={card.inMoodboard ? 'bookmark' : 'bookmark-plus'} 
+            name={card.inMoodboard ? 'bookmark-minus' : 'bookmark-plus'} 
             size={16}
             variant="border"
           />
