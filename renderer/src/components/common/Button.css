@@ -63,9 +63,7 @@
   background-color: #3b3946; /* var(--background/dark/hover) */
 }
 
-.button--primary:active:not(:disabled) {
-  transform: translateY(1px);
-}
+/* Убрана анимация press */
 
 .button--primary:disabled {
   background-color: #ebe9ee; /* var(--background/dark/disabled) */
@@ -82,9 +80,7 @@
   background-color: #d5d3d9; /* var(--background/light/hover) */
 }
 
-.button--secondary:active:not(:disabled) {
-  transform: translateY(1px);
-}
+/* Убрана анимация press */
 
 .button--secondary:disabled {
   background-color: #ebe9ee; /* var(--background/light/disabled) */
@@ -108,12 +104,10 @@
 
 .button--border:hover:not(:disabled) {
   background-color: #d5d3d9; /* var(--background/light/hover) */
-  border-color: #d5d3d9; /* var(--border/hover) */
+  border-color: transparent;
 }
 
-.button--border:active:not(:disabled) {
-  transform: translateY(1px);
-}
+/* Убрана анимация press */
 
 .button--border:disabled {
   border-color: #ebe9ee; /* var(--border/default) */
@@ -138,9 +132,7 @@
   background-color: #d5d3d9; /* var(--background/light/hover) */
 }
 
-.button--ghost:active:not(:disabled) {
-  transform: translateY(1px);
-}
+/* Убрана анимация press */
 
 .button--ghost:disabled {
   color: #d5d3d9; /* var(--text/default/disabled) */
@@ -164,9 +156,7 @@
   background-color: #811210; /* var(--background/danger/hover) */
 }
 
-.button--error:active:not(:disabled) {
-  transform: translateY(1px);
-}
+/* Убрана анимация press */
 
 .button--error .button__counter {
   color: #fde8e8; /* var(--text/danger/light) */
@@ -182,9 +172,7 @@
   background-color: #7f661b; /* var(--background/warning/hover) */
 }
 
-.button--warning:active:not(:disabled) {
-  transform: translateY(1px);
-}
+/* Убрана анимация press */
 
 .button--warning .button__counter {
   color: #fcf7e8; /* var(--text/warning/light) */
@@ -200,9 +188,7 @@
   background-color: #0b6334; /* var(--background/positive/hover) */
 }
 
-.button--success:active:not(:disabled) {
-  transform: translateY(1px);
-}
+/* Убрана анимация press */
 
 .button--success .button__counter {
   color: #e8fcf2; /* var(--text/positive/light) */

@@ -196,7 +196,7 @@
   align-items: center;
   padding-top: var(--spacing-l);
   border-top: 1px solid var(--border-default);
-  margin-top: auto;
+  margin-top: var(--spacing-l); /* Изменено с auto - убран огромный отступ */
 }
 
 /* ========== АДАПТАЦИЯ ========== */
