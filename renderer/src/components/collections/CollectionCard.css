@@ -107,9 +107,12 @@
   white-space: nowrap;
   
   /* H4 типографика */
-  font-size: var(--font-size-l);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-l);
+  font-family: var(--font-family-heading); /* YS Music */
+  font-size: var(--font-size-h4); /* 22px */
+  font-style: normal;
+  font-weight: var(--font-weight-bold); /* 700 */
+  line-height: var(--line-height-h4); /* 22px = 100% */
+  letter-spacing: 0;
 }
 
 /* ========== ФОКУС ========== */
