@@ -74,7 +74,6 @@ export const Tag = ({
     'tag',
     `tag--${variant}`,
     `tag--${size}`,
-    removable && 'tag--removable',
     className
   ].filter(Boolean).join(' ');
 
