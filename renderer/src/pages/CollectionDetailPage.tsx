@@ -8,7 +8,7 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getCollection, getAllCards, deleteCollection, updateCollection, addCardToMoodboard, removeCardFromMoodboard } from '../services/db';
+import { getCollection, getAllCards, deleteCollection, updateCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
 import { logDeleteCollection, logRenameCollection } from '../services/history';
 import type { Collection, Card, ViewMode, ContentFilter } from '../types';
 
@@ -144,9 +144,9 @@ export const CollectionDetailPage = () => {
   const handleMoodboardToggle = async (card: Card) => {
     try {
       if (card.inMoodboard) {
-        await removeCardFromMoodboard(card.id);
+        await removeFromMoodboard(card.id);
       } else {
-        await addCardToMoodboard(card.id);
+        await addToMoodboard(card.id);
       }
       // Перезагружаем карточки коллекции
       if (id) {
