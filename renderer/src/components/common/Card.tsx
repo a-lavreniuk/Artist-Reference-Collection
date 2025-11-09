@@ -156,8 +156,9 @@ export const Card = ({
       {imageLoaded && (
         <div className="card__type-badge">
           <Icon 
-            name={card.type === 'video' ? 'play-16-fill' : 'image-16-border'} 
-            size={20}
+            name={card.type === 'video' ? 'play' : 'image'} 
+            size={16}
+            variant={card.type === 'video' ? 'fill' : 'border'}
           />
         </div>
       )}
@@ -171,8 +172,9 @@ export const Card = ({
           title={card.inMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
         >
           <Icon 
-            name={card.inMoodboard ? 'bookmark-16-border' : 'bookmark-plus-16-border'} 
-            size={20}
+            name={card.inMoodboard ? 'bookmark' : 'bookmark-plus'} 
+            size={16}
+            variant="border"
           />
         </button>
       )}
