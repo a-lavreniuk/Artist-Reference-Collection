@@ -119,8 +119,8 @@ export const SectionHeader = ({
           </div>
         )}
 
-        {/* Разделитель между actions и фильтрами */}
-        {actions && contentFilter && (
+        {/* Разделитель перед фильтрами */}
+        {((viewMode && !actions) || actions) && contentFilter && (
           <div className="section-header__divider" />
         )}
 

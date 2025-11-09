@@ -25,9 +25,19 @@ export interface AddCardFlowProps {
   
   /** Обработчик отмены */
   onCancel: () => void;
+  
+  /** Callback для обновления состояния навигации в header */
+  onNavigationChange?: (callbacks: {
+    onPrevious?: () => void;
+    onNext?: () => void;
+    onFinish?: () => void;
+    canGoPrevious?: boolean;
+    canGoNext?: boolean;
+    isLastItem?: boolean;
+  }) => void;
 }
 
-export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
+export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCardFlowProps) => {
   const [queue, setQueue] = useState<QueueFile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -62,6 +72,22 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Обновление состояния навигации для header
+  useEffect(() => {
+    if (queue.length > 0 && onNavigationChange) {
+      onNavigationChange({
+        onPrevious: handlePrevious,
+        onNext: handleNext,
+        onFinish: handleFinish,
+        canGoPrevious: currentIndex > 0,
+        canGoNext: currentIndex < queue.length - 1 && currentFile?.configured,
+        isLastItem: currentIndex === queue.length - 1
+      });
+    } else if (onNavigationChange) {
+      onNavigationChange({});
+    }
+  }, [queue, currentIndex, currentFile?.configured]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -408,9 +434,7 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
             </div>
           ))}
         </div>
-        <p className="text-s" style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-          {queue.filter(f => f.configured).length} из {queue.length} настроено
-        </p>
+        {/* Убрали счётчик [число] из [число] */}
       </div>
 
       {/* Основной контент */}
@@ -428,10 +452,10 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
         <div className="add-card-flow__settings">
           <div className="add-card-flow__header">
             <div style={{ display: 'flex', gap: '8px' }}>
-              <Button size="small" variant="secondary" onClick={handleCopySettings}>
+              <Button size="S" variant="secondary" onClick={handleCopySettings}>
                 Копировать
               </Button>
-              <Button size="small" variant="secondary" onClick={handlePasteSettings} disabled={!clipboard}>
+              <Button size="S" variant="secondary" onClick={handlePasteSettings} disabled={!clipboard}>
                 Применить
               </Button>
             </div>
@@ -515,19 +539,18 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
                           placeholder="Название метки"
                           value={newTagName}
                           onChange={(e) => setNewTagName(e.target.value)}
-                          size="medium"
                           autoFocus
                         />
-                        <Button size="small" variant="primary" onClick={() => handleCreateTag(category.id)}>
+                        <Button size="S" variant="primary" onClick={() => handleCreateTag(category.id)}>
                           Добавить
                         </Button>
-                        <Button size="small" variant="ghost" onClick={() => { setShowNewTagInput(null); setNewTagName(''); }}>
+                        <Button size="S" variant="ghost" onClick={() => { setShowNewTagInput(null); setNewTagName(''); }}>
                           ✕
                         </Button>
                       </div>
                     ) : (
                       <Button
-                        size="small"
+                        size="S"
                         variant="ghost"
                         onClick={() => setShowNewTagInput(category.id)}
                       >
@@ -539,34 +562,8 @@ export const AddCardFlow = ({ onComplete, onCancel }: AddCardFlowProps) => {
               })}
             </div>
           </div>
-
-          {/* Навигация */}
-          <div className="add-card-flow__footer">
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button variant="ghost" onClick={onCancel}>
-                Отмена
-              </Button>
-              <Button variant="secondary" onClick={handlePrevious} disabled={currentIndex === 0}>
-                ← Назад
-              </Button>
-            </div>
-            
-            <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-              {currentIndex + 1} из {queue.length}
-            </p>
-
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {currentIndex < queue.length - 1 ? (
-                <Button variant="primary" onClick={handleNext}>
-                  Далее →
-                </Button>
-              ) : (
-                <Button variant="success" onClick={handleFinish}>
-                  Завершить
-                </Button>
-              )}
-            </div>
-          </div>
+          
+          {/* Footer с навигацией удалён - кнопки теперь в header */}
         </div>
       </div>
     </div>
