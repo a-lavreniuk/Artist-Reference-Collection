@@ -54,7 +54,7 @@
   /* Оформление */
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-s);
+  border-radius: 16px;
   
   /* Переходы */
   transition: all var(--transition-fast);
