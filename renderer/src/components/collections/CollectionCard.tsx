@@ -84,13 +84,8 @@ export const CollectionCard = ({
             ))}
           </div>
         )}
-      </div>
-
-      {/* Информация */}
-      <div className="collection-card__info">
-        <h4 className="collection-card__title">{collection.name}</h4>
         
-        {/* Статистика: иконки с количеством */}
+        {/* Статистика: иконки с количеством (внутри превью) */}
         {totalCount > 0 && (
           <div className="collection-card__stats">
             {imageCount > 0 && (
@@ -107,6 +102,11 @@ export const CollectionCard = ({
             )}
           </div>
         )}
+      </div>
+
+      {/* Название под превью */}
+      <div className="collection-card__info">
+        <h4 className="collection-card__title">{collection.name}</h4>
       </div>
     </div>
   );

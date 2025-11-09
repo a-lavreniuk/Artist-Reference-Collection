@@ -49,6 +49,20 @@ export const CollectionsPage = () => {
     return { imageCount, videoCount };
   };
 
+  // Функция для получения превью коллекции
+  const getCollectionThumbnails = (collection: Collection): string[] => {
+    // Получаем карточки коллекции в порядке добавления (последние первыми)
+    const collectionCards = collection.cardIds
+      .map(id => cards.find(card => card.id === id))
+      .filter((card): card is Card => card !== undefined)
+      .reverse(); // Последние добавленные первыми
+    
+    // Берём первые 3 и возвращаем их thumbnails или filePath
+    return collectionCards
+      .slice(0, 3)
+      .map(card => card.thumbnailUrl || card.filePath);
+  };
+
   const handleCollectionClick = (collection: Collection) => {
     navigate(`/collections/${collection.id}`);
   };
@@ -94,10 +108,18 @@ export const CollectionsPage = () => {
         <div className="collections-grid">
           {collections.map((collection) => {
             const { imageCount, videoCount } = getCollectionStats(collection);
+            const thumbnails = getCollectionThumbnails(collection);
+            
+            // Создаём временную коллекцию с актуальными thumbnails
+            const collectionWithThumbnails = {
+              ...collection,
+              thumbnails
+            };
+            
             return (
               <CollectionCard
                 key={collection.id}
-                collection={collection}
+                collection={collectionWithThumbnails}
                 imageCount={imageCount}
                 videoCount={videoCount}
                 onClick={handleCollectionClick}
