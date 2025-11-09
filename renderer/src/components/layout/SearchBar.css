@@ -71,24 +71,31 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 8px;
   padding: var(--spacing-s);
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-s);
 }
 
+/* Актуальные стили меток */
 .searchbar__selected-tag {
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  height: 24px;
-  padding: 0 var(--spacing-s);
-  background-color: var(--bg-button-primary);
-  border-radius: var(--radius-xs);
+  gap: 4px; /* Отступ между элементами */
+  padding: 8px 10px; /* Отступы как в Tag */
+  background-color: var(--color-grayscale-800);
+  border: none;
+  border-radius: 10px; /* Скругление 10px */
   color: var(--text-light);
+  font-family: var(--font-family-body);
   font-size: var(--font-size-s);
+  font-style: normal;
+  font-weight: 500; /* Medium */
   line-height: var(--line-height-s);
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
@@ -99,25 +106,24 @@
   max-width: 150px;
 }
 
+/* Крестик удаления - без фона, только изменение прозрачности */
 .searchbar__tag-remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   padding: 0;
+  margin-left: 4px;
   background: none;
   border: none;
-  border-radius: var(--radius-xs);
-  color: currentColor;
+  color: var(--text-light);
   cursor: pointer;
-  opacity: 0.7;
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast);
 }
 
 .searchbar__tag-remove:hover {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.8;
 }
 
 .searchbar__tag-remove svg {
