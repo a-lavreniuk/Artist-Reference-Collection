@@ -65,7 +65,7 @@
   /* Оформление */
   background-color: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-s);
+  border-radius: 16px; /* Исправлено: было var(--radius-s) 8px, теперь 16px согласно макету */
   color: var(--icon-default);
   
   /* Переходы */
@@ -80,7 +80,7 @@
 /* Hover */
 .sidebar__item:hover {
   background-color: var(--bg-button-secondary);
-  border-color: var(--border-default);
+  border-color: transparent; /* Убрали border на hover */
 }
 
 .sidebar__item:hover .sidebar__tooltip {
@@ -89,21 +89,31 @@
   transform: translateY(-50%) translateX(0);
 }
 
-/* Active */
+/* Active - убрали увеличение */
 .sidebar__item:active {
-  transform: scale(0.95);
+  /* Убрали transform: scale(0.95); */
 }
 
-/* Активный пункт */
+/* Активный пункт - используем grayscale-900 для фона */
 .sidebar__item--active {
-  background-color: var(--bg-button-primary);
-  border-color: var(--bg-button-primary);
-  color: var(--icon-light);
+  background-color: var(--color-grayscale-900); /* #3b3946 - согласно макету */
+  border-color: transparent;
+  color: var(--color-grayscale-500); /* #93919a - цвет иконки согласно макету */
 }
 
 .sidebar__item--active:hover {
-  background-color: var(--bg-button-primary-hover);
-  border-color: var(--bg-button-primary-hover);
+  background-color: var(--color-grayscale-900); /* Остаётся тот же цвет при hover */
+  border-color: transparent;
+}
+
+/* Ghost вариант (для кнопки "Добавить") */
+.sidebar__item--ghost {
+  /* В стиле ghost нет обводки и фона даже при hover */
+}
+
+.sidebar__item--ghost:hover {
+  background-color: transparent; /* Убираем фон при hover */
+  border-color: transparent;
 }
 
 /* ========== ИКОНКА ========== */
