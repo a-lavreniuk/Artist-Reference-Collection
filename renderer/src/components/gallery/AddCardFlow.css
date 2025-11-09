@@ -203,7 +203,7 @@
   align-items: center;
   padding-top: var(--spacing-l);
   border-top: 1px solid var(--border-default);
-  margin-top: 0; /* Без отступа - прижат к categories */
+  margin-top: auto; /* Прижат к низу блока настроек */
 }
 
 /* ========== АДАПТАЦИЯ ========== */
