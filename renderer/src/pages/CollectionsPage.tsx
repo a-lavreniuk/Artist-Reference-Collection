@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
-import { Button } from '../components/common';
+import { Button, Icon } from '../components/common';
 import { CollectionCard, CreateCollectionModal } from '../components/collections';
 import { getAllCollections } from '../services/db';
 import { useSearch } from '../contexts';
@@ -67,7 +67,8 @@ export const CollectionsPage = () => {
         actions: (
           <Button
             variant="primary"
-            size="medium"
+            size="L"
+            iconLeft={<Icon name="folder-plus" size={24} variant="border" />}
             onClick={() => setIsCreateModalOpen(true)}
           >
             Добавить коллекцию
@@ -94,7 +95,8 @@ export const CollectionsPage = () => {
           </p>
           <Button
             variant="primary"
-            size="large"
+            size="L"
+            iconLeft={<Icon name="folder-plus" size={24} variant="border" />}
             onClick={() => setIsCreateModalOpen(true)}
             style={{ marginTop: '16px' }}
           >

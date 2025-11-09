@@ -262,15 +262,15 @@ export const MoodboardPage = () => {
           <>
             <Button 
               variant="secondary" 
-              size="medium"
+              size="L"
               onClick={handleExportMoodboard}
               disabled={isExporting || cards.length === 0}
             >
               {isExporting ? 'Экспорт...' : 'Выгрузить мудборд'}
             </Button>
             <Button 
-              variant="danger" 
-              size="medium"
+              variant="error" 
+              size="L"
               onClick={handleClearMoodboard}
               disabled={cards.length === 0}
             >

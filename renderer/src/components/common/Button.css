@@ -274,6 +274,18 @@
   height: 100%;
 }
 
+/* Иконки в Primary кнопках - grayscale-500 */
+.button--primary .button__icon {
+  color: #93919a; /* var(--color-grayscale-500) */
+}
+
+/* Иконки в остальных кнопках */
+.button--secondary .button__icon,
+.button--border .button__icon,
+.button--ghost .button__icon {
+  color: #93919a; /* var(--color-grayscale-500) */
+}
+
 /* Иконки disabled состояние */
 .button--primary:disabled .button__icon,
 .button--secondary:disabled .button__icon,
