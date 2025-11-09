@@ -94,15 +94,15 @@
   /* Убрали transform: scale(0.95); */
 }
 
-/* Активный пункт - используем grayscale-900 для фона */
+/* Активный пункт - используем grayscale-800 для фона */
 .sidebar__item--active {
-  background-color: var(--color-grayscale-900); /* #3b3946 - согласно макету */
+  background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
   border-color: transparent;
-  color: var(--color-grayscale-500); /* #93919a - цвет иконки согласно макету */
+  color: var(--color-grayscale-500); /* #93919a - цвет иконки */
 }
 
 .sidebar__item--active:hover {
-  background-color: var(--color-grayscale-900); /* Остаётся тот же цвет при hover */
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
   border-color: transparent;
 }
 
@@ -122,11 +122,12 @@
 .sidebar__item--active.sidebar__item--border {
   border-width: 1px; /* Возвращаем к стандартной ширине как у остальных кнопок */
   border-color: transparent;
+  background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
 }
 
-/* Активная кнопка "Добавить" сохраняет grayscale-900 при hover */
+/* Активная кнопка "Добавить" - темнеет при hover */
 .sidebar__item--active.sidebar__item--border:hover {
-  background-color: var(--color-grayscale-900); /* #3b3946 - как у других активных кнопок */
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
   border-color: transparent;
 }
 

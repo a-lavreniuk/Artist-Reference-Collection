@@ -94,12 +94,12 @@
 }
 
 .section-header__view-button--active {
-  background-color: var(--color-grayscale-900); /* #3b3946 - как в сайдбаре */
-  color: var(--color-grayscale-500); /* #93919a - цвет иконки как в сайдбаре */
+  background-color: var(--color-grayscale-800); /* #514f5b - по умолчанию */
+  color: var(--color-grayscale-500); /* #93919a - цвет иконки */
 }
 
 .section-header__view-button--active:hover {
-  background-color: var(--color-grayscale-900); /* Сохраняет цвет при hover */
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
 }
 
 .section-header__view-button .icon {
@@ -145,13 +145,13 @@
 }
 
 .section-header__filter-button--active {
-  background-color: var(--color-grayscale-900); /* Активная кнопка - grayscale-900 */
+  background-color: var(--color-grayscale-800); /* Активная кнопка - grayscale-800 */
   border-color: transparent;
   color: var(--text-light);
 }
 
 .section-header__filter-button--active:hover {
-  background-color: var(--color-grayscale-900); /* Сохраняет цвет при hover */
+  background-color: var(--color-grayscale-900); /* #3b3946 - темнеет при hover */
 }
 
 /* Иконка красится по тем же принципам что и в сайдбаре */
