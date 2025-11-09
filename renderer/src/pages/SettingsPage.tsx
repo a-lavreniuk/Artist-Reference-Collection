@@ -584,6 +584,7 @@ export const SettingsPage = () => {
           <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
             <Button
               variant="secondary"
+              size="L"
               onClick={handleChangeDirectory}
               disabled={isMovingDirectory}
             >
@@ -591,7 +592,8 @@ export const SettingsPage = () => {
             </Button>
             
             <Button
-              variant="danger"
+              variant="error"
+              size="L"
               onClick={handleClearCache}
               disabled={isMovingDirectory}
             >
@@ -673,7 +675,7 @@ export const SettingsPage = () => {
                     <Button
                       key={num}
                       variant={backupParts === num ? 'primary' : 'secondary'}
-                      size="small"
+                      size="S"
                       onClick={() => setBackupParts(num)}
                       disabled={isCreatingBackup}
                     >
@@ -687,6 +689,7 @@ export const SettingsPage = () => {
             <div style={{ display: 'flex', gap: '12px' }}>
               <Button
                 variant="primary"
+                size="L"
                 onClick={handleCreateBackup}
                 disabled={isCreatingBackup || isRestoring || !directoryPath}
               >
@@ -695,6 +698,7 @@ export const SettingsPage = () => {
 
               <Button
                 variant="secondary"
+                size="L"
                 onClick={handleRestoreBackup}
                 disabled={isCreatingBackup || isRestoring}
               >
@@ -956,8 +960,8 @@ export const SettingsPage = () => {
                         </p>
                       </div>
                       <Button
-                        variant="danger"
-                        size="small"
+                        variant="error"
+                        size="S"
                         onClick={() => handleDeleteTag(tag.id, tag.name)}
                       >
                         Удалить
