@@ -20,6 +20,8 @@ export const AddPage = () => {
     canGoPrevious?: boolean;
     canGoNext?: boolean;
     isLastItem?: boolean;
+    totalCount?: number;
+    currentIndex?: number;
   }>({});
 
   const handleComplete = () => {
@@ -32,45 +34,52 @@ export const AddPage = () => {
     }
   };
 
+  // Вычисляем количество оставшихся карточек
+  const remainingCount = navigationCallbacks.totalCount 
+    ? navigationCallbacks.totalCount - (navigationCallbacks.currentIndex || 0) - 1 
+    : 0;
+
   // Формируем actions для header на основе текущего состояния
   const headerActions = navigationCallbacks.onPrevious || navigationCallbacks.onNext || navigationCallbacks.onFinish ? (
     <>
       <Button 
-        variant="ghost" 
+        variant="border" 
         size="L"
+        iconOnly
+        iconLeft={<Icon name="x" size={24} variant="border" />}
         onClick={handleCancel}
-      >
-        Отмена
-      </Button>
+        title="Отмена"
+      />
       
       <Button 
         variant="border" 
         size="L"
-        iconOnly
         iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
         onClick={navigationCallbacks.onPrevious}
         disabled={!navigationCallbacks.canGoPrevious}
-        title="Назад"
-      />
+      >
+        Назад
+      </Button>
       
       {navigationCallbacks.isLastItem ? (
         <Button 
           variant="success" 
           size="L"
+          iconLeft={<Icon name="plus" size={24} variant="border" />}
           onClick={navigationCallbacks.onFinish}
         >
-          Завершить
+          Добавить
         </Button>
       ) : (
         <Button 
-          variant="border" 
+          variant="primary" 
           size="L"
-          iconOnly
-          iconLeft={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
+          iconRight={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
           onClick={navigationCallbacks.onNext}
-          disabled={!navigationCallbacks.canGoNext}
-          title="Далее"
-        />
+          counter={remainingCount > 0 ? remainingCount : undefined}
+        >
+          Далее
+        </Button>
       )}
     </>
   ) : null;

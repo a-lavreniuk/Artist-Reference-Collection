@@ -34,6 +34,8 @@ export interface AddCardFlowProps {
     canGoPrevious?: boolean;
     canGoNext?: boolean;
     isLastItem?: boolean;
+    totalCount?: number;
+    currentIndex?: number;
   }) => void;
 }
 
@@ -83,13 +85,15 @@ export const AddCardFlow = ({ onComplete, onCancel, onNavigationChange }: AddCar
         onNext: handleNext,
         onFinish: handleFinish,
         canGoPrevious: currentIndex > 0,
-        canGoNext: currentIndex < queue.length - 1 && currentFile?.configured,
-        isLastItem: currentIndex === queue.length - 1
+        canGoNext: true, // Всегда можно идти вперёд (проверка меток в handleNext)
+        isLastItem: currentIndex === queue.length - 1,
+        totalCount: queue.length,
+        currentIndex: currentIndex
       });
     } else if (onNavigationChange) {
       onNavigationChange({});
     }
-  }, [queue, currentIndex, currentFile?.configured]);
+  }, [queue, currentIndex]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
