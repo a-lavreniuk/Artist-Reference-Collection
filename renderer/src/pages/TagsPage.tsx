@@ -163,7 +163,7 @@ export const TagsPage = () => {
           <Button
             variant="primary"
             size="L"
-            iconLeft={<Icon name="folder-plus" size={24} variant="border" />}
+            iconLeft={<Icon name="tag-plus" size={24} variant="border" />}
             onClick={() => setIsCreateCategoryModalOpen(true)}
           >
             Добавить категорию
@@ -199,7 +199,7 @@ export const TagsPage = () => {
           <Button
             variant="primary"
             size="L"
-            iconLeft={<Icon name="folder-plus" size={24} variant="border" />}
+            iconLeft={<Icon name="tag-plus" size={24} variant="border" />}
             onClick={() => setIsCreateCategoryModalOpen(true)}
             style={{ marginTop: '16px' }}
           >
