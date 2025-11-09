@@ -115,7 +115,7 @@
 
 .sidebar__item--border:hover {
   background-color: var(--color-grayscale-200); /* #d5d3d9 - фон на hover */
-  border-color: var(--color-grayscale-200); /* Обводка совпадает с фоном на hover */
+  border-color: transparent; /* Убираем видимость обводки на hover */
 }
 
 /* Активная кнопка "Добавить" сохраняет grayscale-900 при hover */
