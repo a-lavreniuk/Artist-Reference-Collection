@@ -37,9 +37,32 @@
   width: 100% !important;
 }
 
+/* Специфичные стили для поисковой строки */
 .searchbar .searchbar__input-wrapper .input {
   width: 100% !important;
   flex: 1;
+  height: 56px; /* Высота поисковой строки */
+  padding: 0 16px; /* Базовые отступы 16px */
+}
+
+/* С иконкой слева: 16px + 24px + 16px = 56px */
+.searchbar .searchbar__input-wrapper .input--with-icon-left {
+  padding-left: 56px;
+}
+
+/* С иконкой справа (кнопка очистки): 16px + 24px + 16px = 56px */
+.searchbar .searchbar__input-wrapper .input--with-icon-right {
+  padding-right: 56px;
+}
+
+/* Иконка слева - позиция 16px */
+.searchbar .searchbar__input-wrapper .input__icon--left {
+  left: 16px;
+}
+
+/* Кнопка очистки - позиция 16px справа */
+.searchbar .searchbar__input-wrapper .input__clear {
+  right: 16px;
 }
 
 /* ========== ВЫБРАННЫЕ МЕТКИ ========== */
