@@ -32,8 +32,8 @@
 - Класс: `.card__type-badge`
 - Поведение: статична, без интерактивности
 - Иконки: 
-  - Изображение: `<Icon name="image" size={16} variant="fill" />`
-  - Видео: `<Icon name="play-circle" size={16} variant="fill" />`
+  - Изображение: `<Icon name="image" size={16} variant="border" />`
+  - Видео: `<Icon name="play" size={16} variant="border" />`
 
 #### Вторая иконка (мудборд) - интерактивная:
 - **Появляется при наведении** курсора на карточку

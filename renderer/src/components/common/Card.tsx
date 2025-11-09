@@ -156,9 +156,9 @@ export const Card = ({
       {imageLoaded && (
         <div className="card__type-badge">
           <Icon 
-            name={card.type === 'video' ? 'play-circle' : 'image'} 
+            name={card.type === 'video' ? 'play' : 'image'} 
             size={16}
-            variant="fill"
+            variant="border"
           />
         </div>
       )}
