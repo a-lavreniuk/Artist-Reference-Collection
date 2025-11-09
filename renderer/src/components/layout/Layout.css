@@ -39,7 +39,7 @@
   
   /* Размеры */
   min-height: var(--height-header);
-  padding: var(--spacing-2xl) var(--spacing-2xl) var(--spacing-l);
+  padding: var(--spacing-2xl) var(--spacing-2xl) 0; /* Убран нижний padding для уменьшения расстояния до меню */
   
   /* Оформление */
   background-color: var(--bg-secondary);
