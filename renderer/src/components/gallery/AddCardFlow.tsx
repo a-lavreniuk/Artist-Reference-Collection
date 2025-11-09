@@ -568,28 +568,30 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
             </div>
           </div>
 
-          {/* Навигация */}
-          <div className="add-card-flow__footer">
-            <Button 
-              variant="border" 
-              size="L"
-              iconOnly
-              iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
-              onClick={handlePrevious} 
-              disabled={currentIndex === 0}
-              title="Назад"
-            />
+          {/* Навигация - показывается только если в очереди больше одного файла */}
+          {queue.length > 1 && (
+            <div className="add-card-flow__footer">
+              <Button 
+                variant="border" 
+                size="L"
+                iconOnly
+                iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
+                onClick={handlePrevious} 
+                disabled={currentIndex === 0}
+                title="Назад"
+              />
 
-            <Button 
-              variant="border" 
-              size="L"
-              iconOnly
-              iconLeft={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
-              onClick={handleNext}
-              disabled={currentIndex >= queue.length - 1}
-              title="Далее"
-            />
-          </div>
+              <Button 
+                variant="border" 
+                size="L"
+                iconOnly
+                iconLeft={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
+                onClick={handleNext}
+                disabled={currentIndex >= queue.length - 1}
+                title="Далее"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
