@@ -107,8 +107,15 @@ export const SectionHeader = ({
           </div>
         )}
 
-        {/* Разделитель */}
-        {viewMode && contentFilter && (
+        {/* Дополнительные действия - идут сразу после переключателей вида */}
+        {actions && (
+          <div className="section-header__actions">
+            {actions}
+          </div>
+        )}
+
+        {/* Разделитель между actions и фильтрами */}
+        {actions && contentFilter && (
           <div className="section-header__divider" />
         )}
 
@@ -169,18 +176,6 @@ export const SectionHeader = ({
                 </span>
               )}
             </button>
-          </div>
-        )}
-
-        {/* Разделитель */}
-        {(viewMode || contentFilter) && actions && (
-          <div className="section-header__divider" />
-        )}
-
-        {/* Дополнительные действия */}
-        {actions && (
-          <div className="section-header__actions">
-            {actions}
           </div>
         )}
       </div>

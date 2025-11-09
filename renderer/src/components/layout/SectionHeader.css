@@ -200,7 +200,7 @@
 .section-header__actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-s);
+  gap: 8px; /* Отступ между кнопками-иконками */
 }
 
 /* ========== АДАПТАЦИЯ ПОД ШИРИНУ ОКНА ========== */

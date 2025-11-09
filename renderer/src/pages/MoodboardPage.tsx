@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
-import { Button } from '../components/common';
+import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards, updateCard } from '../services/db';
 import { logClearMoodboard } from '../services/history';
@@ -261,21 +261,23 @@ export const MoodboardPage = () => {
         actions: (
           <>
             <Button 
-              variant="secondary" 
+              variant="border" 
               size="L"
+              iconOnly
+              iconLeft={<Icon name="download" size={24} variant="border" />}
               onClick={handleExportMoodboard}
               disabled={isExporting || cards.length === 0}
-            >
-              {isExporting ? 'Экспорт...' : 'Выгрузить мудборд'}
-            </Button>
+              title="Выгрузить мудборд"
+            />
             <Button 
-              variant="error" 
+              variant="border" 
               size="L"
+              iconOnly
+              iconLeft={<Icon name="trash" size={24} variant="border" />}
               onClick={handleClearMoodboard}
               disabled={cards.length === 0}
-            >
-              Очистить мудборд
-            </Button>
+              title="Очистить мудборд"
+            />
           </>
         )
       }}
