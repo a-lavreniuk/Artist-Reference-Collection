@@ -74,17 +74,11 @@
   height: auto;
   object-fit: cover;
   opacity: 0;
-  transition: opacity var(--transition-base), transform var(--transition-base);
-  transform: scale(1);
+  transition: opacity var(--transition-base);
 }
 
 .card:not(.card--loading) .card__image {
   opacity: 1;
-}
-
-/* Зум изображения при наведении на карточку */
-.card:hover .card__image {
-  transform: scale(1.05);
 }
 
 /* Ошибка загрузки */
