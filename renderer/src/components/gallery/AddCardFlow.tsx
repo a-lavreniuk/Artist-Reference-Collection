@@ -573,22 +573,22 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
             <Button 
               variant="border" 
               size="L"
+              iconOnly
               iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
               onClick={handlePrevious} 
               disabled={currentIndex === 0}
-            >
-              Назад
-            </Button>
+              title="Назад"
+            />
 
             <Button 
-              variant="primary" 
+              variant="border" 
               size="L"
-              iconRight={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
+              iconOnly
+              iconLeft={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
               onClick={handleNext}
               disabled={currentIndex >= queue.length - 1}
-            >
-              Далее
-            </Button>
+              title="Далее"
+            />
           </div>
         </div>
       </div>
