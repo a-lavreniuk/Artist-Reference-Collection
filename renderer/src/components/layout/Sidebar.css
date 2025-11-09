@@ -86,7 +86,7 @@
 .sidebar__item:hover .sidebar__tooltip {
   opacity: 1;
   visibility: visible;
-  transform: translateY(-50%) translateX(0);
+  transform: translateY(-50%); /* Убрали translateX - тултип выровнен по горизонтали */
 }
 
 /* Active - убрали увеличение */
@@ -157,19 +157,20 @@
 .sidebar__tooltip {
   /* Позиционирование */
   position: fixed; /* Изменено с absolute на fixed для выхода из stacking context sidebar */
-  left: calc(var(--width-sidebar) + var(--spacing-m));
-  transform: translateY(-50%) translateX(-8px);
+  left: calc(var(--width-sidebar) + 16px); /* Расстояние от кнопки 16px согласно макету */
+  transform: translateY(-50%); /* Только вертикальное выравнивание по центру кнопки */
   z-index: var(--z-tooltip); /* Выше всех элементов */
   
-  /* Типографика */
-  font-size: var(--font-size-s);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-s);
+  /* Типографика - размер S согласно макету */
+  font-family: var(--font-family-body);
+  font-size: 14px; /* text-s */
+  font-weight: 400;
+  line-height: 14px; /* text-s */
   color: var(--text-light);
   white-space: nowrap;
   
-  /* Оформление */
-  padding: var(--spacing-s) var(--spacing-m);
+  /* Оформление - внутренние отступы 8px согласно макету */
+  padding: 8px; /* Было var(--spacing-s) var(--spacing-m) = 8px 12px */
   background-color: var(--bg-button-primary);
   border-radius: var(--radius-xs);
   box-shadow: var(--shadow-m);
@@ -185,8 +186,8 @@
   pointer-events: none;
 }
 
-/* Стрелочка подсказки */
-.sidebar__tooltip::before {
+/* Стрелочка подсказки - убрана согласно макету */
+/* .sidebar__tooltip::before {
   content: '';
   position: absolute;
   right: 100%;
@@ -194,7 +195,7 @@
   transform: translateY(-50%);
   border: 6px solid transparent;
   border-right-color: var(--bg-button-primary);
-}
+} */
 
 /* ========== ФОКУС ========== */
 
