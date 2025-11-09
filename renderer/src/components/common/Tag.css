@@ -15,7 +15,7 @@
   font-family: var(--font-family-body);  /* Geologica */
   font-size: var(--font-size-s);         /* 12px */
   font-style: normal;
-  font-weight: var(--font-weight-regular); /* 400 */
+  font-weight: 500; /* Medium - увеличена толщина с 400 */
   line-height: var(--line-height-s);      /* 12px (100%) */
   letter-spacing: 0;
   
@@ -117,7 +117,7 @@
 .tag__count {
   font-size: var(--font-size-s);         /* 12px */
   font-style: normal;
-  font-weight: var(--font-weight-regular); /* 400 */
+  font-weight: 500; /* Medium - увеличена толщина с 400 */
   line-height: var(--line-height-s);      /* 12px (100%) */
   letter-spacing: 0;
   color: inherit; /* Наследует цвет от родителя */
