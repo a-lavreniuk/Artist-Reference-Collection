@@ -11,11 +11,13 @@
   align-items: center;
   gap: 4px; /* Отступ между внутренними элементами */
   
-  /* Типографика */
-  font-family: var(--font-family-body);
-  font-size: var(--font-size-s);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-s);
+  /* Типографика - шрифт S */
+  font-family: var(--font-family-body);  /* Geologica */
+  font-size: var(--font-size-s);         /* 12px */
+  font-style: normal;
+  font-weight: var(--font-weight-regular); /* 400 */
+  line-height: var(--line-height-s);      /* 12px (100%) */
+  letter-spacing: 0;
   
   /* Размеры - отступы 8px сверху/снизу, 10px слева/справа */
   padding: 8px 10px;
@@ -113,9 +115,11 @@
 
 /* Счётчик - просто текст рядом с названием, тот же шрифт S */
 .tag__count {
-  font-size: var(--font-size-s);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-s);
+  font-size: var(--font-size-s);         /* 12px */
+  font-style: normal;
+  font-weight: var(--font-weight-regular); /* 400 */
+  line-height: var(--line-height-s);      /* 12px (100%) */
+  letter-spacing: 0;
   color: inherit; /* Наследует цвет от родителя */
 }
 
