@@ -83,7 +83,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px; /* Отступ между элементами */
-  padding: 8px 10px; /* Отступы как в Tag */
+  height: 32px; /* Фиксированная высота */
+  padding: 0 10px; /* Отступы слева/справа */
   background-color: var(--color-grayscale-800);
   border: none;
   border-radius: 10px; /* Скругление 10px */

@@ -19,8 +19,9 @@
   line-height: var(--line-height-s);      /* 12px (100%) */
   letter-spacing: 0;
   
-  /* Размеры - отступы 8px сверху/снизу, 10px слева/справа */
-  padding: 8px 10px;
+  /* Размеры - фиксированная высота 32px, отступы 10px слева/справа */
+  height: 32px;
+  padding: 0 10px;
   
   /* Оформление - скругление 10px */
   border: none;
@@ -73,13 +74,15 @@
 /* ========== РАЗМЕРЫ ========== */
 
 .tag--small {
-  padding: 6px 8px;
+  height: 28px;
+  padding: 0 8px;
   font-size: 11px;
   gap: 4px;
 }
 
 .tag--medium {
-  padding: 8px 10px;
+  height: 32px;
+  padding: 0 10px;
 }
 
 /* ========== ЭЛЕМЕНТЫ ========== */
