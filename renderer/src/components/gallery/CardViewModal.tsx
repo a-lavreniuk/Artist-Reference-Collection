@@ -390,7 +390,6 @@ export const CardViewModal = ({
                       variant="active"
                       removable
                       onRemove={() => handleRemoveTag(tagId)}
-                      color={tag.color}
                     >
                       {tag.name}
                     </Tag>
@@ -413,7 +412,6 @@ export const CardViewModal = ({
                       key={tag.id}
                       variant="default"
                       onClick={() => handleAddTag(tag.id)}
-                      color={tag.color}
                       role="button"
                     >
                       {tag.name}

@@ -14,9 +14,6 @@ export interface CreateTagModalProps {
   /** ID категории */
   categoryId: string;
   
-  /** Цвет категории */
-  categoryColor?: string;
-  
   /** Обработчик закрытия */
   onClose: () => void;
   
@@ -27,7 +24,6 @@ export interface CreateTagModalProps {
 export const CreateTagModal = ({
   isOpen,
   categoryId,
-  categoryColor,
   onClose,
   onTagCreated
 }: CreateTagModalProps) => {
@@ -62,7 +58,6 @@ export const CreateTagModal = ({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: name.trim(),
         categoryId,
-        color: categoryColor,
         dateCreated: new Date(),
         cardCount: 0
       };

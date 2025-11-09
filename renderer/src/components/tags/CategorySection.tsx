@@ -141,7 +141,6 @@ export const CategorySection = ({
                     variant="default"
                     removable
                     count={tag.cardCount}
-                    color={tag.color}
                     onRemove={() => onTagRemove?.(tag.id)}
                     onClick={() => onTagRename?.(tag.id)}
                     style={{ cursor: 'pointer' }}

@@ -36,7 +36,8 @@ export interface Tag {
   id: string;                          // Уникальный ID метки
   name: string;                        // Название метки
   categoryId: string;                  // ID категории, к которой принадлежит
-  color?: string;                      // Цвет метки (опционально)
+  /** @deprecated Цветовая категоризация больше не используется */
+  color?: string;                      // Цвет метки (опционально, не используется)
   dateCreated: Date;                   // Дата создания
   cardCount: number;                   // Количество карточек с этой меткой
 }
@@ -45,7 +46,8 @@ export interface Tag {
 export interface Category {
   id: string;                          // Уникальный ID категории
   name: string;                        // Название категории
-  color?: string;                      // Цвет категории
+  /** @deprecated Цветовая категоризация больше не используется */
+  color?: string;                      // Цвет категории (опционально, не используется)
   dateCreated: Date;                   // Дата создания
   tagIds: string[];                    // Массив ID меток в категории
 }

@@ -1,26 +1,30 @@
 /**
  * Стили для компонента Tag
+ * 
+ * Метка - ключевой элемент для категоризации и классификации контента.
+ * Поддерживает три состояния (default, hover, active) и два стиля (default, blurred).
  */
 
 .tag {
   /* Базовые стили */
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: 4px; /* Отступ между внутренними элементами */
   
-  /* Типографика */
-  font-family: var(--font-family-body);
-  font-size: var(--font-size-s);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-s);
+  /* Типографика - шрифт S */
+  font-family: var(--font-family-body);  /* Geologica */
+  font-size: var(--font-size-s);         /* 12px */
+  font-style: normal;
+  font-weight: 500; /* Medium - увеличена толщина с 400 */
+  line-height: var(--line-height-s);      /* 12px (100%) */
+  letter-spacing: 0;
   
-  /* Размеры */
-  height: 24px;
-  padding: 0 var(--spacing-s);
+  /* Размеры - отступы 8px сверху/снизу, 10px слева/справа */
+  padding: 8px 10px;
   
-  /* Оформление */
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xs);
+  /* Оформление - скругление 10px */
+  border: none;
+  border-radius: 10px;
   cursor: default;
   user-select: none;
   
@@ -29,70 +33,53 @@
   
   /* Сброс */
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* ========== ВАРИАНТЫ ========== */
+/* ========== ВАРИАНТЫ (СТИЛИ) ========== */
 
-/* Default - обычная метка */
+/* Default - обычная метка на монотонном фоне */
 .tag--default {
-  background-color: var(--bg-button-secondary);
-  border-color: var(--border-default);
+  background-color: var(--color-grayscale-100);
   color: var(--text-primary);
 }
 
+/* Hover - при наведении курсора */
 .tag--default:hover {
-  background-color: var(--bg-button-secondary-hover);
-  border-color: var(--border-hover);
+  background-color: var(--color-grayscale-200);
 }
 
-/* Active - активная/выбранная метка */
+/* Active - выбранная/используемая метка */
 .tag--active {
-  background-color: var(--bg-button-primary);
-  border-color: var(--bg-button-primary);
+  background-color: var(--color-grayscale-800);
   color: var(--text-light);
 }
 
 .tag--active:hover {
-  background-color: var(--bg-button-primary-hover);
-  border-color: var(--bg-button-primary-hover);
+  background-color: var(--color-grayscale-800);
 }
 
-/* Overlay - метка поверх изображения */
-.tag--overlay {
+/* Blurred - метка с размытием для размещения поверх изображений */
+.tag--blurred {
   background-color: var(--bg-overlay-image);
   backdrop-filter: var(--backdrop-blur);
-  border-color: transparent;
   color: var(--text-light);
 }
 
-.tag--overlay:hover {
+.tag--blurred:hover {
   background-color: var(--bg-overlay-image-hover);
 }
 
 /* ========== РАЗМЕРЫ ========== */
 
 .tag--small {
-  height: 20px;
-  padding: 0 var(--spacing-xs);
+  padding: 6px 8px;
   font-size: 11px;
-  gap: var(--spacing-2xs);
+  gap: 4px;
 }
 
 .tag--medium {
-  height: 24px;
-  padding: 0 var(--spacing-s);
-}
-
-/* ========== МОДИФИКАТОРЫ ========== */
-
-/* Удаляемая метка */
-.tag--removable {
-  padding-right: var(--spacing-xs);
-  cursor: pointer;
-}
-
-.tag--removable:hover {
-  padding-right: var(--spacing-xs);
+  padding: 8px 10px;
 }
 
 /* ========== ЭЛЕМЕНТЫ ========== */
@@ -126,33 +113,21 @@
   white-space: nowrap;
 }
 
-/* Счётчик */
+/* Счётчик - просто текст рядом с названием, тот же шрифт S */
 .tag__count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 16px;
-  padding: 0 4px;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-xs);
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  line-height: 1;
-}
-
-.tag--default .tag__count {
-  background-color: var(--color-grayscale-200);
-  color: var(--text-secondary);
+  font-size: var(--font-size-s);         /* 12px */
+  font-style: normal;
+  font-weight: 500; /* Medium - увеличена толщина с 400 */
+  line-height: var(--line-height-s);      /* 12px (100%) */
+  letter-spacing: 0;
+  color: inherit; /* Наследует цвет от родителя */
 }
 
 .tag--small .tag__count {
-  min-width: 16px;
-  height: 14px;
-  font-size: 9px;
+  font-size: 11px;
 }
 
-/* Кнопка удаления */
+/* Кнопка удаления - без фона, цвет меняется с grayscale-500 на grayscale-600 */
 .tag__remove {
   display: inline-flex;
   align-items: center;
@@ -160,27 +135,36 @@
   width: 16px;
   height: 16px;
   padding: 0;
-  margin-left: var(--spacing-xs);
+  margin-left: 4px; /* Отступ от текста/счетчика */
   background: none;
   border: none;
-  border-radius: var(--radius-xs);
-  color: currentColor;
+  color: var(--color-grayscale-500);
   cursor: pointer;
-  opacity: 0.7;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast);
 }
 
 .tag__remove:hover {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.1);
+  color: var(--color-grayscale-600);
+}
+
+/* Для активной метки крестик светлый */
+.tag--active .tag__remove {
+  color: var(--text-light);
 }
 
 .tag--active .tag__remove:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-light);
+  opacity: 0.8;
 }
 
-.tag--overlay .tag__remove:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+/* Для размытой метки крестик светлый */
+.tag--blurred .tag__remove {
+  color: var(--text-light);
+}
+
+.tag--blurred .tag__remove:hover {
+  color: var(--text-light);
+  opacity: 0.8;
 }
 
 .tag--small .tag__remove {
