@@ -1,15 +1,22 @@
 /**
  * Компонент CollectionCard - карточка коллекции
- * Отображает название, описание и превью (первые 4 изображения)
+ * Отображает название и превью (последние 3 добавленные карточки)
  */
 
 import type { HTMLAttributes } from 'react';
+import { Icon } from '../common';
 import type { Collection } from '../../types';
 import './CollectionCard.css';
 
 export interface CollectionCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'id' | 'onClick'> {
   /** Данные коллекции */
   collection: Collection;
+  
+  /** Количество изображений в коллекции */
+  imageCount?: number;
+  
+  /** Количество видео в коллекции */
+  videoCount?: number;
   
   /** Обработчик клика */
   onClick?: (collection: Collection) => void;
@@ -20,6 +27,8 @@ export interface CollectionCardProps extends Omit<HTMLAttributes<HTMLDivElement>
  */
 export const CollectionCard = ({
   collection,
+  imageCount = 0,
+  videoCount = 0,
   onClick,
   className = '',
   ...props
@@ -33,9 +42,9 @@ export const CollectionCard = ({
     onClick?.(collection);
   };
 
-  // Получаем первые 4 превью
-  const previews = collection.thumbnails.slice(0, 4);
-  const cardCount = collection.cardIds.length;
+  // Получаем последние 3 превью (в обратном порядке - последние добавленные первыми)
+  const previews = collection.thumbnails.slice(0, 3);
+  const totalCount = imageCount + videoCount;
 
   return (
     <div
@@ -45,48 +54,58 @@ export const CollectionCard = ({
       tabIndex={0}
       {...props}
     >
-      {/* Превью (сетка 2x2) */}
+      {/* Превью (сетка 3 слота) */}
       <div className="collection-card__preview">
-        {previews.length > 0 ? (
-          <div className={`collection-card__grid collection-card__grid--${previews.length}`}>
-            {previews.map((url, index) => (
+        {totalCount > 0 ? (
+          <div className="collection-card__grid">
+            {/* Заполняем 3 слота */}
+            {[0, 1, 2].map((index) => (
               <div key={index} className="collection-card__grid-item">
-                <img
-                  src={url}
-                  alt=""
-                  className="collection-card__image"
-                  loading="lazy"
-                />
+                {previews[index] ? (
+                  <img
+                    src={previews[index]}
+                    alt=""
+                    className="collection-card__image"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="collection-card__placeholder" />
+                )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="collection-card__empty">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M20 6H12L10 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V8C22 6.9 21.1 6 20 6Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-s">Пусто</p>
+          <div className="collection-card__grid">
+            {/* Три серых плейсхолдера */}
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="collection-card__grid-item">
+                <div className="collection-card__placeholder" />
+              </div>
+            ))}
           </div>
         )}
-        
-        {/* Счётчик карточек */}
-        <div className="collection-card__count">
-          <span>{cardCount}</span>
-        </div>
       </div>
 
       {/* Информация */}
       <div className="collection-card__info">
         <h4 className="collection-card__title">{collection.name}</h4>
-        {collection.description && (
-          <p className="collection-card__description text-s">
-            {collection.description}
-          </p>
+        
+        {/* Статистика: иконки с количеством */}
+        {totalCount > 0 && (
+          <div className="collection-card__stats">
+            {imageCount > 0 && (
+              <div className="collection-card__stat">
+                <Icon name="image" size={16} variant="border" />
+                <span>{imageCount}</span>
+              </div>
+            )}
+            {videoCount > 0 && (
+              <div className="collection-card__stat">
+                <Icon name="play" size={16} variant="border" />
+                <span>{videoCount}</span>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
