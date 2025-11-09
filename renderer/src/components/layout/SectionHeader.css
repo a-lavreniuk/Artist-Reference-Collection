@@ -84,7 +84,7 @@
   background-color: transparent;
   border: 1px solid transparent;
   border-radius: 16px; /* Скругление как в сайдбаре */
-  color: var(--icon-default);
+  color: var(--color-grayscale-500); /* #93919a - цвет иконки неактивной кнопки */
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -159,10 +159,11 @@
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  color: var(--color-grayscale-500); /* #93919a - иконки в неактивных кнопках */
 }
 
 .section-header__filter-button--active .icon {
-  color: var(--color-grayscale-500); /* Цвет иконки в активной кнопке */
+  color: var(--color-grayscale-500); /* #93919a - цвет иконки в активной кнопке */
 }
 
 .section-header__filter-button span {
