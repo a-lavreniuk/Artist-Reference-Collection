@@ -19,11 +19,21 @@
   justify-content: center;
   padding: var(--spacing-xl);
   
+  /* Overflow */
+  overflow-y: auto;
+  overflow-x: hidden;
+  
   /* Оформление */
   background-color: var(--bg-overlay);
   
   /* Анимация */
   animation: modal-overlay-enter var(--transition-base);
+}
+
+/* Если содержимое длинное, выравниваем по верху */
+.modal-overlay--scrollable {
+  align-items: flex-start;
+  padding: 0 var(--spacing-xl) var(--spacing-xl) var(--spacing-xl);
 }
 
 @keyframes modal-overlay-enter {
@@ -48,15 +58,16 @@
   
   /* Размеры */
   width: 100%;
-  max-height: 90vh;
+  max-height: none;
+  margin-top: 60px;
+  margin-bottom: 60px;
   
   /* Оформление */
   background-color: var(--bg-secondary);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-xl);
+  border-radius: var(--radius-xl);
   
   /* Overflow */
-  overflow: hidden;
+  overflow: visible;
   
   /* Анимация */
   animation: modal-enter var(--transition-base);
@@ -84,7 +95,7 @@
 }
 
 .modal--large {
-  max-width: 1350px;
+  max-width: 1658px;
 }
 
 .modal--fullscreen {
@@ -169,11 +180,10 @@
   flex: 1;
   
   /* Overflow */
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
   
   /* Размеры */
-  padding: var(--spacing-xl);
+  padding: var(--spacing-3xl);
 }
 
 /* Scrollbar для модального окна */

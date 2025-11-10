@@ -32,6 +32,9 @@ export interface ModalProps {
   
   /** Дополнительный className */
   className?: string;
+  
+  /** Класс для overlay */
+  overlayClassName?: string;
 }
 
 /**
@@ -45,7 +48,8 @@ export const Modal = ({
   closeOnOverlayClick = true,
   showCloseButton = true,
   children,
-  className = ''
+  className = '',
+  overlayClassName = ''
 }: ModalProps) => {
   // Блокируем скролл body когда модальное окно открыто
   useEffect(() => {
@@ -88,8 +92,13 @@ export const Modal = ({
     className
   ].filter(Boolean).join(' ');
 
+  const overlayClassNames = [
+    'modal-overlay',
+    overlayClassName
+  ].filter(Boolean).join(' ');
+
   return createPortal(
-    <div className="modal-overlay" onClick={handleOverlayClick}>
+    <div className={overlayClassNames} onClick={handleOverlayClick}>
       <div className={modalClassNames} role="dialog" aria-modal="true">
         {/* Шапка модального окна */}
         {(title || showCloseButton) && (

@@ -188,30 +188,7 @@ img {
 }
 
 /* ========== МОДАЛЬНЫЕ ОКНА ========== */
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--bg-overlay);
-  backdrop-filter: var(--backdrop-blur);
-  z-index: var(--z-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-xl);
-  z-index: var(--z-modal);
-  max-width: 90vw;
-  max-height: 90vh;
-  overflow: auto;
-}
+/* Стили модальных окон перенесены в Modal.css */
 
 /* ========== TRANSITIONS ========== */
 
