@@ -35,7 +35,7 @@
   z-index: var(--z-dropdown);
   
   /* Оформление */
-  background-color: var(--bg-secondary);
+  background-color: var(--color-grayscale-50);
   border-bottom: 2px solid var(--border-default);
   
   /* Размеры */
