@@ -91,6 +91,9 @@
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb {
   background-color: var(--color-grayscale-200);
   border-radius: 3px;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  background-clip: padding-box;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb:hover {
