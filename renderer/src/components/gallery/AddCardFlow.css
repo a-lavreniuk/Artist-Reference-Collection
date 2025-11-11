@@ -72,16 +72,6 @@
   overflow-x: auto;
   overflow-y: hidden;
   margin-bottom: 32px;
-  /* Создаём фоновую линию, которая всегда видна */
-  background: linear-gradient(
-    to right,
-    transparent,
-    transparent
-  ) bottom / 100% 2px no-repeat,
-  linear-gradient(
-    var(--color-grayscale-100),
-    var(--color-grayscale-100)
-  ) bottom / 100% 2px no-repeat;
   padding-bottom: 32px;
 }
 
@@ -91,16 +81,16 @@
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-grayscale-100);
   border-radius: 0;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb {
   background-color: var(--color-grayscale-200);
   border-radius: 3px;
-  height: 6px;
-  /* Центрируем thumb по линии: линия 2px внизу, thumb 6px должен быть -2px от верха до 4px */
-  margin-top: 1px;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb:hover {
