@@ -9,7 +9,7 @@
   flex-direction: column;
   width: 100%;
   background-color: var(--bg-secondary);
-  border: 1px solid var(--border-default);
+  border: none; /* Убираем бордер у карточки, оставляем только у изображения (2px) */
   border-radius: 16px; /* Скругление углов 16 пикселей */
   overflow: hidden;
   cursor: pointer;
@@ -49,6 +49,7 @@
 /* Компактный вид */
 .card--compact {
   border-radius: var(--radius-s);
+  border: none; /* Убираем бордер у карточки, оставляем только у изображения (2px) */
 }
 
 .card--compact .card__info {

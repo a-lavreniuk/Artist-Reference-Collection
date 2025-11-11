@@ -40,6 +40,17 @@
   gap: var(--spacing-s);
 }
 
+/* Стили для кнопок в toolbar-right */
+.card-view__toolbar-right .button {
+  align-items: center;
+  justify-content: center;
+}
+
+/* Иконка крестика в кнопке "Отмена" должна быть grayscale-500 */
+.card-view__toolbar-right .button--secondary .button__icon {
+  color: var(--color-grayscale-500);
+}
+
 .card-view__icon-button {
   display: flex;
   align-items: center;
@@ -204,6 +215,10 @@
 
 .card-view__search-input::placeholder {
   color: var(--text-secondary);
+}
+
+.card-view__search-input:hover:not(:focus) {
+  background-color: var(--color-grayscale-200);
 }
 
 .card-view__search-input:focus {

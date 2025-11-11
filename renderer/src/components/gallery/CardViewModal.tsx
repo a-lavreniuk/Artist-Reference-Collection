@@ -452,15 +452,15 @@ export const CardViewModal = ({
                   <Button
                     variant="secondary"
                     onClick={handleCancelEdit}
+                    iconLeft={<Icon name="x" size={24} variant="border" />}
                   >
-                    <Icon name="x" size={24} variant="border" />
                     Отмена
                   </Button>
                   <Button
                     variant="success"
                     onClick={handleSaveEdit}
+                    iconLeft={<Icon name="save" size={24} variant="border" />}
                   >
-                    <Icon name="check" size={24} variant="border" />
                     Сохранить
                   </Button>
                 </>

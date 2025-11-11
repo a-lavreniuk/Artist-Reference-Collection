@@ -34,6 +34,9 @@ export interface SearchDropdownProps {
   
   /** Флаг видимости */
   isVisible: boolean;
+  
+  /** Обработчик закрытия dropdown (при клике на overlay) */
+  onClose?: () => void;
 }
 
 // Интерфейс для группировки меток по категориям
@@ -50,12 +53,41 @@ export const SearchDropdown = ({
   onTagSelect,
   onHistoryTagSelect,
   onRecentCardClick,
-  isVisible
+  isVisible,
+  onClose
 }: SearchDropdownProps) => {
   const [categoriesWithTags, setCategoriesWithTags] = useState<CategoryWithTags[]>([]);
   const [recentSearchTags, setRecentSearchTags] = useState<Tag[]>([]);
   const [recentCards, setRecentCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Блокировка скролла контента когда dropdown открыт
+  useEffect(() => {
+    if (isVisible) {
+      // Находим layout__content и блокируем скролл
+      const layoutContent = document.querySelector('.layout__content') as HTMLElement;
+      if (layoutContent) {
+        // Сохраняем текущую ширину скроллбара
+        const scrollbarWidth = layoutContent.offsetWidth - layoutContent.clientWidth;
+        
+        // Блокируем скролл
+        layoutContent.style.overflow = 'hidden';
+        
+        // Компенсируем исчезновение скроллбара padding'ом
+        if (scrollbarWidth > 0) {
+          layoutContent.style.paddingRight = `calc(var(--spacing-2xl) + ${scrollbarWidth}px)`;
+        }
+      }
+      
+      return () => {
+        // Восстанавливаем скролл при закрытии
+        if (layoutContent) {
+          layoutContent.style.overflow = '';
+          layoutContent.style.paddingRight = '';
+        }
+      };
+    }
+  }, [isVisible]);
 
   // Загрузка данных при открытии
   useEffect(() => {
@@ -128,6 +160,11 @@ export const SearchDropdown = ({
     onRecentCardClick?.(card);
   };
 
+  // Обработчик клика на overlay (закрывает dropdown)
+  const handleOverlayClick = () => {
+    onClose?.();
+  };
+
   // Если компонент не виден, не рендерим
   if (!isVisible) {
     return null;
@@ -136,16 +173,21 @@ export const SearchDropdown = ({
   // Состояние загрузки
   if (isLoading) {
     return (
-      <div className="search-dropdown">
-        <div className="search-dropdown__loading">
-          <p className="text-s" style={{ color: 'var(--text-secondary)' }}>Загрузка...</p>
+      <>
+        <div className="search-dropdown-overlay" onClick={handleOverlayClick} />
+        <div className="search-dropdown">
+          <div className="search-dropdown__loading">
+            <p className="text-s" style={{ color: 'var(--text-secondary)' }}>Загрузка...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="search-dropdown">
+    <>
+      <div className="search-dropdown-overlay" onClick={handleOverlayClick} />
+      <div className="search-dropdown">
       <div className="search-dropdown__content">
         {/* Недавние запросы */}
         {recentSearchTags.length > 0 && (
@@ -240,6 +282,14 @@ export const SearchDropdown = ({
                           onClick={() => onTagSelect(tag.id)}
                         >
                           <span className="text-s">{tag.name}</span>
+                          {isSelected && (
+                            <Icon 
+                              name="x" 
+                              size={16} 
+                              variant="border"
+                              className="search-dropdown__tag-button-icon" 
+                            />
+                          )}
                         </button>
                       );
                     })}
@@ -259,6 +309,7 @@ export const SearchDropdown = ({
         )}
       </div>
     </div>
+    </>
   );
 };
 

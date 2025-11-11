@@ -3,7 +3,7 @@
  * Сохраняет состояние поиска при навигации между страницами
  */
 
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { Card } from '../types';
@@ -58,6 +58,15 @@ export function SearchProvider({ children }: { children: ReactNode }) {
 
   // Проверка, находимся ли мы на странице карточек
   const isOnCardsPage = location.pathname === '/' || location.pathname === '/cards';
+
+  // Очищаем выбранные метки при переходе на другой раздел
+  useEffect(() => {
+    if (!isOnCardsPage && selectedTags.length > 0) {
+      console.log('[SearchContext] Очистка выбранных меток при переходе на другой раздел');
+      setSelectedTags([]);
+      setIsSearchMenuOpen(false);
+    }
+  }, [location.pathname, isOnCardsPage, selectedTags.length]);
 
   // Обработчик любого действия в поиске
   const handleSearchAction = useCallback(() => {

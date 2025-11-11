@@ -208,24 +208,24 @@ export const SearchBar = ({
         {/* Выбранные метки */}
         {selectedTags.length > 0 && (
           <div className="searchbar__selected-tags">
-            {selectedTags.map((tagId) => (
-              <div key={tagId} className="searchbar__selected-tag">
-                <span className="searchbar__tag-text">{getTagName(tagId)}</span>
-                <button
-                  className="searchbar__tag-remove"
-                  onClick={() => handleRemoveTag(tagId)}
-                  aria-label="Удалить метку"
-                >
-                  <Icon name="x" size={16} variant="border" />
-                </button>
-              </div>
-            ))}
             <button
               className="searchbar__clear-all"
               onClick={handleClearAll}
+              aria-label="Очистить всё"
             >
-              Очистить всё
+              <Icon name="x" size={16} variant="border" />
             </button>
+            {selectedTags.map((tagId) => (
+              <button
+                key={tagId}
+                className="searchbar__selected-tag"
+                onClick={() => handleRemoveTag(tagId)}
+                aria-label={`Удалить метку ${getTagName(tagId)}`}
+              >
+                <span className="searchbar__tag-text">{getTagName(tagId)}</span>
+                <Icon name="x" size={16} variant="border" className="searchbar__tag-icon" />
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -238,6 +238,7 @@ export const SearchBar = ({
         onHistoryTagSelect={handleHistoryTagSelect}
         onRecentCardClick={handleRecentCardClick}
         isVisible={isOpen}
+        onClose={() => setIsMenuOpen?.(false)}
       />
     </div>
   );

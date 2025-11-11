@@ -3,19 +3,40 @@
  * Дизайн согласно макету Figma
  */
 
+/* ========== OVERLAY (ЗАТЕМНЕНИЕ) ========== */
+
+.search-dropdown-overlay {
+  /* Позиционирование - покрывает всю область от header вниз */
+  position: fixed;
+  top: calc(var(--spacing-2xl) + 56px); /* padding header + высота input */
+  left: var(--width-sidebar);
+  right: 0;
+  bottom: 0;
+  z-index: calc(var(--z-header) + 1);
+  
+  /* Затемнение */
+  background: var(--Background-Main-Shade, rgba(59, 57, 70, 0.48));
+  
+  /* Отступ сверху чтобы не перекрывать dropdown */
+  padding-top: 860px;
+  box-sizing: border-box;
+  
+  /* Перехватывает клики (блокирует взаимодействие с контентом под overlay) */
+  pointer-events: auto;
+  cursor: default;
+}
+
 .search-dropdown {
-  /* Позиционирование */
-  position: absolute;
-  top: calc(100% + var(--spacing-xs));
-  left: 0;
+  /* Позиционирование - на всю ширину layout__main */
+  position: fixed;
+  top: calc(var(--spacing-2xl) + 56px); /* padding header + высота SearchBar input */
+  left: var(--width-sidebar);
   right: 0;
   z-index: var(--z-dropdown);
   
   /* Оформление */
   background-color: var(--bg-secondary);
-  border: 2px solid var(--border-default);
-  border-top: none;
-  border-radius: 0 0 var(--radius-m) var(--radius-m);
+  border-bottom: 2px solid var(--border-default);
   
   /* Размеры */
   max-height: 860px;
@@ -81,7 +102,7 @@
   background-color: var(--color-grayscale-100);
   border: none;
   border-radius: 10px;
-  color: var(--text-primary);
+  color: var(--color-grayscale-900);
   font-family: var(--font-family-body);
   font-size: var(--font-size-s);
   font-style: normal;
@@ -100,6 +121,7 @@
 
 .search-dropdown__tag-chip-text {
   white-space: nowrap;
+  color: var(--color-grayscale-900);
 }
 
 .search-dropdown__tag-chip-icon {
@@ -171,12 +193,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   height: 32px; /* Фиксированная высота */
   padding: 0 10px; /* Отступы слева/справа */
   background-color: var(--color-grayscale-100);
   border: none;
   border-radius: 10px;
-  color: var(--text-primary);
+  color: var(--color-grayscale-900);
   font-family: var(--font-family-body);
   font-size: var(--font-size-s);
   font-style: normal;
@@ -193,6 +216,11 @@
   background-color: var(--color-grayscale-200);
 }
 
+/* Переопределение цвета текста для span внутри кнопки метки */
+.search-dropdown__tag-button .text-s {
+  color: var(--color-grayscale-900);
+}
+
 .search-dropdown__tag-button--selected {
   background-color: var(--color-grayscale-800);
   color: var(--text-light);
@@ -200,6 +228,19 @@
 
 .search-dropdown__tag-button--selected:hover {
   background-color: var(--color-grayscale-800);
+}
+
+/* Для выбранных меток текст должен быть светлым */
+.search-dropdown__tag-button--selected .text-s {
+  color: var(--text-light);
+}
+
+/* Иконка крестика в выбранных метках */
+.search-dropdown__tag-button-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--color-grayscale-500);
 }
 
 /* ========== ПУСТОЕ СОСТОЯНИЕ ========== */
