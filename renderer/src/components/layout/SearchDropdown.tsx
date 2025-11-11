@@ -226,9 +226,9 @@ export const SearchDropdown = ({
                   className="search-dropdown__card-thumb"
                   onClick={() => handleRecentCardClick(card)}
                   style={{ 
-                    backgroundImage: card.thumbnailUrl ? `url(${card.thumbnailUrl})` : undefined,
+                    '--card-bg-image': card.thumbnailUrl ? `url(${card.thumbnailUrl})` : 'none',
                     backgroundColor: 'var(--bg-tertiary)'
-                  }}
+                  } as React.CSSProperties}
                   aria-label={`Просмотреть карточку ${card.fileName}`}
                 />
               ))}

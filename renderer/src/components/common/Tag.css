@@ -120,10 +120,10 @@
 .tag__count {
   font-size: var(--font-size-s);         /* 12px */
   font-style: normal;
-  font-weight: 500; /* Medium - увеличена толщина с 400 */
+  font-weight: 400; /* Regular для счетчика */
   line-height: var(--line-height-s);      /* 12px (100%) */
   letter-spacing: 0;
-  color: inherit; /* Наследует цвет от родителя */
+  color: var(--text-secondary); /* Вторичный цвет для счетчика */
 }
 
 .tag--small .tag__count {

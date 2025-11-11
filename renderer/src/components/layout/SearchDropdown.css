@@ -142,21 +142,37 @@
 }
 
 .search-dropdown__card-thumb {
+  position: relative;
   flex-shrink: 0;
   width: 96px;
   height: 96px;
   border: none;
-  border-radius: var(--radius-xs);
+  border-radius: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast);
+}
+
+.search-dropdown__card-thumb::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  background-image: var(--card-bg-image);
+  transition: transform var(--transition-fast);
 }
 
 .search-dropdown__card-thumb:hover {
-  transform: scale(1.05);
   box-shadow: var(--shadow-m);
+}
+
+.search-dropdown__card-thumb:hover::before {
+  transform: scale(1.02);
 }
 
 /* ========== РАЗДЕЛИТЕЛЬ ========== */

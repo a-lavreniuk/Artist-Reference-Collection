@@ -1,0 +1,76 @@
+/**
+ * Стили для компонента статистики категорий и меток
+ */
+
+.category-stats {
+  display: flex;
+  flex-direction: row;
+  gap: var(--spacing-l);
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.category-stats__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  flex: 1 0 0;
+  min-width: 0;
+  padding: var(--spacing-xl);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-l);
+}
+
+.category-stats__card--skeleton {
+  min-height: 120px;
+  background: var(--color-grayscale-100);
+  border-color: var(--color-grayscale-200);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.category-stats__icon {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 24px;
+  height: 24px;
+  color: var(--icon-default);
+  flex-shrink: 0;
+}
+
+.category-stats__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  width: 100%;
+}
+
+.category-stats__number {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h1);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.category-stats__label {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  margin: 0;
+}
+

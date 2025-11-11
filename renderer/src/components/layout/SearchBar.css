@@ -277,7 +277,6 @@
 }
 
 .searchbar__recent-card:hover {
-  transform: scale(1.05);
   box-shadow: var(--shadow-m);
 }
 

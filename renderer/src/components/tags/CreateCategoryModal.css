@@ -126,8 +126,9 @@
 .create-category-modal__actions {
   display: flex;
   gap: var(--spacing-s);
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
+  margin-top: 32px;
 }
 
 /* Кнопка Success должна иметь светлый текст */
