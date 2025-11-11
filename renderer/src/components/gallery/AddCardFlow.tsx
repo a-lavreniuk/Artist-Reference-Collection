@@ -455,6 +455,17 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
               </button>
             </div>
           ))}
+          
+          {/* Пустая карточка для добавления еще файлов (до 45 файлов в очереди) */}
+          {queue.length < 45 && (
+            <button
+              className="add-card-flow__queue-item add-card-flow__queue-item--add"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Добавить еще файлы"
+            >
+              <Icon name="plus" size={24} variant="border" />
+            </button>
+          )}
         </div>
         {/* Убрали счётчик [число] из [число] */}
       </div>

@@ -93,10 +93,27 @@
   cursor: pointer;
   border: 2px solid transparent;
   transition: all var(--transition-fast);
+  background: none;
+  padding: 0;
 }
 
 .add-card-flow__queue-item:hover {
   border-color: var(--border-hover);
+}
+
+/* Пустая карточка для добавления файлов */
+.add-card-flow__queue-item--add {
+  border: 2px dashed var(--border-default);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--icon-default);
+}
+
+.add-card-flow__queue-item--add:hover {
+  border-color: var(--border-hover);
+  background-color: var(--color-grayscale-100);
 }
 
 .add-card-flow__queue-item--active {
