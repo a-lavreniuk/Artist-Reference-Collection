@@ -77,16 +77,18 @@
 
 /* Кастомный скролл-бар для очереди (он же выполняет роль разделителя) */
 .add-card-flow__queue-scroll::-webkit-scrollbar {
-  height: 2px;
+  height: 8px;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-track {
   background-color: var(--color-grayscale-100);
+  border-radius: 0;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb {
   background-color: var(--color-grayscale-200);
   border-radius: 0;
+  height: 8px;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb:hover {
