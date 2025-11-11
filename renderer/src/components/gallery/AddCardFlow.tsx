@@ -474,8 +474,8 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
         {/* Убрали счётчик [число] из [число] */}
       </div>
 
-      {/* Разделитель */}
-      <div className="add-card-flow__divider" />
+      {/* Разделитель - обычная линия */}
+      <div className="add-card-flow__divider-line" />
 
       {/* Основной контент */}
       <div className="add-card-flow__main">

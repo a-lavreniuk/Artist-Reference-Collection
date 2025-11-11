@@ -7,7 +7,6 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-l);
 }
 
 /* ========== DROPZONE ========== */
@@ -73,10 +72,9 @@
   overflow-x: auto;
   overflow-y: hidden;
   margin-bottom: 32px;
-  padding-bottom: 32px;
 }
 
-/* Кастомный скролл-бар для очереди */
+/* Кастомный скролл-бар для очереди - когда нужен скролл */
 .add-card-flow__queue-scroll::-webkit-scrollbar {
   height: 8px;
 }
@@ -101,7 +99,16 @@
   background-color: var(--color-grayscale-300);
 }
 
-/* Разделитель - скрыт, используется фон очереди */
+/* Разделитель - обычная линия когда нет скролла */
+.add-card-flow__divider-line {
+  width: 100%;
+  height: 2px;
+  background-color: var(--color-grayscale-100);
+  margin-bottom: 32px;
+  flex-shrink: 0;
+}
+
+/* Старый divider - удален */
 .add-card-flow__divider {
   display: none;
 }
@@ -132,11 +139,18 @@
   align-items: center;
   justify-content: center;
   color: var(--icon-default);
+  overflow: visible;
+  pointer-events: auto;
+  z-index: 10;
 }
 
 .add-card-flow__queue-item--add:hover {
   border-color: var(--border-hover);
   background-color: var(--color-grayscale-100);
+}
+
+.add-card-flow__queue-item--add:active {
+  background-color: var(--color-grayscale-200);
 }
 
 .add-card-flow__queue-item--active {
@@ -192,7 +206,6 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-xl);
   flex: 1;
-  margin-top: 0;
 }
 
 .add-card-flow__preview {
