@@ -138,8 +138,9 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       return;
     }
 
-    if (files.length > 50) {
-      setMessage('❌ Максимум 50 файлов за раз');
+    // Проверяем общий лимит (45 файлов в очереди)
+    if (queue.length + files.length > 45) {
+      setMessage(`❌ Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
       return;
     }
 
@@ -150,20 +151,31 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     if (!e.target.files) return;
     
     const files = Array.from(e.target.files);
-    if (files.length > 50) {
-      setMessage('❌ Максимум 50 файлов за раз');
+    
+    // Проверяем общий лимит (45 файлов в очереди)
+    if (queue.length + files.length > 45) {
+      setMessage(`❌ Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
+      // Сбрасываем значение input
+      if (e.target) {
+        e.target.value = '';
+      }
       return;
     }
 
     await processFiles(files);
+    
+    // Сбрасываем значение input после обработки, чтобы можно было снова выбрать те же файлы
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
   const processFiles = async (files: File[]) => {
-    const newQueue: QueueFile[] = [];
+    const newQueueItems: QueueFile[] = [];
 
     for (const file of files) {
       const preview = URL.createObjectURL(file);
-      newQueue.push({
+      newQueueItems.push({
         file,
         preview,
         configured: false,
@@ -172,8 +184,18 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       });
     }
 
-    setQueue(newQueue);
-    setCurrentIndex(0);
+    // Добавляем новые файлы к существующей очереди, а не заменяем её
+    setQueue(prevQueue => {
+      const wasEmpty = prevQueue.length === 0;
+      const newQueue = [...prevQueue, ...newQueueItems];
+      
+      // Переключаемся на первый новый файл, если очередь была пуста
+      if (wasEmpty) {
+        setCurrentIndex(0);
+      }
+      
+      return newQueue;
+    });
   };
 
   const handleTagToggle = (tagId: string) => {
@@ -442,6 +464,14 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
   // Состояние настройки
   return (
     <div className="add-card-flow">
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".jpg,.jpeg,.png,.webp,.mp4,.webm"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
       {/* Очередь файлов */}
       <div className="add-card-flow__queue">
         <div 
@@ -483,14 +513,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('[AddCardFlow] Клик на кнопку добавления файлов');
-                console.log('[AddCardFlow] fileInputRef.current:', fileInputRef.current);
-                if (fileInputRef.current) {
-                  fileInputRef.current.click();
-                  console.log('[AddCardFlow] Клик по input выполнен');
-                } else {
-                  console.error('[AddCardFlow] fileInputRef.current отсутствует!');
-                }
+                fileInputRef.current?.click();
               }}
               aria-label="Добавить еще файлы"
               type="button"
