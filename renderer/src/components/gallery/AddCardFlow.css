@@ -71,22 +71,34 @@
   display: flex;
   gap: 0;
   overflow-x: auto;
-  padding-bottom: var(--spacing-s);
+  overflow-y: hidden;
+  margin-bottom: 32px;
 }
 
-/* Разделитель между очередью и основным контентом */
-.add-card-flow__divider {
-  width: 100%;
-  padding-top: 32px;
-  padding-bottom: 32px;
-}
-
-.add-card-flow__divider::before {
-  content: '';
-  display: block;
-  width: 100%;
+/* Кастомный скролл-бар для очереди (он же выполняет роль разделителя) */
+.add-card-flow__queue-scroll::-webkit-scrollbar {
   height: 2px;
+}
+
+.add-card-flow__queue-scroll::-webkit-scrollbar-track {
   background-color: var(--color-grayscale-100);
+}
+
+.add-card-flow__queue-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-grayscale-200);
+  border-radius: 0;
+}
+
+.add-card-flow__queue-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-grayscale-300);
+}
+
+/* Разделитель - убран, используется скролл-бар очереди */
+.add-card-flow__divider {
+  height: 2px;
+  width: 100%;
+  background-color: var(--color-grayscale-100);
+  margin-bottom: 32px;
 }
 
 .add-card-flow__queue-item {
@@ -175,6 +187,7 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-xl);
   flex: 1;
+  margin-top: 0;
 }
 
 .add-card-flow__preview {
