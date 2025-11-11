@@ -19,7 +19,7 @@
   justify-content: center;
   border: 2px dashed var(--border-default);
   border-radius: var(--radius-l);
-  background-color: var(--bg-secondary);
+  background-color: var(--color-grayscale-50);
   cursor: pointer;
   transition: all var(--transition-fast);
   min-height: 400px;
