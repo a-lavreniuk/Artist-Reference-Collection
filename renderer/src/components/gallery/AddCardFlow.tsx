@@ -446,7 +446,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       <div className="add-card-flow__queue">
         <div 
           ref={queueScrollRef}
-          className="add-card-flow__queue-scroll"
+          className={`add-card-flow__queue-scroll ${hasScroll ? 'add-card-flow__queue-scroll--has-scroll' : ''}`}
         >
           {queue.map((item, index) => (
             <div

@@ -74,6 +74,11 @@
   margin-bottom: 32px;
 }
 
+/* Когда есть скролл - добавляем padding-bottom */
+.add-card-flow__queue-scroll--has-scroll {
+  padding-bottom: 32px;
+}
+
 /* Кастомный скролл-бар для очереди - когда нужен скролл */
 .add-card-flow__queue-scroll::-webkit-scrollbar {
   height: 8px;
