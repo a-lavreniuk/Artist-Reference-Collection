@@ -393,14 +393,21 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
           onClick={() => fileInputRef.current?.click()}
         >
           <div className="add-card-flow__dropzone-content">
-            <Icon name="import" size={24} variant="border" style={{ width: 96, height: 96 }} />
-            <h3 className="h3">Перетащите файлы сюда</h3>
-            <p className="text-m" style={{ color: 'var(--text-secondary)' }}>
-              или нажмите чтобы выбрать файлы
+            <h2 className="add-card-flow__dropzone-title">Добавить изображение или видео...</h2>
+            <p className="add-card-flow__dropzone-text">
+              Можно перетащить файлы в это окно или нажать на кнопку.
+              <br />
+              Допускается загрузка нескольких файлов одновременно,
+              <br />
+              но не более 50-ти в очереди
             </p>
-            <p className="text-s" style={{ marginTop: '16px', color: 'var(--text-secondary)' }}>
-              Поддерживаются: JPG, PNG, WEBP, MP4, WEBM (до 50 файлов)
-            </p>
+            <Button
+              variant="primary"
+              size="L"
+              iconRight={<Icon name="plus" size={24} variant="border" />}
+            >
+              Добавить
+            </Button>
           </div>
           <input
             ref={fileInputRef}
