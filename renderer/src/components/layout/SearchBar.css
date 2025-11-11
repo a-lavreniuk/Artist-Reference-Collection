@@ -47,6 +47,10 @@
   border: none;
 }
 
+.searchbar .searchbar__input-wrapper .input::placeholder {
+  color: var(--color-grayscale-500);
+}
+
 /* С иконкой слева: 16px + 24px + 16px = 56px */
 .searchbar .searchbar__input-wrapper .input--with-icon-left {
   padding-left: 56px;
