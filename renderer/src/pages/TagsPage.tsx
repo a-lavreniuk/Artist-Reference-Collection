@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
@@ -12,7 +13,8 @@ import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
 export const TagsPage = () => {
-  const { searchProps } = useSearch();
+  const navigate = useNavigate();
+  const { searchProps, setSelectedTags } = useSearch();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +62,13 @@ export const TagsPage = () => {
     loadData();
   };
 
+  const handleTagClick = (tagId: string) => {
+    // Активируем поиск по этой метке
+    setSelectedTags([tagId]);
+    // Переходим на страницу карточек
+    navigate('/cards');
+  };
+
 
   if (isLoading) {
     return (
@@ -105,6 +114,7 @@ export const TagsPage = () => {
                 category={category}
                 tags={categoryTags}
                 onCategoryClick={handleCategoryClick}
+                onTagClick={handleTagClick}
               />
             );
           })}

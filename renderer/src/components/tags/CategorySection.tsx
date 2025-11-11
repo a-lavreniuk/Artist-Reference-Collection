@@ -17,6 +17,9 @@ export interface CategorySectionProps {
   
   /** Обработчик клика на категорию (открывает модальное окно редактирования) */
   onCategoryClick?: (categoryId: string) => void;
+  
+  /** Обработчик клика на метку (активирует поиск по метке) */
+  onTagClick?: (tagId: string) => void;
 }
 
 /**
@@ -25,25 +28,31 @@ export interface CategorySectionProps {
 export const CategorySection = ({
   category,
   tags,
-  onCategoryClick
+  onCategoryClick,
+  onTagClick
 }: CategorySectionProps) => {
   // Сортируем метки по количеству использований (cardCount) от большего к меньшему
   const sortedTags = [...tags].sort((a, b) => (b.cardCount || 0) - (a.cardCount || 0));
 
-  const handleClick = () => {
+  const handleCategoryClick = () => {
     onCategoryClick?.(category.id);
+  };
+
+  const handleTagClick = (e: React.MouseEvent, tagId: string) => {
+    e.stopPropagation(); // Останавливаем всплытие, чтобы не открылось модальное окно категории
+    onTagClick?.(tagId);
   };
 
   return (
     <div 
       className="category-section" 
-      onClick={handleClick}
+      onClick={handleCategoryClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          handleClick();
+          handleCategoryClick();
         }
       }}
     >
@@ -65,6 +74,8 @@ export const CategorySection = ({
               key={tag.id}
               variant="default"
               count={tag.cardCount || 0}
+              onClick={(e) => handleTagClick(e as any, tag.id)}
+              style={{ cursor: 'pointer' }}
             >
               {tag.name}
             </Tag>
