@@ -91,14 +91,14 @@
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
-  border: 2px solid transparent;
+  border: 2px solid var(--color-grayscale-100);
   transition: all var(--transition-fast);
   background: none;
   padding: 0;
 }
 
 .add-card-flow__queue-item:hover {
-  border-color: var(--border-hover);
+  border-color: var(--color-grayscale-200);
 }
 
 /* Пустая карточка для добавления файлов */
@@ -117,8 +117,7 @@
 }
 
 .add-card-flow__queue-item--active {
-  border-color: var(--bg-button-primary);
-  box-shadow: 0 0 0 2px var(--bg-button-primary);
+  border-color: var(--color-grayscale-200);
 }
 
 .add-card-flow__queue-item img {
