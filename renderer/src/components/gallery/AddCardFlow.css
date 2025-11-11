@@ -69,10 +69,10 @@
 
 .add-card-flow__queue-scroll {
   display: flex;
-  gap: 0;
+  gap: var(--spacing-m);
   overflow-x: auto;
   overflow-y: hidden;
-  margin-bottom: 32px;
+  padding-bottom: 32px;
 }
 
 /* Кастомный скролл-бар для очереди (он же выполняет роль разделителя) */
@@ -93,14 +93,14 @@
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb {
   background-color: var(--color-grayscale-200);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-grayscale-300);
 }
 
-/* Разделитель - убран, используется скролл-бар очереди */
+/* Разделитель - показывается всегда под скролл-баром */
 .add-card-flow__divider {
   height: 2px;
   width: 100%;

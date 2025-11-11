@@ -460,8 +460,12 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
           {queue.length < 45 && (
             <button
               className="add-card-flow__queue-item add-card-flow__queue-item--add"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
               aria-label="Добавить еще файлы"
+              type="button"
             >
               <Icon name="plus" size={24} variant="border" />
             </button>
