@@ -81,14 +81,19 @@
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-track {
-  background-color: var(--color-grayscale-100);
+  background: linear-gradient(
+    to bottom,
+    transparent 3px,
+    var(--color-grayscale-100) 3px,
+    var(--color-grayscale-100) 5px,
+    transparent 5px
+  );
   border-radius: 0;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb {
   background-color: var(--color-grayscale-200);
   border-radius: 0;
-  height: 8px;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-thumb:hover {
