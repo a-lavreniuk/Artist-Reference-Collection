@@ -145,8 +145,12 @@
   justify-content: center;
   color: var(--icon-default);
   overflow: visible;
-  pointer-events: auto;
+  pointer-events: auto !important;
   z-index: 10;
+}
+
+.add-card-flow__queue-item--add * {
+  pointer-events: none;
 }
 
 .add-card-flow__queue-item--add:hover {
