@@ -3,7 +3,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
@@ -13,8 +12,7 @@ import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
 export const TagsPage = () => {
-  const navigate = useNavigate();
-  const { searchProps, setSelectedTags } = useSearch();
+  const { searchProps, setSelectedTags, handleSearchAction } = useSearch();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,10 +61,16 @@ export const TagsPage = () => {
   };
 
   const handleTagClick = (tagId: string) => {
-    // Активируем поиск по этой метке
+    console.log('Поиск по метке:', tagId);
+    // Закрываем модальное окно редактирования если оно открыто
+    if (isEditCategoryModalOpen) {
+      setIsEditCategoryModalOpen(false);
+      setEditingCategoryId(null);
+    }
+    // Устанавливаем выбранную метку
     setSelectedTags([tagId]);
     // Переходим на страницу карточек
-    navigate('/cards');
+    handleSearchAction();
   };
 
 
