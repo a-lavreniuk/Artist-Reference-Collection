@@ -7,9 +7,9 @@ import { useState, useEffect } from 'react';
 import Masonry from 'react-masonry-css';
 import { Modal } from '../common/Modal';
 import { Button, Tag, Icon, Card as CardComponent, ToastContainer } from '../common';
-import type { Card, Tag as TagType, Collection } from '../../types';
+import type { Card, Tag as TagType, Collection, Category } from '../../types';
 import type { ToastMessage } from '../common/ToastContainer';
-import { updateCard, getAllTags, getAllCollections, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory } from '../../services/db';
+import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
 import { useToast } from '../../hooks/useToast';
 import './CardViewModal.css';
@@ -32,6 +32,12 @@ export interface CardViewModalProps {
 
   /** Обработчик клика по похожей карточке */
   onSimilarCardClick?: (card: Card) => void;
+  
+  /** Обработчик клика по коллекции */
+  onCollectionClick?: (collectionId: string) => void;
+  
+  /** Обработчик клика по метке */
+  onTagClick?: (tagId: string) => void;
 }
 
 /**
@@ -43,14 +49,22 @@ export const CardViewModal = ({
   onClose,
   onCardUpdated,
   onCardDeleted,
-  onSimilarCardClick
+  onSimilarCardClick,
+  onCollectionClick,
+  onTagClick
 }: CardViewModalProps) => {
   const [allTags, setAllTags] = useState<TagType[]>([]);
   const [allCollections, setAllCollections] = useState<Collection[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [videoDataUrl, setVideoDataUrl] = useState<string | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const [similarCards, setSimilarCards] = useState<Array<Card & { matchCount: number }>>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedTags, setEditedTags] = useState<string[]>([]);
+  const [editedCollections, setEditedCollections] = useState<string[]>([]);
+  const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
+  const [tagSearchQuery, setTagSearchQuery] = useState('');
   
   const { toasts, showToast, removeToast } = useToast();
 
@@ -59,7 +73,15 @@ export const CardViewModal = ({
     if (isOpen && card) {
       loadTags();
       loadCollections();
+      loadCategories();
       loadSimilarCards();
+      
+      // Инициализируем редактируемые данные
+      setEditedTags(card.tags);
+      setEditedCollections(card.collections);
+      setIsEditMode(false);
+      setCollectionSearchQuery('');
+      setTagSearchQuery('');
       
       // Добавляем карточку в историю просмотров
       addViewHistory(card.id).catch(error => {
@@ -112,6 +134,15 @@ export const CardViewModal = ({
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const categories = await getAllCategories();
+      setAllCategories(categories);
+    } catch (error) {
+      console.error('Ошибка загрузки категорий:', error);
+    }
+  };
+
   const loadSimilarCards = async () => {
     if (!card) return;
     
@@ -149,17 +180,23 @@ export const CardViewModal = ({
 
   // Переключение мудборда
   const handleToggleMoodboard = async () => {
+    console.log('[CardViewModal] Клик на кнопку мудборда для карточки:', card.id, 'текущий статус inMoodboard:', card.inMoodboard);
+    
     try {
       if (card.inMoodboard) {
+        console.log('[CardViewModal] Удаляем из мудборда');
         await removeFromMoodboard(card.id);
         showToast('Карточка удалена из мудборда', 'info');
       } else {
+        console.log('[CardViewModal] Добавляем в мудборд');
         await addToMoodboard(card.id);
         showToast('Карточка добавлена в мудборд', 'success');
       }
+      
+      console.log('[CardViewModal] Вызываем onCardUpdated');
       onCardUpdated?.();
     } catch (error) {
-      console.error('Ошибка обновления мудборда:', error);
+      console.error('[CardViewModal] Ошибка обновления мудборда:', error);
       showToast('Ошибка обновления мудборда', 'error');
     }
   };
@@ -306,6 +343,85 @@ export const CardViewModal = ({
     }
   };
 
+  // Вход в режим редактирования
+  const handleEnterEditMode = () => {
+    setEditedTags([...card.tags]);
+    setEditedCollections([...card.collections]);
+    setIsEditMode(true);
+  };
+
+  // Отмена редактирования
+  const handleCancelEdit = () => {
+    setEditedTags([...card.tags]);
+    setEditedCollections([...card.collections]);
+    setCollectionSearchQuery('');
+    setTagSearchQuery('');
+    setIsEditMode(false);
+  };
+
+  // Сохранение изменений
+  const handleSaveEdit = async () => {
+    try {
+      // Обновляем данные карточки
+      await updateCard(card.id, {
+        tags: editedTags,
+        collections: editedCollections
+      });
+      
+      // Обновляем связи коллекций
+      // Удаляем карточку из старых коллекций
+      for (const oldCollId of card.collections) {
+        if (!editedCollections.includes(oldCollId)) {
+          const coll = await getCollection(oldCollId);
+          if (coll) {
+            await updateCollection(oldCollId, {
+              cardIds: coll.cardIds.filter(id => id !== card.id)
+            });
+          }
+        }
+      }
+      
+      // Добавляем карточку в новые коллекции
+      for (const newCollId of editedCollections) {
+        if (!card.collections.includes(newCollId)) {
+          const coll = await getCollection(newCollId);
+          if (coll) {
+            await updateCollection(newCollId, {
+              cardIds: [...coll.cardIds, card.id]
+            });
+          }
+        }
+      }
+      
+      setIsEditMode(false);
+      showToast('Изменения сохранены', 'success');
+      
+      // Вызываем обновление - родительский компонент перезагрузит данные
+      onCardUpdated?.();
+    } catch (error) {
+      console.error('Ошибка сохранения изменений:', error);
+      showToast('Ошибка сохранения изменений', 'error');
+    }
+  };
+
+  // Переключение метки
+  const handleToggleTag = (tagId: string) => {
+    if (editedTags.includes(tagId)) {
+      setEditedTags(editedTags.filter(id => id !== tagId));
+    } else {
+      setEditedTags([...editedTags, tagId]);
+    }
+  };
+
+  // Переключение коллекции
+  const handleToggleCollection = (collectionId: string) => {
+    if (editedCollections.includes(collectionId)) {
+      setEditedCollections(editedCollections.filter(id => id !== collectionId));
+    } else {
+      setEditedCollections([...editedCollections, collectionId]);
+    }
+  };
+
   return (
     <>
       <Modal
@@ -313,7 +429,7 @@ export const CardViewModal = ({
         onClose={onClose}
         size="large"
         showCloseButton={false}
-        overlayClassName={similarCards.length > 0 ? 'modal-overlay--scrollable' : ''}
+        overlayClassName={!isEditMode && similarCards.length > 0 ? 'modal-overlay--scrollable' : ''}
       >
         <div className="card-view">
         {/* Верхняя панель управления */}
@@ -331,22 +447,43 @@ export const CardViewModal = ({
             </div>
             
             <div className="card-view__toolbar-right">
-              <button className="card-view__icon-button" onClick={handleToggleMoodboard} title={card.inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}>
-                <Icon name={card.inMoodboard ? 'bookmark-minus' : 'bookmark-plus'} size={24} variant="border" />
-              </button>
-              <button className="card-view__icon-button" onClick={handleExport} title="Выгрузить изображение">
-                <Icon name="download" size={24} variant="border" />
-              </button>
-              <button className="card-view__icon-button" onClick={handleOpenLocation} title="Открыть местонахождение">
-                <Icon name="file-search" size={24} variant="border" />
-              </button>
-              <button className="card-view__icon-button" title="Редактировать">
-                <Icon name="pencil" size={24} variant="border" />
-              </button>
-              <button className="card-view__id-button" onClick={handleCopyId}>
-                <span className="card-view__id-text">{card.id}</span>
-                <Icon name="copy" size={24} variant="border" />
-              </button>
+              {isEditMode ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={handleCancelEdit}
+                  >
+                    <Icon name="x" size={24} variant="border" />
+                    Отмена
+                  </Button>
+                  <Button
+                    variant="success"
+                    onClick={handleSaveEdit}
+                  >
+                    <Icon name="check" size={24} variant="border" />
+                    Сохранить
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <button className="card-view__icon-button" onClick={handleToggleMoodboard} title={card.inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}>
+                    <Icon name={card.inMoodboard ? 'bookmark-minus' : 'bookmark-plus'} size={24} variant="border" />
+                  </button>
+                  <button className="card-view__icon-button" onClick={handleExport} title="Выгрузить изображение">
+                    <Icon name="download" size={24} variant="border" />
+                  </button>
+                  <button className="card-view__icon-button" onClick={handleOpenLocation} title="Открыть местонахождение">
+                    <Icon name="file-search" size={24} variant="border" />
+                  </button>
+                  <button className="card-view__icon-button" onClick={handleEnterEditMode} title="Редактировать">
+                    <Icon name="pencil" size={24} variant="border" />
+                  </button>
+                  <button className="card-view__id-button" onClick={handleCopyId}>
+                    <span className="card-view__id-text">{card.id}</span>
+                    <Icon name="copy" size={24} variant="border" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
           
@@ -391,59 +528,169 @@ export const CardViewModal = ({
           <div className="card-view__section">
             <div className="card-view__section-title-wrapper">
               <h4 className="card-view__section-title">Коллекции</h4>
-              <span className="card-view__section-count">{card.collections.length}</span>
+              <span className="card-view__section-count">{isEditMode ? editedCollections.length : card.collections.length}</span>
             </div>
 
+            {isEditMode && (
+              <input
+                type="text"
+                className="card-view__search-input"
+                placeholder="Поиск коллекций…"
+                value={collectionSearchQuery}
+                onChange={(e) => setCollectionSearchQuery(e.target.value)}
+              />
+            )}
+
             <div className="card-view__tags">
-              {card.collections.length > 0 ? (
-                card.collections.map((collectionId) => {
-                  const collection = allCollections.find(c => c.id === collectionId);
-                  return collection ? (
-                    <div key={collectionId} className="card-view__collection-tag">
-                      <Tag variant="default">
+              {isEditMode ? (
+                // Режим редактирования - показываем саджест
+                allCollections
+                  .filter(coll => 
+                    collectionSearchQuery === '' || 
+                    coll.name.toLowerCase().includes(collectionSearchQuery.toLowerCase())
+                  )
+                  .map((collection) => (
+                    <Tag
+                      key={collection.id}
+                      variant={editedCollections.includes(collection.id) ? 'active' : 'default'}
+                      removable={editedCollections.includes(collection.id)}
+                      onClick={() => handleToggleCollection(collection.id)}
+                      onRemove={() => handleToggleCollection(collection.id)}
+                      role="button"
+                    >
+                      <span className="card-view__tag-name">{collection.name}</span>
+                      <span className="card-view__tag-count">{collection.cardIds?.length || 0}</span>
+                    </Tag>
+                  ))
+              ) : (
+                // Режим просмотра
+                card.collections.length > 0 ? (
+                  card.collections.map((collectionId) => {
+                    const collection = allCollections.find(c => c.id === collectionId);
+                    return collection ? (
+                      <Tag 
+                        key={collectionId}
+                        variant="default"
+                        onClick={() => {
+                          console.log('Клик на коллекцию:', collectionId, collection.name);
+                          onCollectionClick?.(collectionId);
+                        }}
+                        role="button"
+                      >
                         <span className="card-view__tag-name">{collection.name}</span>
                         <span className="card-view__tag-count">{collection.cardIds?.length || 0}</span>
                       </Tag>
-                    </div>
-                  ) : null;
-                })
-              ) : (
-                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-                  Коллекций нет.
-                </p>
+                    ) : null;
+                  })
+                ) : (
+                  <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                    Коллекций нет.
+                  </p>
+                )
               )}
             </div>
           </div>
 
           {/* Метки */}
-          <div className="card-view__section">
+          <div className={`card-view__section ${isEditMode ? 'card-view__section--tags-edit' : ''}`}>
             <div className="card-view__section-title-wrapper">
               <h4 className="card-view__section-title">Метки</h4>
-              <span className="card-view__section-count">{card.tags.length}</span>
+              <span className="card-view__section-count">{isEditMode ? editedTags.length : card.tags.length}</span>
             </div>
             
-            <div className="card-view__tags">
-              {card.tags.length > 0 ? (
-                card.tags.map((tagId) => {
-                  const tag = allTags.find(t => t.id === tagId);
-                  return tag ? (
-                    <Tag key={tagId} variant="default">
-                      {tag.name}
-                    </Tag>
-                  ) : null;
-                })
-              ) : (
-                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-                  Меток нет. Добавьте метки для категоризации.
-                </p>
-              )}
-            </div>
+            {isEditMode ? (
+              <>
+                <input
+                  type="text"
+                  className="card-view__search-input"
+                  placeholder="Поиск меток…"
+                  value={tagSearchQuery}
+                  onChange={(e) => setTagSearchQuery(e.target.value)}
+                />
+                
+                <div className="card-view__divider"></div>
+                
+                <div className="card-view__tags-scroll">
+                  {allCategories
+                    .map((category) => {
+                      const categoryTags = allTags.filter(tag => tag.categoryId === category.id);
+                      
+                      // Если поиск пустой - показываем все метки
+                      if (tagSearchQuery === '') {
+                        return { category, tags: categoryTags };
+                      }
+                      
+                      const query = tagSearchQuery.toLowerCase();
+                      const categoryNameMatches = category.name.toLowerCase().includes(query);
+                      
+                      // Если название категории подходит - показываем ВСЕ метки категории
+                      if (categoryNameMatches) {
+                        return { category, tags: categoryTags };
+                      }
+                      
+                      // Если название категории не подходит - фильтруем метки
+                      const filteredTags = categoryTags.filter(tag => 
+                        tag.name.toLowerCase().includes(query)
+                      );
+                      
+                      if (filteredTags.length === 0) return null;
+                      
+                      return { category, tags: filteredTags };
+                    })
+                    .filter((item): item is { category: Category; tags: TagType[] } => item !== null)
+                    .map(({ category, tags }) => (
+                      <div key={category.id} className="card-view__category">
+                        <h5 className="card-view__category-title">{category.name}</h5>
+                        <div className="card-view__tags">
+                          {tags.map((tag) => (
+                            <Tag
+                              key={tag.id}
+                              variant={editedTags.includes(tag.id) ? 'active' : 'default'}
+                              removable={editedTags.includes(tag.id)}
+                              onClick={() => handleToggleTag(tag.id)}
+                              onRemove={() => handleToggleTag(tag.id)}
+                              role="button"
+                            >
+                              {tag.name}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            ) : (
+              <div className="card-view__tags">
+                {card.tags.length > 0 ? (
+                  card.tags.map((tagId) => {
+                    const tag = allTags.find(t => t.id === tagId);
+                    return tag ? (
+                      <Tag 
+                        key={tagId} 
+                        variant="default"
+                        onClick={() => {
+                          console.log('Клик на метку:', tagId, tag.name);
+                          onTagClick?.(tagId);
+                        }}
+                        role="button"
+                      >
+                        {tag.name}
+                      </Tag>
+                    ) : null;
+                  })
+                ) : (
+                  <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                    Меток нет. Добавьте метки для категоризации.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
         </div>
 
         {/* Похожие изображения */}
-        {similarCards.length > 0 && (
+        {!isEditMode && similarCards.length > 0 && (
           <div className="card-view__similar">
             <div className="card-view__section-title-wrapper">
               <h4 className="card-view__section-title">Похожие изображения</h4>

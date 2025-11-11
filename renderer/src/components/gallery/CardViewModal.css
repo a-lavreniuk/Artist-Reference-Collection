@@ -51,7 +51,7 @@
   border: 2px solid var(--color-grayscale-100);
   border-radius: 16px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .card-view__icon-button:hover {
@@ -93,7 +93,7 @@
   border: 2px solid var(--color-grayscale-100);
   border-radius: 16px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
   height: 56px;
 }
 
@@ -180,6 +180,81 @@
   background: var(--bg-secondary);
 }
 
+/* Секция с метками в режиме редактирования */
+.card-view__section--tags-edit {
+  max-height: 781px;
+  overflow: hidden;
+}
+
+/* Search input */
+.card-view__search-input {
+  width: 100%;
+  height: 44px;
+  padding: 14px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-m);
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  line-height: 16px;
+  color: var(--text-primary);
+  font-variation-settings: 'CRSV' 0, 'SHRP' 0;
+  transition: background-color var(--transition-fast);
+}
+
+.card-view__search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.card-view__search-input:focus {
+  outline: none;
+  background-color: var(--color-grayscale-200);
+}
+
+/* Скроллируемая область с категориями */
+.card-view__tags-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  overflow-y: auto;
+  max-height: calc(781px - 24px - 22px - 16px - 44px - 16px - 2px - 16px);
+  padding-right: var(--spacing-xs);
+}
+
+/* Стилизация scrollbar для области меток */
+.card-view__tags-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-view__tags-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-view__tags-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
+}
+
+.card-view__tags-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grayscale-400);
+}
+
+/* Категория */
+.card-view__category {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-m);
+}
+
+.card-view__category-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: 'Geologica', sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 22px;
+}
+
 .card-view__section-title-wrapper {
   display: flex;
   align-items: center;
@@ -240,8 +315,9 @@
   gap: 4px;
 }
 
-.card-view__collection-tag {
-  display: inline-flex;
+/* Кликабельные метки в режиме просмотра */
+.card-view__tags .tag[role="button"] {
+  cursor: pointer;
 }
 
 .card-view__tag-name {
@@ -261,6 +337,12 @@
   font-weight: 400;
   font-variation-settings: 'CRSV' 0, 'SHRP' 0;
   margin-left: 4px;
+}
+
+/* Белый цвет текста для выбранных меток */
+.tag--active .card-view__tag-name,
+.tag--active .card-view__tag-count {
+  color: var(--text-light);
 }
 
 

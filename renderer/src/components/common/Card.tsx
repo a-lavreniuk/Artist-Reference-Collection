@@ -164,7 +164,7 @@ export const Card = ({
       )}
 
       {/* Кнопка мудборда - появляется при ховере */}
-      {showActions && imageLoaded && (
+      {showActions && (
         <button
           className={`card__moodboard-button ${card.inMoodboard ? 'card__moodboard-button--active' : ''}`}
           onClick={handleMoodboardClick}

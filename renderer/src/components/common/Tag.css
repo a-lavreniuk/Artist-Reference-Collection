@@ -193,11 +193,6 @@
   cursor: pointer;
 }
 
-.tag[role="button"]:active,
-.tag[onclick]:active {
-  transform: translateY(1px);
-}
-
 /* Фокус */
 .tag:focus-visible {
   outline: 2px solid var(--border-focus);

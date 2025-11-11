@@ -54,6 +54,76 @@ export class ARCDatabase extends Dexie {
 // Создание экземпляра базы данных
 export const db = new ARCDatabase();
 
+/**
+ * Диагностика конкретной карточки (для отладки)
+ */
+export async function debugCard(cardId: string): Promise<void> {
+  console.log('\n=== ДИАГНОСТИКА КАРТОЧКИ ===');
+  console.log('ID:', cardId);
+  
+  const card = await db.cards.get(cardId);
+  if (!card) {
+    console.error('❌ Карточка НЕ НАЙДЕНА в базе данных!');
+    return;
+  }
+  
+  console.log('✅ Карточка найдена');
+  console.log('FileName:', card.fileName);
+  console.log('inMoodboard:', card.inMoodboard);
+  console.log('tags:', card.tags);
+  console.log('collections:', card.collections);
+  
+  const moodboard = await getMoodboard();
+  const isInMoodboardArray = moodboard.cardIds.includes(cardId);
+  console.log('В массиве мудборда:', isInMoodboardArray);
+  
+  if (card.inMoodboard !== isInMoodboardArray) {
+    console.error('⚠️ НЕСООТВЕТСТВИЕ: флаг inMoodboard не совпадает с массивом cardIds!');
+    console.log('Исправляем...');
+    await updateCard(cardId, { inMoodboard: isInMoodboardArray });
+    console.log('✅ Исправлено');
+  }
+  
+  console.log('=== КОНЕЦ ДИАГНОСТИКИ ===\n');
+}
+
+/**
+ * Синхронизация флагов inMoodboard с массивом moodboard.cardIds
+ * Исправляет рассинхронизацию данных
+ */
+export async function syncMoodboardFlags(): Promise<number> {
+  console.log('[syncMoodboardFlags] Начало синхронизации...');
+  
+  const moodboard = await getMoodboard();
+  const allCards = await getAllCards();
+  
+  let fixedCount = 0;
+  
+  for (const card of allCards) {
+    const shouldBeInMoodboard = moodboard.cardIds.includes(card.id);
+    
+    if (card.inMoodboard !== shouldBeInMoodboard) {
+      console.log(`[syncMoodboardFlags] Исправление карточки ${card.id}: ${card.inMoodboard} → ${shouldBeInMoodboard}`);
+      await db.cards.update(card.id, { inMoodboard: shouldBeInMoodboard });
+      fixedCount++;
+    }
+  }
+  
+  if (fixedCount > 0) {
+    console.log(`[syncMoodboardFlags] ✅ Исправлено карточек: ${fixedCount}`);
+  } else {
+    console.log('[syncMoodboardFlags] ✅ Все карточки синхронизированы');
+  }
+  
+  return fixedCount;
+}
+
+// Делаем функцию доступной глобально для отладки
+if (typeof window !== 'undefined') {
+  (window as any).debugCard = debugCard;
+  (window as any).db = db;
+}
+
 // ========== CRUD ОПЕРАЦИИ ДЛЯ КАРТОЧЕК ==========
 
 /**
@@ -95,6 +165,15 @@ export async function getAllCards(): Promise<Card[]> {
  * Обновить карточку
  */
 export async function updateCard(id: string, changes: Partial<Card>): Promise<number> {
+  console.log('[updateCard] Обновление карточки:', id, 'изменения:', changes);
+  
+  // Проверяем существует ли карточка
+  const existingCard = await db.cards.get(id);
+  if (!existingCard) {
+    console.error('[updateCard] Карточка не найдена:', id);
+    return 0;
+  }
+  
   // Если изменяются метки, обновляем счётчики
   if (changes.tags) {
     const oldCard = await db.cards.get(id);
@@ -121,7 +200,10 @@ export async function updateCard(id: string, changes: Partial<Card>): Promise<nu
     }
   }
   
-  return await db.cards.update(id, changes);
+  const result = await db.cards.update(id, changes);
+  console.log('[updateCard] Результат обновления:', result, result === 0 ? '(ОШИБКА: карточка не обновлена!)' : '(успех)');
+  
+  return result;
 }
 
 /**
@@ -364,26 +446,48 @@ export async function getMoodboard(): Promise<Moodboard> {
  * Добавить карточку в мудборд
  */
 export async function addToMoodboard(cardId: string): Promise<void> {
+  console.log('[addToMoodboard] Начало добавления карточки:', cardId);
+  
   const moodboard = await getMoodboard();
+  console.log('[addToMoodboard] Текущий мудборд содержит карточек:', moodboard.cardIds.length);
+  
+  // Добавляем в массив если еще нет
   if (!moodboard.cardIds.includes(cardId)) {
+    console.log('[addToMoodboard] Добавляем карточку в массив мудборда');
+    
     await db.moodboard.update('default', {
       cardIds: [...moodboard.cardIds, cardId],
       dateModified: new Date()
     });
-    await updateCard(cardId, { inMoodboard: true });
+    console.log('[addToMoodboard] Мудборд обновлен');
+  } else {
+    console.log('[addToMoodboard] Карточка уже в массиве мудборда');
   }
+  
+  // ВСЕГДА обновляем флаг inMoodboard для синхронизации данных
+  const updateResult = await updateCard(cardId, { inMoodboard: true });
+  console.log('[addToMoodboard] Флаг inMoodboard обновлен, результат:', updateResult);
 }
 
 /**
  * Удалить карточку из мудборда
  */
 export async function removeFromMoodboard(cardId: string): Promise<void> {
+  console.log('[removeFromMoodboard] Начало удаления карточки:', cardId);
+  
   const moodboard = await getMoodboard();
+  console.log('[removeFromMoodboard] Текущий мудборд содержит карточек:', moodboard.cardIds.length);
+  
+  // Удаляем из массива
   await db.moodboard.update('default', {
     cardIds: moodboard.cardIds.filter(id => id !== cardId),
     dateModified: new Date()
   });
-  await updateCard(cardId, { inMoodboard: false });
+  console.log('[removeFromMoodboard] Мудборд обновлен');
+  
+  // ВСЕГДА обновляем флаг inMoodboard для синхронизации данных
+  const updateResult = await updateCard(cardId, { inMoodboard: false });
+  console.log('[removeFromMoodboard] Флаг inMoodboard обновлен, результат:', updateResult);
 }
 
 /**

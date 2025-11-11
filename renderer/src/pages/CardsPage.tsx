@@ -3,20 +3,25 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards, addToMoodboard, removeFromMoodboard } from '../services/db';
+import { getAllCards, addToMoodboard, removeFromMoodboard, syncMoodboardFlags } from '../services/db';
 import { useSearch } from '../contexts';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const CardsPage = () => {
+  const navigate = useNavigate();
+  
   // Используем глобальный контекст поиска
   const {
     selectedTags,
+    setSelectedTags,
     viewingCard,
     isModalOpen,
     handleCardClick: handleSearchCardClick,
     handleCloseModal,
+    updateViewingCard,
     searchProps
   } = useSearch();
   
@@ -33,6 +38,10 @@ export const CardsPage = () => {
     const loadCards = async () => {
       try {
         setIsLoading(true);
+        
+        // Синхронизируем флаги мудборда перед загрузкой
+        await syncMoodboardFlags();
+        
         const allCards = await getAllCards();
         setCards(allCards);
       } catch (error) {
@@ -96,6 +105,14 @@ export const CardsPage = () => {
     // Перезагружаем карточки
     const allCards = await getAllCards();
     setCards(allCards);
+    
+    // Обновляем viewingCard если она открыта (без закрытия модалки)
+    if (viewingCard) {
+      const updatedCard = allCards.find(c => c.id === viewingCard.id);
+      if (updatedCard) {
+        updateViewingCard(updatedCard);
+      }
+    }
   };
 
   // Обработчик удаления карточки
@@ -116,18 +133,42 @@ export const CardsPage = () => {
 
   // Обработчик добавления/удаления из мудборда
   const handleMoodboardToggle = async (card: Card) => {
+    console.log('[CardsPage] Клик на кнопку мудборда для карточки:', card.id, 'текущий статус inMoodboard:', card.inMoodboard);
+    
     try {
       if (card.inMoodboard) {
+        console.log('[CardsPage] Удаляем из мудборда');
         await removeFromMoodboard(card.id);
       } else {
+        console.log('[CardsPage] Добавляем в мудборд');
         await addToMoodboard(card.id);
       }
+      
+      console.log('[CardsPage] Перезагружаем карточки');
       // Перезагружаем карточки для обновления состояния
       const allCards = await getAllCards();
       setCards(allCards);
+      
+      // Проверяем обновилась ли карточка
+      const updatedCard = allCards.find(c => c.id === card.id);
+      console.log('[CardsPage] Карточка после обновления:', updatedCard?.id, 'inMoodboard:', updatedCard?.inMoodboard);
     } catch (error) {
-      console.error('Ошибка переключения мудборда:', error);
+      console.error('[CardsPage] Ошибка переключения мудборда:', error);
     }
+  };
+
+  // Обработчик клика на коллекцию
+  const handleCollectionClick = (collectionId: string) => {
+    console.log('Навигация к коллекции:', collectionId);
+    handleCloseModal();
+    navigate(`/collections/${collectionId}`);
+  };
+
+  // Обработчик клика на метку
+  const handleTagClick = (tagId: string) => {
+    console.log('Поиск по метке:', tagId);
+    handleCloseModal();
+    setSelectedTags([tagId]);
   };
 
   // Состояние загрузки
@@ -181,6 +222,8 @@ export const CardsPage = () => {
         onSimilarCardClick={(card) => {
           handleSearchCardClick(card);
         }}
+        onCollectionClick={handleCollectionClick}
+        onTagClick={handleTagClick}
       />
     </Layout>
   );

@@ -74,11 +74,18 @@
   height: auto;
   object-fit: cover;
   opacity: 0;
-  transition: opacity var(--transition-base);
+  border: 2px solid var(--color-grayscale-100);
+  border-radius: 16px;
+  transition: opacity var(--transition-base), border-color var(--transition-fast);
 }
 
 .card:not(.card--loading) .card__image {
   opacity: 1;
+}
+
+/* Hover эффект для border изображения */
+.card:hover .card__image {
+  border-color: var(--color-grayscale-200);
 }
 
 /* Ошибка загрузки */

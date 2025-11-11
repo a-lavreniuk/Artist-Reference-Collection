@@ -27,6 +27,7 @@ interface SearchContextType {
   handleSearchAction: () => void;
   handleCardClick: (card: Card) => void;
   handleCloseModal: () => void;
+  updateViewingCard: (card: Card) => void;
   
   // Props для SearchBar
   searchProps: {
@@ -85,6 +86,11 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setViewingCard(null), 300);
   }, []);
 
+  // Обновление viewingCard без закрытия модалки
+  const updateViewingCard = useCallback((card: Card) => {
+    setViewingCard(card);
+  }, []);
+
   const value: SearchContextType = {
     searchValue,
     setSearchValue,
@@ -97,6 +103,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     handleSearchAction,
     handleCardClick,
     handleCloseModal,
+    updateViewingCard,
     searchProps: {
       value: searchValue,
       onChange: setSearchValue,

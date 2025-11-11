@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
@@ -12,7 +13,8 @@ import { logClearMoodboard } from '../services/history';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const MoodboardPage = () => {
-  const { searchProps } = useSearch();
+  const navigate = useNavigate();
+  const { searchProps, setSelectedTags } = useSearch();
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
@@ -144,6 +146,19 @@ export const MoodboardPage = () => {
     } catch (error) {
       console.error('Ошибка переключения мудборда:', error);
     }
+  };
+
+  // Обработчик клика на коллекцию
+  const handleCollectionClick = (collectionId: string) => {
+    setIsModalOpen(false);
+    navigate(`/collections/${collectionId}`);
+  };
+
+  // Обработчик клика на метку
+  const handleTagClick = (tagId: string) => {
+    setIsModalOpen(false);
+    setSelectedTags([tagId]);
+    navigate('/cards');
   };
 
   // Обработчик экспорта мудборда
@@ -373,6 +388,8 @@ export const MoodboardPage = () => {
         onSimilarCardClick={(card) => {
           setViewingCard(card);
         }}
+        onCollectionClick={handleCollectionClick}
+        onTagClick={handleTagClick}
       />
     </Layout>
   );

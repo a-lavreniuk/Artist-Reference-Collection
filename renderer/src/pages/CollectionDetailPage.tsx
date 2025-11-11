@@ -15,7 +15,7 @@ import type { Collection, Card, ViewMode, ContentFilter } from '../types';
 export const CollectionDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { searchProps } = useSearch();
+  const { searchProps, setSelectedTags } = useSearch();
   
   const [collection, setCollection] = useState<Collection | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
@@ -157,6 +157,42 @@ export const CollectionDetailPage = () => {
     }
   };
 
+  // Обработчик клика на коллекцию
+  const handleCollectionClick = (collectionId: string) => {
+    setIsModalOpen(false);
+    navigate(`/collections/${collectionId}`);
+  };
+
+  // Обработчик клика на метку
+  const handleTagClick = (tagId: string) => {
+    setIsModalOpen(false);
+    setSelectedTags([tagId]);
+    navigate('/cards');
+  };
+
+  // Обработчик обновления карточки
+  const handleCardUpdated = async () => {
+    if (id) {
+      await loadCollection(id);
+      
+      // Обновляем viewingCard если она открыта
+      if (viewingCard) {
+        const allCards = await getAllCards();
+        const updatedCard = allCards.find(c => c.id === viewingCard.id);
+        if (updatedCard) {
+          setViewingCard(updatedCard);
+        }
+      }
+    }
+  };
+
+  // Обработчик удаления карточки
+  const handleCardDeleted = async () => {
+    if (id) {
+      await loadCollection(id);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout
@@ -230,11 +266,13 @@ export const CollectionDetailPage = () => {
         isOpen={isModalOpen}
         card={viewingCard}
         onClose={() => setIsModalOpen(false)}
-        onCardUpdated={() => id && loadCollection(id)}
-        onCardDeleted={() => id && loadCollection(id)}
+        onCardUpdated={handleCardUpdated}
+        onCardDeleted={handleCardDeleted}
         onSimilarCardClick={(card) => {
           setViewingCard(card);
         }}
+        onCollectionClick={handleCollectionClick}
+        onTagClick={handleTagClick}
       />
     </Layout>
   );
