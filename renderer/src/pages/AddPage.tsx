@@ -56,7 +56,7 @@ export const AddPage = () => {
       <Button 
         variant="success" 
         size="L"
-        iconLeft={<Icon name="plus" size={24} variant="border" />}
+        iconRight={<Icon name="plus" size={24} variant="border" />}
         counter={configuredCount}
         disabled={configuredCount === 0}
         onClick={handleAddClick}
@@ -69,7 +69,7 @@ export const AddPage = () => {
     <Button 
       variant="primary" 
       size="L"
-      iconLeft={<Icon name="plus" size={24} variant="border" />}
+      iconRight={<Icon name="plus" size={24} variant="border" />}
       onClick={handleOpenFileDialog}
     >
       Добавить
