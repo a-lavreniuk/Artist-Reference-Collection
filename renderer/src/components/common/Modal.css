@@ -117,6 +117,7 @@
 
 .modal--large {
   max-width: 1658px;
+  background-color: var(--color-grayscale-50);
 }
 
 .modal--fullscreen {
