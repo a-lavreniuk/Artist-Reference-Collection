@@ -14,7 +14,7 @@
   padding: 0 var(--spacing-2xl);
   
   /* Оформление */
-  background-color: var(--bg-secondary);
+  background-color: var(--color-grayscale-50);
   border-bottom: 2px solid var(--color-grayscale-100); /* Толщина 2px, цвет grayscale-100 */
   
   /* Сброс */

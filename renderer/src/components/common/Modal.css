@@ -91,7 +91,28 @@
 }
 
 .modal--medium {
-  max-width: 600px;
+  max-width: 822px;
+  width: 822px;
+  background-color: var(--color-grayscale-50);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-3xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+}
+
+/* Для модального окна medium убираем стандартные отступы из header и content */
+.modal--medium .modal__header {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  position: static;
+  background-color: inherit;
+}
+
+.modal--medium .modal__content {
+  padding: 0;
 }
 
 .modal--large {
@@ -129,10 +150,16 @@
   flex-shrink: 0;
 }
 
+
 .modal__title {
   flex: 1;
   margin: 0;
   color: var(--text-primary);
+  font-family: 'YS Music', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0;
 }
 
 .modal__close {

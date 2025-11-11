@@ -1,0 +1,93 @@
+/**
+ * Стили модального окна добавления коллекции
+ */
+
+/* Оверлей модального окна */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Модальное окно */
+.add-collection-modal {
+  background-color: var(--grayscale-50);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-l, 24px);
+  padding: var(--spacing-xl, 40px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-m, 16px);
+  min-width: 400px;
+  max-width: 500px;
+  box-sizing: border-box;
+}
+
+/* Заголовок и подзаголовок */
+.add-collection-modal__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-collection-modal__title {
+  font-family: 'YS Music', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  color: var(--text-default);
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.add-collection-modal__subtitle {
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  color: var(--text-secondary);
+  margin: 0;
+  letter-spacing: 0;
+}
+
+/* Инпут для названия */
+.add-collection-modal__input {
+  width: 100%;
+  height: 56px;
+  background-color: var(--background-light);
+  border: none;
+  border-radius: var(--radius-m, 16px);
+  padding: var(--spacing-m, 16px) var(--spacing-m, 16px) var(--spacing-m, 16px) 20px;
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--text-default);
+  box-sizing: border-box;
+  outline: none;
+  transition: background-color 0.2s ease;
+}
+
+.add-collection-modal__input::placeholder {
+  color: var(--text-secondary);
+}
+
+.add-collection-modal__input:focus {
+  background-color: var(--background-light-hover);
+}
+
+/* Контейнер кнопок */
+.add-collection-modal__actions {
+  display: flex;
+  gap: var(--spacing-s, 8px);
+  justify-content: flex-end;
+  align-items: center;
+}
+

@@ -43,11 +43,15 @@
   flex: 1;
   height: 56px; /* Высота поисковой строки */
   padding: 0 16px; /* Базовые отступы 16px */
+  background-color: var(--color-grayscale-100);
+  border: none;
 }
 
 /* С иконкой слева: 16px + 24px + 16px = 56px */
 .searchbar .searchbar__input-wrapper .input--with-icon-left {
   padding-left: 56px;
+  background-color: var(--color-grayscale-100);
+  border: none;
 }
 
 /* С иконкой справа (кнопка очистки): 16px + 24px + 16px = 56px */

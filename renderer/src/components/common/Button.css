@@ -181,7 +181,7 @@
 /* --- SUCCESS --- */
 .button--success {
   background-color: #0f8948; /* var(--background/positive/default) */
-  color: #e8fcf2; /* var(--text/positive/light) */
+  color: #f5f4f7; /* var(--text/light/default) */
 }
 
 .button--success:hover:not(:disabled) {
@@ -191,7 +191,11 @@
 /* Убрана анимация press */
 
 .button--success .button__counter {
-  color: #e8fcf2; /* var(--text/positive/light) */
+  color: #f5f4f7; /* var(--text/light/default) */
+}
+
+.button--success .button__icon {
+  color: #f5f4f7; /* var(--text/light/default) */
 }
 
 /* ========== МОДИФИКАТОРЫ ========== */

@@ -7,6 +7,7 @@ import { Modal, Button, Input } from '../common';
 import type { Collection } from '../../types';
 import { addCollection } from '../../services/db';
 import { logCreateCollection } from '../../services/history';
+import './CreateCollectionModal.css';
 
 export interface CreateCollectionModalProps {
   /** Открыто ли модальное окно */
@@ -28,7 +29,6 @@ export const CreateCollectionModal = ({
   onCollectionCreated
 }: CreateCollectionModalProps) => {
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +49,7 @@ export const CreateCollectionModal = ({
       const collection: Collection = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: undefined,
         dateCreated: new Date(),
         dateModified: new Date(),
         cardIds: [],
@@ -63,7 +63,6 @@ export const CreateCollectionModal = ({
       
       // Очищаем форму
       setName('');
-      setDescription('');
       
       // Вызываем callback
       onCollectionCreated?.(collection);
@@ -78,7 +77,6 @@ export const CreateCollectionModal = ({
 
   const handleClose = () => {
     setName('');
-    setDescription('');
     setError(null);
     onClose();
   };
@@ -87,42 +85,36 @@ export const CreateCollectionModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Создать коллекцию"
       size="medium"
+      showCloseButton={false}
     >
       <form onSubmit={handleSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Название */}
+        <div className="create-collection-modal">
+          {/* Заголовок и подзаголовок вместе */}
+          <div className="create-collection-modal__header">
+            <h4 className="modal__title">Новая коллекция</h4>
+            <p className="create-collection-modal__subtitle">
+              Для новой коллекции нужно название
+            </p>
+          </div>
+
+          {/* Инпут */}
           <Input
-            label="Название коллекции"
-            placeholder="Например: Проект интерьера гостиной"
+            placeholder="Название…"
             value={name}
             onChange={(e) => setName(e.target.value)}
             error={error || undefined}
             fullWidth
+            className="create-collection-modal__input"
             autoFocus
           />
 
-          {/* Описание */}
-          <div>
-            <label className="input-label" style={{ marginBottom: '8px', display: 'block' }}>
-              Описание (опционально)
-            </label>
-            <textarea
-              className="input"
-              placeholder="Добавьте описание коллекции..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              style={{ width: '100%', resize: 'vertical' }}
-            />
-          </div>
-
           {/* Кнопки */}
-          <div className="modal__footer" style={{ padding: 0, border: 'none', marginTop: '8px' }}>
+          <div className="create-collection-modal__actions">
             <Button
               type="button"
-              variant="secondary"
+              variant="border"
+              size="S"
               onClick={handleClose}
               disabled={isCreating}
             >
@@ -130,10 +122,21 @@ export const CreateCollectionModal = ({
             </Button>
             <Button
               type="submit"
-              variant="primary"
+              variant="success"
+              size="S"
               loading={isCreating}
+              iconRight={
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M8 3V13M3 8H13"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              }
             >
-              Создать коллекцию
+              Создать
             </Button>
           </div>
         </div>
