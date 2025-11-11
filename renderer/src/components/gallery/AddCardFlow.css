@@ -72,22 +72,27 @@
   gap: var(--spacing-m);
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 32px;
+  margin-bottom: 32px;
+  /* Создаём фоновую линию, которая всегда видна */
+  background: linear-gradient(
+    to right,
+    transparent,
+    transparent
+  ) bottom / 100% 2px no-repeat,
+  linear-gradient(
+    var(--color-grayscale-100),
+    var(--color-grayscale-100)
+  ) bottom / 100% 2px no-repeat;
+  padding-bottom: 8px;
 }
 
-/* Кастомный скролл-бар для очереди (он же выполняет роль разделителя) */
+/* Кастомный скролл-бар для очереди */
 .add-card-flow__queue-scroll::-webkit-scrollbar {
   height: 8px;
 }
 
 .add-card-flow__queue-scroll::-webkit-scrollbar-track {
-  background: linear-gradient(
-    to bottom,
-    transparent 3px,
-    var(--color-grayscale-100) 3px,
-    var(--color-grayscale-100) 5px,
-    transparent 5px
-  );
+  background: transparent;
   border-radius: 0;
 }
 
@@ -100,12 +105,9 @@
   background-color: var(--color-grayscale-300);
 }
 
-/* Разделитель - показывается всегда под скролл-баром */
+/* Разделитель - скрыт, используется фон очереди */
 .add-card-flow__divider {
-  height: 2px;
-  width: 100%;
-  background-color: var(--color-grayscale-100);
-  margin-bottom: 32px;
+  display: none;
 }
 
 .add-card-flow__queue-item {
