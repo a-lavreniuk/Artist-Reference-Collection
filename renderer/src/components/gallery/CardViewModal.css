@@ -18,7 +18,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--bg-secondary);
+  background: var(--color-grayscale-50);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   margin: calc(var(--spacing-3xl) * -1);
   margin-bottom: 0;
@@ -188,7 +188,7 @@
   padding: var(--spacing-xl);
   border-radius: var(--radius-m);
   border: 2px solid var(--border-default);
-  background: var(--bg-secondary);
+  background: var(--color-grayscale-50);
 }
 
 /* Секция с метками в режиме редактирования */
