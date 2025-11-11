@@ -6,9 +6,8 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
-import { CategorySection, CreateCategoryModal, CreateTagModal } from '../components/tags';
-import { getAllCategories, getAllTags, deleteTag, deleteCategory, updateCategory, updateTag } from '../services/db';
-import { logDeleteCategory, logRenameCategory, logRenameTag } from '../services/history';
+import { CategorySection, CreateCategoryModal, CategoryStats, EditCategoryModal } from '../components/tags';
+import { getAllCategories, getAllTags } from '../services/db';
 import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
@@ -20,8 +19,8 @@ export const TagsPage = () => {
   
   // Модальные окна
   const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
-  const [isCreateTagModalOpen, setIsCreateTagModalOpen] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   // Загрузка категорий и меток
   useEffect(() => {
@@ -44,100 +43,23 @@ export const TagsPage = () => {
     }
   };
 
-  const handleTagRemove = async (tagId: string) => {
-    const tag = tags.find(t => t.id === tagId);
-    if (!tag) return;
-
-    if (!confirm(`Удалить метку "${tag.name}"? Это действие необратимо.`)) {
-      return;
-    }
-
-    try {
-      await deleteTag(tagId);
-      await loadData();
-    } catch (error) {
-      console.error('Ошибка удаления метки:', error);
-    }
+  const handleCategoryClick = (categoryId: string) => {
+    setEditingCategoryId(categoryId);
+    setIsEditCategoryModalOpen(true);
   };
 
-  const handleCategoryDelete = async (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    if (!category) return;
-
-    if (!confirm(`Удалить категорию "${category.name}" и все метки в ней? Это действие необратимо.`)) {
-      return;
-    }
-
-    try {
-      await deleteCategory(categoryId);
-      
-      // Логируем удаление категории
-      await logDeleteCategory(category.name);
-      
-      await loadData();
-    } catch (error) {
-      console.error('Ошибка удаления категории:', error);
-    }
+  const handleCategoryUpdated = () => {
+    loadData();
   };
 
-  const handleAddTag = (categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-    setIsCreateTagModalOpen(true);
-  };
-
-  const handleCategoryRename = async (categoryId: string) => {
-    const category = categories.find(c => c.id === categoryId);
-    if (!category) return;
-
-    const newName = prompt('Новое название категории:', category.name);
-    
-    if (!newName || newName.trim() === '' || newName.trim() === category.name) {
-      return;
-    }
-
-    try {
-      const oldName = category.name;
-      await updateCategory(categoryId, { name: newName.trim() });
-      
-      // Логируем переименование
-      await logRenameCategory(oldName, newName.trim());
-      
-      await loadData();
-    } catch (error) {
-      console.error('Ошибка переименования категории:', error);
-    }
-  };
-
-  const handleTagRename = async (tagId: string) => {
-    const tag = tags.find(t => t.id === tagId);
-    if (!tag) return;
-
-    const newName = prompt('Новое название метки:', tag.name);
-    
-    if (!newName || newName.trim() === '' || newName.trim() === tag.name) {
-      return;
-    }
-
-    try {
-      const oldName = tag.name;
-      await updateTag(tagId, { name: newName.trim() });
-      
-      // Логируем переименование
-      await logRenameTag(oldName, newName.trim());
-      
-      await loadData();
-    } catch (error) {
-      console.error('Ошибка переименования метки:', error);
-    }
+  const handleCategoryDeleted = () => {
+    loadData();
   };
 
   const handleCategoryCreated = () => {
     loadData();
   };
 
-  const handleTagCreated = () => {
-    loadData();
-  };
 
   if (isLoading) {
     return (
@@ -172,6 +94,7 @@ export const TagsPage = () => {
       }}
       searchProps={searchProps}
     >
+      <CategoryStats categories={categories} tags={tags} />
       {categories.length > 0 ? (
         <div className="tags-page">
           {categories.map((category) => {
@@ -181,11 +104,7 @@ export const TagsPage = () => {
                 key={category.id}
                 category={category}
                 tags={categoryTags}
-                onTagRemove={handleTagRemove}
-                onCategoryDelete={handleCategoryDelete}
-                onAddTag={handleAddTag}
-                onCategoryRename={handleCategoryRename}
-                onTagRename={handleTagRename}
+                onCategoryClick={handleCategoryClick}
               />
             );
           })}
@@ -215,15 +134,17 @@ export const TagsPage = () => {
         onCategoryCreated={handleCategoryCreated}
       />
 
-      {selectedCategoryId && (
-        <CreateTagModal
-          isOpen={isCreateTagModalOpen}
-          categoryId={selectedCategoryId}
+      {editingCategoryId && (
+        <EditCategoryModal
+          isOpen={isEditCategoryModalOpen}
+          category={categories.find(c => c.id === editingCategoryId) || null}
+          tags={tags.filter(t => t.categoryId === editingCategoryId)}
           onClose={() => {
-            setIsCreateTagModalOpen(false);
-            setSelectedCategoryId(null);
+            setIsEditCategoryModalOpen(false);
+            setEditingCategoryId(null);
           }}
-          onTagCreated={handleTagCreated}
+          onCategoryUpdated={handleCategoryUpdated}
+          onCategoryDeleted={handleCategoryDeleted}
         />
       )}
     </Layout>

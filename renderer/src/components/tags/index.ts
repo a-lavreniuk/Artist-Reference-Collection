@@ -11,3 +11,8 @@ export type { CreateCategoryModalProps } from './CreateCategoryModal';
 export { CreateTagModal } from './CreateTagModal';
 export type { CreateTagModalProps } from './CreateTagModal';
 
+export { CategoryStats } from './CategoryStats';
+
+export { EditCategoryModal } from './EditCategoryModal';
+export type { EditCategoryModalProps } from './EditCategoryModal';
+
