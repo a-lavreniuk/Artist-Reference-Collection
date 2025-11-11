@@ -59,13 +59,20 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   // Проверка, находимся ли мы на странице карточек
   const isOnCardsPage = location.pathname === '/' || location.pathname === '/cards';
 
-  // Очищаем выбранные метки при переходе на другой раздел
+  // Очищаем выбранные метки при переходе С страницы карточек на другой раздел
+  // НЕ очищаем при переходе НА страницу карточек (чтобы работал клик на метку)
   useEffect(() => {
-    if (!isOnCardsPage && selectedTags.length > 0) {
+    const prevPath = sessionStorage.getItem('prevPath') || '/';
+    const wasPreviouslyOnCardsPage = prevPath === '/' || prevPath === '/cards';
+    
+    if (!isOnCardsPage && wasPreviouslyOnCardsPage && selectedTags.length > 0) {
       console.log('[SearchContext] Очистка выбранных меток при переходе на другой раздел');
       setSelectedTags([]);
       setIsSearchMenuOpen(false);
     }
+    
+    // Сохраняем текущий путь для следующего useEffect
+    sessionStorage.setItem('prevPath', location.pathname);
   }, [location.pathname, isOnCardsPage, selectedTags.length]);
 
   // Обработчик любого действия в поиске
