@@ -50,8 +50,10 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
   const [searchQuery, setSearchQuery] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
+  const [hasScroll, setHasScroll] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queueScrollRef = useRef<HTMLDivElement>(null);
   
   // Получаем доступ к файловой системе
   const { directoryPath, hasPermission } = useFileSystem();
@@ -71,6 +73,21 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
   useEffect(() => {
     loadData();
   }, []);
+
+  // Проверяем нужен ли скролл
+  useEffect(() => {
+    const checkScroll = () => {
+      if (queueScrollRef.current) {
+        const needsScroll = queueScrollRef.current.scrollWidth > queueScrollRef.current.clientWidth;
+        setHasScroll(needsScroll);
+      }
+    };
+
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [queue]);
 
   const currentFile = queue[currentIndex];
 
@@ -427,7 +444,10 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     <div className="add-card-flow">
       {/* Очередь файлов */}
       <div className="add-card-flow__queue">
-        <div className="add-card-flow__queue-scroll">
+        <div 
+          ref={queueScrollRef}
+          className="add-card-flow__queue-scroll"
+        >
           {queue.map((item, index) => (
             <div
               key={index}
@@ -474,8 +494,8 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
         {/* Убрали счётчик [число] из [число] */}
       </div>
 
-      {/* Разделитель - обычная линия */}
-      <div className="add-card-flow__divider-line" />
+      {/* Разделитель - обычная линия (показывается только когда НЕТ скролла) */}
+      {!hasScroll && <div className="add-card-flow__divider-line" />}
 
       {/* Основной контент */}
       <div className="add-card-flow__main">
