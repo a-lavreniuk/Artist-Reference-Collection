@@ -526,7 +526,7 @@ export const SettingsPage = () => {
         <div style={{ 
           display: 'flex',
           flexDirection: 'column',
-          gap: 'var(--spacing-2xl, 32px)',
+          gap: 'var(--spacing-l, 16px)',
           width: '100%'
         }}>
             {/* Секция: Использование пространства */}
@@ -714,34 +714,31 @@ export const SettingsPage = () => {
                 flex: '1 0 0',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 'var(--spacing-l, 16px)',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
                 minHeight: '1px',
                 minWidth: '1px'
               }}>
-                <h2 className="h2" style={{ 
-                  fontFamily: 'var(--font-family-heading)',
-                  fontSize: 'var(--font-size-h2, 32px)',
-                  lineHeight: 'var(--line-height-h2, 32px)',
-                  fontWeight: 'var(--font-weight-bold, 700)',
-                  color: 'var(--text-primary, #3b3946)',
-                  letterSpacing: '0px',
-                  width: '100%'
-                }}>
-                  Локальное хранилище
-                </h2>
-                
+                <Icon name="hard-drive" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
                 <div style={{
-                  flex: '1 0 0',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 'var(--spacing-l, 16px)',
-                  padding: 'var(--spacing-xl, 24px)',
-                  border: '2px solid var(--border-default, #ebe9ee)',
-                  borderRadius: 'var(--radius-l, 16px)',
-                  minHeight: '1px',
-                  minWidth: '1px',
                   width: '100%'
                 }}>
+                  <h3 className="h3" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h3, 28px)',
+                    lineHeight: 'var(--line-height-h3, 28px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    Локальное хранилище
+                  </h3>
+                  
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -787,31 +784,37 @@ export const SettingsPage = () => {
                 flex: '1 0 0',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 'var(--spacing-l, 16px)',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
                 minHeight: '1px',
                 minWidth: '1px'
               }}>
-                <h2 className="h2" style={{ 
-                  fontFamily: 'var(--font-family-heading)',
-                  fontSize: 'var(--font-size-h2, 32px)',
-                  lineHeight: 'var(--line-height-h2, 32px)',
-                  fontWeight: 'var(--font-weight-bold, 700)',
-                  color: 'var(--text-primary, #3b3946)',
-                  letterSpacing: '0px',
-                  width: '100%'
-                }}>
-                  Резервная копия
-                </h2>
-                
+                <Icon name="folder-input" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 'var(--spacing-l, 16px)',
-                  padding: 'var(--spacing-xl, 24px)',
-                  border: '2px solid var(--border-default, #ebe9ee)',
-                  borderRadius: 'var(--radius-l, 16px)',
                   width: '100%'
                 }}>
+                  <h3 className="h3" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h3, 28px)',
+                    lineHeight: 'var(--line-height-h3, 28px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    Резервная копия
+                  </h3>
+                  
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-l, 16px)',
+                    width: '100%'
+                  }}>
                   <p className="text-m" style={{
                     fontFamily: 'var(--font-family-body)',
                     fontSize: 'var(--font-size-m, 16px)',
@@ -883,6 +886,7 @@ export const SettingsPage = () => {
                     </Button>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
 

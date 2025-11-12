@@ -183,38 +183,38 @@ export const HistorySection = () => {
 
   return (
     <div className="history-section">
-      <h3 className="history-section__title h3">История изменений</h3>
+      <h2 className="history-section__title">История изменений</h2>
 
       {/* Фильтры */}
       <div className="history-section__filters">
         <div className="history-section__filter-buttons">
           <Button
-            variant={activePeriod === 'today' ? 'primary' : 'secondary'}
-            size="small"
+            variant={activePeriod === 'today' ? 'primary' : 'border'}
+            size="S"
             onClick={() => setActivePeriod('today')}
           >
             Сегодня
           </Button>
 
           <Button
-            variant={activePeriod === 'week' ? 'primary' : 'secondary'}
-            size="small"
+            variant={activePeriod === 'week' ? 'primary' : 'border'}
+            size="S"
             onClick={() => setActivePeriod('week')}
           >
             За неделю
           </Button>
 
           <Button
-            variant={activePeriod === 'month' ? 'primary' : 'secondary'}
-            size="small"
+            variant={activePeriod === 'month' ? 'primary' : 'border'}
+            size="S"
             onClick={() => setActivePeriod('month')}
           >
             За месяц
           </Button>
 
           <Button
-            variant={activePeriod === 'all' ? 'primary' : 'secondary'}
-            size="small"
+            variant={activePeriod === 'all' ? 'primary' : 'border'}
+            size="S"
             onClick={() => setActivePeriod('all')}
           >
             Вся история
@@ -222,8 +222,8 @@ export const HistorySection = () => {
         </div>
 
         <Button
-          variant="secondary"
-          size="small"
+          variant="border"
+          size="S"
           onClick={handleClearHistory}
           disabled={history.length === 0}
         >
@@ -260,7 +260,7 @@ export const HistorySection = () => {
             const descriptionParts = parseDescription(entry.description);
             
             return (
-              <div key={entry.id}>
+              <div key={entry.id} className="history-section__entry">
                 <div className="history-section__item">
                   <p className="history-section__timestamp text-m">
                     {formatDate(entry.timestamp)}
