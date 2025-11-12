@@ -1,6 +1,7 @@
 /**
- * Компонент Alert - модальные диалоги для подтверждения действий
+ * Компонент Dialog - модальные диалоги для подтверждения действий
  * Типы: confirm (подтверждение), info (информация), prompt (ввод)
+ * Позиция: центр экрана
  */
 
 import { useState, useEffect, useRef, type ReactNode } from 'react';
@@ -8,20 +9,20 @@ import { createPortal } from 'react-dom';
 import { Button } from './Button';
 import { Icon } from './Icon';
 import { Input } from './Input';
-import './Alert.css';
+import './Dialog.css';
 
-export type AlertType = 'confirm' | 'info' | 'prompt';
-export type AlertVariant = 'default' | 'destructive';
+export type DialogType = 'confirm' | 'info' | 'prompt';
+export type DialogVariant = 'default' | 'destructive';
 
-export interface AlertProps {
+export interface DialogProps {
   /** Открыт ли диалог */
   isOpen: boolean;
   
   /** Тип диалога */
-  type: AlertType;
+  type: DialogType;
   
   /** Вариант стиля (для деструктивных действий) */
-  variant?: AlertVariant;
+  variant?: DialogVariant;
   
   /** Заголовок */
   title: string;
@@ -55,9 +56,9 @@ export interface AlertProps {
 }
 
 /**
- * Компонент Alert
+ * Компонент Dialog
  */
-export const Alert = ({
+export const Dialog = ({
   isOpen,
   type,
   variant = 'default',
@@ -71,7 +72,7 @@ export const Alert = ({
   onConfirm,
   onCancel,
   closeOnOverlayClick = false
-}: AlertProps) => {
+}: DialogProps) => {
   const [inputValue, setInputValue] = useState(defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -148,25 +149,25 @@ export const Alert = ({
     // Если icon - это string, используем компонент Icon
     if (typeof icon === 'string') {
       return (
-        <div className={`alert__icon alert__icon--${variant}`}>
+        <div className={`dialog__icon dialog__icon--${variant}`}>
           <Icon name={icon as any} size={32} variant="fill" />
         </div>
       );
     }
 
     // Иначе рендерим как ReactNode
-    return <div className={`alert__icon alert__icon--${variant}`}>{icon}</div>;
+    return <div className={`dialog__icon dialog__icon--${variant}`}>{icon}</div>;
   };
 
-  const alertClassName = `alert alert--${type} alert--${variant}`;
+  const dialogClassName = `dialog dialog--${type} dialog--${variant}`;
 
   return createPortal(
-    <div className="alert-overlay" onClick={handleOverlayClick}>
-      <div className={alertClassName} role="alertdialog" aria-modal="true">
+    <div className="dialog-overlay" onClick={handleOverlayClick}>
+      <div className={dialogClassName} role="dialog" aria-modal="true">
         {/* Кнопка закрытия */}
         <button
           type="button"
-          className="alert__close"
+          className="dialog__close"
           onClick={onCancel}
           aria-label="Закрыть"
         >
@@ -177,10 +178,10 @@ export const Alert = ({
         {renderIcon()}
 
         {/* Заголовок */}
-        <h3 className="alert__title">{title}</h3>
+        <h3 className="dialog__title">{title}</h3>
 
         {/* Описание */}
-        <p className="alert__description">{description}</p>
+        <p className="dialog__description">{description}</p>
 
         {/* Input для prompt */}
         {type === 'prompt' && (
@@ -196,7 +197,7 @@ export const Alert = ({
         )}
 
         {/* Кнопки действий */}
-        <div className="alert__actions">
+        <div className="dialog__actions">
           {type !== 'info' && (
             <Button variant="border" size="L" onClick={onCancel}>
               {cancelText}
@@ -224,5 +225,5 @@ export const Alert = ({
   );
 };
 
-export default Alert;
+export default Dialog;
 

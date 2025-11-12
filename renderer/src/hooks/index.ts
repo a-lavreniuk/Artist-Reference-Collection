@@ -5,5 +5,5 @@
 export { useFileSystem } from './useFileSystem';
 export { useElectronUpdates } from './useElectronUpdates';
 export { useSearchNavigation } from './useSearchNavigation';
-export { useAlert, AlertContextProvider, AlertContext } from './useAlert';
+export { useDialog, DialogContextProvider, DialogContext } from './useDialog';
 

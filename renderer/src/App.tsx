@@ -15,7 +15,7 @@ import {
   AddPage,
   TestNotificationsPage
 } from './pages';
-import { OnboardingScreen, UpdateNotification, ErrorBoundary, AlertProvider } from './components/common';
+import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider } from './components/common';
 import { useFileSystem, useElectronUpdates } from './hooks';
 import { SearchProvider } from './contexts';
 
@@ -132,7 +132,7 @@ function App() {
 
   // Основное приложение
   return (
-    <AlertProvider>
+    <DialogProvider>
       <Router>
         <SearchProvider>
           <ErrorBoundary>
@@ -158,7 +158,7 @@ function App() {
         onUpdate={handleUpdate}
         onDismiss={handleDismissUpdate}
       />
-    </AlertProvider>
+    </DialogProvider>
   );
 }
 

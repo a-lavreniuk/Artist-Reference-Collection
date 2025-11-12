@@ -1,25 +1,25 @@
 /**
- * AlertProvider - глобальный провайдер для Alert диалогов
+ * DialogProvider - глобальный провайдер для Dialog окон
  * Должен быть размещен в корне приложения (App.tsx)
  */
 
 import type { ReactNode } from 'react';
 import { useContext } from 'react';
-import { Alert } from './Alert';
-import { AlertContextProvider, AlertContext } from '../../hooks/useAlert';
+import { Dialog } from './Dialog';
+import { DialogContextProvider, DialogContext } from '../../hooks/useDialog';
 
 /**
- * Внутренний компонент для отображения Alert
+ * Внутренний компонент для отображения Dialog
  */
-const AlertDisplay = () => {
-  const context = useContext(AlertContext);
+const DialogDisplay = () => {
+  const context = useContext(DialogContext);
   
   if (!context) return null;
 
   const { state, confirm, cancel } = context;
 
   return (
-    <Alert
+    <Dialog
       isOpen={state.isOpen}
       type={state.type}
       variant={state.variant}
@@ -38,16 +38,16 @@ const AlertDisplay = () => {
 };
 
 /**
- * Компонент AlertProvider
+ * Компонент DialogProvider
  */
-export const AlertProvider = ({ children }: { children: ReactNode }) => {
+export const DialogProvider = ({ children }: { children: ReactNode }) => {
   return (
-    <AlertContextProvider>
+    <DialogContextProvider>
       {children}
-      <AlertDisplay />
-    </AlertContextProvider>
+      <DialogDisplay />
+    </DialogContextProvider>
   );
 };
 
-export default AlertProvider;
+export default DialogProvider;
 

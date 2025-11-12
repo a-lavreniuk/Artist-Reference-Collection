@@ -1,11 +1,12 @@
 /**
- * Стили для компонента Alert
+ * Стили для компонента Dialog
  * Модальные диалоги: confirm, info, prompt
+ * Позиция: центр экрана
  */
 
 /* ========== OVERLAY ========== */
 
-.alert-overlay {
+.dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -21,10 +22,10 @@
   background-color: var(--bg-overlay);
   backdrop-filter: var(--backdrop-blur);
   
-  animation: alert-overlay-enter var(--transition-base);
+  animation: dialog-overlay-enter var(--transition-base);
 }
 
-@keyframes alert-overlay-enter {
+@keyframes dialog-overlay-enter {
   from {
     opacity: 0;
   }
@@ -33,9 +34,9 @@
   }
 }
 
-/* ========== ALERT DIALOG ========== */
+/* ========== DIALOG ========== */
 
-.alert {
+.dialog {
   position: relative;
   z-index: var(--z-modal);
   
@@ -52,10 +53,10 @@
   border-radius: var(--radius-l);
   box-shadow: var(--shadow-xl);
   
-  animation: alert-enter var(--transition-base);
+  animation: dialog-enter var(--transition-base);
 }
 
-@keyframes alert-enter {
+@keyframes dialog-enter {
   from {
     opacity: 0;
     transform: scale(0.95);
@@ -68,7 +69,7 @@
 
 /* ========== КНОПКА ЗАКРЫТИЯ ========== */
 
-.alert__close {
+.dialog__close {
   position: absolute;
   top: var(--spacing-l);
   right: var(--spacing-l);
@@ -90,18 +91,18 @@
   transition: all var(--transition-fast);
 }
 
-.alert__close:hover {
+.dialog__close:hover {
   background-color: var(--color-grayscale-100);
   color: var(--text-primary);
 }
 
-.alert__close:active {
+.dialog__close:active {
   transform: scale(0.95);
 }
 
 /* ========== ИКОНКА ========== */
 
-.alert__icon {
+.dialog__icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,17 +113,17 @@
   flex-shrink: 0;
 }
 
-.alert__icon--default {
+.dialog__icon--default {
   color: var(--icon-default);
 }
 
-.alert__icon--destructive {
+.dialog__icon--destructive {
   color: var(--color-red-600);
 }
 
 /* ========== ЗАГОЛОВОК ========== */
 
-.alert__title {
+.dialog__title {
   margin: 0;
   width: 100%;
   text-align: center;
@@ -137,7 +138,7 @@
 
 /* ========== ОПИСАНИЕ ========== */
 
-.alert__description {
+.dialog__description {
   margin: 0;
   width: 100%;
   text-align: center;
@@ -153,39 +154,39 @@
 }
 
 /* Длинное описание с прокруткой */
-.alert__description--scrollable {
+.dialog__description--scrollable {
   max-height: 300px;
   overflow-y: auto;
   text-align: left;
   padding-right: var(--spacing-m);
 }
 
-.alert__description--scrollable::-webkit-scrollbar {
+.dialog__description--scrollable::-webkit-scrollbar {
   width: 6px;
 }
 
-.alert__description--scrollable::-webkit-scrollbar-track {
+.dialog__description--scrollable::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.alert__description--scrollable::-webkit-scrollbar-thumb {
+.dialog__description--scrollable::-webkit-scrollbar-thumb {
   background: var(--color-grayscale-300);
   border-radius: var(--radius-s);
 }
 
-.alert__description--scrollable::-webkit-scrollbar-thumb:hover {
+.dialog__description--scrollable::-webkit-scrollbar-thumb:hover {
   background: var(--color-grayscale-400);
 }
 
 /* ========== INPUT (для prompt) ========== */
 
-.alert form {
+.dialog form {
   width: 100%;
 }
 
 /* ========== ДЕЙСТВИЯ ========== */
 
-.alert__actions {
+.dialog__actions {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -195,33 +196,33 @@
 }
 
 /* Для info с одной кнопкой */
-.alert--info .alert__actions {
+.dialog--info .dialog__actions {
   justify-content: center;
 }
 
 /* ========== ВАРИАНТЫ ========== */
 
-/* Destructive alerts (удаление и т.п.) */
-.alert--destructive .alert__title {
+/* Destructive dialogs (удаление и т.п.) */
+.dialog--destructive .dialog__title {
   color: var(--text-primary);
 }
 
 /* ========== АДАПТАЦИЯ ========== */
 
 @media (max-width: 1366px) {
-  .alert {
+  .dialog {
     width: 400px;
     padding: var(--spacing-xl);
   }
 }
 
 @media (max-height: 800px) {
-  .alert {
+  .dialog {
     max-height: 90vh;
     overflow-y: auto;
   }
   
-  .alert__description {
+  .dialog__description {
     max-height: 200px;
     overflow-y: auto;
   }

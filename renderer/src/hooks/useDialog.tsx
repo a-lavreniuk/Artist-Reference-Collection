@@ -1,15 +1,16 @@
 /**
- * Hook для работы с Alert диалогами
+ * Hook для работы с Dialog окнами
  * Предоставляет Promise-based API для confirm, info и prompt
+ * Dialog = модальное окно по центру экрана
  */
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { AlertType, AlertVariant } from '../components/common/Alert';
+import type { DialogType, DialogVariant } from '../components/common/Dialog';
 
-interface AlertState {
+interface DialogState {
   isOpen: boolean;
-  type: AlertType;
-  variant: AlertVariant;
+  type: DialogType;
+  variant: DialogVariant;
   title: string;
   description: string;
   icon?: ReactNode | string;
@@ -21,20 +22,20 @@ interface AlertState {
   resolve?: (value: boolean | string | null) => void;
 }
 
-interface AlertContextType {
-  state: AlertState;
-  show: (options: Partial<AlertState>) => void;
+interface DialogContextType {
+  state: DialogState;
+  show: (options: Partial<DialogState>) => void;
   confirm: (value?: string) => void;
   cancel: () => void;
 }
 
-export const AlertContext = createContext<AlertContextType | null>(null);
+export const DialogContext = createContext<DialogContextType | null>(null);
 
 /**
- * Provider для Alert контекста
+ * Provider для Dialog контекста
  */
-export const AlertContextProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<AlertState>({
+export const DialogContextProvider = ({ children }: { children: ReactNode }) => {
+  const [state, setState] = useState<DialogState>({
     isOpen: false,
     type: 'confirm',
     variant: 'default',
@@ -45,7 +46,7 @@ export const AlertContextProvider = ({ children }: { children: ReactNode }) => {
     closeOnOverlayClick: false
   });
 
-  const show = useCallback((options: Partial<AlertState>) => {
+  const show = useCallback((options: Partial<DialogState>) => {
     setState(prev => ({
       ...prev,
       ...options,
@@ -83,9 +84,9 @@ export const AlertContextProvider = ({ children }: { children: ReactNode }) => {
   }, [state.resolve, state.type, hide]);
 
   return (
-    <AlertContext.Provider value={{ state, show, confirm, cancel }}>
+    <DialogContext.Provider value={{ state, show, confirm, cancel }}>
       {children}
-    </AlertContext.Provider>
+    </DialogContext.Provider>
   );
 };
 
@@ -95,7 +96,7 @@ interface ConfirmOptions {
   icon?: ReactNode | string;
   confirmText?: string;
   cancelText?: string;
-  variant?: AlertVariant;
+  variant?: DialogVariant;
   closeOnOverlayClick?: boolean;
 }
 
@@ -119,13 +120,13 @@ interface PromptOptions {
 }
 
 /**
- * Hook для работы с Alert диалогами
+ * Hook для работы с Dialog окнами
  */
-export function useAlert() {
-  const context = useContext(AlertContext);
+export function useDialog() {
+  const context = useContext(DialogContext);
   
   if (!context) {
-    throw new Error('useAlert должен использоваться внутри AlertContextProvider');
+    throw new Error('useDialog должен использоваться внутри DialogContextProvider');
   }
 
   const { show } = context;
@@ -198,5 +199,5 @@ export function useAlert() {
   };
 }
 
-export default useAlert;
+export default useDialog;
 

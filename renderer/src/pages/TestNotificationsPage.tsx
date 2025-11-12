@@ -6,12 +6,12 @@
 import { useState } from 'react';
 import { Layout } from '../components/layout';
 import { Button, Icon } from '../components/common';
-import { useAlert } from '../hooks';
+import { useDialog } from '../hooks';
 import { useToast } from '../hooks/useToast';
 import type { SearchProps } from '../components/layout/SearchBar';
 
 export const TestNotificationsPage = () => {
-  const alert = useAlert();
+  const dialog = useDialog();
   const toast = useToast();
   const [lastResult, setLastResult] = useState<string>('');
 
@@ -30,7 +30,7 @@ export const TestNotificationsPage = () => {
   // ========== ALERT TESTS ==========
 
   const handleConfirmDefault = async () => {
-    const result = await alert.confirm({
+    const result = await dialog.confirm({
       title: 'Подтвердите действие',
       description: 'Вы уверены, что хотите выполнить это действие?',
       confirmText: 'Подтвердить',
@@ -40,7 +40,7 @@ export const TestNotificationsPage = () => {
   };
 
   const handleConfirmDestructive = async () => {
-    const result = await alert.confirm({
+    const result = await dialog.confirm({
       title: 'Удалить карточку?',
       description: 'Это действие нельзя отменить. Карточка будет удалена безвозвратно.',
       icon: 'trash-3',
@@ -52,7 +52,7 @@ export const TestNotificationsPage = () => {
   };
 
   const handleConfirmWithIcon = async () => {
-    const result = await alert.confirm({
+    const result = await dialog.confirm({
       title: 'Сменить местоположение хранилища?',
       description: 'Смена папки сохранения приведёт к тому что потеряются все настроенные связи.',
       icon: 'folder-output',
@@ -64,7 +64,7 @@ export const TestNotificationsPage = () => {
   };
 
   const handleInfoDialog = async () => {
-    await alert.info({
+    await dialog.info({
       title: 'Информация',
       description: 'Это информационное окно. Оно показывает важную информацию пользователю и требует только подтверждения.',
       confirmText: 'Понятно'
@@ -73,7 +73,7 @@ export const TestNotificationsPage = () => {
   };
 
   const handlePromptDialog = async () => {
-    const result = await alert.prompt({
+    const result = await dialog.prompt({
       title: 'Введите название',
       description: 'Создание новой коллекции. Введите название для новой коллекции.',
       defaultValue: 'Без названия',
@@ -90,7 +90,7 @@ export const TestNotificationsPage = () => {
   };
 
   const handleLongTextDialog = async () => {
-    await alert.info({
+    await dialog.info({
       title: 'Очень длинный текст',
       description: `Это пример диалога с очень длинным текстом.
       
@@ -165,10 +165,10 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
           </div>
         )}
 
-        {/* Секция: Alert Dialogs */}
+        {/* Секция: Dialogs */}
         <section>
           <h2 className="h2" style={{ marginBottom: 'var(--spacing-l)' }}>
-            Alert Dialogs
+            Dialog Windows (модальные окна)
           </h2>
           
           <div style={{
