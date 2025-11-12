@@ -63,8 +63,7 @@
   flex: 1;
   
   /* Скролл */
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden; /* Убран скролл - весь контент должен вписываться в экран */
   
   /* Оформление */
   padding: var(--spacing-2xl);

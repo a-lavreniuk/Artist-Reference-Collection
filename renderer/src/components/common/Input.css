@@ -52,9 +52,9 @@
   padding: 0 16px;
   
   /* Оформление */
-  background-color: var(--bg-secondary);
-  border: 2px solid var(--border-default);
-  border-radius: 16px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: 12px;
   
   /* Переходы */
   transition: all var(--transition-fast);
@@ -74,22 +74,21 @@
 
 /* Hover */
 .input:hover:not(:disabled):not(:focus) {
-  border-color: var(--border-hover);
+  background-color: var(--color-grayscale-200);
 }
 
 /* Focus - идентично Hover */
 .input:focus {
-  border-color: var(--border-hover);
+  background-color: var(--color-grayscale-200);
 }
 
 /* Error */
 .input--error {
-  border-color: var(--color-red-500);
+  background-color: var(--color-red-100);
 }
 
 .input--error:focus {
-  border-color: var(--color-red-500);
-  box-shadow: 0 0 0 3px rgba(236, 34, 31, 0.1);
+  background-color: var(--color-red-100);
 }
 
 /* Disabled */
@@ -102,7 +101,7 @@
 /* ========== РАЗМЕРЫ ========== */
 
 .input--medium {
-  height: var(--height-input);
+  height: 44px;
 }
 
 .input--large {

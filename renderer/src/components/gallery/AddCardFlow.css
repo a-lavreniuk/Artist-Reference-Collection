@@ -72,9 +72,14 @@
   overflow-x: auto;
   overflow-y: hidden;
   margin-bottom: 32px;
-  /* Оптимизация производительности скролла */
-  will-change: scroll-position;
-  -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+  /* Drag-to-scroll */
+  cursor: grab;
+  user-select: none; /* Предотвращаем выделение текста и изображений */
+  touch-action: pan-y;
+}
+
+.add-card-flow__queue-scroll.active {
+  cursor: grabbing;
 }
 
 /* Когда есть скролл - добавляем padding-bottom */
@@ -181,37 +186,42 @@
   /* Оптимизация производительности изображений */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  transform: translateZ(0); /* GPU-ускорение */
-  will-change: transform;
+  /* Предотвращаем выделение */
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .add-card-flow__queue-check {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  background-color: var(--bg-success);
-  border-radius: 50%;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(81, 79, 91, 0.48);
+  backdrop-filter: blur(64px);
+  border: none;
+  border-radius: var(--radius-s);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-light);
+  opacity: 1;
 }
 
 .add-card-flow__queue-remove {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 20px;
-  height: 20px;
-  background-color: rgba(236, 34, 31, 0.9);
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(81, 79, 91, 0.48);
+  backdrop-filter: blur(64px);
   border: none;
-  border-radius: 50%;
+  border-radius: var(--radius-s);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-light);
   cursor: pointer;
   opacity: 0;
   transition: opacity var(--transition-fast);
@@ -226,15 +236,19 @@
 .add-card-flow__main {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-xl);
-  flex: 1;
+  gap: 16px;
+  /* Вычисляем высоту так, чтобы снизу оставалось 32px до края экрана */
+  /* 100vh - header(80px) - section-header(80px) - padding-top(32px) - queue(128px + 32px) - divider(2px + 32px) - padding-bottom(32px) */
+  height: calc(100vh - 80px - 80px - 32px - 160px - 34px - 32px);
+  max-height: calc(100vh - 80px - 80px - 32px - 160px - 34px - 32px);
+  overflow: hidden;
 }
 
 .add-card-flow__preview {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-grayscale-900);
+  background-color: var(--color-grayscale-100);
   border-radius: var(--radius-l);
   overflow: hidden;
 }
@@ -250,41 +264,143 @@
 .add-card-flow__settings {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-l);
-  background-color: var(--bg-secondary);
-  border-radius: var(--radius-l);
-  border: 1px solid var(--border-default);
-  padding: var(--spacing-l);
-  /* Убран overflow-y: auto - чтобы footer был внизу */
+  gap: 16px;
+  height: 100%;
+  overflow: hidden;
 }
 
-.add-card-flow__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-m);
-  padding-bottom: var(--spacing-l);
-  border-bottom: 1px solid var(--border-default);
-}
-
-.add-card-flow__section {
+/* Общие стили для блоков */
+.add-card-flow__block {
   display: flex;
   flex-direction: column;
+  background-color: var(--color-grayscale-50);
+  border-radius: var(--radius-l);
+  border: 2px solid var(--color-grayscale-100);
+  padding: var(--spacing-l);
 }
 
-/* Секция с метками растягивается на всё свободное пространство */
-.add-card-flow__section:last-of-type {
+.add-card-flow__block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-m);
+}
+
+.add-card-flow__block-title {
+  /* H2 */
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.add-card-flow__block-counter {
+  color: var(--color-grayscale-500);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+}
+
+.add-card-flow__block-description {
+  /* M */
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Блок шаблона */
+.add-card-flow__block--template {
+  flex-shrink: 0;
+}
+
+.add-card-flow__template-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.add-card-flow__template-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  background-color: var(--bg-primary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-m);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-card-flow__template-button:hover:not(:disabled) {
+  background-color: var(--color-grayscale-100);
+  border-color: var(--border-hover);
+}
+
+.add-card-flow__template-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Блок коллекций */
+.add-card-flow__block--collections {
+  flex-shrink: 0;
+}
+
+/* Блок меток - растягивается и имеет внутренний скролл */
+.add-card-flow__block--tags {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
+/* Список тегов */
+.add-card-flow__tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+/* Контейнер категорий с внутренним скроллом */
 .add-card-flow__categories {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-l);
-  flex: 1; /* Растягивается на всё свободное пространство */
-  overflow-y: auto; /* Скролл внутри categories если не влезают */
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
+  padding-right: var(--spacing-xs);
+}
+
+/* Кастомный скроллбар для категорий */
+.add-card-flow__categories::-webkit-scrollbar {
+  width: 6px;
+}
+
+.add-card-flow__categories::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.add-card-flow__categories::-webkit-scrollbar-thumb {
+  background-color: var(--color-grayscale-200);
+  border-radius: 3px;
+}
+
+.add-card-flow__categories::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-grayscale-300);
 }
 
 .add-card-flow__category {
@@ -296,14 +412,70 @@
   border-bottom: none;
 }
 
+/* Кнопки меток и коллекций */
+.add-card-flow__tag-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  height: 32px;
+  padding: 0 12px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-s);
+  color: var(--color-grayscale-900);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-card-flow__tag-button:hover {
+  background-color: var(--color-grayscale-200);
+}
+
+.add-card-flow__tag-button .text-s {
+  color: var(--color-grayscale-900);
+}
+
+/* Выбранная метка/коллекция */
+.add-card-flow__tag-button--selected {
+  background-color: var(--color-grayscale-800);
+  color: var(--text-light);
+}
+
+.add-card-flow__tag-button--selected:hover {
+  background-color: var(--color-grayscale-800);
+}
+
+.add-card-flow__tag-button--selected .text-s {
+  color: var(--text-light);
+}
+
+/* Кнопка добавления метки */
+.add-card-flow__add-tag-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-s);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.add-card-flow__add-tag-button:hover {
+  background-color: var(--color-grayscale-200);
+}
+
 /* ========== ФУТЕР ========== */
 
 .add-card-flow__footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: var(--spacing-l);
-  border-top: 1px solid var(--border-default);
   margin-top: auto; /* Прижат к низу блока настроек */
 }
 

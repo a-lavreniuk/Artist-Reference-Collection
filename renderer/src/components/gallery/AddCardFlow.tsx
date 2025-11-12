@@ -26,10 +26,12 @@ interface QueueItemProps {
   isActive: boolean;
   onSelect: (index: number) => void;
   onRemove: (index: number) => void;
+  isDraggingRef?: React.MutableRefObject<boolean>;
 }
 
-const QueueItem = memo(({ item, index, isActive, onSelect, onRemove }: QueueItemProps) => {
+const QueueItem = memo(({ item, index, isActive, onSelect, onRemove, isDraggingRef }: QueueItemProps) => {
   const handleClick = () => {
+    if (isDraggingRef?.current) return;
     onSelect(index);
   };
 
@@ -93,13 +95,21 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
   
   const [clipboard, setClipboard] = useState<{ tags: string[]; collections: string[] } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
+  const [tagsSearchQuery, setTagsSearchQuery] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
   const [hasScroll, setHasScroll] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queueScrollRef = useRef<HTMLDivElement>(null);
+  const queueDragStateRef = useRef<{ pointerId: number | null; startX: number; lastX: number }>({
+    pointerId: null,
+    startX: 0,
+    lastX: 0
+  });
+  const queueDraggingRef = useRef(false);
+  const queuePointerDownItemRef = useRef<HTMLElement | null>(null);
   
   // Получаем доступ к файловой системе
   const { directoryPath, hasPermission } = useFileSystem();
@@ -145,6 +155,103 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       window.removeEventListener('resize', debouncedCheckScroll);
     };
   }, [queue]);
+
+  const handleQueuePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('button')) {
+      return;
+    }
+
+    const slider = queueScrollRef.current;
+    if (!slider) return;
+
+    queueDragStateRef.current.pointerId = event.pointerId;
+    queueDragStateRef.current.startX = event.clientX;
+    queueDragStateRef.current.lastX = event.clientX;
+    queueDraggingRef.current = false;
+    queuePointerDownItemRef.current = (event.target as HTMLElement).closest('.add-card-flow__queue-item') as HTMLElement | null;
+
+    if (slider.setPointerCapture) {
+      slider.setPointerCapture(event.pointerId);
+    }
+    slider.classList.add('active');
+  }, []);
+
+  const handleQueuePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const slider = queueScrollRef.current;
+    if (!slider) return;
+
+    const state = queueDragStateRef.current;
+    if (state.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - state.lastX;
+    state.lastX = event.clientX;
+
+    if (!queueDraggingRef.current && Math.abs(event.clientX - state.startX) > 3) {
+      queueDraggingRef.current = true;
+      queuePointerDownItemRef.current = null;
+    }
+
+    if (queueDraggingRef.current) {
+      slider.scrollLeft -= deltaX;
+      event.preventDefault();
+    }
+  }, []);
+
+  const resetQueueDragState = useCallback(() => {
+    queueDragStateRef.current.pointerId = null;
+    queueDragStateRef.current.startX = 0;
+    queueDragStateRef.current.lastX = 0;
+  }, []);
+
+  const handleQueuePointerEnd = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const slider = queueScrollRef.current;
+    if (!slider) return;
+
+    const state = queueDragStateRef.current;
+    if (state.pointerId !== event.pointerId) return;
+
+    if (slider.hasPointerCapture?.(event.pointerId)) {
+      slider.releasePointerCapture(event.pointerId);
+    }
+    slider.classList.remove('active');
+
+    const wasDragging = queueDraggingRef.current;
+    resetQueueDragState();
+
+    if (wasDragging) {
+      requestAnimationFrame(() => {
+        queueDraggingRef.current = false;
+      });
+    } else {
+      queueDraggingRef.current = false;
+
+      const queueItem = queuePointerDownItemRef.current;
+      if (queueItem && slider.contains(queueItem)) {
+        const index = Array.from(slider.children).indexOf(queueItem);
+        if (index !== -1 && index < queue.length) {
+          setCurrentIndex(index);
+        }
+      }
+    }
+
+    queuePointerDownItemRef.current = null;
+  }, [resetQueueDragState, queue.length]);
+
+  const handleQueuePointerLeave = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const slider = queueScrollRef.current;
+    if (!slider) return;
+
+    const state = queueDragStateRef.current;
+    if (state.pointerId !== event.pointerId) return;
+
+    if (slider.hasPointerCapture?.(event.pointerId)) {
+      slider.releasePointerCapture(event.pointerId);
+    }
+    slider.classList.remove('active');
+    queueDraggingRef.current = false;
+    resetQueueDragState();
+    queuePointerDownItemRef.current = null;
+  }, [resetQueueDragState]);
 
   // Мемоизированные вычисления для оптимизации производительности
   const currentFile = useMemo(() => queue[currentIndex], [queue, currentIndex]);
@@ -547,6 +654,11 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
         <div 
           ref={queueScrollRef}
           className={`add-card-flow__queue-scroll ${hasScroll ? 'add-card-flow__queue-scroll--has-scroll' : ''}`}
+          onPointerDown={handleQueuePointerDown}
+          onPointerMove={handleQueuePointerMove}
+          onPointerUp={handleQueuePointerEnd}
+          onPointerCancel={handleQueuePointerEnd}
+          onPointerLeave={handleQueuePointerLeave}
         >
           {queue.map((item, index) => (
             <QueueItem
@@ -556,6 +668,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
               isActive={index === currentIndex}
               onSelect={handleSelectQueueItem}
               onRemove={handleRemoveFromQueue}
+              isDraggingRef={queueDraggingRef}
             />
           ))}
           
@@ -594,17 +707,6 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
 
         {/* Настройки */}
         <div className="add-card-flow__settings">
-          <div className="add-card-flow__header">
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button size="S" variant="secondary" onClick={handleCopySettings}>
-                Копировать
-              </Button>
-              <Button size="S" variant="secondary" onClick={handlePasteSettings} disabled={!clipboard}>
-                Применить
-              </Button>
-            </div>
-          </div>
-
           {message && (
             <div style={{
               padding: '8px 12px',
@@ -616,89 +718,142 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
             </div>
           )}
 
-          {/* Коллекции */}
-          <div className="add-card-flow__section">
-            <h4 className="text-m" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '12px' }}>
-              Коллекции
-            </h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {allCollections.map((coll) => (
-                <Tag
-                  key={coll.id}
-                  variant={currentFile.collections.includes(coll.id) ? 'active' : 'default'}
-                  onClick={() => handleCollectionToggle(coll.id)}
-                  role="button"
+          {/* Блок 1: Шаблон - копирование и применение настроек */}
+          <div className="add-card-flow__block add-card-flow__block--template">
+            <div className="add-card-flow__block-header">
+              <h3 className="add-card-flow__block-title">Шаблон</h3>
+              <div className="add-card-flow__template-actions">
+                <button 
+                  className="add-card-flow__template-button"
+                  onClick={handleCopySettings}
+                  disabled={currentFile.tags.length === 0 && currentFile.collections.length === 0}
+                  title="Копировать настройки"
                 >
-                  {coll.name}
-                </Tag>
-              ))}
+                  <Icon name="save" size={24} variant="border" />
+                </button>
+                <button 
+                  className="add-card-flow__template-button"
+                  onClick={handlePasteSettings}
+                  disabled={!clipboard}
+                  title="Применить настройки"
+                >
+                  <Icon name="download" size={24} variant="border" />
+                </button>
+              </div>
+            </div>
+            <p className="add-card-flow__block-description">
+              Сохранить настройки для применения к другим файлам
+            </p>
+          </div>
+
+          {/* Блок 2: Коллекции */}
+          <div className="add-card-flow__block add-card-flow__block--collections">
+            <div className="add-card-flow__block-header">
+              <h3 className="add-card-flow__block-title">
+                Коллекции
+                {currentFile.collections.length > 0 && (
+                  <span className="add-card-flow__block-counter">{currentFile.collections.length}</span>
+                )}
+              </h3>
+            </div>
+            <Input
+              placeholder="Поиск коллекций..."
+              value={collectionsSearchQuery}
+              onChange={(e) => setCollectionsSearchQuery(e.target.value)}
+              fullWidth
+              style={{ marginBottom: '12px' }}
+            />
+            <div className="add-card-flow__tags-list">
+              {allCollections
+                .filter(coll => 
+                  collectionsSearchQuery === '' || 
+                  coll.name.toLowerCase().includes(collectionsSearchQuery.toLowerCase())
+                )
+                .map((coll) => {
+                  const isSelected = currentFile.collections.includes(coll.id);
+                  return (
+                    <button
+                      key={coll.id}
+                      className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
+                      onClick={() => handleCollectionToggle(coll.id)}
+                    >
+                      <span className="text-s">{coll.name}</span>
+                      {isSelected && <Icon name="x" size={16} variant="border" />}
+                    </button>
+                  );
+                })}
             </div>
           </div>
 
-          {/* Метки */}
-          <div className="add-card-flow__section">
-            <h4 className="text-m" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '12px' }}>
-              Метки {currentFile.tags.length === 0 && <span style={{ color: 'var(--text-error)' }}>*</span>}
-            </h4>
-            
+          {/* Блок 3: Метки с категориями */}
+          <div className="add-card-flow__block add-card-flow__block--tags">
+            <div className="add-card-flow__block-header">
+              <h3 className="add-card-flow__block-title">
+                Метки
+                {currentFile.tags.length > 0 && (
+                  <span className="add-card-flow__block-counter">{currentFile.tags.length}</span>
+                )}
+              </h3>
+            </div>
             <Input
               placeholder="Поиск меток..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={tagsSearchQuery}
+              onChange={(e) => setTagsSearchQuery(e.target.value)}
               fullWidth
-              style={{ marginBottom: '16px' }}
+              style={{ marginBottom: '12px' }}
             />
 
             <div className="add-card-flow__categories">
               {allCategories.map((category) => {
                 const categoryTags = allTags.filter(t => t.categoryId === category.id);
-                const filteredTags = searchQuery 
-                  ? categoryTags.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                const filteredTags = tagsSearchQuery 
+                  ? categoryTags.filter(t => t.name.toLowerCase().includes(tagsSearchQuery.toLowerCase()))
                   : categoryTags;
 
-                if (filteredTags.length === 0 && !searchQuery) return null;
+                // Скрываем категорию если нет меток (или нет совпадений при поиске)
+                if (filteredTags.length === 0) return null;
 
                 return (
                   <div key={category.id} className="add-card-flow__category">
                     <p className="text-s" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '8px' }}>
                       {category.name}
                     </p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                      {filteredTags.map((tag) => (
-                        <Tag
-                          key={tag.id}
-                          variant={currentFile.tags.includes(tag.id) ? 'active' : 'default'}
-                          onClick={() => handleTagToggle(tag.id)}
-                          role="button"
-                        >
-                          {tag.name}
-                        </Tag>
-                      ))}
+                    <div className="add-card-flow__tags-list" style={{ marginBottom: '8px' }}>
+                      {filteredTags.map((tag) => {
+                        const isSelected = currentFile.tags.includes(tag.id);
+                        return (
+                          <button
+                            key={tag.id}
+                            className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
+                            onClick={() => handleTagToggle(tag.id)}
+                          >
+                            <span className="text-s">{tag.name}</span>
+                            {isSelected && <Icon name="x" size={16} variant="border" />}
+                          </button>
+                        );
+                      })}
+                      <button
+                        className="add-card-flow__add-tag-button"
+                        onClick={() => setShowNewTagInput(showNewTagInput === category.id ? null : category.id)}
+                      >
+                        <Icon name={showNewTagInput === category.id ? "x" : "plus"} size={16} variant="border" />
+                      </button>
                     </div>
                     
-                    {showNewTagInput === category.id ? (
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                        <Input
-                          placeholder="Название метки"
-                          value={newTagName}
-                          onChange={(e) => setNewTagName(e.target.value)}
-                          autoFocus
-                        />
-                        <Button size="S" variant="primary" onClick={() => handleCreateTag(category.id)}>
-                          Добавить
-                        </Button>
-                        <Button size="S" variant="ghost" onClick={() => { setShowNewTagInput(null); setNewTagName(''); }}>
-                          ✕
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="S"
-                        variant="ghost"
-                        onClick={() => setShowNewTagInput(category.id)}
-                      >
-                        + Новая метка
-                      </Button>
+                    {showNewTagInput === category.id && (
+                      <Input
+                        placeholder="Название метки"
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newTagName.trim()) {
+                            handleCreateTag(category.id);
+                          }
+                        }}
+                        autoFocus
+                        fullWidth
+                        style={{ marginTop: '8px' }}
+                      />
                     )}
                   </div>
                 );
