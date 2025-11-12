@@ -12,9 +12,10 @@ import {
   TagsPage,
   MoodboardPage,
   SettingsPage,
-  AddPage
+  AddPage,
+  TestNotificationsPage
 } from './pages';
-import { OnboardingScreen, UpdateNotification, ErrorBoundary } from './components/common';
+import { OnboardingScreen, UpdateNotification, ErrorBoundary, AlertProvider } from './components/common';
 import { useFileSystem, useElectronUpdates } from './hooks';
 import { SearchProvider } from './contexts';
 
@@ -131,7 +132,7 @@ function App() {
 
   // Основное приложение
   return (
-    <>
+    <AlertProvider>
       <Router>
         <SearchProvider>
           <ErrorBoundary>
@@ -145,6 +146,7 @@ function App() {
               <Route path="/moodboard" element={<MoodboardPage />} />
               <Route path="/add" element={<AddPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/test-notifications" element={<TestNotificationsPage />} />
             </Routes>
           </ErrorBoundary>
         </SearchProvider>
@@ -156,7 +158,7 @@ function App() {
         onUpdate={handleUpdate}
         onDismiss={handleDismissUpdate}
       />
-    </>
+    </AlertProvider>
   );
 }
 

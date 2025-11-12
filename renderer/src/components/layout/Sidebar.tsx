@@ -81,6 +81,27 @@ export const Sidebar = () => {
 
         {/* Нижняя кнопка (настройки) */}
         <div className="sidebar__group sidebar__group--bottom">
+          {/* ВРЕМЕННО: Кнопка тестирования уведомлений */}
+          <NavLink
+            to="/test-notifications"
+            className={({ isActive }) =>
+              `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`
+            }
+            title="Тест уведомлений (DEV)"
+            style={{ borderTop: '1px solid var(--border-default)' }}
+          >
+            {({ isActive }) => (
+              <>
+                <span className="sidebar__icon">
+                  <Icon name="check" size={24} variant={isActive ? 'fill' : 'border'} />
+                </span>
+                <span className="sidebar__tooltip">
+                  Тест уведомлений
+                </span>
+              </>
+            )}
+          </NavLink>
+          
           <NavLink
             to="/settings"
             className={({ isActive }) =>
