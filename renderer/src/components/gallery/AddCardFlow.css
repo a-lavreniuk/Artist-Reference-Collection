@@ -72,6 +72,9 @@
   overflow-x: auto;
   overflow-y: hidden;
   margin-bottom: 32px;
+  /* Оптимизация производительности скролла */
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
 }
 
 /* Когда есть скролл - добавляем padding-bottom */
@@ -127,9 +130,13 @@
   overflow: hidden;
   cursor: pointer;
   border: 2px solid var(--color-grayscale-100);
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast);
   background: none;
   padding: 0;
+  /* Оптимизация производительности рендеринга */
+  contain: layout style paint;
+  will-change: border-color;
+  transform: translateZ(0); /* GPU-ускорение */
 }
 
 .add-card-flow__queue-item:hover {
@@ -166,10 +173,16 @@
   border-color: var(--color-grayscale-200);
 }
 
-.add-card-flow__queue-item img {
+.add-card-flow__queue-item img,
+.add-card-flow__queue-item video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Оптимизация производительности изображений */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translateZ(0); /* GPU-ускорение */
+  will-change: transform;
 }
 
 .add-card-flow__queue-check {

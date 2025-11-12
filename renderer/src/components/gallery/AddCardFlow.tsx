@@ -3,7 +3,7 @@
  * Drag & Drop, очередь, настройка меток для каждого файла
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
 import { Button, Tag, Input, Icon } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
 import { logImportFiles } from '../../services/history';
@@ -18,6 +18,52 @@ interface QueueFile {
   tags: string[];
   collections: string[];
 }
+
+// Мемоизированный компонент элемента очереди для оптимизации производительности
+interface QueueItemProps {
+  item: QueueFile;
+  index: number;
+  isActive: boolean;
+  onSelect: (index: number) => void;
+  onRemove: (index: number) => void;
+}
+
+const QueueItem = memo(({ item, index, isActive, onSelect, onRemove }: QueueItemProps) => {
+  const handleClick = () => {
+    onSelect(index);
+  };
+
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onRemove(index);
+  };
+
+  return (
+    <div
+      className={`add-card-flow__queue-item ${isActive ? 'add-card-flow__queue-item--active' : ''}`}
+      onClick={handleClick}
+    >
+      {item.file.type.startsWith('video/') ? (
+        <video src={item.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <img src={item.preview} alt="" loading="lazy" />
+      )}
+      {item.configured && (
+        <div className="add-card-flow__queue-check">
+          <Icon name="check" size={16} variant="border" />
+        </div>
+      )}
+      <button
+        className="add-card-flow__queue-remove"
+        onClick={handleRemove}
+      >
+        <Icon name="x" size={16} variant="border" />
+      </button>
+    </div>
+  );
+});
+
+QueueItem.displayName = 'QueueItem';
 
 export interface AddCardFlowProps {
   /** Обработчик завершения */
@@ -74,8 +120,10 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     loadData();
   }, []);
 
-  // Проверяем нужен ли скролл
+  // Проверяем нужен ли скролл (с debounce для оптимизации)
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const checkScroll = () => {
       if (queueScrollRef.current) {
         const needsScroll = queueScrollRef.current.scrollWidth > queueScrollRef.current.clientWidth;
@@ -83,21 +131,34 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       }
     };
 
+    // Debounce проверки скролла для оптимизации производительности
+    const debouncedCheckScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(checkScroll, 100);
+    };
+
     checkScroll();
-    window.addEventListener('resize', checkScroll);
+    window.addEventListener('resize', debouncedCheckScroll);
     
-    return () => window.removeEventListener('resize', checkScroll);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', debouncedCheckScroll);
+    };
   }, [queue]);
 
-  const currentFile = queue[currentIndex];
+  // Мемоизированные вычисления для оптимизации производительности
+  const currentFile = useMemo(() => queue[currentIndex], [queue, currentIndex]);
+  
+  const configuredCount = useMemo(() => {
+    return queue.filter(f => f.configured).length;
+  }, [queue]);
 
   // Обновление состояния очереди для header
   useEffect(() => {
     if (onQueueStateChange) {
-      const configuredCount = queue.filter(f => f.configured).length;
       onQueueStateChange(queue.length > 0, configuredCount);
     }
-  }, [queue, onQueueStateChange]);
+  }, [queue.length, configuredCount, onQueueStateChange]);
 
   // Передаём handleFinish в родительский компонент
   useEffect(() => {
@@ -253,27 +314,36 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     setTimeout(() => setMessage(null), 2000);
   };
 
-  const handleNext = () => {
+  // Мемоизированные обработчики для оптимизации производительности
+  const handleSelectQueueItem = useCallback((index: number) => {
+    setCurrentIndex(index);
+  }, []);
+
+  const handleRemoveFromQueue = useCallback((index: number) => {
+    setQueue(prevQueue => {
+      const newQueue = prevQueue.filter((_, i) => i !== index);
+      setCurrentIndex(prevIndex => {
+        if (prevIndex >= newQueue.length) {
+          return Math.max(0, newQueue.length - 1);
+        }
+        return prevIndex;
+      });
+      return newQueue;
+    });
+  }, []);
+
+  const handleNext = useCallback(() => {
     // Просто листаем без проверки меток
     if (currentIndex < queue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
-  };
+  }, [currentIndex, queue.length]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
     }
-  };
-
-  const handleRemoveFromQueue = (index: number) => {
-    const newQueue = queue.filter((_, i) => i !== index);
-    setQueue(newQueue);
-    
-    if (currentIndex >= newQueue.length) {
-      setCurrentIndex(Math.max(0, newQueue.length - 1));
-    }
-  };
+  }, [currentIndex]);
 
   const handleCreateTag = async (categoryId: string) => {
     if (!newTagName.trim()) return;
@@ -479,31 +549,14 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
           className={`add-card-flow__queue-scroll ${hasScroll ? 'add-card-flow__queue-scroll--has-scroll' : ''}`}
         >
           {queue.map((item, index) => (
-            <div
+            <QueueItem
               key={index}
-              className={`add-card-flow__queue-item ${index === currentIndex ? 'add-card-flow__queue-item--active' : ''}`}
-              onClick={() => setCurrentIndex(index)}
-            >
-              {item.file.type.startsWith('video/') ? (
-                <video src={item.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <img src={item.preview} alt="" />
-              )}
-              {item.configured && (
-                <div className="add-card-flow__queue-check">
-                  <Icon name="check" size={16} variant="border" />
-                </div>
-              )}
-              <button
-                className="add-card-flow__queue-remove"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemoveFromQueue(index);
-                }}
-              >
-                <Icon name="x" size={16} variant="border" />
-              </button>
-            </div>
+              item={item}
+              index={index}
+              isActive={index === currentIndex}
+              onSelect={handleSelectQueueItem}
+              onRemove={handleRemoveFromQueue}
+            />
           ))}
           
           {/* Пустая карточка для добавления еще файлов (до 45 файлов в очереди) */}
