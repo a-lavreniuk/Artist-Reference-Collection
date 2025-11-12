@@ -1,0 +1,229 @@
+/**
+ * Стили для компонента Alert
+ * Модальные диалоги: confirm, info, prompt
+ */
+
+/* ========== OVERLAY ========== */
+
+.alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-overlay);
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  
+  background-color: var(--bg-overlay);
+  backdrop-filter: var(--backdrop-blur);
+  
+  animation: alert-overlay-enter var(--transition-base);
+}
+
+@keyframes alert-overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== ALERT DIALOG ========== */
+
+.alert {
+  position: relative;
+  z-index: var(--z-modal);
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xl);
+  
+  width: 480px;
+  padding: var(--spacing-2xl);
+  
+  background-color: var(--bg-primary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-xl);
+  
+  animation: alert-enter var(--transition-base);
+}
+
+@keyframes alert-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ========== КНОПКА ЗАКРЫТИЯ ========== */
+
+.alert__close {
+  position: absolute;
+  top: var(--spacing-l);
+  right: var(--spacing-l);
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-s);
+  color: var(--icon-default);
+  cursor: pointer;
+  
+  transition: all var(--transition-fast);
+}
+
+.alert__close:hover {
+  background-color: var(--color-grayscale-100);
+  color: var(--text-primary);
+}
+
+.alert__close:active {
+  transform: scale(0.95);
+}
+
+/* ========== ИКОНКА ========== */
+
+.alert__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  width: 48px;
+  height: 48px;
+  
+  flex-shrink: 0;
+}
+
+.alert__icon--default {
+  color: var(--icon-default);
+}
+
+.alert__icon--destructive {
+  color: var(--color-red-600);
+}
+
+/* ========== ЗАГОЛОВОК ========== */
+
+.alert__title {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h3);
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+/* ========== ОПИСАНИЕ ========== */
+
+.alert__description {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  
+  white-space: pre-wrap;
+}
+
+/* Длинное описание с прокруткой */
+.alert__description--scrollable {
+  max-height: 300px;
+  overflow-y: auto;
+  text-align: left;
+  padding-right: var(--spacing-m);
+}
+
+.alert__description--scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.alert__description--scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.alert__description--scrollable::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
+}
+
+.alert__description--scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grayscale-400);
+}
+
+/* ========== INPUT (для prompt) ========== */
+
+.alert form {
+  width: 100%;
+}
+
+/* ========== ДЕЙСТВИЯ ========== */
+
+.alert__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-m);
+  width: 100%;
+  margin-top: var(--spacing-s);
+}
+
+/* Для info с одной кнопкой */
+.alert--info .alert__actions {
+  justify-content: center;
+}
+
+/* ========== ВАРИАНТЫ ========== */
+
+/* Destructive alerts (удаление и т.п.) */
+.alert--destructive .alert__title {
+  color: var(--text-primary);
+}
+
+/* ========== АДАПТАЦИЯ ========== */
+
+@media (max-width: 1366px) {
+  .alert {
+    width: 400px;
+    padding: var(--spacing-xl);
+  }
+}
+
+@media (max-height: 800px) {
+  .alert {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .alert__description {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+}
+

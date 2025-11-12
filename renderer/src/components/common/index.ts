@@ -34,3 +34,8 @@ export type { ToastProps } from './Toast';
 export { ToastContainer } from './ToastContainer';
 export type { ToastContainerProps, ToastMessage } from './ToastContainer';
 
+export { Alert } from './Alert';
+export type { AlertProps, AlertType, AlertVariant } from './Alert';
+
+export { AlertProvider } from './AlertProvider';
+
