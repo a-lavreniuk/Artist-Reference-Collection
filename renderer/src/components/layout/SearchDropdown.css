@@ -88,7 +88,7 @@
 .search-dropdown__tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
 }
 

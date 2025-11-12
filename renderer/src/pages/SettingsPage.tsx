@@ -20,7 +20,7 @@ type CollectionWithCount = Collection & { cardCount: number };
 
 export const SettingsPage = () => {
   const navigate = useNavigate();
-  const { searchProps } = useSearch();
+  const { searchProps, setSelectedTags } = useSearch();
   const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
@@ -206,7 +206,11 @@ export const SettingsPage = () => {
     }
   };
 
-  const handleDeleteTag = async (tagId: string, tagName: string) => {
+  const handleDeleteTag = async (tagId: string, tagName: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation(); // Предотвращаем клик на метку
+    }
+    
     if (!confirm(`Удалить метку "${tagName}"? Это действие необратимо.`)) {
       return;
     }
@@ -222,6 +226,17 @@ export const SettingsPage = () => {
       setMessage('❌ Ошибка удаления метки');
       setTimeout(() => setMessage(null), 2000);
     }
+  };
+
+  // Обработчик клика по метке - переход на страницу карточек с фильтром
+  const handleTagClick = (tagId: string) => {
+    setSelectedTags([tagId]);
+    navigate('/cards');
+  };
+
+  // Обработчик клика по коллекции - переход на страницу коллекции
+  const handleCollectionClick = (collectionId: string) => {
+    navigate(`/collections/${collectionId}`);
   };
 
   // Вспомогательная функция для форматирования размера
@@ -964,221 +979,587 @@ export const SettingsPage = () => {
         {/* Таб: Статистика */}
         {activeTab === 'statistics' && stats && (
           <div style={{ 
-            padding: '24px', 
-            backgroundColor: 'var(--bg-secondary)', 
-            borderRadius: 'var(--radius-l)' 
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--spacing-l, 16px)',
+            width: '100%'
           }}>
-            <h3 className="h3" style={{ marginBottom: '16px' }}>📊 Статистика</h3>
-            
+            {/* 5 карточек статистики вверху */}
             <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(2, 1fr)', 
-              gap: '16px' 
+              display: 'flex',
+              gap: 'var(--spacing-l, 16px)',
+              width: '100%'
             }}>
-              <div>
-                <p className="text-s" style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                  Всего карточек
-                </p>
-                <p className="h2">{stats.totalCards}</p>
+              {/* Карточка: Изображения */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="image" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)'
+                }}>
+                  <h1 className="h1" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h1, 40px)',
+                    lineHeight: 'var(--line-height-h1, 40px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    {stats.imageCount.toLocaleString('ru-RU')}
+                  </h1>
+                  <p className="text-m" style={{
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    color: 'var(--text-secondary, #93919a)',
+                    letterSpacing: '0px'
+                  }}>
+                    Изображения
+                  </p>
+                </div>
               </div>
-              
-              <div>
-                <p className="text-s" style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                  Изображений
-                </p>
-                <p className="h2">{stats.imageCount}</p>
+
+              {/* Карточка: Видео */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="play-circle" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)'
+                }}>
+                  <h1 className="h1" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h1, 40px)',
+                    lineHeight: 'var(--line-height-h1, 40px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    {stats.videoCount.toLocaleString('ru-RU')}
+                  </h1>
+                  <p className="text-m" style={{
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    color: 'var(--text-secondary, #93919a)',
+                    letterSpacing: '0px'
+                  }}>
+                    Видео
+                  </p>
+                </div>
               </div>
-              
-              <div>
-                <p className="text-s" style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                  Видео
-                </p>
-                <p className="h2">{stats.videoCount}</p>
+
+              {/* Карточка: Коллекции */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="folder-open" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)'
+                }}>
+                  <h1 className="h1" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h1, 40px)',
+                    lineHeight: 'var(--line-height-h1, 40px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    {stats.collectionCount.toLocaleString('ru-RU')}
+                  </h1>
+                  <p className="text-m" style={{
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    color: 'var(--text-secondary, #93919a)',
+                    letterSpacing: '0px'
+                  }}>
+                    Коллекции
+                  </p>
+                </div>
               </div>
-              
-              <div>
-                <p className="text-s" style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                  Коллекций
-                </p>
-                <p className="h2">{stats.collectionCount}</p>
+
+              {/* Карточка: Метки */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="tag" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)'
+                }}>
+                  <h1 className="h1" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h1, 40px)',
+                    lineHeight: 'var(--line-height-h1, 40px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    {stats.tagCount.toLocaleString('ru-RU')}
+                  </h1>
+                  <p className="text-m" style={{
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    color: 'var(--text-secondary, #93919a)',
+                    letterSpacing: '0px'
+                  }}>
+                    Метки
+                  </p>
+                </div>
               </div>
-              
-              <div>
-                <p className="text-s" style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                  Меток
-                </p>
-                <p className="h2">{stats.tagCount}</p>
-              </div>
-              
-              <div>
-                <p className="text-s" style={{ marginBottom: '4px', color: 'var(--text-secondary)' }}>
-                  Категорий
-                </p>
-                <p className="h2">{stats.categoryCount}</p>
+
+              {/* Карточка: Мудборд */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="bookmark" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)'
+                }}>
+                  <h1 className="h1" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h1, 40px)',
+                    lineHeight: 'var(--line-height-h1, 40px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    {stats.moodboardCount}
+                  </h1>
+                  <p className="text-m" style={{
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    color: 'var(--text-secondary, #93919a)',
+                    letterSpacing: '0px'
+                  }}>
+                    Мудборд
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Топ метки */}
-            {topTags.length > 0 && (
-              <div style={{ marginTop: '32px' }}>
-                <h4 className="text-l" style={{ marginBottom: '16px', fontWeight: 'var(--font-weight-bold)' }}>
-                  🏆 Самые используемые метки
-                </h4>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(2, 1fr)', 
-                  gap: '12px' 
+            {/* 3 секции списков внизу */}
+            <div style={{ 
+              display: 'flex',
+              gap: 'var(--spacing-l, 16px)',
+              width: '100%'
+            }}>
+              {/* Секция: Популярные метки */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="trending-up" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)',
+                  width: '100%'
                 }}>
-                  {topTags.map((tag, index) => (
-                    <div 
-                      key={tag.id}
-                      style={{
-                        padding: '12px 16px',
-                        backgroundColor: 'var(--bg-primary)',
-                        borderRadius: 'var(--radius-m)',
-                        border: '1px solid var(--border-default)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div>
-                        <span style={{ 
-                          marginRight: '8px',
-                          color: 'var(--text-secondary)',
-                          fontWeight: 'var(--font-weight-bold)'
+                  <h3 className="h3" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h3, 28px)',
+                    lineHeight: 'var(--line-height-h3, 28px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    Популярные метки
+                  </h3>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-s, 8px)',
+                    width: '100%'
+                  }}>
+                    {topTags.slice(0, 10).map((tag, index) => (
+                      <div 
+                        key={tag.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--spacing-l, 16px)'
                         }}>
-                          #{index + 1}
-                        </span>
-                        <span className="text-m" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                          {tag.name}
-                        </span>
-                        <p className="text-s" style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          {tag.categoryName}
-                        </p>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
+                          <p className="text-m" style={{
+                            fontFamily: 'var(--font-family-body)',
+                            fontSize: 'var(--font-size-m, 16px)',
+                            lineHeight: 'var(--line-height-m, 22px)',
+                            fontWeight: 'var(--font-weight-light, 300)',
+                            color: 'var(--text-secondary, #93919a)',
+                            letterSpacing: '0px',
+                            minWidth: '24px'
+                          }}>
+                            {(index + 1).toString().padStart(2, '0')}
+                          </p>
+                          <div 
+                            onClick={() => handleTagClick(tag.id)}
+                            style={{
+                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
+                              borderRadius: '10px',
+                              height: '32px',
+                              padding: '0 10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.15s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
+                            }}
+                          >
+                            <p className="text-s" style={{
+                              fontFamily: 'var(--font-family-body)',
+                              fontSize: 'var(--font-size-s, 12px)',
+                              lineHeight: 'var(--line-height-s, 12px)',
+                              fontWeight: 'var(--font-weight-regular, 400)',
+                              color: 'var(--text-primary, #3b3946)',
+                              letterSpacing: '0px'
+                            }}>
+                              {tag.name}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-m" style={{
+                          fontFamily: 'var(--font-family-body)',
+                          fontSize: 'var(--font-size-m, 16px)',
+                          lineHeight: 'var(--line-height-m, 22px)',
+                          fontWeight: 'var(--font-weight-light, 300)',
+                          color: 'var(--text-primary, #3b3946)',
+                          letterSpacing: '0px'
+                        }}>
                           {tag.cardCount}
                         </p>
-                        <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-                          карточек
-                        </p>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Топ коллекции */}
-            {topCollections.length > 0 && (
-              <div style={{ marginTop: '32px' }}>
-                <h4 className="text-l" style={{ marginBottom: '16px', fontWeight: 'var(--font-weight-bold)' }}>
-                  📚 Самые большие коллекции
-                </h4>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(2, 1fr)', 
-                  gap: '12px' 
+              {/* Секция: Малоиспользуемые метки */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="trending-down" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)',
+                  width: '100%'
                 }}>
-                  {topCollections.map((collection, index) => (
-                    <div 
-                      key={collection.id}
-                      style={{
-                        padding: '12px 16px',
-                        backgroundColor: 'var(--bg-primary)',
-                        borderRadius: 'var(--radius-m)',
-                        border: '1px solid var(--border-default)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ 
-                          marginRight: '8px',
-                          color: 'var(--text-secondary)',
-                          fontWeight: 'var(--font-weight-bold)'
-                        }}>
-                          #{index + 1}
-                        </span>
-                        <span className="text-m" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                          {collection.name}
-                        </span>
-                        {collection.description && (
-                          <p className="text-s" style={{ 
-                            color: 'var(--text-secondary)', 
-                            marginTop: '2px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            {collection.description}
-                          </p>
-                        )}
-                      </div>
-                      <div style={{ textAlign: 'right', marginLeft: '12px' }}>
-                        <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                          {collection.cardCount}
-                        </p>
-                        <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-                          карточек
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Малоиспользуемые метки */}
-            {underusedTags.length > 0 && (
-              <div style={{ marginTop: '32px' }}>
-                <h4 className="text-l" style={{ marginBottom: '8px', fontWeight: 'var(--font-weight-bold)' }}>
-                  🔍 Малоиспользуемые метки
-                </h4>
-                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                  Метки с малым количеством использований (≤3 карточки)
-                </p>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(2, 1fr)', 
-                  gap: '12px' 
-                }}>
-                  {underusedTags.map((tag) => (
-                    <div 
-                      key={tag.id}
-                      style={{
-                        padding: '12px 16px',
-                        backgroundColor: 'var(--bg-primary)',
-                        borderRadius: 'var(--radius-m)',
-                        border: '1px solid var(--border-default)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div>
-                        <span className="text-m" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                          {tag.name}
-                        </span>
-                        <p className="text-s" style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          {tag.categoryName} • {tag.cardCount} карточек
-                        </p>
-                      </div>
-                      <Button
-                        variant="error"
-                        size="S"
-                        onClick={() => handleDeleteTag(tag.id, tag.name)}
+                  <h3 className="h3" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h3, 28px)',
+                    lineHeight: 'var(--line-height-h3, 28px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    Малоиспользуемые метки
+                  </h3>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-s, 8px)',
+                    width: '100%'
+                  }}>
+                    {underusedTags.slice(0, 10).map((tag, index) => (
+                      <div 
+                        key={tag.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%'
+                        }}
                       >
-                        Удалить
-                      </Button>
-                    </div>
-                  ))}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <p className="text-m" style={{
+                            fontFamily: 'var(--font-family-body)',
+                            fontSize: 'var(--font-size-m, 16px)',
+                            lineHeight: 'var(--line-height-m, 22px)',
+                            fontWeight: 'var(--font-weight-light, 300)',
+                            color: 'var(--text-secondary, #93919a)',
+                            letterSpacing: '0px',
+                            minWidth: '24px',
+                            marginRight: '12px'
+                          }}>
+                            {(index + 1).toString().padStart(2, '0')}
+                          </p>
+                          <div 
+                            onClick={() => handleTagClick(tag.id)}
+                            style={{
+                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
+                              borderRadius: '10px',
+                              height: '32px',
+                              padding: '0 10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.15s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
+                            }}
+                          >
+                            <p className="text-s" style={{
+                              fontFamily: 'var(--font-family-body)',
+                              fontSize: 'var(--font-size-s, 12px)',
+                              lineHeight: 'var(--line-height-s, 12px)',
+                              fontWeight: 'var(--font-weight-regular, 400)',
+                              color: 'var(--text-primary, #3b3946)',
+                              letterSpacing: '0px'
+                            }}>
+                              {tag.name}
+                            </p>
+                          </div>
+                          <button
+                            onClick={(e) => handleDeleteTag(tag.id, tag.name, e)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '32px',
+                              height: '32px',
+                              padding: 0,
+                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
+                              border: 'none',
+                              borderRadius: 'var(--radius-s, 8px)',
+                              color: 'var(--icon-default, #93919a)',
+                              cursor: 'pointer',
+                              transition: 'all var(--transition-fast, 150ms ease-in-out)',
+                              flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
+                            }}
+                            title="Удалить метку"
+                          >
+                            <Icon name="trash" size={16} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                          </button>
+                        </div>
+                        <p className="text-m" style={{
+                          fontFamily: 'var(--font-family-body)',
+                          fontSize: 'var(--font-size-m, 16px)',
+                          lineHeight: 'var(--line-height-m, 22px)',
+                          fontWeight: 'var(--font-weight-light, 300)',
+                          color: 'var(--text-primary, #3b3946)',
+                          letterSpacing: '0px'
+                        }}>
+                          {tag.cardCount}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Секция: Большие коллекции */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="folder-open" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)',
+                  width: '100%'
+                }}>
+                  <h3 className="h3" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h3, 28px)',
+                    lineHeight: 'var(--line-height-h3, 28px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    Большие коллекции
+                  </h3>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-s, 8px)',
+                    width: '100%'
+                  }}>
+                    {topCollections.slice(0, 10).map((collection, index) => (
+                      <div 
+                        key={collection.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--spacing-l, 16px)'
+                        }}>
+                          <p className="text-m" style={{
+                            fontFamily: 'var(--font-family-body)',
+                            fontSize: 'var(--font-size-m, 16px)',
+                            lineHeight: 'var(--line-height-m, 22px)',
+                            fontWeight: 'var(--font-weight-light, 300)',
+                            color: 'var(--text-secondary, #93919a)',
+                            letterSpacing: '0px',
+                            minWidth: '24px'
+                          }}>
+                            {(index + 1).toString().padStart(2, '0')}
+                          </p>
+                          <div 
+                            onClick={() => handleCollectionClick(collection.id)}
+                            style={{
+                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
+                              borderRadius: '10px',
+                              height: '32px',
+                              padding: '0 10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              cursor: 'pointer',
+                              transition: 'background-color 0.15s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
+                            }}
+                          >
+                            <p className="text-s" style={{
+                              fontFamily: 'var(--font-family-body)',
+                              fontSize: 'var(--font-size-s, 12px)',
+                              lineHeight: 'var(--line-height-s, 12px)',
+                              fontWeight: 'var(--font-weight-regular, 400)',
+                              color: 'var(--text-primary, #3b3946)',
+                              letterSpacing: '0px'
+                            }}>
+                              {collection.name}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-m" style={{
+                          fontFamily: 'var(--font-family-body)',
+                          fontSize: 'var(--font-size-m, 16px)',
+                          lineHeight: 'var(--line-height-m, 22px)',
+                          fontWeight: 'var(--font-weight-light, 300)',
+                          color: 'var(--text-primary, #3b3946)',
+                          letterSpacing: '0px'
+                        }}>
+                          {collection.cardCount.toLocaleString('ru-RU')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

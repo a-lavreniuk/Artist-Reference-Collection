@@ -19,6 +19,8 @@ export type IconName =
   | 'grid-default'
   | 'trash'
   | 'line-chart'
+  | 'trending-up'
+  | 'trending-down'
   | 'copy'
   | 'history'
   | 'server'

@@ -126,6 +126,7 @@ export interface AppStatistics {
   collectionCount: number;             // Количество коллекций
   tagCount: number;                    // Количество меток
   categoryCount: number;               // Количество категорий
+  moodboardCount: number;              // Количество карточек в мудборде
 }
 
 // Типы действий для истории

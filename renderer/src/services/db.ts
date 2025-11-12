@@ -519,6 +519,7 @@ export async function getStatistics(): Promise<AppStatistics> {
   const imageCards = cards.filter(c => c.type === 'image');
   const videoCards = cards.filter(c => c.type === 'video');
   const totalSize = cards.reduce((sum, card) => sum + card.fileSize, 0);
+  const moodboardCards = cards.filter(c => c.inMoodboard);
 
   return {
     totalCards: cards.length,
@@ -527,7 +528,8 @@ export async function getStatistics(): Promise<AppStatistics> {
     totalSize,
     collectionCount: collections.length,
     tagCount: tags.length,
-    categoryCount: categories.length
+    categoryCount: categories.length,
+    moodboardCount: moodboardCards.length
   };
 }
 
