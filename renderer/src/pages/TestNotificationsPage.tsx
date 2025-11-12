@@ -6,12 +6,13 @@
 import { useState } from 'react';
 import { Layout } from '../components/layout';
 import { Button, Icon } from '../components/common';
-import { useDialog } from '../hooks';
+import { useDialog, useAlert } from '../hooks';
 import { useToast } from '../hooks/useToast';
 import type { SearchProps } from '../components/layout/SearchBar';
 
 export const TestNotificationsPage = () => {
   const dialog = useDialog();
+  const alert = useAlert();
   const toast = useToast();
   const [lastResult, setLastResult] = useState<string>('');
 
@@ -131,6 +132,28 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
     setTimeout(() => toast.info('Третий toast'), 400);
     setTimeout(() => toast.success('Четвертый toast'), 600);
     setLastResult('📚 Показано 4 toast');
+  };
+
+  // ========== ALERT TESTS ==========
+
+  const handleAlertSuccess = () => {
+    alert.success('Complited');
+    setLastResult('✅ Success alert показан');
+  };
+
+  const handleAlertError = () => {
+    alert.error('An error occurred!');
+    setLastResult('❌ Error alert показан');
+  };
+
+  const handleAlertWarning = () => {
+    alert.warning('Some information is missing!');
+    setLastResult('⚠️ Warning alert показан');
+  };
+
+  const handleAlertInfo = () => {
+    alert.info('Are you sure?');
+    setLastResult('ℹ️ Info alert показан');
   };
 
   return (
@@ -426,6 +449,113 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
           </div>
         </section>
 
+        {/* Секция: Alert Banners */}
+        <section>
+          <h2 className="h2" style={{ marginBottom: 'var(--spacing-l)' }}>
+            Alert Banners (баннеры внизу экрана)
+          </h2>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 'var(--spacing-l)'
+          }}>
+            {/* Success Alert */}
+            <div style={{
+              padding: 'var(--spacing-xl)',
+              backgroundColor: 'var(--color-green-100)',
+              border: '2px solid var(--color-green-600)',
+              borderRadius: 'var(--radius-l)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--spacing-m)'
+            }}>
+              <h4 className="h4">Success Alert</h4>
+              <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                Баннер успеха внизу экрана
+              </p>
+              <Button
+                variant="success"
+                size="L"
+                onClick={handleAlertSuccess}
+                iconRight={<Icon name="check" size={24} variant="border" />}
+              >
+                Показать
+              </Button>
+            </div>
+
+            {/* Error Alert */}
+            <div style={{
+              padding: 'var(--spacing-xl)',
+              backgroundColor: 'var(--color-red-100)',
+              border: '2px solid var(--color-red-600)',
+              borderRadius: 'var(--radius-l)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--spacing-m)'
+            }}>
+              <h4 className="h4">Error Alert</h4>
+              <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                Баннер ошибки внизу экрана
+              </p>
+              <Button
+                variant="error"
+                size="L"
+                onClick={handleAlertError}
+                iconRight={<Icon name="x" size={24} variant="border" />}
+              >
+                Показать
+              </Button>
+            </div>
+
+            {/* Warning Alert */}
+            <div style={{
+              padding: 'var(--spacing-xl)',
+              backgroundColor: 'var(--color-yellow-100)',
+              border: '2px solid var(--color-yellow-600)',
+              borderRadius: 'var(--radius-l)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--spacing-m)'
+            }}>
+              <h4 className="h4">Warning Alert</h4>
+              <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                Баннер предупреждения
+              </p>
+              <Button
+                variant="warning"
+                size="L"
+                onClick={handleAlertWarning}
+              >
+                Показать
+              </Button>
+            </div>
+
+            {/* Info Alert */}
+            <div style={{
+              padding: 'var(--spacing-xl)',
+              backgroundColor: 'var(--color-grayscale-100)',
+              border: '2px solid var(--color-grayscale-500)',
+              borderRadius: 'var(--radius-l)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--spacing-m)'
+            }}>
+              <h4 className="h4">Info Alert</h4>
+              <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
+                Информационный баннер
+              </p>
+              <Button
+                variant="secondary"
+                size="L"
+                onClick={handleAlertInfo}
+              >
+                Показать
+              </Button>
+            </div>
+          </div>
+        </section>
+
         {/* Примечание */}
         <div style={{
           padding: 'var(--spacing-xl)',
@@ -436,6 +566,12 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
           <p className="text-m" style={{ fontWeight: 'var(--font-weight-regular)' }}>
             ⚠️ <strong>Примечание:</strong> Это тестовая страница для разработки системы уведомлений. 
             После завершения тестирования она будет удалена.
+          </p>
+          <p className="text-s" style={{ marginTop: 'var(--spacing-m)', color: 'var(--text-secondary)' }}>
+            <strong>Правильная терминология:</strong><br/>
+            • Dialog = модальное окно по центру<br/>
+            • Toast = уведомления в правом нижнем углу<br/>
+            • Alert = горизонтальный баннер внизу экрана
           </p>
         </div>
       </div>

@@ -39,3 +39,8 @@ export type { DialogProps, DialogType, DialogVariant } from './Dialog';
 
 export { DialogProvider } from './DialogProvider';
 
+export { Alert } from './Alert';
+export type { AlertProps, AlertType } from './Alert';
+
+export { AlertProvider } from './AlertProvider';
+
