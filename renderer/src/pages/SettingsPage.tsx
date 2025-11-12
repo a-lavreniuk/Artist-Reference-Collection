@@ -31,7 +31,7 @@ export const SettingsPage = () => {
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
-  const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8>(1);
+  const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8 | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
   const [directorySizes, setDirectorySizes] = useState<{
@@ -268,6 +268,12 @@ export const SettingsPage = () => {
       return;
     }
 
+    if (backupParts === null) {
+      setBackupMessage('❌ Выберите формат резервной копии');
+      setTimeout(() => setBackupMessage(null), 3000);
+      return;
+    }
+
     if (!window.electronAPI) {
       setBackupMessage('❌ Electron API недоступен');
       return;
@@ -305,7 +311,7 @@ export const SettingsPage = () => {
       const response = await window.electronAPI.createBackup(
         selectedPath,
         directoryPath,
-        backupParts,
+        backupParts!,
         databaseJson
       );
 
@@ -313,7 +319,7 @@ export const SettingsPage = () => {
         const sizeMB = Math.round(response.size / 1024 / 1024);
         
         // Логируем создание бэкапа
-        await logCreateBackup(response.size, backupParts);
+        await logCreateBackup(response.size, backupParts!);
         
         setBackupMessage(`✅ Backup создан! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
         
@@ -498,237 +504,421 @@ export const SettingsPage = () => {
       }}
       searchProps={searchProps}
     >
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px', minHeight: 'calc(100vh - 120px - 64px)' }}>
-        {/* Табы перенесены в header */}
+      {/* Табы перенесены в header */}
 
-        {/* Таб: Хранилище */}
-        {activeTab === 'storage' && (
-          <div style={{ 
-            padding: '24px', 
-            backgroundColor: 'var(--bg-secondary)', 
-            borderRadius: 'var(--radius-l)',
-            marginBottom: '24px'
-          }}>
-            <h3 className="h3" style={{ marginBottom: '24px' }}>💾 Хранилище</h3>
-          
-          {/* Путь к рабочей папке */}
-          <div style={{ 
-            marginBottom: '24px',
-            padding: '16px',
-            backgroundColor: 'var(--bg-primary)',
-            borderRadius: 'var(--radius-m)',
-            border: '1px solid var(--border-default)'
-          }}>
-            <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              Рабочая папка
-            </p>
-            <p className="text-m" style={{ 
-              fontFamily: 'monospace',
-              wordBreak: 'break-all'
-            }}>
-              {directoryPath || 'Не выбрана'}
-            </p>
-          </div>
+      {/* Таб: Хранилище */}
+      {activeTab === 'storage' && (
+        <div style={{ 
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--spacing-2xl, 32px)',
+          width: '100%'
+        }}>
+            {/* Секция: Использование пространства */}
+            {/* Карточки с размерами */}
+            {directorySizes && (
+              <div style={{ 
+                display: 'flex',
+                gap: 'var(--spacing-l, 16px)',
+                width: '100%'
+              }}>
+                  {/* Карточка: Всего использовано */}
+                  <div style={{
+                    flex: '1 0 0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-xl, 24px)',
+                    padding: 'var(--spacing-xl, 24px)',
+                    border: '2px solid var(--border-default, #ebe9ee)',
+                    borderRadius: 'var(--radius-l, 16px)',
+                    minHeight: '1px',
+                    minWidth: '1px'
+                  }}>
+                    <Icon name="hard-drive" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 'var(--spacing-l, 16px)'
+                    }}>
+                      <h1 className="h1" style={{
+                        fontFamily: 'var(--font-family-heading)',
+                        fontSize: 'var(--font-size-h1, 40px)',
+                        lineHeight: 'var(--line-height-h1, 40px)',
+                        fontWeight: 'var(--font-weight-bold, 700)',
+                        color: 'var(--text-primary, #3b3946)',
+                        letterSpacing: '0px'
+                      }}>
+                        {Math.round(directorySizes.totalSize / 1024 / 1024)} мб
+                      </h1>
+                      <p className="text-m" style={{
+                        fontFamily: 'var(--font-family-body)',
+                        fontSize: 'var(--font-size-m, 16px)',
+                        lineHeight: 'var(--line-height-m, 22px)',
+                        fontWeight: 'var(--font-weight-light, 300)',
+                        color: 'var(--text-secondary, #93919a)',
+                        letterSpacing: '0px'
+                      }}>
+                        Всего использовано
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Размеры файлов */}
-          {directorySizes && (
+                  {/* Карточка: Изображения */}
+                  <div style={{
+                    flex: '1 0 0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-xl, 24px)',
+                    padding: 'var(--spacing-xl, 24px)',
+                    border: '2px solid var(--border-default, #ebe9ee)',
+                    borderRadius: 'var(--radius-l, 16px)',
+                    minHeight: '1px',
+                    minWidth: '1px'
+                  }}>
+                    <Icon name="image" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 'var(--spacing-l, 16px)'
+                    }}>
+                      <h1 className="h1" style={{
+                        fontFamily: 'var(--font-family-heading)',
+                        fontSize: 'var(--font-size-h1, 40px)',
+                        lineHeight: 'var(--line-height-h1, 40px)',
+                        fontWeight: 'var(--font-weight-bold, 700)',
+                        color: 'var(--text-primary, #3b3946)',
+                        letterSpacing: '0px'
+                      }}>
+                        {Math.round(directorySizes.imagesSize / 1024 / 1024)} мб
+                      </h1>
+                      <p className="text-m" style={{
+                        fontFamily: 'var(--font-family-body)',
+                        fontSize: 'var(--font-size-m, 16px)',
+                        lineHeight: 'var(--line-height-m, 22px)',
+                        fontWeight: 'var(--font-weight-light, 300)',
+                        color: 'var(--text-secondary, #93919a)',
+                        letterSpacing: '0px'
+                      }}>
+                        Изображения
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Карточка: Видео */}
+                  <div style={{
+                    flex: '1 0 0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-xl, 24px)',
+                    padding: 'var(--spacing-xl, 24px)',
+                    border: '2px solid var(--border-default, #ebe9ee)',
+                    borderRadius: 'var(--radius-l, 16px)',
+                    minHeight: '1px',
+                    minWidth: '1px'
+                  }}>
+                    <Icon name="play-circle" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 'var(--spacing-l, 16px)'
+                    }}>
+                      <h1 className="h1" style={{
+                        fontFamily: 'var(--font-family-heading)',
+                        fontSize: 'var(--font-size-h1, 40px)',
+                        lineHeight: 'var(--line-height-h1, 40px)',
+                        fontWeight: 'var(--font-weight-bold, 700)',
+                        color: 'var(--text-primary, #3b3946)',
+                        letterSpacing: '0px'
+                      }}>
+                        {Math.round(directorySizes.videosSize / 1024 / 1024)} мб
+                      </h1>
+                      <p className="text-m" style={{
+                        fontFamily: 'var(--font-family-body)',
+                        fontSize: 'var(--font-size-m, 16px)',
+                        lineHeight: 'var(--line-height-m, 22px)',
+                        fontWeight: 'var(--font-weight-light, 300)',
+                        color: 'var(--text-secondary, #93919a)',
+                        letterSpacing: '0px'
+                      }}>
+                        Видео
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Карточка: Кэш */}
+                  <div style={{
+                    flex: '1 0 0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-xl, 24px)',
+                    padding: 'var(--spacing-xl, 24px)',
+                    border: '2px solid var(--border-default, #ebe9ee)',
+                    borderRadius: 'var(--radius-l, 16px)',
+                    minHeight: '1px',
+                    minWidth: '1px'
+                  }}>
+                    <Icon name="eye" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 'var(--spacing-l, 16px)'
+                    }}>
+                      <h1 className="h1" style={{
+                        fontFamily: 'var(--font-family-heading)',
+                        fontSize: 'var(--font-size-h1, 40px)',
+                        lineHeight: 'var(--line-height-h1, 40px)',
+                        fontWeight: 'var(--font-weight-bold, 700)',
+                        color: 'var(--text-primary, #3b3946)',
+                        letterSpacing: '0px'
+                      }}>
+                        {Math.round(directorySizes.cacheSize / 1024 / 1024)} мб
+                      </h1>
+                      <p className="text-m" style={{
+                        fontFamily: 'var(--font-family-body)',
+                        fontSize: 'var(--font-size-m, 16px)',
+                        lineHeight: 'var(--line-height-m, 22px)',
+                        fontWeight: 'var(--font-weight-light, 300)',
+                        color: 'var(--text-secondary, #93919a)',
+                        letterSpacing: '0px'
+                      }}>
+                        Кэш
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Два раздела в ряд: Локальное хранилище и Резервная копия */}
             <div style={{ 
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '12px',
-              marginBottom: '24px'
+              display: 'flex',
+              gap: 'var(--spacing-l, 16px)',
+              width: '100%'
             }}>
+              {/* Раздел: Локальное хранилище */}
               <div style={{
-                padding: '16px',
-                backgroundColor: 'var(--bg-primary)',
-                borderRadius: 'var(--radius-m)',
-                border: '1px solid var(--border-default)'
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
               }}>
-                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Всего занято
-                </p>
-                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                  {Math.round(directorySizes.totalSize / 1024 / 1024)} МБ
-                </p>
-              </div>
-
-              <div style={{
-                padding: '16px',
-                backgroundColor: 'var(--bg-primary)',
-                borderRadius: 'var(--radius-m)',
-                border: '1px solid var(--border-default)'
-              }}>
-                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Изображения
-                </p>
-                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                  {Math.round(directorySizes.imagesSize / 1024 / 1024)} МБ
-                </p>
-                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-                  {directorySizes.imageCount} файлов
-                </p>
-              </div>
-
-              <div style={{
-                padding: '16px',
-                backgroundColor: 'var(--bg-primary)',
-                borderRadius: 'var(--radius-m)',
-                border: '1px solid var(--border-default)'
-              }}>
-                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Видео
-                </p>
-                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                  {Math.round(directorySizes.videosSize / 1024 / 1024)} МБ
-                </p>
-                <p className="text-s" style={{ color: 'var(--text-secondary)' }}>
-                  {directorySizes.videoCount} файлов
-                </p>
-              </div>
-
-              <div style={{
-                padding: '16px',
-                backgroundColor: 'var(--bg-primary)',
-                borderRadius: 'var(--radius-m)',
-                border: '1px solid var(--border-default)'
-              }}>
-                <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Кэш превью
-                </p>
-                <p className="text-l" style={{ fontWeight: 'var(--font-weight-bold)' }}>
-                  {Math.round(directorySizes.cacheSize / 1024 / 1024)} МБ
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-            <Button
-              variant="secondary"
-              size="L"
-              onClick={handleChangeDirectory}
-              disabled={isMovingDirectory}
-            >
-              {isMovingDirectory ? 'Перенос...' : (directoryHandle ? 'Перенести папку' : 'Выбрать папку')}
-            </Button>
-            
-            <Button
-              variant="error"
-              size="L"
-              onClick={handleClearCache}
-              disabled={isMovingDirectory}
-            >
-              Очистить базу данных
-            </Button>
-          </div>
-
-          {/* Прогресс переноса */}
-          {isMovingDirectory && (
-            <div style={{ marginTop: '16px' }}>
-              <div style={{
-                width: '100%',
-                height: '8px',
-                backgroundColor: 'var(--color-grayscale-200)',
-                borderRadius: 'var(--radius-s)',
-                overflow: 'hidden'
-              }}>
+                <h2 className="h2" style={{ 
+                  fontFamily: 'var(--font-family-heading)',
+                  fontSize: 'var(--font-size-h2, 32px)',
+                  lineHeight: 'var(--line-height-h2, 32px)',
+                  fontWeight: 'var(--font-weight-bold, 700)',
+                  color: 'var(--text-primary, #3b3946)',
+                  letterSpacing: '0px',
+                  width: '100%'
+                }}>
+                  Локальное хранилище
+                </h2>
+                
                 <div style={{
-                  width: `${moveProgress}%`,
-                  height: '100%',
-                  backgroundColor: 'var(--bg-button-primary)',
-                  transition: 'width 0.3s ease'
-                }} />
-              </div>
-              <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
-                {moveProgress}%
-              </p>
-            </div>
-          )}
-
-          {/* Сообщение о переносе */}
-          {moveMessage && (
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: moveMessage.includes('✅') ? 'var(--color-green-100)' : moveMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-              borderRadius: 'var(--radius-s)',
-              marginTop: '16px',
-              whiteSpace: 'pre-line'
-            }}>
-              <p className="text-s">{moveMessage}</p>
-            </div>
-          )}
-
-          {message && (
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: message.includes('✅') ? 'var(--color-green-100)' : 'var(--color-red-100)',
-              borderRadius: 'var(--radius-s)',
-              marginTop: '16px'
-            }}>
-              <p className="text-s">{message}</p>
-            </div>
-          )}
-
-          {/* Резервное копирование */}
-          <div style={{ 
-            marginTop: '32px',
-            paddingTop: '24px',
-            borderTop: '1px solid var(--border-default)'
-          }}>
-            <h4 className="text-l" style={{ marginBottom: '12px', fontWeight: 'var(--font-weight-bold)' }}>
-              💾 Резервное копирование
-            </h4>
-            <p className="text-s" style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Создайте полную резервную копию всех файлов и базы данных
-            </p>
-
-            {/* Выбор количества частей */}
-            <div style={{ marginBottom: '16px' }}>
-              <p className="text-s" style={{ marginBottom: '8px', fontWeight: 'var(--font-weight-bold)' }}>
-                Разбиение архива:
-              </p>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {([1, 2, 4, 8] as const).map((num) => {
-                  const partSize = directorySizes ? directorySizes.totalSize / num : 0;
-                  const sizeLabel = directorySizes ? ` (${formatSize(partSize)})` : '';
+                  flex: '1 0 0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)',
+                  padding: 'var(--spacing-xl, 24px)',
+                  border: '2px solid var(--border-default, #ebe9ee)',
+                  borderRadius: 'var(--radius-l, 16px)',
+                  minHeight: '1px',
+                  minWidth: '1px',
+                  width: '100%'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-l, 16px)',
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    letterSpacing: '0px'
+                  }}>
+                    <p style={{
+                      color: 'var(--text-primary, #3b3946)'
+                    }}>
+                      Папка на компьютере для автоматического сохранения загружаемых файлов:
+                    </p>
+                    <p style={{
+                      color: 'var(--text-secondary, #93919a)'
+                    }}>
+                      {directoryPath || 'Не выбрана'}
+                    </p>
+                  </div>
                   
-                  return (
+                  <div style={{
+                    display: 'flex',
+                    gap: 'var(--spacing-s, 8px)',
+                    marginTop: 'auto'
+                  }}>
                     <Button
-                      key={num}
-                      variant={backupParts === num ? 'primary' : 'secondary'}
+                      variant="primary"
+                      size="L"
+                      onClick={handleChangeDirectory}
+                      disabled={isMovingDirectory}
+                      iconRight={<Icon name="folder-output" size={24} variant="border" />}
+                    >
+                      Изменить
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Раздел: Резервная копия */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <h2 className="h2" style={{ 
+                  fontFamily: 'var(--font-family-heading)',
+                  fontSize: 'var(--font-size-h2, 32px)',
+                  lineHeight: 'var(--line-height-h2, 32px)',
+                  fontWeight: 'var(--font-weight-bold, 700)',
+                  color: 'var(--text-primary, #3b3946)',
+                  letterSpacing: '0px',
+                  width: '100%'
+                }}>
+                  Резервная копия
+                </h2>
+                
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)',
+                  padding: 'var(--spacing-xl, 24px)',
+                  border: '2px solid var(--border-default, #ebe9ee)',
+                  borderRadius: 'var(--radius-l, 16px)',
+                  width: '100%'
+                }}>
+                  <p className="text-m" style={{
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    Если база слишком большая, то можно разделить архив на несколько частей
+                  </p>
+                  
+                  {/* Опции разделения архива */}
+                  <div style={{
+                    display: 'flex',
+                    gap: 'var(--spacing-s, 8px)',
+                    alignItems: 'center',
+                    width: '100%',
+                    flexWrap: 'wrap'
+                  }}>
+                    <Button
+                      variant={backupParts === 1 ? 'primary' : 'secondary'}
                       size="S"
-                      onClick={() => setBackupParts(num)}
+                      onClick={() => setBackupParts(1)}
                       disabled={isCreatingBackup}
                     >
-                      {num === 1 ? `Одним файлом${sizeLabel}` : `${num} части${sizeLabel}`}
+                      Одним архивом
                     </Button>
-                  );
-                })}
+                    {([2, 4, 8] as const).map((num) => {
+                      const partSize = directorySizes ? directorySizes.totalSize / num : 0;
+                      const sizeMB = Math.round(partSize / 1024 / 1024);
+                      
+                      return (
+                        <Button
+                          key={num}
+                          variant={backupParts === num ? 'primary' : 'secondary'}
+                          size="S"
+                          onClick={() => setBackupParts(num)}
+                          disabled={isCreatingBackup}
+                        >
+                          <span style={{ color: backupParts === num ? 'var(--text-light, #f5f4f7)' : 'var(--text-primary, #3b3946)' }}>{num}</span>
+                          <span style={{ color: backupParts === num ? 'var(--text-light, #f5f4f7)' : 'var(--text-secondary, #93919a)' }}> {sizeMB} МБ</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Кнопки действий */}
+                  <div style={{
+                    display: 'flex',
+                    gap: 'var(--spacing-l, 16px)'
+                  }}>
+                    <Button
+                      variant="primary"
+                      size="L"
+                      onClick={handleCreateBackup}
+                      disabled={isCreatingBackup || isRestoring || !directoryPath || backupParts === null}
+                      iconRight={<Icon name="save" size={24} variant="border" />}
+                    >
+                      Сохранить
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="L"
+                      onClick={handleRestoreBackup}
+                      disabled={isCreatingBackup || isRestoring}
+                      iconRight={<Icon name="download" size={24} variant="border" />}
+                    >
+                      Восстановить
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <Button
-                variant="primary"
-                size="L"
-                onClick={handleCreateBackup}
-                disabled={isCreatingBackup || isRestoring || !directoryPath}
-              >
-                {isCreatingBackup ? 'Создание...' : 'Создать backup'}
-              </Button>
+            {/* Прогресс переноса */}
+            {isMovingDirectory && (
+              <div style={{ marginTop: 'var(--spacing-l, 16px)' }}>
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  backgroundColor: 'var(--color-grayscale-200)',
+                  borderRadius: 'var(--radius-s)',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${moveProgress}%`,
+                    height: '100%',
+                    backgroundColor: 'var(--bg-button-primary)',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
+                  {moveProgress}%
+                </p>
+              </div>
+            )}
 
-              <Button
-                variant="secondary"
-                size="L"
-                onClick={handleRestoreBackup}
-                disabled={isCreatingBackup || isRestoring}
-              >
-                {isRestoring ? 'Восстановление...' : 'Восстановить'}
-              </Button>
-            </div>
+            {/* Сообщения */}
+            {moveMessage && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: moveMessage.includes('✅') ? 'var(--color-green-100)' : moveMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
+                borderRadius: 'var(--radius-s)',
+                whiteSpace: 'pre-line'
+              }}>
+                <p className="text-s">{moveMessage}</p>
+              </div>
+            )}
 
+            {message && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: message.includes('✅') ? 'var(--color-green-100)' : 'var(--color-red-100)',
+                borderRadius: 'var(--radius-s)'
+              }}>
+                <p className="text-s">{message}</p>
+              </div>
+            )}
+
+            {/* Прогресс создания backup */}
             {isCreatingBackup && (
-              <div style={{ marginTop: '16px' }}>
+              <div>
                 <div style={{
                   width: '100%',
                   height: '8px',
@@ -753,8 +943,7 @@ export const SettingsPage = () => {
               <div style={{
                 padding: '12px 16px',
                 backgroundColor: backupMessage.includes('✅') ? 'var(--color-green-100)' : backupMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)',
-                marginTop: '16px'
+                borderRadius: 'var(--radius-s)'
               }}>
                 <p className="text-s">{backupMessage}</p>
               </div>
@@ -764,13 +953,11 @@ export const SettingsPage = () => {
               <div style={{
                 padding: '12px 16px',
                 backgroundColor: restoreMessage.includes('✅') ? 'var(--color-green-100)' : restoreMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)',
-                marginTop: '16px'
+                borderRadius: 'var(--radius-s)'
               }}>
                 <p className="text-s">{restoreMessage}</p>
               </div>
             )}
-          </div>
           </div>
         )}
 
@@ -995,11 +1182,10 @@ export const SettingsPage = () => {
           </div>
         )}
 
-        {/* Таб: История */}
-        {activeTab === 'history' && (
-          <HistorySection />
-        )}
-      </div>
+      {/* Таб: История */}
+      {activeTab === 'history' && (
+        <HistorySection />
+      )}
     </Layout>
   );
 };

@@ -73,10 +73,8 @@
   position: relative;
 }
 
-/* Контейнер для основного контента с ограничением ширины */
+/* Контейнер для основного контента */
 .layout__content-container {
-  max-width: 2560px;
-  margin: 0 auto;
   width: 100%;
 }
 
