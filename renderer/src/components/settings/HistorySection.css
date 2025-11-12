@@ -59,6 +59,13 @@
   flex: 1;
 }
 
+/* Обёртка для записи (item + divider) */
+.history-section__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
 /* Элемент истории */
 .history-section__item {
   display: flex;

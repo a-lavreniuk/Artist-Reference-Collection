@@ -260,7 +260,7 @@ export const HistorySection = () => {
             const descriptionParts = parseDescription(entry.description);
             
             return (
-              <div key={entry.id}>
+              <div key={entry.id} className="history-section__entry">
                 <div className="history-section__item">
                   <p className="history-section__timestamp text-m">
                     {formatDate(entry.timestamp)}

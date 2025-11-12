@@ -526,7 +526,7 @@ export const SettingsPage = () => {
         <div style={{ 
           display: 'flex',
           flexDirection: 'column',
-          gap: 'var(--spacing-2xl, 32px)',
+          gap: 'var(--spacing-l, 16px)',
           width: '100%'
         }}>
             {/* Секция: Использование пространства */}

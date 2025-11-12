@@ -57,6 +57,7 @@
 .button--primary {
   background-color: #514f5b; /* var(--background/dark/default) */
   color: #f5f4f7; /* var(--text/light/default) */
+  border: 2px solid transparent;
 }
 
 .button--primary:hover:not(:disabled) {
@@ -74,6 +75,7 @@
 .button--secondary {
   background-color: #ebe9ee; /* var(--background/light/default) */
   color: #3b3946; /* var(--text/default/default) */
+  border: 2px solid transparent;
 }
 
 .button--secondary:hover:not(:disabled) {
