@@ -148,9 +148,11 @@ export const CardViewModal = ({
     if (!card) return;
     
     try {
-      const similar = await getSimilarCards(card.id, 5);
-      setSimilarCards(similar);
-      console.log('[CardViewModal] Найдено похожих карточек:', similar.length);
+      const similar = await getSimilarCards(card.id, 15);
+      // Ограничиваем максимум 30 карточками
+      const limitedSimilar = similar.slice(0, 30);
+      setSimilarCards(limitedSimilar);
+      console.log('[CardViewModal] Найдено похожих карточек:', similar.length, 'показано:', limitedSimilar.length);
     } catch (error) {
       console.error('Ошибка загрузки похожих карточек:', error);
     }

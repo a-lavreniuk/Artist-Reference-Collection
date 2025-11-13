@@ -654,10 +654,10 @@ export async function searchCardsAdvanced(query: string): Promise<Card[]> {
 /**
  * Найти похожие карточки по совпадающим меткам
  * @param cardId - ID текущей карточки
- * @param minMatches - Минимальное количество совпадающих меток (по умолчанию 5)
+ * @param minMatches - Минимальное количество совпадающих меток (по умолчанию 15)
  * @returns Массив похожих карточек, отсортированных по количеству совпадений
  */
-export async function getSimilarCards(cardId: string, minMatches: number = 5): Promise<Array<Card & { matchCount: number }>> {
+export async function getSimilarCards(cardId: string, minMatches: number = 15): Promise<Array<Card & { matchCount: number }>> {
   // Получаем текущую карточку
   const currentCard = await getCard(cardId);
   if (!currentCard || currentCard.tags.length === 0) {
