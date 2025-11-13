@@ -15,6 +15,7 @@ import {
   AddPage
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
+import { OnboardingScreenDemo } from './components/common/OnboardingScreen.demo';
 import { useFileSystem, useElectronUpdates } from './hooks';
 import { SearchProvider } from './contexts';
 
@@ -67,8 +68,11 @@ function App() {
     setShowOnboarding(false);
   };
 
-  // Обработчик пропуска (можно настроить позже в настройках)
-  const handleSkip = () => {
+  // Обработчик восстановления резервной копии
+  const handleRestoreBackup = async () => {
+    console.log('[App] Восстановление резервной копии');
+    // TODO: Реализовать логику восстановления
+    // Пока просто скрываем онбординг
     setShowOnboarding(false);
   };
 
@@ -123,7 +127,7 @@ function App() {
     return (
       <OnboardingScreen
         onDirectorySelected={handleDirectorySelected}
-        onSkip={handleSkip}
+        onRestoreBackup={handleRestoreBackup}
         requestDirectory={requestDirectory}
       />
     );
@@ -147,6 +151,7 @@ function App() {
               <Route path="/moodboard" element={<MoodboardPage />} />
               <Route path="/add" element={<AddPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/test/onboarding" element={<OnboardingScreenDemo />} />
               </Routes>
             </ErrorBoundary>
           </SearchProvider>
