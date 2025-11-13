@@ -15,8 +15,6 @@ import {
   AddPage
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
-import { OnboardingScreenDemo } from './components/common/OnboardingScreen.demo';
-import { OnboardingScreenTestSimple } from './components/common/OnboardingScreen.test-simple';
 import { useFileSystem, useElectronUpdates } from './hooks';
 import { SearchProvider } from './contexts';
 
@@ -55,17 +53,14 @@ function App() {
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
-  
-  // Проверяем, находимся ли мы на тестовой странице
-  const isTestRoute = window.location.pathname.startsWith('/test/');
 
   // Проверяем нужно ли показать онбординг
   useEffect(() => {
-    if (!isLoading && !isTestRoute) {
+    if (!isLoading) {
       // Показываем онбординг если нет handle или нет разрешений
       setShowOnboarding(!directoryHandle || !hasPermission);
     }
-  }, [isLoading, directoryHandle, hasPermission, isTestRoute]);
+  }, [isLoading, directoryHandle, hasPermission]);
 
   // Обработчик успешного выбора папки
   const handleDirectorySelected = () => {
@@ -94,20 +89,6 @@ function App() {
   const handleDismissUpdate = () => {
     setShowUpdateNotification(false);
   };
-
-  // Для тестовых страниц пропускаем все проверки Electron
-  if (isTestRoute) {
-    return (
-      <Router>
-        <ErrorBoundary>
-          <Routes>
-            <Route path="/test/onboarding" element={<OnboardingScreenDemo />} />
-            <Route path="/test/onboarding-simple" element={<OnboardingScreenTestSimple />} />
-          </Routes>
-        </ErrorBoundary>
-      </Router>
-    );
-  }
 
   // Показываем загрузку пока проверяем рабочую папку
   if (isLoading) {
