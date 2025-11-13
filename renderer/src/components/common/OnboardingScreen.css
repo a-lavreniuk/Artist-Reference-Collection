@@ -28,7 +28,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 680px;
+  max-width: 714px;
   padding: var(--spacing-3xl);
   text-align: center;
 }
@@ -38,8 +38,7 @@
 .onboarding__title {
   margin-bottom: var(--spacing-3xl);
   color: var(--text-primary);
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
+  /* H1 стили применяются автоматически из typography.css */
 }
 
 /* ========== СЕТКА ВОЗМОЖНОСТЕЙ 2×2 ========== */
@@ -49,26 +48,25 @@
   grid-template-columns: repeat(2, 1fr);
   gap: var(--spacing-l);
   width: 100%;
-  margin-bottom: var(--spacing-3xl);
+  margin-bottom: 16px; /* Отступ до кнопок 16px */
 }
 
 /* Карточка фичи */
 .onboarding__feature-card {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: flex-start; /* Выравнивание по верхнему краю */
   gap: var(--spacing-m);
   padding: var(--spacing-xl);
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-default);
+  background-color: transparent; /* Без заливки */
+  border: 2px solid var(--border-default); /* Бордер 2px */
   border-radius: var(--radius-l);
-  text-align: center;
-  transition: all 0.2s ease;
+  text-align: left; /* Выравнивание текста по левому краю */
 }
 
+/* Убираем hover эффект */
 .onboarding__feature-card:hover {
-  background-color: var(--bg-tertiary);
-  border-color: var(--border-hover);
+  /* Нет hover эффектов */
 }
 
 /* Иконка фичи */
@@ -84,6 +82,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  flex: 1; /* Занимает оставшееся место */
 }
 
 .onboarding__feature-title {
@@ -114,8 +113,13 @@
   gap: var(--spacing-s);
 }
 
-.onboarding__actions button svg {
+/* Иконки внутри кнопок */
+.onboarding__actions button .icon {
   flex-shrink: 0;
+  margin-left: var(--spacing-xs);
+  /* Выравнивание по центру относительно текста */
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ========== ОШИБКА ========== */

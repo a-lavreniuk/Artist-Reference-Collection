@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { Button } from './Button';
+import { Icon } from './Icon';
 import './OnboardingScreen.css';
 
 export interface OnboardingScreenProps {
@@ -73,15 +74,7 @@ export const OnboardingScreen = ({
         <div className="onboarding__features-grid">
           {/* Коллекции */}
           <div className="onboarding__feature-card">
-            <svg className="onboarding__feature-icon" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M9 12H15M9 16H15M17 21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3H12.5858C12.851 3 13.1054 3.10536 13.2929 3.29289L18.7071 8.70711C18.8946 8.89464 19 9.149 19 9.41421V19C19 20.1046 18.1046 21 17 21Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <Icon name="folder-open" size={48} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Коллекции</h3>
               <p className="onboarding__feature-text text-s">
@@ -92,15 +85,7 @@ export const OnboardingScreen = ({
 
           {/* Метки */}
           <div className="onboarding__feature-card">
-            <svg className="onboarding__feature-icon" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M7.5 7.5H7.51M7 3H17L21 7V17L17 21H7L3 17V7L7 3Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <Icon name="tag" size={48} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Метки</h3>
               <p className="onboarding__feature-text text-s">
@@ -111,16 +96,7 @@ export const OnboardingScreen = ({
 
           {/* Всё локально */}
           <div className="onboarding__feature-card">
-            <svg className="onboarding__feature-icon" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M9 12H15M9 16H15M17 21H7C5.89543 21 5 20.1046 5 19V5C5 3.89543 5.89543 3 7 3H17C18.1046 3 19 3.89543 19 5V19C19 20.1046 18.1046 21 17 21Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <rect x="8" y="6" width="8" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.5"/>
-            </svg>
+            <Icon name="server" size={48} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Всё локально</h3>
               <p className="onboarding__feature-text text-s">
@@ -131,27 +107,7 @@ export const OnboardingScreen = ({
 
           {/* Мудборды */}
           <div className="onboarding__feature-card">
-            <svg className="onboarding__feature-icon" viewBox="0 0 24 24" fill="none">
-              <rect
-                x="3"
-                y="3"
-                width="18"
-                height="18"
-                rx="2"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M12 8V12L14 14"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <circle cx="16" cy="8" r="2" fill="currentColor" />
-            </svg>
+            <Icon name="bookmark-plus" size={48} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Мудборды</h3>
               <p className="onboarding__feature-text text-s">
@@ -172,22 +128,8 @@ export const OnboardingScreen = ({
             disabled={isRestoring}
             fullWidth
           >
-            <span>Показать куда сохранять</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M20 6H12L10 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V8C22 6.9 21.1 6 20 6Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M12 12L16 12M16 12L14 10M16 12L14 14"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            Показать куда сохранять
+            <Icon name="folder-open" size={20} />
           </Button>
           
           {/* Вторичная кнопка */}
@@ -199,23 +141,8 @@ export const OnboardingScreen = ({
             disabled={isSelecting}
             fullWidth
           >
-            <span>Восстановить резервную копию</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M12 8V16M12 16L9 13M12 16L15 13"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            Восстановить резервную копию
+            <Icon name="download" size={20} />
           </Button>
         </div>
 
