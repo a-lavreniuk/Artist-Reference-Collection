@@ -59,9 +59,8 @@ export function useFileSystem(): UseFileSystemReturn {
           return;
         }
 
-        // Загружаем сохраненный путь из настроек приложения
-        // Используем localStorage как временное хранилище
-        const savedPath = localStorage.getItem('arc_working_directory');
+        // Загружаем сохраненный путь из настроек приложения через Electron API
+        const savedPath = await window.electronAPI.getSetting('workingDirectory');
         
         if (savedPath) {
           // Проверяем существование директории
@@ -74,9 +73,11 @@ export function useFileSystem(): UseFileSystemReturn {
           } else {
             // Директория больше не существует
             console.warn('[FileSystem] Сохраненная директория не найдена');
-            localStorage.removeItem('arc_working_directory');
+            await window.electronAPI.removeSetting('workingDirectory');
             setHasPermission(false);
           }
+        } else {
+          console.log('[FileSystem] Рабочая папка не настроена, нужен онбординг');
         }
       } catch (err) {
         console.error('[FileSystem] Ошибка загрузки пути:', err);
@@ -103,10 +104,40 @@ export function useFileSystem(): UseFileSystemReturn {
       const path = await window.electronAPI.selectWorkingDirectory();
       
       if (path) {
+        // Проверяем текущую рабочую папку
+        const oldPath = await window.electronAPI.getSetting('workingDirectory');
+        
+        // Если меняется папка и это не первый запуск
+        if (oldPath && oldPath !== path) {
+          console.log('[FileSystem] Смена рабочей папки с', oldPath, 'на', path);
+          
+          // Проверяем есть ли данные в базе (через динамический импорт чтобы избежать циклической зависимости)
+          const { db } = await import('../services/db');
+          const cardCount = await db.cards.count();
+          
+          if (cardCount > 0) {
+            const confirmed = confirm(
+              `В базе данных найдено ${cardCount} карточек из предыдущей рабочей папки.\n\n` +
+              `Хотите очистить базу данных?\n\n` +
+              `ДА - удалить все старые карточки (файлы в папке "${oldPath}" останутся нетронутыми)\n` +
+              `НЕТ - оставить старые карточки (они будут показываться, но файлы могут быть недоступны)`
+            );
+            
+            if (confirmed) {
+              console.log('[FileSystem] Очистка базы данных...');
+              await db.delete();
+              await db.open();
+              console.log('[FileSystem] База данных очищена');
+            } else {
+              console.log('[FileSystem] Пользователь оставил старые данные');
+            }
+          }
+        }
+        
         setDirectoryPath(path);
         setHasPermission(true);
-        // Сохраняем путь для следующего запуска
-        localStorage.setItem('arc_working_directory', path);
+        // Сохраняем путь для следующего запуска через Electron API
+        await window.electronAPI.saveSetting('workingDirectory', path);
         console.log('[FileSystem] Выбрана рабочая директория:', path);
       }
       
@@ -140,10 +171,10 @@ export function useFileSystem(): UseFileSystemReturn {
   /**
    * Очистить путь
    */
-  const clearDirectory = useCallback(() => {
+  const clearDirectory = useCallback(async () => {
     setDirectoryPath(null);
     setHasPermission(false);
-    localStorage.removeItem('arc_working_directory');
+    await window.electronAPI.removeSetting('workingDirectory');
     console.log('[FileSystem] Рабочая директория очищена');
   }, []);
 

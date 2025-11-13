@@ -150,7 +150,7 @@ export const Dialog = ({
     if (typeof icon === 'string') {
       return (
         <div className={`dialog__icon dialog__icon--${variant}`}>
-          <Icon name={icon as any} size={32} variant="fill" />
+          <Icon name={icon as any} size={24} variant="fill" />
         </div>
       );
     }

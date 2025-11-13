@@ -224,6 +224,33 @@ export interface ElectronAPI {
    */
   checkForUpdates: () => Promise<void>;
   
+  /**
+   * Открыть папку с логами приложения
+   */
+  openLogsFolder: () => Promise<void>;
+  
+  // === НАСТРОЙКИ ПРИЛОЖЕНИЯ ===
+  
+  /**
+   * Сохранить настройку приложения
+   * @param key - Ключ настройки
+   * @param value - Значение настройки
+   */
+  saveSetting: (key: string, value: any) => Promise<void>;
+  
+  /**
+   * Получить настройку приложения
+   * @param key - Ключ настройки
+   * @returns Значение настройки или null
+   */
+  getSetting: (key: string) => Promise<any>;
+  
+  /**
+   * Удалить настройку приложения
+   * @param key - Ключ настройки
+   */
+  removeSetting: (key: string) => Promise<void>;
+  
   // === ИСТОРИЯ ДЕЙСТВИЙ ===
   
   /**
@@ -332,6 +359,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('show-notification', title, body),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  openLogsFolder: () => ipcRenderer.invoke('open-logs-folder'),
+  
+  // Настройки приложения
+  saveSetting: (key: string, value: any) => ipcRenderer.invoke('save-setting', key, value),
+  getSetting: (key: string) => ipcRenderer.invoke('get-setting', key),
+  removeSetting: (key: string) => ipcRenderer.invoke('remove-setting', key),
   
   // История действий
   getHistory: (workingDir?: string) => ipcRenderer.invoke('get-history', workingDir),

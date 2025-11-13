@@ -15,9 +15,22 @@ files:
   - preload/**/*
   - renderer/dist/**/*
   - package.json
+  - LICENSE
+
+# Дополнительные ресурсы для копирования в установленное приложение
+extraResources:
+  - from: resources/icon.ico
+    to: icon.ico
+  - from: resources/icon.png
+    to: icon.png
+
+# Исключить ffmpeg из ASAR для возможности запуска
+asarUnpack:
+  - "**/node_modules/@ffmpeg-installer/**"
+  - "**/node_modules/fluent-ffmpeg/**"
 
 # Файлы для исключения
-files:
+extraFiles:
   - "!**/.git/*"
   - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
   - "!**/node_modules/.bin"
@@ -35,6 +48,12 @@ win:
   icon: resources/icon.ico
   artifactName: "${productName}-Setup-${version}.${ext}"
   publisherName: Александр Лавренюк
+  # Code signing (если доступен сертификат)
+  # Переменные окружения: CSC_LINK, CSC_KEY_PASSWORD
+  # signingHashAlgorithms:
+  #   - sha256
+  # signAndEditExecutable: true
+  # signDlls: false
 
 # Настройки установщика NSIS
 nsis:
@@ -46,17 +65,29 @@ nsis:
   perMachine: false
   installerIcon: resources/icon.ico
   uninstallerIcon: resources/icon.ico
-  license: null
+  license: LICENSE
   language: "1049" # Русский язык
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false # Сохраняем данные пользователя при удалении
+  # GUID для определения установленного приложения
+  guid: "a4e8f45e-9c2d-4b3a-8f1e-6d7c8b9a0e1f"
+  include: null
+  warningsAsErrors: false
 
-# Публикация обновлений (для будущего)
+# Публикация обновлений через GitHub Releases
 publish:
-  provider: generic
-  url: https://example.com/updates/
+  provider: github
+  owner: rocontd
+  repo: arc
+  releaseType: release
+  # GH_TOKEN должен быть установлен в переменных окружения или GitHub Secrets
   
 # Сжатие
 compression: normal
 
-# Удалять ли предыдущую версию при обновлении
+# ASAR архивирование для защиты кода
 asar: true
+
+# Включение генерации latest.yml для автообновлений
+generateUpdatesFilesForAllChannels: true
 

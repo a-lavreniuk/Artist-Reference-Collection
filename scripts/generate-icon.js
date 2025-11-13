@@ -14,14 +14,14 @@ const SIZES = [16, 32, 48, 64, 128, 256];
 async function generateIcon() {
   console.log('🎨 Генерация иконки приложения...');
   
-  const svgPath = path.join(__dirname, '../resources/app-icon.svg');
+  const svgPath = path.join(__dirname, '../renderer/src/assets/icons/arc-icon.svg');
   const outputDir = path.join(__dirname, '../resources/temp_icons');
   const iconPath = path.join(__dirname, '../resources/icon.ico');
   
   try {
     // 1. Читаем SVG
     const svgBuffer = await fs.readFile(svgPath);
-    console.log('✅ SVG файл загружен');
+    console.log('✅ SVG файл загружен из:', svgPath);
     
     // 2. Создаём временную папку для PNG
     await fs.mkdir(outputDir, { recursive: true });
@@ -34,7 +34,7 @@ async function generateIcon() {
       const pngBuffer = await sharp(svgBuffer)
         .resize(size, size, {
           fit: 'contain',
-          background: { r: 255, g: 255, b: 255, alpha: 1 } // Белый фон для лучшей видимости
+          background: { r: 0, g: 0, b: 0, alpha: 0 } // Прозрачный фон
         })
         .png()
         .toBuffer();
@@ -48,7 +48,7 @@ async function generateIcon() {
     await sharp(svgBuffer)
       .resize(256, 256, {
         fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
+        background: { r: 0, g: 0, b: 0, alpha: 0 } // Прозрачный фон
       })
       .png()
       .toFile(iconPngPath);

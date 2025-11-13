@@ -64,6 +64,12 @@ interface ElectronAPI {
   showNotification: (title: string, body: string) => Promise<void>;
   getAppVersion: () => Promise<string>;
   checkForUpdates: () => Promise<void>;
+  openLogsFolder: () => Promise<void>;
+  
+  // === НАСТРОЙКИ ПРИЛОЖЕНИЯ ===
+  saveSetting: (key: string, value: any) => Promise<void>;
+  getSetting: (key: string) => Promise<any>;
+  removeSetting: (key: string) => Promise<void>;
   
   // === ИСТОРИЯ ДЕЙСТВИЙ ===
   getHistory: (workingDir?: string) => Promise<Array<{

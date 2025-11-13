@@ -5,9 +5,32 @@
 
 import { app, BrowserWindow, screen, Tray, Menu, nativeImage } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { initializeAutoUpdater } from './auto-updater';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
+
+// Настройка логирования в файл
+const logFile = path.join(app.getPath('userData'), 'main-process.log');
+const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+
+// Перехватываем console.log для записи в файл
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = (...args: any[]) => {
+  const timestamp = new Date().toISOString();
+  const message = `[${timestamp}] ${args.join(' ')}\n`;
+  logStream.write(message);
+  originalLog(...args);
+};
+
+console.error = (...args: any[]) => {
+  const timestamp = new Date().toISOString();
+  const message = `[${timestamp}] ERROR: ${args.join(' ')}\n`;
+  logStream.write(message);
+  originalError(...args);
+};
 
 // Хранилище главного окна и трея
 let mainWindow: BrowserWindow | null = null;
@@ -53,7 +76,8 @@ function createWindow(): void {
     },
     backgroundColor: '#0A0A0A', // Фон из палитры ARC (grayscale-950)
     title: 'ARC - Artist Reference Collection',
-    icon: path.join(__dirname, '../resources/icon.ico')
+    // Иконка берется из resources при сборке electron-builder
+    ...(app.isPackaged ? {} : { icon: path.join(__dirname, '../../resources/icon.ico') })
   });
 
   // Загружаем React приложение
@@ -65,11 +89,13 @@ function createWindow(): void {
     // mainWindow.webContents.openDevTools();
   } else {
     // В продакшене загружаем собранное приложение
-    mainWindow.loadFile(path.join(__dirname, '../../renderer/dist/index.html'));
+    // После сборки структура: main/main.js и renderer/dist/index.html находятся на одном уровне
+    mainWindow.loadFile(path.join(__dirname, '../renderer/dist/index.html'));
   }
 
   // Показываем окно когда контент загружен
   mainWindow.once('ready-to-show', () => {
+    mainWindow?.maximize(); // Разворачиваем на весь экран
     mainWindow?.show();
     
     // Инициализируем автообновления после показа окна
@@ -106,11 +132,34 @@ function createWindow(): void {
  * Создание системного трея
  */
 function createTray(): void {
-  // Путь к иконке для трея (используем PNG для лучшей поддержки)
-  const iconPath = path.join(__dirname, '../resources/icon.png');
+  // Путь к иконке для трея
+  let iconPath: string;
   
-  // Загружаем иконку и устанавливаем размер 16x16 для трея
-  const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+  if (app.isPackaged) {
+    // В продакшене: extraResources копируются в process.resourcesPath
+    iconPath = path.join(process.resourcesPath, 'icon.ico');
+    console.log('[MAIN] Режим PRODUCTION');
+    console.log('[MAIN] process.resourcesPath:', process.resourcesPath);
+    console.log('[MAIN] Путь к иконке:', iconPath);
+  } else {
+    // В разработке
+    iconPath = path.join(__dirname, '../../resources/icon.ico');
+    console.log('[MAIN] Режим DEVELOPMENT');
+    console.log('[MAIN] Путь к иконке:', iconPath);
+  }
+  
+  console.log('[MAIN] Файл существует:', fs.existsSync(iconPath));
+  
+  // Загружаем иконку
+  const icon = nativeImage.createFromPath(iconPath);
+  
+  if (icon.isEmpty()) {
+    console.error('[MAIN] ❌ Не удалось загрузить иконку трея!');
+    console.error('[MAIN] Финальный путь:', iconPath);
+    // Создаем трей с пустой иконкой - хотя бы меню будет работать
+  } else {
+    console.log('[MAIN] ✅ Иконка загружена успешно, размер:', icon.getSize());
+  }
   
   // Создаём трей
   tray = new Tray(icon);

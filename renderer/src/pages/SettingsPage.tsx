@@ -9,9 +9,10 @@ import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
-import { useToast } from '../hooks/useToast';
+// import { useToast } from '../hooks/useToast';
+import { useAlert } from '../hooks/useAlert';
 import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
-import { logCreateBackup, logClearCache, logMoveStorage } from '../services/history';
+import { logCreateBackup, logMoveStorage } from '../services/history';
 import type { AppStatistics, Tag, Collection } from '../types';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
@@ -22,14 +23,16 @@ type CollectionWithCount = Collection & { cardCount: number };
 export const SettingsPage = () => {
   const navigate = useNavigate();
   const { searchProps, setSelectedTags } = useSearch();
-  const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
-  const toast = useToast();
+  const { requestDirectory, directoryPath } = useFileSystem();
+  // const toast = useToast();
+  const alert = useAlert();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
   const [topTags, setTopTags] = useState<TagWithCategory[]>([]);
   const [topCollections, setTopCollections] = useState<CollectionWithCount[]>([]);
   const [underusedTags, setUnderusedTags] = useState<TagWithCategory[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+  // const [message, setMessage] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('');
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
@@ -87,6 +90,12 @@ export const SettingsPage = () => {
       setTopTags(tags);
       setTopCollections(collections);
       setUnderusedTags(unused);
+      
+      // Загружаем версию приложения
+      if (window.electronAPI?.getAppVersion) {
+        const version = await window.electronAPI.getAppVersion();
+        setAppVersion(version);
+      }
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
     }
@@ -179,8 +188,8 @@ export const SettingsPage = () => {
 
         console.log(`[Settings] Обновлено путей: ${allCards.length}`);
 
-        // 4. Обновляем рабочую папку в настройках (правильный ключ!)
-        localStorage.setItem('arc_working_directory', newPath);
+        // 4. Обновляем рабочую папку в настройках через Electron API
+        await window.electronAPI.saveSetting('workingDirectory', newPath);
         
         // 5. Логируем перенос хранилища
         const totalSize = directorySizes?.totalSize || 0;
@@ -239,40 +248,40 @@ export const SettingsPage = () => {
   };
 
   // Вспомогательная функция для форматирования размера
-  const formatSize = (bytes: number): string => {
-    const mb = bytes / 1024 / 1024;
-    if (mb < 1) {
-      return '< 1 МБ';
-    } else if (mb < 1024) {
-      return `${Math.round(mb)} МБ`;
-    } else {
-      const gb = mb / 1024;
-      return `${gb.toFixed(1)} ГБ`;
-    }
-  };
+  // const formatSize = (bytes: number): string => {
+  //   const mb = bytes / 1024 / 1024;
+  //   if (mb < 1) {
+  //     return '< 1 МБ';
+  //   } else if (mb < 1024) {
+  //     return `${Math.round(mb)} МБ`;
+  //   } else {
+  //     const gb = mb / 1024;
+  //     return `${gb.toFixed(1)} ГБ`;
+  //   }
+  // };
 
-  const handleClearCache = async () => {
-    if (!confirm('Очистить весь кеш? Это удалит все данные из базы.')) {
-      return;
-    }
+  // const handleClearCache = async () => {
+  //   if (!confirm('Очистить весь кеш? Это удалит все данные из базы.')) {
+  //     return;
+  //   }
 
-    try {
-      // Получаем размер кэша перед очисткой
-      const cacheSize = directorySizes?.cacheSize || 0;
-      
-      await db.delete();
-      await db.open();
-      
-      // Логируем очистку кэша
-      await logClearCache(cacheSize);
-      
-      alert.success('Кеш очищен');
-      await loadStats();
-    } catch (error) {
-      alert.error('Не удалось очистить кеш');
-      console.error('Ошибка очистки:', error);
-    }
-  };
+  //   try {
+  //     // Получаем размер кэша перед очисткой
+  //     const cacheSize = directorySizes?.cacheSize || 0;
+  //     
+  //     await db.delete();
+  //     await db.open();
+  //     
+  //     // Логируем очистку кэша
+  //     await logClearCache(cacheSize);
+  //     
+  //     alert.success('Кеш очищен');
+  //     await loadStats();
+  //   } catch (error) {
+  //     alert.error('Не удалось очистить кеш');
+  //     console.error('Ошибка очистки:', error);
+  //   }
+  // };
 
   const handleCreateBackup = async () => {
     if (!directoryPath) {
@@ -412,9 +421,9 @@ export const SettingsPage = () => {
         console.log('[Settings] База данных импортирована с обновленными путями');
       }
 
-      // 5. Обновляем рабочую папку в настройках (правильный ключ!)
-      localStorage.setItem('arc_working_directory', targetPath);
-      console.log('[Settings] Рабочая папка обновлена в localStorage:', targetPath);
+      // 5. Обновляем рабочую папку в настройках через Electron API
+      await window.electronAPI.saveSetting('workingDirectory', targetPath);
+      console.log('[Settings] Рабочая папка обновлена:', targetPath);
 
       setRestoreMessage('✅ Восстановление завершено! Переход в галерею...');
       await loadStats();
@@ -923,7 +932,7 @@ export const SettingsPage = () => {
               </div>
             )}
 
-            {message && (
+            {/* {message && (
               <div style={{
                 padding: '12px 16px',
                 backgroundColor: message.includes('✅') ? 'var(--color-green-100)' : 'var(--color-red-100)',
@@ -931,7 +940,7 @@ export const SettingsPage = () => {
               }}>
                 <p className="text-s">{message}</p>
               </div>
-            )}
+            )} */}
 
             {/* Прогресс создания backup */}
             {isCreatingBackup && (
@@ -975,6 +984,71 @@ export const SettingsPage = () => {
                 <p className="text-s">{restoreMessage}</p>
               </div>
             )}
+
+            {/* Метка версии и кнопка логов в правом нижнем углу */}
+            <div style={{
+              position: 'fixed',
+              bottom: 'var(--spacing-l, 16px)',
+              right: 'var(--spacing-l, 16px)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--spacing-s, 8px)'
+            }}>
+              {/* Кнопка открытия логов */}
+              <button
+                onClick={async () => {
+                  try {
+                    await window.electronAPI.openLogsFolder();
+                  } catch (error) {
+                    console.error('Ошибка открытия папки логов:', error);
+                  }
+                }}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: 'var(--bg-tertiary, #ebe9ee)',
+                  borderRadius: 'var(--radius-s, 8px)',
+                  border: '1px solid var(--border-default, #d4d1dc)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s'
+                }}
+                title="Открыть папку с логами приложения"
+              >
+                <Icon name="folder-open" size={16} variant="border" />
+                <p className="text-s" style={{
+                  fontFamily: 'var(--font-family-body)',
+                  fontSize: 'var(--font-size-s, 14px)',
+                  lineHeight: 'var(--line-height-s, 18px)',
+                  fontWeight: 'var(--font-weight-regular, 400)',
+                  color: 'var(--text-secondary, #93919a)',
+                  letterSpacing: '0px'
+                }}>
+                  Логи
+                </p>
+              </button>
+              
+              {/* Метка версии */}
+              <div style={{
+                padding: '6px 12px',
+                backgroundColor: 'var(--bg-tertiary, #ebe9ee)',
+                borderRadius: 'var(--radius-s, 8px)',
+                border: '1px solid var(--border-default, #d4d1dc)',
+                pointerEvents: 'none'
+              }}>
+                <p className="text-s" style={{
+                  fontFamily: 'var(--font-family-body)',
+                  fontSize: 'var(--font-size-s, 14px)',
+                  lineHeight: 'var(--line-height-s, 18px)',
+                  fontWeight: 'var(--font-weight-regular, 400)',
+                  color: 'var(--text-secondary, #93919a)',
+                  letterSpacing: '0px'
+                }}>
+                  v{appVersion}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1562,6 +1636,7 @@ export const SettingsPage = () => {
                 </div>
               </div>
             </div>
+
           </div>
         )}
 

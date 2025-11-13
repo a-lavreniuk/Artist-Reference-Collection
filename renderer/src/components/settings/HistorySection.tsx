@@ -18,7 +18,7 @@ export const HistorySection = () => {
   const [loading, setLoading] = useState(true);
   const [activePeriod, setActivePeriod] = useState<HistoryPeriod>('all');
   const [filteredHistory, setFilteredHistory] = useState<HistoryEntry[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+  // const [message, setMessage] = useState<string | null>(null);
 
   // Загрузка истории при монтировании
   useEffect(() => {
@@ -233,7 +233,7 @@ export const HistorySection = () => {
       </div>
 
       {/* Сообщения */}
-      {message && (
+      {/* {message && (
         <div
           className="history-section__message"
           style={{
@@ -244,7 +244,7 @@ export const HistorySection = () => {
         >
           <p className="text-s">{message}</p>
         </div>
-      )}
+      )} */}
 
       {/* Список записей истории */}
       {filteredHistory.length === 0 ? (

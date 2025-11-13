@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
-import { Button, Tag, Input, Icon } from '../common';
+import { Button, Input, Icon } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
 import { logImportFiles } from '../../services/history';
 import { useFileSystem } from '../../hooks';
@@ -86,7 +86,7 @@ export interface AddCardFlowProps {
   onOpenFileDialogReady?: (handler: () => void) => void;
 }
 
-export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady }: AddCardFlowProps) => {
+export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady }: AddCardFlowProps) => {
   const toast = useToast();
   const alert = useAlert();
   const [queue, setQueue] = useState<QueueFile[]>([]);
@@ -136,7 +136,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
 
   // Проверяем нужен ли скролл (с debounce для оптимизации)
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
     
     const checkScroll = () => {
       if (queueScrollRef.current) {
@@ -464,7 +464,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     }
 
     try {
-      const category = allCategories.find(c => c.id === categoryId);
+      // const category = allCategories.find(c => c.id === categoryId);
       const tag: TagType = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: newTagName.trim(),
@@ -529,6 +529,14 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       
       const createdCards: Card[] = [];
       
+      // Проверяем наличие рабочей папки
+      if (!directoryPath) {
+        alert.error('Рабочая папка не настроена. Пожалуйста, выберите рабочую папку в настройках.');
+        return;
+      }
+      
+      console.log('[AddCardFlow] Начинаем сохранение, рабочая папка:', directoryPath);
+      
       // Сохраняем только настроенные карточки
       for (let i = 0; i < configured.length; i++) {
         const item = configured[i];
@@ -537,6 +545,8 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
         try {
           // Читаем файл как ArrayBuffer
           const arrayBuffer = await item.file.arrayBuffer();
+          
+          console.log('[AddCardFlow] Сохранение файла:', item.file.name, 'в папку:', directoryPath);
           
           // Сохраняем файл в рабочую папку через Electron API
           const savedFilePath = await window.electronAPI.saveFileFromBuffer(
@@ -553,8 +563,20 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
           );
           console.log('[AddCardFlow] Превью создано:', thumbnailPath);
           
-          // Получаем Data URL для превью
-          const thumbnailUrl = await window.electronAPI.getFileURL(thumbnailPath);
+          // Проверяем существование файла превью перед чтением
+          const thumbnailExists = await window.electronAPI.fileExists(thumbnailPath);
+          console.log('[AddCardFlow] Превью существует:', thumbnailExists);
+          
+          // Получаем Data URL для превью (если существует)
+          let thumbnailUrl = '';
+          if (thumbnailExists) {
+            thumbnailUrl = await window.electronAPI.getFileURL(thumbnailPath);
+            console.log('[AddCardFlow] Data URL создан');
+          } else {
+            console.warn('[AddCardFlow] Превью не создано, будет использован placeholder');
+            // Для видео без превью используем пустую строку - UI покажет placeholder
+            thumbnailUrl = '';
+          }
 
           // Создаём карточку с правильными путями
           const card: Card = {
@@ -585,16 +607,21 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
           }
           
           createdCards.push(card);
-        } catch (fileError) {
+        } catch (fileError: any) {
           console.error(`Ошибка сохранения файла ${item.file.name}:`, fileError);
+          
+          // Показываем ошибку через alert
+          const errorMessage = fileError?.message || String(fileError);
+          alert.error(`Ошибка сохранения файла ${item.file.name}: ${errorMessage}`);
+          
           // Продолжаем с следующим файлом
           setMessage(`⚠️ Не удалось сохранить ${item.file.name}`);
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
 
       if (createdCards.length === 0) {
-        alert.error('Не удалось сохранить ни один файл');
+        alert.error('Не удалось сохранить ни один файл. Проверьте консоль для подробностей.');
         return;
       }
 
@@ -603,9 +630,10 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
 
       // Завершаем добавление - Alert покажется в AddPage
       setTimeout(() => onComplete(createdCards.length), 500);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Ошибка сохранения:', error);
-      alert.error('Ошибка сохранения карточек');
+      const errorMessage = error?.message || String(error);
+      alert.error(`Ошибка сохранения карточек: ${errorMessage}`);
     }
   };
 

@@ -161,23 +161,23 @@ export const CardViewModal = ({
   }
 
   // Форматирование размера файла
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-  };
+  // const formatFileSize = (bytes: number): string => {
+  //   if (bytes < 1024) return `${bytes} B`;
+  //   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  //   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  //   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  // };
 
   // Форматирование даты
-  const formatDate = (date: Date): string => {
-    return new Date(date).toLocaleDateString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // const formatDate = (date: Date): string => {
+  //   return new Date(date).toLocaleDateString('ru-RU', {
+  //     year: 'numeric',
+  //     month: 'long',
+  //     day: 'numeric',
+  //     hour: '2-digit',
+  //     minute: '2-digit'
+  //   });
+  // };
 
   // Переключение мудборда
   const handleToggleMoodboard = async () => {
@@ -187,18 +187,18 @@ export const CardViewModal = ({
       if (card.inMoodboard) {
         console.log('[CardViewModal] Удаляем из мудборда');
         await removeFromMoodboard(card.id);
-        showToast('Карточка удалена из мудборда', 'info');
+        alert.info('Карточка удалена из мудборда');
       } else {
         console.log('[CardViewModal] Добавляем в мудборд');
         await addToMoodboard(card.id);
-        showToast('Карточка добавлена в мудборд', 'success');
+        alert.success('Карточка добавлена в мудборд');
       }
       
       console.log('[CardViewModal] Вызываем onCardUpdated');
       onCardUpdated?.();
     } catch (error) {
       console.error('[CardViewModal] Ошибка обновления мудборда:', error);
-      showToast('Ошибка обновления мудборда', 'error');
+      alert.error('Ошибка обновления мудборда');
     }
   };
 
@@ -241,77 +241,77 @@ export const CardViewModal = ({
   };
 
   // Удаление метки из карточки
-  const handleRemoveTag = async (tagId: string) => {
-    try {
-      const newTags = card.tags.filter(id => id !== tagId);
-      await updateCard(card.id, { tags: newTags });
-      onCardUpdated?.();
-    } catch (error) {
-      console.error('Ошибка удаления метки:', error);
-    }
-  };
+  // const handleRemoveTag = async (tagId: string) => {
+  //   try {
+  //     const newTags = card.tags.filter(id => id !== tagId);
+  //     await updateCard(card.id, { tags: newTags });
+  //     onCardUpdated?.();
+  //   } catch (error) {
+  //     console.error('Ошибка удаления метки:', error);
+  //   }
+  // };
 
   // Добавление метки к карточке
-  const handleAddTag = async (tagId: string) => {
-    try {
-      if (card.tags.includes(tagId)) {
-        return; // Метка уже добавлена
-      }
-      const newTags = [...card.tags, tagId];
-      await updateCard(card.id, { tags: newTags });
-      setIsAddingTag(false);
-      onCardUpdated?.();
-    } catch (error) {
-      console.error('Ошибка добавления метки:', error);
-    }
-  };
+  // const handleAddTag = async (tagId: string) => {
+  //   try {
+  //     if (card.tags.includes(tagId)) {
+  //       return; // Метка уже добавлена
+  //     }
+  //     const newTags = [...card.tags, tagId];
+  //     await updateCard(card.id, { tags: newTags });
+  //     // setIsAddingTag(false);
+  //     onCardUpdated?.();
+  //   } catch (error) {
+  //     console.error('Ошибка добавления метки:', error);
+  //   }
+  // };
 
   // Добавление коллекции к карточке
-  const handleAddCollection = async (collectionId: string) => {
-    try {
-      if (card.collections.includes(collectionId)) {
-        return; // Коллекция уже добавлена
-      }
-      
-      // Добавляем коллекцию к карточке
-      const newCollections = [...card.collections, collectionId];
-      await updateCard(card.id, { collections: newCollections });
-      
-      // Добавляем карточку в коллекцию
-      const collection = await getCollection(collectionId);
-      if (collection) {
-        await updateCollection(collectionId, {
-          cardIds: [...collection.cardIds, card.id]
-        });
-      }
-      
-      setIsAddingCollection(false);
-      onCardUpdated?.();
-    } catch (error) {
-      console.error('Ошибка добавления коллекции:', error);
-    }
-  };
+  // const handleAddCollection = async (collectionId: string) => {
+  //   try {
+  //     if (card.collections.includes(collectionId)) {
+  //       return; // Коллекция уже добавлена
+  //     }
+  //     
+  //     // Добавляем коллекцию к карточке
+  //     const newCollections = [...card.collections, collectionId];
+  //     await updateCard(card.id, { collections: newCollections });
+  //     
+  //     // Добавляем карточку в коллекцию
+  //     const collection = await getCollection(collectionId);
+  //     if (collection) {
+  //       await updateCollection(collectionId, {
+  //         cardIds: [...collection.cardIds, card.id]
+  //       });
+  //     }
+  //     
+  //     // setIsAddingCollection(false);
+  //     onCardUpdated?.();
+  //   } catch (error) {
+  //     console.error('Ошибка добавления коллекции:', error);
+  //   }
+  // };
 
   // Удаление коллекции из карточки
-  const handleRemoveCollection = async (collectionId: string) => {
-    try {
-      // Удаляем коллекцию из карточки
-      const newCollections = card.collections.filter(id => id !== collectionId);
-      await updateCard(card.id, { collections: newCollections });
-      
-      // Удаляем карточку из коллекции
-      const collection = await getCollection(collectionId);
-      if (collection) {
-        await updateCollection(collectionId, {
-          cardIds: collection.cardIds.filter(id => id !== card.id)
-        });
-      }
-      
-      onCardUpdated?.();
-    } catch (error) {
-      console.error('Ошибка удаления коллекции:', error);
-    }
-  };
+  // const handleRemoveCollection = async (collectionId: string) => {
+  //   try {
+  //     // Удаляем коллекцию из карточки
+  //     const newCollections = card.collections.filter(id => id !== collectionId);
+  //     await updateCard(card.id, { collections: newCollections });
+  //     
+  //     // Удаляем карточку из коллекции
+  //     const collection = await getCollection(collectionId);
+  //     if (collection) {
+  //       await updateCollection(collectionId, {
+  //         cardIds: collection.cardIds.filter(id => id !== card.id)
+  //       });
+  //     }
+  //     
+  //     onCardUpdated?.();
+  //   } catch (error) {
+  //     console.error('Ошибка удаления коллекции:', error);
+  //   }
+  // };
 
   // Копирование ID в буфер
   const handleCopyId = async () => {
@@ -404,13 +404,13 @@ export const CardViewModal = ({
       }
       
       setIsEditMode(false);
-      showToast('Изменения сохранены', 'success');
+      showToast({ message: 'Изменения сохранены' });
       
       // Вызываем обновление - родительский компонент перезагрузит данные
       onCardUpdated?.();
     } catch (error) {
       console.error('Ошибка сохранения изменений:', error);
-      showToast('Ошибка сохранения изменений', 'error');
+      showToast({ message: 'Ошибка сохранения изменений' });
     }
   };
 

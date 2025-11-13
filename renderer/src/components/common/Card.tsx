@@ -89,10 +89,10 @@ export const Card = ({
     onClick?.(card);
   };
 
-  const handleSelectClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelect?.(card, !selected);
-  };
+  // const handleSelectClick = (e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   onSelect?.(card, !selected);
+  // };
 
   const handleMoodboardClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,12 +109,12 @@ export const Card = ({
   };
 
   // Форматирование размера файла
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-  };
+  // const formatFileSize = (bytes: number): string => {
+  //   if (bytes < 1024) return `${bytes} B`;
+  //   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  //   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  //   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  // };
 
   return (
     <div

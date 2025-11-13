@@ -6,13 +6,13 @@
 import type { HistoryActionType } from '../types';
 
 /**
- * Получить рабочую директорию из localStorage
+ * Получить рабочую директорию из настроек Electron
  */
-function getWorkingDirectory(): string | undefined {
-  if (typeof window === 'undefined' || !window.localStorage) {
+async function getWorkingDirectory(): Promise<string | undefined> {
+  if (typeof window === 'undefined' || !window.electronAPI) {
     return undefined;
   }
-  return localStorage.getItem('arc_working_directory') || undefined;
+  return await window.electronAPI.getSetting('workingDirectory') || undefined;
 }
 
 /**
@@ -24,7 +24,7 @@ async function logAction(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    const workingDir = getWorkingDirectory();
+    const workingDir = await getWorkingDirectory();
     console.log('[History] Попытка записи в историю:', { action, description, metadata, workingDir });
     
     if (!window.electronAPI) {
@@ -226,7 +226,7 @@ export async function getHistory(): Promise<Array<{
   metadata?: any;
 }>> {
   try {
-    const workingDir = getWorkingDirectory();
+    const workingDir = await getWorkingDirectory();
     if (window.electronAPI?.getHistory) {
       return await window.electronAPI.getHistory(workingDir);
     }
@@ -242,7 +242,7 @@ export async function getHistory(): Promise<Array<{
  */
 export async function clearHistory(): Promise<void> {
   try {
-    const workingDir = getWorkingDirectory();
+    const workingDir = await getWorkingDirectory();
     if (window.electronAPI?.clearHistory) {
       await window.electronAPI.clearHistory(workingDir);
       console.log('[History] История очищена');

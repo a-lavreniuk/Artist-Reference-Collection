@@ -244,7 +244,7 @@ export async function deleteCard(id: string): Promise<void> {
           if (fileName) {
             const thumbName = `${fileName}_thumb.jpg`;
             // Путь к превью: рабочая_папка/_cache/thumbs/имя_thumb.jpg
-            const workingDir = localStorage.getItem('arc_working_directory');
+            const workingDir = await window.electronAPI.getSetting('workingDirectory');
             if (workingDir) {
               const thumbPath = `${workingDir}\\_cache\\thumbs\\${thumbName}`;
               await window.electronAPI.deleteFile(thumbPath);

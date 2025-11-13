@@ -15,7 +15,17 @@ import archiver from 'archiver';
 import extract from 'extract-zip';
 
 // Настраиваем путь к ffmpeg бинарнику
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+// В ASAR архиве ffmpeg не может быть запущен, используем распакованную версию
+let ffmpegPath = ffmpegInstaller.path;
+
+if (app.isPackaged) {
+  // В продакшене заменяем путь внутри ASAR на путь к распакованной версии
+  // app.asar -> app.asar.unpacked
+  ffmpegPath = ffmpegPath.replace('app.asar', 'app.asar.unpacked');
+  console.log('[IPC] Используется ffmpeg из распакованного ASAR:', ffmpegPath);
+}
+
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 /**
  * Регистрация всех IPC handlers
@@ -286,23 +296,38 @@ export function registerIPCHandlers(): void {
       if (isVideo) {
         // Генерируем превью для видео через ffmpeg
         console.log('[IPC] Генерация превью для видео через ffmpeg...');
+        console.log('[IPC] Путь к ffmpeg:', ffmpegInstaller.path);
+        console.log('[IPC] Исходный файл:', filePath);
+        console.log('[IPC] Папка превью:', thumbsDir);
+        console.log('[IPC] Имя превью:', thumbName);
+        
+        // Проверяем существование исходного видео файла
+        const videoExists = await fileExists(filePath);
+        if (!videoExists) {
+          console.error('[IPC] Исходный видео файл не найден!');
+          return thumbPath; // Возвращаем путь, UI покажет placeholder
+        }
         
         await new Promise<void>((resolve, reject) => {
           ffmpeg(filePath)
+            .on('start', (commandLine) => {
+              console.log('[IPC] ffmpeg команда:', commandLine);
+            })
             .screenshots({
               count: 1,
               folder: thumbsDir,
               filename: thumbName,
               size: '512x?', // 512px по ширине, высота автоматически
-              timemarks: ['00:00:01.000'] // Кадр на 1-й секунде
+              timemarks: ['00:00:00.100'] // Кадр на 0.1 секунде (для коротких видео)
             })
             .on('end', () => {
-              console.log('[IPC] Превью видео создано:', thumbPath);
+              console.log('[IPC] ✅ Превью видео создано успешно');
               resolve();
             })
-            .on('error', (err) => {
-              console.error('[IPC] Ошибка генерации превью видео:', err);
-              // Если не удалось создать превью, возвращаем путь к несуществующему файлу
+            .on('error', (err, stdout, stderr) => {
+              console.error('[IPC] ❌ Ошибка ffmpeg:', err.message);
+              console.error('[IPC] stderr:', stderr);
+              // Если не удалось создать превью, не прерываем процесс
               // UI покажет placeholder
               resolve();
             });
@@ -761,6 +786,20 @@ export function registerIPCHandlers(): void {
   });
 
   /**
+   * Открыть папку с логами приложения
+   */
+  ipcMain.handle('open-logs-folder', async () => {
+    try {
+      const userDataPath = app.getPath('userData');
+      await shell.openPath(userDataPath);
+      console.log('[IPC] Открыта папка с логами:', userDataPath);
+    } catch (error) {
+      console.error('[IPC] Ошибка открытия папки с логами:', error);
+      throw error;
+    }
+  });
+
+  /**
    * Проверить наличие обновлений
    * TODO: Интеграция с electron-updater
    */
@@ -1137,6 +1176,85 @@ export function registerIPCHandlers(): void {
       }
     } catch (error) {
       console.error('[IPC] Ошибка очистки истории:', error);
+      throw error;
+    }
+  });
+
+  // === НАСТРОЙКИ ПРИЛОЖЕНИЯ ===
+
+  /**
+   * Сохранить настройку приложения в userData
+   */
+  ipcMain.handle('save-setting', async (_event, key: string, value: any) => {
+    try {
+      const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+      
+      // Читаем существующие настройки
+      let settings: Record<string, any> = {};
+      try {
+        const data = await fs.readFile(settingsPath, 'utf-8');
+        settings = JSON.parse(data);
+      } catch (error) {
+        // Файл не существует, создадим новый
+      }
+      
+      // Сохраняем новое значение
+      settings[key] = value;
+      
+      // Записываем обратно
+      await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+      console.log('[IPC] Настройка сохранена:', key);
+    } catch (error) {
+      console.error('[IPC] Ошибка сохранения настройки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Получить настройку приложения из userData
+   */
+  ipcMain.handle('get-setting', async (_event, key: string) => {
+    try {
+      const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+      
+      // Читаем настройки
+      try {
+        const data = await fs.readFile(settingsPath, 'utf-8');
+        const settings = JSON.parse(data);
+        return settings[key] !== undefined ? settings[key] : null;
+      } catch (error) {
+        // Файл не существует
+        return null;
+      }
+    } catch (error) {
+      console.error('[IPC] Ошибка чтения настройки:', error);
+      return null;
+    }
+  });
+
+  /**
+   * Удалить настройку приложения
+   */
+  ipcMain.handle('remove-setting', async (_event, key: string) => {
+    try {
+      const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+      
+      // Читаем существующие настройки
+      try {
+        const data = await fs.readFile(settingsPath, 'utf-8');
+        const settings = JSON.parse(data);
+        
+        // Удаляем ключ
+        delete settings[key];
+        
+        // Записываем обратно
+        await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+        console.log('[IPC] Настройка удалена:', key);
+      } catch (error) {
+        // Файл не существует, ничего делать не нужно
+      }
+    } catch (error) {
+      console.error('[IPC] Ошибка удаления настройки:', error);
       throw error;
     }
   });
