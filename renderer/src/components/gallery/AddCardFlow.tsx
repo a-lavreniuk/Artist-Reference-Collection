@@ -802,6 +802,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
               onChange={(e) => setCollectionsSearchQuery(e.target.value)}
               fullWidth
               style={{ marginBottom: '12px' }}
+              clearable
+              onClear={() => setCollectionsSearchQuery('')}
             />
             <div className="add-card-flow__tags-list">
               {allCollections
@@ -841,6 +843,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
               onChange={(e) => setTagsSearchQuery(e.target.value)}
               fullWidth
               style={{ marginBottom: '12px' }}
+              clearable
+              onClear={() => setTagsSearchQuery('')}
             />
 
             <div className="add-card-flow__categories">
@@ -893,6 +897,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
                         autoFocus
                         fullWidth
                         style={{ marginTop: '8px' }}
+                        clearable
+                        onClear={() => setNewTagName('')}
                       />
                     )}
                   </div>

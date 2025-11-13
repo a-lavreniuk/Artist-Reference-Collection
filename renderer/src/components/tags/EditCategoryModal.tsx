@@ -274,6 +274,11 @@ export const EditCategoryModal = ({
             fullWidth
             className="create-category-modal__input"
             autoFocus
+            clearable
+            onClear={() => {
+              setName('');
+              setError(null);
+            }}
           />
 
           {/* Блок редактирования меток */}
@@ -297,6 +302,11 @@ export const EditCategoryModal = ({
               error={tagError || undefined}
               fullWidth
               className="create-category-modal__input"
+              clearable
+              onClear={() => {
+                setTagName('');
+                setTagError(null);
+              }}
             />
 
             {/* Список существующих меток */}
