@@ -55,7 +55,7 @@
   display: flex;
   flex-direction: column; /* Вертикальная раскладка: иконка, заголовок, подпись */
   align-items: flex-start; /* Выравнивание по левому краю */
-  gap: var(--spacing-m);
+  gap: 24px; /* Отступ от иконки до заголовка */
   padding: var(--spacing-xl);
   background-color: transparent; /* Без фоновой заливки */
   border: 2px solid var(--border-default); /* Бордер 2px */
@@ -79,7 +79,7 @@
 .onboarding__feature-content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 16px; /* Отступ от заголовка до подписи */
   flex: 1; /* Занимает оставшееся место */
 }
 
@@ -103,8 +103,17 @@
   margin-bottom: var(--spacing-l);
 }
 
-/* Стили для кнопок - минимальные переопределения */
-/* Глобальные стили кнопок в Button.css управляют иконками */
+/* Переопределяем gap в кнопках онбординга */
+.onboarding__actions .button {
+  gap: 8px; /* Отступ между текстом и иконкой */
+}
+
+/* Выравнивание иконок с текстом по центру */
+.onboarding__actions .button__icon {
+  color: #93919a; /* grayscale-500 */
+  display: inline-flex;
+  align-items: center; /* Вертикальное выравнивание по центру */
+}
 
 /* ========== ОШИБКА ========== */
 

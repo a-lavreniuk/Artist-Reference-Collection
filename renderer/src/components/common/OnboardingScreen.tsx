@@ -127,9 +127,9 @@ export const OnboardingScreen = ({
             loading={isSelecting}
             disabled={isRestoring}
             fullWidth
+            iconRight={<Icon name="folder-open" size={24} />}
           >
             Показать куда сохранять
-            <Icon name="folder-open" size={24} />
           </Button>
           
           {/* Вторичная кнопка */}
@@ -140,9 +140,9 @@ export const OnboardingScreen = ({
             loading={isRestoring}
             disabled={isSelecting}
             fullWidth
+            iconRight={<Icon name="download" size={24} />}
           >
             Восстановить резервную копию
-            <Icon name="download" size={24} />
           </Button>
         </div>
 
