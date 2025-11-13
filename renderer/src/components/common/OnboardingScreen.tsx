@@ -77,7 +77,7 @@ export const OnboardingScreen = ({
             <Icon name="folder-open" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Коллекции</h3>
-              <p className="onboarding__feature-text text-s">
+              <p className="onboarding__feature-text text-l">
                 Организуйте тематические коллекции
               </p>
             </div>
@@ -88,7 +88,7 @@ export const OnboardingScreen = ({
             <Icon name="tag" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Метки</h3>
-              <p className="onboarding__feature-text text-s">
+              <p className="onboarding__feature-text text-l">
                 Категории и метки поиска
               </p>
             </div>
@@ -99,7 +99,7 @@ export const OnboardingScreen = ({
             <Icon name="server" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Всё локально</h3>
-              <p className="onboarding__feature-text text-s">
+              <p className="onboarding__feature-text text-l">
                 Файлы хранятся прямо на компьютере
               </p>
             </div>
@@ -110,7 +110,7 @@ export const OnboardingScreen = ({
             <Icon name="bookmark-plus" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Мудборды</h3>
-              <p className="onboarding__feature-text text-s">
+              <p className="onboarding__feature-text text-l">
                 Доски настроения проектов
               </p>
             </div>
