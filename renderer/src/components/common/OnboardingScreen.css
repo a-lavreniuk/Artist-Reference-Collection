@@ -84,12 +84,12 @@
 }
 
 .onboarding__feature-title {
-  color: var(--text-primary);
-  font-size: var(--font-size-m);
-  font-weight: var(--font-weight-semibold);
+  /* H3 стили применяются автоматически из typography.css */
+  /* YS Music, 28px, 700, line-height 28px */
 }
 
 .onboarding__feature-text {
+  /* text-l стили применяются автоматически из typography.css */
   color: var(--text-secondary);
 }
 
