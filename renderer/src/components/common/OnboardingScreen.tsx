@@ -74,7 +74,7 @@ export const OnboardingScreen = ({
         <div className="onboarding__features-grid">
           {/* Коллекции */}
           <div className="onboarding__feature-card">
-            <Icon name="folder-open" size={48} className="onboarding__feature-icon" />
+            <Icon name="folder-open" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Коллекции</h3>
               <p className="onboarding__feature-text text-s">
@@ -85,7 +85,7 @@ export const OnboardingScreen = ({
 
           {/* Метки */}
           <div className="onboarding__feature-card">
-            <Icon name="tag" size={48} className="onboarding__feature-icon" />
+            <Icon name="tag" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Метки</h3>
               <p className="onboarding__feature-text text-s">
@@ -96,7 +96,7 @@ export const OnboardingScreen = ({
 
           {/* Всё локально */}
           <div className="onboarding__feature-card">
-            <Icon name="server" size={48} className="onboarding__feature-icon" />
+            <Icon name="server" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Всё локально</h3>
               <p className="onboarding__feature-text text-s">
@@ -107,7 +107,7 @@ export const OnboardingScreen = ({
 
           {/* Мудборды */}
           <div className="onboarding__feature-card">
-            <Icon name="bookmark-plus" size={48} className="onboarding__feature-icon" />
+            <Icon name="bookmark-plus" size={24} className="onboarding__feature-icon" />
             <div className="onboarding__feature-content">
               <h3 className="onboarding__feature-title">Мудборды</h3>
               <p className="onboarding__feature-text text-s">
@@ -129,7 +129,7 @@ export const OnboardingScreen = ({
             fullWidth
           >
             Показать куда сохранять
-            <Icon name="folder-open" size={20} />
+            <Icon name="folder-open" size={24} />
           </Button>
           
           {/* Вторичная кнопка */}
@@ -142,7 +142,7 @@ export const OnboardingScreen = ({
             fullWidth
           >
             Восстановить резервную копию
-            <Icon name="download" size={20} />
+            <Icon name="download" size={24} />
           </Button>
         </div>
 
