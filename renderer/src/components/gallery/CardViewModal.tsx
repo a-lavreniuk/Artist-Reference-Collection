@@ -6,12 +6,12 @@
 import { useState, useEffect } from 'react';
 import Masonry from 'react-masonry-css';
 import { Modal } from '../common/Modal';
-import { Button, Tag, Icon, Card as CardComponent, ToastContainer } from '../common';
+import { Button, Tag, Icon, Card as CardComponent } from '../common';
 import type { Card, Tag as TagType, Collection, Category } from '../../types';
-import type { ToastMessage } from '../common/ToastContainer';
 import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
 import { useToast } from '../../hooks/useToast';
+import { useAlert } from '../../hooks/useAlert';
 import './CardViewModal.css';
 
 export interface CardViewModalProps {
@@ -66,7 +66,8 @@ export const CardViewModal = ({
   const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   
-  const { toasts, showToast, removeToast } = useToast();
+  const { showToast } = useToast();
+  const alert = useAlert();
 
   // Загрузка всех меток, коллекций и похожих карточек при открытии
   useEffect(() => {
@@ -203,32 +204,40 @@ export const CardViewModal = ({
 
   // Удаление карточки
   const handleDelete = async () => {
-    if (!confirm('Вы уверены, что хотите удалить эту карточку? Это действие необратимо.')) {
-      return;
-    }
-
-    try {
-      setIsDeleting(true);
-      
-      // Получаем название коллекции если карточка в коллекции
-      let collectionName: string | undefined;
-      if (card.collections.length > 0) {
-        const collection = await getCollection(card.collections[0]);
-        collectionName = collection?.name;
-      }
-      
-      await deleteCard(card.id);
-      
-      // Логируем удаление карточки
-      await logDeleteCards(1, collectionName);
-      
-      onCardDeleted?.();
-      onClose();
-    } catch (error) {
-      console.error('Ошибка удаления карточки:', error);
-    } finally {
-      setIsDeleting(false);
-    }
+    showToast({
+      title: 'Удалить карточку',
+      message: 'Вы уверены что хотите удалить карточку? Это действие необратимо',
+      type: 'error',
+      onConfirm: async () => {
+        try {
+          setIsDeleting(true);
+          
+          // Получаем название коллекции если карточка в коллекции
+          let collectionName: string | undefined;
+          if (card.collections.length > 0) {
+            const collection = await getCollection(card.collections[0]);
+            collectionName = collection?.name;
+          }
+          
+          await deleteCard(card.id);
+          
+          // Логируем удаление карточки
+          await logDeleteCards(1, collectionName);
+          
+          // Показываем успешное уведомление
+          alert.success('Карточка удалена');
+          
+          onCardDeleted?.();
+          onClose();
+        } catch (error) {
+          console.error('Ошибка удаления карточки:', error);
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+      confirmText: 'Удалить',
+      cancelText: 'Отмена'
+    });
   };
 
   // Удаление метки из карточки
@@ -309,9 +318,10 @@ export const CardViewModal = ({
     if (window.electronAPI) {
       try {
         await window.electronAPI.copyToClipboard(card.id);
-        alert('ID скопирован в буфер обмена');
+        alert.info('ID карточки скопирован');
       } catch (error) {
         console.error('Ошибка копирования ID:', error);
+        alert.error('Не удалось скопировать ID');
       }
     }
   };
@@ -323,7 +333,7 @@ export const CardViewModal = ({
         await window.electronAPI.openFileLocation(card.filePath);
       } catch (error) {
         console.error('Ошибка открытия папки:', error);
-        alert('Не удалось открыть папку');
+        alert.error('Не удалось открыть папку');
       }
     }
   };
@@ -334,11 +344,11 @@ export const CardViewModal = ({
       try {
         const exportedPath = await window.electronAPI.exportFile(card.filePath, card.fileName);
         if (exportedPath) {
-          alert('Файл экспортирован: ' + exportedPath);
+          alert.success('Файл экспортирован');
         }
       } catch (error) {
         console.error('Ошибка экспорта файла:', error);
-        alert('Не удалось экспортировать файл');
+        alert.error('Не удалось экспортировать файл');
       }
     }
   };
@@ -721,8 +731,6 @@ export const CardViewModal = ({
         )}
         </div>
       </Modal>
-      
-      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </>
   );
 };

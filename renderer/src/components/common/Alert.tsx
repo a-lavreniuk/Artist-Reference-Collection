@@ -61,11 +61,11 @@ export const Alert = ({
   }
 
   return (
-    <div className={`alert alert--${type}`}>
+      <div className={`alert alert--${type}`}>
       <div className="alert__container">
         {/* Иконка */}
         <div className="alert__icon">
-          <Icon name={alertIcons[type]} size={24} variant="fill" />
+          <Icon name={alertIcons[type]} size={16} variant="fill" />
         </div>
 
         {/* Сообщение */}
@@ -78,7 +78,7 @@ export const Alert = ({
           onClick={onClose}
           aria-label="Закрыть"
         >
-          <Icon name="x" size={24} variant="border" />
+          <Icon name="x" size={16} variant="border" />
         </button>
       </div>
     </div>

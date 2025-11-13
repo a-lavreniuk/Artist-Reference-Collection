@@ -1,37 +1,29 @@
 /**
  * Хук useToast - управление toast уведомлениями
+ * Использует глобальный контекст ToastProvider
  */
 
-import { useState, useCallback } from 'react';
-import type { ToastMessage } from '../components/common/ToastContainer';
+import { useToastContext } from './useToastContext';
+
+interface ToastOptions {
+  title?: string;
+  message: string;
+  type?: 'success' | 'error' | 'info';
+  duration?: number;
+  onConfirm?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+}
 
 export const useToast = () => {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-
-  const showToast = useCallback((
-    message: string,
-    type: 'success' | 'error' | 'info' = 'info',
-    duration: number = 3000
-  ) => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    const newToast: ToastMessage = {
-      id,
-      message,
-      type,
-      duration
-    };
-
-    setToasts((prev) => [...prev, newToast]);
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
+  const { showToast } = useToastContext();
 
   return {
-    toasts,
     showToast,
-    removeToast
+    success: (message: string, duration?: number) => showToast({ message, type: 'success', duration }),
+    error: (message: string, duration?: number) => showToast({ message, type: 'error', duration }),
+    info: (message: string, duration?: number) => showToast({ message, type: 'info', duration }),
+    confirm: (options: Omit<ToastOptions, 'type'>) => showToast({ ...options, type: 'error' })
   };
 };
 

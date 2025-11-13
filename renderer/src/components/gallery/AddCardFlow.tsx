@@ -8,6 +8,8 @@ import { Button, Tag, Input, Icon } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
 import { logImportFiles } from '../../services/history';
 import { useFileSystem } from '../../hooks';
+import { useToast } from '../../hooks/useToast';
+import { useAlert } from '../../hooks/useAlert';
 import type { Card, Tag as TagType, Category, Collection } from '../../types';
 import './AddCardFlow.css';
 
@@ -69,7 +71,7 @@ QueueItem.displayName = 'QueueItem';
 
 export interface AddCardFlowProps {
   /** Обработчик завершения */
-  onComplete: (cards: Card[]) => void;
+  onComplete: (addedCount: number) => void;
   
   /** Обработчик отмены */
   onCancel: () => void;
@@ -85,6 +87,8 @@ export interface AddCardFlowProps {
 }
 
 export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady }: AddCardFlowProps) => {
+  const toast = useToast();
+  const alert = useAlert();
   const [queue, setQueue] = useState<QueueFile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -302,13 +306,13 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     });
 
     if (files.length === 0) {
-      setMessage('❌ Не найдено поддерживаемых файлов');
+      alert.warning('Не найдено поддерживаемых файлов');
       return;
     }
 
     // Проверяем общий лимит (45 файлов в очереди)
     if (queue.length + files.length > 45) {
-      setMessage(`❌ Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
+      alert.warning(`Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
       return;
     }
 
@@ -322,7 +326,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     
     // Проверяем общий лимит (45 файлов в очереди)
     if (queue.length + files.length > 45) {
-      setMessage(`❌ Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
+      alert.warning(`Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
       // Сбрасываем значение input
       if (e.target) {
         e.target.value = '';
@@ -404,8 +408,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       tags: [...currentFile.tags],
       collections: [...currentFile.collections]
     });
-    setMessage('✅ Настройки скопированы');
-    setTimeout(() => setMessage(null), 2000);
+    alert.success('Настройки скопированы');
   };
 
   const handlePasteSettings = () => {
@@ -417,8 +420,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     newQueue[currentIndex].configured = clipboard.tags.length > 0;
     setQueue(newQueue);
     
-    setMessage('✅ Настройки применены');
-    setTimeout(() => setMessage(null), 2000);
+    alert.success('Настройки применены');
   };
 
   // Мемоизированные обработчики для оптимизации производительности
@@ -457,7 +459,7 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
 
     // Проверка существования
     if (allTags.some(t => t.name.toLowerCase() === newTagName.toLowerCase())) {
-      setMessage('❌ Метка с таким названием уже существует');
+      alert.warning('Метка с таким названием уже существует');
       return;
     }
 
@@ -475,11 +477,10 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       setAllTags([...allTags, tag]);
       setNewTagName('');
       setShowNewTagInput(null);
-      setMessage('✅ Метка создана');
-      setTimeout(() => setMessage(null), 2000);
+      alert.success('Метка создана');
     } catch (error) {
       console.error('Ошибка создания метки:', error);
-      setMessage('❌ Ошибка создания метки');
+      alert.error('Не удалось создать метку');
     }
   };
 
@@ -489,26 +490,37 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
     const unconfigured = queue.filter(f => !f.configured);
     
     if (configured.length === 0) {
-      setMessage('❌ Добавьте метки хотя бы к одной карточке');
+      alert.warning('Добавьте метки хотя бы к одной карточке');
       return;
     }
 
     // Если не все файлы настроены - спрашиваем подтверждение
     if (unconfigured.length > 0) {
-      const confirmed = confirm(
-        `Настройки применены к ${configured.length} из ${queue.length} карточек.\n\n` +
-        `Оставшиеся ${unconfigured.length} карточек будут удалены из очереди.\n\n` +
-        `Продолжить?`
-      );
-      
-      if (!confirmed) {
-        return;
-      }
+      toast.showToast({
+        title: 'Добавить карточки',
+        message: `Настройки применены к ${configured.length} из ${queue.length} карточек. Оставшиеся ${unconfigured.length} карточек будут удалены из очереди. Продолжить?`,
+        type: 'error',
+        onConfirm: () => {
+          // Продолжаем выполнение после подтверждения
+          continueFinish();
+        },
+        confirmText: 'Продолжить',
+        cancelText: 'Отмена'
+      });
+      return; // Выходим и ждем подтверждения
     }
+    
+    // Если все файлы настроены, продолжаем сразу
+    continueFinish();
+  };
+  
+  // Продолжение процесса добавления после подтверждения
+  const continueFinish = async () => {
+    const configured = queue.filter(f => f.configured);
 
     // Проверяем доступ к директории
     if (!directoryPath || !hasPermission) {
-      setMessage('❌ Нет доступа к рабочей папке. Перейдите в настройки и выберите папку.');
+      alert.error('Нет доступа к рабочей папке. Перейдите в настройки и выберите папку');
       return;
     }
 
@@ -582,18 +594,18 @@ export const AddCardFlow = ({ onComplete, onCancel, onQueueStateChange, onFinish
       }
 
       if (createdCards.length === 0) {
-        setMessage('❌ Не удалось сохранить ни один файл');
+        alert.error('Не удалось сохранить ни один файл');
         return;
       }
 
       // Логируем импорт файлов
       await logImportFiles(createdCards.length);
 
-      setMessage(`✅ Добавлено ${createdCards.length} карточек!`);
-      setTimeout(() => onComplete(createdCards), 1000);
+      // Завершаем добавление - Alert покажется в AddPage
+      setTimeout(() => onComplete(createdCards.length), 500);
     } catch (error) {
       console.error('Ошибка сохранения:', error);
-      setMessage('❌ Ошибка сохранения карточек');
+      alert.error('Ошибка сохранения карточек');
     }
   };
 

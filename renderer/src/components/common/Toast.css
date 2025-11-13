@@ -1,11 +1,12 @@
 /**
  * Стили для компонента Toast
+ * Всплывающие уведомления в правом нижнем углу
  */
 
 .toast-container {
   position: fixed;
   bottom: 40px;
-  right: 40px;
+  right: 40px; /* Правый нижний угол */
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
@@ -14,19 +15,7 @@
 }
 
 .toast {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-m);
-  padding: var(--spacing-l) var(--spacing-xl);
-  min-width: 300px;
-  max-width: 400px;
-  
-  background-color: var(--color-grayscale-800);
-  border-radius: var(--radius-m);
-  box-shadow: var(--shadow-xl);
-  
   pointer-events: auto;
-  
   animation: toast-enter var(--transition-base);
 }
 
@@ -44,20 +33,12 @@
 .toast__content {
   flex: 1;
   color: var(--text-light);
-  font-size: 14px;
-  line-height: 1.4;
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  letter-spacing: 0;
 }
 
-/* Типы уведомлений */
-.toast--success {
-  background-color: var(--color-green-600);
-}
-
-.toast--error {
-  background-color: var(--color-red-600);
-}
-
-.toast--info {
-  background-color: var(--color-grayscale-800);
-}
+/* Типы уведомлений - все используют одинаковый стиль, как Dialog */
 

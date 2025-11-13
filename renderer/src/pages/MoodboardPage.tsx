@@ -10,11 +10,13 @@ import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getAllCards, updateCard, addToMoodboard, removeFromMoodboard } from '../services/db';
 import { logClearMoodboard } from '../services/history';
+import { useToast } from '../hooks/useToast';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
 export const MoodboardPage = () => {
   const navigate = useNavigate();
   const { searchProps, setSelectedTags } = useSearch();
+  const toast = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
@@ -225,39 +227,37 @@ export const MoodboardPage = () => {
       return;
     }
 
-    const confirmed = confirm(
-      `Очистить мудборд?\n\n` +
-      `Будет удалено из мудборда: ${cards.length} карточек\n\n` +
-      `⚠️ Сами карточки НЕ будут удалены, только убраны из мудборда.\n\n` +
-      `Продолжить?`
-    );
+    toast.showToast({
+      title: 'Очистить мудборд',
+      message: `Вы уверены что хотите очистить мудборд? Будет удалено из мудборда: ${cards.length} карточек. Сами карточки останутся в системе`,
+      type: 'error',
+      onConfirm: async () => {
+        try {
+          setExportMessage('🔄 Очистка мудборда...');
 
-    if (!confirmed) {
-      return;
-    }
+          // Снимаем флаг inMoodboard со всех карточек
+          for (const card of cards) {
+            await updateCard(card.id, { inMoodboard: false });
+          }
 
-    try {
-      setExportMessage('🔄 Очистка мудборда...');
+          console.log(`[Moodboard] Очищено карточек: ${cards.length}`);
 
-      // Снимаем флаг inMoodboard со всех карточек
-      for (const card of cards) {
-        await updateCard(card.id, { inMoodboard: false });
-      }
+          // Логируем очистку мудборда
+          await logClearMoodboard();
 
-      console.log(`[Moodboard] Очищено карточек: ${cards.length}`);
-
-      // Логируем очистку мудборда
-      await logClearMoodboard();
-
-      // Обновляем список
-      setCards([]);
-      setExportMessage('✅ Мудборд очищен');
-      setTimeout(() => setExportMessage(null), 2000);
-    } catch (error) {
-      console.error('[Moodboard] Ошибка очистки:', error);
-      setExportMessage('❌ Ошибка очистки мудборда');
-      setTimeout(() => setExportMessage(null), 3000);
-    }
+          // Обновляем список
+          setCards([]);
+          setExportMessage('✅ Мудборд очищен');
+          setTimeout(() => setExportMessage(null), 2000);
+        } catch (error) {
+          console.error('[Moodboard] Ошибка очистки:', error);
+          setExportMessage('❌ Ошибка очистки мудборда');
+          setTimeout(() => setExportMessage(null), 3000);
+        }
+      },
+      confirmText: 'Очистить',
+      cancelText: 'Отмена'
+    });
   };
 
   // Состояние загрузки

@@ -97,11 +97,25 @@ export const Modal = ({
     overlayClassName
   ].filter(Boolean).join(' ');
 
+  // Для modal--medium не рендерим header через Modal, только через children
+  const isMediumSize = size === 'medium';
+  const shouldRenderHeader = !isMediumSize && (title || showCloseButton);
+
   return createPortal(
     <div className={overlayClassNames} onClick={handleOverlayClick}>
-      <div className={modalClassNames} role="dialog" aria-modal="true">
-        {/* Шапка модального окна */}
-        {(title || showCloseButton) && (
+      <div 
+        className={modalClassNames} 
+        role="dialog" 
+        aria-modal="true"
+        style={isMediumSize ? {
+          maxWidth: '822px',
+          width: '822px',
+          padding: '40px',
+          gap: '16px'
+        } : undefined}
+      >
+        {/* Шапка модального окна (только для не-medium размеров) */}
+        {shouldRenderHeader && (
           <div className="modal__header">
             {title && (
               <h4 className="modal__title">{title}</h4>

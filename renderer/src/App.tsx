@@ -12,10 +12,9 @@ import {
   TagsPage,
   MoodboardPage,
   SettingsPage,
-  AddPage,
-  TestNotificationsPage
+  AddPage
 } from './pages';
-import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider } from './components/common';
+import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
 import { useFileSystem, useElectronUpdates } from './hooks';
 import { SearchProvider } from './contexts';
 
@@ -134,11 +133,12 @@ function App() {
   return (
     <DialogProvider>
       <AlertProvider>
-        <Router>
-        <SearchProvider>
-          <ErrorBoundary>
-            <NavigationListener />
-            <Routes>
+        <ToastProvider>
+          <Router>
+          <SearchProvider>
+            <ErrorBoundary>
+              <NavigationListener />
+              <Routes>
               <Route path="/" element={<CardsPage />} />
               <Route path="/cards" element={<CardsPage />} />
               <Route path="/collections" element={<CollectionsPage />} />
@@ -147,18 +147,18 @@ function App() {
               <Route path="/moodboard" element={<MoodboardPage />} />
               <Route path="/add" element={<AddPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/test-notifications" element={<TestNotificationsPage />} />
-            </Routes>
-          </ErrorBoundary>
-        </SearchProvider>
-      </Router>
+              </Routes>
+            </ErrorBoundary>
+          </SearchProvider>
+        </Router>
 
-      {/* Уведомление об обновлении */}
-      <UpdateNotification
-        show={showUpdateNotification}
-        onUpdate={handleUpdate}
-        onDismiss={handleDismissUpdate}
-      />
+        {/* Уведомление об обновлении */}
+        <UpdateNotification
+          show={showUpdateNotification}
+          onUpdate={handleUpdate}
+          onDismiss={handleDismissUpdate}
+        />
+        </ToastProvider>
       </AlertProvider>
     </DialogProvider>
   );

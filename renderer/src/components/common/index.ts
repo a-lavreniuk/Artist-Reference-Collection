@@ -44,3 +44,5 @@ export type { AlertProps, AlertType } from './Alert';
 
 export { AlertProvider } from './AlertProvider';
 
+export { ToastProvider } from './ToastProvider';
+

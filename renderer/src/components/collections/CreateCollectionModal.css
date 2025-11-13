@@ -6,6 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-l);
+  text-align: left;
 }
 
 /* Контейнер заголовка и подзаголовка вместе */
@@ -52,7 +53,7 @@
 .create-collection-modal__actions {
   display: flex;
   gap: var(--spacing-s);
-  justify-content: flex-end;
+  justify-content: flex-end !important;
   align-items: center;
 }
 

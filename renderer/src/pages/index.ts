@@ -9,5 +9,4 @@ export { TagsPage } from './TagsPage';
 export { MoodboardPage } from './MoodboardPage';
 export { SettingsPage } from './SettingsPage';
 export { AddPage } from './AddPage';
-export { TestNotificationsPage } from './TestNotificationsPage';
 

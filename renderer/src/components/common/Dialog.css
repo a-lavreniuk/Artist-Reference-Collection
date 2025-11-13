@@ -20,7 +20,6 @@
   padding: var(--spacing-xl);
   
   background-color: var(--bg-overlay);
-  backdrop-filter: var(--backdrop-blur);
   
   animation: dialog-overlay-enter var(--transition-base);
 }
@@ -42,15 +41,15 @@
   
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-xl);
+  align-items: flex-start; /* Выравнивание по левой стороне */
+  gap: var(--spacing-l); /* 16px как у modal--medium */
   
-  width: 480px;
-  padding: var(--spacing-2xl);
+  width: 822px; /* Ширина 822px как у modal--medium */
+  padding: var(--spacing-3xl); /* 40px как у modal--medium */
   
-  background-color: var(--bg-primary);
+  background-color: var(--color-grayscale-50); /* Фон как у modal--medium */
   border: 2px solid var(--border-default);
-  border-radius: var(--radius-l);
+  border-radius: var(--radius-xl); /* 24px как у modal--medium */
   box-shadow: var(--shadow-xl);
   
   animation: dialog-enter var(--transition-base);
@@ -70,55 +69,13 @@
 /* ========== КНОПКА ЗАКРЫТИЯ ========== */
 
 .dialog__close {
-  position: absolute;
-  top: var(--spacing-l);
-  right: var(--spacing-l);
-  
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  
-  background-color: transparent;
-  border: none;
-  border-radius: var(--radius-s);
-  color: var(--icon-default);
-  cursor: pointer;
-  
-  transition: all var(--transition-fast);
-}
-
-.dialog__close:hover {
-  background-color: var(--color-grayscale-100);
-  color: var(--text-primary);
-}
-
-.dialog__close:active {
-  transform: scale(0.95);
+  display: none; /* Убираем крестик закрытия */
 }
 
 /* ========== ИКОНКА ========== */
 
 .dialog__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  width: 48px;
-  height: 48px;
-  
-  flex-shrink: 0;
-}
-
-.dialog__icon--default {
-  color: var(--icon-default);
-}
-
-.dialog__icon--destructive {
-  color: var(--color-red-600);
+  display: none !important; /* Убираем иконку */
 }
 
 /* ========== ЗАГОЛОВОК ========== */
@@ -126,12 +83,12 @@
 .dialog__title {
   margin: 0;
   width: 100%;
-  text-align: center;
+  text-align: left; /* Текст по левой стороне */
   
-  font-family: var(--font-family-heading);
-  font-size: var(--font-size-h3);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-h3);
+  font-family: 'YS Music', sans-serif; /* Как у modal__title */
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
   letter-spacing: 0;
   color: var(--text-primary);
 }
@@ -141,14 +98,14 @@
 .dialog__description {
   margin: 0;
   width: 100%;
-  text-align: center;
+  text-align: left; /* Текст по левой стороне */
   
-  font-family: var(--font-family-body);
-  font-size: var(--font-size-m);
-  font-weight: var(--font-weight-light);
-  line-height: var(--line-height-m);
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
   letter-spacing: 0;
-  color: var(--text-primary);
+  color: var(--text-secondary); /* Цвет как у подзаголовка */
   
   white-space: pre-wrap;
 }
@@ -184,20 +141,41 @@
   width: 100%;
 }
 
+.dialog form .input-wrapper {
+  width: 100%;
+}
+
+.dialog form .input {
+  width: 100%;
+  height: 56px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-l);
+  padding: var(--spacing-l) var(--spacing-l) var(--spacing-l) 20px;
+}
+
+.dialog form .input::placeholder {
+  color: var(--text-secondary);
+}
+
+.dialog form .input:focus {
+  background-color: var(--color-grayscale-200);
+}
+
 /* ========== ДЕЙСТВИЯ ========== */
 
 .dialog__actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--spacing-m);
+  justify-content: flex-end; /* Кнопки по правой стороне */
+  gap: var(--spacing-s); /* 8px между кнопками */
   width: 100%;
-  margin-top: var(--spacing-s);
+  margin-top: var(--spacing-l);
 }
 
-/* Для info с одной кнопкой */
+/* Для info с одной кнопкой тоже справа */
 .dialog--info .dialog__actions {
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 /* ========== ВАРИАНТЫ ========== */

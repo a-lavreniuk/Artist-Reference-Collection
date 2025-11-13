@@ -7,6 +7,7 @@ import { Modal, Button, Input } from '../common';
 import type { Collection } from '../../types';
 import { addCollection } from '../../services/db';
 import { logCreateCollection } from '../../services/history';
+import { useAlert } from '../../hooks/useAlert';
 import './CreateCollectionModal.css';
 
 export interface CreateCollectionModalProps {
@@ -28,6 +29,7 @@ export const CreateCollectionModal = ({
   onClose,
   onCollectionCreated
 }: CreateCollectionModalProps) => {
+  const alert = useAlert();
   const [name, setName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +62,9 @@ export const CreateCollectionModal = ({
       
       // Логируем создание коллекции
       await logCreateCollection(collection.name, collection.cardIds.length);
+      
+      // Показываем успешное уведомление
+      alert.success(`Коллекция "${collection.name}" создана`);
       
       // Очищаем форму
       setName('');
@@ -110,7 +115,7 @@ export const CreateCollectionModal = ({
           />
 
           {/* Кнопки */}
-          <div className="create-collection-modal__actions">
+          <div className="create-collection-modal__actions" style={{ justifyContent: 'flex-end' }}>
             <Button
               type="button"
               variant="border"

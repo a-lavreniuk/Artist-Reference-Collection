@@ -91,20 +91,20 @@
 }
 
 .modal--medium {
-  max-width: 822px;
-  width: 822px;
-  background-color: var(--color-grayscale-50);
-  border: 2px solid var(--border-default);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-3xl);
+  max-width: 822px !important;
+  width: 822px !important;
+  background-color: var(--color-grayscale-50) !important;
+  border: 2px solid var(--border-default) !important;
+  border-radius: var(--radius-xl) !important;
+  padding: var(--spacing-3xl) !important;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-l);
+  gap: var(--spacing-l) !important;
 }
 
 /* Для модального окна medium убираем стандартные отступы из header и content */
 .modal--medium .modal__header {
-  padding: 0;
+  padding: 0 !important;
   border: none;
   box-shadow: none;
   position: static;
@@ -112,7 +112,9 @@
 }
 
 .modal--medium .modal__content {
-  padding: 0;
+  padding: 0 !important;
+  flex: 1;
+  overflow: visible;
 }
 
 .modal--large {

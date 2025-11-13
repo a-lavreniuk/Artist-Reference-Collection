@@ -6,10 +6,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../common';
 import { getHistory, clearHistory } from '../../services/history';
+import { useAlert } from '../../hooks/useAlert';
+import { useToast } from '../../hooks/useToast';
 import type { HistoryEntry, HistoryPeriod, HistoryActionType } from '../../types';
 import './HistorySection.css';
 
 export const HistorySection = () => {
+  const alert = useAlert();
+  const toast = useToast();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activePeriod, setActivePeriod] = useState<HistoryPeriod>('all');
@@ -45,7 +49,7 @@ export const HistorySection = () => {
       console.log('[HistorySection] Загружено записей:', entries.length);
     } catch (error) {
       console.error('[HistorySection] Ошибка загрузки истории:', error);
-      setMessage('❌ Ошибка загрузки истории');
+      alert.error('Ошибка загрузки истории');
     } finally {
       setLoading(false);
     }
@@ -96,27 +100,24 @@ export const HistorySection = () => {
    * Очистить всю историю
    */
   const handleClearHistory = async () => {
-    const confirmed = confirm(
-      '⚠️ Очистить историю?\n\n' +
-      'Это действие нельзя отменить.\n' +
-      'Будут удалены все записи истории действий.'
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await clearHistory();
-      setHistory([]);
-      setFilteredHistory([]);
-      setMessage('✅ История очищена');
-      setTimeout(() => setMessage(null), 2000);
-    } catch (error) {
-      console.error('[HistorySection] Ошибка очистки истории:', error);
-      setMessage('❌ Ошибка очистки истории');
-      setTimeout(() => setMessage(null), 2000);
-    }
+    toast.showToast({
+      title: 'Очистить историю',
+      message: 'Вся история действий будет удалена. Это действие необратимо',
+      type: 'error',
+      onConfirm: async () => {
+        try {
+          await clearHistory();
+          setHistory([]);
+          setFilteredHistory([]);
+          alert.success('История очищена');
+        } catch (error) {
+          console.error('[HistorySection] Ошибка очистки истории:', error);
+          alert.error('Не удалось очистить историю');
+        }
+      },
+      confirmText: 'Очистить',
+      cancelText: 'Отмена'
+    });
   };
 
   /**

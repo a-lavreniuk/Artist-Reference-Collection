@@ -9,21 +9,38 @@ import { Layout } from '../components/layout';
 import { Button, Icon } from '../components/common';
 import { AddCardFlow } from '../components/gallery';
 import { useSearch } from '../contexts';
+import { useToast } from '../hooks/useToast';
+import { useAlert } from '../hooks/useAlert';
 
 export const AddPage = () => {
   const navigate = useNavigate();
   const { searchProps } = useSearch();
+  const toast = useToast();
+  const alert = useAlert();
   const [configuredCount, setConfiguredCount] = useState(0);
   const [hasQueue, setHasQueue] = useState(false);
   const finishHandlerRef = useRef<(() => void) | null>(null);
   const openFileDialogRef = useRef<(() => void) | null>(null);
 
-  const handleComplete = () => {
+  const handleComplete = (addedCount: number) => {
+    // Показываем успешное уведомление
+    alert.success(`Добавлено карточек: ${addedCount}`);
     navigate('/');
   };
 
   const handleCancel = () => {
-    if (confirm('Отменить добавление карточек? Все данные будут потеряны.')) {
+    if (hasQueue && configuredCount > 0) {
+      toast.showToast({
+        title: 'Отменить добавление',
+        message: 'Вы уверены что хотите отменить? Все несохранённые карточки будут удалены',
+        type: 'error',
+        onConfirm: () => {
+          navigate('/');
+        },
+        confirmText: 'Отменить',
+        cancelText: 'Продолжить редактирование'
+      });
+    } else {
       navigate('/');
     }
   };

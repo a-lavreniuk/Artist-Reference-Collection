@@ -37,17 +37,11 @@
   align-items: center;
   gap: var(--spacing-m);
   
-  height: 56px;
-  padding: var(--spacing-l) var(--spacing-xl);
+  padding: var(--spacing-l); /* 16px внутренние отступы */
   
-  border-radius: 28px; /* Скругленные концы (половина высоты) */
-  box-shadow: var(--shadow-xl);
+  border-radius: var(--radius-l); /* 16px скругления краёв */
   
   transition: all var(--transition-fast);
-}
-
-.alert__container:hover {
-  box-shadow: 0px 12px 40px rgba(59, 57, 70, 0.32);
 }
 
 /* ========== ТИПЫ ALERT ========== */
@@ -55,21 +49,41 @@
 .alert--success .alert__container {
   background-color: var(--color-green-600);
   color: var(--text-light);
+  box-shadow: 0px 8px 32px rgba(15, 137, 72, 0.24); /* Тень цвета green-600 */
+}
+
+.alert--success .alert__container:hover {
+  background-color: var(--color-green-700); /* green 600 → 700 */
 }
 
 .alert--error .alert__container {
   background-color: var(--color-red-600);
   color: var(--text-light);
+  box-shadow: 0px 8px 32px rgba(182, 26, 23, 0.24); /* Тень цвета red-600 */
+}
+
+.alert--error .alert__container:hover {
+  background-color: var(--color-red-700); /* red 600 → 700 */
 }
 
 .alert--warning .alert__container {
   background-color: var(--color-yellow-600);
   color: var(--text-light);
+  box-shadow: 0px 8px 32px rgba(179, 144, 39, 0.24); /* Тень цвета yellow-600 */
+}
+
+.alert--warning .alert__container:hover {
+  background-color: var(--color-yellow-700); /* yellow 600 → 700 */
 }
 
 .alert--info .alert__container {
   background-color: var(--color-grayscale-800);
   color: var(--text-light);
+  box-shadow: 0px 8px 32px rgba(81, 79, 91, 0.24); /* Тень цвета grayscale-800 */
+}
+
+.alert--info .alert__container:hover {
+  background-color: var(--color-grayscale-900); /* grayscale 800 → 900 */
 }
 
 /* ========== ИКОНКА ========== */
@@ -80,8 +94,8 @@
   justify-content: center;
   flex-shrink: 0;
   
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   
   color: currentColor;
 }
@@ -112,27 +126,25 @@
   justify-content: center;
   flex-shrink: 0;
   
-  width: 32px;
-  height: 32px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   
   background-color: transparent;
   border: none;
-  border-radius: var(--radius-s);
   color: currentColor;
   cursor: pointer;
   
-  transition: all var(--transition-fast);
+  transition: opacity var(--transition-fast);
   opacity: 0.8;
 }
 
 .alert__close:hover {
   opacity: 1;
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .alert__close:active {
-  transform: scale(0.95);
+  opacity: 0.6;
 }
 
 /* ========== АДАПТАЦИЯ ========== */

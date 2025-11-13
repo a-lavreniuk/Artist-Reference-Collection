@@ -191,6 +191,7 @@ export const Dialog = ({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={placeholder}
+              fullWidth
               autoFocus
             />
           </form>
@@ -199,14 +200,14 @@ export const Dialog = ({
         {/* Кнопки действий */}
         <div className="dialog__actions">
           {type !== 'info' && (
-            <Button variant="border" size="L" onClick={onCancel}>
+            <Button variant="border" size="S" onClick={onCancel}>
               {cancelText}
             </Button>
           )}
           
           <Button
-            variant={variant === 'destructive' ? 'error' : 'primary'}
-            size="L"
+            variant={variant === 'destructive' ? 'error' : 'success'}
+            size="S"
             onClick={handleConfirm}
             iconRight={
               variant === 'destructive' && type === 'confirm' ? (

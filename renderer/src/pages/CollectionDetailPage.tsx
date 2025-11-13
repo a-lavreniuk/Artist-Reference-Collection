@@ -10,12 +10,16 @@ import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { getCollection, getAllCards, deleteCollection, updateCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
 import { logDeleteCollection, logRenameCollection } from '../services/history';
+import { useToast } from '../hooks/useToast';
+import { useAlert } from '../hooks/useAlert';
 import type { Collection, Card, ViewMode, ContentFilter } from '../types';
 
 export const CollectionDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { searchProps, setSelectedTags } = useSearch();
+  const toast = useToast();
+  const alert = useAlert();
   
   const [collection, setCollection] = useState<Collection | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
@@ -88,20 +92,28 @@ export const CollectionDetailPage = () => {
   const handleDeleteCollection = async () => {
     if (!collection) return;
     
-    if (!confirm(`Удалить коллекцию "${collection.name}"? Карточки останутся в системе.`)) {
-      return;
-    }
-
-    try {
-      await deleteCollection(collection.id);
-      
-      // Логируем удаление коллекции
-      await logDeleteCollection(collection.name);
-      
-      navigate('/collections');
-    } catch (error) {
-      console.error('Ошибка удаления коллекции:', error);
-    }
+    toast.showToast({
+      title: 'Удалить коллекцию',
+      message: `Вы уверены что хотите удалить коллекцию "${collection.name}"? Карточки останутся в системе`,
+      type: 'error',
+      onConfirm: async () => {
+        try {
+          await deleteCollection(collection.id);
+          
+          // Логируем удаление коллекции
+          await logDeleteCollection(collection.name);
+          
+          // Показываем успешное уведомление
+          alert.success(`Коллекция "${collection.name}" удалена`);
+          
+          navigate('/collections');
+        } catch (error) {
+          console.error('Ошибка удаления коллекции:', error);
+        }
+      },
+      confirmText: 'Удалить',
+      cancelText: 'Отмена'
+    });
   };
 
   const handleRenameCollection = async () => {

@@ -4,13 +4,16 @@
 
 import { createPortal } from 'react-dom';
 import { Toast } from './Toast';
-import './Toast.css';
 
 export interface ToastMessage {
   id: string;
+  title?: string;
   message: string;
   type?: 'success' | 'error' | 'info';
   duration?: number;
+  onConfirm?: () => void;
+  confirmText?: string;
+  cancelText?: string;
 }
 
 export interface ToastContainerProps {
@@ -27,10 +30,14 @@ export const ToastContainer = ({ toasts, onRemoveToast }: ToastContainerProps) =
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
+          title={toast.title}
           message={toast.message}
           type={toast.type}
           duration={toast.duration}
           onClose={() => onRemoveToast(toast.id)}
+          onConfirm={toast.onConfirm}
+          confirmText={toast.confirmText}
+          cancelText={toast.cancelText}
         />
       ))}
     </div>,

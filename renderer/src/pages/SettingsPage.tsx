@@ -9,6 +9,7 @@ import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
+import { useToast } from '../hooks/useToast';
 import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
 import { logCreateBackup, logClearCache, logMoveStorage } from '../services/history';
 import type { AppStatistics, Tag, Collection } from '../types';
@@ -22,6 +23,7 @@ export const SettingsPage = () => {
   const navigate = useNavigate();
   const { searchProps, setSelectedTags } = useSearch();
   const { directoryHandle, requestDirectory, directoryPath } = useFileSystem();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
   const [topTags, setTopTags] = useState<TagWithCategory[]>([]);
@@ -108,7 +110,7 @@ export const SettingsPage = () => {
     const hasCards = stats && stats.totalCards > 0;
     
     if (!window.electronAPI) {
-      setMessage('❌ Electron API недоступен');
+      alert.error('Electron API недоступен');
       return;
     }
 
@@ -201,8 +203,7 @@ export const SettingsPage = () => {
       // Если нет карточек, просто выбираем папку
       await requestDirectory();
       await loadDirectorySizes();
-      setMessage('✅ Рабочая папка установлена');
-      setTimeout(() => setMessage(null), 2000);
+      alert.success('Рабочая папка установлена');
     }
   };
 
@@ -219,12 +220,10 @@ export const SettingsPage = () => {
       await deleteTag(tagId);
       // Обновляем список
       await loadStats();
-      setMessage('✅ Метка удалена');
-      setTimeout(() => setMessage(null), 2000);
+      alert.success('Метка удалена');
     } catch (error) {
       console.error('Ошибка удаления метки:', error);
-      setMessage('❌ Ошибка удаления метки');
-      setTimeout(() => setMessage(null), 2000);
+      alert.error('Не удалось удалить метку');
     }
   };
 
@@ -267,12 +266,11 @@ export const SettingsPage = () => {
       // Логируем очистку кэша
       await logClearCache(cacheSize);
       
-      setMessage('✅ Кеш очищен');
+      alert.success('Кеш очищен');
       await loadStats();
-      setTimeout(() => setMessage(null), 2000);
     } catch (error) {
+      alert.error('Не удалось очистить кеш');
       console.error('Ошибка очистки:', error);
-      setMessage('❌ Ошибка очистки кеша');
     }
   };
 
@@ -290,7 +288,7 @@ export const SettingsPage = () => {
     }
 
     if (!window.electronAPI) {
-      setBackupMessage('❌ Electron API недоступен');
+      alert.error('Electron API недоступен');
       return;
     }
 
@@ -356,7 +354,7 @@ export const SettingsPage = () => {
 
   const handleRestoreBackup = async () => {
     if (!window.electronAPI) {
-      setRestoreMessage('❌ Electron API недоступен');
+      alert.error('Electron API недоступен');
       return;
     }
 

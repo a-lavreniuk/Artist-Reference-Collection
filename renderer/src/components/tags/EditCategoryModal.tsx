@@ -8,6 +8,8 @@ import { Modal, Button, Input } from '../common';
 import type { Category, Tag as TagType } from '../../types';
 import { updateCategory, deleteCategory, addTag, deleteTag, getAllTags } from '../../services/db';
 import { logRenameCategory, logDeleteCategory } from '../../services/history';
+import { useToast } from '../../hooks/useToast';
+import { useAlert } from '../../hooks/useAlert';
 import './CreateCategoryModal.css';
 
 export interface EditCategoryModalProps {
@@ -41,6 +43,8 @@ export const EditCategoryModal = ({
   onCategoryUpdated,
   onCategoryDeleted
 }: EditCategoryModalProps) => {
+  const toast = useToast();
+  const alert = useAlert();
   const [name, setName] = useState(category?.name || '');
   const [tagName, setTagName] = useState('');
   // Храним ID существующих меток и названия новых меток
@@ -192,27 +196,35 @@ export const EditCategoryModal = ({
   const handleDelete = async () => {
     if (!category) return;
 
-    if (!confirm(`Удалить категорию "${category.name}" и все метки в ней? Это действие необратимо.`)) {
-      return;
-    }
+    toast.showToast({
+      title: 'Удалить категорию',
+      message: `Вы уверены что хотите удалить категорию "${category.name}" и все метки в ней? Это действие необратимо`,
+      type: 'error',
+      onConfirm: async () => {
+        try {
+          setIsDeleting(true);
+          setError(null);
 
-    try {
-      setIsDeleting(true);
-      setError(null);
-
-      await deleteCategory(category.id);
-      
-      // Логируем удаление категории
-      await logDeleteCategory(category.name);
-      
-      onCategoryDeleted?.();
-      onClose();
-    } catch (err) {
-      console.error('Ошибка удаления категории:', err);
-      setError('Не удалось удалить категорию');
-    } finally {
-      setIsDeleting(false);
-    }
+          await deleteCategory(category.id);
+          
+          // Логируем удаление категории
+          await logDeleteCategory(category.name);
+          
+          // Показываем успешное уведомление
+          alert.success(`Категория "${category.name}" удалена`);
+          
+          onCategoryDeleted?.();
+          onClose();
+        } catch (err) {
+          console.error('Ошибка удаления категории:', err);
+          setError('Не удалось удалить категорию');
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+      confirmText: 'Удалить',
+      cancelText: 'Отмена'
+    });
   };
 
   const handleClose = () => {

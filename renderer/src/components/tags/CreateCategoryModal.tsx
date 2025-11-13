@@ -7,6 +7,7 @@ import { Modal, Button, Input } from '../common';
 import type { Category, Tag } from '../../types';
 import { addCategory, addTag, getAllTags, updateCategory } from '../../services/db';
 import { logCreateCategory } from '../../services/history';
+import { useAlert } from '../../hooks/useAlert';
 import './CreateCategoryModal.css';
 
 export interface CreateCategoryModalProps {
@@ -28,6 +29,7 @@ export const CreateCategoryModal = ({
   onClose,
   onCategoryCreated
 }: CreateCategoryModalProps) => {
+  const alert = useAlert();
   const [name, setName] = useState('');
   const [tagName, setTagName] = useState('');
   const [tags, setTags] = useState<string[]>([]); // Массив названий меток
@@ -129,6 +131,9 @@ export const CreateCategoryModal = ({
       
       // Логируем создание категории
       await logCreateCategory(category.name, tagIds.length);
+      
+      // Показываем успешное уведомление
+      alert.success(`Категория "${category.name}" создана`);
       
       // Очищаем форму
       setName('');
@@ -236,7 +241,7 @@ export const CreateCategoryModal = ({
           </div>
 
           {/* Кнопки */}
-          <div className="create-category-modal__actions">
+          <div className="create-category-modal__actions" style={{ justifyContent: 'flex-end' }}>
             <Button
               type="button"
               variant="border"
