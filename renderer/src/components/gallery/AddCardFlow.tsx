@@ -801,7 +801,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
               value={collectionsSearchQuery}
               onChange={(e) => setCollectionsSearchQuery(e.target.value)}
               fullWidth
-              style={{ marginBottom: '12px' }}
+              className="add-card-flow__search-input"
               clearable
               onClear={() => setCollectionsSearchQuery('')}
             />
@@ -842,7 +842,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
               value={tagsSearchQuery}
               onChange={(e) => setTagsSearchQuery(e.target.value)}
               fullWidth
-              style={{ marginBottom: '12px' }}
+              className="add-card-flow__search-input"
               clearable
               onClear={() => setTagsSearchQuery('')}
             />

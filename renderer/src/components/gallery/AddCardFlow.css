@@ -366,6 +366,11 @@
   overflow: hidden;
 }
 
+/* Поисковый инпут в блоках */
+.add-card-flow__search-input {
+  margin-bottom: 12px;
+}
+
 /* Список тегов */
 .add-card-flow__tags-list {
   display: flex;

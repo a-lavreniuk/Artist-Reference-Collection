@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import Masonry from 'react-masonry-css';
 import { Modal } from '../common/Modal';
-import { Button, Tag, Icon, Card as CardComponent } from '../common';
+import { Button, Tag, Icon, Card as CardComponent, Input } from '../common';
 import type { Card, Tag as TagType, Collection, Category } from '../../types';
 import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
@@ -544,12 +544,13 @@ export const CardViewModal = ({
             </div>
 
             {isEditMode && (
-              <input
-                type="text"
-                className="card-view__search-input"
+              <Input
                 placeholder="Поиск коллекций…"
                 value={collectionSearchQuery}
                 onChange={(e) => setCollectionSearchQuery(e.target.value)}
+                fullWidth
+                clearable
+                onClear={() => setCollectionSearchQuery('')}
               />
             )}
 
@@ -612,12 +613,13 @@ export const CardViewModal = ({
             
             {isEditMode ? (
               <>
-                <input
-                  type="text"
-                  className="card-view__search-input"
+                <Input
                   placeholder="Поиск меток…"
                   value={tagSearchQuery}
                   onChange={(e) => setTagSearchQuery(e.target.value)}
+                  fullWidth
+                  clearable
+                  onClear={() => setTagSearchQuery('')}
                 />
                 
                 <div className="card-view__divider"></div>
