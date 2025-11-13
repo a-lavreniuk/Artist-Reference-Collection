@@ -29,7 +29,6 @@
   flex-direction: column;
   align-items: center;
   max-width: 714px;
-  padding: var(--spacing-3xl);
   text-align: center;
 }
 
@@ -54,12 +53,12 @@
 /* Карточка фичи */
 .onboarding__feature-card {
   display: flex;
-  flex-direction: row;
-  align-items: flex-start; /* Выравнивание по верхнему краю */
+  flex-direction: column; /* Вертикальная раскладка: иконка, заголовок, подпись */
+  align-items: flex-start; /* Выравнивание по левому краю */
   gap: var(--spacing-m);
   padding: var(--spacing-xl);
-  background-color: var(--bg-secondary); /* Светло-серый фон */
-  border: 1px solid var(--border-default); /* Бордер 1px */
+  background-color: transparent; /* Без фоновой заливки */
+  border: 2px solid var(--border-default); /* Бордер 2px */
   border-radius: var(--radius-l);
   text-align: left; /* Выравнивание текста по левому краю */
 }
@@ -104,22 +103,8 @@
   margin-bottom: var(--spacing-l);
 }
 
-/* Стили для кнопок с иконками */
-.onboarding__actions button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-s);
-}
-
-/* Иконки внутри кнопок */
-.onboarding__actions button .icon {
-  flex-shrink: 0;
-  margin-left: var(--spacing-xs);
-  /* Выравнивание по центру относительно текста */
-  display: inline-flex;
-  align-items: center;
-}
+/* Стили для кнопок - минимальные переопределения */
+/* Глобальные стили кнопок в Button.css управляют иконками */
 
 /* ========== ОШИБКА ========== */
 
