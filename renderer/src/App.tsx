@@ -55,14 +55,17 @@ function App() {
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
+  
+  // Проверяем, находимся ли мы на тестовой странице
+  const isTestRoute = window.location.pathname.startsWith('/test/');
 
   // Проверяем нужно ли показать онбординг
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !isTestRoute) {
       // Показываем онбординг если нет handle или нет разрешений
       setShowOnboarding(!directoryHandle || !hasPermission);
     }
-  }, [isLoading, directoryHandle, hasPermission]);
+  }, [isLoading, directoryHandle, hasPermission, isTestRoute]);
 
   // Обработчик успешного выбора папки
   const handleDirectorySelected = () => {
@@ -91,6 +94,20 @@ function App() {
   const handleDismissUpdate = () => {
     setShowUpdateNotification(false);
   };
+
+  // Для тестовых страниц пропускаем все проверки Electron
+  if (isTestRoute) {
+    return (
+      <Router>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/test/onboarding" element={<OnboardingScreenDemo />} />
+            <Route path="/test/onboarding-simple" element={<OnboardingScreenTestSimple />} />
+          </Routes>
+        </ErrorBoundary>
+      </Router>
+    );
+  }
 
   // Показываем загрузку пока проверяем рабочую папку
   if (isLoading) {
@@ -152,8 +169,6 @@ function App() {
               <Route path="/moodboard" element={<MoodboardPage />} />
               <Route path="/add" element={<AddPage />} />
               <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/test/onboarding" element={<OnboardingScreenDemo />} />
-              <Route path="/test/onboarding-simple" element={<OnboardingScreenTestSimple />} />
               </Routes>
             </ErrorBoundary>
           </SearchProvider>
