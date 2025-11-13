@@ -16,6 +16,7 @@ import {
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
 import { OnboardingScreenDemo } from './components/common/OnboardingScreen.demo';
+import { OnboardingScreenTestSimple } from './components/common/OnboardingScreen.test-simple';
 import { useFileSystem, useElectronUpdates } from './hooks';
 import { SearchProvider } from './contexts';
 
@@ -152,6 +153,7 @@ function App() {
               <Route path="/add" element={<AddPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/test/onboarding" element={<OnboardingScreenDemo />} />
+              <Route path="/test/onboarding-simple" element={<OnboardingScreenTestSimple />} />
               </Routes>
             </ErrorBoundary>
           </SearchProvider>

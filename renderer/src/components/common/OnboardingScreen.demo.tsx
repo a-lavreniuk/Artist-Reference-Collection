@@ -40,8 +40,20 @@ export const OnboardingScreenDemo = () => {
     setSelectedAction('');
   };
 
+  console.log('🎨 OnboardingScreenDemo рендерится');
+
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <div style={{ 
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100vw',
+      height: '100vh',
+      zIndex: 9999,
+      backgroundColor: 'var(--bg-primary, #f5f5f5)'
+    }}>
       {/* Экран онбординга */}
       <OnboardingScreen
         onDirectorySelected={handleDirectorySelected}
