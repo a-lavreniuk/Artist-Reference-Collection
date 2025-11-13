@@ -187,6 +187,11 @@ export const CreateCategoryModal = ({
             error={error || undefined}
             fullWidth
             className="create-category-modal__input"
+            clearable
+            onClear={() => {
+              setName('');
+              setError(null);
+            }}
           />
 
           {/* Блок добавления меток */}
@@ -210,6 +215,11 @@ export const CreateCategoryModal = ({
               error={tagError || undefined}
               fullWidth
               className="create-category-modal__input"
+              clearable
+              onClear={() => {
+                setTagName('');
+                setTagError(null);
+              }}
             />
 
             {/* Список добавленных меток */}

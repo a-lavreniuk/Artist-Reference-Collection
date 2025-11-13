@@ -112,6 +112,8 @@ export const CreateCollectionModal = ({
             fullWidth
             className="create-collection-modal__input"
             autoFocus
+            clearable
+            onClear={() => setName('')}
           />
 
           {/* Кнопки */}
