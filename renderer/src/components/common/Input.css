@@ -181,8 +181,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   background: none;
   border: none;
@@ -199,8 +199,8 @@
 
 .input--large ~ .input__clear {
   right: 16px;
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
 }
 
 .input__clear svg {
