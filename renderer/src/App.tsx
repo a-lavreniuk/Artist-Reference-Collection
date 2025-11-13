@@ -67,8 +67,11 @@ function App() {
     setShowOnboarding(false);
   };
 
-  // Обработчик пропуска (можно настроить позже в настройках)
-  const handleSkip = () => {
+  // Обработчик восстановления резервной копии
+  const handleRestoreBackup = async () => {
+    console.log('[App] Восстановление резервной копии');
+    // TODO: Реализовать логику восстановления
+    // Пока просто скрываем онбординг
     setShowOnboarding(false);
   };
 
@@ -123,7 +126,7 @@ function App() {
     return (
       <OnboardingScreen
         onDirectorySelected={handleDirectorySelected}
-        onSkip={handleSkip}
+        onRestoreBackup={handleRestoreBackup}
         requestDirectory={requestDirectory}
       />
     );

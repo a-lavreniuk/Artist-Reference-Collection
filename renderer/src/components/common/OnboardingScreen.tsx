@@ -5,14 +5,15 @@
 
 import { useState } from 'react';
 import { Button } from './Button';
+import { Icon } from './Icon';
 import './OnboardingScreen.css';
 
 export interface OnboardingScreenProps {
   /** Обработчик выбора папки */
   onDirectorySelected: () => void;
   
-  /** Обработчик пропуска */
-  onSkip?: () => void;
+  /** Обработчик восстановления резервной копии */
+  onRestoreBackup: () => void;
   
   /** Функция запроса директории */
   requestDirectory: () => Promise<any>;
@@ -23,10 +24,11 @@ export interface OnboardingScreenProps {
  */
 export const OnboardingScreen = ({
   onDirectorySelected,
-  onSkip,
+  onRestoreBackup,
   requestDirectory
 }: OnboardingScreenProps) => {
   const [isSelecting, setIsSelecting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectDirectory = async () => {
@@ -47,100 +49,69 @@ export const OnboardingScreen = ({
     }
   };
 
+  const handleRestoreBackup = async () => {
+    try {
+      setIsRestoring(true);
+      setError(null);
+      await onRestoreBackup();
+    } catch (err) {
+      console.error('Ошибка восстановления:', err);
+      setError('Не удалось восстановить резервную копию.');
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   return (
     <div className="onboarding">
       <div className="onboarding__container">
-        {/* Иконка */}
-        <div className="onboarding__icon">
-          <svg width="120" height="120" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M20 6H12L10 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V8C22 6.9 21.1 6 20 6Z"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-
         {/* Заголовок */}
         <h1 className="onboarding__title">
-          Добро пожаловать в ARC
+          Добро пожаловать
         </h1>
 
-        {/* Описание */}
-        <p className="onboarding__description text-l">
-          Для начала работы выберите папку с вашими медиафайлами.
-          <br />
-          Приложение получит доступ только к этой папке.
-        </p>
-
-        {/* Список возможностей */}
-        <div className="onboarding__features">
-          <div className="onboarding__feature">
-            <svg className="onboarding__feature-icon" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path
-                d="M9 12L11 14L15 10"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div>
-              <h4 className="onboarding__feature-title">Полностью офлайн</h4>
-              <p className="onboarding__feature-text text-s">
-                Все данные хранятся локально на вашем компьютере
+        {/* Сетка возможностей 2×2 */}
+        <div className="onboarding__features-grid">
+          {/* Коллекции */}
+          <div className="onboarding__feature-card">
+            <Icon name="folder-open" size={24} className="onboarding__feature-icon" />
+            <div className="onboarding__feature-content">
+              <h3 className="onboarding__feature-title">Коллекции</h3>
+              <p className="onboarding__feature-text text-l">
+                Организуйте тематические коллекции
               </p>
             </div>
           </div>
 
-          <div className="onboarding__feature">
-            <svg className="onboarding__feature-icon" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path
-                d="M9 12L11 14L15 10"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div>
-              <h4 className="onboarding__feature-title">Безопасно</h4>
-              <p className="onboarding__feature-text text-s">
-                Вы полностью контролируете доступ к своим файлам
+          {/* Метки */}
+          <div className="onboarding__feature-card">
+            <Icon name="tag" size={24} className="onboarding__feature-icon" />
+            <div className="onboarding__feature-content">
+              <h3 className="onboarding__feature-title">Метки</h3>
+              <p className="onboarding__feature-text text-l">
+                Категории и метки поиска
               </p>
             </div>
           </div>
 
-          <div className="onboarding__feature">
-            <svg className="onboarding__feature-icon" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-              <path
-                d="M9 12L11 14L15 10"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div>
-              <h4 className="onboarding__feature-title">Быстро</h4>
-              <p className="onboarding__feature-text text-s">
-                Оптимизировано для работы с большими коллекциями
+          {/* Всё локально */}
+          <div className="onboarding__feature-card">
+            <Icon name="server" size={24} className="onboarding__feature-icon" />
+            <div className="onboarding__feature-content">
+              <h3 className="onboarding__feature-title">Всё локально</h3>
+              <p className="onboarding__feature-text text-l">
+                Файлы хранятся прямо на компьютере
+              </p>
+            </div>
+          </div>
+
+          {/* Мудборды */}
+          <div className="onboarding__feature-card">
+            <Icon name="bookmark-plus" size={24} className="onboarding__feature-icon" />
+            <div className="onboarding__feature-content">
+              <h3 className="onboarding__feature-title">Мудборды</h3>
+              <p className="onboarding__feature-text text-l">
+                Доски настроения проектов
               </p>
             </div>
           </div>
@@ -148,26 +119,31 @@ export const OnboardingScreen = ({
 
         {/* Кнопки действий */}
         <div className="onboarding__actions">
+          {/* Основная кнопка */}
           <Button
             variant="primary"
             size="L"
             onClick={handleSelectDirectory}
             loading={isSelecting}
+            disabled={isRestoring}
             fullWidth
+            iconRight={<Icon name="folder-open" size={24} />}
           >
-            Выбрать папку с файлами
+            Показать куда сохранять
           </Button>
           
-          {onSkip && (
-            <Button
-              variant="ghost"
-              size="S"
-              onClick={onSkip}
-              disabled={isSelecting}
-            >
-              Пропустить (можно настроить позже)
-            </Button>
-          )}
+          {/* Вторичная кнопка */}
+          <Button
+            variant="secondary"
+            size="L"
+            onClick={handleRestoreBackup}
+            loading={isRestoring}
+            disabled={isSelecting}
+            fullWidth
+            iconRight={<Icon name="download" size={24} />}
+          >
+            Восстановить резервную копию
+          </Button>
         </div>
 
         {/* Сообщение об ошибке */}
@@ -181,13 +157,6 @@ export const OnboardingScreen = ({
             <span>{error}</span>
           </div>
         )}
-
-        {/* Подсказка */}
-        <p className="onboarding__hint text-s">
-          💡 Совет: Выберите папку, где уже хранятся ваши референсы.
-          <br />
-          Приложение проиндексирует все изображения и видео в этой папке.
-        </p>
       </div>
     </div>
   );
