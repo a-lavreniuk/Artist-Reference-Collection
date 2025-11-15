@@ -8,8 +8,8 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getCollection, getAllCards, deleteCollection, updateCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
-import { logDeleteCollection, logRenameCollection } from '../services/history';
+import { getCollection, getAllCards, deleteCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
+import { logDeleteCollection } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
 import type { Collection, Card, ViewMode, ContentFilter } from '../types';
@@ -116,9 +116,14 @@ export const CollectionDetailPage = () => {
     });
   };
 
-  const handleRenameCollection = async () => {
+  const handleRenameCollection = () => {
     if (!collection) return;
     
+    // TODO: Заменить на модальное окно EditCollectionModal
+    // Временно отключено из-за ограничений Electron (prompt не поддерживается)
+    console.log('[CollectionDetailPage] Переименование коллекции временно недоступно');
+    
+    /* Старый код с prompt - не работает в Electron
     const newName = prompt('Новое название коллекции:', collection.name);
     
     if (!newName || newName.trim() === '' || newName.trim() === collection.name) {
@@ -137,6 +142,7 @@ export const CollectionDetailPage = () => {
     } catch (error) {
       console.error('Ошибка переименования коллекции:', error);
     }
+    */
   };
 
   const handleCardClick = (card: Card) => {
