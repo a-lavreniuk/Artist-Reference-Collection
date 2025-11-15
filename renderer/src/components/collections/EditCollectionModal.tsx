@@ -7,7 +7,6 @@ import { Modal, Button, Input } from '../common';
 import type { Collection } from '../../types';
 import { updateCollection } from '../../services/db';
 import { logRenameCollection } from '../../services/history';
-import { useAlert } from '../../hooks/useAlert';
 
 export interface EditCollectionModalProps {
   /** Открыто ли модальное окно */
@@ -35,7 +34,6 @@ export const EditCollectionModal = ({
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const { showAlert } = useAlert();
 
   // Загружаем название коллекции при открытии
   useEffect(() => {
