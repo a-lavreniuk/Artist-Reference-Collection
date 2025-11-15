@@ -39,6 +39,12 @@
   border: none;
   border-radius: var(--radius-l);
   padding: var(--spacing-l) var(--spacing-l) var(--spacing-l) 20px;
+  /* КРИТИЧЕСКИ ВАЖНО: разрешаем выделение текста */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
 }
 
 .create-collection-modal__input .input::placeholder {

@@ -8,6 +8,7 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
+import { EditCollectionModal } from '../components/collections';
 import { getCollection, getAllCards, deleteCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
 import { logDeleteCollection } from '../services/history';
 import { useToast } from '../hooks/useToast';
@@ -31,6 +32,7 @@ export const CollectionDetailPage = () => {
   
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Загрузка коллекции и карточек
   useEffect(() => {
@@ -118,31 +120,14 @@ export const CollectionDetailPage = () => {
 
   const handleRenameCollection = () => {
     if (!collection) return;
-    
-    // TODO: Заменить на модальное окно EditCollectionModal
-    // Временно отключено из-за ограничений Electron (prompt не поддерживается)
-    console.log('[CollectionDetailPage] Переименование коллекции временно недоступно');
-    
-    /* Старый код с prompt - не работает в Electron
-    const newName = prompt('Новое название коллекции:', collection.name);
-    
-    if (!newName || newName.trim() === '' || newName.trim() === collection.name) {
-      return;
-    }
+    setIsEditModalOpen(true);
+  };
 
-    try {
-      const oldName = collection.name;
-      await updateCollection(collection.id, { name: newName.trim() });
-      
-      // Логируем переименование
-      await logRenameCollection(oldName, newName.trim());
-      
-      // Перезагружаем коллекцию
-      await loadCollection(collection.id);
-    } catch (error) {
-      console.error('Ошибка переименования коллекции:', error);
+  const handleCollectionUpdated = async () => {
+    if (id) {
+      await loadCollection(id);
+      toast.success('Коллекция переименована');
     }
-    */
   };
 
   const handleCardClick = (card: Card) => {
@@ -291,6 +276,13 @@ export const CollectionDetailPage = () => {
         }}
         onCollectionClick={handleCollectionClick}
         onTagClick={handleTagClick}
+      />
+
+      <EditCollectionModal
+        isOpen={isEditModalOpen}
+        collection={collection}
+        onClose={() => setIsEditModalOpen(false)}
+        onCollectionUpdated={handleCollectionUpdated}
       />
     </Layout>
   );
