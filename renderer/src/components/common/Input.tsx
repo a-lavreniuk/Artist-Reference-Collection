@@ -3,7 +3,7 @@
  * Поддерживает различные типы, размеры и состояния
  */
 
-import { forwardRef } from 'react';
+import { forwardRef, useEffect, useRef } from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { Icon } from './Icon';
 import './Input.css';
@@ -57,6 +57,71 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 }, ref) => {
   const hasError = Boolean(error);
   const showClearButton = clearable && value && !disabled;
+  const internalRef = useRef<HTMLInputElement>(null);
+  
+  // Объединяем внешний ref и внутренний ref
+  const getInputRef = () => {
+    if (typeof ref === 'function') {
+      return internalRef.current;
+    } else if (ref && 'current' in ref) {
+      return ref.current;
+    }
+    return internalRef.current;
+  };
+  
+  // Принудительно разрешаем все события на инпуте
+  useEffect(() => {
+    let cleanup: (() => void) | null = null;
+    
+    // Небольшая задержка чтобы инпут успел отрендериться
+    const timeoutId = setTimeout(() => {
+      const input = getInputRef();
+      if (!input) return;
+    
+      // Устанавливаем стили
+      input.style.userSelect = 'text';
+      input.style.webkitUserSelect = 'text';
+      (input.style as any).MozUserSelect = 'text';
+      (input.style as any).msUserSelect = 'text';
+      input.style.cursor = 'text';
+      input.style.pointerEvents = 'auto';
+      
+      // Принудительно разрешаем все события мыши
+      const allowMouseEvents = (e: MouseEvent | PointerEvent) => {
+        // НЕ блокируем события - просто убеждаемся что они проходят
+        if (e.target === input || input.contains(e.target as Node)) {
+          // Событие на инпуте - разрешаем
+          return;
+        }
+      };
+      
+      // Перехватываем события в фазе capture ДО того, как они дойдут до родителя
+      input.addEventListener('mousedown', allowMouseEvents, { capture: true });
+      input.addEventListener('mouseup', allowMouseEvents, { capture: true });
+      input.addEventListener('click', allowMouseEvents, { capture: true });
+      input.addEventListener('pointerdown', allowMouseEvents, { capture: true });
+      input.addEventListener('pointerup', allowMouseEvents, { capture: true });
+      input.addEventListener('selectstart', (e) => {
+        // Разрешаем выделение
+        if (e.target === input || input.contains(e.target as Node)) {
+          return;
+        }
+      }, { capture: true });
+      
+      cleanup = () => {
+        input.removeEventListener('mousedown', allowMouseEvents, { capture: true });
+        input.removeEventListener('mouseup', allowMouseEvents, { capture: true });
+        input.removeEventListener('click', allowMouseEvents, { capture: true });
+        input.removeEventListener('pointerdown', allowMouseEvents, { capture: true });
+        input.removeEventListener('pointerup', allowMouseEvents, { capture: true });
+      };
+    }, 10);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      if (cleanup) cleanup();
+    };
+  }, [value]); // Перезапускаем при изменении value, чтобы обработать новые инпуты
 
   const wrapperClassNames = [
     'input-wrapper',
@@ -93,7 +158,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
         )}
         
         <input
-          ref={ref}
+          ref={(node) => {
+            // Сохраняем в внутренний ref
+            internalRef.current = node;
+            
+            // Также вызываем внешний ref если он есть
+            if (typeof ref === 'function') {
+              ref(node);
+            } else if (ref) {
+              (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+            }
+          }}
           className={inputClassNames}
           disabled={disabled}
           value={value}

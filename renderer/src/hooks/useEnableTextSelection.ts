@@ -35,8 +35,8 @@ export const useEnableTextSelection = () => {
         // Устанавливаем стили напрямую через JavaScript
         element.style.userSelect = 'text';
         element.style.webkitUserSelect = 'text';
-        element.style.MozUserSelect = 'text';
-        element.style.msUserSelect = 'text';
+        (element.style as any).MozUserSelect = 'text';
+        (element.style as any).msUserSelect = 'text';
         element.style.cursor = 'text';
         element.style.pointerEvents = 'auto';
         

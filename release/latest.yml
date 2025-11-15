@@ -1,8 +1,8 @@
 version: 1.1.3-test
 files:
   - url: ARC-Setup-1.1.3-test.exe
-    sha512: Hfsn7xTsi5DZ6n3Qj52V332RxE3dNtPMwxAS6AEnSjVViY228yLwva8vKHGKmdZO1I4b50sq7/JH6NTlFiGqCg==
-    size: 103021566
+    sha512: Sx4nSXAEo2zTUkGWbi27OIOKGp7qbGy1Dvbf2iwpzCmxoro+JlJcnsA+hoPxo/uLR99JPESZX8xB1oxnWYpPOg==
+    size: 103021576
 path: ARC-Setup-1.1.3-test.exe
-sha512: Hfsn7xTsi5DZ6n3Qj52V332RxE3dNtPMwxAS6AEnSjVViY228yLwva8vKHGKmdZO1I4b50sq7/JH6NTlFiGqCg==
-releaseDate: '2025-11-15T13:45:28.903Z'
+sha512: Sx4nSXAEo2zTUkGWbi27OIOKGp7qbGy1Dvbf2iwpzCmxoro+JlJcnsA+hoPxo/uLR99JPESZX8xB1oxnWYpPOg==
+releaseDate: '2025-11-15T13:58:59.863Z'
