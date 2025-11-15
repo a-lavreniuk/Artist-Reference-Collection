@@ -15,7 +15,7 @@ import {
   AddPage
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
-import { useFileSystem, useElectronUpdates } from './hooks';
+import { useFileSystem, useElectronUpdates, useEnableTextSelection } from './hooks';
 import { SearchProvider } from './contexts';
 
 /**
@@ -38,6 +38,9 @@ function NavigationListener() {
 }
 
 function App() {
+  // Принудительно включаем выделение текста во всех инпутах
+  useEnableTextSelection();
+
   const {
     directoryHandle,
     isLoading,

@@ -97,6 +97,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
           className={inputClassNames}
           disabled={disabled}
           value={value}
+          style={{
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
+            MozUserSelect: 'text',
+            msUserSelect: 'text',
+            cursor: 'text',
+            ...props.style
+          }}
           {...props}
         />
         

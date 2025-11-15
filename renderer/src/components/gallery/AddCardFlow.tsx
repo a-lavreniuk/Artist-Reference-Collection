@@ -161,7 +161,15 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
   }, [queue]);
 
   const handleQueuePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest('button')) {
+    const target = event.target as HTMLElement;
+    
+    // Игнорируем клики на кнопки, инпуты и textarea
+    if (target.closest('button') || 
+        target.closest('input') || 
+        target.closest('textarea') ||
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'BUTTON') {
       return;
     }
 
