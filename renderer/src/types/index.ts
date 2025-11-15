@@ -38,6 +38,7 @@ export interface Tag {
   categoryId: string;                  // ID категории, к которой принадлежит
   /** @deprecated Цветовая категоризация больше не используется */
   color?: string;                      // Цвет метки (опционально, не используется)
+  description?: string;                // Описание метки (опционально, для мета-информации)
   dateCreated: Date;                   // Дата создания
   cardCount: number;                   // Количество карточек с этой меткой
 }

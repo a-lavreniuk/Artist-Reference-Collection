@@ -1,0 +1,56 @@
+/**
+ * Дополнительные стили для EditCategoryModal
+ */
+
+/* Контейнер списка меток с прокруткой */
+.edit-category-modal__tags-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 8px);
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  margin-bottom: var(--spacing-xs, 8px);
+}
+
+/* Кастомный скроллбар */
+.edit-category-modal__tags-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.edit-category-modal__tags-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.edit-category-modal__tags-list::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300, #b8b5bb);
+  border-radius: 4px;
+}
+
+.edit-category-modal__tags-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grayscale-400, #93919a);
+}
+
+/* Кнопка добавления метки */
+.edit-category-modal__add-button {
+  border: 2px solid var(--border-default, #ebe9ee);
+  border-radius: var(--radius-s, 12px);
+  height: 40px;
+  padding: var(--spacing-xs, 14px) var(--spacing-m, 18px);
+  font-size: var(--font-size-input, 16px);
+  line-height: var(--line-height-input, 16px);
+  color: var(--text-primary, #3b3946);
+  background: transparent;
+  transition: all var(--transition-fast, 0.15s);
+}
+
+.edit-category-modal__add-button:hover {
+  background: var(--color-grayscale-100, #ebe9ee);
+  border-color: var(--color-grayscale-200, #d4d2d7);
+}
+
+.edit-category-modal__add-button:active {
+  background: var(--color-grayscale-200, #d4d2d7);
+}
+

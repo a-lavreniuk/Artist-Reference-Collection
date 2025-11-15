@@ -1,0 +1,56 @@
+/**
+ * Стили компонента Tooltip
+ * Использует стиль из Sidebar для единообразия
+ */
+
+.tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+  /* Убираем влияние на позиционирование fixed */
+}
+
+.tooltip {
+  position: fixed;
+  z-index: var(--z-tooltip, 10000);
+  
+  /* Типографика - размер S согласно макету (как в Sidebar) */
+  font-family: var(--font-family-body);
+  font-size: 14px; /* text-s */
+  font-weight: 400;
+  line-height: 14px; /* text-s */
+  color: var(--text-light);
+  white-space: normal;
+  max-width: 300px;
+  word-wrap: break-word;
+  
+  /* Оформление - отступы 10px слева и справа, скругление 10px (как в Sidebar) */
+  padding: 8px 10px; /* 8px сверху/снизу, 10px слева/справа */
+  background-color: var(--bg-button-primary);
+  border-radius: 10px; /* XS скругление 10px */
+  box-shadow: var(--shadow-m);
+  
+  /* Переходы */
+  transition: all var(--transition-fast);
+  
+  /* Pointer events */
+  pointer-events: none;
+  
+  /* Анимация появления - применяется только когда tooltip видим */
+  opacity: 0;
+}
+
+.tooltip[style*="visibility: visible"] {
+  animation: tooltipFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

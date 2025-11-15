@@ -661,6 +661,7 @@ export const CardViewModal = ({
                               key={tag.id}
                               variant={editedTags.includes(tag.id) ? 'active' : 'default'}
                               removable={editedTags.includes(tag.id)}
+                              description={tag.description}
                               onClick={() => handleToggleTag(tag.id)}
                               onRemove={() => handleToggleTag(tag.id)}
                               role="button"
@@ -682,6 +683,7 @@ export const CardViewModal = ({
                       <Tag 
                         key={tagId} 
                         variant="default"
+                        description={tag.description}
                         onClick={() => {
                           console.log('Клик на метку:', tagId, tag.name);
                           onTagClick?.(tagId);

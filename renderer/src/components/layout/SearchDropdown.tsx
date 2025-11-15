@@ -251,18 +251,23 @@ export const SearchDropdown = ({
               
               // Показываем категорию если её название или хотя бы одна метка содержит запрос
               const categoryMatches = category.name.toLowerCase().includes(query);
-              const hasMatchingTag = category.tags.some(tag => 
-                tag.name.toLowerCase().includes(query)
-              );
+              const hasMatchingTag = category.tags.some(tag => {
+                const nameMatch = tag.name.toLowerCase().includes(query);
+                const descriptionMatch = tag.description?.toLowerCase().includes(query) || false;
+                return nameMatch || descriptionMatch;
+              });
               
               return categoryMatches || hasMatchingTag;
             })
             .map((category) => {
-              // Фильтруем метки внутри категории по поисковому запросу
+              // Фильтруем метки внутри категории по поисковому запросу (по названию или описанию)
               const filteredTags = searchQuery.trim()
-                ? category.tags.filter(tag => 
-                    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
+                ? category.tags.filter(tag => {
+                    const queryLower = searchQuery.toLowerCase();
+                    const nameMatch = tag.name.toLowerCase().includes(queryLower);
+                    const descriptionMatch = tag.description?.toLowerCase().includes(queryLower) || false;
+                    return nameMatch || descriptionMatch;
+                  })
                 : category.tags;
               
               // Не показываем категорию если в ней нет меток после фильтрации
