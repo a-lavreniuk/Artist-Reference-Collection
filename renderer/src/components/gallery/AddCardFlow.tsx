@@ -162,14 +162,15 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
 
   const handleQueuePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    
-    // Игнорируем клики на кнопки, инпуты и textarea
-    if (target.closest('button') || 
-        target.closest('input') || 
+
+    // КРИТИЧЕСКИ ВАЖНО: Игнорируем клики на кнопки, инпуты и textarea
+    // Это позволяет выделять текст в инпутах без захвата pointer events
+    if (target.closest('button') ||
+        target.closest('input') ||
         target.closest('textarea') ||
         target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'BUTTON') {
+        target.tagName === 'TEXTAREA') {
+      console.log('[AddCardFlow] Игнорируем pointer на инпуте/кнопке');
       return;
     }
 
@@ -182,6 +183,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
     queueDraggingRef.current = false;
     queuePointerDownItemRef.current = (event.target as HTMLElement).closest('.add-card-flow__queue-item') as HTMLElement | null;
 
+    // КРИТИЧЕСКИ ВАЖНО: НЕ захватываем pointer для инпутов
+    // setPointerCapture блокирует все pointer события, включая выделение текста
     if (slider.setPointerCapture) {
       slider.setPointerCapture(event.pointerId);
     }

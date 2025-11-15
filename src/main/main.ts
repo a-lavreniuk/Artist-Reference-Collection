@@ -168,6 +168,7 @@ function createWindow(): void {
     handleCommandLineNavigation();
   });
 
+
   // Обработка закрытия окна - сворачиваем в трей
   mainWindow.on('close', (event) => {
     // Если не принудительный выход, сворачиваем в трей

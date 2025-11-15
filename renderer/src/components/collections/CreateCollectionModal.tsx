@@ -105,6 +105,7 @@ export const CreateCollectionModal = ({
 
           {/* Инпут */}
           <Input
+            type="text"
             placeholder="Название…"
             value={name}
             onChange={(e) => setName(e.target.value)}

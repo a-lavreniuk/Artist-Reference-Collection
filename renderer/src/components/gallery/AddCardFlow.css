@@ -74,7 +74,7 @@
   margin-bottom: 32px;
   /* Drag-to-scroll */
   cursor: grab;
-  user-select: none; /* Предотвращаем выделение текста и изображений */
+  /* user-select: none убран - блокировал выделение текста в инпутах */
   touch-action: pan-y;
 }
 
@@ -369,21 +369,6 @@
 /* Поисковый инпут в блоках */
 .add-card-flow__search-input {
   margin-bottom: 12px;
-}
-
-/* КРИТИЧЕСКИ ВАЖНО: разрешаем выделение текста во всех инпутах AddCardFlow */
-/* Даже если родитель имеет user-select: none (например, .add-card-flow__queue-scroll) */
-.add-card-flow__search-input .input,
-.add-card-flow input,
-.add-card-flow textarea,
-.add-card-flow .input-wrapper,
-.add-card-flow .input-container {
-  user-select: text !important;
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
-  cursor: text !important;
-  pointer-events: auto !important;
 }
 
 /* Список тегов */

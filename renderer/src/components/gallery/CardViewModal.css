@@ -197,17 +197,6 @@
   overflow: hidden;
 }
 
-/* КРИТИЧЕСКИ ВАЖНО: разрешаем выделение текста во всех инпутах CardViewModal */
-.card-view__section--tags-edit input,
-.card-view__section--tags-edit textarea,
-.card-view__section--tags-edit .input {
-  user-select: text !important;
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
-  cursor: text !important;
-}
-
 /* Search input */
 .card-view__search-input {
   width: 100%;
