@@ -74,6 +74,7 @@ export const CategorySection = ({
               key={tag.id}
               variant="default"
               count={tag.cardCount || 0}
+              description={tag.description}
               onClick={(e) => handleTagClick(e as any, tag.id)}
               style={{ cursor: 'pointer' }}
             >

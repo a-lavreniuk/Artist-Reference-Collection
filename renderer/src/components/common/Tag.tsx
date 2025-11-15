@@ -16,6 +16,7 @@
  */
 
 import type { HTMLAttributes, ReactNode } from 'react';
+import { Tooltip } from './Tooltip';
 import './Tag.css';
 
 export interface TagProps extends HTMLAttributes<HTMLDivElement> {
@@ -50,6 +51,9 @@ export interface TagProps extends HTMLAttributes<HTMLDivElement> {
   /** Иконка слева от текста (опционально) */
   icon?: ReactNode;
   
+  /** Описание метки для tooltip (опционально) */
+  description?: string;
+  
   /** Текст метки */
   children: ReactNode;
 }
@@ -65,6 +69,7 @@ export const Tag = ({
   color,
   count,
   icon,
+  description,
   className = '',
   children,
   style,
@@ -84,7 +89,7 @@ export const Tag = ({
     onRemove?.();
   };
 
-  return (
+  const tagContent = (
     <div
       className={classNames}
       style={tagStyle}
@@ -132,6 +137,17 @@ export const Tag = ({
       )}
     </div>
   );
+
+  // Если есть описание, оборачиваем в Tooltip
+  if (description && description.trim()) {
+    return (
+      <Tooltip content={description} delay={500} position="top">
+        {tagContent}
+      </Tooltip>
+    );
+  }
+
+  return tagContent;
 };
 
 export default Tag;

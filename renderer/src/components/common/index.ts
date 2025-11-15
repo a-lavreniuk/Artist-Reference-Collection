@@ -46,3 +46,6 @@ export { AlertProvider } from './AlertProvider';
 
 export { ToastProvider } from './ToastProvider';
 
+export { Tooltip } from './Tooltip';
+export type { TooltipProps } from './Tooltip';
+

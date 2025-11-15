@@ -48,6 +48,23 @@ export class ARCDatabase extends Dexie {
       viewHistory: 'id, cardId, timestamp',
       thumbnailCache: 'id, cardId, dateGenerated, expiresAt'
     });
+
+    // Версия 2: добавление поля description к меткам
+    this.version(2).stores({
+      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections, inMoodboard',
+      tags: 'id, name, categoryId, dateCreated, cardCount, description',
+      categories: 'id, name, dateCreated, *tagIds',
+      collections: 'id, name, dateCreated, dateModified, *cardIds',
+      moodboard: 'id, dateModified, *cardIds',
+      settings: 'id',
+      searchHistory: 'id, timestamp, *tagIds',
+      viewHistory: 'id, cardId, timestamp',
+      thumbnailCache: 'id, cardId, dateGenerated, expiresAt'
+    }).upgrade(async (tx) => {
+      // Автоматическая миграция: существующие метки получат description: undefined
+      // Dexie автоматически обработает это при обновлении схемы
+      console.log('[DB] Миграция версии 2: добавлено поле description к меткам');
+    });
   }
 }
 
@@ -623,10 +640,12 @@ export async function searchCardsAdvanced(query: string): Promise<Card[]> {
   const allCategories = await getAllCategories();
   const allCards = await getAllCards();
 
-  // Находим метки, соответствующие запросу
-  const matchingTags = allTags.filter(tag => 
-    tag.name.toLowerCase().includes(searchLower)
-  );
+  // Находим метки, соответствующие запросу (по названию или описанию)
+  const matchingTags = allTags.filter(tag => {
+    const nameMatch = tag.name.toLowerCase().includes(searchLower);
+    const descriptionMatch = tag.description?.toLowerCase().includes(searchLower) || false;
+    return nameMatch || descriptionMatch;
+  });
 
   // Находим категории, соответствующие запросу
   const matchingCategories = allCategories.filter(cat =>

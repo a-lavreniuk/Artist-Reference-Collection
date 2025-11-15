@@ -16,3 +16,6 @@ export { CategoryStats } from './CategoryStats';
 export { EditCategoryModal } from './EditCategoryModal';
 export type { EditCategoryModalProps } from './EditCategoryModal';
 
+export { TagRow } from './TagRow';
+export type { TagRowProps } from './TagRow';
+
