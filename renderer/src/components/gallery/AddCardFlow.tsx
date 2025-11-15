@@ -862,7 +862,12 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
               {allCategories.map((category) => {
                 const categoryTags = allTags.filter(t => t.categoryId === category.id);
                 const filteredTags = tagsSearchQuery 
-                  ? categoryTags.filter(t => t.name.toLowerCase().includes(tagsSearchQuery.toLowerCase()))
+                  ? categoryTags.filter(t => {
+                      const queryLower = tagsSearchQuery.toLowerCase();
+                      const nameMatch = t.name.toLowerCase().includes(queryLower);
+                      const descriptionMatch = t.description?.toLowerCase().includes(queryLower) || false;
+                      return nameMatch || descriptionMatch;
+                    })
                   : categoryTags;
 
                 // Скрываем категорию если нет меток (или нет совпадений при поиске)

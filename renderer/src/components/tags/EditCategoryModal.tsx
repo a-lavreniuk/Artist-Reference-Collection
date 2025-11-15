@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Button, Input } from '../common';
 import { TagRow } from './TagRow';
 import type { Category, Tag as TagType } from '../../types';
-import { updateCategory, deleteCategory, addTag, deleteTag, updateTag, getAllTags } from '../../services/db';
+import { updateCategory, deleteCategory, addTag, deleteTag, updateTag, getAllTags, getAllCategories } from '../../services/db';
 import { logRenameCategory, logDeleteCategory, logRenameTag } from '../../services/history';
 import { useToast } from '../../hooks/useToast';
 import { useAlert } from '../../hooks/useAlert';
@@ -63,6 +63,7 @@ export const EditCategoryModal = ({
   const [error, setError] = useState<string | null>(null);
   const [tagErrors, setTagErrors] = useState<Map<string, string>>(new Map());
   const tagsListRef = useRef<HTMLDivElement>(null);
+  const validationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Инициализация данных при открытии модального окна
   useEffect(() => {
@@ -79,13 +80,24 @@ export const EditCategoryModal = ({
       setEditableTags(initialTags);
       setError(null);
       setTagErrors(new Map());
+      
+      // Очищаем таймеры валидации при закрытии
+      validationTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      validationTimeoutsRef.current.clear();
     }
+    
+    // Очистка таймеров при размонтировании
+    return () => {
+      validationTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      validationTimeoutsRef.current.clear();
+    };
   }, [category, tags, isOpen]);
 
   /**
    * Обработчик изменения метки
    */
   const handleTagChange = (index: number, newName: string, newDescription: string) => {
+    // Обновляем состояние сразу
     setEditableTags(prev => {
       const updated = [...prev];
       updated[index] = {
@@ -105,6 +117,46 @@ export const EditCategoryModal = ({
       }
       return newErrors;
     });
+
+    // Отменяем предыдущий таймер валидации для этой метки
+    const tag = editableTags[index];
+    const tagKey = tag?.id || `new-${index}`;
+    const existingTimeout = validationTimeoutsRef.current.get(tagKey);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // Устанавливаем новый таймер для валидации (через 500мс после последнего ввода)
+    const trimmedName = newName.trim();
+    if (trimmedName && category) {
+      const timeoutId = setTimeout(async () => {
+        const allTags = await getAllTags();
+        const allCategories = await getAllCategories();
+        const currentTag = editableTags[index];
+        
+        // Ищем метку с таким же названием (игнорируя текущую метку)
+        const duplicateTag = allTags.find(
+          t => t.name.toLowerCase() === trimmedName.toLowerCase() && 
+               t.id !== currentTag?.id
+        );
+        
+        if (duplicateTag) {
+          // Если метка найдена в той же категории
+          if (duplicateTag.categoryId === category.id) {
+            alert.error('Эта метка уже используется в этой категории');
+          } else {
+            // Если метка найдена в другой категории
+            const duplicateCategory = allCategories.find(c => c.id === duplicateTag.categoryId);
+            const categoryName = duplicateCategory?.name || 'другой категории';
+            alert.error(`Эта метка уже используется в категории «${categoryName}»`);
+          }
+        }
+        
+        validationTimeoutsRef.current.delete(tagKey);
+      }, 500);
+      
+      validationTimeoutsRef.current.set(tagKey, timeoutId);
+    }
   };
 
   /**
@@ -150,7 +202,10 @@ export const EditCategoryModal = ({
   const validateTags = async (): Promise<boolean> => {
     const errors = new Map<string, string>();
     const allTags = await getAllTags();
+    const allCategories = await getAllCategories();
     const nameSet = new Set<string>();
+    let hasDuplicate = false;
+    let duplicateMessage = '';
 
     for (let i = 0; i < editableTags.length; i++) {
       const tag = editableTags[i];
@@ -166,23 +221,51 @@ export const EditCategoryModal = ({
       // Проверка на дубликаты в текущем списке
       if (nameSet.has(trimmedName.toLowerCase())) {
         errors.set(tagKey, 'Метка с таким названием уже добавлена');
+        if (!hasDuplicate) {
+          hasDuplicate = true;
+          duplicateMessage = 'Метка с таким названием уже добавлена';
+        }
         continue;
       }
       nameSet.add(trimmedName.toLowerCase());
 
-      // Проверка на дубликаты в базе (для новых меток или при изменении названия)
+      // Проверка на дубликаты в базе (КРИТИЧНО: метки должны быть уникальны во всей системе)
+      // Проверяем для новых меток или при изменении названия
       if (tag.isNew || (tag.originalName && tag.originalName.toLowerCase() !== trimmedName.toLowerCase())) {
         const duplicate = allTags.find(
           t => t.name.toLowerCase() === trimmedName.toLowerCase() && 
-               t.categoryId === category?.id &&
                t.id !== tag.id
         );
         
         if (duplicate) {
-          errors.set(tagKey, 'Метка с таким названием уже существует в этой категории');
+          // Если метка найдена в той же категории
+          if (duplicate.categoryId === category?.id) {
+            if (!hasDuplicate) {
+              hasDuplicate = true;
+              duplicateMessage = 'Эта метка уже используется в этой категории';
+            }
+            errors.set(tagKey, 'Метка с таким названием уже существует в этой категории');
+          } else {
+            // Если метка найдена в другой категории
+            const duplicateCategory = allCategories.find(c => c.id === duplicate.categoryId);
+            const categoryName = duplicateCategory?.name || 'другой категории';
+            if (!hasDuplicate) {
+              hasDuplicate = true;
+              duplicateMessage = `Эта метка уже используется в категории «${categoryName}»`;
+            }
+            errors.set(tagKey, 'Метка с таким названием уже существует');
+          }
           continue;
         }
       }
+    }
+
+    // Показываем alert если есть дубликаты (синхронно, чтобы alert точно показался)
+    if (hasDuplicate && duplicateMessage) {
+      // Используем setTimeout(0) чтобы alert показался после обновления состояния
+      setTimeout(() => {
+        alert.error(duplicateMessage);
+      }, 0);
     }
 
     if (errors.size > 0) {
@@ -230,6 +313,10 @@ export const EditCategoryModal = ({
       const existingTags = editableTags.filter(t => !t.isNew);
       const newTags = editableTags.filter(t => t.isNew && t.name.trim());
 
+      // Проверяем на дубликаты перед обновлением/созданием (дополнительная проверка)
+      const allTagsCheck = await getAllTags();
+      const allCategoriesCheck = await getAllCategories();
+
       // Обновляем существующие метки
       const updatedTagIds: string[] = [];
       for (const editableTag of existingTags) {
@@ -241,7 +328,23 @@ export const EditCategoryModal = ({
 
         // Проверяем изменения названия
         if (editableTag.name.trim() !== originalTag.name) {
-          changes.name = editableTag.name.trim();
+          const newName = editableTag.name.trim();
+          
+          // КРИТИЧНО: Проверяем на дубликаты во всей системе перед переименованием
+          const duplicate = allTagsCheck.find(
+            t => t.name.toLowerCase() === newName.toLowerCase() && 
+                 t.id !== editableTag.id
+          );
+          
+          if (duplicate) {
+            const duplicateCategory = allCategoriesCheck.find(c => c.id === duplicate.categoryId);
+            const categoryName = duplicateCategory?.name || 'другой категории';
+            alert.error(`Не удалось переименовать метку: она уже используется в категории «${categoryName}»`);
+            setIsSaving(false);
+            return;
+          }
+          
+          changes.name = newName;
           nameChanged = true;
         }
 
@@ -268,6 +371,19 @@ export const EditCategoryModal = ({
       for (const editableTag of newTags) {
         const trimmedTagName = editableTag.name.trim();
         if (!trimmedTagName) continue;
+
+        // КРИТИЧНО: Проверяем на дубликаты во всей системе перед созданием
+        const duplicate = allTagsCheck.find(
+          t => t.name.toLowerCase() === trimmedTagName.toLowerCase()
+        );
+        
+        if (duplicate) {
+          const duplicateCategory = allCategoriesCheck.find(c => c.id === duplicate.categoryId);
+          const categoryName = duplicateCategory?.name || 'другой категории';
+          alert.error(`Не удалось создать метку: она уже используется в категории «${categoryName}»`);
+          setIsSaving(false);
+          return;
+        }
 
         const tagId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const tag: TagType = {
@@ -410,7 +526,6 @@ export const EditCategoryModal = ({
                 <TagRow
                   key={tag.id}
                   tag={tag.isNew ? undefined : tags.find(t => t.id === tag.id)}
-                  mode={tag.isNew ? 'add' : 'edit'}
                   initialName={tag.name}
                   initialDescription={tag.description}
                   onChange={(name, description) => handleTagChange(index, name, description)}
@@ -446,7 +561,7 @@ export const EditCategoryModal = ({
           </div>
 
           {/* Кнопки */}
-          <div className="create-category-modal__actions">
+          <div className="create-category-modal__actions create-category-modal__actions--with-delete">
             <Button
               type="button"
               variant="error"
