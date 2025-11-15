@@ -8,8 +8,9 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getCollection, getAllCards, deleteCollection, updateCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
-import { logDeleteCollection, logRenameCollection } from '../services/history';
+import { EditCollectionModal } from '../components/collections';
+import { getCollection, getAllCards, deleteCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
+import { logDeleteCollection } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
 import type { Collection, Card, ViewMode, ContentFilter } from '../types';
@@ -31,6 +32,7 @@ export const CollectionDetailPage = () => {
   
   const [viewingCard, setViewingCard] = useState<Card | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Загрузка коллекции и карточек
   useEffect(() => {
@@ -116,26 +118,15 @@ export const CollectionDetailPage = () => {
     });
   };
 
-  const handleRenameCollection = async () => {
+  const handleRenameCollection = () => {
     if (!collection) return;
-    
-    const newName = prompt('Новое название коллекции:', collection.name);
-    
-    if (!newName || newName.trim() === '' || newName.trim() === collection.name) {
-      return;
-    }
+    setIsEditModalOpen(true);
+  };
 
-    try {
-      const oldName = collection.name;
-      await updateCollection(collection.id, { name: newName.trim() });
-      
-      // Логируем переименование
-      await logRenameCollection(oldName, newName.trim());
-      
-      // Перезагружаем коллекцию
-      await loadCollection(collection.id);
-    } catch (error) {
-      console.error('Ошибка переименования коллекции:', error);
+  const handleCollectionUpdated = async () => {
+    if (id) {
+      await loadCollection(id);
+      toast.success('Коллекция переименована');
     }
   };
 
@@ -285,6 +276,13 @@ export const CollectionDetailPage = () => {
         }}
         onCollectionClick={handleCollectionClick}
         onTagClick={handleTagClick}
+      />
+
+      <EditCollectionModal
+        isOpen={isEditModalOpen}
+        collection={collection}
+        onClose={() => setIsEditModalOpen(false)}
+        onCollectionUpdated={handleCollectionUpdated}
       />
     </Layout>
   );

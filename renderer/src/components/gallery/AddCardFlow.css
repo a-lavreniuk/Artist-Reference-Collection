@@ -74,7 +74,7 @@
   margin-bottom: 32px;
   /* Drag-to-scroll */
   cursor: grab;
-  user-select: none; /* Предотвращаем выделение текста и изображений */
+  /* user-select: none убран - блокировал выделение текста в инпутах */
   touch-action: pan-y;
 }
 

@@ -54,6 +54,7 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
+
   // Проверяем нужно ли показать онбординг
   useEffect(() => {
     if (!isLoading) {
@@ -134,36 +135,38 @@ function App() {
 
   // Основное приложение
   return (
-    <DialogProvider>
-      <AlertProvider>
-        <ToastProvider>
-          <Router>
-          <SearchProvider>
-            <ErrorBoundary>
-              <NavigationListener />
-              <Routes>
-              <Route path="/" element={<CardsPage />} />
-              <Route path="/cards" element={<CardsPage />} />
-              <Route path="/collections" element={<CollectionsPage />} />
-              <Route path="/collections/:id" element={<CollectionDetailPage />} />
-              <Route path="/tags" element={<TagsPage />} />
-              <Route path="/moodboard" element={<MoodboardPage />} />
-              <Route path="/add" element={<AddPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              </Routes>
-            </ErrorBoundary>
-          </SearchProvider>
-        </Router>
+    <>
+      <DialogProvider>
+        <AlertProvider>
+          <ToastProvider>
+            <Router>
+            <SearchProvider>
+              <ErrorBoundary>
+                <NavigationListener />
+                <Routes>
+                <Route path="/" element={<CardsPage />} />
+                <Route path="/cards" element={<CardsPage />} />
+                <Route path="/collections" element={<CollectionsPage />} />
+                <Route path="/collections/:id" element={<CollectionDetailPage />} />
+                <Route path="/tags" element={<TagsPage />} />
+                <Route path="/moodboard" element={<MoodboardPage />} />
+                <Route path="/add" element={<AddPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                </Routes>
+              </ErrorBoundary>
+            </SearchProvider>
+          </Router>
 
-        {/* Уведомление об обновлении */}
-        <UpdateNotification
-          show={showUpdateNotification}
-          onUpdate={handleUpdate}
-          onDismiss={handleDismissUpdate}
-        />
-        </ToastProvider>
-      </AlertProvider>
-    </DialogProvider>
+          {/* Уведомление об обновлении */}
+          <UpdateNotification
+            show={showUpdateNotification}
+            onUpdate={handleUpdate}
+            onDismiss={handleDismissUpdate}
+          />
+          </ToastProvider>
+        </AlertProvider>
+      </DialogProvider>
+    </>
   );
 }
 

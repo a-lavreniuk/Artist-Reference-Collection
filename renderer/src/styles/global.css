@@ -98,6 +98,12 @@ select {
   color: var(--text-primary);
   border: none;
   outline: none;
+  /* КРИТИЧЕСКИ ВАЖНО: разрешаем выделение текста во всех инпутах */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
 }
 
 input:focus,

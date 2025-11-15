@@ -309,9 +309,10 @@ export const EditCategoryModal = ({
               }}
             />
 
-            {/* Список существующих меток */}
-            {displayedExistingTags.length > 0 && (
+            {/* Объединенный список существующих и новых меток */}
+            {(displayedExistingTags.length > 0 || newTags.length > 0) && (
               <div className="create-category-modal__tags-list">
+                {/* Существующие метки */}
                 {displayedExistingTags.map((tag) => (
                   <div key={tag.id} className="create-category-modal__tag">
                     <span className="create-category-modal__tag-name">{tag.name}</span>
@@ -333,12 +334,7 @@ export const EditCategoryModal = ({
                     </button>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {/* Список новых меток */}
-            {newTags.length > 0 && (
-              <div className="create-category-modal__tags-list" style={{ marginTop: displayedExistingTags.length > 0 ? '8px' : '0' }}>
+                {/* Новые метки */}
                 {newTags.map((tag, index) => (
                   <div key={`new-${index}`} className="create-category-modal__tag">
                     <span className="create-category-modal__tag-name">{tag}</span>
