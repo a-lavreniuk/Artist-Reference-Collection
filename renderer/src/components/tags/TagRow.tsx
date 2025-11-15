@@ -41,7 +41,6 @@ export interface TagRowProps {
  */
 export const TagRow = ({
   tag,
-  mode = tag ? 'edit' : 'add',
   initialName = '',
   initialDescription = '',
   onChange,

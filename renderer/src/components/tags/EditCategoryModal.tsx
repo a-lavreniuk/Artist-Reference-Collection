@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Modal, Button, Input } from '../common';
 import { TagRow } from './TagRow';
 import type { Category, Tag as TagType } from '../../types';
-import { updateCategory, deleteCategory, addTag, deleteTag, updateTag, getAllTags, getAllCards, updateCard } from '../../services/db';
+import { updateCategory, deleteCategory, addTag, deleteTag, updateTag, getAllTags } from '../../services/db';
 import { logRenameCategory, logDeleteCategory, logRenameTag } from '../../services/history';
 import { useToast } from '../../hooks/useToast';
 import { useAlert } from '../../hooks/useAlert';
@@ -99,7 +99,10 @@ export const EditCategoryModal = ({
     // Очищаем ошибку для этой метки
     setTagErrors(prev => {
       const newErrors = new Map(prev);
-      newErrors.delete(prev[index]?.id || `new-${index}`);
+      const tag = editableTags[index];
+      if (tag) {
+        newErrors.delete(tag.id || `new-${index}`);
+      }
       return newErrors;
     });
   };
@@ -113,8 +116,10 @@ export const EditCategoryModal = ({
     // Очищаем ошибку для удаленной метки
     setTagErrors(prev => {
       const newErrors = new Map(prev);
-      const tagId = prev[index]?.id || `new-${index}`;
-      newErrors.delete(tagId);
+      const tag = editableTags[index];
+      if (tag) {
+        newErrors.delete(tag.id || `new-${index}`);
+      }
       return newErrors;
     });
   };

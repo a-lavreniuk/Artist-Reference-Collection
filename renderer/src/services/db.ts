@@ -60,7 +60,7 @@ export class ARCDatabase extends Dexie {
       searchHistory: 'id, timestamp, *tagIds',
       viewHistory: 'id, cardId, timestamp',
       thumbnailCache: 'id, cardId, dateGenerated, expiresAt'
-    }).upgrade(async (tx) => {
+    }).upgrade(async () => {
       // Автоматическая миграция: существующие метки получат description: undefined
       // Dexie автоматически обработает это при обновлении схемы
       console.log('[DB] Миграция версии 2: добавлено поле description к меткам');
