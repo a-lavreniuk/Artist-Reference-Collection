@@ -10,7 +10,7 @@
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: var(--z-toast);
+  z-index: 10000; /* Выше модального окна (201) и overlay (200) */
   
   width: auto;
   min-width: 400px;

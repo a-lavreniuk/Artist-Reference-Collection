@@ -127,9 +127,14 @@
 .create-category-modal__actions {
   display: flex;
   gap: var(--spacing-s);
-  justify-content: flex-end !important; /* Кнопки по правой стороне */
+  justify-content: flex-end; /* Кнопки по правой стороне */
   align-items: center;
   margin-top: 32px;
+}
+
+/* Если есть кнопка удаления, используем space-between */
+.create-category-modal__actions--with-delete {
+  justify-content: space-between; /* Кнопка удаления слева, остальные справа */
 }
 
 /* Кнопка Success должна иметь светлый текст */

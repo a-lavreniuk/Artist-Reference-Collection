@@ -643,9 +643,11 @@ export const CardViewModal = ({
                       }
                       
                       // Если название категории не подходит - фильтруем метки
-                      const filteredTags = categoryTags.filter(tag => 
-                        tag.name.toLowerCase().includes(query)
-                      );
+                      const filteredTags = categoryTags.filter(tag => {
+                        const nameMatch = tag.name.toLowerCase().includes(query);
+                        const descriptionMatch = tag.description?.toLowerCase().includes(query) || false;
+                        return nameMatch || descriptionMatch;
+                      });
                       
                       if (filteredTags.length === 0) return null;
                       
