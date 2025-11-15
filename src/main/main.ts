@@ -40,6 +40,67 @@ let tray: Tray | null = null;
 let isQuitting = false;
 
 /**
+ * Single Instance Lock
+ * Предотвращает запуск множественных экземпляров приложения
+ */
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Если уже запущен другой экземпляр, выходим
+  console.log('[MAIN] Приложение уже запущено. Завершаем текущий экземпляр.');
+  app.quit();
+} else {
+  // Обработчик повторного запуска - фокусируем существующее окно
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    console.log('[MAIN] Попытка запустить второй экземпляр приложения');
+    
+    // Если окно существует, показываем и фокусируем его
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      if (!mainWindow.isVisible()) {
+        mainWindow.show();
+      }
+      mainWindow.focus();
+      console.log('[MAIN] Окно восстановлено и сфокусировано');
+      
+      // Обрабатываем аргументы командной строки для навигации
+      for (const arg of commandLine) {
+        if (arg.startsWith('--navigate=')) {
+          const page = arg.replace('--navigate=', '');
+          mainWindow.webContents.send('navigate-to', `/${page}`);
+          console.log(`[MAIN] Навигация на страницу: /${page}`);
+          break;
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Обработка аргументов командной строки для навигации
+ */
+function handleCommandLineNavigation(): void {
+  const args = process.argv.slice(1);
+  
+  for (const arg of args) {
+    if (arg.startsWith('--navigate=')) {
+      const page = arg.replace('--navigate=', '');
+      
+      if (mainWindow) {
+        // Небольшая задержка, чтобы окно успело полностью загрузиться
+        setTimeout(() => {
+          mainWindow?.webContents.send('navigate-to', `/${page}`);
+          console.log(`[MAIN] Навигация на страницу: /${page}`);
+        }, 500);
+      }
+      break;
+    }
+  }
+}
+
+/**
  * Создание главного окна приложения
  */
 function createWindow(): void {
@@ -102,6 +163,9 @@ function createWindow(): void {
     if (mainWindow) {
       initializeAutoUpdater(mainWindow);
     }
+    
+    // Обрабатываем аргументы командной строки для навигации из Jump List
+    handleCommandLineNavigation();
   });
 
   // Обработка закрытия окна - сворачиваем в трей
@@ -280,6 +344,77 @@ function createTray(): void {
 }
 
 /**
+ * Создание Jump List для Windows (контекстное меню на панели задач)
+ */
+function createJumpList(): void {
+  if (process.platform !== 'win32') {
+    return; // Jump List работает только на Windows
+  }
+
+  app.setJumpList([
+    {
+      type: 'custom',
+      name: 'Навигация',
+      items: [
+        {
+          type: 'task',
+          title: 'Карточки',
+          description: 'Открыть страницу карточек',
+          program: process.execPath,
+          args: '--navigate=cards',
+          iconPath: process.execPath,
+          iconIndex: 0
+        },
+        {
+          type: 'task',
+          title: 'Коллекции',
+          description: 'Открыть страницу коллекций',
+          program: process.execPath,
+          args: '--navigate=collections',
+          iconPath: process.execPath,
+          iconIndex: 0
+        },
+        {
+          type: 'task',
+          title: 'Метки',
+          description: 'Открыть страницу меток',
+          program: process.execPath,
+          args: '--navigate=tags',
+          iconPath: process.execPath,
+          iconIndex: 0
+        },
+        {
+          type: 'task',
+          title: 'Мудборд',
+          description: 'Открыть мудборд',
+          program: process.execPath,
+          args: '--navigate=moodboard',
+          iconPath: process.execPath,
+          iconIndex: 0
+        }
+      ]
+    },
+    {
+      type: 'custom',
+      name: 'Действия',
+      items: [
+        {
+          type: 'task',
+          title: 'Добавить карточку',
+          description: 'Добавить новую карточку',
+          program: process.execPath,
+          args: '--navigate=add',
+          iconPath: process.execPath,
+          iconIndex: 0
+        }
+      ]
+    }
+  ]);
+
+  console.log('[MAIN] Jump List создан');
+}
+
+/**
  * Инициализация приложения
  */
 app.whenReady().then(() => {
@@ -293,6 +428,9 @@ app.whenReady().then(() => {
   
   // Создаём системный трей
   createTray();
+  
+  // Создаём Jump List для Windows
+  createJumpList();
   
   createWindow();
   

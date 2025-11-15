@@ -63,6 +63,12 @@
   /* Сброс */
   outline: none;
   appearance: none;
+  
+  /* Разрешаем выделение текста */
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
 /* Placeholder */
@@ -268,5 +274,11 @@ textarea.input {
   padding: 16px;
   resize: vertical;
   line-height: var(--line-height-m);
+  
+  /* Разрешаем выделение текста */
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
 }
 
