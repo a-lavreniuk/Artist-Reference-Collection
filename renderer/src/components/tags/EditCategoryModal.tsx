@@ -135,10 +135,13 @@ export const EditCategoryModal = ({
         const currentTag = editableTags[index];
         
         // Ищем метку с таким же названием (игнорируя текущую метку)
-        const duplicateTag = allTags.find(
-          t => t.name.toLowerCase() === trimmedName.toLowerCase() && 
-               t.id !== currentTag?.id
-        );
+        // Важно: проверяем, что категория метки существует (метка не была удалена вместе с категорией)
+        const duplicateTag = allTags.find(t => {
+          const tagCategoryExists = allCategories.some(c => c.id === t.categoryId);
+          return tagCategoryExists &&
+                 t.name.toLowerCase() === trimmedName.toLowerCase() && 
+                 t.id !== currentTag?.id;
+        });
         
         if (duplicateTag) {
           // Если метка найдена в той же категории
@@ -243,10 +246,13 @@ export const EditCategoryModal = ({
       // Проверка на дубликаты в базе (КРИТИЧНО: метки должны быть уникальны во всей системе)
       // Проверяем для новых меток или при изменении названия
       if (tag.isNew || (tag.originalName && tag.originalName.toLowerCase() !== trimmedName.toLowerCase())) {
-        const duplicate = allTags.find(
-          t => t.name.toLowerCase() === trimmedName.toLowerCase() && 
-               t.id !== tag.id
-        );
+        // Важно: проверяем, что категория метки существует (метка не была удалена вместе с категорией)
+        const duplicate = allTags.find(t => {
+          const tagCategoryExists = allCategories.some(c => c.id === t.categoryId);
+          return tagCategoryExists &&
+                 t.name.toLowerCase() === trimmedName.toLowerCase() && 
+                 t.id !== tag.id;
+        });
         
         if (duplicate) {
           // Если метка найдена в той же категории
@@ -342,10 +348,13 @@ export const EditCategoryModal = ({
           const newName = editableTag.name.trim();
           
           // КРИТИЧНО: Проверяем на дубликаты во всей системе перед переименованием
-          const duplicate = allTagsCheck.find(
-            t => t.name.toLowerCase() === newName.toLowerCase() && 
-                 t.id !== editableTag.id
-          );
+          // Важно: проверяем, что категория метки существует (метка не была удалена вместе с категорией)
+          const duplicate = allTagsCheck.find(t => {
+            const tagCategoryExists = allCategoriesCheck.some(c => c.id === t.categoryId);
+            return tagCategoryExists &&
+                   t.name.toLowerCase() === newName.toLowerCase() && 
+                   t.id !== editableTag.id;
+          });
           
           if (duplicate) {
             const duplicateCategory = allCategoriesCheck.find(c => c.id === duplicate.categoryId);
@@ -384,9 +393,12 @@ export const EditCategoryModal = ({
         if (!trimmedTagName) continue;
 
         // КРИТИЧНО: Проверяем на дубликаты во всей системе перед созданием
-        const duplicate = allTagsCheck.find(
-          t => t.name.toLowerCase() === trimmedTagName.toLowerCase()
-        );
+        // Важно: проверяем, что категория метки существует (метка не была удалена вместе с категорией)
+        const duplicate = allTagsCheck.find(t => {
+          const tagCategoryExists = allCategoriesCheck.some(c => c.id === t.categoryId);
+          return tagCategoryExists &&
+                 t.name.toLowerCase() === trimmedTagName.toLowerCase();
+        });
         
         if (duplicate) {
           const duplicateCategory = allCategoriesCheck.find(c => c.id === duplicate.categoryId);

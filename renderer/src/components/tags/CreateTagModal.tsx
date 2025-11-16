@@ -44,9 +44,18 @@ export const CreateTagModal = ({
       setError(null);
 
       // Проверяем дубликаты
-      const { getAllTags } = await import('../../services/db');
+      const { getAllTags, getAllCategories } = await import('../../services/db');
       const existingTags = await getAllTags();
-      const duplicate = existingTags.find(t => t.name.toLowerCase() === name.trim().toLowerCase() && t.categoryId === categoryId);
+      const allCategories = await getAllCategories();
+      
+      // Проверяем метки с таким же названием, но только те, которые действительно существуют
+      // (их категория должна существовать)
+      const duplicate = existingTags.find(t => {
+        const tagCategoryExists = allCategories.some(c => c.id === t.categoryId);
+        return tagCategoryExists && 
+               t.name.toLowerCase() === name.trim().toLowerCase() && 
+               t.categoryId === categoryId;
+      });
       
       if (duplicate) {
         setError('Метка с таким названием уже существует в этой категории');

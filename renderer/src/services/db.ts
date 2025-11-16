@@ -342,6 +342,9 @@ export async function updateTag(id: string, changes: Partial<Tag>): Promise<numb
  * Удалить метку
  */
 export async function deleteTag(id: string): Promise<void> {
+  // Получаем метку для доступа к categoryId
+  const tag = await db.tags.get(id);
+  
   // Удаляем метку из всех карточек
   const allCards = await db.cards.toArray();
   const cardsWithTag = allCards.filter(card => card.tags && card.tags.includes(id));
@@ -350,6 +353,16 @@ export async function deleteTag(id: string): Promise<void> {
     await updateCard(card.id, {
       tags: card.tags.filter(tagId => tagId !== id)
     });
+  }
+  
+  // Удаляем метку из массива tagIds категории
+  if (tag && tag.categoryId) {
+    const category = await db.categories.get(tag.categoryId);
+    if (category) {
+      await updateCategory(tag.categoryId, {
+        tagIds: category.tagIds.filter(tagId => tagId !== id)
+      });
+    }
   }
   
   // Удаляем саму метку
@@ -385,12 +398,36 @@ export async function updateCategory(id: string, changes: Partial<Category>): Pr
 export async function deleteCategory(id: string): Promise<void> {
   const category = await db.categories.get(id);
   if (category) {
-    // Удаляем все метки в категории
-    for (const tagId of category.tagIds) {
-      await deleteTag(tagId);
+    // Сохраняем список ID меток перед удалением категории
+    const tagIdsToDelete = [...category.tagIds];
+    
+    // Сначала удаляем саму категорию, чтобы deleteTag не пытался обновить уже удаленную категорию
+    await db.categories.delete(id);
+    
+    // Затем удаляем все метки в категории
+    // Теперь deleteTag не будет пытаться обновить категорию (она уже удалена)
+    for (const tagId of tagIdsToDelete) {
+      // Получаем метку для проверки существования
+      const tag = await db.tags.get(tagId);
+      if (tag) {
+        // Удаляем метку из всех карточек
+        const allCards = await db.cards.toArray();
+        const cardsWithTag = allCards.filter(card => card.tags && card.tags.includes(tagId));
+        
+        for (const card of cardsWithTag) {
+          await updateCard(card.id, {
+            tags: card.tags.filter(t => t !== tagId)
+          });
+        }
+        
+        // Удаляем саму метку (без обновления категории, так как она уже удалена)
+        await db.tags.delete(tagId);
+      }
     }
+  } else {
+    // Если категория не найдена, все равно пытаемся удалить
+    await db.categories.delete(id);
   }
-  await db.categories.delete(id);
 }
 
 // ========== CRUD ОПЕРАЦИИ ДЛЯ КОЛЛЕКЦИЙ ==========

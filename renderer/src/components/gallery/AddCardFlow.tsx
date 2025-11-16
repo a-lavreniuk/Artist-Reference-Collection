@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
-import { Button, Input, Icon } from '../common';
+import { Button, Input, Icon, Tooltip } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
 import { logImportFiles } from '../../services/history';
 import { useFileSystem } from '../../hooks';
@@ -931,15 +931,22 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
                     <div className="add-card-flow__tags-list" style={{ marginBottom: '8px' }}>
                       {filteredTags.map((tag) => {
                         const isSelected = currentFile.tags.includes(tag.id);
+                        const tooltipContent = tag.description || tag.name;
                         return (
-                          <button
+                          <Tooltip
                             key={tag.id}
-                            className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
-                            onClick={() => handleTagToggle(tag.id)}
+                            content={tooltipContent}
+                            delay={500}
+                            position="top"
                           >
-                            <span className="text-s">{tag.name}</span>
-                            {isSelected && <Icon name="x" size={16} variant="border" />}
-                          </button>
+                            <button
+                              className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
+                              onClick={() => handleTagToggle(tag.id)}
+                            >
+                              <span className="text-s">{tag.name}</span>
+                              {isSelected && <Icon name="x" size={16} variant="border" />}
+                            </button>
+                          </Tooltip>
                         );
                       })}
                       <button

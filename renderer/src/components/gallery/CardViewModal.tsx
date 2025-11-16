@@ -8,7 +8,7 @@ import Masonry from 'react-masonry-css';
 import { Modal } from '../common/Modal';
 import { Button, Tag, Icon, Card as CardComponent, Input } from '../common';
 import type { Card, Tag as TagType, Collection, Category } from '../../types';
-import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory } from '../../services/db';
+import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory, addTag, updateCategory, db } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
 import { useToast } from '../../hooks/useToast';
 import { useAlert } from '../../hooks/useAlert';
@@ -65,6 +65,8 @@ export const CardViewModal = ({
   const [editedCollections, setEditedCollections] = useState<string[]>([]);
   const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
   const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
+  const [newTagName, setNewTagName] = useState('');
   
   const { showToast } = useToast();
   const alert = useAlert();
@@ -83,6 +85,8 @@ export const CardViewModal = ({
       setIsEditMode(false);
       setCollectionSearchQuery('');
       setTagSearchQuery('');
+      setShowNewTagInput(null);
+      setNewTagName('');
       
       // Добавляем карточку в историю просмотров
       addViewHistory(card.id).catch(error => {
@@ -368,6 +372,8 @@ export const CardViewModal = ({
     setEditedCollections([...card.collections]);
     setCollectionSearchQuery('');
     setTagSearchQuery('');
+    setShowNewTagInput(null);
+    setNewTagName('');
     setIsEditMode(false);
   };
 
@@ -431,6 +437,55 @@ export const CardViewModal = ({
       setEditedCollections(editedCollections.filter(id => id !== collectionId));
     } else {
       setEditedCollections([...editedCollections, collectionId]);
+    }
+  };
+
+  // Создание новой метки
+  const handleCreateTag = async (categoryId: string) => {
+    if (!newTagName.trim()) return;
+
+    // Проверка существования
+    const existingTags = await getAllTags();
+    const duplicate = existingTags.find(t => 
+      t.name.toLowerCase() === newTagName.trim().toLowerCase() && 
+      t.categoryId === categoryId
+    );
+
+    if (duplicate) {
+      alert.warning('Метка с таким названием уже существует в этой категории');
+      return;
+    }
+
+    try {
+      const tag: TagType = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: newTagName.trim(),
+        categoryId,
+        dateCreated: new Date(),
+        cardCount: 0
+      };
+
+      const tagId = await addTag(tag);
+      
+      // Добавляем ID метки в категорию
+      const category = await db.categories.get(categoryId);
+      if (category) {
+        await updateCategory(categoryId, {
+          tagIds: [...category.tagIds, tagId]
+        });
+      }
+
+      // Обновляем список меток
+      await loadTags();
+      
+      // Автоматически добавляем новую метку к карточке
+      setEditedTags([...editedTags, tagId]);
+      setNewTagName('');
+      setShowNewTagInput(null);
+      alert.success('Метка создана и добавлена к карточке');
+    } catch (error) {
+      console.error('Ошибка создания метки:', error);
+      alert.error('Не удалось создать метку');
     }
   };
 
@@ -663,7 +718,7 @@ export const CardViewModal = ({
                               key={tag.id}
                               variant={editedTags.includes(tag.id) ? 'active' : 'default'}
                               removable={editedTags.includes(tag.id)}
-                              description={tag.description}
+                              description={tag.description || tag.name}
                               onClick={() => handleToggleTag(tag.id)}
                               onRemove={() => handleToggleTag(tag.id)}
                               role="button"
@@ -671,7 +726,35 @@ export const CardViewModal = ({
                               {tag.name}
                             </Tag>
                           ))}
+                          <button
+                            className="card-view__add-tag-button"
+                            onClick={() => setShowNewTagInput(showNewTagInput === category.id ? null : category.id)}
+                            type="button"
+                            title="Добавить метку"
+                          >
+                            <Icon name={showNewTagInput === category.id ? "x" : "plus"} size={16} variant="border" />
+                          </button>
                         </div>
+                        {showNewTagInput === category.id && (
+                          <Input
+                            placeholder="Название метки"
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && newTagName.trim()) {
+                                handleCreateTag(category.id);
+                              }
+                            }}
+                            autoFocus
+                            fullWidth
+                            style={{ marginTop: '8px' }}
+                            clearable
+                            onClear={() => {
+                              setNewTagName('');
+                              setShowNewTagInput(null);
+                            }}
+                          />
+                        )}
                       </div>
                     ))}
                 </div>
@@ -685,7 +768,7 @@ export const CardViewModal = ({
                       <Tag 
                         key={tagId} 
                         variant="default"
-                        description={tag.description}
+                        description={tag.description || tag.name}
                         onClick={() => {
                           console.log('Клик на метку:', tagId, tag.name);
                           onTagClick?.(tagId);

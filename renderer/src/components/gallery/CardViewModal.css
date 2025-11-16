@@ -360,6 +360,27 @@
   color: var(--text-light);
 }
 
+/* Кнопка добавления метки */
+.card-view__add-tag-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-s);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.card-view__add-tag-button:hover {
+  background-color: var(--color-grayscale-200);
+}
+
 
 /* ========== ПОХОЖИЕ ИЗОБРАЖЕНИЯ ========== */
 

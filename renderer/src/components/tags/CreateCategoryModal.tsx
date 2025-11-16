@@ -112,10 +112,13 @@ export const CreateCategoryModal = ({
         const currentTag = editableTags[index];
         
         // Ищем метку с таким же названием (игнорируя текущую метку)
-        const duplicateTag = allTags.find(
-          t => t.name.toLowerCase() === trimmedName.toLowerCase() && 
-               t.id !== currentTag?.id
-        );
+        // Важно: проверяем, что категория метки существует (метка не была удалена вместе с категорией)
+        const duplicateTag = allTags.find(t => {
+          const tagCategoryExists = allCategories.some(c => c.id === t.categoryId);
+          return tagCategoryExists &&
+                 t.name.toLowerCase() === trimmedName.toLowerCase() && 
+                 t.id !== currentTag?.id;
+        });
         
         if (duplicateTag) {
           // Если метка найдена в другой категории (для нового модального окна всегда другая категория)
@@ -208,9 +211,12 @@ export const CreateCategoryModal = ({
       nameSet.add(trimmedName.toLowerCase());
 
       // Проверка на дубликаты в базе (КРИТИЧНО: метки должны быть уникальны во всей системе)
-      const duplicate = allTags.find(
-        t => t.name.toLowerCase() === trimmedName.toLowerCase()
-      );
+      // Важно: проверяем, что категория метки существует (метка не была удалена вместе с категорией)
+      const duplicate = allTags.find(t => {
+        const tagCategoryExists = allCategories.some(c => c.id === t.categoryId);
+        return tagCategoryExists &&
+               t.name.toLowerCase() === trimmedName.toLowerCase();
+      });
       
       if (duplicate) {
         // Показываем alert с информацией о категории
@@ -289,9 +295,12 @@ export const CreateCategoryModal = ({
         if (!trimmedTagName) continue;
 
         // КРИТИЧНО: Проверяем на дубликаты во всей системе перед созданием
-        const duplicate = allTags.find(
-          t => t.name.toLowerCase() === trimmedTagName.toLowerCase()
-        );
+        // Важно: проверяем, что категория метки существует (метка не была удалена вместе с категорией)
+        const duplicate = allTags.find(t => {
+          const tagCategoryExists = allCategories.some(c => c.id === t.categoryId);
+          return tagCategoryExists &&
+                 t.name.toLowerCase() === trimmedTagName.toLowerCase();
+        });
         
         if (duplicate) {
           const duplicateCategory = allCategories.find(c => c.id === duplicate.categoryId);
