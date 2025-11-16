@@ -85,7 +85,7 @@ export const DuplicateComparison = ({
             )}
             {image1Error && (
               <div className="duplicate-comparison__error">
-                <Icon name="image" size={48} variant="border" />
+                <Icon name="image" size={24} variant="border" />
                 <p>Не удалось загрузить</p>
               </div>
             )}
@@ -128,7 +128,7 @@ export const DuplicateComparison = ({
             )}
             {image2Error && (
               <div className="duplicate-comparison__error">
-                <Icon name="image" size={48} variant="border" />
+                <Icon name="image" size={24} variant="border" />
                 <p>Не удалось загрузить</p>
               </div>
             )}
