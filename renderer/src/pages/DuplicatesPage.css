@@ -1,0 +1,17 @@
+/**
+ * Стили для страницы поиска дублей
+ */
+
+.duplicates-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.duplicates-page__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
