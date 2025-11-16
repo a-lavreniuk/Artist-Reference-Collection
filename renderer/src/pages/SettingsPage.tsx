@@ -11,7 +11,7 @@ import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
 // import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
-import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
+import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts, findOrphanTags, cleanupOrphanTags } from '../services/db';
 import { logCreateBackup, logMoveStorage } from '../services/history';
 import type { AppStatistics, Tag, Collection } from '../types';
 
@@ -98,6 +98,45 @@ export const SettingsPage = () => {
       }
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
+    }
+  };
+
+  const handleCleanupOrphanTags = async () => {
+    try {
+      // Сначала находим метки с несуществующими категориями
+      const orphanTags = await findOrphanTags();
+      
+      if (orphanTags.length === 0) {
+        alert.success('Меток с несуществующими категориями не найдено');
+        return;
+      }
+
+      // Показываем список меток, которые будут удалены
+      const tagNames = orphanTags.map(t => t.name).join(', ');
+      const confirmed = confirm(
+        `Найдено ${orphanTags.length} меток с несуществующими категориями:\n\n${tagNames}\n\n` +
+        'Эти метки будут удалены из базы данных и из всех карточек.\n\n' +
+        'Продолжить?'
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Выполняем очистку
+      const result = await cleanupOrphanTags();
+      
+      alert.success(
+        `Очистка завершена:\n` +
+        `• Удалено меток: ${result.deleted}\n` +
+        `• Удалено из карточек: ${result.removedFromCards}`
+      );
+
+      // Перезагружаем статистику
+      await loadStats();
+    } catch (error) {
+      console.error('Ошибка очистки меток:', error);
+      alert.error('Ошибка при очистке меток');
     }
   };
 
@@ -1025,6 +1064,21 @@ export const SettingsPage = () => {
             gap: 'var(--spacing-l, 16px)',
             width: '100%'
           }}>
+            {/* Кнопка очистки меток с несуществующими категориями */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              width: '100%'
+            }}>
+              <Button
+                variant="secondary"
+                size="M"
+                onClick={handleCleanupOrphanTags}
+                iconLeft={<Icon name="trash" size={16} variant="border" />}
+              >
+                Очистить метки с несуществующими категориями
+              </Button>
+            </div>
             {/* 5 карточек статистики вверху */}
             <div style={{ 
               display: 'flex',

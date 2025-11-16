@@ -938,5 +938,58 @@ export async function recalculateTagCounts(): Promise<void> {
   console.log('[DB] Пересчёт завершён. Обновлено меток:', tagCountMap.size);
 }
 
+/**
+ * Найти метки с несуществующими категориями
+ * Возвращает список меток, которые привязаны к несуществующим категориям
+ */
+export async function findOrphanTags(): Promise<Array<Tag & { categoryExists: boolean; categoryName?: string }>> {
+  const allTags = await db.tags.toArray();
+  const allCategories = await db.categories.toArray();
+  const categoryIds = new Set(allCategories.map(c => c.id));
+  
+  const orphanTags = allTags.map(tag => {
+    const categoryExists = tag.categoryId ? categoryIds.has(tag.categoryId) : false;
+    const category = tag.categoryId ? allCategories.find(c => c.id === tag.categoryId) : null;
+    
+    return {
+      ...tag,
+      categoryExists,
+      categoryName: category?.name
+    };
+  }).filter(tag => !tag.categoryExists);
+  
+  return orphanTags;
+}
+
+/**
+ * Удалить метки с несуществующими категориями
+ * Также удаляет эти метки из всех карточек
+ */
+export async function cleanupOrphanTags(): Promise<{ deleted: number; removedFromCards: number }> {
+  const orphanTags = await findOrphanTags();
+  let removedFromCards = 0;
+  
+  // Удаляем метки из всех карточек
+  const allCards = await db.cards.toArray();
+  for (const orphanTag of orphanTags) {
+    for (const card of allCards) {
+      if (card.tags && card.tags.includes(orphanTag.id)) {
+        await updateCard(card.id, {
+          tags: card.tags.filter(tagId => tagId !== orphanTag.id)
+        });
+        removedFromCards++;
+      }
+    }
+    
+    // Удаляем саму метку
+    await db.tags.delete(orphanTag.id);
+  }
+  
+  return {
+    deleted: orphanTags.length,
+    removedFromCards
+  };
+}
+
 export default db;
 
