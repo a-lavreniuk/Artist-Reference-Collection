@@ -19,6 +19,8 @@ interface QueueFile {
   configured: boolean;
   tags: string[];
   collections: string[];
+  width?: number;  // Ширина изображения
+  height?: number; // Высота изображения
 }
 
 // Мемоизированный компонент элемента очереди для оптимизации производительности
@@ -353,17 +355,63 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
     }
   };
 
+  /**
+   * Извлекает размеры изображения из File объекта
+   */
+  const getImageDimensions = (file: File): Promise<{ width: number; height: number } | null> => {
+    return new Promise((resolve) => {
+      // Проверяем, что это изображение
+      if (!file.type.startsWith('image/')) {
+        resolve(null);
+        return;
+      }
+
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({
+          width: img.naturalWidth,
+          height: img.naturalHeight
+        });
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+
+      img.src = url;
+    });
+  };
+
   const processFiles = async (files: File[]) => {
     const newQueueItems: QueueFile[] = [];
 
     for (const file of files) {
       const preview = URL.createObjectURL(file);
+      
+      // Извлекаем размеры для изображений
+      let width: number | undefined;
+      let height: number | undefined;
+      
+      if (file.type.startsWith('image/')) {
+        const dimensions = await getImageDimensions(file);
+        if (dimensions) {
+          width = dimensions.width;
+          height = dimensions.height;
+        }
+      }
+
       newQueueItems.push({
         file,
         preview,
         configured: false,
         tags: [],
-        collections: []
+        collections: [],
+        width,
+        height
       });
     }
 
@@ -599,6 +647,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             dateAdded: new Date(),
             dateModified: new Date(),
             fileSize: item.file.size,
+            width: item.width,  // Ширина изображения
+            height: item.height, // Высота изображения
             thumbnailUrl, // file:// URL для превью
             tags: item.tags,
             collections: item.collections,

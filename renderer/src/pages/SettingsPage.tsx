@@ -985,7 +985,7 @@ export const SettingsPage = () => {
               </div>
             )}
 
-            {/* Метка версии и кнопка логов в правом нижнем углу */}
+            {/* Метка версии в правом нижнем углу */}
             <div style={{
               position: 'fixed',
               bottom: 'var(--spacing-l, 16px)',
@@ -994,41 +994,6 @@ export const SettingsPage = () => {
               alignItems: 'center',
               gap: 'var(--spacing-s, 8px)'
             }}>
-              {/* Кнопка открытия логов */}
-              <button
-                onClick={async () => {
-                  try {
-                    await window.electronAPI.openLogsFolder();
-                  } catch (error) {
-                    console.error('Ошибка открытия папки логов:', error);
-                  }
-                }}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: 'var(--bg-tertiary, #ebe9ee)',
-                  borderRadius: 'var(--radius-s, 8px)',
-                  border: '1px solid var(--border-default, #d4d1dc)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s'
-                }}
-                title="Открыть папку с логами приложения"
-              >
-                <Icon name="folder-open" size={16} variant="border" />
-                <p className="text-s" style={{
-                  fontFamily: 'var(--font-family-body)',
-                  fontSize: 'var(--font-size-s, 14px)',
-                  lineHeight: 'var(--line-height-s, 18px)',
-                  fontWeight: 'var(--font-weight-regular, 400)',
-                  color: 'var(--text-secondary, #93919a)',
-                  letterSpacing: '0px'
-                }}>
-                  Логи
-                </p>
-              </button>
-              
               {/* Метка версии */}
               <div style={{
                 padding: '6px 12px',

@@ -40,6 +40,12 @@ const sidebarItems: SidebarItem[] = [
     icon: 'bookmark'
   },
   {
+    id: 'duplicates',
+    label: 'Дубли',
+    path: '/duplicates',
+    icon: 'copy'
+  },
+  {
     id: 'add',
     label: 'Добавить',
     path: '/add',

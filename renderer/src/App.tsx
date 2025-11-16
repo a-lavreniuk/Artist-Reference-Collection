@@ -11,6 +11,7 @@ import {
   CollectionDetailPage,
   TagsPage,
   MoodboardPage,
+  DuplicatesPage,
   SettingsPage,
   AddPage
 } from './pages';
@@ -150,6 +151,7 @@ function App() {
                 <Route path="/collections/:id" element={<CollectionDetailPage />} />
                 <Route path="/tags" element={<TagsPage />} />
                 <Route path="/moodboard" element={<MoodboardPage />} />
+                <Route path="/duplicates" element={<DuplicatesPage />} />
                 <Route path="/add" element={<AddPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 </Routes>

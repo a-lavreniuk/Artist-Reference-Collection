@@ -202,6 +202,7 @@ export const CreateCategoryModal = ({
         if (!hasDuplicate) {
           hasDuplicate = true;
           duplicateMessage = `Метка «${trimmedName}» уже добавлена в эту категорию`;
+        }
         continue;
       }
       nameSet.add(trimmedName.toLowerCase());
