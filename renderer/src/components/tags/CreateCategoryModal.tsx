@@ -118,10 +118,16 @@ export const CreateCategoryModal = ({
         );
         
         if (duplicateTag) {
-          // Если метка найдена в другой категории
+          // Если метка найдена в другой категории (для нового модального окна всегда другая категория)
           const duplicateCategory = allCategories.find(c => c.id === duplicateTag.categoryId);
           const categoryName = duplicateCategory?.name || 'другой категории';
-          alert.error(`Эта метка уже используется в категории «${categoryName}»`);
+          alert.error(`Метка «${trimmedName}» уже используется в категории «${categoryName}»`);
+          // Подсвечиваем инпут ошибкой
+          setTagErrors(prev => {
+            const newErrors = new Map(prev);
+            newErrors.set(tagKey, 'Метка с таким названием уже существует');
+            return newErrors;
+          });
         }
         
         validationTimeoutsRef.current.delete(tagKey);
@@ -195,8 +201,7 @@ export const CreateCategoryModal = ({
         errors.set(tagKey, 'Метка с таким названием уже добавлена');
         if (!hasDuplicate) {
           hasDuplicate = true;
-          duplicateMessage = 'Метка с таким названием уже добавлена';
-        }
+          duplicateMessage = `Метка «${trimmedName}» уже добавлена в эту категорию`;
         continue;
       }
       nameSet.add(trimmedName.toLowerCase());
@@ -212,7 +217,7 @@ export const CreateCategoryModal = ({
         const categoryName = duplicateCategory?.name || 'другой категории';
         if (!hasDuplicate) {
           hasDuplicate = true;
-          duplicateMessage = `Эта метка уже используется в категории «${categoryName}»`;
+          duplicateMessage = `Метка «${trimmedName}» уже используется в категории «${categoryName}»`;
         }
         errors.set(tagKey, 'Метка с таким названием уже существует');
         continue;
@@ -290,7 +295,7 @@ export const CreateCategoryModal = ({
         if (duplicate) {
           const duplicateCategory = allCategories.find(c => c.id === duplicate.categoryId);
           const categoryName = duplicateCategory?.name || 'другой категории';
-          alert.error(`Не удалось создать метку: она уже используется в категории «${categoryName}»`);
+          alert.error(`Метка «${trimmedTagName}» уже используется в категории «${categoryName}»`);
           setIsSaving(false);
           return;
         }

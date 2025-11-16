@@ -143,12 +143,23 @@ export const EditCategoryModal = ({
         if (duplicateTag) {
           // Если метка найдена в той же категории
           if (duplicateTag.categoryId === category.id) {
-            alert.error('Эта метка уже используется в этой категории');
+            // Показываем alert и подсвечиваем инпут ошибкой
+            alert.error(`Метка «${trimmedName}» уже используется в этой категории`);
+            setTagErrors(prev => {
+              const newErrors = new Map(prev);
+              newErrors.set(tagKey, 'Метка с таким названием уже существует в этой категории');
+              return newErrors;
+            });
           } else {
             // Если метка найдена в другой категории
             const duplicateCategory = allCategories.find(c => c.id === duplicateTag.categoryId);
             const categoryName = duplicateCategory?.name || 'другой категории';
-            alert.error(`Эта метка уже используется в категории «${categoryName}»`);
+            alert.error(`Метка «${trimmedName}» уже используется в категории «${categoryName}»`);
+            setTagErrors(prev => {
+              const newErrors = new Map(prev);
+              newErrors.set(tagKey, 'Метка с таким названием уже существует');
+              return newErrors;
+            });
           }
         }
         
@@ -242,7 +253,7 @@ export const EditCategoryModal = ({
           if (duplicate.categoryId === category?.id) {
             if (!hasDuplicate) {
               hasDuplicate = true;
-              duplicateMessage = 'Эта метка уже используется в этой категории';
+              duplicateMessage = `Метка «${trimmedName}» уже используется в этой категории`;
             }
             errors.set(tagKey, 'Метка с таким названием уже существует в этой категории');
           } else {
@@ -251,7 +262,7 @@ export const EditCategoryModal = ({
             const categoryName = duplicateCategory?.name || 'другой категории';
             if (!hasDuplicate) {
               hasDuplicate = true;
-              duplicateMessage = `Эта метка уже используется в категории «${categoryName}»`;
+              duplicateMessage = `Метка «${trimmedName}» уже используется в категории «${categoryName}»`;
             }
             errors.set(tagKey, 'Метка с таким названием уже существует');
           }
@@ -339,7 +350,7 @@ export const EditCategoryModal = ({
           if (duplicate) {
             const duplicateCategory = allCategoriesCheck.find(c => c.id === duplicate.categoryId);
             const categoryName = duplicateCategory?.name || 'другой категории';
-            alert.error(`Не удалось переименовать метку: она уже используется в категории «${categoryName}»`);
+            alert.error(`Метка «${newName}» уже используется в категории «${categoryName}»`);
             setIsSaving(false);
             return;
           }
@@ -380,7 +391,7 @@ export const EditCategoryModal = ({
         if (duplicate) {
           const duplicateCategory = allCategoriesCheck.find(c => c.id === duplicate.categoryId);
           const categoryName = duplicateCategory?.name || 'другой категории';
-          alert.error(`Не удалось создать метку: она уже используется в категории «${categoryName}»`);
+          alert.error(`Метка «${trimmedTagName}» уже используется в категории «${categoryName}»`);
           setIsSaving(false);
           return;
         }

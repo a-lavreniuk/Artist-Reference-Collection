@@ -1,8 +1,8 @@
-version: 1.1.4
+version: 1.1.5
 files:
-  - url: ARC-Setup-1.1.4.exe
-    sha512: VXOaKG33+gtFwVlk8WjhLX8UDdTFwLRklntGFGooyuhLF6ZckeaOhu3lcCFOmWTfQiSwCCsI061V4w8FVrRDJg==
-    size: 103023082
-path: ARC-Setup-1.1.4.exe
-sha512: VXOaKG33+gtFwVlk8WjhLX8UDdTFwLRklntGFGooyuhLF6ZckeaOhu3lcCFOmWTfQiSwCCsI061V4w8FVrRDJg==
-releaseDate: '2025-11-15T19:05:53.402Z'
+  - url: ARC-Setup-1.1.5.exe
+    sha512: PSSl+iT24bP5TTvnYzv7qTxLffUC+RwXlGudqQ3Jd0KU3jSvQFIDJUdxrY/GP1XWH5rbAFprWH3DY9+eKJb46w==
+    size: 103024115
+path: ARC-Setup-1.1.5.exe
+sha512: PSSl+iT24bP5TTvnYzv7qTxLffUC+RwXlGudqQ3Jd0KU3jSvQFIDJUdxrY/GP1XWH5rbAFprWH3DY9+eKJb46w==
+releaseDate: '2025-11-15T20:39:03.588Z'

@@ -70,7 +70,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
     lineHeight: 'var(--line-height-input)',
     color: 'var(--text-primary)',
     background: hasError ? 'var(--color-red-100)' : 'var(--color-grayscale-100)',
-    border: 'none',
+    border: hasError ? '1px solid var(--color-red-500)' : '1px solid transparent',
     borderRadius: '12px',
     outline: 'none',
     transition: 'all var(--transition-fast)',

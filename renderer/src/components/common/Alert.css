@@ -13,8 +13,8 @@
   z-index: 10000; /* Выше модального окна (201) и overlay (200) */
   
   width: auto;
-  min-width: 400px;
-  max-width: 600px;
+  /* Убираем жёсткие ограничения по ширине, чтобы длинные тексты помещались полностью */
+  max-width: none;
   
   animation: alert-enter var(--transition-base);
 }
@@ -112,10 +112,6 @@
   line-height: var(--line-height-m);
   letter-spacing: 0;
   color: currentColor;
-  
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ========== КНОПКА ЗАКРЫТИЯ ========== */
@@ -145,14 +141,5 @@
 
 .alert__close:active {
   opacity: 0.6;
-}
-
-/* ========== АДАПТАЦИЯ ========== */
-
-@media (max-width: 1366px) {
-  .alert {
-    min-width: 320px;
-    max-width: 500px;
-  }
 }
 
