@@ -1072,7 +1072,7 @@ export const SettingsPage = () => {
             }}>
               <Button
                 variant="secondary"
-                size="M"
+                size="L"
                 onClick={handleCleanupOrphanTags}
                 iconLeft={<Icon name="trash" size={16} variant="border" />}
               >
