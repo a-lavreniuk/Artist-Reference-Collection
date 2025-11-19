@@ -405,49 +405,6 @@ export function registerIPCHandlers(): void {
     }
   });
 
-  /**
-   * Читать файл и получить его данные для создания File объекта в renderer
-   * Используется для автоматического добавления файлов из папки _pending
-   */
-  ipcMain.handle('read-file-for-queue', async (_event, filePath: string) => {
-    try {
-      console.log('[IPC] Чтение файла для очереди:', filePath);
-      
-      // Проверяем существование файла
-      const exists = await fileExists(filePath);
-      if (!exists) {
-        throw new Error('Файл не найден');
-      }
-      
-      // Читаем файл
-      const fileBuffer = await fs.readFile(filePath);
-      const stats = await fs.stat(filePath);
-      const fileName = path.basename(filePath);
-      
-      // Определяем MIME тип по расширению
-      const ext = path.extname(filePath).toLowerCase();
-      let mimeType = 'image/jpeg';
-      
-      if (ext === '.png') mimeType = 'image/png';
-      else if (ext === '.webp') mimeType = 'image/webp';
-      else if (ext === '.mp4') mimeType = 'video/mp4';
-      else if (ext === '.webm') mimeType = 'video/webm';
-      else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
-      
-      // Возвращаем данные для создания File объекта в renderer
-      return {
-        buffer: Array.from(fileBuffer), // Конвертируем Buffer в обычный массив для передачи через IPC
-        fileName,
-        mimeType,
-        size: stats.size,
-        lastModified: stats.mtime.getTime()
-      };
-    } catch (error) {
-      console.error('[IPC] Ошибка чтения файла для очереди:', error);
-      throw error;
-    }
-  });
-
   // === СИСТЕМНЫЕ ОПЕРАЦИИ С ФАЙЛАМИ ===
 
   /**
