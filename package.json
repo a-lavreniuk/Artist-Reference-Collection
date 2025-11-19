@@ -1,6 +1,6 @@
 {
   "name": "arc-electron",
-  "version": "1.1.9",
+  "version": "1.2.1",
   "description": "ARC - Artist Reference Collection Desktop Application",
   "main": "main/main.js",
   "author": "Александр Лавренюк",
@@ -64,6 +64,14 @@
     "asarUnpack": [
       "**/node_modules/@ffmpeg-installer/**",
       "**/node_modules/fluent-ffmpeg/**"
+    ],
+    "protocols": [
+      {
+        "name": "ARC Protocol",
+        "schemes": [
+          "arc"
+        ]
+      }
     ],
     "win": {
       "target": "nsis",

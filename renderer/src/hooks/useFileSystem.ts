@@ -70,6 +70,9 @@ export function useFileSystem(): UseFileSystemReturn {
             setDirectoryPath(savedPath);
             setHasPermission(true);
             console.log('[FileSystem] Загружен сохраненный путь:', savedPath);
+            
+            // Устанавливаем рабочую папку в Main process для DownloadManager
+            await window.electronAPI.setWorkingDirectory(savedPath);
           } else {
             // Директория больше не существует
             console.warn('[FileSystem] Сохраненная директория не найдена');
@@ -138,6 +141,8 @@ export function useFileSystem(): UseFileSystemReturn {
         setHasPermission(true);
         // Сохраняем путь для следующего запуска через Electron API
         await window.electronAPI.saveSetting('workingDirectory', path);
+        // Обновляем путь в DownloadManager
+        await window.electronAPI.setWorkingDirectory(path);
         console.log('[FileSystem] Выбрана рабочая директория:', path);
       }
       

@@ -5,8 +5,10 @@
 interface ElectronAPI {
   // === ФАЙЛОВАЯ СИСТЕМА ===
   selectWorkingDirectory: () => Promise<string | undefined>;
+  setWorkingDirectory: (dirPath: string) => Promise<boolean>;
   selectBackupPath: (defaultFileName: string) => Promise<string | undefined>;
   scanDirectory: (dirPath: string) => Promise<string[]>;
+  scanImportDirectory: () => Promise<string[]>;
   getFileInfo: (filePath: string) => Promise<{
     name: string;
     size: number;
@@ -15,6 +17,7 @@ interface ElectronAPI {
   }>;
   fileExists: (filePath: string) => Promise<boolean>;
   organizeFile: (sourcePath: string, workingDir: string) => Promise<string>;
+  moveFileToWorkingDir: (sourcePath: string, workingDir: string) => Promise<string>;
   saveFileFromBuffer: (buffer: ArrayBuffer, fileName: string, workingDir: string) => Promise<string>;
   generateThumbnail: (filePath: string, workingDir: string) => Promise<string>;
   getFileURL: (filePath: string) => Promise<string>;
@@ -90,6 +93,12 @@ interface ElectronAPI {
   onUpdateAvailable: (callback: () => void) => void;
   onUpdateReady: (callback: () => void) => void;
   onNavigate: (callback: (path: string) => void) => void;
+  onExternalFileDownloaded: (callback: (data: {
+    filePath: string;
+    sourceUrl?: string;
+    originalUrl: string;
+    timestamp: number;
+  }) => void) => () => void;
   installUpdate: () => Promise<void>;
 }
 

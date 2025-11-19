@@ -7,4 +7,4 @@ export { useElectronUpdates } from './useElectronUpdates';
 export { useSearchNavigation } from './useSearchNavigation';
 export { useDialog, DialogContextProvider, DialogContext } from './useDialog';
 export { useAlert, AlertContextProvider, AlertContext } from './useAlert';
-
+export { useToast } from './useToast';

@@ -13,6 +13,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import archiver from 'archiver';
 import extract from 'extract-zip';
+import { DownloadManager } from './download-manager';
 
 // Настраиваем путь к ffmpeg бинарнику
 // В ASAR архиве ffmpeg не может быть запущен, используем распакованную версию
@@ -54,10 +55,31 @@ export function registerIPCHandlers(): void {
 
       const selectedPath = result.filePaths[0];
       console.log('[IPC] Выбрана папка:', selectedPath);
+      
+      // Устанавливаем рабочую директорию для менеджера загрузок
+      DownloadManager.getInstance().setWorkingDirectory(selectedPath);
+      
       return selectedPath;
     } catch (error) {
       console.error('[IPC] Ошибка выбора папки:', error);
       throw error;
+    }
+  });
+
+  /**
+   * Установить рабочую директорию (вызывается при старте)
+   */
+  ipcMain.handle('set-working-directory', async (_event, dirPath: string) => {
+    try {
+      if (dirPath && typeof dirPath === 'string') {
+        DownloadManager.getInstance().setWorkingDirectory(dirPath);
+        console.log('[IPC] Рабочая директория установлена:', dirPath);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[IPC] Ошибка установки рабочей директории:', error);
+      return false;
     }
   });
 
@@ -163,6 +185,53 @@ export function registerIPCHandlers(): void {
   });
 
   /**
+   * Сканировать папку импорта (_cache/imports)
+   */
+  ipcMain.handle('scan-import-directory', async () => {
+    try {
+      // Получаем путь через DownloadManager, так как он знает где лежит temp
+      // Используем приватное свойство через any, так как нет публичного геттера
+      // В будущем стоит добавить публичный метод getTempDir()
+      const downloadManager = DownloadManager.getInstance();
+      const tempDir = (downloadManager as any).tempDir; 
+      
+      console.log('[IPC] Сканирование папки импорта:', tempDir);
+      
+      if (!tempDir) {
+        console.log('[IPC] Папка импорта не определена');
+        return [];
+      }
+      
+      try {
+        await fs.access(tempDir);
+      } catch {
+        console.log('[IPC] Папка импорта не существует');
+        return [];
+      }
+
+      const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm'];
+      const files: string[] = [];
+      
+      const entries = await fs.readdir(tempDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (!entry.isDirectory()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          if (supportedExtensions.includes(ext)) {
+            files.push(path.join(tempDir, entry.name));
+          }
+        }
+      }
+      
+      console.log(`[IPC] В импорте найдено файлов: ${files.length}`);
+      return files;
+    } catch (error) {
+      console.error('[IPC] Ошибка сканирования папки импорта:', error);
+      return [];
+    }
+  });
+
+  /**
    * Получить информацию о файле
    */
   ipcMain.handle('get-file-info', async (_event, filePath: string) => {
@@ -230,6 +299,47 @@ export function registerIPCHandlers(): void {
       return finalPath;
     } catch (error) {
       console.error('[IPC] Ошибка организации файла:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Переместить файл из временной папки в рабочую папку с организацией по дате
+   */
+  ipcMain.handle('move-file-to-working-dir', async (_event, sourcePath: string, workingDir: string) => {
+    try {
+      console.log('[IPC] Перемещение файла:', sourcePath);
+
+      // Создаём структуру папок год/месяц/день
+      const now = new Date();
+      const year = now.getFullYear().toString();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+
+      const targetDir = path.join(workingDir, year, month, day);
+      await fs.mkdir(targetDir, { recursive: true });
+
+      // Перемещаем файл
+      const fileName = path.basename(sourcePath);
+      const targetPath = path.join(targetDir, fileName);
+
+      // Если файл с таким именем уже существует, добавляем timestamp
+      let finalPath = targetPath;
+      let counter = 1;
+      while (await fileExists(finalPath)) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        finalPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
+        counter++;
+      }
+
+      // Перемещаем файл (rename = move в пределах одного диска)
+      await fs.rename(sourcePath, finalPath);
+      console.log('[IPC] Файл перемещен в:', finalPath);
+
+      return finalPath;
+    } catch (error) {
+      console.error('[IPC] Ошибка перемещения файла:', error);
       throw error;
     }
   });

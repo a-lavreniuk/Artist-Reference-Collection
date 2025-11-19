@@ -302,7 +302,19 @@ export interface ElectronAPI {
    * @param callback - Функция обратного вызова с путём для навигации
    */
   onNavigate: (callback: (path: string) => void) => void;
-  
+
+  /**
+   * Подписаться на событие загрузки внешнего файла
+   * @param callback - Функция обратного вызова с данными о файле
+   * @returns Функция отписки
+   */
+  onExternalFileDownloaded: (callback: (data: {
+    filePath: string;
+    sourceUrl?: string;
+    originalUrl: string;
+    timestamp: number;
+  }) => void) => () => void;
+
   /**
    * Установить загруженное обновление
    */
@@ -315,12 +327,16 @@ export interface ElectronAPI {
 contextBridge.exposeInMainWorld('electronAPI', {
   // Файловая система
   selectWorkingDirectory: () => ipcRenderer.invoke('select-working-directory'),
+  setWorkingDirectory: (dirPath: string) => ipcRenderer.invoke('set-working-directory', dirPath),
   selectBackupPath: (defaultFileName: string) => ipcRenderer.invoke('select-backup-path', defaultFileName),
   scanDirectory: (dirPath: string) => ipcRenderer.invoke('scan-directory', dirPath),
+  scanImportDirectory: () => ipcRenderer.invoke('scan-import-directory'),
   getFileInfo: (filePath: string) => ipcRenderer.invoke('get-file-info', filePath),
   fileExists: (filePath: string) => ipcRenderer.invoke('file-exists', filePath),
   organizeFile: (sourcePath: string, workingDir: string) => 
     ipcRenderer.invoke('organize-file', sourcePath, workingDir),
+  moveFileToWorkingDir: (sourcePath: string, workingDir: string) => 
+    ipcRenderer.invoke('move-file-to-working-dir', sourcePath, workingDir),
   saveFileFromBuffer: (buffer: ArrayBuffer, fileName: string, workingDir: string) => 
     ipcRenderer.invoke('save-file-from-buffer', Buffer.from(buffer), fileName, workingDir),
   generateThumbnail: (filePath: string, workingDir: string) => 
@@ -381,6 +397,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onNavigate: (callback: (path: string) => void) => {
     ipcRenderer.on('navigate-to', (_event, path: string) => callback(path));
+  },
+  onExternalFileDownloaded: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('main:external-file-downloaded', listener);
+    return () => {
+      ipcRenderer.removeListener('main:external-file-downloaded', listener);
+    };
   },
   installUpdate: () => ipcRenderer.invoke('install-update')
 } as ElectronAPI);

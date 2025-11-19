@@ -16,8 +16,69 @@ import {
   AddPage
 } from './pages';
 import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
-import { useFileSystem, useElectronUpdates } from './hooks';
+import { useFileSystem, useElectronUpdates, useToast } from './hooks';
 import { SearchProvider } from './contexts';
+
+/**
+ * Компонент для обработки внешнего импорта (из браузера)
+ * Использует window.location.hash для навигации, так как может рендериться до полной инициализации Router
+ */
+function ExternalImportListener() {
+  const { showToast } = useToast();
+  const { directoryPath } = useFileSystem();
+
+  // Эффект для проверки файлов при фокусе окна
+  useEffect(() => {
+    const checkImportFiles = async () => {
+      if (!directoryPath || !window.electronAPI) return;
+
+      try {
+        const files = await window.electronAPI.scanImportDirectory();
+        
+        if (files.length > 0) {
+          console.log('[App] Найдены файлы для импорта:', files.length);
+          
+          showToast({
+            title: 'Новые изображения',
+            message: `Найдено ${files.length} новых изображений во временной папке. Хотите добавить их?`,
+            type: 'info',
+            duration: 10000, // Показываем подольше
+            onConfirm: () => {
+              // Сохраняем файлы в sessionStorage для передачи
+              sessionStorage.setItem('importFiles', JSON.stringify(files));
+              // Переходим на страницу добавления через HashRouter
+              window.location.hash = '/add';
+            },
+            confirmText: 'Добавить',
+            cancelText: 'Позже'
+          });
+        }
+      } catch (error) {
+        console.error('[App] Ошибка проверки импорта:', error);
+      }
+    };
+
+    const handleFocus = () => {
+      checkImportFiles();
+    };
+
+    // Проверяем при монтировании (старте приложения)
+    // Небольшая задержка, чтобы Router успел инициализироваться
+    const timeoutId = setTimeout(() => {
+      checkImportFiles();
+    }, 100);
+
+    // Подписываемся на фокус окна
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [directoryPath, showToast]);
+
+  return null;
+}
 
 /**
  * Компонент для обработки навигации от системного трея
@@ -144,6 +205,7 @@ function App() {
             <SearchProvider>
               <ErrorBoundary>
                 <NavigationListener />
+                <ExternalImportListener />
                 <Routes>
                 <Route path="/" element={<CardsPage />} />
                 <Route path="/cards" element={<CardsPage />} />

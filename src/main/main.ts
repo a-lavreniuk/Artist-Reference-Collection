@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { initializeAutoUpdater } from './auto-updater';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
+import { DownloadManager } from './download-manager';
 
 // Настройка логирования в файл
 const logFile = path.join(app.getPath('userData'), 'main-process.log');
@@ -39,6 +40,15 @@ let tray: Tray | null = null;
 // Флаг для отслеживания принудительного выхода
 let isQuitting = false;
 
+// Регистрация протокола arc://
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('arc', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('arc');
+}
+
 /**
  * Single Instance Lock
  * Предотвращает запуск множественных экземпляров приложения
@@ -56,14 +66,30 @@ if (!gotTheLock) {
     
     // Если окно существует, показываем и фокусируем его
     if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
+      let isProtocolLink = false;
+
+      // Проверяем, является ли запуск следствием открытия ссылки
+      for (const arg of commandLine) {
+        if (arg.startsWith('arc://')) {
+          isProtocolLink = true;
+          handleProtocolUrl(arg);
+          break;
+        }
       }
-      if (!mainWindow.isVisible()) {
-        mainWindow.show();
+
+      // Если это НЕ протокол-ссылка (обычный запуск ярлыка), то фокусируем окно
+      if (!isProtocolLink) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        if (!mainWindow.isVisible()) {
+          mainWindow.show();
+        }
+        mainWindow.focus();
+        console.log('[MAIN] Окно восстановлено и сфокусировано');
+      } else {
+        console.log('[MAIN] Запуск через протокол: фокус окна пропущен');
       }
-      mainWindow.focus();
-      console.log('[MAIN] Окно восстановлено и сфокусировано');
       
       // Обрабатываем аргументы командной строки для навигации
       for (const arg of commandLine) {
@@ -79,12 +105,40 @@ if (!gotTheLock) {
 }
 
 /**
+ * Обработка ссылок протокола arc://
+ * Формат: arc://import?url=...&source=...
+ */
+function handleProtocolUrl(url: string): void {
+  console.log(`[MAIN] Обработка протокола: ${url}`);
+  
+  try {
+    const urlObj = new URL(url);
+    
+    if (urlObj.host === 'import') {
+      const imageUrl = urlObj.searchParams.get('url');
+      const source = urlObj.searchParams.get('source');
+      
+      if (imageUrl) {
+        DownloadManager.getInstance().downloadFile(imageUrl, source || undefined);
+      }
+    }
+  } catch (error) {
+    console.error('[MAIN] Ошибка обработки протокола:', error);
+  }
+}
+
+/**
  * Обработка аргументов командной строки для навигации
  */
 function handleCommandLineNavigation(): void {
   const args = process.argv.slice(1);
   
   for (const arg of args) {
+    // Обработка протокола при запуске
+    if (arg.startsWith('arc://')) {
+      handleProtocolUrl(arg);
+    }
+
     if (arg.startsWith('--navigate=')) {
       const page = arg.replace('--navigate=', '');
       
@@ -162,6 +216,7 @@ function createWindow(): void {
     // Инициализируем автообновления после показа окна
     if (mainWindow) {
       initializeAutoUpdater(mainWindow);
+      DownloadManager.getInstance().setMainWindow(mainWindow);
     }
     
     // Обрабатываем аргументы командной строки для навигации из Jump List
@@ -427,6 +482,9 @@ app.whenReady().then(() => {
   // Регистрируем IPC handlers перед созданием окна
   registerIPCHandlers();
   
+  // Очистка старых временных файлов
+  DownloadManager.getInstance().cleanupOldFiles();
+  
   // Создаём системный трей
   createTray();
   
@@ -446,6 +504,12 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+// Обработка открытия URL (macOS)
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
 });
 
 /**

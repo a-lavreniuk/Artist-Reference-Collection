@@ -21,6 +21,7 @@ interface QueueFile {
   collections: string[];
   width?: number;  // Ширина изображения
   height?: number; // Высота изображения
+  originalFilePath?: string; // Путь к исходному временному файлу (для удаления после сохранения)
 }
 
 // Мемоизированный компонент элемента очереди для оптимизации производительности
@@ -78,6 +79,9 @@ export interface AddCardFlowProps {
   /** Обработчик отмены */
   onCancel: () => void;
   
+  /** Начальные файлы для импорта (пути) */
+  initialFiles?: string[];
+  
   /** Callback для обновления состояния очереди */
   onQueueStateChange?: (hasQueue: boolean, configuredCount: number) => void;
   
@@ -88,7 +92,7 @@ export interface AddCardFlowProps {
   onOpenFileDialogReady?: (handler: () => void) => void;
 }
 
-export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady }: AddCardFlowProps) => {
+export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady, initialFiles }: AddCardFlowProps) => {
   const toast = useToast();
   const alert = useAlert();
   const [queue, setQueue] = useState<QueueFile[]>([]);
@@ -135,6 +139,107 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
   useEffect(() => {
     loadData();
   }, []);
+
+  /**
+   * Извлекает размеры изображения из File объекта
+   */
+  const getImageDimensions = (file: File): Promise<{ width: number; height: number } | null> => {
+    return new Promise((resolve) => {
+      // Проверяем, что это изображение
+      if (!file.type.startsWith('image/')) {
+        resolve(null);
+        return;
+      }
+
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({
+          width: img.naturalWidth,
+          height: img.naturalHeight
+        });
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+
+      img.src = url;
+    });
+  };
+
+  // Обработка начальных файлов (импорт из браузера)
+  useEffect(() => {
+    const loadInitialFiles = async () => {
+      if (!initialFiles || initialFiles.length === 0) return;
+
+      try {
+        console.log('[AddCardFlow] Загрузка начальных файлов:', initialFiles.length);
+        const newQueueItems: QueueFile[] = [];
+        
+        for (const filePath of initialFiles) {
+          try {
+            // Загружаем файл как Blob
+            const response = await fetch(`file://${filePath}`);
+            const blob = await response.blob();
+            
+            // Создаем File объект
+            const fileName = filePath.split(/[/\\]/).pop() || 'image.jpg';
+            const file = new File([blob], fileName, { type: blob.type });
+            
+            const preview = URL.createObjectURL(file);
+            
+            // Извлекаем размеры для изображений
+            let width: number | undefined;
+            let height: number | undefined;
+            
+            if (file.type.startsWith('image/')) {
+              const dimensions = await getImageDimensions(file);
+              if (dimensions) {
+                width = dimensions.width;
+                height = dimensions.height;
+              }
+            }
+
+            newQueueItems.push({
+              file,
+              preview,
+              configured: false,
+              tags: [],
+              collections: [],
+              width,
+              height,
+              originalFilePath: filePath // Сохраняем путь для последующего удаления
+            });
+          } catch (error) {
+            console.error(`Ошибка загрузки файла ${filePath}:`, error);
+          }
+        }
+        
+        if (newQueueItems.length > 0) {
+          // Добавляем новые файлы к существующей очереди
+          setQueue(prevQueue => {
+            const wasEmpty = prevQueue.length === 0;
+            const newQueue = [...prevQueue, ...newQueueItems];
+            
+            // Переключаемся на первый новый файл, если очередь была пуста
+            if (wasEmpty) {
+              setCurrentIndex(0);
+            }
+            
+            return newQueue;
+          });
+        }
+      } catch (error) {
+        console.error('Ошибка обработки начальных файлов:', error);
+      }
+    };
+
+    loadInitialFiles();
+  }, [initialFiles]);
 
   // Проверяем нужен ли скролл (с debounce для оптимизации)
   useEffect(() => {
@@ -355,37 +460,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
     }
   };
 
-  /**
-   * Извлекает размеры изображения из File объекта
-   */
-  const getImageDimensions = (file: File): Promise<{ width: number; height: number } | null> => {
-    return new Promise((resolve) => {
-      // Проверяем, что это изображение
-      if (!file.type.startsWith('image/')) {
-        resolve(null);
-        return;
-      }
-
-      const img = new Image();
-      const url = URL.createObjectURL(file);
-
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve({
-          width: img.naturalWidth,
-          height: img.naturalHeight
-        });
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(null);
-      };
-
-      img.src = url;
-    });
-  };
-
   const processFiles = async (files: File[]) => {
     const newQueueItems: QueueFile[] = [];
 
@@ -602,18 +676,27 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
         setMessage(`💾 Сохранение ${i + 1}/${configured.length}: ${item.file.name}`);
         
         try {
-          // Читаем файл как ArrayBuffer
-          const arrayBuffer = await item.file.arrayBuffer();
+          let savedFilePath: string;
           
-          console.log('[AddCardFlow] Сохранение файла:', item.file.name, 'в папку:', directoryPath);
-          
-          // Сохраняем файл в рабочую папку через Electron API
-          const savedFilePath = await window.electronAPI.saveFileFromBuffer(
-            arrayBuffer,
-            item.file.name,
-            directoryPath
-          );
-          console.log('[AddCardFlow] Файл сохранён:', savedFilePath);
+          // Если файл был импортирован из браузера (есть originalFilePath), перемещаем его
+          if (item.originalFilePath) {
+            console.log('[AddCardFlow] Перемещение файла из временной папки:', item.originalFilePath);
+            savedFilePath = await window.electronAPI.moveFileToWorkingDir(
+              item.originalFilePath,
+              directoryPath
+            );
+            console.log('[AddCardFlow] Файл перемещён:', savedFilePath);
+          } else {
+            // Иначе используем старый способ - читаем в буфер и сохраняем
+            const arrayBuffer = await item.file.arrayBuffer();
+            console.log('[AddCardFlow] Сохранение файла:', item.file.name, 'в папку:', directoryPath);
+            savedFilePath = await window.electronAPI.saveFileFromBuffer(
+              arrayBuffer,
+              item.file.name,
+              directoryPath
+            );
+            console.log('[AddCardFlow] Файл сохранён:', savedFilePath);
+          }
           
           // Генерируем превью
           const thumbnailPath = await window.electronAPI.generateThumbnail(
@@ -688,6 +771,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
 
       // Логируем импорт файлов
       await logImportFiles(createdCards.length);
+
+      // Файлы уже перемещены в рабочую папку (не удалены), поэтому ничего дополнительно делать не нужно
 
       // Завершаем добавление - Alert покажется в AddPage
       setTimeout(() => onComplete(createdCards.length), 500);
