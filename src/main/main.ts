@@ -6,6 +6,8 @@
 import { app, BrowserWindow, screen, Tray, Menu, nativeImage } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
+import { watch, FSWatcher } from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { initializeAutoUpdater } from './auto-updater';
 import { registerShortcuts, unregisterShortcuts } from './shortcuts';
@@ -38,6 +40,14 @@ let tray: Tray | null = null;
 
 // Флаг для отслеживания принудительного выхода
 let isQuitting = false;
+
+// Мониторинг папки _pending
+let pendingFolderWatcher: FSWatcher | null = null;
+let pendingFolderPath: string | null = null;
+
+// Мониторинг папки _pending
+let pendingFolderWatcher: FSWatcher | null = null;
+let pendingFolderPath: string | null = null;
 
 /**
  * Single Instance Lock
