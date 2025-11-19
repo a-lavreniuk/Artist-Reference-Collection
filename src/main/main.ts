@@ -426,6 +426,88 @@ function createJumpList(): void {
 }
 
 /**
+ * Начать мониторинг папки _pending для автоматического добавления файлов в очередь
+ * @param workingDir - Рабочая директория
+ */
+function startPendingFolderWatch(workingDir: string): void {
+  // Останавливаем предыдущий мониторинг если был
+  stopPendingFolderWatch();
+  
+  const pendingDir = path.join(workingDir, '_pending');
+  pendingFolderPath = pendingDir;
+  
+  console.log('[MAIN] Начало мониторинга папки _pending:', pendingDir);
+  
+  // Создаём папку если не существует
+  if (!fs.existsSync(pendingDir)) {
+    fs.mkdirSync(pendingDir, { recursive: true });
+    console.log('[MAIN] Папка _pending создана');
+  }
+  
+  // Начинаем мониторинг
+  try {
+    pendingFolderWatcher = watch(pendingDir, { recursive: false }, async (eventType, filename) => {
+      if (!filename) return;
+      
+      const filePath = path.join(pendingDir, filename);
+      
+      // Проверяем что это добавление файла (не удаление)
+      try {
+        await fsPromises.access(filePath);
+      } catch {
+        // Файл не существует, это удаление - игнорируем
+        return;
+      }
+      
+      // Проверяем что это поддерживаемый медиафайл
+      const ext = path.extname(filename).toLowerCase();
+      const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm'];
+      
+      if (!supportedExtensions.includes(ext)) {
+        console.log('[MAIN] Пропускаем неподдерживаемый файл:', filename);
+        return;
+      }
+      
+      // Проверяем что это файл, а не папка
+      try {
+        const stats = await fsPromises.stat(filePath);
+        if (!stats.isFile()) {
+          return;
+        }
+      } catch {
+        return;
+      }
+      
+      console.log('[MAIN] Обнаружен новый файл в _pending:', filename);
+      
+      // Небольшая задержка чтобы файл полностью записался
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('pending-file-added', filePath);
+          console.log('[MAIN] Событие отправлено в renderer:', filePath);
+        }
+      }, 500);
+    });
+    
+    console.log('[MAIN] Мониторинг папки _pending запущен');
+  } catch (error) {
+    console.error('[MAIN] Ошибка запуска мониторинга папки _pending:', error);
+  }
+}
+
+/**
+ * Остановить мониторинг папки _pending
+ */
+function stopPendingFolderWatch(): void {
+  if (pendingFolderWatcher) {
+    pendingFolderWatcher.close();
+    pendingFolderWatcher = null;
+    console.log('[MAIN] Мониторинг папки _pending остановлен');
+  }
+  pendingFolderPath = null;
+}
+
+/**
  * Инициализация приложения
  */
 app.whenReady().then(() => {

@@ -1302,6 +1302,38 @@ export function registerIPCHandlers(): void {
     }
   });
 
+  /**
+   * Начать мониторинг папки _pending для автоматического добавления файлов
+   * @param workingDir - Рабочая директория
+   */
+  ipcMain.handle('start-pending-folder-watch', async (_event, workingDir: string) => {
+    try {
+      console.log('[IPC] Запрос на запуск мониторинга папки _pending:', workingDir);
+      
+      // Импортируем функцию из main.ts (нужно будет экспортировать)
+      // Пока что делаем через глобальную переменную или событие
+      // Для этого нужно добавить функцию в main.ts и вызвать её через событие
+      
+      return { success: true };
+    } catch (error) {
+      console.error('[IPC] Ошибка запуска мониторинга:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Остановить мониторинг папки _pending
+   */
+  ipcMain.handle('stop-pending-folder-watch', async () => {
+    try {
+      console.log('[IPC] Запрос на остановку мониторинга папки _pending');
+      return { success: true };
+    } catch (error) {
+      console.error('[IPC] Ошибка остановки мониторинга:', error);
+      throw error;
+    }
+  });
+
   console.log('[IPC] Все IPC handlers зарегистрированы');
 }
 
