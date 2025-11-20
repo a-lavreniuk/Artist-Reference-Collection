@@ -734,8 +734,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             height: item.height, // Высота изображения
             thumbnailUrl, // file:// URL для превью
             tags: item.tags,
-            collections: item.collections,
-            inMoodboard: false
+            collections: item.collections
           };
 
           await addCard(card);

@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards, addToMoodboard, removeFromMoodboard, syncMoodboardFlags } from '../services/db';
+import { getAllCards, addToMoodboard, removeFromMoodboard, getMoodboard, searchCardsAdvanced } from '../services/db';
 import { useSearch } from '../contexts';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
@@ -22,7 +22,8 @@ export const CardsPage = () => {
     handleCardClick: handleSearchCardClick,
     handleCloseModal,
     updateViewingCard,
-    searchProps
+    searchProps,
+    searchValue
   } = useSearch();
   
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
@@ -32,6 +33,8 @@ export const CardsPage = () => {
   // Состояние данных
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [moodboardCardIds, setMoodboardCardIds] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<Card[] | null>(null);
 
   // Загрузка карточек при монтировании
   useEffect(() => {
@@ -39,11 +42,10 @@ export const CardsPage = () => {
       try {
         setIsLoading(true);
         
-        // Синхронизируем флаги мудборда перед загрузкой
-        await syncMoodboardFlags();
-        
         const allCards = await getAllCards();
+        const moodboard = await getMoodboard();
         setCards(allCards);
+        setMoodboardCardIds(moodboard.cardIds);
       } catch (error) {
         console.error('Ошибка загрузки карточек:', error);
       } finally {
@@ -54,12 +56,32 @@ export const CardsPage = () => {
     loadCards();
   }, []);
 
-  // Убираем поиск по тексту - теперь searchValue используется только для фильтрации меток в SearchDropdown
-  // Фильтрация карточек происходит только через selectedTags
+  // Поиск по ID или меткам при изменении searchValue
+  useEffect(() => {
+    const performSearch = async () => {
+      if (searchValue && searchValue.trim()) {
+        try {
+          const results = await searchCardsAdvanced(searchValue.trim());
+          setSearchResults(results);
+          console.log('[CardsPage] Поиск по запросу:', searchValue, 'найдено:', results.length);
+        } catch (error) {
+          console.error('[CardsPage] Ошибка поиска:', error);
+          setSearchResults(null);
+        }
+      } else {
+        setSearchResults(null);
+      }
+    };
+
+    // Debounce для поиска (300мс)
+    const timeoutId = setTimeout(performSearch, 300);
+    return () => clearTimeout(timeoutId);
+  }, [searchValue]);
 
   // Фильтрация карточек
   const filteredCards = useMemo(() => {
-    let filtered = [...cards];
+    // Если есть результаты поиска - используем их, иначе все карточки
+    let filtered = searchResults !== null ? [...searchResults] : [...cards];
 
     // Фильтр по типу контента
     if (contentFilter === 'images') {
@@ -68,7 +90,7 @@ export const CardsPage = () => {
       filtered = filtered.filter(card => card.type === 'video');
     }
 
-    // Фильтр по меткам
+    // Фильтр по меткам (применяется даже если есть результаты поиска)
     if (selectedTags.length > 0) {
       filtered = filtered.filter(card =>
         selectedTags.every(tagId => card.tags.includes(tagId))
@@ -81,7 +103,7 @@ export const CardsPage = () => {
     );
 
     return filtered;
-  }, [cards, contentFilter, selectedTags]);
+  }, [cards, contentFilter, selectedTags, searchResults]);
 
   // Подсчёт карточек по типам
   const counts = useMemo(() => {
@@ -133,10 +155,11 @@ export const CardsPage = () => {
 
   // Обработчик добавления/удаления из мудборда
   const handleMoodboardToggle = async (card: Card) => {
-    console.log('[CardsPage] Клик на кнопку мудборда для карточки:', card.id, 'текущий статус inMoodboard:', card.inMoodboard);
+    const isInMoodboard = moodboardCardIds.includes(card.id);
+    console.log('[CardsPage] Клик на кнопку мудборда для карточки:', card.id, 'текущий статус в мудборде:', isInMoodboard);
     
     try {
-      if (card.inMoodboard) {
+      if (isInMoodboard) {
         console.log('[CardsPage] Удаляем из мудборда');
         await removeFromMoodboard(card.id);
       } else {
@@ -145,13 +168,11 @@ export const CardsPage = () => {
       }
       
       console.log('[CardsPage] Перезагружаем карточки');
-      // Перезагружаем карточки для обновления состояния
+      // Перезагружаем карточки и мудборд для обновления состояния
       const allCards = await getAllCards();
+      const moodboard = await getMoodboard();
       setCards(allCards);
-      
-      // Проверяем обновилась ли карточка
-      const updatedCard = allCards.find(c => c.id === card.id);
-      console.log('[CardsPage] Карточка после обновления:', updatedCard?.id, 'inMoodboard:', updatedCard?.inMoodboard);
+      setMoodboardCardIds(moodboard.cardIds);
     } catch (error) {
       console.error('[CardsPage] Ошибка переключения мудборда:', error);
     }
@@ -210,6 +231,7 @@ export const CardsPage = () => {
         onCardSelect={handleCardSelect}
         onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
+        moodboardCardIds={moodboardCardIds}
       />
 
       {/* Модальное окно просмотра карточки */}

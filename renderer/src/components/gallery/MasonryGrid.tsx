@@ -1,9 +1,10 @@
 /**
  * Компонент MasonryGrid - галерея в стиле Pinterest
  * Отображает карточки с сохранением пропорций в masonry layout
+ * Использует виртуализацию для оптимизации производительности
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import Masonry from 'react-masonry-css';
 import { Card } from '../common';
 import type { Card as CardType, ViewMode } from '../../types';
@@ -30,6 +31,9 @@ export interface MasonryGridProps {
   
   /** Показывать действия на карточках */
   showActions?: boolean;
+  
+  /** Массив ID карточек в мудборде (для определения статуса) */
+  moodboardCardIds?: string[];
 }
 
 /**
@@ -42,8 +46,76 @@ export const MasonryGrid = ({
   onCardSelect,
   onMoodboardToggle,
   selectedCards = [],
-  showActions = true
+  showActions = true,
+  moodboardCardIds = []
 }: MasonryGridProps) => {
+  const [visibleCards, setVisibleCards] = useState<Set<string>>(new Set());
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Создаем Intersection Observer для виртуализации
+  useEffect(() => {
+    // Инициализируем видимыми первые 20 карточек для быстрой загрузки
+    const initialVisible = new Set(cards.slice(0, 20).map(card => card.id));
+    setVisibleCards(initialVisible);
+
+    // Создаем observer с запасом в 200px для предзагрузки
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const cardId = entry.target.getAttribute('data-card-id');
+          if (cardId) {
+            setVisibleCards((prev) => {
+              const next = new Set(prev);
+              if (entry.isIntersecting) {
+                next.add(cardId);
+              } else {
+                // Не удаляем сразу, чтобы избежать мерцания
+                // Удаляем только если карточка далеко за пределами viewport
+                if (entry.boundingClientRect.top > window.innerHeight * 2) {
+                  next.delete(cardId);
+                }
+              }
+              return next;
+            });
+          }
+        });
+      },
+      {
+        rootMargin: '200px' // Загружаем карточки за 200px до появления
+      }
+    );
+
+    // Наблюдаем за всеми карточками
+    cardRefs.current.forEach((element) => {
+      if (element && observerRef.current) {
+        observerRef.current.observe(element);
+      }
+    });
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [cards]);
+
+  // Callback для установки ref карточки
+  const setCardRef = useCallback((cardId: string, element: HTMLDivElement | null) => {
+    if (element) {
+      cardRefs.current.set(cardId, element);
+      if (observerRef.current) {
+        observerRef.current.observe(element);
+      }
+    } else {
+      const existing = cardRefs.current.get(cardId);
+      if (existing && observerRef.current) {
+        observerRef.current.unobserve(existing);
+      }
+      cardRefs.current.delete(cardId);
+    }
+  }, []);
+
   // Определяем количество колонок в зависимости от режима
   const breakpointColumns = useMemo(() => {
     if (viewMode === 'compact') {
@@ -95,19 +167,33 @@ export const MasonryGrid = ({
         className="masonry-grid__container"
         columnClassName="masonry-grid__column"
       >
-        {cards.map((card) => (
-          <div key={card.id} className="masonry-grid__item">
-            <Card
-              card={card}
-              compact={viewMode === 'compact'}
-              selected={selectedCards.includes(card.id)}
-              onClick={onCardClick}
-              onSelect={onCardSelect}
-              onMoodboardToggle={onMoodboardToggle}
-              showActions={showActions}
-            />
-          </div>
-        ))}
+        {cards.map((card) => {
+          const isVisible = visibleCards.has(card.id);
+          return (
+            <div
+              key={card.id}
+              className="masonry-grid__item"
+              data-card-id={card.id}
+              ref={(el) => setCardRef(card.id, el)}
+            >
+              {isVisible ? (
+                <Card
+                  card={card}
+                  compact={viewMode === 'compact'}
+                  selected={selectedCards.includes(card.id)}
+                  onClick={onCardClick}
+                  onSelect={onCardSelect}
+                  onMoodboardToggle={onMoodboardToggle}
+                  showActions={showActions}
+                  moodboardCardIds={moodboardCardIds}
+                />
+              ) : (
+                // Плейсхолдер для невидимых карточек (сохраняет layout)
+                <div style={{ width: '100%', height: '200px', backgroundColor: 'var(--color-grayscale-100, #ebe9ee)' }} />
+              )}
+            </div>
+          );
+        })}
       </Masonry>
     </div>
   );

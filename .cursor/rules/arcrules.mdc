@@ -35,7 +35,7 @@ CODING_RULES:
 
 DATABASE_ARCHITECTURE:
 - IndexedDB через библиотеку Dexie.js для метаданных карточек, тегов, коллекций
-- Схема из 6 основных таблиц: cards, tags, categories, collections, moodboard_items, app_settings
+- Схема из 6 основных таблиц: cards, tags, categories, collections, moodboard, settings
 - Индексирование полей для быстрого поиска и фильтрации
 - Транзакционные операции для обеспечения консистентности данных
 - Автоматическое обновление счетчиков использования через триггеры

@@ -99,6 +99,11 @@ interface ElectronAPI {
     originalUrl: string;
     timestamp: number;
   }) => void) => () => void;
+  onThumbnailError: (callback: (data: {
+    filePath: string;
+    error: string;
+    stderr: string;
+  }) => void) => () => void;
   installUpdate: () => Promise<void>;
 }
 

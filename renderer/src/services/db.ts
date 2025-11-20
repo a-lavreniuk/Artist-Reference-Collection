@@ -38,7 +38,7 @@ export class ARCDatabase extends Dexie {
 
     // Определение схемы базы данных
     this.version(1).stores({
-      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections, inMoodboard',
+      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections',
       tags: 'id, name, categoryId, dateCreated, cardCount',
       categories: 'id, name, dateCreated, *tagIds',
       collections: 'id, name, dateCreated, dateModified, *cardIds',
@@ -51,7 +51,7 @@ export class ARCDatabase extends Dexie {
 
     // Версия 2: добавление поля description к меткам
     this.version(2).stores({
-      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections, inMoodboard',
+      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections',
       tags: 'id, name, categoryId, dateCreated, cardCount, description',
       categories: 'id, name, dateCreated, *tagIds',
       collections: 'id, name, dateCreated, dateModified, *cardIds',
@@ -64,6 +64,23 @@ export class ARCDatabase extends Dexie {
       // Автоматическая миграция: существующие метки получат description: undefined
       // Dexie автоматически обработает это при обновлении схемы
       console.log('[DB] Миграция версии 2: добавлено поле description к меткам');
+    });
+
+    // Версия 3: удаление поля inMoodboard из карточек (используем только moodboard.cardIds)
+    this.version(3).stores({
+      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections',
+      tags: 'id, name, categoryId, dateCreated, cardCount, description',
+      categories: 'id, name, dateCreated, *tagIds',
+      collections: 'id, name, dateCreated, dateModified, *cardIds',
+      moodboard: 'id, dateModified, *cardIds',
+      settings: 'id',
+      searchHistory: 'id, timestamp, *tagIds',
+      viewHistory: 'id, cardId, timestamp',
+      thumbnailCache: 'id, cardId, dateGenerated, expiresAt'
+    }).upgrade(async () => {
+      // Автоматическая миграция: поле inMoodboard будет удалено из всех карточек
+      // Dexie автоматически обработает это при обновлении схемы
+      console.log('[DB] Миграция версии 3: удалено поле inMoodboard из карточек');
     });
   }
 }
@@ -86,7 +103,6 @@ export async function debugCard(cardId: string): Promise<void> {
   
   console.log('✅ Карточка найдена');
   console.log('FileName:', card.fileName);
-  console.log('inMoodboard:', card.inMoodboard);
   console.log('tags:', card.tags);
   console.log('collections:', card.collections);
   
@@ -94,51 +110,22 @@ export async function debugCard(cardId: string): Promise<void> {
   const isInMoodboardArray = moodboard.cardIds.includes(cardId);
   console.log('В массиве мудборда:', isInMoodboardArray);
   
-  if (card.inMoodboard !== isInMoodboardArray) {
-    console.error('⚠️ НЕСООТВЕТСТВИЕ: флаг inMoodboard не совпадает с массивом cardIds!');
-    console.log('Исправляем...');
-    await updateCard(cardId, { inMoodboard: isInMoodboardArray });
-    console.log('✅ Исправлено');
-  }
-  
   console.log('=== КОНЕЦ ДИАГНОСТИКИ ===\n');
-}
-
-/**
- * Синхронизация флагов inMoodboard с массивом moodboard.cardIds
- * Исправляет рассинхронизацию данных
- */
-export async function syncMoodboardFlags(): Promise<number> {
-  console.log('[syncMoodboardFlags] Начало синхронизации...');
-  
-  const moodboard = await getMoodboard();
-  const allCards = await getAllCards();
-  
-  let fixedCount = 0;
-  
-  for (const card of allCards) {
-    const shouldBeInMoodboard = moodboard.cardIds.includes(card.id);
-    
-    if (card.inMoodboard !== shouldBeInMoodboard) {
-      console.log(`[syncMoodboardFlags] Исправление карточки ${card.id}: ${card.inMoodboard} → ${shouldBeInMoodboard}`);
-      await db.cards.update(card.id, { inMoodboard: shouldBeInMoodboard });
-      fixedCount++;
-    }
-  }
-  
-  if (fixedCount > 0) {
-    console.log(`[syncMoodboardFlags] ✅ Исправлено карточек: ${fixedCount}`);
-  } else {
-    console.log('[syncMoodboardFlags] ✅ Все карточки синхронизированы');
-  }
-  
-  return fixedCount;
 }
 
 // Делаем функцию доступной глобально для отладки
 if (typeof window !== 'undefined') {
   (window as any).debugCard = debugCard;
   (window as any).db = db;
+}
+
+/**
+ * Проверить находится ли карточка в мудборде
+ * Использует только массив moodboard.cardIds (единственный источник истины)
+ */
+export async function isCardInMoodboard(cardId: string): Promise<boolean> {
+  const moodboard = await getMoodboard();
+  return moodboard.cardIds.includes(cardId);
 }
 
 // ========== CRUD ОПЕРАЦИИ ДЛЯ КАРТОЧЕК ==========
@@ -263,7 +250,8 @@ export async function deleteCard(id: string): Promise<void> {
             // Путь к превью: рабочая_папка/_cache/thumbs/имя_thumb.jpg
             const workingDir = await window.electronAPI.getSetting('workingDirectory');
             if (workingDir) {
-              const thumbPath = `${workingDir}\\_cache\\thumbs\\${thumbName}`;
+              // Используем правильные разделители для кроссплатформенности
+              const thumbPath = workingDir.replace(/[\/\\]$/, '') + '\\_cache\\thumbs\\' + thumbName;
               await window.electronAPI.deleteFile(thumbPath);
               console.log('[DB] Удалено превью:', thumbPath);
             }
@@ -308,8 +296,9 @@ export async function searchCards(filters: {
 
   // Фильтр по мудборду
   if (filters.inMoodboard !== undefined) {
+    const moodboard = await getMoodboard();
     const cards = await query.toArray();
-    return cards.filter(card => card.inMoodboard === filters.inMoodboard);
+    return cards.filter(card => moodboard.cardIds.includes(card.id) === filters.inMoodboard);
   }
 
   return await query.toArray();
@@ -517,10 +506,6 @@ export async function addToMoodboard(cardId: string): Promise<void> {
   } else {
     console.log('[addToMoodboard] Карточка уже в массиве мудборда');
   }
-  
-  // ВСЕГДА обновляем флаг inMoodboard для синхронизации данных
-  const updateResult = await updateCard(cardId, { inMoodboard: true });
-  console.log('[addToMoodboard] Флаг inMoodboard обновлен, результат:', updateResult);
 }
 
 /**
@@ -538,21 +523,12 @@ export async function removeFromMoodboard(cardId: string): Promise<void> {
     dateModified: new Date()
   });
   console.log('[removeFromMoodboard] Мудборд обновлен');
-  
-  // ВСЕГДА обновляем флаг inMoodboard для синхронизации данных
-  const updateResult = await updateCard(cardId, { inMoodboard: false });
-  console.log('[removeFromMoodboard] Флаг inMoodboard обновлен, результат:', updateResult);
 }
 
 /**
  * Очистить мудборд
  */
 export async function clearMoodboard(): Promise<void> {
-  const moodboard = await getMoodboard();
-  // Обновляем все карточки
-  for (const cardId of moodboard.cardIds) {
-    await updateCard(cardId, { inMoodboard: false });
-  }
   await db.moodboard.update('default', {
     cardIds: [],
     dateModified: new Date()
@@ -573,7 +549,7 @@ export async function getStatistics(): Promise<AppStatistics> {
   const imageCards = cards.filter(c => c.type === 'image');
   const videoCards = cards.filter(c => c.type === 'video');
   const totalSize = cards.reduce((sum, card) => sum + card.fileSize, 0);
-  const moodboardCards = cards.filter(c => c.inMoodboard);
+  const moodboard = await getMoodboard();
 
   return {
     totalCards: cards.length,
@@ -583,7 +559,7 @@ export async function getStatistics(): Promise<AppStatistics> {
     collectionCount: collections.length,
     tagCount: tags.length,
     categoryCount: categories.length,
-    moodboardCount: moodboardCards.length
+    moodboardCount: moodboard.cardIds.length
   };
 }
 
@@ -664,9 +640,29 @@ export async function searchCardsAdvanced(query: string): Promise<Card[]> {
   }
 
   const searchLower = query.toLowerCase().trim();
+  const searchOriginal = query.trim();
   
-  // 1. Поиск по ID (точное совпадение)
-  const cardById = await db.cards.get(searchLower);
+  // 1. Поиск по ID (точное совпадение, без учета регистра)
+  // Сначала пробуем точное совпадение в нижнем регистре
+  let cardById = await db.cards.get(searchLower);
+  
+  // Если не найдено, пробуем оригинальный запрос (на случай если ID содержит заглавные буквы)
+  if (!cardById && searchOriginal !== searchLower) {
+    cardById = await db.cards.get(searchOriginal);
+  }
+  
+  // Если не найдено, ищем по части ID (если запрос похож на ID - содержит дефис или длинный)
+  if (!cardById && (searchLower.includes('-') || searchLower.length > 10)) {
+    const allCards = await getAllCards();
+    const matchingById = allCards.filter(card => 
+      card.id.toLowerCase().includes(searchLower) || card.id.includes(searchOriginal)
+    );
+    if (matchingById.length > 0) {
+      console.log(`[DB] Найдено карточек по части ID "${query}": ${matchingById.length}`);
+      return matchingById;
+    }
+  }
+  
   if (cardById) {
     console.log(`[DB] Найдена карточка по ID: ${cardById.id}`);
     return [cardById];
@@ -797,10 +793,15 @@ export async function importDatabase(jsonData: string, newWorkingDir?: string): 
       }
       
       // Обновляем путь к превью
-      if (card.thumbnailUrl && card.thumbnailUrl.startsWith('data:')) {
-        // Data URL не требует обновления
-      } else if (card.thumbnailUrl) {
-        // Обновляем путь к превью тоже не нужно, так как это Data URL
+      if (card.thumbnailUrl && !card.thumbnailUrl.startsWith('data:')) {
+        // Извлекаем относительный путь к превью из старого пути
+        // Ищем структуру _cache/thumbs/имя_thumb.jpg
+        const thumbMatch = card.thumbnailUrl.match(/(_cache[\\/]thumbs[\\/].+)$/);
+        if (thumbMatch) {
+          // Формируем новый путь с правильными разделителями
+          const thumbRelativePath = thumbMatch[1].replace(/[\\/]/g, '\\');
+          card.thumbnailUrl = `${newWorkingDir}\\${thumbRelativePath}`;
+        }
       }
     }
     

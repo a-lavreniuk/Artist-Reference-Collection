@@ -30,6 +30,9 @@ export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'id' | '
   
   /** Показывать ли оверлей с действиями */
   showActions?: boolean;
+  
+  /** Массив ID карточек в мудборде (для определения статуса) */
+  moodboardCardIds?: string[];
 }
 
 /**
@@ -43,6 +46,7 @@ export const Card = ({
   onSelect,
   onMoodboardToggle,
   showActions = true,
+  moodboardCardIds = [],
   className = '',
   ...props
 }: CardProps) => {
@@ -164,20 +168,23 @@ export const Card = ({
       )}
 
       {/* Кнопка мудборда - появляется при ховере */}
-      {showActions && (
-        <button
-          className={`card__moodboard-button ${card.inMoodboard ? 'card__moodboard-button--active' : ''}`}
-          onClick={handleMoodboardClick}
-          aria-label={card.inMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
-          title={card.inMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
-        >
-          <Icon 
-            name={card.inMoodboard ? 'bookmark-minus' : 'bookmark-plus'} 
-            size={16}
-            variant="border"
-          />
-        </button>
-      )}
+      {showActions && (() => {
+        const isInMoodboard = moodboardCardIds.includes(card.id);
+        return (
+          <button
+            className={`card__moodboard-button ${isInMoodboard ? 'card__moodboard-button--active' : ''}`}
+            onClick={handleMoodboardClick}
+            aria-label={isInMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
+            title={isInMoodboard ? 'Удалить из мудборда' : 'Добавить в мудборд'}
+          >
+            <Icon 
+              name={isInMoodboard ? 'bookmark-minus' : 'bookmark-plus'} 
+              size={16}
+              variant="border"
+            />
+          </button>
+        );
+      })()}
     </div>
   );
 };

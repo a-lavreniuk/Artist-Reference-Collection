@@ -11,7 +11,8 @@ import { HistorySection } from '../components/settings';
 import { useFileSystem } from '../hooks';
 // import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
-import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts, findOrphanTags, cleanupOrphanTags } from '../services/db';
+import { useDialog } from '../hooks/useDialog';
+import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
 import { logCreateBackup, logMoveStorage } from '../services/history';
 import type { AppStatistics, Tag, Collection } from '../types';
 
@@ -26,6 +27,7 @@ export const SettingsPage = () => {
   const { requestDirectory, directoryPath } = useFileSystem();
   // const toast = useToast();
   const alert = useAlert();
+  const dialog = useDialog();
   const [activeTab, setActiveTab] = useState<SettingsTab>('storage');
   const [stats, setStats] = useState<AppStatistics | null>(null);
   const [topTags, setTopTags] = useState<TagWithCategory[]>([]);
@@ -39,6 +41,7 @@ export const SettingsPage = () => {
   const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8 | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
   const [directorySizes, setDirectorySizes] = useState<{
     totalSize: number;
     imagesSize: number;
@@ -101,44 +104,6 @@ export const SettingsPage = () => {
     }
   };
 
-  const handleCleanupOrphanTags = async () => {
-    try {
-      // Сначала находим метки с несуществующими категориями
-      const orphanTags = await findOrphanTags();
-      
-      if (orphanTags.length === 0) {
-        alert.success('Меток с несуществующими категориями не найдено');
-        return;
-      }
-
-      // Показываем список меток, которые будут удалены
-      const tagNames = orphanTags.map(t => t.name).join(', ');
-      const confirmed = confirm(
-        `Найдено ${orphanTags.length} меток с несуществующими категориями:\n\n${tagNames}\n\n` +
-        'Эти метки будут удалены из базы данных и из всех карточек.\n\n' +
-        'Продолжить?'
-      );
-
-      if (!confirmed) {
-        return;
-      }
-
-      // Выполняем очистку
-      const result = await cleanupOrphanTags();
-      
-      alert.success(
-        `Очистка завершена:\n` +
-        `• Удалено меток: ${result.deleted}\n` +
-        `• Удалено из карточек: ${result.removedFromCards}`
-      );
-
-      // Перезагружаем статистику
-      await loadStats();
-    } catch (error) {
-      console.error('Ошибка очистки меток:', error);
-      alert.error('Ошибка при очистке меток');
-    }
-  };
 
   const loadDirectorySizes = async () => {
     if (!directoryPath || !window.electronAPI?.getDirectorySize) {
@@ -397,6 +362,92 @@ export const SettingsPage = () => {
     } finally {
       setIsCreatingBackup(false);
       setBackupProgress(0);
+    }
+  };
+
+  const handleCheckIntegrity = async () => {
+    try {
+      setIsCheckingIntegrity(true);
+      
+      const { validateDatabase, fixIssues } = await import('../services/integrityCheck');
+      const result = await validateDatabase();
+      
+      if (result.issues.length === 0) {
+        alert.success('Проблем не найдено. База данных в порядке.');
+        return;
+      }
+      
+      const errors = result.issues.filter(i => i.severity === 'error');
+      const warnings = result.issues.filter(i => i.severity === 'warning');
+      
+      // Формируем детальное сообщение
+      let message = `Найдено проблем: ${result.issues.length}\n`;
+      message += `• Ошибок: ${errors.length}\n`;
+      message += `• Предупреждений: ${warnings.length}\n\n`;
+      
+      // Показываем детали каждой ошибки
+      if (errors.length > 0) {
+        message += '❌ ОШИБКИ:\n';
+        errors.forEach((issue, index) => {
+          message += `\n${index + 1}. ${issue.description}\n`;
+        });
+        message += '\n';
+      }
+      
+      // Показываем детали предупреждений
+      if (warnings.length > 0) {
+        message += '⚠️ ПРЕДУПРЕЖДЕНИЯ:\n';
+        warnings.forEach((issue, index) => {
+          message += `\n${index + 1}. ${issue.description}\n`;
+        });
+        message += '\n';
+      }
+      
+      if (warnings.length > 0) {
+        // Используем dialog.confirm для показа результатов и предложения исправления
+        const shouldFix = await dialog.confirm({
+          title: 'Найдены проблемы с целостностью данных',
+          description: message + '\nИсправить предупреждения автоматически?',
+          confirmText: 'Исправить',
+          cancelText: 'Отмена'
+        });
+        
+        if (shouldFix) {
+          const fixed = await fixIssues(warnings);
+          let fixedMessage = `✅ Исправлено проблем: ${fixed}\n\n`;
+          if (errors.length > 0) {
+            fixedMessage += '❌ ОСТАЛИСЬ ОШИБКИ (требуют ручного вмешательства):\n';
+            errors.forEach((issue, index) => {
+              fixedMessage += `\n${index + 1}. ${issue.description}\n`;
+            });
+            // Показываем оставшиеся ошибки через dialog.info
+            await dialog.info({
+              title: 'Исправление завершено',
+              description: fixedMessage
+            });
+          } else {
+            alert.success(`Исправлено проблем: ${fixed}`);
+          }
+          await loadStats();
+        } else {
+          // Показываем результаты проверки через dialog.info
+          await dialog.info({
+            title: 'Результаты проверки целостности',
+            description: message
+          });
+        }
+      } else {
+        // Только ошибки - показываем через dialog.info
+        await dialog.info({
+          title: 'Найдены ошибки в базе данных',
+          description: message
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка проверки целостности:', error);
+      alert.error('Ошибка проверки целостности: ' + (error as Error).message);
+    } finally {
+      setIsCheckingIntegrity(false);
     }
   };
 
@@ -749,7 +800,7 @@ export const SettingsPage = () => {
                 </div>
               )}
 
-            {/* Два раздела в ряд: Локальное хранилище и Резервная копия */}
+            {/* Три раздела в ряд: Локальное хранилище, Резервная копия и Проверка целостности */}
             <div style={{ 
               display: 'flex',
               gap: 'var(--spacing-l, 16px)',
@@ -934,6 +985,71 @@ export const SettingsPage = () => {
                 </div>
               </div>
               </div>
+
+              {/* Раздел: Проверка целостности */}
+              <div style={{
+                flex: '1 0 0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--spacing-xl, 24px)',
+                padding: 'var(--spacing-xl, 24px)',
+                border: '2px solid var(--border-default, #ebe9ee)',
+                borderRadius: 'var(--radius-l, 16px)',
+                minHeight: '1px',
+                minWidth: '1px'
+              }}>
+                <Icon name="file-search" size={24} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--spacing-l, 16px)',
+                  width: '100%'
+                }}>
+                  <h3 className="h3" style={{
+                    fontFamily: 'var(--font-family-heading)',
+                    fontSize: 'var(--font-size-h3, 28px)',
+                    lineHeight: 'var(--line-height-h3, 28px)',
+                    fontWeight: 'var(--font-weight-bold, 700)',
+                    color: 'var(--text-primary, #3b3946)',
+                    letterSpacing: '0px'
+                  }}>
+                    Проверка
+                  </h3>
+                  
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 'var(--spacing-l, 16px)',
+                    fontFamily: 'var(--font-family-body)',
+                    fontSize: 'var(--font-size-m, 16px)',
+                    lineHeight: 'var(--line-height-m, 22px)',
+                    fontWeight: 'var(--font-weight-light, 300)',
+                    letterSpacing: '0px'
+                  }}>
+                    <p style={{
+                      color: 'var(--text-primary, #3b3946)'
+                    }}>
+                      Проверьте базу данных на наличие ошибок, таких как отсутствующие файлы или некорректные ссылки.
+                    </p>
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    gap: 'var(--spacing-s, 8px)',
+                    marginTop: 'auto'
+                  }}>
+                    <Button
+                      variant="primary"
+                      size="L"
+                      onClick={handleCheckIntegrity}
+                      disabled={isCheckingIntegrity || isCreatingBackup || isRestoring}
+                      iconRight={<Icon name="search" size={24} variant="border" />}
+                    >
+                      {isCheckingIntegrity ? 'Проверка...' : 'Проверить целостность'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Прогресс переноса */}
@@ -1064,21 +1180,6 @@ export const SettingsPage = () => {
             gap: 'var(--spacing-l, 16px)',
             width: '100%'
           }}>
-            {/* Кнопка очистки меток с несуществующими категориями */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              width: '100%'
-            }}>
-              <Button
-                variant="secondary"
-                size="L"
-                onClick={handleCleanupOrphanTags}
-                iconLeft={<Icon name="trash" size={16} variant="border" />}
-              >
-                Очистить метки с несуществующими категориями
-              </Button>
-            </div>
             {/* 5 карточек статистики вверху */}
             <div style={{ 
               display: 'flex',

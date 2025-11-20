@@ -9,7 +9,7 @@ import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { EditCollectionModal } from '../components/collections';
-import { getCollection, getAllCards, deleteCollection, addToMoodboard, removeFromMoodboard } from '../services/db';
+import { getCollection, getAllCards, deleteCollection, addToMoodboard, removeFromMoodboard, getMoodboard } from '../services/db';
 import { logDeleteCollection } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
@@ -146,7 +146,10 @@ export const CollectionDetailPage = () => {
   // Обработчик добавления/удаления из мудборда
   const handleMoodboardToggle = async (card: Card) => {
     try {
-      if (card.inMoodboard) {
+      const moodboard = await getMoodboard();
+      const isInMoodboard = moodboard.cardIds.includes(card.id);
+      
+      if (isInMoodboard) {
         await removeFromMoodboard(card.id);
       } else {
         await addToMoodboard(card.id);

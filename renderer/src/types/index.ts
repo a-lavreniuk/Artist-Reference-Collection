@@ -28,7 +28,6 @@ export interface Card {
   thumbnailUrl?: string;               // URL превью из IndexedDB
   tags: string[];                      // Массив ID меток
   collections: string[];               // Массив ID коллекций
-  inMoodboard: boolean;                // Находится ли в мудборде
 }
 
 // Метка для категоризации карточек

@@ -18,6 +18,7 @@ import {
 import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
 import { useFileSystem, useElectronUpdates, useToast } from './hooks';
 import { SearchProvider } from './contexts';
+import { validateDatabase, fixIssues } from './services/integrityCheck';
 
 /**
  * Компонент для обработки внешнего импорта (из браузера)
@@ -116,6 +117,48 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
+  // Проверка целостности при первом запуске
+  useEffect(() => {
+    const runIntegrityCheck = async () => {
+      if (isLoading || !hasPermission || !directoryHandle) {
+        return;
+      }
+
+      try {
+        // Проверяем, запускалась ли уже проверка целостности
+        const hasRunCheck = await window.electronAPI.getSetting('hasRunIntegrityCheck');
+        
+        if (!hasRunCheck) {
+          console.log('[App] Первый запуск - проверка целостности данных...');
+          const result = await validateDatabase();
+          
+          if (!result.isValid || result.issues.length > 0) {
+            console.log(`[App] Найдено проблем: ${result.issues.length}`);
+            
+            // Автоматически исправляем предупреждения
+            const warnings = result.issues.filter(i => i.severity === 'warning');
+            if (warnings.length > 0) {
+              const fixed = await fixIssues(warnings);
+              console.log(`[App] Автоматически исправлено проблем: ${fixed}`);
+            }
+            
+            // Ошибки требуют внимания пользователя, но не блокируем запуск
+            const errors = result.issues.filter(i => i.severity === 'error');
+            if (errors.length > 0) {
+              console.warn(`[App] Найдено критических ошибок: ${errors.length}`);
+            }
+          }
+          
+          // Отмечаем что проверка выполнена
+          await window.electronAPI.saveSetting('hasRunIntegrityCheck', true);
+        }
+      } catch (error) {
+        console.error('[App] Ошибка проверки целостности:', error);
+      }
+    };
+
+    runIntegrityCheck();
+  }, [isLoading, hasPermission, directoryHandle]);
 
   // Проверяем нужно ли показать онбординг
   useEffect(() => {

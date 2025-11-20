@@ -316,6 +316,17 @@ export interface ElectronAPI {
   }) => void) => () => void;
 
   /**
+   * Подписаться на событие ошибки генерации превью
+   * @param callback - Функция обратного вызова с данными об ошибке
+   * @returns Функция отписки
+   */
+  onThumbnailError: (callback: (data: {
+    filePath: string;
+    error: string;
+    stderr: string;
+  }) => void) => () => void;
+
+  /**
    * Установить загруженное обновление
    */
   installUpdate: () => Promise<void>;
@@ -403,6 +414,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('main:external-file-downloaded', listener);
     return () => {
       ipcRenderer.removeListener('main:external-file-downloaded', listener);
+    };
+  },
+  onThumbnailError: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('thumbnail-error', listener);
+    return () => {
+      ipcRenderer.removeListener('thumbnail-error', listener);
     };
   },
   installUpdate: () => ipcRenderer.invoke('install-update')

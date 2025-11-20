@@ -190,10 +190,8 @@ export function registerIPCHandlers(): void {
   ipcMain.handle('scan-import-directory', async () => {
     try {
       // Получаем путь через DownloadManager, так как он знает где лежит temp
-      // Используем приватное свойство через any, так как нет публичного геттера
-      // В будущем стоит добавить публичный метод getTempDir()
       const downloadManager = DownloadManager.getInstance();
-      const tempDir = (downloadManager as any).tempDir; 
+      const tempDir = downloadManager.getTempDir(); 
       
       console.log('[IPC] Сканирование папки импорта:', tempDir);
       
@@ -434,13 +432,23 @@ export function registerIPCHandlers(): void {
               console.log('[IPC] ✅ Превью видео создано успешно');
               resolve();
             })
-            .on('error', (err, stdout, stderr) => {
-              console.error('[IPC] ❌ Ошибка ffmpeg:', err.message);
-              console.error('[IPC] stderr:', stderr);
-              // Если не удалось создать превью, не прерываем процесс
-              // UI покажет placeholder
-              resolve();
+        .on('error', (err, stdout, stderr) => {
+          console.error('[IPC] ❌ Ошибка ffmpeg:', err.message);
+          console.error('[IPC] stderr:', stderr);
+          
+          // Отправляем уведомление об ошибке в renderer процесс
+          if (_event && !_event.sender.isDestroyed()) {
+            _event.sender.send('thumbnail-error', {
+              filePath: filePath,
+              error: err.message,
+              stderr: stderr || ''
             });
+          }
+          
+          // Если не удалось создать превью, не прерываем процесс
+          // UI покажет placeholder
+          resolve();
+        });
         });
 
         // Проверяем, создалось ли превью
@@ -485,10 +493,24 @@ export function registerIPCHandlers(): void {
 
   /**
    * Получить file:// URL для локального файла
-   * Читает файл и возвращает как Data URL (base64)
+   * Для маленьких файлов (<5MB) возвращает Data URL (base64)
+   * Для больших файлов возвращает file:// URL для оптимизации памяти
    */
   ipcMain.handle('get-file-url', async (_event, filePath: string) => {
     try {
+      console.log('[IPC] Получение URL для файла:', filePath);
+      
+      // Проверяем размер файла
+      const stats = await fs.stat(filePath);
+      const fileSizeInMB = stats.size / (1024 * 1024);
+      const maxSizeForDataURL = 5; // 5MB
+      
+      // Для больших файлов возвращаем file:// URL
+      if (fileSizeInMB > maxSizeForDataURL) {
+        console.log(`[IPC] Файл слишком большой (${fileSizeInMB.toFixed(2)}MB), используем file:// URL`);
+        return `file:///${filePath.replace(/\\/g, '/')}`;
+      }
+      
       console.log('[IPC] Чтение файла для Data URL:', filePath);
       
       // Читаем файл
@@ -551,8 +573,9 @@ export function registerIPCHandlers(): void {
       // Проверяем существование исходного файла
       const exists = await fileExists(sourcePath);
       if (!exists) {
+        const errorMessage = `Файл не найден по пути:\n${sourcePath}\n\nВозможные причины:\n• Файл был удален или перемещен\n• Путь к файлу изменился\n• Диск недоступен\n\nЧто делать:\n• Проверьте целостность данных в настройках\n• Восстановите файл из резервной копии\n• Удалите карточку из базы данных`;
         console.error('[IPC] Исходный файл не найден:', sourcePath);
-        throw new Error('Исходный файл не найден');
+        throw new Error(errorMessage);
       }
       
       // Диалог выбора места сохранения
@@ -574,9 +597,19 @@ export function registerIPCHandlers(): void {
       console.log('[IPC] Файл экспортирован:', result.filePath);
       
       return result.filePath;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[IPC] Ошибка экспорта файла:', error);
-      throw error;
+      
+      // Улучшаем сообщение об ошибке
+      if (error.code === 'ENOENT') {
+        throw new Error(`Файл не найден:\n${sourcePath}\n\nФайл был удален или перемещен. Проверьте целостность данных в настройках.`);
+      } else if (error.code === 'EACCES') {
+        throw new Error(`Нет доступа к файлу:\n${sourcePath}\n\nПроверьте права доступа к файлу.`);
+      } else if (error.code === 'ENOSPC') {
+        throw new Error(`Недостаточно места на диске для экспорта файла.`);
+      } else {
+        throw new Error(`Ошибка экспорта файла:\n${error.message || 'Неизвестная ошибка'}`);
+      }
     }
   });
 

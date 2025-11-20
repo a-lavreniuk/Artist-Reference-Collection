@@ -8,7 +8,7 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards, updateCard, addToMoodboard, removeFromMoodboard } from '../services/db';
+import { getAllCards, addToMoodboard, removeFromMoodboard, getMoodboard, clearMoodboard } from '../services/db';
 import { logClearMoodboard } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import type { Card, ViewMode, ContentFilter } from '../types';
@@ -19,6 +19,7 @@ export const MoodboardPage = () => {
   const toast = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
+  const [moodboardCardIds, setMoodboardCardIds] = useState<string[]>([]);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   
   // Состояние данных
@@ -40,9 +41,11 @@ export const MoodboardPage = () => {
       try {
         setIsLoading(true);
         const allCards = await getAllCards();
+        const moodboard = await getMoodboard();
         // Фильтруем только карточки в мудборде
-        const moodboardCards = allCards.filter(card => card.inMoodboard);
+        const moodboardCards = allCards.filter(card => moodboard.cardIds.includes(card.id));
         setCards(moodboardCards);
+        setMoodboardCardIds(moodboard.cardIds);
       } catch (error) {
         console.error('Ошибка загрузки мудборда:', error);
       } finally {
@@ -100,10 +103,11 @@ export const MoodboardPage = () => {
 
   // Обработчик обновления карточки
   const handleCardUpdated = async () => {
-    // Перезагружаем карточки после обновления
-    const allCards = await getAllCards();
-    const moodboardCards = allCards.filter(card => card.inMoodboard);
-    setCards(moodboardCards);
+      // Перезагружаем карточки после обновления
+      const allCards = await getAllCards();
+      const moodboard = await getMoodboard();
+      const moodboardCards = allCards.filter(card => moodboard.cardIds.includes(card.id));
+      setCards(moodboardCards);
     
     // Обновляем просматриваемую карточку
     if (viewingCard) {
@@ -118,10 +122,11 @@ export const MoodboardPage = () => {
   const handleCardDeleted = async () => {
     setIsModalOpen(false);
     setViewingCard(null);
-    // Перезагружаем список
-    const allCards = await getAllCards();
-    const moodboardCards = allCards.filter(card => card.inMoodboard);
-    setCards(moodboardCards);
+      // Перезагружаем список
+      const allCards = await getAllCards();
+      const moodboard = await getMoodboard();
+      const moodboardCards = allCards.filter(card => moodboard.cardIds.includes(card.id));
+      setCards(moodboardCards);
   };
 
   // Обработчик выбора карточки
@@ -136,15 +141,20 @@ export const MoodboardPage = () => {
   // Обработчик добавления/удаления из мудборда
   const handleMoodboardToggle = async (card: Card) => {
     try {
-      if (card.inMoodboard) {
+      const moodboard = await getMoodboard();
+      const isInMoodboard = moodboard.cardIds.includes(card.id);
+      
+      if (isInMoodboard) {
         await removeFromMoodboard(card.id);
       } else {
         await addToMoodboard(card.id);
       }
       // Перезагружаем карточки мудборда
       const allCards = await getAllCards();
-      const moodboardCards = allCards.filter(c => c.inMoodboard);
+      const updatedMoodboard = await getMoodboard();
+      const moodboardCards = allCards.filter(c => updatedMoodboard.cardIds.includes(c.id));
       setCards(moodboardCards);
+      setMoodboardCardIds(updatedMoodboard.cardIds);
     } catch (error) {
       console.error('Ошибка переключения мудборда:', error);
     }
@@ -235,10 +245,8 @@ export const MoodboardPage = () => {
         try {
           setExportMessage('🔄 Очистка мудборда...');
 
-          // Снимаем флаг inMoodboard со всех карточек
-          for (const card of cards) {
-            await updateCard(card.id, { inMoodboard: false });
-          }
+          // Очищаем мудборд (удаляем все карточки из массива)
+          await clearMoodboard();
 
           console.log(`[Moodboard] Очищено карточек: ${cards.length}`);
 
@@ -322,6 +330,7 @@ export const MoodboardPage = () => {
         onCardSelect={handleCardSelect}
         onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
+        moodboardCardIds={moodboardCardIds}
       />
 
       {/* Прогресс экспорта */}

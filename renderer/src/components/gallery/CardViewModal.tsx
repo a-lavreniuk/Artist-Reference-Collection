@@ -8,7 +8,7 @@ import Masonry from 'react-masonry-css';
 import { Modal } from '../common/Modal';
 import { Button, Tag, Icon, Card as CardComponent, Input } from '../common';
 import type { Card, Tag as TagType, Collection, Category } from '../../types';
-import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory, addTag, updateCategory, db } from '../../services/db';
+import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory, addTag, updateCategory, getMoodboard, db } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
 import { useToast } from '../../hooks/useToast';
 import { useAlert } from '../../hooks/useAlert';
@@ -67,9 +67,19 @@ export const CardViewModal = ({
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
   const [newTagName, setNewTagName] = useState('');
+  const [isInMoodboard, setIsInMoodboard] = useState(false);
   
   const { showToast } = useToast();
   const alert = useAlert();
+  
+  // Загружаем статус мудборда при открытии модального окна
+  useEffect(() => {
+    if (card) {
+      getMoodboard().then(moodboard => {
+        setIsInMoodboard(moodboard.cardIds.includes(card.id));
+      });
+    }
+  }, [card]);
 
   // Загрузка всех меток, коллекций и похожих карточек при открытии
   useEffect(() => {
@@ -187,16 +197,22 @@ export const CardViewModal = ({
 
   // Переключение мудборда
   const handleToggleMoodboard = async () => {
-    console.log('[CardViewModal] Клик на кнопку мудборда для карточки:', card.id, 'текущий статус inMoodboard:', card.inMoodboard);
+    if (!card) return;
+    
+    const moodboard = await getMoodboard();
+    const currentIsInMoodboard = moodboard.cardIds.includes(card.id);
+    console.log('[CardViewModal] Клик на кнопку мудборда для карточки:', card.id, 'текущий статус в мудборде:', currentIsInMoodboard);
     
     try {
-      if (card.inMoodboard) {
+      if (currentIsInMoodboard) {
         console.log('[CardViewModal] Удаляем из мудборда');
         await removeFromMoodboard(card.id);
+        setIsInMoodboard(false);
         alert.info('Карточка удалена из мудборда');
       } else {
         console.log('[CardViewModal] Добавляем в мудборд');
         await addToMoodboard(card.id);
+        setIsInMoodboard(true);
         alert.success('Карточка добавлена в мудборд');
       }
       
@@ -348,13 +364,27 @@ export const CardViewModal = ({
   const handleExport = async () => {
     if (window.electronAPI) {
       try {
+        // Сначала проверяем существование файла
+        const fileExists = await window.electronAPI.fileExists(card.filePath);
+        if (!fileExists) {
+          alert.error(
+            `Файл не найден\n\n` +
+            `Имя файла: ${card.fileName}\n` +
+            `Путь: ${card.filePath}\n\n` +
+            `Файл был удален или перемещен.\n` +
+            `Проверьте целостность данных в настройках или восстановите файл из резервной копии.`
+          );
+          return;
+        }
+        
         const exportedPath = await window.electronAPI.exportFile(card.filePath, card.fileName);
         if (exportedPath) {
-          alert.success('Файл экспортирован');
+          alert.success(`Файл экспортирован:\n${exportedPath}`);
         }
       } catch (error) {
         console.error('Ошибка экспорта файла:', error);
-        alert.error('Не удалось экспортировать файл');
+        const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+        alert.error(`Не удалось экспортировать файл\n\n${errorMessage}`);
       }
     }
   };
@@ -533,8 +563,8 @@ export const CardViewModal = ({
                 </>
               ) : (
                 <>
-                  <button className="card-view__icon-button" onClick={handleToggleMoodboard} title={card.inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}>
-                    <Icon name={card.inMoodboard ? 'bookmark-minus' : 'bookmark-plus'} size={24} variant="border" />
+                  <button className="card-view__icon-button" onClick={handleToggleMoodboard} title={isInMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}>
+                    <Icon name={isInMoodboard ? 'bookmark-minus' : 'bookmark-plus'} size={24} variant="border" />
                   </button>
                   <button className="card-view__icon-button" onClick={handleExport} title="Выгрузить изображение">
                     <Icon name="download" size={24} variant="border" />
