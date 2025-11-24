@@ -19,6 +19,7 @@ interface QueueFile {
   configured: boolean;
   tags: string[];
   collections: string[];
+  description?: string; // Описание карточки
   width?: number;  // Ширина изображения
   height?: number; // Высота изображения
   originalFilePath?: string; // Путь к исходному временному файлу (для удаления после сохранения)
@@ -210,6 +211,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
               configured: false,
               tags: [],
               collections: [],
+              description: '',
               width,
               height,
               originalFilePath: filePath // Сохраняем путь для последующего удаления
@@ -484,6 +486,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
         configured: false,
         tags: [],
         collections: [],
+        description: '',
         width,
         height
       });
@@ -531,6 +534,17 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
       current.collections.push(collectionId);
     }
     
+    setQueue(newQueue);
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    if (!currentFile) return;
+
+    // Ограничение до 2000 символов
+    const truncatedValue = value.length > 2000 ? value.substring(0, 2000) : value;
+
+    const newQueue = [...queue];
+    newQueue[currentIndex].description = truncatedValue;
     setQueue(newQueue);
   };
 
@@ -734,7 +748,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             height: item.height, // Высота изображения
             thumbnailUrl, // file:// URL для превью
             tags: item.tags,
-            collections: item.collections
+            collections: item.collections,
+            description: item.description?.trim() || undefined // Сохраняем описание, если оно не пустое
           };
 
           await addCard(card);
@@ -970,6 +985,30 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
                   );
                 })}
             </div>
+          </div>
+
+          {/* Блок 2.5: Описание */}
+          <div className="add-card-flow__block add-card-flow__block--description">
+            <div className="add-card-flow__block-header">
+              <h3 className="add-card-flow__block-title">Описание</h3>
+            </div>
+            <textarea
+              className="input add-card-flow__description-textarea"
+              placeholder="Введите описание…"
+              value={currentFile.description || ''}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
+              maxLength={2000}
+              rows={4}
+            />
+            {(currentFile.description?.length || 0) > 0 && (
+              <p className="text-s" style={{ 
+                color: 'var(--text-secondary)', 
+                marginTop: '8px',
+                textAlign: 'right'
+              }}>
+                {(currentFile.description?.length || 0)} / 2000
+              </p>
+            )}
           </div>
 
           {/* Блок 3: Метки с категориями */}

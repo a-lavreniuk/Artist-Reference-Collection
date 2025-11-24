@@ -82,6 +82,23 @@ export class ARCDatabase extends Dexie {
       // Dexie автоматически обработает это при обновлении схемы
       console.log('[DB] Миграция версии 3: удалено поле inMoodboard из карточек');
     });
+
+    // Версия 4: добавление поля description к карточкам
+    this.version(4).stores({
+      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections',
+      tags: 'id, name, categoryId, dateCreated, cardCount, description',
+      categories: 'id, name, dateCreated, *tagIds',
+      collections: 'id, name, dateCreated, dateModified, *cardIds',
+      moodboard: 'id, dateModified, *cardIds',
+      settings: 'id',
+      searchHistory: 'id, timestamp, *tagIds',
+      viewHistory: 'id, cardId, timestamp',
+      thumbnailCache: 'id, cardId, dateGenerated, expiresAt'
+    }).upgrade(async () => {
+      // Автоматическая миграция: существующие карточки получат description: undefined
+      // Dexie автоматически обработает это при обновлении схемы
+      console.log('[DB] Миграция версии 4: добавлено поле description к карточкам');
+    });
   }
 }
 

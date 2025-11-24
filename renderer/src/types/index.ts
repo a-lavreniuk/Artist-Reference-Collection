@@ -28,6 +28,7 @@ export interface Card {
   thumbnailUrl?: string;               // URL превью из IndexedDB
   tags: string[];                      // Массив ID меток
   collections: string[];               // Массив ID коллекций
+  description?: string;                // Описание карточки (опционально)
 }
 
 // Метка для категоризации карточек

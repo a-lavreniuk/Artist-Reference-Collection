@@ -564,6 +564,28 @@ export function registerIPCHandlers(): void {
   });
 
   /**
+   * Открыть внешнюю ссылку в браузере по умолчанию
+   */
+  ipcMain.handle('open-external', async (_event, url: string) => {
+    try {
+      console.log('[IPC] Открытие внешней ссылки:', url);
+      
+      // Проверяем, что это валидный URL
+      if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        console.error('[IPC] Некорректный URL:', url);
+        throw new Error('Некорректный URL');
+      }
+      
+      // Открываем ссылку в браузере по умолчанию
+      await shell.openExternal(url);
+      console.log('[IPC] Ссылка открыта успешно');
+    } catch (error) {
+      console.error('[IPC] Ошибка открытия ссылки:', error);
+      throw error;
+    }
+  });
+
+  /**
    * Экспортировать файл в выбранную папку
    */
   ipcMain.handle('export-file', async (_event, sourcePath: string, defaultFileName: string) => {

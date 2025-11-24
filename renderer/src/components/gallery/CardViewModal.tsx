@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import Masonry from 'react-masonry-css';
 import { Modal } from '../common/Modal';
 import { Button, Tag, Icon, Card as CardComponent, Input } from '../common';
+import { LinkifiedText } from '../common/LinkifiedText';
 import type { Card, Tag as TagType, Collection, Category } from '../../types';
 import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory, addTag, updateCategory, getMoodboard, db } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
@@ -63,6 +64,7 @@ export const CardViewModal = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedTags, setEditedTags] = useState<string[]>([]);
   const [editedCollections, setEditedCollections] = useState<string[]>([]);
+  const [editedDescription, setEditedDescription] = useState<string>('');
   const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
@@ -92,6 +94,7 @@ export const CardViewModal = ({
       // Инициализируем редактируемые данные
       setEditedTags(card.tags);
       setEditedCollections(card.collections);
+      setEditedDescription(card.description || '');
       setIsEditMode(false);
       setCollectionSearchQuery('');
       setTagSearchQuery('');
@@ -393,6 +396,7 @@ export const CardViewModal = ({
   const handleEnterEditMode = () => {
     setEditedTags([...card.tags]);
     setEditedCollections([...card.collections]);
+    setEditedDescription(card.description || '');
     setIsEditMode(true);
   };
 
@@ -400,6 +404,7 @@ export const CardViewModal = ({
   const handleCancelEdit = () => {
     setEditedTags([...card.tags]);
     setEditedCollections([...card.collections]);
+    setEditedDescription(card.description || '');
     setCollectionSearchQuery('');
     setTagSearchQuery('');
     setShowNewTagInput(null);
@@ -413,7 +418,8 @@ export const CardViewModal = ({
       // Обновляем данные карточки
       await updateCard(card.id, {
         tags: editedTags,
-        collections: editedCollections
+        collections: editedCollections,
+        description: editedDescription.trim() || undefined
       });
       
       // Обновляем связи коллекций
@@ -621,6 +627,47 @@ export const CardViewModal = ({
 
         {/* Информация о файле */}
         <div className="card-view__info">
+          {/* Описание */}
+          {(card.description || isEditMode) && (
+            <div className="card-view__section">
+              <div className="card-view__section-title-wrapper">
+                <h4 className="card-view__section-title">Описание</h4>
+              </div>
+              {isEditMode ? (
+                <>
+                  <textarea
+                    className="input card-view__description-textarea"
+                    placeholder="Введите описание…"
+                    value={editedDescription}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Ограничение до 2000 символов
+                      const truncatedValue = value.length > 2000 ? value.substring(0, 2000) : value;
+                      setEditedDescription(truncatedValue);
+                    }}
+                    maxLength={2000}
+                    rows={4}
+                  />
+                  {editedDescription.length > 0 && (
+                    <p className="text-s" style={{ 
+                      color: 'var(--text-secondary)', 
+                      marginTop: '8px',
+                      textAlign: 'right'
+                    }}>
+                      {editedDescription.length} / 2000
+                    </p>
+                  )}
+                </>
+              ) : (
+                card.description && (
+                  <div className="card-view__description-content">
+                    <LinkifiedText text={card.description} />
+                  </div>
+                )
+              )}
+            </div>
+          )}
+
           {/* Коллекции */}
           <div className="card-view__section">
             <div className="card-view__section-title-wrapper">
