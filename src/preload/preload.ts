@@ -92,6 +92,12 @@ export interface ElectronAPI {
   openFileLocation: (filePath: string) => Promise<boolean>;
   
   /**
+   * Открыть внешнюю ссылку в браузере по умолчанию
+   * @param url - URL для открытия
+   */
+  openExternal: (url: string) => Promise<void>;
+  
+  /**
    * Экспортировать файл в выбранную папку
    * @param sourcePath - Путь к исходному файлу
    * @param defaultFileName - Имя файла по умолчанию
@@ -356,6 +362,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Системные операции
   openFileLocation: (filePath: string) => ipcRenderer.invoke('open-file-location', filePath),
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   exportFile: (sourcePath: string, defaultFileName: string) => 
     ipcRenderer.invoke('export-file', sourcePath, defaultFileName),
   copyToClipboard: (text: string) => ipcRenderer.invoke('copy-to-clipboard', text),

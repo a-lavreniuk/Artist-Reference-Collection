@@ -293,6 +293,47 @@
   color: var(--text-secondary);
 }
 
+/* Описание */
+.card-view__description-textarea {
+  width: 100%;
+  min-height: 92px;
+  padding: 16px;
+  background-color: var(--color-grayscale-100);
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--text-primary);
+  font-variation-settings: 'CRSV' 0, 'SHRP' 0;
+  resize: vertical;
+  transition: background-color var(--transition-fast);
+}
+
+.card-view__description-textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.card-view__description-textarea:hover:not(:focus) {
+  background-color: var(--color-grayscale-200);
+}
+
+.card-view__description-textarea:focus {
+  outline: none;
+  background-color: var(--color-grayscale-200);
+}
+
+.card-view__description-content {
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--text-primary);
+  font-variation-settings: 'CRSV' 0, 'SHRP' 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 /* ========== МЕТАДАННЫЕ ========== */
 
 .card-view__metadata {

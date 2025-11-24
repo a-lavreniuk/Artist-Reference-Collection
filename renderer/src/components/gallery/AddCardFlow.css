@@ -366,6 +366,39 @@
   overflow: hidden;
 }
 
+.add-card-flow__block--description {
+  /* Стили для блока описания */
+}
+
+.add-card-flow__description-textarea {
+  width: 100%;
+  min-height: 92px;
+  padding: 16px;
+  background-color: var(--color-grayscale-100);
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--text-primary);
+  font-variation-settings: 'CRSV' 0, 'SHRP' 0;
+  resize: vertical;
+  transition: background-color var(--transition-fast);
+}
+
+.add-card-flow__description-textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.add-card-flow__description-textarea:hover:not(:focus) {
+  background-color: var(--color-grayscale-200);
+}
+
+.add-card-flow__description-textarea:focus {
+  outline: none;
+  background-color: var(--color-grayscale-200);
+}
+
 /* Поисковый инпут в блоках */
 .add-card-flow__search-input {
   margin-bottom: 12px;
