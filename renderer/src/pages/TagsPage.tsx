@@ -8,7 +8,7 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { CategorySection, CreateCategoryModal, CategoryStats, EditCategoryModal } from '../components/tags';
-import { getAllCategories, getAllTags } from '../services/db';
+import { getAllCategories, getAllTags, updateCategory } from '../services/db';
 import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
@@ -62,6 +62,44 @@ export const TagsPage = () => {
     loadData();
   };
 
+  const handleMoveCategoryUp = async (categoryId: string) => {
+    const currentIndex = categories.findIndex(c => c.id === categoryId);
+    if (currentIndex <= 0) return;
+
+    const prevCategory = categories[currentIndex - 1];
+    const currentCategory = categories[currentIndex];
+
+    // Меняем местами order
+    const currentOrder = currentCategory.order ?? currentIndex;
+    const prevOrder = prevCategory.order ?? currentIndex - 1;
+
+    await Promise.all([
+      updateCategory(currentCategory.id, { order: prevOrder }),
+      updateCategory(prevCategory.id, { order: currentOrder })
+    ]);
+
+    loadData();
+  };
+
+  const handleMoveCategoryDown = async (categoryId: string) => {
+    const currentIndex = categories.findIndex(c => c.id === categoryId);
+    if (currentIndex < 0 || currentIndex >= categories.length - 1) return;
+
+    const nextCategory = categories[currentIndex + 1];
+    const currentCategory = categories[currentIndex];
+
+    // Меняем местами order
+    const currentOrder = currentCategory.order ?? currentIndex;
+    const nextOrder = nextCategory.order ?? currentIndex + 1;
+
+    await Promise.all([
+      updateCategory(currentCategory.id, { order: nextOrder }),
+      updateCategory(nextCategory.id, { order: currentOrder })
+    ]);
+
+    loadData();
+  };
+
   const handleTagClick = (tagId: string) => {
     console.log('Поиск по метке:', tagId);
     // Закрываем модальное окно редактирования если оно открыто
@@ -112,7 +150,7 @@ export const TagsPage = () => {
       <CategoryStats categories={categories} tags={tags} />
       {categories.length > 0 ? (
         <div className="tags-page">
-          {categories.map((category) => {
+          {categories.map((category, index) => {
             const categoryTags = tags.filter(t => t.categoryId === category.id);
             return (
               <CategorySection
@@ -121,6 +159,10 @@ export const TagsPage = () => {
                 tags={categoryTags}
                 onCategoryClick={handleCategoryClick}
                 onTagClick={handleTagClick}
+                onMoveUp={handleMoveCategoryUp}
+                onMoveDown={handleMoveCategoryDown}
+                canMoveUp={index > 0}
+                canMoveDown={index < categories.length - 1}
               />
             );
           })}

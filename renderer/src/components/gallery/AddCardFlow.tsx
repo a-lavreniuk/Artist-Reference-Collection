@@ -918,32 +918,59 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             </div>
           )}
 
-          {/* Блок 1: Шаблон - копирование и применение настроек */}
-          <div className="add-card-flow__block add-card-flow__block--template">
-            <div className="add-card-flow__block-header">
-              <h3 className="add-card-flow__block-title">Шаблон</h3>
-              <div className="add-card-flow__template-actions">
-                <button 
-                  className="add-card-flow__template-button"
-                  onClick={handleCopySettings}
-                  disabled={currentFile.tags.length === 0 && currentFile.collections.length === 0}
-                  title="Копировать настройки"
-                >
-                  <Icon name="save" size={24} variant="border" />
-                </button>
-                <button 
-                  className="add-card-flow__template-button"
-                  onClick={handlePasteSettings}
-                  disabled={!clipboard}
-                  title="Применить настройки"
-                >
-                  <Icon name="download" size={24} variant="border" />
-                </button>
+          {/* Блок 1: Шаблон и Описание - объединены по горизонтали */}
+          <div className="add-card-flow__block-row">
+            {/* Блок шаблона */}
+            <div className="add-card-flow__block add-card-flow__block--template">
+              <div className="add-card-flow__block-header">
+                <h3 className="add-card-flow__block-title">Шаблон</h3>
+                <div className="add-card-flow__template-actions">
+                  <button 
+                    className="add-card-flow__template-button"
+                    onClick={handleCopySettings}
+                    disabled={currentFile.tags.length === 0 && currentFile.collections.length === 0}
+                    title="Копировать настройки"
+                  >
+                    <Icon name="save" size={24} variant="border" />
+                  </button>
+                  <button 
+                    className="add-card-flow__template-button"
+                    onClick={handlePasteSettings}
+                    disabled={!clipboard}
+                    title="Применить настройки"
+                  >
+                    <Icon name="download" size={24} variant="border" />
+                  </button>
+                </div>
               </div>
+              <p className="add-card-flow__block-description">
+                Сохранить настройки для применения к другим файлам
+              </p>
             </div>
-            <p className="add-card-flow__block-description">
-              Сохранить настройки для применения к другим файлам
-            </p>
+
+            {/* Блок описания */}
+            <div className="add-card-flow__block add-card-flow__block--description">
+              <div className="add-card-flow__block-header">
+                <h3 className="add-card-flow__block-title">Описание</h3>
+              </div>
+              <textarea
+                className="input add-card-flow__description-textarea"
+                placeholder="Введите описание…"
+                value={currentFile.description || ''}
+                onChange={(e) => handleDescriptionChange(e.target.value)}
+                maxLength={2000}
+                rows={4}
+              />
+              {(currentFile.description?.length || 0) > 0 && (
+                <p className="text-s" style={{ 
+                  color: 'var(--text-secondary)', 
+                  marginTop: '8px',
+                  textAlign: 'right'
+                }}>
+                  {(currentFile.description?.length || 0)} / 2000
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Блок 2: Коллекции */}
@@ -987,30 +1014,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             </div>
           </div>
 
-          {/* Блок 2.5: Описание */}
-          <div className="add-card-flow__block add-card-flow__block--description">
-            <div className="add-card-flow__block-header">
-              <h3 className="add-card-flow__block-title">Описание</h3>
-            </div>
-            <textarea
-              className="input add-card-flow__description-textarea"
-              placeholder="Введите описание…"
-              value={currentFile.description || ''}
-              onChange={(e) => handleDescriptionChange(e.target.value)}
-              maxLength={2000}
-              rows={4}
-            />
-            {(currentFile.description?.length || 0) > 0 && (
-              <p className="text-s" style={{ 
-                color: 'var(--text-secondary)', 
-                marginTop: '8px',
-                textAlign: 'right'
-              }}>
-                {(currentFile.description?.length || 0)} / 2000
-              </p>
-            )}
-          </div>
-
           {/* Блок 3: Метки с категориями */}
           <div className="add-card-flow__block add-card-flow__block--tags">
             <div className="add-card-flow__block-header">
@@ -1046,13 +1049,18 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
                 // Скрываем категорию если нет меток (или нет совпадений при поиске)
                 if (filteredTags.length === 0) return null;
 
+                // Сортируем метки по алфавиту (а→я, a→z)
+                const sortedTags = [...filteredTags].sort((a, b) => {
+                  return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+                });
+
                 return (
                   <div key={category.id} className="add-card-flow__category">
                     <p className="text-s" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '8px' }}>
                       {category.name}
                     </p>
                     <div className="add-card-flow__tags-list" style={{ marginBottom: '8px' }}>
-                      {filteredTags.map((tag) => {
+                      {sortedTags.map((tag) => {
                         const isSelected = currentFile.tags.includes(tag.id);
                         const tooltipContent = tag.description || tag.name;
                         return (
@@ -1103,30 +1111,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             </div>
           </div>
 
-          {/* Навигация - показывается только если в очереди больше одного файла */}
-          {queue.length > 1 && (
-            <div className="add-card-flow__footer">
-              <Button 
-                variant="border" 
-                size="L"
-                iconOnly
-                iconLeft={<Icon name="arrow-left" size={24} variant="border" />}
-                onClick={handlePrevious} 
-                disabled={currentIndex === 0}
-                title="Назад"
-              />
-
-              <Button 
-                variant="border" 
-                size="L"
-                iconOnly
-                iconLeft={<Icon name="arrow-left" size={24} variant="border" style={{ transform: 'scaleX(-1)' }} />}
-                onClick={handleNext}
-                disabled={currentIndex >= queue.length - 1}
-                title="Далее"
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>

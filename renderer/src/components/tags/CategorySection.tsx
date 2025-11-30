@@ -4,7 +4,7 @@
  * Клик на всю категорию открывает модальное окно редактирования
  */
 
-import { Tag } from '../common';
+import { Tag, Icon } from '../common';
 import type { Category, Tag as TagType } from '../../types';
 import './CategorySection.css';
 
@@ -20,6 +20,18 @@ export interface CategorySectionProps {
   
   /** Обработчик клика на метку (активирует поиск по метке) */
   onTagClick?: (tagId: string) => void;
+  
+  /** Обработчик изменения порядка категории (вверх) */
+  onMoveUp?: (categoryId: string) => void;
+  
+  /** Обработчик изменения порядка категории (вниз) */
+  onMoveDown?: (categoryId: string) => void;
+  
+  /** Можно ли переместить категорию вверх */
+  canMoveUp?: boolean;
+  
+  /** Можно ли переместить категорию вниз */
+  canMoveDown?: boolean;
 }
 
 /**
@@ -29,10 +41,16 @@ export const CategorySection = ({
   category,
   tags,
   onCategoryClick,
-  onTagClick
+  onTagClick,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false
 }: CategorySectionProps) => {
-  // Сортируем метки по количеству использований (cardCount) от большего к меньшему
-  const sortedTags = [...tags].sort((a, b) => (b.cardCount || 0) - (a.cardCount || 0));
+  // Сортируем метки по алфавиту (а→я, a→z)
+  const sortedTags = [...tags].sort((a, b) => {
+    return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+  });
 
   const handleCategoryClick = () => {
     onCategoryClick?.(category.id);
@@ -41,6 +59,16 @@ export const CategorySection = ({
   const handleTagClick = (e: React.MouseEvent, tagId: string) => {
     e.stopPropagation(); // Останавливаем всплытие, чтобы не открылось модальное окно категории
     onTagClick?.(tagId);
+  };
+
+  const handleMoveUp = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Останавливаем всплытие, чтобы не открылось модальное окно категории
+    onMoveUp?.(category.id);
+  };
+
+  const handleMoveDown = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Останавливаем всплытие, чтобы не открылось модальное окно категории
+    onMoveDown?.(category.id);
   };
 
   return (
@@ -64,6 +92,24 @@ export const CategorySection = ({
         <span className="category-section__count">
           {tags.length}
         </span>
+        <div className="category-section__order-buttons">
+          <button
+            className="category-section__order-button"
+            onClick={handleMoveUp}
+            disabled={!canMoveUp}
+            title="Переместить вверх"
+          >
+            <Icon name="chevron-up" size={16} variant="border" />
+          </button>
+          <button
+            className="category-section__order-button"
+            onClick={handleMoveDown}
+            disabled={!canMoveDown}
+            title="Переместить вниз"
+          >
+            <Icon name="chevron-down" size={16} variant="border" />
+          </button>
+        </div>
       </div>
 
       {/* Список меток */}

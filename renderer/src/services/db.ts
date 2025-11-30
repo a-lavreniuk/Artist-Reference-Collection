@@ -99,6 +99,26 @@ export class ARCDatabase extends Dexie {
       // Dexie автоматически обработает это при обновлении схемы
       console.log('[DB] Миграция версии 4: добавлено поле description к карточкам');
     });
+
+    // Версия 5: добавление поля order к категориям
+    this.version(5).stores({
+      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections',
+      tags: 'id, name, categoryId, dateCreated, cardCount, description',
+      categories: 'id, name, dateCreated, *tagIds, order',
+      collections: 'id, name, dateCreated, dateModified, *cardIds',
+      moodboard: 'id, dateModified, *cardIds',
+      settings: 'id',
+      searchHistory: 'id, timestamp, *tagIds',
+      viewHistory: 'id, cardId, timestamp',
+      thumbnailCache: 'id, cardId, dateGenerated, expiresAt'
+    }).upgrade(async (trans) => {
+      // Автоматическая миграция: устанавливаем order для существующих категорий
+      const categories = await trans.table('categories').toArray();
+      for (let i = 0; i < categories.length; i++) {
+        await trans.table('categories').update(categories[i].id, { order: i });
+      }
+      console.log('[DB] Миграция версии 5: добавлено поле order к категориям');
+    });
   }
 }
 
@@ -388,7 +408,16 @@ export async function addCategory(category: Category): Promise<string> {
  * Получить все категории
  */
 export async function getAllCategories(): Promise<Category[]> {
-  return await db.categories.toArray();
+  const categories = await db.categories.toArray();
+  // Сортируем по order, если он есть, иначе по dateCreated
+  return categories.sort((a, b) => {
+    if (a.order !== undefined && b.order !== undefined) {
+      return a.order - b.order;
+    }
+    if (a.order !== undefined) return -1;
+    if (b.order !== undefined) return 1;
+    return a.dateCreated.getTime() - b.dateCreated.getTime();
+  });
 }
 
 /**

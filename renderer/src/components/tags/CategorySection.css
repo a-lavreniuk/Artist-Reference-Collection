@@ -50,6 +50,37 @@
   color: var(--text-secondary);
 }
 
+.category-section__order-buttons {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-left: auto;
+}
+
+.category-section__order-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-s);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.category-section__order-button:hover:not(:disabled) {
+  background-color: var(--color-grayscale-100);
+  border-color: var(--border-hover);
+}
+
+.category-section__order-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ========== МЕТКИ ========== */
 
 .category-section__tags {

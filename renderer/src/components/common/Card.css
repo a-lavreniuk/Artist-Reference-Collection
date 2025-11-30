@@ -48,7 +48,7 @@
 
 /* Компактный вид */
 .card--compact {
-  border-radius: var(--radius-s);
+  border-radius: 16px; /* Единое скругление как у обычной карточки */
   border: none; /* Убираем бордер у карточки, оставляем только у изображения (2px) */
 }
 
@@ -78,6 +78,11 @@
   border: 2px solid var(--color-grayscale-100);
   border-radius: 16px;
   transition: opacity var(--transition-base), border-color var(--transition-fast);
+}
+
+/* Единое скругление для компактного вида */
+.card--compact .card__image {
+  border-radius: 16px;
 }
 
 .card:not(.card--loading) .card__image {

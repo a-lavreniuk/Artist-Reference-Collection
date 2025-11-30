@@ -273,11 +273,14 @@ export const CreateCategoryModal = ({
 
       // Создаём категорию
       const categoryId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Получаем все категории для определения order (новая категория будет последней)
+      let allCategories = await getAllCategories();
       const category: Category = {
         id: categoryId,
         name: trimmedName,
         dateCreated: new Date(),
-        tagIds: []
+        tagIds: [],
+        order: allCategories.length // Новая категория будет последней
       };
 
       await addCategory(category);
@@ -287,7 +290,8 @@ export const CreateCategoryModal = ({
 
       // Проверяем на дубликаты перед созданием (дополнительная проверка)
       const allTags = await getAllTags();
-      const allCategories = await getAllCategories();
+      // Обновляем список категорий после добавления новой
+      allCategories = await getAllCategories();
       const tagIds: string[] = [];
       
       for (const editableTag of tagsToCreate) {

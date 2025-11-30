@@ -319,6 +319,14 @@
   margin: 0;
 }
 
+/* Блок-ряд для объединения шаблона и описания */
+.add-card-flow__block-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
 /* Блок шаблона */
 .add-card-flow__block--template {
   flex-shrink: 0;
@@ -442,12 +450,7 @@
 }
 
 .add-card-flow__category {
-  padding-bottom: var(--spacing-l);
-  border-bottom: 1px solid var(--border-default);
-}
-
-.add-card-flow__category:last-child {
-  border-bottom: none;
+  /* Убрали padding-bottom и border-bottom */
 }
 
 /* Кнопки меток и коллекций */

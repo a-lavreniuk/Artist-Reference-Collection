@@ -786,11 +786,17 @@ export const CardViewModal = ({
                       return { category, tags: filteredTags };
                     })
                     .filter((item): item is { category: Category; tags: TagType[] } => item !== null)
-                    .map(({ category, tags }) => (
-                      <div key={category.id} className="card-view__category">
-                        <h5 className="card-view__category-title">{category.name}</h5>
-                        <div className="card-view__tags">
-                          {tags.map((tag) => (
+                    .map(({ category, tags }) => {
+                      // Сортируем метки по алфавиту (а→я, a→z)
+                      const sortedTags = [...tags].sort((a, b) => {
+                        return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+                      });
+                      
+                      return (
+                        <div key={category.id} className="card-view__category">
+                          <h5 className="card-view__category-title">{category.name}</h5>
+                          <div className="card-view__tags">
+                            {sortedTags.map((tag) => (
                             <Tag
                               key={tag.id}
                               variant={editedTags.includes(tag.id) ? 'active' : 'default'}
@@ -802,7 +808,7 @@ export const CardViewModal = ({
                             >
                               {tag.name}
                             </Tag>
-                          ))}
+                            ))}
                           <button
                             className="card-view__add-tag-button"
                             onClick={() => setShowNewTagInput(showNewTagInput === category.id ? null : category.id)}
@@ -833,7 +839,8 @@ export const CardViewModal = ({
                           />
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </>
             ) : (
