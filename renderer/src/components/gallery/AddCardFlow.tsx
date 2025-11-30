@@ -588,18 +588,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
     });
   }, []);
 
-  const handleNext = useCallback(() => {
-    // Просто листаем без проверки меток
-    if (currentIndex < queue.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  }, [currentIndex, queue.length]);
-
-  const handlePrevious = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  }, [currentIndex]);
 
   const handleCreateTag = async (categoryId: string) => {
     if (!newTagName.trim()) return;

@@ -49,7 +49,9 @@ export type IconName =
   | 'x'
   | 'download'
   | 'arrow-left'
-  | 'search';
+  | 'search'
+  | 'chevron-up'
+  | 'chevron-down';
 
 // Размер иконки
 export type IconSize = 16 | 24;
