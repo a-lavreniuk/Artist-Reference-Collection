@@ -30,7 +30,6 @@ export const TagsPage = () => {
   
   // Состояние для drag-and-drop меток
   const [draggingTagId, setDraggingTagId] = useState<string | null>(null);
-  const [isMoving, setIsMoving] = useState(false);
 
   // Загрузка категорий и меток
   useEffect(() => {
@@ -120,7 +119,6 @@ export const TagsPage = () => {
 
   const handleTagDrop = async (tagId: string, targetCategoryId: string) => {
     try {
-      setIsMoving(true);
       
       // Получаем информацию о метке для уведомления
       const tag = tags.find(t => t.id === tagId);
@@ -156,7 +154,6 @@ export const TagsPage = () => {
         alert.error('Не удалось переместить метку');
       }
     } finally {
-      setIsMoving(false);
       setDraggingTagId(null);
     }
   };

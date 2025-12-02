@@ -1,8 +1,8 @@
 version: 1.2.8
 files:
   - url: ARC-Setup-1.2.8.exe
-    sha512: PLACEHOLDER_HASH_WILL_BE_GENERATED_BY_ELECTRON_BUILDER
-    size: 0
+    sha512: K6Rv4aDoIVPLVmEuDfIL+19mMSIPgo4B2a97AwIp9EQiIqoLZvSb8Lqm77F2RZO1hYNlnoE0tS/g7diV1aiC/g==
+    size: 103041790
 path: ARC-Setup-1.2.8.exe
-sha512: EUHWaAh44lJHklmYxFaYWm8lW1tbFEnV6ZhKCtFi3ILnt6gPVJ1uKwRBMKADcShNwy9bKVwddg1ZxWIApIvEfA==
-releaseDate: '2025-12-02T20:50:36.584Z'
+sha512: K6Rv4aDoIVPLVmEuDfIL+19mMSIPgo4B2a97AwIp9EQiIqoLZvSb8Lqm77F2RZO1hYNlnoE0tS/g7diV1aiC/g==
+releaseDate: '2025-12-02T20:59:36.989Z'

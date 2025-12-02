@@ -221,8 +221,8 @@ export const CategorySection = ({
               count={tag.cardCount || 0}
               description={tag.description}
               onClick={(e) => handleTagClick(e as any, tag.id)}
-              onDragStart={onTagDragStart}
-              onDragEnd={onTagDragEnd}
+              onTagDragStart={onTagDragStart}
+              onTagDragEnd={onTagDragEnd}
               style={{ cursor: 'grab' }}
             >
               {tag.name}

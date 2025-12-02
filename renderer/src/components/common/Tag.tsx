@@ -19,7 +19,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { Tooltip } from './Tooltip';
 import './Tag.css';
 
-export interface TagProps extends HTMLAttributes<HTMLDivElement> {
+export interface TagProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onDragStart' | 'onDragEnd'> {
   /** 
    * Визуальный стиль метки
    * - default: обычная метка на монотонном фоне
@@ -58,10 +58,10 @@ export interface TagProps extends HTMLAttributes<HTMLDivElement> {
   tagId?: string;
   
   /** Обработчик начала перетаскивания */
-  onDragStart?: (tagId: string, event: React.DragEvent) => void;
+  onTagDragStart?: (tagId: string, event: React.DragEvent) => void;
   
   /** Обработчик окончания перетаскивания */
-  onDragEnd?: (tagId: string, event: React.DragEvent) => void;
+  onTagDragEnd?: (tagId: string, event: React.DragEvent) => void;
   
   /** Текст метки */
   children: ReactNode;
@@ -80,8 +80,8 @@ export const Tag = ({
   icon,
   description,
   tagId,
-  onDragStart,
-  onDragEnd,
+  onTagDragStart,
+  onTagDragEnd,
   className = '',
   children,
   style,
@@ -101,7 +101,7 @@ export const Tag = ({
     onRemove?.();
   };
 
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     if (!tagId) return;
     
     // Устанавливаем данные для передачи
@@ -110,12 +110,13 @@ export const Tag = ({
     e.dataTransfer.setData('application/tag-id', tagId);
     
     // Визуальная обратная связь
-    e.currentTarget.style.opacity = '0.5';
-    e.currentTarget.style.cursor = 'grabbing';
+    const target = e.currentTarget as HTMLDivElement;
+    target.style.opacity = '0.5';
+    target.style.cursor = 'grabbing';
     
     // Создаем кастомное изображение для drag
-    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-    dragImage.style.width = `${e.currentTarget.offsetWidth}px`;
+    const dragImage = target.cloneNode(true) as HTMLElement;
+    dragImage.style.width = `${target.offsetWidth}px`;
     dragImage.style.opacity = '0.9';
     document.body.appendChild(dragImage);
     dragImage.style.position = 'absolute';
@@ -129,17 +130,18 @@ export const Tag = ({
       }
     }, 0);
     
-    onDragStart?.(tagId, e);
+    onTagDragStart?.(tagId, e);
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
     if (!tagId) return;
     
     // Восстанавливаем визуальное состояние
-    e.currentTarget.style.opacity = '1';
-    e.currentTarget.style.cursor = style?.cursor || 'grab';
+    const target = e.currentTarget as HTMLDivElement;
+    target.style.opacity = '1';
+    target.style.cursor = style?.cursor || 'grab';
     
-    onDragEnd?.(tagId, e);
+    onTagDragEnd?.(tagId, e);
   };
 
   const isDraggable = Boolean(tagId);

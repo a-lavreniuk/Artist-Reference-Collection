@@ -8,7 +8,6 @@ import { Button, Input, Icon, Tooltip } from '../common';
 import { getAllTags, getAllCategories, getAllCollections, addCard, addTag, getCollection, updateCollection } from '../../services/db';
 import { logImportFiles } from '../../services/history';
 import { useFileSystem } from '../../hooks';
-import { useToast } from '../../hooks/useToast';
 import { useAlert } from '../../hooks/useAlert';
 import type { Card, Tag as TagType, Category, Collection } from '../../types';
 import './AddCardFlow.css';
@@ -94,7 +93,6 @@ export interface AddCardFlowProps {
 }
 
 export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady, initialFiles }: AddCardFlowProps) => {
-  const toast = useToast();
   const alert = useAlert();
   const [queue, setQueue] = useState<QueueFile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
