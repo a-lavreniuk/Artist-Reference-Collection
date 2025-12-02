@@ -54,6 +54,15 @@ export interface TagProps extends HTMLAttributes<HTMLDivElement> {
   /** Описание метки для tooltip (опционально) */
   description?: string;
   
+  /** ID метки для drag-and-drop */
+  tagId?: string;
+  
+  /** Обработчик начала перетаскивания */
+  onDragStart?: (tagId: string, event: React.DragEvent) => void;
+  
+  /** Обработчик окончания перетаскивания */
+  onDragEnd?: (tagId: string, event: React.DragEvent) => void;
+  
   /** Текст метки */
   children: ReactNode;
 }
@@ -70,6 +79,9 @@ export const Tag = ({
   count,
   icon,
   description,
+  tagId,
+  onDragStart,
+  onDragEnd,
   className = '',
   children,
   style,
@@ -89,10 +101,60 @@ export const Tag = ({
     onRemove?.();
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    if (!tagId) return;
+    
+    // Устанавливаем данные для передачи
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tagId);
+    e.dataTransfer.setData('application/tag-id', tagId);
+    
+    // Визуальная обратная связь
+    e.currentTarget.style.opacity = '0.5';
+    e.currentTarget.style.cursor = 'grabbing';
+    
+    // Создаем кастомное изображение для drag
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.width = `${e.currentTarget.offsetWidth}px`;
+    dragImage.style.opacity = '0.9';
+    document.body.appendChild(dragImage);
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    
+    // Удаляем временный элемент после небольшой задержки
+    setTimeout(() => {
+      if (document.body.contains(dragImage)) {
+        document.body.removeChild(dragImage);
+      }
+    }, 0);
+    
+    onDragStart?.(tagId, e);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    if (!tagId) return;
+    
+    // Восстанавливаем визуальное состояние
+    e.currentTarget.style.opacity = '1';
+    e.currentTarget.style.cursor = style?.cursor || 'grab';
+    
+    onDragEnd?.(tagId, e);
+  };
+
+  const isDraggable = Boolean(tagId);
+  const finalStyle = {
+    ...tagStyle,
+    cursor: isDraggable ? (tagStyle?.cursor || 'grab') : tagStyle?.cursor
+  };
+
   const tagContent = (
     <div
       className={classNames}
-      style={tagStyle}
+      draggable={isDraggable}
+      onDragStart={isDraggable ? handleDragStart : undefined}
+      onDragEnd={isDraggable ? handleDragEnd : undefined}
+      style={finalStyle}
       {...props}
     >
       {icon && (

@@ -81,6 +81,15 @@
   cursor: not-allowed;
 }
 
+/* ========== СОСТОЯНИЯ DRAG-AND-DROP ========== */
+
+
+/* Категория - цель для drop метки */
+.category-section--tag-drag-over {
+  border-color: var(--color-primary, #0f8948);
+  transition: border-color 0.2s;
+}
+
 /* ========== МЕТКИ ========== */
 
 .category-section__tags {
@@ -89,3 +98,4 @@
   gap: 4px;
   align-items: center;
 }
+

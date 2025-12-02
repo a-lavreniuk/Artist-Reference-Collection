@@ -51,7 +51,8 @@ export type IconName =
   | 'arrow-left'
   | 'search'
   | 'chevron-up'
-  | 'chevron-down';
+  | 'chevron-down'
+  | 'grip-vertical';
 
 // Размер иконки
 export type IconSize = 16 | 24;

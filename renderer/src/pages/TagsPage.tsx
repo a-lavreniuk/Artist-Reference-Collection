@@ -8,13 +8,17 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { CategorySection, CreateCategoryModal, CategoryStats, EditCategoryModal } from '../components/tags';
-import { getAllCategories, getAllTags, updateCategory } from '../services/db';
+import { getAllCategories, getAllTags, updateCategory, moveTagToCategory } from '../services/db';
+import { useToast } from '../hooks/useToast';
+import { useAlert } from '../hooks/useAlert';
 import type { Category, Tag } from '../types';
 import './TagsPage.css';
 
 export const TagsPage = () => {
   const navigate = useNavigate();
   const { searchProps, setSelectedTags } = useSearch();
+  const toast = useToast();
+  const alert = useAlert();
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +27,10 @@ export const TagsPage = () => {
   const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false);
   const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  
+  // Состояние для drag-and-drop меток
+  const [draggingTagId, setDraggingTagId] = useState<string | null>(null);
+  const [isMoving, setIsMoving] = useState(false);
 
   // Загрузка категорий и меток
   useEffect(() => {
@@ -100,6 +108,59 @@ export const TagsPage = () => {
     loadData();
   };
 
+  // ========== DRAG-AND-DROP ДЛЯ МЕТОК ==========
+  
+  const handleTagDragStart = (tagId: string) => {
+    setDraggingTagId(tagId);
+  };
+
+  const handleTagDragEnd = () => {
+    setDraggingTagId(null);
+  };
+
+  const handleTagDrop = async (tagId: string, targetCategoryId: string) => {
+    try {
+      setIsMoving(true);
+      
+      // Получаем информацию о метке для уведомления
+      const tag = tags.find(t => t.id === tagId);
+      const targetCategory = categories.find(c => c.id === targetCategoryId);
+      
+      if (!tag || !targetCategory) {
+        throw new Error('Метка или категория не найдены');
+      }
+      
+      // Проверяем, что метка не из этой же категории
+      if (tag.categoryId === targetCategoryId) {
+        return;
+      }
+      
+      // Перемещаем метку
+      await moveTagToCategory(tagId, targetCategoryId);
+      
+      // Показываем уведомление
+      toast.success(`Метка "${tag.name}" перемещена в "${targetCategory.name}"`);
+      
+      // Перезагружаем данные
+      await loadData();
+      
+    } catch (error) {
+      console.error('Ошибка перемещения метки:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('не найдена')) {
+          alert.error('Метка или категория не найдены');
+        } else {
+          alert.error(`Не удалось переместить метку: ${error.message}`);
+        }
+      } else {
+        alert.error('Не удалось переместить метку');
+      }
+    } finally {
+      setIsMoving(false);
+      setDraggingTagId(null);
+    }
+  };
+
   const handleTagClick = (tagId: string) => {
     console.log('Поиск по метке:', tagId);
     // Закрываем модальное окно редактирования если оно открыто
@@ -149,7 +210,25 @@ export const TagsPage = () => {
     >
       <CategoryStats categories={categories} tags={tags} />
       {categories.length > 0 ? (
-        <div className="tags-page">
+        <div 
+          className="tags-page"
+          onDragOver={(e) => {
+            // Разрешаем drop меток на уровне страницы
+            if (e.dataTransfer.types.includes('application/tag-id')) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }
+          }}
+          onDrop={(e) => {
+            // Обрабатываем drop метки на уровне страницы (если не попали в категорию)
+            if (e.dataTransfer.types.includes('application/tag-id')) {
+              e.preventDefault();
+              e.stopPropagation();
+              // Если drop произошел не на категорию, просто сбрасываем состояние
+              setDraggingTagId(null);
+            }
+          }}
+        >
           {categories.map((category, index) => {
             const categoryTags = tags.filter(t => t.categoryId === category.id);
             return (
@@ -163,6 +242,11 @@ export const TagsPage = () => {
                 onMoveDown={handleMoveCategoryDown}
                 canMoveUp={index > 0}
                 canMoveDown={index < categories.length - 1}
+                onTagDragStart={handleTagDragStart}
+                onTagDragEnd={handleTagDragEnd}
+                onTagDrop={handleTagDrop}
+                draggingTagId={draggingTagId}
+                allTags={tags}
               />
             );
           })}

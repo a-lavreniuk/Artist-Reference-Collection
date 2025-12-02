@@ -193,6 +193,22 @@
   cursor: pointer;
 }
 
+/* Draggable метка */
+.tag[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+}
+
+.tag[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.tag--dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
 /* Фокус */
 .tag:focus-visible {
   outline: 2px solid var(--border-focus);

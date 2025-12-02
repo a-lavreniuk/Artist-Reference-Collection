@@ -483,7 +483,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
       newQueueItems.push({
         file,
         preview,
-        configured: false,
+        configured: true, // Карточка всегда считается настроенной (можно добавить без меток)
         tags: [],
         collections: [],
         description: '',
@@ -518,7 +518,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
       current.tags.push(tagId);
     }
     
-    current.configured = current.tags.length > 0;
+    // Карточка всегда считается настроенной (можно добавить без меток)
+    current.configured = true;
     setQueue(newQueue);
   };
 
@@ -564,7 +565,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
     const newQueue = [...queue];
     newQueue[currentIndex].tags = [...clipboard.tags];
     newQueue[currentIndex].collections = [...clipboard.collections];
-    newQueue[currentIndex].configured = clipboard.tags.length > 0;
+    // Карточка всегда считается настроенной (можно добавить без меток)
+    newQueue[currentIndex].configured = true;
     setQueue(newQueue);
     
     alert.success('Настройки применены');
@@ -620,38 +622,15 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
   };
 
   const handleFinish = async () => {
-    // Проверяем сколько файлов настроено
-    const configured = queue.filter(f => f.configured);
-    const unconfigured = queue.filter(f => !f.configured);
-    
-    if (configured.length === 0) {
-      alert.warning('Добавьте метки хотя бы к одной карточке');
-      return;
-    }
-
-    // Если не все файлы настроены - спрашиваем подтверждение
-    if (unconfigured.length > 0) {
-      toast.showToast({
-        title: 'Добавить карточки',
-        message: `Настройки применены к ${configured.length} из ${queue.length} карточек. Оставшиеся ${unconfigured.length} карточек будут удалены из очереди. Продолжить?`,
-        type: 'error',
-        onConfirm: () => {
-          // Продолжаем выполнение после подтверждения
-          continueFinish();
-        },
-        confirmText: 'Продолжить',
-        cancelText: 'Отмена'
-      });
-      return; // Выходим и ждем подтверждения
-    }
-    
-    // Если все файлы настроены, продолжаем сразу
+    // Все карточки считаются настроенными (можно добавить без меток)
+    // Продолжаем сразу без проверок
     continueFinish();
   };
   
-  // Продолжение процесса добавления после подтверждения
+  // Продолжение процесса добавления
   const continueFinish = async () => {
-    const configured = queue.filter(f => f.configured);
+    // Все карточки в очереди считаются настроенными (можно добавить без меток)
+    const configured = queue;
 
     // Проверяем доступ к директории
     if (!directoryPath || !hasPermission) {

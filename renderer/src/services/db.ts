@@ -395,6 +395,56 @@ export async function deleteTag(id: string): Promise<void> {
   await db.tags.delete(id);
 }
 
+/**
+ * Переместить метку из одной категории в другую
+ * Автоматически синхронизирует массивы tagIds в категориях
+ * Привязка к карточкам сохраняется (карточки хранят только ID меток)
+ */
+export async function moveTagToCategory(
+  tagId: string, 
+  newCategoryId: string
+): Promise<void> {
+  const tag = await db.tags.get(tagId);
+  if (!tag) {
+    throw new Error(`Метка с ID ${tagId} не найдена`);
+  }
+
+  const newCategory = await db.categories.get(newCategoryId);
+  if (!newCategory) {
+    throw new Error(`Категория с ID ${newCategoryId} не найдена`);
+  }
+
+  const oldCategoryId = tag.categoryId;
+  
+  // Если метка уже в этой категории, ничего не делаем
+  if (oldCategoryId === newCategoryId) {
+    return;
+  }
+
+  // Используем транзакцию для атомарности
+  await db.transaction('rw', db.tags, db.categories, async () => {
+    // 1. Обновляем categoryId у метки
+    await db.tags.update(tagId, { categoryId: newCategoryId });
+
+    // 2. Удаляем метку из старой категории (если она была)
+    if (oldCategoryId) {
+      const oldCategory = await db.categories.get(oldCategoryId);
+      if (oldCategory) {
+        await db.categories.update(oldCategoryId, {
+          tagIds: oldCategory.tagIds.filter(id => id !== tagId)
+        });
+      }
+    }
+
+    // 3. Добавляем метку в новую категорию (если её там еще нет)
+    if (!newCategory.tagIds.includes(tagId)) {
+      await db.categories.update(newCategoryId, {
+        tagIds: [...newCategory.tagIds, tagId]
+      });
+    }
+  });
+}
+
 // ========== CRUD ОПЕРАЦИИ ДЛЯ КАТЕГОРИЙ ==========
 
 /**
