@@ -1,8 +1,8 @@
-version: 1.2.8
+version: 1.2.9
 files:
-  - url: ARC-Setup-1.2.8.exe
-    sha512: K6Rv4aDoIVPLVmEuDfIL+19mMSIPgo4B2a97AwIp9EQiIqoLZvSb8Lqm77F2RZO1hYNlnoE0tS/g7diV1aiC/g==
-    size: 103041790
-path: ARC-Setup-1.2.8.exe
-sha512: K6Rv4aDoIVPLVmEuDfIL+19mMSIPgo4B2a97AwIp9EQiIqoLZvSb8Lqm77F2RZO1hYNlnoE0tS/g7diV1aiC/g==
-releaseDate: '2025-12-02T20:59:36.989Z'
+  - url: ARC-Setup-1.2.9.exe
+    sha512: HghBNvRFGP79wah/Y91IudvsekFTRY9T2ZD8RpAqBpyyRyQ0mY3VPzmnucGFJPd7eelFgl6p9LEVEsNlNkkVyQ==
+    size: 103044931
+path: ARC-Setup-1.2.9.exe
+sha512: HghBNvRFGP79wah/Y91IudvsekFTRY9T2ZD8RpAqBpyyRyQ0mY3VPzmnucGFJPd7eelFgl6p9LEVEsNlNkkVyQ==
+releaseDate: '2025-12-03T13:38:02.948Z'
