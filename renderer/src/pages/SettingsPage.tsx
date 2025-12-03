@@ -15,6 +15,9 @@ import { useDialog } from '../hooks/useDialog';
 import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
 import { logCreateBackup, logMoveStorage } from '../services/history';
 import type { AppStatistics, Tag, Collection } from '../types';
+import { WhatsNewModal } from '../components/common';
+import { getLatestVersion } from '../data/changelog';
+import type { VersionChange } from '../data/changelog';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
 
@@ -53,6 +56,8 @@ export const SettingsPage = () => {
   const [isMovingDirectory, setIsMovingDirectory] = useState(false);
   const [moveProgress, setMoveProgress] = useState(0);
   const [moveMessage, setMoveMessage] = useState<string | null>(null);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [whatsNewVersions, setWhatsNewVersions] = useState<VersionChange[]>([]);
 
   useEffect(() => {
     // Загружаем статистику и размеры при первом открытии или смене папки
@@ -528,6 +533,22 @@ export const SettingsPage = () => {
     } finally {
       setIsRestoring(false);
     }
+  };
+
+  /**
+   * Показать окно "Что нового?"
+   */
+  const handleShowWhatsNew = () => {
+    const latestVersion = getLatestVersion();
+    setWhatsNewVersions([latestVersion]);
+    setShowWhatsNew(true);
+  };
+
+  /**
+   * Закрыть окно "Что нового?"
+   */
+  const handleWhatsNewClose = () => {
+    setShowWhatsNew(false);
   };
 
   // Формируем actions для header - кнопки переключения табов
@@ -1735,6 +1756,52 @@ export const SettingsPage = () => {
       {activeTab === 'history' && (
         <HistorySection />
       )}
+
+      {/* Badge с версией - показывается на всех табах, кликабельный */}
+      <div style={{
+        position: 'fixed',
+        bottom: 'var(--spacing-l, 16px)',
+        right: 'var(--spacing-l, 16px)'
+      }}>
+        <button
+          onClick={handleShowWhatsNew}
+          style={{
+            padding: '6px 12px',
+            backgroundColor: 'var(--bg-tertiary, #ebe9ee)',
+            borderRadius: 'var(--radius-s, 8px)',
+            border: '1px solid var(--border-default, #d4d1dc)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--bg-secondary, #f5f4f7)';
+            e.currentTarget.style.borderColor = 'var(--border-hover, #d4d1dc)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--bg-tertiary, #ebe9ee)';
+            e.currentTarget.style.borderColor = 'var(--border-default, #d4d1dc)';
+          }}
+          title="Нажмите, чтобы посмотреть что нового"
+        >
+          <p className="text-s" style={{
+            fontFamily: 'var(--font-family-body)',
+            fontSize: 'var(--font-size-s, 14px)',
+            lineHeight: 'var(--line-height-s, 18px)',
+            fontWeight: 'var(--font-weight-regular, 400)',
+            color: 'var(--text-secondary, #93919a)',
+            letterSpacing: '0px'
+          }}>
+            v{appVersion}
+          </p>
+        </button>
+      </div>
+
+      {/* Модалка "Что нового?" */}
+      <WhatsNewModal
+        isOpen={showWhatsNew}
+        onClose={handleWhatsNewClose}
+        versions={whatsNewVersions}
+      />
     </Layout>
   );
 };

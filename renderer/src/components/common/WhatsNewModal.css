@@ -1,0 +1,189 @@
+/**
+ * Стили для модального окна "Что нового?"
+ */
+
+.whats-new-modal__backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(10, 10, 10, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: whats-new-fade-in 0.2s ease-out;
+}
+
+@keyframes whats-new-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.whats-new-modal__container {
+  width: 600px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background-color: var(--bg-primary, #ffffff);
+  border-radius: var(--radius-xl, 24px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  animation: whats-new-slide-up 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes whats-new-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Заголовок */
+.whats-new-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-xl, 24px);
+  padding-bottom: var(--spacing-m, 12px);
+  border-bottom: 2px solid var(--border-default, #ebe9ee);
+}
+
+.whats-new-modal__header h2 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2, 32px);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: var(--line-height-h2, 32px);
+  color: var(--text-primary, #3b3946);
+  letter-spacing: 0.5px;
+}
+
+.whats-new-modal__close {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-m, 12px);
+  cursor: pointer;
+  color: var(--icon-default, #93919a);
+  transition: all 0.15s ease;
+}
+
+.whats-new-modal__close:hover {
+  background-color: var(--bg-tertiary, #ebe9ee);
+  color: var(--icon-hover, #3b3946);
+}
+
+.whats-new-modal__close:active {
+  transform: scale(0.95);
+}
+
+/* Контент */
+.whats-new-modal__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xl, 24px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl, 24px);
+}
+
+/* Скроллбар */
+.whats-new-modal__content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.whats-new-modal__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.whats-new-modal__content::-webkit-scrollbar-thumb {
+  background-color: var(--border-default, #ebe9ee);
+  border-radius: 4px;
+}
+
+.whats-new-modal__content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--border-hover, #d4d1dc);
+}
+
+/* Блок версии */
+.whats-new-modal__version {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-m, 12px);
+}
+
+.whats-new-modal__version-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 4px);
+}
+
+.whats-new-modal__version-header h3 {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h3, 28px);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: var(--line-height-h3, 28px);
+  color: var(--text-primary, #3b3946);
+}
+
+.whats-new-modal__date {
+  color: var(--text-secondary, #93919a);
+}
+
+/* Список изменений */
+.whats-new-modal__changes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-s, 8px);
+}
+
+.whats-new-modal__changes li {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m, 16px);
+  font-weight: var(--font-weight-light, 300);
+  line-height: var(--line-height-m, 22px);
+  color: var(--text-primary, #3b3946);
+  padding-left: var(--spacing-m, 12px);
+  position: relative;
+}
+
+.whats-new-modal__changes li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--icon-default, #93919a);
+  font-weight: var(--font-weight-bold, 700);
+}
+
+/* Разделитель между версиями */
+.whats-new-modal__divider {
+  height: 1px;
+  background-color: var(--border-default, #ebe9ee);
+  margin: var(--spacing-m, 12px) 0;
+}
+
+/* Футер с кнопкой */
+.whats-new-modal__footer {
+  padding: var(--spacing-xl, 24px);
+  padding-top: var(--spacing-m, 12px);
+  border-top: 2px solid var(--border-default, #ebe9ee);
+}
+

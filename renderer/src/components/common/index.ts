@@ -49,3 +49,8 @@ export { ToastProvider } from './ToastProvider';
 export { Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
 
+export { WhatsNewModal } from './WhatsNewModal';
+export type { WhatsNewModalProps } from './WhatsNewModal';
+
+export { LinkifiedText } from './LinkifiedText';
+export type { LinkifiedTextProps } from './LinkifiedText';
