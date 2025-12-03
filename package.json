@@ -1,6 +1,6 @@
 {
   "name": "arc-electron",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "description": "ARC - Artist Reference Collection Desktop Application",
   "main": "main/main.js",
   "author": "Александр Лавренюк",
