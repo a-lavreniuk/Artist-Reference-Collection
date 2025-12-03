@@ -6,6 +6,7 @@
 import { app, BrowserWindow, screen, Tray, Menu, nativeImage } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { existsSync } from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { initializeAutoUpdater } from './auto-updater';
 import { DownloadManager } from './download-manager';
@@ -230,7 +231,7 @@ function createWindow(): void {
   }
   
   // Проверяем существование файла иконки
-  const iconExists = fsSync.existsSync(iconPath);
+  const iconExists = existsSync(iconPath);
   console.log('[MAIN] Иконка существует:', iconExists);
   
   if (!iconExists) {
