@@ -1,5 +1,6 @@
 /**
  * Стили для модального окна "Что нового?"
+ * Использует стиль существующих Dialog окон
  */
 
 .whats-new-modal__backdrop {
@@ -8,16 +9,16 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(10, 10, 10, 0.6);
+  background-color: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-  animation: whats-new-fade-in 0.2s ease-out;
+  z-index: var(--z-overlay);
+  padding: var(--spacing-xl);
+  animation: dialog-overlay-enter var(--transition-base);
 }
 
-@keyframes whats-new-fade-in {
+@keyframes dialog-overlay-enter {
   from {
     opacity: 0;
   }
@@ -27,26 +28,28 @@
 }
 
 .whats-new-modal__container {
-  width: 600px;
-  max-width: 90vw;
+  width: 822px;
   max-height: 80vh;
-  background-color: var(--bg-primary, #ffffff);
-  border-radius: var(--radius-xl, 24px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
-  animation: whats-new-slide-up 0.3s ease-out;
+  gap: var(--spacing-l);
+  padding: var(--spacing-3xl);
+  background-color: var(--color-grayscale-50);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  animation: dialog-enter var(--transition-base);
   overflow: hidden;
 }
 
-@keyframes whats-new-slide-up {
+@keyframes dialog-enter {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1);
   }
 }
 
@@ -55,18 +58,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-xl, 24px);
-  padding-bottom: var(--spacing-m, 12px);
-  border-bottom: 2px solid var(--border-default, #ebe9ee);
+  width: 100%;
 }
 
 .whats-new-modal__header h2 {
-  font-family: var(--font-family-heading);
-  font-size: var(--font-size-h2, 32px);
-  font-weight: var(--font-weight-bold, 700);
-  line-height: var(--line-height-h2, 32px);
-  color: var(--text-primary, #3b3946);
-  letter-spacing: 0.5px;
+  margin: 0;
+  font-family: 'YS Music', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-primary);
 }
 
 .whats-new-modal__close {
@@ -77,15 +79,14 @@
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: var(--radius-m, 12px);
+  border-radius: var(--radius-m);
   cursor: pointer;
-  color: var(--icon-default, #93919a);
-  transition: all 0.15s ease;
+  color: var(--icon-default);
+  transition: background-color var(--transition-base);
 }
 
 .whats-new-modal__close:hover {
-  background-color: var(--bg-tertiary, #ebe9ee);
-  color: var(--icon-hover, #3b3946);
+  background-color: var(--color-grayscale-100);
 }
 
 .whats-new-modal__close:active {
@@ -96,15 +97,15 @@
 .whats-new-modal__content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-xl, 24px);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xl, 24px);
+  gap: var(--spacing-xl);
+  width: 100%;
 }
 
 /* Скроллбар */
 .whats-new-modal__content::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .whats-new-modal__content::-webkit-scrollbar-track {
@@ -112,78 +113,76 @@
 }
 
 .whats-new-modal__content::-webkit-scrollbar-thumb {
-  background-color: var(--border-default, #ebe9ee);
-  border-radius: 4px;
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
 }
 
 .whats-new-modal__content::-webkit-scrollbar-thumb:hover {
-  background-color: var(--border-hover, #d4d1dc);
+  background: var(--color-grayscale-400);
 }
 
 /* Блок версии */
 .whats-new-modal__version {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-m, 12px);
+  gap: var(--spacing-m);
 }
 
 .whats-new-modal__version-header {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs, 4px);
+  gap: var(--spacing-xs);
 }
 
 .whats-new-modal__version-header h3 {
-  font-family: var(--font-family-heading);
-  font-size: var(--font-size-h3, 28px);
-  font-weight: var(--font-weight-bold, 700);
-  line-height: var(--line-height-h3, 28px);
-  color: var(--text-primary, #3b3946);
+  margin: 0;
+  font-family: 'YS Music', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0;
+  color: var(--text-primary);
 }
 
 .whats-new-modal__date {
-  color: var(--text-secondary, #93919a);
+  font-family: 'Geologica', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 12px;
+  color: var(--text-secondary);
 }
 
-/* Список изменений */
+/* Список изменений - без буллитов */
 .whats-new-modal__changes {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-s, 8px);
+  gap: var(--spacing-s);
 }
 
 .whats-new-modal__changes li {
-  font-family: var(--font-family-body);
-  font-size: var(--font-size-m, 16px);
-  font-weight: var(--font-weight-light, 300);
-  line-height: var(--line-height-m, 22px);
-  color: var(--text-primary, #3b3946);
-  padding-left: var(--spacing-m, 12px);
-  position: relative;
-}
-
-.whats-new-modal__changes li::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: var(--icon-default, #93919a);
-  font-weight: var(--font-weight-bold, 700);
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-secondary);
 }
 
 /* Разделитель между версиями */
 .whats-new-modal__divider {
-  height: 1px;
-  background-color: var(--border-default, #ebe9ee);
-  margin: var(--spacing-m, 12px) 0;
+  height: 2px;
+  background-color: var(--border-default);
+  margin: var(--spacing-m) 0;
 }
 
 /* Футер с кнопкой */
 .whats-new-modal__footer {
-  padding: var(--spacing-xl, 24px);
-  padding-top: var(--spacing-m, 12px);
-  border-top: 2px solid var(--border-default, #ebe9ee);
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-top: var(--spacing-l);
 }
 

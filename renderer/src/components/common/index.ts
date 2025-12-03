@@ -52,5 +52,8 @@ export type { TooltipProps } from './Tooltip';
 export { WhatsNewModal } from './WhatsNewModal';
 export type { WhatsNewModalProps } from './WhatsNewModal';
 
+export { FolderPickerModal } from './FolderPickerModal';
+export type { FolderPickerModalProps } from './FolderPickerModal';
+
 export { LinkifiedText } from './LinkifiedText';
 export type { LinkifiedTextProps } from './LinkifiedText';

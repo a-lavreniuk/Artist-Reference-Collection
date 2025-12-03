@@ -38,7 +38,7 @@ export const WhatsNewModal = ({ isOpen, onClose, versions }: WhatsNewModalProps)
       <div className="whats-new-modal__container">
         {/* Заголовок */}
         <div className="whats-new-modal__header">
-          <h2 className="h2">ЧТО НОВОГО?</h2>
+          <h2>Что нового?</h2>
           <button
             className="whats-new-modal__close"
             onClick={onClose}
@@ -75,13 +75,12 @@ export const WhatsNewModal = ({ isOpen, onClose, versions }: WhatsNewModalProps)
           ))}
         </div>
 
-        {/* Кнопка закрытия внизу */}
+        {/* Кнопка закрытия внизу - справа */}
         <div className="whats-new-modal__footer">
           <Button
             variant="primary"
             size="L"
             onClick={onClose}
-            style={{ width: '100%' }}
           >
             Понятно
           </Button>

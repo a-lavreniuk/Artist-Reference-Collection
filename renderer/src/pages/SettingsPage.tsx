@@ -132,19 +132,21 @@ export const SettingsPage = () => {
       return;
     }
 
-    // Если есть карточки, предлагаем перенос
+    // Если есть карточки, предлагаем перенос через Dialog
     if (hasCards && directoryPath) {
-      const confirmed = confirm(
-        '📦 Перенос рабочей папки\n\n' +
-        `Текущая папка: ${directoryPath}\n` +
-        `Карточек: ${stats.totalCards}\n\n` +
-        'Система автоматически:\n' +
-        '✅ Скопирует ВСЕ файлы в новую папку\n' +
-        '✅ Обновит пути в базе данных\n' +
-        '✅ Сохранит работоспособность карточек\n\n' +
-        'Это может занять несколько минут.\n\n' +
-        'Продолжить?'
-      );
+      const confirmed = await dialog.confirm({
+        title: 'Перенос рабочей папки',
+        description: 
+          `Текущая папка: ${directoryPath}\n` +
+          `Карточек: ${stats.totalCards}\n\n` +
+          'Система автоматически:\n' +
+          '✅ Скопирует ВСЕ файлы в новую папку\n' +
+          '✅ Обновит пути в базе данных\n' +
+          '✅ Сохранит работоспособность карточек\n\n' +
+          'Это может занять несколько минут.',
+        confirmText: 'Перенести',
+        cancelText: 'Отмена'
+      });
       
       if (!confirmed) {
         return;
@@ -230,7 +232,15 @@ export const SettingsPage = () => {
       e.stopPropagation(); // Предотвращаем клик на метку
     }
     
-    if (!confirm(`Удалить метку "${tagName}"? Это действие необратимо.`)) {
+    const confirmed = await dialog.confirm({
+      title: 'Удалить метку?',
+      description: `Метка "${tagName}" будет удалена навсегда. Это действие необратимо.`,
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'destructive'
+    });
+    
+    if (!confirmed) {
       return;
     }
 
@@ -1767,19 +1777,17 @@ export const SettingsPage = () => {
           onClick={handleShowWhatsNew}
           style={{
             padding: '6px 12px',
-            backgroundColor: 'var(--bg-tertiary, #ebe9ee)',
+            backgroundColor: 'var(--color-grayscale-200, #f5f4f7)',
             borderRadius: 'var(--radius-s, 8px)',
-            border: '1px solid var(--border-default, #d4d1dc)',
+            border: 'none',
             cursor: 'pointer',
-            transition: 'all 0.15s ease'
+            transition: 'background-color 0.15s ease'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--bg-secondary, #f5f4f7)';
-            e.currentTarget.style.borderColor = 'var(--border-hover, #d4d1dc)';
+            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-300, #d4d1dc)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--bg-tertiary, #ebe9ee)';
-            e.currentTarget.style.borderColor = 'var(--border-default, #d4d1dc)';
+            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #f5f4f7)';
           }}
           title="Нажмите, чтобы посмотреть что нового"
         >
