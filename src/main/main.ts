@@ -222,9 +222,19 @@ function createWindow(): void {
   if (app.isPackaged) {
     // В продакшене: extraResources копируются в process.resourcesPath
     iconPath = path.join(process.resourcesPath, 'icon.ico');
+    console.log('[MAIN] Режим PRODUCTION, путь к иконке:', iconPath);
   } else {
     // В разработке
     iconPath = path.join(__dirname, '../../resources/icon.ico');
+    console.log('[MAIN] Режим DEVELOPMENT, путь к иконке:', iconPath);
+  }
+  
+  // Проверяем существование файла иконки
+  const iconExists = fsSync.existsSync(iconPath);
+  console.log('[MAIN] Иконка существует:', iconExists);
+  
+  if (!iconExists) {
+    console.error('[MAIN] ❌ ИКОНКА НЕ НАЙДЕНА:', iconPath);
   }
 
   mainWindow = new BrowserWindow({
@@ -245,7 +255,7 @@ function createWindow(): void {
     backgroundColor: '#0A0A0A', // Фон из палитры ARC (grayscale-950)
     title: 'ARC - Artist Reference Collection',
     // Явно устанавливаем иконку для панели задач и окна
-    icon: iconPath
+    icon: iconExists ? iconPath : undefined
   });
 
   // Загружаем React приложение
@@ -265,6 +275,17 @@ function createWindow(): void {
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize(); // Разворачиваем на весь экран
     mainWindow?.show();
+    
+    // Явно устанавливаем иконку для Windows (для панели задач)
+    if (process.platform === 'win32' && iconExists && mainWindow) {
+      const icon = nativeImage.createFromPath(iconPath);
+      if (!icon.isEmpty()) {
+        mainWindow.setIcon(icon);
+        console.log('[MAIN] ✅ Иконка установлена для окна');
+      } else {
+        console.error('[MAIN] ❌ Не удалось загрузить иконку из файла');
+      }
+    }
     
     // Инициализируем автообновления после показа окна
     if (mainWindow) {
