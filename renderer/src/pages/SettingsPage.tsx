@@ -35,6 +35,7 @@ export const SettingsPage = () => {
   const [underusedTags, setUnderusedTags] = useState<TagWithCategory[]>([]);
   // const [message, setMessage] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState<string>('');
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
@@ -527,6 +528,40 @@ export const SettingsPage = () => {
       setRestoreMessage('❌ Ошибка восстановления: ' + (error as Error).message);
     } finally {
       setIsRestoring(false);
+    }
+  };
+
+  /**
+   * Проверить наличие обновлений
+   */
+  const handleCheckForUpdates = async () => {
+    if (!window.electronAPI?.checkForUpdates) {
+      alert.showAlert({
+        title: 'Ошибка',
+        message: 'Функция проверки обновлений недоступна',
+        type: 'error'
+      });
+      return;
+    }
+
+    try {
+      setIsCheckingUpdates(true);
+      await window.electronAPI.checkForUpdates();
+      
+      alert.showAlert({
+        title: 'Проверка обновлений',
+        message: 'Проверка запущена. Если обновление доступно, появится уведомление.',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('[Settings] Ошибка проверки обновлений:', error);
+      alert.showAlert({
+        title: 'Ошибка',
+        message: 'Не удалось проверить обновления',
+        type: 'error'
+      });
+    } finally {
+      setIsCheckingUpdates(false);
     }
   };
 
@@ -1140,7 +1175,7 @@ export const SettingsPage = () => {
               </div>
             )}
 
-            {/* Метка версии в правом нижнем углу */}
+            {/* Версия и обновления в правом нижнем углу */}
             <div style={{
               position: 'fixed',
               bottom: 'var(--spacing-l, 16px)',
@@ -1149,6 +1184,22 @@ export const SettingsPage = () => {
               alignItems: 'center',
               gap: 'var(--spacing-s, 8px)'
             }}>
+              {/* Кнопка проверки обновлений */}
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handleCheckForUpdates}
+                disabled={isCheckingUpdates}
+                style={{
+                  padding: '6px 12px',
+                  height: 'auto',
+                  minHeight: 'auto'
+                }}
+              >
+                <Icon name="download" size={16} variant="border" />
+                {isCheckingUpdates ? 'Проверка...' : 'Проверить обновления'}
+              </Button>
+              
               {/* Метка версии */}
               <div style={{
                 padding: '6px 12px',

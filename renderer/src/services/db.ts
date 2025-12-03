@@ -17,6 +17,7 @@ import type {
   ThumbnailCache,
   AppStatistics
 } from '../types';
+import { pathJoin } from '../utils/path';
 
 /**
  * Класс базы данных ARC
@@ -287,8 +288,8 @@ export async function deleteCard(id: string): Promise<void> {
             // Путь к превью: рабочая_папка/_cache/thumbs/имя_thumb.jpg
             const workingDir = await window.electronAPI.getSetting('workingDirectory');
             if (workingDir) {
-              // Используем правильные разделители для кроссплатформенности
-              const thumbPath = workingDir.replace(/[\/\\]$/, '') + '\\_cache\\thumbs\\' + thumbName;
+              // Используем кроссплатформенный pathJoin
+              const thumbPath = pathJoin(workingDir, '_cache', 'thumbs', thumbName);
               await window.electronAPI.deleteFile(thumbPath);
               console.log('[DB] Удалено превью:', thumbPath);
             }
@@ -884,8 +885,10 @@ export async function importDatabase(jsonData: string, newWorkingDir?: string): 
       // Ищем структуру год/месяц/день
       const match = card.filePath.match(/(\d{4}[\\/]\d{2}[\\/]\d{2}[\\/].+)$/);
       if (match) {
-        // Формируем новый путь
-        card.filePath = newWorkingDir + '\\' + match[1].replace(/\//g, '\\');
+        // Формируем новый путь кроссплатформенно
+        const relativePath = match[1].replace(/[\\/]/g, '/'); // Нормализуем к Unix-стилю
+        const pathParts = relativePath.split('/');
+        card.filePath = pathJoin(newWorkingDir, ...pathParts);
       }
       
       // Обновляем путь к превью
@@ -894,9 +897,10 @@ export async function importDatabase(jsonData: string, newWorkingDir?: string): 
         // Ищем структуру _cache/thumbs/имя_thumb.jpg
         const thumbMatch = card.thumbnailUrl.match(/(_cache[\\/]thumbs[\\/].+)$/);
         if (thumbMatch) {
-          // Формируем новый путь с правильными разделителями
-          const thumbRelativePath = thumbMatch[1].replace(/[\\/]/g, '\\');
-          card.thumbnailUrl = `${newWorkingDir}\\${thumbRelativePath}`;
+          // Формируем новый путь кроссплатформенно
+          const thumbRelativePath = thumbMatch[1].replace(/[\\/]/g, '/'); // Нормализуем к Unix-стилю
+          const thumbParts = thumbRelativePath.split('/');
+          card.thumbnailUrl = pathJoin(newWorkingDir, ...thumbParts);
         }
       }
     }

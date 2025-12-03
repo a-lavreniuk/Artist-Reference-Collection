@@ -8,18 +8,60 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { registerIPCHandlers } from './ipc-handlers';
 import { initializeAutoUpdater } from './auto-updater';
-import { registerShortcuts, unregisterShortcuts } from './shortcuts';
 import { DownloadManager } from './download-manager';
 
-// Настройка логирования в файл
+// Настройка логирования в файл с ротацией
 const logFile = path.join(app.getPath('userData'), 'main-process.log');
-const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB
+let logStream = fs.createWriteStream(logFile, { flags: 'a' });
+
+/**
+ * Ротация лог-файла если он превышает максимальный размер
+ */
+function rotateLogIfNeeded(): void {
+  try {
+    const stats = fs.statSync(logFile);
+    if (stats.size > MAX_LOG_SIZE) {
+      const timestamp = new Date().toISOString().split('T')[0];
+      const archivePath = path.join(app.getPath('userData'), `main-process-${timestamp}.log`);
+      
+      // Закрываем текущий stream
+      logStream.end();
+      
+      // Переименовываем текущий лог
+      fs.renameSync(logFile, archivePath);
+      
+      // Удаляем старые логи (оставляем 5 последних)
+      const logFiles = fs.readdirSync(app.getPath('userData'))
+        .filter(f => f.startsWith('main-process-') && f.endsWith('.log'))
+        .sort()
+        .reverse();
+      
+      if (logFiles.length > 5) {
+        logFiles.slice(5).forEach(f => {
+          try {
+            fs.unlinkSync(path.join(app.getPath('userData'), f));
+          } catch (err) {
+            // Игнорируем ошибки удаления
+          }
+        });
+      }
+      
+      // Создаем новый stream
+      logStream = fs.createWriteStream(logFile, { flags: 'a' });
+      console.log('[MAIN] Лог-файл ротирован');
+    }
+  } catch (error) {
+    // Игнорируем ошибки ротации
+  }
+}
 
 // Перехватываем console.log для записи в файл
 const originalLog = console.log;
 const originalError = console.error;
 
 console.log = (...args: any[]) => {
+  rotateLogIfNeeded();
   const timestamp = new Date().toISOString();
   const message = `[${timestamp}] ${args.join(' ')}\n`;
   logStream.write(message);
@@ -27,6 +69,7 @@ console.log = (...args: any[]) => {
 };
 
 console.error = (...args: any[]) => {
+  rotateLogIfNeeded();
   const timestamp = new Date().toISOString();
   const message = `[${timestamp}] ERROR: ${args.join(' ')}\n`;
   logStream.write(message);
@@ -200,8 +243,8 @@ function createWindow(): void {
     // В режиме разработки загружаем с dev-сервера Vite
     mainWindow.loadURL('http://localhost:5173');
     
-    // DevTools можно открыть вручную через Ctrl+Shift+I если нужно
-    // mainWindow.webContents.openDevTools();
+    // Открываем DevTools в режиме разработки
+    mainWindow.webContents.openDevTools();
   } else {
     // В продакшене загружаем собранное приложение
     // После сборки структура: main/main.js и renderer/dist/index.html находятся на одном уровне
@@ -400,6 +443,70 @@ function createTray(): void {
 }
 
 /**
+ * Создание минималистичного Application Menu
+ * Только для горячих клавиш, визуально не навязчивое
+ */
+function createApplicationMenu(): void {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'ARC',
+      submenu: [
+        {
+          label: 'Добавить карточку',
+          accelerator: 'CommandOrControl+N',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('navigate-to', '/add');
+            }
+          }
+        },
+        {
+          label: 'Поиск',
+          accelerator: 'CommandOrControl+F',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('hotkey:search');
+            }
+          }
+        },
+        {
+          label: 'Настройки',
+          accelerator: 'CommandOrControl+,',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('navigate-to', '/settings');
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Консоль разработчика',
+          accelerator: 'CommandOrControl+Shift+I',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.toggleDevTools();
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Выход',
+          accelerator: 'Alt+F4',
+          click: () => {
+            isQuitting = true;
+            app.quit();
+          }
+        }
+      ]
+    }
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+  console.log('[MAIN] Application Menu создано (минималистичное)');
+}
+
+/**
  * Создание Jump List для Windows (контекстное меню на панели задач)
  */
 function createJumpList(): void {
@@ -485,6 +592,9 @@ app.whenReady().then(() => {
   // Очистка старых временных файлов
   DownloadManager.getInstance().cleanupOldFiles();
   
+  // Создаём Application Menu с горячими клавишами
+  createApplicationMenu();
+  
   // Создаём системный трей
   createTray();
   
@@ -492,11 +602,6 @@ app.whenReady().then(() => {
   createJumpList();
   
   createWindow();
-  
-  // Регистрируем горячие клавиши после создания окна
-  if (mainWindow) {
-    registerShortcuts(mainWindow);
-  }
 
   // Для macOS - создаем окно если оно было закрыто и приложение активировано
   app.on('activate', () => {
@@ -517,9 +622,6 @@ app.on('open-url', (event, url) => {
  * Если окно свернуто в трей, не выходим
  */
 app.on('window-all-closed', () => {
-  // Отменяем регистрацию горячих клавиш
-  unregisterShortcuts();
-  
   // Не выходим если окно свернуто в трей
   if (!isQuitting && process.platform === 'win32') {
     console.log('[MAIN] Приложение свернуто в трей, не выходим');

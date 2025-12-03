@@ -28,6 +28,35 @@ function ExternalImportListener() {
   const { showToast } = useToast();
   const { directoryPath } = useFileSystem();
 
+  // Подписка на событие загрузки файла из браузера
+  useEffect(() => {
+    if (!window.electronAPI?.onExternalFileDownloaded) return;
+
+    console.log('[App] Подписка на события внешней загрузки');
+
+    const unsubscribe = window.electronAPI.onExternalFileDownloaded((data) => {
+      console.log('[App] Получено событие загрузки файла:', data);
+      
+      showToast({
+        title: 'Файл загружен из браузера',
+        message: `Изображение сохранено из ${data.sourceUrl || 'браузера'}. Хотите добавить его в коллекцию?`,
+        type: 'success',
+        duration: 15000,
+        onConfirm: () => {
+          // Сохраняем путь к файлу для импорта
+          sessionStorage.setItem('importFiles', JSON.stringify([data.filePath]));
+          window.location.hash = '/add';
+        },
+        confirmText: 'Добавить',
+        cancelText: 'Позже'
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [showToast]);
+
   // Эффект для проверки файлов при фокусе окна
   useEffect(() => {
     const checkImportFiles = async () => {
@@ -43,7 +72,7 @@ function ExternalImportListener() {
             title: 'Новые изображения',
             message: `Найдено ${files.length} новых изображений во временной папке. Хотите добавить их?`,
             type: 'info',
-            duration: 10000, // Показываем подольше
+            duration: 10000,
             onConfirm: () => {
               // Сохраняем файлы в sessionStorage для передачи
               sessionStorage.setItem('importFiles', JSON.stringify(files));
@@ -64,7 +93,6 @@ function ExternalImportListener() {
     };
 
     // Проверяем при монтировании (старте приложения)
-    // Небольшая задержка, чтобы Router успел инициализироваться
     const timeoutId = setTimeout(() => {
       checkImportFiles();
     }, 100);

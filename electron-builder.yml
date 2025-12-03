@@ -78,7 +78,7 @@ nsis:
 publish:
   provider: github
   owner: rocontd
-  repo: arc
+  repo: Artist-Reference-Collection
   releaseType: release
   # GH_TOKEN должен быть установлен в переменных окружения или GitHub Secrets
   
