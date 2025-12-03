@@ -88,7 +88,7 @@ export const DuplicatesPage = () => {
     toast.showToast({
       title: 'Очистить пропущенные',
       message: 'Очистить список пропущенных пар? Они снова будут показываться при поиске дублей.',
-      type: 'warning',
+      type: 'info',
       onConfirm: () => {
         clearSkippedPairs();
         toast.success('Список пропущенных пар очищен');
