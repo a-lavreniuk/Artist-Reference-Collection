@@ -500,6 +500,20 @@ export function registerIPCHandlers(): void {
     try {
       console.log('[IPC] Получение URL для файла:', filePath);
       
+      // Валидация пути - проверяем что файл внутри рабочей директории
+      const workingDir = await getSetting('workingDirectory');
+      if (workingDir) {
+        const normalizedPath = path.normalize(filePath);
+        const normalizedWorkingDir = path.normalize(workingDir);
+        
+        if (!normalizedPath.startsWith(normalizedWorkingDir)) {
+          console.error('[IPC] Доступ запрещен: файл вне рабочей директории');
+          console.error('[IPC] Файл:', normalizedPath);
+          console.error('[IPC] Рабочая папка:', normalizedWorkingDir);
+          throw new Error('Access denied: file outside working directory');
+        }
+      }
+      
       // Проверяем размер файла
       const stats = await fs.stat(filePath);
       const fileSizeInMB = stats.size / (1024 * 1024);
@@ -966,20 +980,20 @@ export function registerIPCHandlers(): void {
 
   /**
    * Проверить наличие обновлений
-   * TODO: Интеграция с electron-updater
    */
   ipcMain.handle('check-for-updates', async () => {
     console.log('[IPC] Проверка обновлений...');
-    // TODO: Реализовать проверку обновлений
+    const { checkForUpdates } = await import('./auto-updater');
+    await checkForUpdates();
   });
 
   /**
    * Установить загруженное обновление
-   * TODO: Интеграция с electron-updater
    */
   ipcMain.handle('install-update', async () => {
     console.log('[IPC] Установка обновления...');
-    // TODO: Реализовать установку обновления
+    const { installUpdate } = await import('./auto-updater');
+    installUpdate();
   });
 
   /**
@@ -1436,6 +1450,20 @@ async function fileExists(filePath: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Вспомогательная функция получения настройки
+ */
+async function getSetting(key: string): Promise<any> {
+  try {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    const data = await fs.readFile(settingsPath, 'utf-8');
+    const settings = JSON.parse(data);
+    return settings[key] !== undefined ? settings[key] : null;
+  } catch {
+    return null;
   }
 }
 

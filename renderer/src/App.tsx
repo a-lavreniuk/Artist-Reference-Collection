@@ -15,10 +15,12 @@ import {
   SettingsPage,
   AddPage
 } from './pages';
-import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider } from './components/common';
+import { OnboardingScreen, UpdateNotification, ErrorBoundary, DialogProvider, AlertProvider, ToastProvider, WhatsNewModal } from './components/common';
 import { useFileSystem, useElectronUpdates, useToast } from './hooks';
 import { SearchProvider } from './contexts';
 import { validateDatabase, fixIssues } from './services/integrityCheck';
+import { getChangesSince, getLatestVersion } from './data/changelog';
+import type { VersionChange } from './data/changelog';
 
 /**
  * Компонент для обработки внешнего импорта (из браузера)
@@ -27,6 +29,35 @@ import { validateDatabase, fixIssues } from './services/integrityCheck';
 function ExternalImportListener() {
   const { showToast } = useToast();
   const { directoryPath } = useFileSystem();
+
+  // Подписка на событие загрузки файла из браузера
+  useEffect(() => {
+    if (!window.electronAPI?.onExternalFileDownloaded) return;
+
+    console.log('[App] Подписка на события внешней загрузки');
+
+    const unsubscribe = window.electronAPI.onExternalFileDownloaded((data) => {
+      console.log('[App] Получено событие загрузки файла:', data);
+      
+      showToast({
+        title: 'Файл загружен из браузера',
+        message: `Изображение сохранено из ${data.sourceUrl || 'браузера'}. Хотите добавить его в коллекцию?`,
+        type: 'success',
+        duration: 15000,
+        onConfirm: () => {
+          // Сохраняем путь к файлу для импорта
+          sessionStorage.setItem('importFiles', JSON.stringify([data.filePath]));
+          window.location.hash = '/add';
+        },
+        confirmText: 'Добавить',
+        cancelText: 'Позже'
+      });
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [showToast]);
 
   // Эффект для проверки файлов при фокусе окна
   useEffect(() => {
@@ -43,7 +74,7 @@ function ExternalImportListener() {
             title: 'Новые изображения',
             message: `Найдено ${files.length} новых изображений во временной папке. Хотите добавить их?`,
             type: 'info',
-            duration: 10000, // Показываем подольше
+            duration: 10000,
             onConfirm: () => {
               // Сохраняем файлы в sessionStorage для передачи
               sessionStorage.setItem('importFiles', JSON.stringify(files));
@@ -64,7 +95,6 @@ function ExternalImportListener() {
     };
 
     // Проверяем при монтировании (старте приложения)
-    // Небольшая задержка, чтобы Router успел инициализироваться
     const timeoutId = setTimeout(() => {
       checkImportFiles();
     }, 100);
@@ -116,8 +146,10 @@ function App() {
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUpdateNotification, setShowUpdateNotification] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [whatsNewVersions, setWhatsNewVersions] = useState<VersionChange[]>([]);
 
-  // Проверка целостности при первом запуске
+  // Проверка целостности и показ "Что нового?" при первом запуске
   useEffect(() => {
     const runIntegrityCheck = async () => {
       if (isLoading || !hasPermission || !directoryHandle) {
@@ -151,6 +183,26 @@ function App() {
           
           // Отмечаем что проверка выполнена
           await window.electronAPI.saveSetting('hasRunIntegrityCheck', true);
+        }
+
+        // Проверяем нужно ли показать "Что нового?"
+        const currentVersion = await window.electronAPI.getAppVersion();
+        const lastSeenVersion = await window.electronAPI.getSetting('lastSeenVersion');
+        
+        console.log('[App] Текущая версия:', currentVersion);
+        console.log('[App] Последняя просмотренная версия:', lastSeenVersion);
+        
+        if (!lastSeenVersion || lastSeenVersion !== currentVersion) {
+          // Показываем изменения с последней просмотренной версии
+          const changes = lastSeenVersion 
+            ? getChangesSince(lastSeenVersion)
+            : [getLatestVersion()];
+          
+          if (changes.length > 0) {
+            console.log('[App] Показываем "Что нового?" для версий:', changes.map(v => v.version));
+            setWhatsNewVersions(changes);
+            setShowWhatsNew(true);
+          }
         }
       } catch (error) {
         console.error('[App] Ошибка проверки целостности:', error);
@@ -194,6 +246,20 @@ function App() {
   // Обработчик отмены обновления
   const handleDismissUpdate = () => {
     setShowUpdateNotification(false);
+  };
+
+  // Обработчик закрытия "Что нового?"
+  const handleWhatsNewClose = async () => {
+    setShowWhatsNew(false);
+    
+    // Сохраняем текущую версию как просмотренную
+    try {
+      const currentVersion = await window.electronAPI.getAppVersion();
+      await window.electronAPI.saveSetting('lastSeenVersion', currentVersion);
+      console.log('[App] Версия отмечена как просмотренная:', currentVersion);
+    } catch (error) {
+      console.error('[App] Ошибка сохранения версии:', error);
+    }
   };
 
   // Показываем загрузку пока проверяем рабочую папку
@@ -269,6 +335,13 @@ function App() {
             show={showUpdateNotification}
             onUpdate={handleUpdate}
             onDismiss={handleDismissUpdate}
+          />
+
+          {/* Модалка "Что нового?" */}
+          <WhatsNewModal
+            isOpen={showWhatsNew}
+            onClose={handleWhatsNewClose}
+            versions={whatsNewVersions}
           />
           </ToastProvider>
         </AlertProvider>

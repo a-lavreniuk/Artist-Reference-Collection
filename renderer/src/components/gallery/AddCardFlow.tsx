@@ -181,8 +181,11 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
         
         for (const filePath of initialFiles) {
           try {
-            // Загружаем файл как Blob
-            const response = await fetch(`file://${filePath}`);
+            // Получаем Data URL через Electron API (обходим ограничение file://)
+            const dataUrl = await window.electronAPI.getFileURL(filePath);
+            
+            // Конвертируем Data URL в Blob
+            const response = await fetch(dataUrl);
             const blob = await response.blob();
             
             // Создаем File объект

@@ -1,0 +1,188 @@
+/**
+ * Стили для модального окна "Что нового?"
+ * Использует стиль существующих Dialog окон
+ */
+
+.whats-new-modal__backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-overlay);
+  padding: var(--spacing-xl);
+  animation: dialog-overlay-enter var(--transition-base);
+}
+
+@keyframes dialog-overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.whats-new-modal__container {
+  width: 822px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  padding: var(--spacing-3xl);
+  background-color: var(--color-grayscale-50);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  animation: dialog-enter var(--transition-base);
+  overflow: hidden;
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Заголовок */
+.whats-new-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.whats-new-modal__header h2 {
+  margin: 0;
+  font-family: 'YS Music', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+.whats-new-modal__close {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  color: var(--icon-default);
+  transition: background-color var(--transition-base);
+}
+
+.whats-new-modal__close:hover {
+  background-color: var(--color-grayscale-100);
+}
+
+.whats-new-modal__close:active {
+  transform: scale(0.95);
+}
+
+/* Контент */
+.whats-new-modal__content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  width: 100%;
+}
+
+/* Скроллбар */
+.whats-new-modal__content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.whats-new-modal__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.whats-new-modal__content::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
+}
+
+.whats-new-modal__content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grayscale-400);
+}
+
+/* Блок версии */
+.whats-new-modal__version {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-m);
+}
+
+.whats-new-modal__version-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.whats-new-modal__version-header h3 {
+  margin: 0;
+  font-family: 'YS Music', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+.whats-new-modal__date {
+  font-family: 'Geologica', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 12px;
+  color: var(--text-secondary);
+}
+
+/* Список изменений - без буллитов */
+.whats-new-modal__changes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-s);
+}
+
+.whats-new-modal__changes li {
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+/* Разделитель между версиями */
+.whats-new-modal__divider {
+  height: 2px;
+  background-color: var(--border-default);
+  margin: var(--spacing-m) 0;
+}
+
+/* Футер с кнопкой */
+.whats-new-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-top: var(--spacing-l);
+}
+

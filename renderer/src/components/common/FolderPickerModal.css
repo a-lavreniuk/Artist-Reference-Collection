@@ -1,0 +1,117 @@
+/**
+ * Стили для модального окна выбора папки
+ * Использует стиль существующих Dialog окон
+ */
+
+.folder-picker-modal__backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-overlay);
+  padding: var(--spacing-xl);
+  animation: dialog-overlay-enter var(--transition-base);
+}
+
+.folder-picker-modal__container {
+  width: 822px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  padding: var(--spacing-3xl);
+  background-color: var(--color-grayscale-50);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  animation: dialog-enter var(--transition-base);
+}
+
+/* Заголовок */
+.folder-picker-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.folder-picker-modal__header h2 {
+  margin: 0;
+  font-family: 'YS Music', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+.folder-picker-modal__close {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  color: var(--icon-default);
+  transition: background-color var(--transition-base);
+}
+
+.folder-picker-modal__close:hover {
+  background-color: var(--color-grayscale-100);
+}
+
+.folder-picker-modal__close:active {
+  transform: scale(0.95);
+}
+
+/* Описание */
+.folder-picker-modal__description {
+  margin: 0;
+  width: 100%;
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+/* Выбор папки */
+.folder-picker-modal__picker {
+  display: flex;
+  gap: var(--spacing-s);
+  width: 100%;
+  align-items: center;
+}
+
+/* Текущая папка */
+.folder-picker-modal__current {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-s) var(--spacing-m);
+  background-color: var(--color-grayscale-100);
+  border-radius: var(--radius-m);
+}
+
+.folder-picker-modal__current span {
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+/* Действия */
+.folder-picker-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-s);
+  width: 100%;
+  margin-top: var(--spacing-l);
+}
+

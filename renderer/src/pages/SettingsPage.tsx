@@ -15,6 +15,9 @@ import { useDialog } from '../hooks/useDialog';
 import { getStatistics, db, exportDatabase, importDatabase, getTopTags, getTopCollections, getUnderusedTags, deleteTag, recalculateTagCounts } from '../services/db';
 import { logCreateBackup, logMoveStorage } from '../services/history';
 import type { AppStatistics, Tag, Collection } from '../types';
+import { WhatsNewModal } from '../components/common';
+import { getLatestVersion } from '../data/changelog';
+import type { VersionChange } from '../data/changelog';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
 
@@ -53,6 +56,8 @@ export const SettingsPage = () => {
   const [isMovingDirectory, setIsMovingDirectory] = useState(false);
   const [moveProgress, setMoveProgress] = useState(0);
   const [moveMessage, setMoveMessage] = useState<string | null>(null);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [whatsNewVersions, setWhatsNewVersions] = useState<VersionChange[]>([]);
 
   useEffect(() => {
     // Загружаем статистику и размеры при первом открытии или смене папки
@@ -127,19 +132,21 @@ export const SettingsPage = () => {
       return;
     }
 
-    // Если есть карточки, предлагаем перенос
+    // Если есть карточки, предлагаем перенос через Dialog
     if (hasCards && directoryPath) {
-      const confirmed = confirm(
-        '📦 Перенос рабочей папки\n\n' +
-        `Текущая папка: ${directoryPath}\n` +
-        `Карточек: ${stats.totalCards}\n\n` +
-        'Система автоматически:\n' +
-        '✅ Скопирует ВСЕ файлы в новую папку\n' +
-        '✅ Обновит пути в базе данных\n' +
-        '✅ Сохранит работоспособность карточек\n\n' +
-        'Это может занять несколько минут.\n\n' +
-        'Продолжить?'
-      );
+      const confirmed = await dialog.confirm({
+        title: 'Перенос рабочей папки',
+        description: 
+          `Текущая папка: ${directoryPath}\n` +
+          `Карточек: ${stats.totalCards}\n\n` +
+          'Система автоматически:\n' +
+          '✅ Скопирует ВСЕ файлы в новую папку\n' +
+          '✅ Обновит пути в базе данных\n' +
+          '✅ Сохранит работоспособность карточек\n\n' +
+          'Это может занять несколько минут.',
+        confirmText: 'Перенести',
+        cancelText: 'Отмена'
+      });
       
       if (!confirmed) {
         return;
@@ -225,7 +232,15 @@ export const SettingsPage = () => {
       e.stopPropagation(); // Предотвращаем клик на метку
     }
     
-    if (!confirm(`Удалить метку "${tagName}"? Это действие необратимо.`)) {
+    const confirmed = await dialog.confirm({
+      title: 'Удалить метку?',
+      description: `Метка "${tagName}" будет удалена навсегда. Это действие необратимо.`,
+      confirmText: 'Удалить',
+      cancelText: 'Отмена',
+      variant: 'destructive'
+    });
+    
+    if (!confirmed) {
       return;
     }
 
@@ -528,6 +543,22 @@ export const SettingsPage = () => {
     } finally {
       setIsRestoring(false);
     }
+  };
+
+  /**
+   * Показать окно "Что нового?"
+   */
+  const handleShowWhatsNew = () => {
+    const latestVersion = getLatestVersion();
+    setWhatsNewVersions([latestVersion]);
+    setShowWhatsNew(true);
+  };
+
+  /**
+   * Закрыть окно "Что нового?"
+   */
+  const handleWhatsNewClose = () => {
+    setShowWhatsNew(false);
   };
 
   // Формируем actions для header - кнопки переключения табов
@@ -1140,35 +1171,6 @@ export const SettingsPage = () => {
               </div>
             )}
 
-            {/* Метка версии в правом нижнем углу */}
-            <div style={{
-              position: 'fixed',
-              bottom: 'var(--spacing-l, 16px)',
-              right: 'var(--spacing-l, 16px)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--spacing-s, 8px)'
-            }}>
-              {/* Метка версии */}
-              <div style={{
-                padding: '6px 12px',
-                backgroundColor: 'var(--bg-tertiary, #ebe9ee)',
-                borderRadius: 'var(--radius-s, 8px)',
-                border: '1px solid var(--border-default, #d4d1dc)',
-                pointerEvents: 'none'
-              }}>
-                <p className="text-s" style={{
-                  fontFamily: 'var(--font-family-body)',
-                  fontSize: 'var(--font-size-s, 14px)',
-                  lineHeight: 'var(--line-height-s, 18px)',
-                  fontWeight: 'var(--font-weight-regular, 400)',
-                  color: 'var(--text-secondary, #93919a)',
-                  letterSpacing: '0px'
-                }}>
-                  v{appVersion}
-                </p>
-              </div>
-            </div>
           </div>
         )}
 
@@ -1764,6 +1766,50 @@ export const SettingsPage = () => {
       {activeTab === 'history' && (
         <HistorySection />
       )}
+
+      {/* Badge с версией - показывается на всех табах, кликабельный */}
+      <div style={{
+        position: 'fixed',
+        bottom: 'var(--spacing-l, 16px)',
+        right: 'var(--spacing-l, 16px)'
+      }}>
+        <button
+          onClick={handleShowWhatsNew}
+          style={{
+            padding: '6px 12px',
+            backgroundColor: 'var(--color-grayscale-200, #f5f4f7)',
+            borderRadius: 'var(--radius-s, 8px)',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'background-color 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-300, #d4d1dc)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #f5f4f7)';
+          }}
+          title="Нажмите, чтобы посмотреть что нового"
+        >
+          <p className="text-s" style={{
+            fontFamily: 'var(--font-family-body)',
+            fontSize: 'var(--font-size-s, 14px)',
+            lineHeight: 'var(--line-height-s, 18px)',
+            fontWeight: 'var(--font-weight-regular, 400)',
+            color: 'var(--text-secondary, #93919a)',
+            letterSpacing: '0px'
+          }}>
+            v{appVersion}
+          </p>
+        </button>
+      </div>
+
+      {/* Модалка "Что нового?" */}
+      <WhatsNewModal
+        isOpen={showWhatsNew}
+        onClose={handleWhatsNewClose}
+        versions={whatsNewVersions}
+      />
     </Layout>
   );
 };
