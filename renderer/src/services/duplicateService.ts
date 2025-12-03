@@ -111,8 +111,73 @@ function calculateSimilarity(hash1: string, hash2: string): number {
 }
 
 /**
+ * Получить список пропущенных пар из localStorage
+ */
+function getSkippedPairs(): Set<string> {
+  try {
+    const stored = localStorage.getItem('skippedDuplicatePairs');
+    if (stored) {
+      const pairs = JSON.parse(stored) as string[];
+      return new Set(pairs);
+    }
+  } catch (error) {
+    console.error('[DuplicateService] Ошибка загрузки пропущенных пар:', error);
+  }
+  return new Set<string>();
+}
+
+/**
+ * Создать ключ пары карточек (сортированный для консистентности)
+ */
+function createPairKey(id1: string, id2: string): string {
+  // Сортируем ID чтобы ключ был одинаковый независимо от порядка
+  return id1 < id2 ? `${id1}-${id2}` : `${id2}-${id1}`;
+}
+
+/**
+ * Сохранить пропущенную пару в localStorage
+ */
+export function skipDuplicatePair(id1: string, id2: string): void {
+  const skippedPairs = getSkippedPairs();
+  const pairKey = createPairKey(id1, id2);
+  skippedPairs.add(pairKey);
+  
+  try {
+    localStorage.setItem('skippedDuplicatePairs', JSON.stringify(Array.from(skippedPairs)));
+    console.log('[DuplicateService] Пара пропущена:', pairKey);
+  } catch (error) {
+    console.error('[DuplicateService] Ошибка сохранения пропущенной пары:', error);
+  }
+}
+
+/**
+ * Очистить список пропущенных пар
+ */
+export function clearSkippedPairs(): void {
+  try {
+    localStorage.removeItem('skippedDuplicatePairs');
+    console.log('[DuplicateService] Список пропущенных пар очищен');
+  } catch (error) {
+    console.error('[DuplicateService] Ошибка очистки пропущенных пар:', error);
+  }
+}
+
+/**
  * Находит дубликаты среди карточек
  * Порог схожести: 90% (можно настроить)
+ * 
+ * ПРИНЦИП ОПРЕДЕЛЕНИЯ ПОХОЖЕСТИ:
+ * 1. Изображение уменьшается до 8×8 пикселей (64 пикселя)
+ * 2. Вычисляется средняя яркость всех пикселей
+ * 3. Для каждого пикселя создается бит: 1 если ярче среднего, 0 если темнее
+ * 4. Получается 64-битный хэш (perceptual hash)
+ * 5. Хэши двух изображений сравниваются побитово (расстояние Хэмминга)
+ * 6. Схожесть = 100% - процент различающихся битов
+ * 
+ * Этот метод позволяет находить визуально похожие изображения, даже если они:
+ * - Разного разрешения
+ * - Немного отличаются по яркости/контрасту
+ * - Обрезаны или повернуты незначительно
  */
 export async function findDuplicates(
   cards: Card[],
@@ -124,6 +189,7 @@ export async function findDuplicates(
 
   const duplicates: DuplicatePair[] = [];
   const processedPairs = new Set<string>();
+  const skippedPairs = getSkippedPairs();
 
   // Вычисляем хэши для всех изображений
   console.log('[DuplicateService] Вычисление хэшей для', cards.length, 'изображений...');
@@ -139,6 +205,7 @@ export async function findDuplicates(
   }
 
   console.log('[DuplicateService] Хэши вычислены, поиск дублей...');
+  console.log('[DuplicateService] Пропущенных пар:', skippedPairs.size);
 
   // Сравниваем все пары изображений
   for (let i = 0; i < cards.length; i++) {
@@ -146,9 +213,11 @@ export async function findDuplicates(
       const card1 = cards[i];
       const card2 = cards[j];
 
-      // Пропускаем если уже обработали эту пару
-      const pairKey = `${card1.id}-${card2.id}`;
-      if (processedPairs.has(pairKey)) {
+      // Создаем ключ пары
+      const pairKey = createPairKey(card1.id, card2.id);
+
+      // Пропускаем если уже обработали эту пару или она была пропущена пользователем
+      if (processedPairs.has(pairKey) || skippedPairs.has(pairKey)) {
         continue;
       }
 

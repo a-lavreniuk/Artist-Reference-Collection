@@ -7,8 +7,9 @@ import { useState } from 'react';
 import { Layout } from '../components/layout';
 import { Button, Icon } from '../components/common';
 import { useSearch } from '../contexts';
+import { useToast } from '../hooks/useToast';
 import { getAllCards } from '../services/db';
-import { findDuplicates } from '../services/duplicateService';
+import { findDuplicates, skipDuplicatePair, clearSkippedPairs } from '../services/duplicateService';
 import type { Card } from '../types';
 import { DuplicateComparison } from '../components/duplicates/DuplicateComparison';
 import './DuplicatesPage.css';
@@ -21,6 +22,7 @@ interface DuplicatePair {
 
 export const DuplicatesPage = () => {
   const { searchProps } = useSearch();
+  const toast = useToast();
   
   const [isSearching, setIsSearching] = useState(false);
   const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
@@ -64,6 +66,12 @@ export const DuplicatesPage = () => {
    * Пропустить текущую пару дублей
    */
   const handleSkip = () => {
+    const currentDup = duplicates[currentIndex];
+    if (currentDup) {
+      // Сохраняем пропущенную пару в localStorage
+      skipDuplicatePair(currentDup.card1.id, currentDup.card2.id);
+    }
+
     if (currentIndex < duplicates.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
@@ -71,6 +79,23 @@ export const DuplicatesPage = () => {
       setDuplicates([]);
       setCurrentIndex(0);
     }
+  };
+
+  /**
+   * Очистить список пропущенных пар
+   */
+  const handleClearSkipped = () => {
+    toast.showToast({
+      title: 'Очистить пропущенные',
+      message: 'Очистить список пропущенных пар? Они снова будут показываться при поиске дублей.',
+      type: 'info',
+      onConfirm: () => {
+        clearSkippedPairs();
+        toast.success('Список пропущенных пар очищен');
+      },
+      confirmText: 'Очистить',
+      cancelText: 'Отмена'
+    });
   };
 
   /**
@@ -119,6 +144,15 @@ export const DuplicatesPage = () => {
         title: 'Поиск дублей',
         actions: (
           <div className="duplicates-page__actions">
+            <Button
+              variant="border"
+              size="L"
+              iconOnly
+              iconLeft={<Icon name="trash" size={24} variant="border" />}
+              onClick={handleClearSkipped}
+              disabled={isSearching || isDeleting}
+              title="Очистить пропущенные пары"
+            />
             <Button
               variant="primary"
               size="L"

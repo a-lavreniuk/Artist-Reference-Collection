@@ -36,7 +36,7 @@ export const AddPage = () => {
       return;
     }
     
-    // Если нет в state, проверяем sessionStorage
+    // Если нет в state, проверяем sessionStorage (для новых импортов)
     const storedFiles = sessionStorage.getItem('importFiles');
     if (storedFiles) {
       try {
@@ -50,6 +50,23 @@ export const AddPage = () => {
       } catch (error) {
         console.error('[AddPage] Ошибка парсинга файлов из sessionStorage:', error);
         sessionStorage.removeItem('importFiles');
+      }
+      return;
+    }
+
+    // Если нет новых файлов для импорта, проверяем сохраненную очередь
+    const queuePaths = sessionStorage.getItem('addCardQueuePaths');
+    if (queuePaths) {
+      try {
+        const paths = JSON.parse(queuePaths) as string[];
+        if (paths && paths.length > 0) {
+          console.log('[AddPage] Восстановление очереди из sessionStorage:', paths.length, 'файлов');
+          setImportFiles(paths);
+          // НЕ очищаем queuePaths здесь - они будут очищены когда пользователь завершит или очистит очередь
+        }
+      } catch (error) {
+        console.error('[AddPage] Ошибка восстановления очереди:', error);
+        sessionStorage.removeItem('addCardQueuePaths');
       }
     }
   }, [location.state]);
@@ -67,6 +84,10 @@ export const AddPage = () => {
         message: 'Вы уверены что хотите отменить? Все несохранённые карточки будут удалены',
         type: 'error',
         onConfirm: () => {
+          // Очищаем сохраненную очередь при отмене
+          sessionStorage.removeItem('addCardQueuePaths');
+          sessionStorage.removeItem('addCardCurrentIndex');
+          console.log('[AddPage] Очередь очищена при отмене');
           navigate('/');
         },
         confirmText: 'Отменить',
