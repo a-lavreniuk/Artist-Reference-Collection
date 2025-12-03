@@ -141,16 +141,6 @@ export const MasonryGrid = ({
     return (
       <div className="masonry-grid__empty">
         <div className="layout__empty-state">
-          <div className="layout__empty-icon">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 4H10V10H4V4ZM14 4H20V10H14V4ZM14 14H20V20H14V14ZM4 14H10V20H4V14Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
           <h3 className="layout__empty-title">Карточек не найдено</h3>
           <p className="layout__empty-text text-m">
             Попробуйте изменить фильтры или добавьте новые карточки

@@ -217,6 +217,16 @@ function createWindow(): void {
   const initialWidth = Math.min(Math.max(screenWidth, MIN_WIDTH), MAX_WIDTH);
   const initialHeight = Math.min(Math.max(screenHeight, MIN_HEIGHT), MAX_HEIGHT);
 
+  // Определяем путь к иконке
+  let iconPath: string;
+  if (app.isPackaged) {
+    // В продакшене: extraResources копируются в process.resourcesPath
+    iconPath = path.join(process.resourcesPath, 'icon.ico');
+  } else {
+    // В разработке
+    iconPath = path.join(__dirname, '../../resources/icon.ico');
+  }
+
   mainWindow = new BrowserWindow({
     width: initialWidth,
     height: initialHeight,
@@ -234,8 +244,8 @@ function createWindow(): void {
     },
     backgroundColor: '#0A0A0A', // Фон из палитры ARC (grayscale-950)
     title: 'ARC - Artist Reference Collection',
-    // Иконка берется из resources при сборке electron-builder
-    ...(app.isPackaged ? {} : { icon: path.join(__dirname, '../../resources/icon.ico') })
+    // Явно устанавливаем иконку для панели задач и окна
+    icon: iconPath
   });
 
   // Загружаем React приложение

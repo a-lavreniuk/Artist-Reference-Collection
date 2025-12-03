@@ -94,8 +94,39 @@ export interface AddCardFlowProps {
 
 export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady, initialFiles }: AddCardFlowProps) => {
   const alert = useAlert();
-  const [queue, setQueue] = useState<QueueFile[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // Загружаем очередь из sessionStorage при инициализации
+  // ВАЖНО: Сохраняются только файлы с originalFilePath (из браузерного расширения),
+  // так как File объекты из drag-and-drop нельзя восстановить после перезагрузки
+  const loadQueueFromStorage = (): QueueFile[] => {
+    try {
+      const stored = sessionStorage.getItem('addCardQueuePaths');
+      if (stored) {
+        const paths: string[] = JSON.parse(stored);
+        console.log('[AddCardFlow] Найдены пути файлов для восстановления:', paths.length);
+        // Пути будут обработаны в useEffect через initialFiles механизм
+        return [];
+      }
+    } catch (error) {
+      console.error('[AddCardFlow] Ошибка загрузки очереди из sessionStorage:', error);
+    }
+    return [];
+  };
+
+  const loadCurrentIndexFromStorage = (): number => {
+    try {
+      const stored = sessionStorage.getItem('addCardCurrentIndex');
+      if (stored) {
+        return parseInt(stored, 10) || 0;
+      }
+    } catch (error) {
+      console.error('[AddCardFlow] Ошибка загрузки currentIndex из sessionStorage:', error);
+    }
+    return 0;
+  };
+
+  const [queue, setQueue] = useState<QueueFile[]>(loadQueueFromStorage);
+  const [currentIndex, setCurrentIndex] = useState(loadCurrentIndexFromStorage);
   const [isDragging, setIsDragging] = useState(false);
   
   const [allTags, setAllTags] = useState<TagType[]>([]);
@@ -138,6 +169,85 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
   useEffect(() => {
     loadData();
   }, []);
+
+  // Сохраняем пути файлов из браузерного расширения в sessionStorage
+  // Файлы из drag-and-drop не сохраняются, так как их нельзя восстановить
+  useEffect(() => {
+    if (queue.length > 0) {
+      try {
+        // Сохраняем только пути файлов с originalFilePath
+        const pathsToStore = queue
+          .filter(item => item.originalFilePath)
+          .map(item => item.originalFilePath) as string[];
+        
+        if (pathsToStore.length > 0) {
+          sessionStorage.setItem('addCardQueuePaths', JSON.stringify(pathsToStore));
+          console.log('[AddCardFlow] Пути файлов сохранены в sessionStorage:', pathsToStore.length);
+        } else {
+          sessionStorage.removeItem('addCardQueuePaths');
+        }
+      } catch (error) {
+        console.error('[AddCardFlow] Ошибка сохранения путей в sessionStorage:', error);
+      }
+    } else {
+      // Если очередь пуста, удаляем из хранилища
+      sessionStorage.removeItem('addCardQueuePaths');
+      sessionStorage.removeItem('addCardCurrentIndex');
+    }
+  }, [queue]);
+
+  // Сохраняем currentIndex в sessionStorage при изменениях
+  useEffect(() => {
+    if (queue.length > 0) {
+      sessionStorage.setItem('addCardCurrentIndex', currentIndex.toString());
+    }
+  }, [currentIndex, queue.length]);
+
+  // Проверяем существование файлов при монтировании компонента
+  useEffect(() => {
+    const checkQueueFiles = async () => {
+      if (queue.length === 0) return;
+
+      const validQueue: QueueFile[] = [];
+      const missingFiles: string[] = [];
+
+      for (const item of queue) {
+        // Проверяем существование файла, если есть originalFilePath
+        if (item.originalFilePath) {
+          try {
+            const exists = await window.electronAPI.fileExists(item.originalFilePath);
+            if (exists) {
+              validQueue.push(item);
+            } else {
+              missingFiles.push(item.file.name);
+              console.warn('[AddCardFlow] Файл не найден:', item.originalFilePath);
+            }
+          } catch (error) {
+            console.error('[AddCardFlow] Ошибка проверки файла:', error);
+            // Если ошибка проверки, оставляем файл в очереди
+            validQueue.push(item);
+          }
+        } else {
+          // Если нет originalFilePath, файл добавлен через drag-and-drop и хранится в памяти
+          validQueue.push(item);
+        }
+      }
+
+      // Если есть отсутствующие файлы, показываем предупреждение и обновляем очередь
+      if (missingFiles.length > 0) {
+        alert.warning(
+          `Не найдено файлов: ${missingFiles.length}. Они были удалены из очереди.`
+        );
+        setQueue(validQueue);
+        // Корректируем currentIndex если нужно
+        if (currentIndex >= validQueue.length && validQueue.length > 0) {
+          setCurrentIndex(validQueue.length - 1);
+        }
+      }
+    };
+
+    checkQueueFiles();
+  }, []); // Запускаем только один раз при монтировании
 
   /**
    * Извлекает размеры изображения из File объекта
@@ -755,6 +865,11 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
       await logImportFiles(createdCards.length);
 
       // Файлы уже перемещены в рабочую папку (не удалены), поэтому ничего дополнительно делать не нужно
+
+      // Очищаем sessionStorage после успешного добавления
+      sessionStorage.removeItem('addCardQueuePaths');
+      sessionStorage.removeItem('addCardCurrentIndex');
+      console.log('[AddCardFlow] Очередь очищена из sessionStorage после успешного добавления');
 
       // Завершаем добавление - Alert покажется в AddPage
       setTimeout(() => onComplete(createdCards.length), 500);
