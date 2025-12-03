@@ -34,6 +34,7 @@ export const SettingsPage = () => {
   const [topCollections, setTopCollections] = useState<CollectionWithCount[]>([]);
   const [underusedTags, setUnderusedTags] = useState<TagWithCategory[]>([]);
   // const [message, setMessage] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('');
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
   const [backupMessage, setBackupMessage] = useState<string | null>(null);
@@ -92,6 +93,12 @@ export const SettingsPage = () => {
       setTopTags(tags);
       setTopCollections(collections);
       setUnderusedTags(unused);
+      
+      // Загружаем версию приложения
+      if (window.electronAPI?.getAppVersion) {
+        const version = await window.electronAPI.getAppVersion();
+        setAppVersion(version);
+      }
     } catch (error) {
       console.error('Ошибка загрузки статистики:', error);
     }

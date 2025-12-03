@@ -243,8 +243,8 @@ function createWindow(): void {
     // В режиме разработки загружаем с dev-сервера Vite
     mainWindow.loadURL('http://localhost:5173');
     
-    // Открываем DevTools в режиме разработки
-    mainWindow.webContents.openDevTools();
+    // DevTools можно открыть вручную через Ctrl+Shift+I
+    // mainWindow.webContents.openDevTools();
   } else {
     // В продакшене загружаем собранное приложение
     // После сборки структура: main/main.js и renderer/dist/index.html находятся на одном уровне
