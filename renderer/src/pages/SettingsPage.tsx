@@ -18,6 +18,7 @@ import type { AppStatistics, Tag, Collection } from '../types';
 import { WhatsNewModal } from '../components/common';
 import { getLatestVersion } from '../data/changelog';
 import type { VersionChange } from '../data/changelog';
+import './SettingsPage.css';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
 
@@ -524,23 +525,6 @@ export const SettingsPage = () => {
       <button
         className={`section-header__filter-button ${activeTab === 'storage' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('storage')}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          height: '56px',
-          padding: '16px 32px',
-          backgroundColor: activeTab === 'storage' ? 'var(--color-grayscale-800)' : 'transparent',
-          border: activeTab === 'storage' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
-          borderRadius: '16px',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-          fontFamily: 'var(--font-family-body)',
-          fontSize: '16px',
-          fontWeight: 400,
-          lineHeight: '16px',
-          color: activeTab === 'storage' ? 'var(--text-light)' : 'var(--text-primary)'
-        }}
       >
         <Icon name="server" size={24} variant={activeTab === 'storage' ? 'fill' : 'border'} />
         <span>Хранилище</span>
@@ -548,23 +532,6 @@ export const SettingsPage = () => {
       <button
         className={`section-header__filter-button ${activeTab === 'statistics' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('statistics')}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          height: '56px',
-          padding: '16px 32px',
-          backgroundColor: activeTab === 'statistics' ? 'var(--color-grayscale-800)' : 'transparent',
-          border: activeTab === 'statistics' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
-          borderRadius: '16px',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-          fontFamily: 'var(--font-family-body)',
-          fontSize: '16px',
-          fontWeight: 400,
-          lineHeight: '16px',
-          color: activeTab === 'statistics' ? 'var(--text-light)' : 'var(--text-primary)'
-        }}
       >
         <Icon name="line-chart" size={24} variant={activeTab === 'statistics' ? 'fill' : 'border'} />
         <span>Статистика</span>
@@ -572,23 +539,6 @@ export const SettingsPage = () => {
       <button
         className={`section-header__filter-button ${activeTab === 'history' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('history')}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          height: '56px',
-          padding: '16px 32px',
-          backgroundColor: activeTab === 'history' ? 'var(--color-grayscale-800)' : 'transparent',
-          border: activeTab === 'history' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
-          borderRadius: '16px',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-          fontFamily: 'var(--font-family-body)',
-          fontSize: '16px',
-          fontWeight: 400,
-          lineHeight: '16px',
-          color: activeTab === 'history' ? 'var(--text-light)' : 'var(--text-primary)'
-        }}
       >
         <Icon name="history" size={24} variant={activeTab === 'history' ? 'fill' : 'border'} />
         <span>История</span>
@@ -1341,38 +1291,14 @@ export const SettingsPage = () => {
                           }}>
                             {(index + 1).toString().padStart(2, '0')}
                           </p>
-                          <div 
+                          <button 
                             onClick={() => handleTagClick(tag.id)}
-                            style={{
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              borderRadius: '10px',
-                              height: '32px',
-                              padding: '0 10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.15s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-tag-button"
                           >
-                            <p className="text-s" style={{
-                              fontFamily: 'var(--font-family-body)',
-                              fontSize: 'var(--font-size-s, 12px)',
-                              lineHeight: 'var(--line-height-s, 12px)',
-                              fontWeight: 'var(--font-weight-regular, 400)',
-                              color: 'var(--text-primary, #3b3946)',
-                              letterSpacing: '0px'
-                            }}>
+                            <p className="text-s">
                               {tag.name}
                             </p>
-                          </div>
+                          </button>
                         </div>
                         <p className="text-m" style={{
                           fontFamily: 'var(--font-family-body)',
@@ -1452,64 +1378,20 @@ export const SettingsPage = () => {
                           }}>
                             {(index + 1).toString().padStart(2, '0')}
                           </p>
-                          <div 
+                          <button 
                             onClick={() => handleTagClick(tag.id)}
-                            style={{
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              borderRadius: '10px',
-                              height: '32px',
-                              padding: '0 10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.15s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-tag-button"
                           >
-                            <p className="text-s" style={{
-                              fontFamily: 'var(--font-family-body)',
-                              fontSize: 'var(--font-size-s, 12px)',
-                              lineHeight: 'var(--line-height-s, 12px)',
-                              fontWeight: 'var(--font-weight-regular, 400)',
-                              color: 'var(--text-primary, #3b3946)',
-                              letterSpacing: '0px'
-                            }}>
+                            <p className="text-s">
                               {tag.name}
                             </p>
-                          </div>
+                          </button>
                           <button
                             onClick={(e) => handleDeleteTag(tag.id, tag.name, e)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '32px',
-                              height: '32px',
-                              padding: 0,
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              border: 'none',
-                              borderRadius: 'var(--radius-s, 8px)',
-                              color: 'var(--icon-default, #93919a)',
-                              cursor: 'pointer',
-                              transition: 'all var(--transition-fast, 150ms ease-in-out)',
-                              flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-delete-button"
                             title="Удалить метку"
                           >
-                            <Icon name="trash" size={16} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                            <Icon name="trash" size={16} variant="border" />
                           </button>
                         </div>
                         <p className="text-m" style={{
@@ -1589,38 +1471,14 @@ export const SettingsPage = () => {
                           }}>
                             {(index + 1).toString().padStart(2, '0')}
                           </p>
-                          <div 
+                          <button 
                             onClick={() => handleCollectionClick(collection.id)}
-                            style={{
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              borderRadius: '10px',
-                              height: '32px',
-                              padding: '0 10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.15s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-tag-button"
                           >
-                            <p className="text-s" style={{
-                              fontFamily: 'var(--font-family-body)',
-                              fontSize: 'var(--font-size-s, 12px)',
-                              lineHeight: 'var(--line-height-s, 12px)',
-                              fontWeight: 'var(--font-weight-regular, 400)',
-                              color: 'var(--text-primary, #3b3946)',
-                              letterSpacing: '0px'
-                            }}>
+                            <p className="text-s">
                               {collection.name}
                             </p>
-                          </div>
+                          </button>
                         </div>
                         <p className="text-m" style={{
                           fontFamily: 'var(--font-family-body)',
@@ -1655,30 +1513,10 @@ export const SettingsPage = () => {
       }}>
         <button
           onClick={handleShowWhatsNew}
-          style={{
-            padding: '6px 12px',
-            backgroundColor: 'var(--color-grayscale-200, #f5f4f7)',
-            borderRadius: 'var(--radius-s, 8px)',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'background-color 0.15s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-300, #d4d1dc)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #f5f4f7)';
-          }}
+          className="settings-whats-new-button"
           title="Нажмите, чтобы посмотреть что нового"
         >
-          <p className="text-s" style={{
-            fontFamily: 'var(--font-family-body)',
-            fontSize: 'var(--font-size-s, 14px)',
-            lineHeight: 'var(--line-height-s, 18px)',
-            fontWeight: 'var(--font-weight-regular, 400)',
-            color: 'var(--text-secondary, #93919a)',
-            letterSpacing: '0px'
-          }}>
+          <p className="text-s">
             v{appVersion}
           </p>
         </button>
