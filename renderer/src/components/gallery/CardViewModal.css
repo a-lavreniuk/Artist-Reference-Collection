@@ -1,5 +1,5 @@
 /**
- * Стили для компонента CardViewModal
+ * ╨б╤В╨╕╨╗╨╕ ╨┤╨╗╤П ╨║╨╛╨╝╨┐╨╛╨╜╨╡╨╜╤В╨░ CardViewModal
  */
 
 .card-view {
@@ -9,7 +9,7 @@
   min-height: 500px;
 }
 
-/* ========== ВЕРХНЯЯ ПАНЕЛЬ ========== */
+/* ========== ╨Т╨Х╨а╨е╨Э╨п╨п ╨Я╨Р╨Э╨Х╨Ы╨м ========== */
 
 .card-view__toolbar {
   display: flex;
@@ -40,13 +40,13 @@
   gap: var(--spacing-s);
 }
 
-/* Стили для кнопок в toolbar-right */
+/* ╨б╤В╨╕╨╗╨╕ ╨┤╨╗╤П ╨║╨╜╨╛╨┐╨╛╨║ ╨▓ toolbar-right */
 .card-view__toolbar-right .button {
   align-items: center;
   justify-content: center;
 }
 
-/* Иконка крестика в кнопке "Отмена" должна быть grayscale-500 */
+/* ╨Ш╨║╨╛╨╜╨║╨░ ╨║╤А╨╡╤Б╤В╨╕╨║╨░ ╨▓ ╨║╨╜╨╛╨┐╨║╨╡ "╨Ю╤В╨╝╨╡╨╜╨░" ╨┤╨╛╨╗╨╢╨╜╨░ ╨▒╤Л╤В╤М grayscale-500 */
 .card-view__toolbar-right .button--secondary .button__icon {
   color: var(--color-grayscale-500);
 }
@@ -75,7 +75,7 @@
   cursor: not-allowed;
 }
 
-/* Иконки в кнопках */
+/* ╨Ш╨║╨╛╨╜╨║╨╕ ╨▓ ╨║╨╜╨╛╨┐╨║╨░╤Е */
 .card-view__icon-button svg,
 .card-view__icon-button .icon {
   width: 24px;
@@ -84,14 +84,14 @@
   transition: color var(--transition-fast);
 }
 
-/* Специальный hover для кнопки удаления (trash) */
-.card-view__icon-button:hover[title*="Удалить"] {
+/* ╨б╨┐╨╡╤Ж╨╕╨░╨╗╤М╨╜╤Л╨╣ hover ╨┤╨╗╤П ╨║╨╜╨╛╨┐╨║╨╕ ╤Г╨┤╨░╨╗╨╡╨╜╨╕╤П (trash) */
+.card-view__icon-button:hover[title*="╨г╨┤╨░╨╗╨╕╤В╤М"] {
   background-color: var(--color-red-600);
   border-color: transparent;
 }
 
-.card-view__icon-button:hover[title*="Удалить"] svg,
-.card-view__icon-button:hover[title*="Удалить"] .icon {
+.card-view__icon-button:hover[title*="╨г╨┤╨░╨╗╨╕╤В╤М"] svg,
+.card-view__icon-button:hover[title*="╨г╨┤╨░╨╗╨╕╤В╤М"] .icon {
   color: var(--color-red-300);
 }
 
@@ -113,7 +113,7 @@
   border-color: transparent;
 }
 
-/* Иконка в кнопке ID */
+/* ╨Ш╨║╨╛╨╜╨║╨░ ╨▓ ╨║╨╜╨╛╨┐╨║╨╡ ID */
 .card-view__id-button svg,
 .card-view__id-button .icon {
   width: 24px;
@@ -129,7 +129,7 @@
   font-variation-settings: 'CRSV' 0, 'SHRP' 0;
 }
 
-/* ========== РАЗДЕЛИТЕЛЬ ========== */
+/* ========== ╨а╨Р╨Ч╨Ф╨Х╨Ы╨Ш╨в╨Х╨Ы╨м ========== */
 
 .card-view__divider {
   width: 100%;
@@ -137,7 +137,7 @@
   background: var(--border-default);
 }
 
-/* ========== ОСНОВНОЕ СОДЕРЖИМОЕ ========== */
+/* ========== ╨Ю╨б╨Э╨Ю╨Т╨Э╨Ю╨Х ╨б╨Ю╨Ф╨Х╨а╨Ц╨Ш╨Ь╨Ю╨Х ========== */
 
 .card-view__content {
   display: grid;
@@ -145,7 +145,7 @@
   gap: var(--spacing-l);
 }
 
-/* ========== ПРЕВЬЮ ========== */
+/* ========== ╨Я╨а╨Х╨Т╨м╨о ========== */
 
 .card-view__preview {
   display: flex;
@@ -171,7 +171,7 @@
   object-fit: contain;
 }
 
-/* ========== ИНФОРМАЦИЯ ========== */
+/* ========== ╨Ш╨Э╨д╨Ю╨а╨Ь╨Р╨ж╨Ш╨п ========== */
 
 .card-view__info {
   display: flex;
@@ -179,7 +179,7 @@
   gap: var(--spacing-xl);
 }
 
-/* ========== СЕКЦИИ ========== */
+/* ========== ╨б╨Х╨Ъ╨ж╨Ш╨Ш ========== */
 
 .card-view__section {
   display: flex;
@@ -191,7 +191,7 @@
   background: var(--color-grayscale-50);
 }
 
-/* Секция с метками в режиме редактирования */
+/* ╨б╨╡╨║╤Ж╨╕╤П ╤Б ╨╝╨╡╤В╨║╨░╨╝╨╕ ╨▓ ╤А╨╡╨╢╨╕╨╝╨╡ ╤А╨╡╨┤╨░╨║╤В╨╕╤А╨╛╨▓╨░╨╜╨╕╤П */
 .card-view__section--tags-edit {
   max-height: 781px;
   overflow: hidden;
@@ -226,7 +226,7 @@
   background-color: var(--color-grayscale-200);
 }
 
-/* Скроллируемая область с категориями */
+/* ╨б╨║╤А╨╛╨╗╨╗╨╕╤А╤Г╨╡╨╝╨░╤П ╨╛╨▒╨╗╨░╤Б╤В╤М ╤Б ╨║╨░╤В╨╡╨│╨╛╤А╨╕╤П╨╝╨╕ */
 .card-view__tags-scroll {
   display: flex;
   flex-direction: column;
@@ -236,7 +236,7 @@
   padding-right: var(--spacing-xs);
 }
 
-/* Стилизация scrollbar для области меток */
+/* ╨б╤В╨╕╨╗╨╕╨╖╨░╤Ж╨╕╤П scrollbar ╨┤╨╗╤П ╨╛╨▒╨╗╨░╤Б╤В╨╕ ╨╝╨╡╤В╨╛╨║ */
 .card-view__tags-scroll::-webkit-scrollbar {
   width: 6px;
 }
@@ -254,7 +254,7 @@
   background: var(--color-grayscale-400);
 }
 
-/* Категория */
+/* ╨Ъ╨░╤В╨╡╨│╨╛╤А╨╕╤П */
 .card-view__category {
   display: flex;
   flex-direction: column;
@@ -293,7 +293,7 @@
   color: var(--text-secondary);
 }
 
-/* Описание */
+/* ╨Ю╨┐╨╕╤Б╨░╨╜╨╕╨╡ */
 .card-view__description-textarea {
   width: 100%;
   min-height: 92px;
@@ -334,7 +334,7 @@
   overflow-wrap: break-word;
 }
 
-/* ========== МЕТАДАННЫЕ ========== */
+/* ========== ╨Ь╨Х╨в╨Р╨Ф╨Р╨Э╨Э╨л╨Х ========== */
 
 .card-view__metadata {
   display: flex;
@@ -363,7 +363,7 @@
   font-weight: var(--font-weight-regular);
 }
 
-/* ========== МЕТКИ ========== */
+/* ========== ╨Ь╨Х╨в╨Ъ╨Ш ========== */
 
 .card-view__tags {
   display: flex;
@@ -371,7 +371,7 @@
   gap: 4px;
 }
 
-/* Кликабельные метки в режиме просмотра */
+/* ╨Ъ╨╗╨╕╨║╨░╨▒╨╡╨╗╤М╨╜╤Л╨╡ ╨╝╨╡╤В╨║╨╕ ╨▓ ╤А╨╡╨╢╨╕╨╝╨╡ ╨┐╤А╨╛╤Б╨╝╨╛╤В╤А╨░ */
 .card-view__tags .tag[role="button"] {
   cursor: pointer;
 }
@@ -395,13 +395,13 @@
   margin-left: 4px;
 }
 
-/* Белый цвет текста для выбранных меток */
+/* ╨С╨╡╨╗╤Л╨╣ ╤Ж╨▓╨╡╤В ╤В╨╡╨║╤Б╤В╨░ ╨┤╨╗╤П ╨▓╤Л╨▒╤А╨░╨╜╨╜╤Л╤Е ╨╝╨╡╤В╨╛╨║ */
 .tag--active .card-view__tag-name,
 .tag--active .card-view__tag-count {
   color: var(--text-light);
 }
 
-/* Кнопка добавления метки */
+/* ╨Ъ╨╜╨╛╨┐╨║╨░ ╨┤╨╛╨▒╨░╨▓╨╗╨╡╨╜╨╕╤П ╨╝╨╡╤В╨║╨╕ */
 .card-view__add-tag-button {
   display: flex;
   align-items: center;
@@ -423,7 +423,7 @@
 }
 
 
-/* ========== ПОХОЖИЕ ИЗОБРАЖЕНИЯ ========== */
+/* ========== ╨Я╨Ю╨е╨Ю╨Ц╨Ш╨Х ╨Ш╨Ч╨Ю╨С╨а╨Р╨Ц╨Х╨Э╨Ш╨п ========== */
 
 .card-view__similar {
   display: flex;
@@ -457,7 +457,7 @@
   color: var(--text-secondary);
 }
 
-/* ========== АДАПТАЦИЯ ========== */
+/* ========== ╨Р╨Ф╨Р╨Я╨в╨Р╨ж╨Ш╨п ========== */
 
 @media (max-width: 1920px) {
   .card-view__content {
