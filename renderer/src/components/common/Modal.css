@@ -1,11 +1,11 @@
 /**
- * Стили для компонента Modal
+ * ╨б╤В╨╕╨╗╨╕ ╨┤╨╗╤П ╨║╨╛╨╝╨┐╨╛╨╜╨╡╨╜╤В╨░ Modal
  */
 
 /* ========== OVERLAY ========== */
 
 .modal-overlay {
-  /* Позиционирование */
+  /* ╨Я╨╛╨╖╨╕╤Ж╨╕╨╛╨╜╨╕╤А╨╛╨▓╨░╨╜╨╕╨╡ */
   position: fixed;
   top: 0;
   left: 0;
@@ -13,7 +13,7 @@
   bottom: 0;
   z-index: var(--z-overlay);
   
-  /* Отображение */
+  /* ╨Ю╤В╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡ */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,14 +23,14 @@
   overflow-y: auto;
   overflow-x: hidden;
   
-  /* Оформление */
+  /* ╨Ю╤Д╨╛╤А╨╝╨╗╨╡╨╜╨╕╨╡ */
   background-color: var(--bg-overlay);
   
-  /* Анимация */
+  /* ╨Р╨╜╨╕╨╝╨░╤Ж╨╕╤П */
   animation: modal-overlay-enter var(--transition-base);
 }
 
-/* Если содержимое длинное, выравниваем по верху */
+/* ╨Х╤Б╨╗╨╕ ╤Б╨╛╨┤╨╡╤А╨╢╨╕╨╝╨╛╨╡ ╨┤╨╗╨╕╨╜╨╜╨╛╨╡, ╨▓╤Л╤А╨░╨▓╨╜╨╕╨▓╨░╨╡╨╝ ╨┐╨╛ ╨▓╨╡╤А╤Е╤Г */
 .modal-overlay--scrollable {
   align-items: flex-start;
   padding: 0 var(--spacing-xl) var(--spacing-xl) var(--spacing-xl);
@@ -45,31 +45,31 @@
   }
 }
 
-/* ========== МОДАЛЬНОЕ ОКНО ========== */
+/* ========== ╨Ь╨Ю╨Ф╨Р╨Ы╨м╨Э╨Ю╨Х ╨Ю╨Ъ╨Э╨Ю ========== */
 
 .modal {
-  /* Позиционирование */
+  /* ╨Я╨╛╨╖╨╕╤Ж╨╕╨╛╨╜╨╕╤А╨╛╨▓╨░╨╜╨╕╨╡ */
   position: relative;
   z-index: var(--z-modal);
   
-  /* Отображение */
+  /* ╨Ю╤В╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡ */
   display: flex;
   flex-direction: column;
   
-  /* Размеры */
+  /* ╨а╨░╨╖╨╝╨╡╤А╤Л */
   width: 100%;
   max-height: none;
   margin-top: 60px;
   margin-bottom: 60px;
   
-  /* Оформление */
+  /* ╨Ю╤Д╨╛╤А╨╝╨╗╨╡╨╜╨╕╨╡ */
   background-color: var(--bg-secondary);
   border-radius: var(--radius-xl);
   
   /* Overflow */
   overflow: visible;
   
-  /* Анимация */
+  /* ╨Р╨╜╨╕╨╝╨░╤Ж╨╕╤П */
   animation: modal-enter var(--transition-base);
 }
 
@@ -84,7 +84,7 @@
   }
 }
 
-/* ========== РАЗМЕРЫ ========== */
+/* ========== ╨а╨Р╨Ч╨Ь╨Х╨а╨л ========== */
 
 .modal--small {
   max-width: 400px;
@@ -93,7 +93,6 @@
 .modal--medium {
   max-width: 822px !important;
   width: 822px !important;
-  max-height: calc(100vh - 80px) !important; /* Ограничение высоты с отступами */
   background-color: var(--color-grayscale-50) !important;
   border: 2px solid var(--border-default) !important;
   border-radius: var(--radius-xl) !important;
@@ -101,10 +100,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-l) !important;
-  overflow: hidden !important; /* Скрываем переполнение */
 }
 
-/* Для модального окна medium убираем стандартные отступы из header и content */
+/* ╨Ф╨╗╤П ╨╝╨╛╨┤╨░╨╗╤М╨╜╨╛╨│╨╛ ╨╛╨║╨╜╨░ medium ╤Г╨▒╨╕╤А╨░╨╡╨╝ ╤Б╤В╨░╨╜╨┤╨░╤А╤В╨╜╤Л╨╡ ╨╛╤В╤Б╤В╤Г╨┐╤Л ╨╕╨╖ header ╨╕ content */
 .modal--medium .modal__header {
   padding: 0 !important;
   border: none;
@@ -116,20 +114,12 @@
 .modal--medium .modal__content {
   padding: 0 !important;
   flex: 1;
-  overflow-y: auto; /* Включаем прокрутку для длинного контента */
-  overflow-x: hidden;
-  padding-right: var(--spacing-s); /* Отступ для скроллбара */
+  overflow: visible;
 }
 
 .modal--large {
   max-width: 1658px;
-  max-height: calc(100vh - 120px); /* Ограничение высоты */
   background-color: var(--color-grayscale-50);
-  overflow: hidden; /* Скрываем переполнение */
-}
-
-.modal--large .modal__content {
-  overflow-y: auto; /* Включаем прокрутку для длинного контента */
 }
 
 .modal--fullscreen {
@@ -137,29 +127,29 @@
   max-height: 95vh;
 }
 
-/* ========== ШАПКА ========== */
+/* ========== ╨и╨Р╨Я╨Ъ╨Р ========== */
 
 .modal__header {
-  /* Позиционирование */
+  /* ╨Я╨╛╨╖╨╕╤Ж╨╕╨╛╨╜╨╕╤А╨╛╨▓╨░╨╜╨╕╨╡ */
   position: sticky;
   top: 0;
   z-index: 10;
   
-  /* Отображение */
+  /* ╨Ю╤В╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡ */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-l);
   
-  /* Размеры */
+  /* ╨а╨░╨╖╨╝╨╡╤А╤Л */
   padding: var(--spacing-xl);
   
-  /* Оформление */
+  /* ╨Ю╤Д╨╛╤А╨╝╨╗╨╡╨╜╨╕╨╡ */
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-default);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   
-  /* Сброс */
+  /* ╨б╨▒╤А╨╛╤Б */
   flex-shrink: 0;
 }
 
@@ -176,25 +166,25 @@
 }
 
 .modal__close {
-  /* Размеры */
+  /* ╨а╨░╨╖╨╝╨╡╤А╤Л */
   width: 40px;
   height: 40px;
   padding: 0;
   
-  /* Отображение */
+  /* ╨Ю╤В╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡ */
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   
-  /* Оформление */
+  /* ╨Ю╤Д╨╛╤А╨╝╨╗╨╡╨╜╨╕╨╡ */
   background-color: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-s);
   color: var(--icon-default);
   cursor: pointer;
   
-  /* Переходы */
+  /* ╨Я╨╡╤А╨╡╤Е╨╛╨┤╤Л */
   transition: all var(--transition-fast);
 }
 
@@ -213,20 +203,20 @@
   height: 24px;
 }
 
-/* ========== СОДЕРЖИМОЕ ========== */
+/* ========== ╨б╨Ю╨Ф╨Х╨а╨Ц╨Ш╨Ь╨Ю╨Х ========== */
 
 .modal__content {
-  /* Отображение */
+  /* ╨Ю╤В╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡ */
   flex: 1;
   
   /* Overflow */
   overflow: visible;
   
-  /* Размеры */
+  /* ╨а╨░╨╖╨╝╨╡╤А╤Л */
   padding: var(--spacing-3xl);
 }
 
-/* Scrollbar для модального окна */
+/* Scrollbar ╨┤╨╗╤П ╨╝╨╛╨┤╨░╨╗╤М╨╜╨╛╨│╨╛ ╨╛╨║╨╜╨░ */
 .modal__content::-webkit-scrollbar {
   width: 6px;
 }
@@ -244,29 +234,29 @@
   background: var(--color-grayscale-400);
 }
 
-/* ========== ФУТЕР ========== */
+/* ========== ╨д╨г╨в╨Х╨а ========== */
 
 .modal__footer {
-  /* Отображение */
+  /* ╨Ю╤В╨╛╨▒╤А╨░╨╢╨╡╨╜╨╕╨╡ */
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--spacing-m);
   
-  /* Размеры */
+  /* ╨а╨░╨╖╨╝╨╡╤А╤Л */
   padding: var(--spacing-xl);
   
-  /* Оформление */
+  /* ╨Ю╤Д╨╛╤А╨╝╨╗╨╡╨╜╨╕╨╡ */
   border-top: 1px solid var(--border-default);
   
-  /* Сброс */
+  /* ╨б╨▒╤А╨╛╤Б */
   flex-shrink: 0;
 }
 
-/* ========== АДАПТАЦИЯ ========== */
+/* ========== ╨Р╨Ф╨Р╨Я╨в╨Р╨ж╨Ш╨п ========== */
 
-/* Примечание: отступы НЕ меняются на разных разрешениях */
-/* Padding остаётся 24px (var(--spacing-xl)) всегда */
+/* ╨Я╤А╨╕╨╝╨╡╤З╨░╨╜╨╕╨╡: ╨╛╤В╤Б╤В╤Г╨┐╤Л ╨Э╨Х ╨╝╨╡╨╜╤П╤О╤В╤Б╤П ╨╜╨░ ╤А╨░╨╖╨╜╤Л╤Е ╤А╨░╨╖╤А╨╡╤И╨╡╨╜╨╕╤П╤Е */
+/* Padding ╨╛╤Б╤В╨░╤С╤В╤Б╤П 24px (var(--spacing-xl)) ╨▓╤Б╨╡╨│╨┤╨░ */
 
 @media (max-height: 800px) {
   .modal {
