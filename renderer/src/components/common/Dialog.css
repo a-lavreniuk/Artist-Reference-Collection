@@ -45,12 +45,15 @@
   gap: var(--spacing-l); /* 16px как у modal--medium */
   
   width: 822px; /* Ширина 822px как у modal--medium */
+  max-height: calc(100vh - 80px); /* Ограничение по высоте с отступами */
   padding: var(--spacing-3xl); /* 40px как у modal--medium */
   
   background-color: var(--color-grayscale-50); /* Фон как у modal--medium */
   border: 2px solid var(--border-default);
   border-radius: var(--radius-xl); /* 24px как у modal--medium */
   box-shadow: var(--shadow-xl);
+  
+  overflow: hidden; /* Контент не выходит за границы */
   
   animation: dialog-enter var(--transition-base);
 }
@@ -108,30 +111,30 @@
   color: var(--text-secondary); /* Цвет как у подзаголовка */
   
   white-space: pre-wrap;
-}
-
-/* Длинное описание с прокруткой */
-.dialog__description--scrollable {
-  max-height: 300px;
+  
+  /* Ограничение высоты с прокруткой для длинных текстов */
+  max-height: calc(100vh - 320px); /* Учитываем заголовок, отступы и кнопки */
   overflow-y: auto;
-  text-align: left;
-  padding-right: var(--spacing-m);
+  padding-right: var(--spacing-s); /* Отступ для скроллбара */
 }
 
-.dialog__description--scrollable::-webkit-scrollbar {
-  width: 6px;
+/* Кастомный скроллбар */
+.dialog__description::-webkit-scrollbar {
+  width: 8px;
 }
 
-.dialog__description--scrollable::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.dialog__description--scrollable::-webkit-scrollbar-thumb {
-  background: var(--color-grayscale-300);
+.dialog__description::-webkit-scrollbar-track {
+  background: var(--color-grayscale-100);
   border-radius: var(--radius-s);
 }
 
-.dialog__description--scrollable::-webkit-scrollbar-thumb:hover {
+.dialog__description::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
+  transition: background var(--transition-fast);
+}
+
+.dialog__description::-webkit-scrollbar-thumb:hover {
   background: var(--color-grayscale-400);
 }
 
@@ -195,14 +198,8 @@
 }
 
 @media (max-height: 800px) {
-  .dialog {
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  
   .dialog__description {
-    max-height: 200px;
-    overflow-y: auto;
+    max-height: calc(100vh - 400px); /* Уменьшаем высоту на маленьких экранах */
   }
 }
 
