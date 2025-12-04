@@ -189,10 +189,9 @@ export const DuplicatesPage = () => {
         )}
 
         {isSearching && (
-          <div className="layout__loading">
-            <div className="layout__spinner" />
-            <p className="layout__loading-text">Поиск дублей...</p>
-            <p className="layout__loading-subtext text-m">
+          <div className="layout__empty-state">
+            <h3 className="layout__empty-title">Поиск дублей...</h3>
+            <p className="layout__empty-text text-m">
               Это может занять некоторое время
             </p>
           </div>

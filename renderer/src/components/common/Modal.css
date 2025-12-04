@@ -93,6 +93,7 @@
 .modal--medium {
   max-width: 822px !important;
   width: 822px !important;
+  max-height: calc(100vh - 80px) !important; /* Ограничение высоты с отступами */
   background-color: var(--color-grayscale-50) !important;
   border: 2px solid var(--border-default) !important;
   border-radius: var(--radius-xl) !important;
@@ -100,6 +101,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-l) !important;
+  overflow: hidden !important; /* Скрываем переполнение */
 }
 
 /* Для модального окна medium убираем стандартные отступы из header и content */
@@ -114,12 +116,20 @@
 .modal--medium .modal__content {
   padding: 0 !important;
   flex: 1;
-  overflow: visible;
+  overflow-y: auto; /* Включаем прокрутку для длинного контента */
+  overflow-x: hidden;
+  padding-right: var(--spacing-s); /* Отступ для скроллбара */
 }
 
 .modal--large {
   max-width: 1658px;
+  max-height: calc(100vh - 120px); /* Ограничение высоты */
   background-color: var(--color-grayscale-50);
+  overflow: hidden; /* Скрываем переполнение */
+}
+
+.modal--large .modal__content {
+  overflow-y: auto; /* Включаем прокрутку для длинного контента */
 }
 
 .modal--fullscreen {

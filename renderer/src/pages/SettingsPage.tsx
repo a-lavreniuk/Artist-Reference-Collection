@@ -18,6 +18,7 @@ import type { AppStatistics, Tag, Collection } from '../types';
 import { WhatsNewModal } from '../components/common';
 import { getLatestVersion } from '../data/changelog';
 import type { VersionChange } from '../data/changelog';
+import './SettingsPage.css';
 
 type SettingsTab = 'storage' | 'statistics' | 'history';
 
@@ -39,11 +40,8 @@ export const SettingsPage = () => {
   // const [message, setMessage] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState<string>('');
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [backupProgress, setBackupProgress] = useState(0);
-  const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8 | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
   const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
   const [directorySizes, setDirectorySizes] = useState<{
     totalSize: number;
@@ -54,8 +52,6 @@ export const SettingsPage = () => {
     videoCount: number;
   } | null>(null);
   const [isMovingDirectory, setIsMovingDirectory] = useState(false);
-  const [moveProgress, setMoveProgress] = useState(0);
-  const [moveMessage, setMoveMessage] = useState<string | null>(null);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [whatsNewVersions, setWhatsNewVersions] = useState<VersionChange[]>([]);
 
@@ -64,20 +60,6 @@ export const SettingsPage = () => {
     if (activeTab === 'storage' || activeTab === 'statistics') {
       loadStats();
       loadDirectorySizes();
-    }
-    
-    // Подписываемся на прогресс backup
-    if (window.electronAPI?.onBackupProgress) {
-      window.electronAPI.onBackupProgress((data) => {
-        setBackupProgress(data.percent);
-      });
-    }
-    
-    // Подписываемся на прогресс переноса папки
-    if (window.electronAPI?.onMoveDirectoryProgress) {
-      window.electronAPI.onMoveDirectoryProgress((data) => {
-        setMoveProgress(data.percent);
-      });
     }
   }, [directoryPath, activeTab]);
 
@@ -140,9 +122,9 @@ export const SettingsPage = () => {
           `Текущая папка: ${directoryPath}\n` +
           `Карточек: ${stats.totalCards}\n\n` +
           'Система автоматически:\n' +
-          '✅ Скопирует ВСЕ файлы в новую папку\n' +
-          '✅ Обновит пути в базе данных\n' +
-          '✅ Сохранит работоспособность карточек\n\n' +
+          '• Скопирует ВСЕ файлы в новую папку\n' +
+          '• Обновит пути в базе данных\n' +
+          '• Сохранит работоспособность карточек\n\n' +
           'Это может занять несколько минут.',
         confirmText: 'Перенести',
         cancelText: 'Отмена'
@@ -154,37 +136,30 @@ export const SettingsPage = () => {
 
       try {
         setIsMovingDirectory(true);
-        setMoveProgress(0);
-        setMoveMessage('🔄 Выбор новой папки...');
+        alert.info('Перенос рабочей папки. Это может занять несколько минут...');
 
         // 1. Выбираем новую папку
         const newPath = await window.electronAPI.selectWorkingDirectory();
         
         if (!newPath) {
           setIsMovingDirectory(false);
-          setMoveMessage(null);
           return;
         }
 
         if (newPath === directoryPath) {
           setIsMovingDirectory(false);
-          setMoveMessage('❌ Выбрана та же папка');
-          setTimeout(() => setMoveMessage(null), 2000);
+          alert.error('Выбрана та же папка');
           return;
         }
-
-        setMoveMessage(`🔄 Копирование файлов из\n${directoryPath}\nв\n${newPath}`);
 
         // 2. Копируем все файлы
         const result = await window.electronAPI.moveWorkingDirectory(directoryPath, newPath);
 
         if (!result.success) {
-          setMoveMessage('❌ Ошибка переноса файлов');
+          alert.error('Ошибка переноса файлов');
           setIsMovingDirectory(false);
           return;
         }
-
-        setMoveMessage('🔄 Обновление путей в базе данных...');
 
         // 3. Обновляем пути в базе данных
         const allCards = await db.cards.toArray();
@@ -206,7 +181,7 @@ export const SettingsPage = () => {
         const totalSize = directorySizes?.totalSize || 0;
         await logMoveStorage(totalSize);
         
-        setMoveMessage(`✅ Перенос завершён! Скопировано файлов: ${result.copiedFiles}. Переход в галерею...`);
+        alert.success(`Перенос завершён! Скопировано файлов: ${result.copiedFiles}. Переход в галерею...`);
         
         setTimeout(() => {
           // Переходим в галерею для просмотра карточек
@@ -215,7 +190,7 @@ export const SettingsPage = () => {
         
       } catch (error) {
         console.error('[Settings] Ошибка переноса папки:', error);
-        setMoveMessage('❌ Ошибка переноса: ' + (error as Error).message);
+        alert.error('Ошибка переноса: ' + (error as Error).message);
       } finally {
         setIsMovingDirectory(false);
       }
@@ -304,14 +279,12 @@ export const SettingsPage = () => {
 
   const handleCreateBackup = async () => {
     if (!directoryPath) {
-      setBackupMessage('❌ Сначала выберите рабочую папку');
-      setTimeout(() => setBackupMessage(null), 3000);
+      alert.error('Сначала выберите рабочую папку');
       return;
     }
 
     if (backupParts === null) {
-      setBackupMessage('❌ Выберите формат резервной копии');
-      setTimeout(() => setBackupMessage(null), 3000);
+      alert.error('Выберите формат резервной копии');
       return;
     }
 
@@ -322,14 +295,11 @@ export const SettingsPage = () => {
 
     try {
       setIsCreatingBackup(true);
-      setBackupProgress(0);
-      setBackupMessage('🔄 Экспорт базы данных...');
+      alert.info('Создание резервной копии. Это может занять несколько минут...');
 
       // 1. Экспортируем базу данных
       const databaseJson = await exportDatabase();
       console.log('[Settings] База данных экспортирована');
-
-      setBackupMessage('🔄 Выбор места сохранения...');
 
       // 2. Генерируем имя файла с датой
       const date = new Date();
@@ -342,11 +312,8 @@ export const SettingsPage = () => {
 
       if (!selectedPath) {
         setIsCreatingBackup(false);
-        setBackupMessage(null);
         return;
       }
-
-      setBackupMessage('🔄 Создание архива...');
 
       // 4. Создаём backup с базой данных
       const response = await window.electronAPI.createBackup(
@@ -362,21 +329,18 @@ export const SettingsPage = () => {
         // Логируем создание бэкапа
         await logCreateBackup(response.size, backupParts!);
         
-        setBackupMessage(`✅ Backup создан! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
+        alert.success(`Резервная копия создана! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
         
         // Открываем папку с backup в проводнике
         await window.electronAPI.openFileLocation(selectedPath);
-        
-        setTimeout(() => setBackupMessage(null), 5000);
       } else {
-        setBackupMessage('❌ Ошибка создания backup');
+        alert.error('Ошибка создания резервной копии');
       }
     } catch (error) {
       console.error('Ошибка создания backup:', error);
-      setBackupMessage('❌ Ошибка создания backup');
+      alert.error('Ошибка создания резервной копии');
     } finally {
       setIsCreatingBackup(false);
-      setBackupProgress(0);
     }
   };
 
@@ -473,7 +437,7 @@ export const SettingsPage = () => {
     }
 
     const confirmRestore = confirm(
-      '⚠️ ВНИМАНИЕ!\n\n' +
+      'ВНИМАНИЕ!\n\n' +
       'Восстановление из резервной копии:\n' +
       '- Заменит ВСЕ текущие файлы\n' +
       '- Заменит ВСЮ базу данных\n' +
@@ -487,25 +451,21 @@ export const SettingsPage = () => {
 
     try {
       setIsRestoring(true);
-      setRestoreMessage('🔄 Выбор архива...');
+      alert.info('Восстановление из резервной копии. Это может занять несколько минут...');
 
       // 1. Выбираем архив для восстановления
       const archivePath = await window.electronAPI.selectArchivePath();
       
       if (!archivePath) {
         setIsRestoring(false);
-        setRestoreMessage(null);
         return;
       }
-
-      setRestoreMessage('🔄 Восстановление файлов...');
 
       // 2. Выбираем целевую папку
       const targetPath = await window.electronAPI.selectWorkingDirectory();
       
       if (!targetPath) {
         setIsRestoring(false);
-        setRestoreMessage(null);
         return;
       }
 
@@ -513,12 +473,10 @@ export const SettingsPage = () => {
       const result = await window.electronAPI.restoreBackup(archivePath, targetPath);
 
       if (!result.success) {
-        setRestoreMessage('❌ Ошибка восстановления');
+        alert.error('Ошибка восстановления');
         setIsRestoring(false);
         return;
       }
-
-      setRestoreMessage('🔄 Восстановление базы данных...');
 
       // 4. Импортируем базу данных с обновлением путей
       if (result.databaseJson) {
@@ -530,7 +488,7 @@ export const SettingsPage = () => {
       await window.electronAPI.saveSetting('workingDirectory', targetPath);
       console.log('[Settings] Рабочая папка обновлена:', targetPath);
 
-      setRestoreMessage('✅ Восстановление завершено! Переход в галерею...');
+      alert.success('Восстановление завершено! Переход в галерею...');
       await loadStats();
       
       setTimeout(() => {
@@ -539,7 +497,7 @@ export const SettingsPage = () => {
       }, 1500);
     } catch (error) {
       console.error('Ошибка восстановления:', error);
-      setRestoreMessage('❌ Ошибка восстановления: ' + (error as Error).message);
+      alert.error('Ошибка восстановления: ' + (error as Error).message);
     } finally {
       setIsRestoring(false);
     }
@@ -567,23 +525,6 @@ export const SettingsPage = () => {
       <button
         className={`section-header__filter-button ${activeTab === 'storage' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('storage')}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          height: '56px',
-          padding: '16px 32px',
-          backgroundColor: activeTab === 'storage' ? 'var(--color-grayscale-800)' : 'transparent',
-          border: activeTab === 'storage' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
-          borderRadius: '16px',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-          fontFamily: 'var(--font-family-body)',
-          fontSize: '16px',
-          fontWeight: 400,
-          lineHeight: '16px',
-          color: activeTab === 'storage' ? 'var(--text-light)' : 'var(--text-primary)'
-        }}
       >
         <Icon name="server" size={24} variant={activeTab === 'storage' ? 'fill' : 'border'} />
         <span>Хранилище</span>
@@ -591,23 +532,6 @@ export const SettingsPage = () => {
       <button
         className={`section-header__filter-button ${activeTab === 'statistics' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('statistics')}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          height: '56px',
-          padding: '16px 32px',
-          backgroundColor: activeTab === 'statistics' ? 'var(--color-grayscale-800)' : 'transparent',
-          border: activeTab === 'statistics' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
-          borderRadius: '16px',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-          fontFamily: 'var(--font-family-body)',
-          fontSize: '16px',
-          fontWeight: 400,
-          lineHeight: '16px',
-          color: activeTab === 'statistics' ? 'var(--text-light)' : 'var(--text-primary)'
-        }}
       >
         <Icon name="line-chart" size={24} variant={activeTab === 'statistics' ? 'fill' : 'border'} />
         <span>Статистика</span>
@@ -615,23 +539,6 @@ export const SettingsPage = () => {
       <button
         className={`section-header__filter-button ${activeTab === 'history' ? 'section-header__filter-button--active' : ''}`}
         onClick={() => setActiveTab('history')}
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          height: '56px',
-          padding: '16px 32px',
-          backgroundColor: activeTab === 'history' ? 'var(--color-grayscale-800)' : 'transparent',
-          border: activeTab === 'history' ? '2px solid transparent' : '2px solid var(--color-grayscale-100)',
-          borderRadius: '16px',
-          cursor: 'pointer',
-          transition: 'all 0.15s',
-          fontFamily: 'var(--font-family-body)',
-          fontSize: '16px',
-          fontWeight: 400,
-          lineHeight: '16px',
-          color: activeTab === 'history' ? 'var(--text-light)' : 'var(--text-primary)'
-        }}
       >
         <Icon name="history" size={24} variant={activeTab === 'history' ? 'fill' : 'border'} />
         <span>История</span>
@@ -1083,41 +990,6 @@ export const SettingsPage = () => {
               </div>
             </div>
 
-            {/* Прогресс переноса */}
-            {isMovingDirectory && (
-              <div style={{ marginTop: 'var(--spacing-l, 16px)' }}>
-                <div style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: 'var(--color-grayscale-200)',
-                  borderRadius: 'var(--radius-s)',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${moveProgress}%`,
-                    height: '100%',
-                    backgroundColor: 'var(--bg-button-primary)',
-                    transition: 'width 0.3s ease'
-                  }} />
-                </div>
-                <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
-                  {moveProgress}%
-                </p>
-              </div>
-            )}
-
-            {/* Сообщения */}
-            {moveMessage && (
-              <div style={{
-                padding: '12px 16px',
-                backgroundColor: moveMessage.includes('✅') ? 'var(--color-green-100)' : moveMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)',
-                whiteSpace: 'pre-line'
-              }}>
-                <p className="text-s">{moveMessage}</p>
-              </div>
-            )}
-
             {/* {message && (
               <div style={{
                 padding: '12px 16px',
@@ -1128,48 +1000,6 @@ export const SettingsPage = () => {
               </div>
             )} */}
 
-            {/* Прогресс создания backup */}
-            {isCreatingBackup && (
-              <div>
-                <div style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: 'var(--color-grayscale-200)',
-                  borderRadius: 'var(--radius-s)',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${backupProgress}%`,
-                    height: '100%',
-                    backgroundColor: 'var(--bg-button-primary)',
-                    transition: 'width 0.3s ease'
-                  }} />
-                </div>
-                <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
-                  {backupProgress}%
-                </p>
-              </div>
-            )}
-
-            {backupMessage && (
-              <div style={{
-                padding: '12px 16px',
-                backgroundColor: backupMessage.includes('✅') ? 'var(--color-green-100)' : backupMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)'
-              }}>
-                <p className="text-s">{backupMessage}</p>
-              </div>
-            )}
-
-            {restoreMessage && (
-              <div style={{
-                padding: '12px 16px',
-                backgroundColor: restoreMessage.includes('✅') ? 'var(--color-green-100)' : restoreMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)'
-              }}>
-                <p className="text-s">{restoreMessage}</p>
-              </div>
-            )}
 
           </div>
         )}
@@ -1461,38 +1291,14 @@ export const SettingsPage = () => {
                           }}>
                             {(index + 1).toString().padStart(2, '0')}
                           </p>
-                          <div 
+                          <button 
                             onClick={() => handleTagClick(tag.id)}
-                            style={{
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              borderRadius: '10px',
-                              height: '32px',
-                              padding: '0 10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.15s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-tag-button"
                           >
-                            <p className="text-s" style={{
-                              fontFamily: 'var(--font-family-body)',
-                              fontSize: 'var(--font-size-s, 12px)',
-                              lineHeight: 'var(--line-height-s, 12px)',
-                              fontWeight: 'var(--font-weight-regular, 400)',
-                              color: 'var(--text-primary, #3b3946)',
-                              letterSpacing: '0px'
-                            }}>
+                            <p className="text-s">
                               {tag.name}
                             </p>
-                          </div>
+                          </button>
                         </div>
                         <p className="text-m" style={{
                           fontFamily: 'var(--font-family-body)',
@@ -1572,64 +1378,20 @@ export const SettingsPage = () => {
                           }}>
                             {(index + 1).toString().padStart(2, '0')}
                           </p>
-                          <div 
+                          <button 
                             onClick={() => handleTagClick(tag.id)}
-                            style={{
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              borderRadius: '10px',
-                              height: '32px',
-                              padding: '0 10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.15s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-tag-button"
                           >
-                            <p className="text-s" style={{
-                              fontFamily: 'var(--font-family-body)',
-                              fontSize: 'var(--font-size-s, 12px)',
-                              lineHeight: 'var(--line-height-s, 12px)',
-                              fontWeight: 'var(--font-weight-regular, 400)',
-                              color: 'var(--text-primary, #3b3946)',
-                              letterSpacing: '0px'
-                            }}>
+                            <p className="text-s">
                               {tag.name}
                             </p>
-                          </div>
+                          </button>
                           <button
                             onClick={(e) => handleDeleteTag(tag.id, tag.name, e)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '32px',
-                              height: '32px',
-                              padding: 0,
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              border: 'none',
-                              borderRadius: 'var(--radius-s, 8px)',
-                              color: 'var(--icon-default, #93919a)',
-                              cursor: 'pointer',
-                              transition: 'all var(--transition-fast, 150ms ease-in-out)',
-                              flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-delete-button"
                             title="Удалить метку"
                           >
-                            <Icon name="trash" size={16} variant="border" style={{ color: 'var(--icon-default, #93919a)' }} />
+                            <Icon name="trash" size={16} variant="border" />
                           </button>
                         </div>
                         <p className="text-m" style={{
@@ -1709,38 +1471,14 @@ export const SettingsPage = () => {
                           }}>
                             {(index + 1).toString().padStart(2, '0')}
                           </p>
-                          <div 
+                          <button 
                             onClick={() => handleCollectionClick(collection.id)}
-                            style={{
-                              backgroundColor: 'var(--color-grayscale-100, #ebe9ee)',
-                              borderRadius: '10px',
-                              height: '32px',
-                              padding: '0 10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.15s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #d5d3d9)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--color-grayscale-100, #ebe9ee)';
-                            }}
+                            className="settings-tag-button"
                           >
-                            <p className="text-s" style={{
-                              fontFamily: 'var(--font-family-body)',
-                              fontSize: 'var(--font-size-s, 12px)',
-                              lineHeight: 'var(--line-height-s, 12px)',
-                              fontWeight: 'var(--font-weight-regular, 400)',
-                              color: 'var(--text-primary, #3b3946)',
-                              letterSpacing: '0px'
-                            }}>
+                            <p className="text-s">
                               {collection.name}
                             </p>
-                          </div>
+                          </button>
                         </div>
                         <p className="text-m" style={{
                           fontFamily: 'var(--font-family-body)',
@@ -1775,30 +1513,10 @@ export const SettingsPage = () => {
       }}>
         <button
           onClick={handleShowWhatsNew}
-          style={{
-            padding: '6px 12px',
-            backgroundColor: 'var(--color-grayscale-200, #f5f4f7)',
-            borderRadius: 'var(--radius-s, 8px)',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'background-color 0.15s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-300, #d4d1dc)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-grayscale-200, #f5f4f7)';
-          }}
+          className="settings-whats-new-button"
           title="Нажмите, чтобы посмотреть что нового"
         >
-          <p className="text-s" style={{
-            fontFamily: 'var(--font-family-body)',
-            fontSize: 'var(--font-size-s, 14px)',
-            lineHeight: 'var(--line-height-s, 18px)',
-            fontWeight: 'var(--font-weight-regular, 400)',
-            color: 'var(--text-secondary, #93919a)',
-            letterSpacing: '0px'
-          }}>
+          <p className="text-s">
             v{appVersion}
           </p>
         </button>
