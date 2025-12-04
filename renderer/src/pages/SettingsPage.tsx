@@ -39,11 +39,8 @@ export const SettingsPage = () => {
   // const [message, setMessage] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState<string>('');
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [backupProgress, setBackupProgress] = useState(0);
-  const [backupMessage, setBackupMessage] = useState<string | null>(null);
   const [backupParts, setBackupParts] = useState<1 | 2 | 4 | 8 | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
   const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
   const [directorySizes, setDirectorySizes] = useState<{
     totalSize: number;
@@ -54,8 +51,6 @@ export const SettingsPage = () => {
     videoCount: number;
   } | null>(null);
   const [isMovingDirectory, setIsMovingDirectory] = useState(false);
-  const [moveProgress, setMoveProgress] = useState(0);
-  const [moveMessage, setMoveMessage] = useState<string | null>(null);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [whatsNewVersions, setWhatsNewVersions] = useState<VersionChange[]>([]);
 
@@ -64,20 +59,6 @@ export const SettingsPage = () => {
     if (activeTab === 'storage' || activeTab === 'statistics') {
       loadStats();
       loadDirectorySizes();
-    }
-    
-    // Подписываемся на прогресс backup
-    if (window.electronAPI?.onBackupProgress) {
-      window.electronAPI.onBackupProgress((data) => {
-        setBackupProgress(data.percent);
-      });
-    }
-    
-    // Подписываемся на прогресс переноса папки
-    if (window.electronAPI?.onMoveDirectoryProgress) {
-      window.electronAPI.onMoveDirectoryProgress((data) => {
-        setMoveProgress(data.percent);
-      });
     }
   }, [directoryPath, activeTab]);
 
@@ -140,9 +121,9 @@ export const SettingsPage = () => {
           `Текущая папка: ${directoryPath}\n` +
           `Карточек: ${stats.totalCards}\n\n` +
           'Система автоматически:\n' +
-          '✅ Скопирует ВСЕ файлы в новую папку\n' +
-          '✅ Обновит пути в базе данных\n' +
-          '✅ Сохранит работоспособность карточек\n\n' +
+          '• Скопирует ВСЕ файлы в новую папку\n' +
+          '• Обновит пути в базе данных\n' +
+          '• Сохранит работоспособность карточек\n\n' +
           'Это может занять несколько минут.',
         confirmText: 'Перенести',
         cancelText: 'Отмена'
@@ -154,37 +135,30 @@ export const SettingsPage = () => {
 
       try {
         setIsMovingDirectory(true);
-        setMoveProgress(0);
-        setMoveMessage('🔄 Выбор новой папки...');
+        alert.info('Перенос рабочей папки. Это может занять несколько минут...');
 
         // 1. Выбираем новую папку
         const newPath = await window.electronAPI.selectWorkingDirectory();
         
         if (!newPath) {
           setIsMovingDirectory(false);
-          setMoveMessage(null);
           return;
         }
 
         if (newPath === directoryPath) {
           setIsMovingDirectory(false);
-          setMoveMessage('❌ Выбрана та же папка');
-          setTimeout(() => setMoveMessage(null), 2000);
+          alert.error('Выбрана та же папка');
           return;
         }
-
-        setMoveMessage(`🔄 Копирование файлов из\n${directoryPath}\nв\n${newPath}`);
 
         // 2. Копируем все файлы
         const result = await window.electronAPI.moveWorkingDirectory(directoryPath, newPath);
 
         if (!result.success) {
-          setMoveMessage('❌ Ошибка переноса файлов');
+          alert.error('Ошибка переноса файлов');
           setIsMovingDirectory(false);
           return;
         }
-
-        setMoveMessage('🔄 Обновление путей в базе данных...');
 
         // 3. Обновляем пути в базе данных
         const allCards = await db.cards.toArray();
@@ -206,7 +180,7 @@ export const SettingsPage = () => {
         const totalSize = directorySizes?.totalSize || 0;
         await logMoveStorage(totalSize);
         
-        setMoveMessage(`✅ Перенос завершён! Скопировано файлов: ${result.copiedFiles}. Переход в галерею...`);
+        alert.success(`Перенос завершён! Скопировано файлов: ${result.copiedFiles}. Переход в галерею...`);
         
         setTimeout(() => {
           // Переходим в галерею для просмотра карточек
@@ -215,7 +189,7 @@ export const SettingsPage = () => {
         
       } catch (error) {
         console.error('[Settings] Ошибка переноса папки:', error);
-        setMoveMessage('❌ Ошибка переноса: ' + (error as Error).message);
+        alert.error('Ошибка переноса: ' + (error as Error).message);
       } finally {
         setIsMovingDirectory(false);
       }
@@ -304,14 +278,12 @@ export const SettingsPage = () => {
 
   const handleCreateBackup = async () => {
     if (!directoryPath) {
-      setBackupMessage('❌ Сначала выберите рабочую папку');
-      setTimeout(() => setBackupMessage(null), 3000);
+      alert.error('Сначала выберите рабочую папку');
       return;
     }
 
     if (backupParts === null) {
-      setBackupMessage('❌ Выберите формат резервной копии');
-      setTimeout(() => setBackupMessage(null), 3000);
+      alert.error('Выберите формат резервной копии');
       return;
     }
 
@@ -322,14 +294,11 @@ export const SettingsPage = () => {
 
     try {
       setIsCreatingBackup(true);
-      setBackupProgress(0);
-      setBackupMessage('🔄 Экспорт базы данных...');
+      alert.info('Создание резервной копии. Это может занять несколько минут...');
 
       // 1. Экспортируем базу данных
       const databaseJson = await exportDatabase();
       console.log('[Settings] База данных экспортирована');
-
-      setBackupMessage('🔄 Выбор места сохранения...');
 
       // 2. Генерируем имя файла с датой
       const date = new Date();
@@ -342,11 +311,8 @@ export const SettingsPage = () => {
 
       if (!selectedPath) {
         setIsCreatingBackup(false);
-        setBackupMessage(null);
         return;
       }
-
-      setBackupMessage('🔄 Создание архива...');
 
       // 4. Создаём backup с базой данных
       const response = await window.electronAPI.createBackup(
@@ -362,21 +328,18 @@ export const SettingsPage = () => {
         // Логируем создание бэкапа
         await logCreateBackup(response.size, backupParts!);
         
-        setBackupMessage(`✅ Backup создан! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
+        alert.success(`Резервная копия создана! Размер: ${sizeMB} MB, файлов: ${response.filesCount}`);
         
         // Открываем папку с backup в проводнике
         await window.electronAPI.openFileLocation(selectedPath);
-        
-        setTimeout(() => setBackupMessage(null), 5000);
       } else {
-        setBackupMessage('❌ Ошибка создания backup');
+        alert.error('Ошибка создания резервной копии');
       }
     } catch (error) {
       console.error('Ошибка создания backup:', error);
-      setBackupMessage('❌ Ошибка создания backup');
+      alert.error('Ошибка создания резервной копии');
     } finally {
       setIsCreatingBackup(false);
-      setBackupProgress(0);
     }
   };
 
@@ -473,7 +436,7 @@ export const SettingsPage = () => {
     }
 
     const confirmRestore = confirm(
-      '⚠️ ВНИМАНИЕ!\n\n' +
+      'ВНИМАНИЕ!\n\n' +
       'Восстановление из резервной копии:\n' +
       '- Заменит ВСЕ текущие файлы\n' +
       '- Заменит ВСЮ базу данных\n' +
@@ -487,25 +450,21 @@ export const SettingsPage = () => {
 
     try {
       setIsRestoring(true);
-      setRestoreMessage('🔄 Выбор архива...');
+      alert.info('Восстановление из резервной копии. Это может занять несколько минут...');
 
       // 1. Выбираем архив для восстановления
       const archivePath = await window.electronAPI.selectArchivePath();
       
       if (!archivePath) {
         setIsRestoring(false);
-        setRestoreMessage(null);
         return;
       }
-
-      setRestoreMessage('🔄 Восстановление файлов...');
 
       // 2. Выбираем целевую папку
       const targetPath = await window.electronAPI.selectWorkingDirectory();
       
       if (!targetPath) {
         setIsRestoring(false);
-        setRestoreMessage(null);
         return;
       }
 
@@ -513,12 +472,10 @@ export const SettingsPage = () => {
       const result = await window.electronAPI.restoreBackup(archivePath, targetPath);
 
       if (!result.success) {
-        setRestoreMessage('❌ Ошибка восстановления');
+        alert.error('Ошибка восстановления');
         setIsRestoring(false);
         return;
       }
-
-      setRestoreMessage('🔄 Восстановление базы данных...');
 
       // 4. Импортируем базу данных с обновлением путей
       if (result.databaseJson) {
@@ -530,7 +487,7 @@ export const SettingsPage = () => {
       await window.electronAPI.saveSetting('workingDirectory', targetPath);
       console.log('[Settings] Рабочая папка обновлена:', targetPath);
 
-      setRestoreMessage('✅ Восстановление завершено! Переход в галерею...');
+      alert.success('Восстановление завершено! Переход в галерею...');
       await loadStats();
       
       setTimeout(() => {
@@ -539,7 +496,7 @@ export const SettingsPage = () => {
       }, 1500);
     } catch (error) {
       console.error('Ошибка восстановления:', error);
-      setRestoreMessage('❌ Ошибка восстановления: ' + (error as Error).message);
+      alert.error('Ошибка восстановления: ' + (error as Error).message);
     } finally {
       setIsRestoring(false);
     }
@@ -1083,41 +1040,6 @@ export const SettingsPage = () => {
               </div>
             </div>
 
-            {/* Прогресс переноса */}
-            {isMovingDirectory && (
-              <div style={{ marginTop: 'var(--spacing-l, 16px)' }}>
-                <div style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: 'var(--color-grayscale-200)',
-                  borderRadius: 'var(--radius-s)',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${moveProgress}%`,
-                    height: '100%',
-                    backgroundColor: 'var(--bg-button-primary)',
-                    transition: 'width 0.3s ease'
-                  }} />
-                </div>
-                <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
-                  {moveProgress}%
-                </p>
-              </div>
-            )}
-
-            {/* Сообщения */}
-            {moveMessage && (
-              <div style={{
-                padding: '12px 16px',
-                backgroundColor: moveMessage.includes('✅') ? 'var(--color-green-100)' : moveMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)',
-                whiteSpace: 'pre-line'
-              }}>
-                <p className="text-s">{moveMessage}</p>
-              </div>
-            )}
-
             {/* {message && (
               <div style={{
                 padding: '12px 16px',
@@ -1128,48 +1050,6 @@ export const SettingsPage = () => {
               </div>
             )} */}
 
-            {/* Прогресс создания backup */}
-            {isCreatingBackup && (
-              <div>
-                <div style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: 'var(--color-grayscale-200)',
-                  borderRadius: 'var(--radius-s)',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    width: `${backupProgress}%`,
-                    height: '100%',
-                    backgroundColor: 'var(--bg-button-primary)',
-                    transition: 'width 0.3s ease'
-                  }} />
-                </div>
-                <p className="text-s" style={{ marginTop: '8px', textAlign: 'center' }}>
-                  {backupProgress}%
-                </p>
-              </div>
-            )}
-
-            {backupMessage && (
-              <div style={{
-                padding: '12px 16px',
-                backgroundColor: backupMessage.includes('✅') ? 'var(--color-green-100)' : backupMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)'
-              }}>
-                <p className="text-s">{backupMessage}</p>
-              </div>
-            )}
-
-            {restoreMessage && (
-              <div style={{
-                padding: '12px 16px',
-                backgroundColor: restoreMessage.includes('✅') ? 'var(--color-green-100)' : restoreMessage.includes('🔄') ? 'var(--color-yellow-100)' : 'var(--color-red-100)',
-                borderRadius: 'var(--radius-s)'
-              }}>
-                <p className="text-s">{restoreMessage}</p>
-              </div>
-            )}
 
           </div>
         )}
