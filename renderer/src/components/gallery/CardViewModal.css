@@ -21,6 +21,7 @@
   background: var(--color-grayscale-50);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   margin: calc(var(--spacing-3xl) * -1);
+  margin-top: calc(var(--spacing-3xl) * -1 - var(--spacing-2xl));
   margin-bottom: 0;
   padding: var(--spacing-3xl);
   padding-bottom: 0;
