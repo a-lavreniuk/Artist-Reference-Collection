@@ -134,7 +134,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
   const [allCollections, setAllCollections] = useState<Collection[]>([]);
   
   const [clipboard, setClipboard] = useState<{ tags: string[]; collections: string[] } | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [collectionsSearchQuery, setCollectionsSearchQuery] = useState('');
   const [tagsSearchQuery, setTagsSearchQuery] = useState('');
   const [newTagName, setNewTagName] = useState('');
@@ -750,7 +749,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
     }
 
     try {
-      setMessage('💾 Сохранение файлов в рабочую папку...');
+      alert.info(`Сохранение ${configured.length} ${configured.length === 1 ? 'карточки' : 'карточек'}. Это может занять некоторое время...`);
       
       const createdCards: Card[] = [];
       
@@ -765,7 +764,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
       // Сохраняем только настроенные карточки
       for (let i = 0; i < configured.length; i++) {
         const item = configured[i];
-        setMessage(`💾 Сохранение ${i + 1}/${configured.length}: ${item.file.name}`);
         
         try {
           let savedFilePath: string;
@@ -851,8 +849,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
           alert.error(`Ошибка сохранения файла ${item.file.name}: ${errorMessage}`);
           
           // Продолжаем с следующим файлом
-          setMessage(`⚠️ Не удалось сохранить ${item.file.name}`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
@@ -990,17 +987,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
 
         {/* Настройки */}
         <div className="add-card-flow__settings">
-          {message && (
-            <div style={{
-              padding: '8px 12px',
-              backgroundColor: message.includes('✅') ? 'var(--color-green-100)' : 'var(--color-red-100)',
-              borderRadius: 'var(--radius-xs)',
-              marginBottom: '12px'
-            }}>
-              <p className="text-s">{message}</p>
-            </div>
-          )}
-
           {/* Блок 1: Шаблон и Описание - объединены по горизонтали */}
           <div className="add-card-flow__block-row">
             {/* Блок шаблона */}
