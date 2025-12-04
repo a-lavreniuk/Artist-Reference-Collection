@@ -130,6 +130,12 @@
 
 .modal--large .modal__content {
   overflow-y: auto; /* Включаем прокрутку для длинного контента */
+  overflow-x: hidden;
+}
+
+/* Для CardViewModal убираем overflow чтобы работал position: sticky */
+.modal--large .modal__content:has(.card-view) {
+  overflow: visible;
 }
 
 .modal--fullscreen {
