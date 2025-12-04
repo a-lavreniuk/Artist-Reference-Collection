@@ -17,7 +17,7 @@
   gap: var(--spacing-2xl);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 10;
   background: var(--color-grayscale-50);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   margin: calc(var(--spacing-3xl) * -1);
