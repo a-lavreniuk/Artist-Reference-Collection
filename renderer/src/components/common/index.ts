@@ -17,6 +17,9 @@ export type { InputProps } from './Input';
 export { Card } from './Card';
 export type { CardProps } from './Card';
 
+export { CardSkeleton } from './CardSkeleton';
+export type { CardSkeletonProps } from './CardSkeleton';
+
 export { OnboardingScreen } from './OnboardingScreen';
 export type { OnboardingScreenProps } from './OnboardingScreen';
 

@@ -6,7 +6,7 @@
 
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import Masonry from 'react-masonry-css';
-import { Card } from '../common';
+import { Card, CardSkeleton } from '../common';
 import type { Card as CardType, ViewMode } from '../../types';
 import './MasonryGrid.css';
 
@@ -52,53 +52,81 @@ export const MasonryGrid = ({
   const [visibleCards, setVisibleCards] = useState<Set<string>>(new Set());
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const prevViewModeRef = useRef<ViewMode>(viewMode);
 
-  // Создаем Intersection Observer для виртуализации
+  // Инициализация видимых карточек при изменении списка cards
   useEffect(() => {
-    // Инициализируем видимыми первые 20 карточек для быстрой загрузки
-    const initialVisible = new Set(cards.slice(0, 20).map(card => card.id));
+    // При изменении списка карточек инициализируем видимыми первые 300
+    // Увеличено до 300 для гарантированного покрытия всех колонок при любом режиме
+    const initialVisible = new Set(cards.slice(0, 300).map(card => card.id));
     setVisibleCards(initialVisible);
+  }, [cards]);
 
-    // Создаем observer с запасом в 200px для предзагрузки
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const cardId = entry.target.getAttribute('data-card-id');
-          if (cardId) {
-            setVisibleCards((prev) => {
-              const next = new Set(prev);
-              if (entry.isIntersecting) {
-                next.add(cardId);
-              } else {
-                // Не удаляем сразу, чтобы избежать мерцания
-                // Удаляем только если карточка далеко за пределами viewport
-                if (entry.boundingClientRect.top > window.innerHeight * 2) {
-                  next.delete(cardId);
-                }
+  // Специальный эффект для обработки смены viewMode
+  useEffect(() => {
+    if (prevViewModeRef.current !== viewMode) {
+      // При смене viewMode временно показываем ВСЕ карточки для корректного пересчета layout
+      // Это предотвращает появление "дыр" во время перестройки Masonry сетки
+      // Observer позже оптимизирует список видимых карточек
+      const allVisible = new Set(cards.map(card => card.id));
+      setVisibleCards(allVisible);
+      prevViewModeRef.current = viewMode;
+    }
+  }, [viewMode, cards]);
+
+  // Создаем и обновляем Intersection Observer
+  useEffect(() => {
+    let rafId1: number;
+    let rafId2: number;
+
+    // При смене viewMode дожидаемся пересчета layout через два фрейма
+    // Первый фрейм - для обновления DOM, второй - для пересчета layout
+    rafId1 = requestAnimationFrame(() => {
+      rafId2 = requestAnimationFrame(() => {
+        // Создаем observer с большим запасом для предзагрузки
+        observerRef.current = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              const cardId = entry.target.getAttribute('data-card-id');
+              if (cardId) {
+                setVisibleCards((prev) => {
+                  const next = new Set(prev);
+                  if (entry.isIntersecting) {
+                    next.add(cardId);
+                  } else {
+                    // Не удаляем сразу, чтобы избежать мерцания
+                    // Удаляем только если карточка далеко за пределами viewport
+                    if (entry.boundingClientRect.top > window.innerHeight * 3) {
+                      next.delete(cardId);
+                    }
+                  }
+                  return next;
+                });
               }
-              return next;
             });
+          },
+          {
+            rootMargin: '1000px' // Загружаем карточки за 1000px до появления для плавного скролла
+          }
+        );
+
+        // Наблюдаем за всеми карточками
+        cardRefs.current.forEach((element) => {
+          if (element && observerRef.current) {
+            observerRef.current.observe(element);
           }
         });
-      },
-      {
-        rootMargin: '200px' // Загружаем карточки за 200px до появления
-      }
-    );
-
-    // Наблюдаем за всеми карточками
-    cardRefs.current.forEach((element) => {
-      if (element && observerRef.current) {
-        observerRef.current.observe(element);
-      }
+      });
     });
 
     return () => {
+      cancelAnimationFrame(rafId1);
+      cancelAnimationFrame(rafId2);
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
     };
-  }, [cards]);
+  }, [cards, viewMode]); // Пересоздаем при изменении cards или viewMode
 
   // Callback для установки ref карточки
   const setCardRef = useCallback((cardId: string, element: HTMLDivElement | null) => {
@@ -178,8 +206,8 @@ export const MasonryGrid = ({
                   moodboardCardIds={moodboardCardIds}
                 />
               ) : (
-                // Плейсхолдер для невидимых карточек (сохраняет layout)
-                <div style={{ width: '100%', height: '200px', backgroundColor: 'var(--color-grayscale-100, #ebe9ee)' }} />
+                // Скелетон для невидимых карточек (сохраняет layout и выглядит как настоящая карточка)
+                <CardSkeleton compact={viewMode === 'compact'} />
               )}
             </div>
           );

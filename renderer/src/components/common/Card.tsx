@@ -69,7 +69,7 @@ export const Card = ({
         });
       },
       {
-        rootMargin: '200px' // Загружаем за 200px до появления в viewport
+        rootMargin: '1000px' // Загружаем за 1000px до появления в viewport для плавного скролла
       }
     );
 
