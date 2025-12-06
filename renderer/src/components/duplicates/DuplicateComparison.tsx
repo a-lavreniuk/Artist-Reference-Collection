@@ -6,12 +6,14 @@
 import { useState } from 'react';
 import { Button, Icon } from '../common';
 import type { Card } from '../../types';
+import type { DuplicatePair } from '../../services/duplicateService';
 import './DuplicateComparison.css';
 
 interface DuplicateComparisonProps {
   card1: Card;
   card2: Card;
   similarity: number;
+  method?: DuplicatePair['method'];
   onDelete: (cardId: string) => Promise<void>;
   isDeleting: boolean;
   currentIndex: number;
@@ -43,10 +45,29 @@ function getFileFormat(fileName: string): string {
   return ext || 'Неизвестно';
 }
 
+/**
+ * Получает русское название метода обнаружения
+ */
+function getMethodLabel(method?: DuplicatePair['method']): string {
+  switch (method) {
+    case 'exact':
+      return 'Точное совпадение';
+    case 'perceptual':
+      return 'Визуальная схожесть';
+    case 'color':
+      return 'Цветовая схожесть';
+    case 'rotated':
+      return 'Повернутое изображение';
+    default:
+      return 'Схожесть';
+  }
+}
+
 export const DuplicateComparison = ({
   card1,
   card2,
   similarity,
+  method,
   onDelete,
   isDeleting,
   currentIndex,
@@ -71,9 +92,11 @@ export const DuplicateComparison = ({
         <p className="duplicate-comparison__counter text-m">
           {currentIndex} из {totalCount}
         </p>
-        <p className="duplicate-comparison__similarity text-m">
-          Схожесть: {similarity}%
-        </p>
+        <div className="duplicate-comparison__similarity-info">
+          <p className="duplicate-comparison__similarity text-m">
+            {getMethodLabel(method)}: {similarity}%
+          </p>
+        </div>
       </div>
 
       <div className="duplicate-comparison__content">

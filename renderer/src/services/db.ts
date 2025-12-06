@@ -123,8 +123,44 @@ export class ARCDatabase extends Dexie {
   }
 }
 
-// Создание экземпляра базы данных
+// Создание экземпляра базы данных с обработкой ошибок
 export const db = new ARCDatabase();
+
+/**
+ * Инициализация базы данных с обработкой ошибок
+ * Должна быть вызвана при старте приложения
+ */
+export async function initializeDatabase(): Promise<boolean> {
+  try {
+    // Пробуем открыть базу данных
+    await db.open();
+    console.log('[DB] База данных успешно инициализирована');
+    return true;
+  } catch (error: any) {
+    console.error('[DB] Ошибка инициализации базы данных:', error);
+    
+    // Обработка специфичных ошибок
+    if (error.name === 'QuotaExceededError') {
+      console.error('[DB] Превышена квота IndexedDB. Необходимо освободить место.');
+      alert('Недостаточно места для базы данных. Пожалуйста, очистите кеш браузера или освободите место на диске.');
+    } else if (error.name === 'VersionError') {
+      console.error('[DB] Ошибка версии базы данных. Попытка пересоздания...');
+      // Можно попробовать удалить и пересоздать БД
+      try {
+        await db.delete();
+        await db.open();
+        console.log('[DB] База данных успешно пересоздана');
+        return true;
+      } catch (retryError) {
+        console.error('[DB] Не удалось пересоздать базу данных:', retryError);
+      }
+    } else if (error.name === 'InvalidStateError') {
+      console.error('[DB] IndexedDB находится в некорректном состоянии');
+    }
+    
+    return false;
+  }
+}
 
 /**
  * Диагностика конкретной карточки (для отладки)
@@ -155,6 +191,7 @@ export async function debugCard(cardId: string): Promise<void> {
 if (typeof window !== 'undefined') {
   (window as any).debugCard = debugCard;
   (window as any).db = db;
+  (window as any).initializeDatabase = initializeDatabase;
 }
 
 /**
@@ -251,14 +288,59 @@ export async function updateCard(id: string, changes: Partial<Card>): Promise<nu
 /**
  * Удалить карточку
  * Удаляет запись из БД + физические файлы (исходник и превью)
+ * Использует транзакцию для обеспечения атомарности операций БД
  */
 export async function deleteCard(id: string): Promise<void> {
   // Получаем карточку для доступа к путям файлов
   const card = await db.cards.get(id);
   
-  if (card) {
+  if (!card) {
+    console.warn('[DB] Карточка не найдена:', id);
+    return;
+  }
+
+  // Сначала удаляем физические файлы (если это не удастся, БД останется нетронутой)
+  const filesToDelete: string[] = [];
+  
+  if (window.electronAPI?.deleteFile) {
+    try {
+      // Удаляем исходник
+      filesToDelete.push(card.filePath);
+      await window.electronAPI.deleteFile(card.filePath);
+      console.log('[DB] Удалён исходник:', card.filePath);
+      
+      // Удаляем превью (извлекаем путь из thumbnailUrl если это не Data URL)
+      if (card.thumbnailUrl && !card.thumbnailUrl.startsWith('data:')) {
+        filesToDelete.push(card.thumbnailUrl);
+        await window.electronAPI.deleteFile(card.thumbnailUrl);
+        console.log('[DB] Удалено превью:', card.thumbnailUrl);
+      } else {
+        // Если thumbnailUrl это Data URL, ищем файл превью по имени
+        const fileName = card.filePath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '');
+        if (fileName) {
+          const thumbName = `${fileName}_thumb.jpg`;
+          // Путь к превью: рабочая_папка/_cache/thumbs/имя_thumb.jpg
+          const workingDir = await window.electronAPI.getSetting('workingDirectory');
+          if (workingDir) {
+            // Используем кроссплатформенный pathJoin
+            const thumbPath = pathJoin(workingDir, '_cache', 'thumbs', thumbName);
+            filesToDelete.push(thumbPath);
+            await window.electronAPI.deleteFile(thumbPath);
+            console.log('[DB] Удалено превью:', thumbPath);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[DB] Ошибка удаления файлов:', error);
+      // Продолжаем удаление из БД даже если не удалось удалить файлы
+      // В будущем можно добавить механизм очистки orphan файлов
+    }
+  }
+  
+  // Используем транзакцию для атомарного обновления БД
+  await db.transaction('rw', db.cards, db.tags, db.thumbnailCache, async () => {
     // Уменьшаем счётчик для всех меток карточки
-    if (card.tags) {
+    if (card.tags && card.tags.length > 0) {
       for (const tagId of card.tags) {
         const tag = await db.tags.get(tagId);
         if (tag && tag.cardCount > 0) {
@@ -268,44 +350,15 @@ export async function deleteCard(id: string): Promise<void> {
         }
       }
     }
-
-    // Удаляем физические файлы через Electron API
-    if (window.electronAPI?.deleteFile) {
-      try {
-        // Удаляем исходник
-        await window.electronAPI.deleteFile(card.filePath);
-        console.log('[DB] Удалён исходник:', card.filePath);
-        
-        // Удаляем превью (извлекаем путь из thumbnailUrl если это не Data URL)
-        if (card.thumbnailUrl && !card.thumbnailUrl.startsWith('data:')) {
-          await window.electronAPI.deleteFile(card.thumbnailUrl);
-          console.log('[DB] Удалено превью:', card.thumbnailUrl);
-        } else {
-          // Если thumbnailUrl это Data URL, ищем файл превью по имени
-          const fileName = card.filePath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '');
-          if (fileName) {
-            const thumbName = `${fileName}_thumb.jpg`;
-            // Путь к превью: рабочая_папка/_cache/thumbs/имя_thumb.jpg
-            const workingDir = await window.electronAPI.getSetting('workingDirectory');
-            if (workingDir) {
-              // Используем кроссплатформенный pathJoin
-              const thumbPath = pathJoin(workingDir, '_cache', 'thumbs', thumbName);
-              await window.electronAPI.deleteFile(thumbPath);
-              console.log('[DB] Удалено превью:', thumbPath);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[DB] Ошибка удаления файлов:', error);
-        // Продолжаем удаление из БД даже если не удалось удалить файлы
-      }
-    }
-  }
+    
+    // Удаляем запись из БД
+    await db.cards.delete(id);
+    
+    // Также удаляем превью из кеша БД
+    await db.thumbnailCache.where('cardId').equals(id).delete();
+  });
   
-  // Удаляем запись из БД
-  await db.cards.delete(id);
-  // Также удаляем превью из кеша БД
-  await db.thumbnailCache.where('cardId').equals(id).delete();
+  console.log('[DB] Карточка успешно удалена:', id);
 }
 
 /**
@@ -551,16 +604,26 @@ export async function updateCollection(id: string, changes: Partial<Collection>)
 
 /**
  * Удалить коллекцию
+ * Использует транзакцию для атомарного удаления коллекции и очистки ссылок в карточках
  */
 export async function deleteCollection(id: string): Promise<void> {
-  await db.collections.delete(id);
-  // Удаляем ссылки из карточек
-  const cards = await db.cards.where('collections').equals(id).toArray();
-  for (const card of cards) {
-    await updateCard(card.id, {
-      collections: card.collections.filter(collId => collId !== id)
-    });
-  }
+  // Используем транзакцию для атомарности
+  await db.transaction('rw', db.collections, db.cards, async () => {
+    // Получаем все карточки с этой коллекцией ДО удаления
+    const cards = await db.cards.where('collections').equals(id).toArray();
+    
+    // Удаляем ссылки из карточек
+    for (const card of cards) {
+      await db.cards.update(card.id, {
+        collections: card.collections.filter(collId => collId !== id)
+      });
+    }
+    
+    // Только после очистки ссылок удаляем саму коллекцию
+    await db.collections.delete(id);
+  });
+  
+  console.log('[DB] Коллекция удалена:', id);
 }
 
 // ========== ОПЕРАЦИИ С МУДБОРДОМ ==========
@@ -732,12 +795,21 @@ export async function getViewHistory(): Promise<ViewHistory[]> {
  * @returns Массив найденных карточек
  */
 export async function searchCardsAdvanced(query: string): Promise<Card[]> {
-  if (!query || query.trim().length === 0) {
-    return await getAllCards();
+  // Валидация: минимальная длина запроса
+  const trimmedQuery = query?.trim() || '';
+  
+  if (trimmedQuery.length === 0) {
+    console.log('[DB] Пустой поисковый запрос, возвращаем пустой массив');
+    return [];
+  }
+  
+  if (trimmedQuery.length < 2) {
+    console.log('[DB] Слишком короткий поисковый запрос (минимум 2 символа)');
+    return [];
   }
 
-  const searchLower = query.toLowerCase().trim();
-  const searchOriginal = query.trim();
+  const searchLower = trimmedQuery.toLowerCase();
+  const searchOriginal = trimmedQuery;
   
   // 1. Поиск по ID (точное совпадение, без учета регистра)
   // Сначала пробуем точное совпадение в нижнем регистре

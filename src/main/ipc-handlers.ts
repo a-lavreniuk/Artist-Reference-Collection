@@ -146,11 +146,36 @@ export function registerIPCHandlers(): void {
       console.log('[IPC] Сканирование директории:', dirPath);
       const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm'];
       const files: string[] = [];
+      const visitedPaths = new Set<string>(); // Отслеживание посещенных путей для защиты от symlinks
+      const MAX_DEPTH = 50; // Максимальная глубина рекурсии
 
       /**
-       * Рекурсивное сканирование папки
+       * Рекурсивное сканирование папки с защитой от бесконечной рекурсии
        */
-      async function scanDir(currentPath: string): Promise<void> {
+      async function scanDir(currentPath: string, depth: number = 0): Promise<void> {
+        // Проверка глубины рекурсии
+        if (depth > MAX_DEPTH) {
+          console.warn(`[IPC] Достигнута максимальная глубина рекурсии (${MAX_DEPTH}) для: ${currentPath}`);
+          return;
+        }
+        
+        // Получаем реальный путь (resolve symlinks)
+        let realPath: string;
+        try {
+          realPath = await fs.realpath(currentPath);
+        } catch (err) {
+          console.error(`[IPC] Не удалось получить realpath для ${currentPath}:`, err);
+          return;
+        }
+        
+        // Проверка на циклические ссылки
+        if (visitedPaths.has(realPath)) {
+          console.warn(`[IPC] Обнаружена циклическая ссылка, пропускаем: ${currentPath} -> ${realPath}`);
+          return;
+        }
+        
+        visitedPaths.add(realPath);
+        
         try {
           const entries = await fs.readdir(currentPath, { withFileTypes: true });
 
@@ -160,9 +185,9 @@ export function registerIPCHandlers(): void {
             if (entry.isDirectory()) {
               // Пропускаем служебные папки
               if (!entry.name.startsWith('.') && !entry.name.startsWith('_')) {
-                await scanDir(fullPath);
+                await scanDir(fullPath, depth + 1);
               }
-            } else if (entry.isFile()) {
+            } else if (entry.isFile() || entry.isSymbolicLink()) {
               // Проверяем расширение файла
               const ext = path.extname(entry.name).toLowerCase();
               if (supportedExtensions.includes(ext)) {
@@ -277,18 +302,34 @@ export function registerIPCHandlers(): void {
       const targetDir = path.join(workingDir, year, month, day);
       await fs.mkdir(targetDir, { recursive: true });
 
-      // Копируем файл
-      const fileName = path.basename(sourcePath);
+      // Санитизация имени файла (удаляем запрещенные символы Windows)
+      let fileName = path.basename(sourcePath);
+      fileName = fileName.replace(/[<>:"|?*]/g, '_');
+      
+      // Проверка длины имени файла (максимум 255 символов для большинства ФС)
+      if (fileName.length > 255) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        fileName = nameWithoutExt.substring(0, 250 - ext.length) + ext;
+      }
+      
       const targetPath = path.join(targetDir, fileName);
 
-      // Если файл с таким именем уже существует, добавляем timestamp
+      // Если файл с таким именем уже существует, добавляем counter
+      // Максимум 9999 попыток для защиты от бесконечного цикла
       let finalPath = targetPath;
       let counter = 1;
-      while (await fileExists(finalPath)) {
+      const MAX_ATTEMPTS = 9999;
+      
+      while (await fileExists(finalPath) && counter <= MAX_ATTEMPTS) {
         const ext = path.extname(fileName);
         const nameWithoutExt = path.basename(fileName, ext);
         finalPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
         counter++;
+      }
+      
+      if (counter > MAX_ATTEMPTS) {
+        throw new Error(`Не удалось найти уникальное имя файла после ${MAX_ATTEMPTS} попыток`);
       }
 
       await fs.copyFile(sourcePath, finalPath);
@@ -317,18 +358,34 @@ export function registerIPCHandlers(): void {
       const targetDir = path.join(workingDir, year, month, day);
       await fs.mkdir(targetDir, { recursive: true });
 
-      // Перемещаем файл
-      const fileName = path.basename(sourcePath);
+      // Санитизация имени файла
+      let fileName = path.basename(sourcePath);
+      fileName = fileName.replace(/[<>:"|?*]/g, '_');
+      
+      // Проверка длины имени файла
+      if (fileName.length > 255) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        fileName = nameWithoutExt.substring(0, 250 - ext.length) + ext;
+      }
+      
       const targetPath = path.join(targetDir, fileName);
 
-      // Если файл с таким именем уже существует, добавляем timestamp
+      // Если файл с таким именем уже существует, добавляем counter
+      // Максимум 9999 попыток для защиты от бесконечного цикла
       let finalPath = targetPath;
       let counter = 1;
-      while (await fileExists(finalPath)) {
+      const MAX_ATTEMPTS = 9999;
+      
+      while (await fileExists(finalPath) && counter <= MAX_ATTEMPTS) {
         const ext = path.extname(fileName);
         const nameWithoutExt = path.basename(fileName, ext);
         finalPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
         counter++;
+      }
+      
+      if (counter > MAX_ATTEMPTS) {
+        throw new Error(`Не удалось найти уникальное имя файла после ${MAX_ATTEMPTS} попыток`);
       }
 
       // Перемещаем файл (rename = move в пределах одного диска)
@@ -359,16 +416,32 @@ export function registerIPCHandlers(): void {
       await fs.mkdir(targetDir, { recursive: true });
       console.log('[IPC] Создана директория:', targetDir);
 
-      // Сохраняем файл
-      let targetPath = path.join(targetDir, fileName);
+      // Санитизация имени файла
+      let sanitizedFileName = fileName.replace(/[<>:"|?*]/g, '_');
+      
+      // Проверка длины имени файла
+      if (sanitizedFileName.length > 255) {
+        const ext = path.extname(sanitizedFileName);
+        const nameWithoutExt = path.basename(sanitizedFileName, ext);
+        sanitizedFileName = nameWithoutExt.substring(0, 250 - ext.length) + ext;
+      }
+      
+      let targetPath = path.join(targetDir, sanitizedFileName);
       
       // Если файл с таким именем уже существует, добавляем счётчик
+      // Максимум 9999 попыток для защиты от бесконечного цикла
       let counter = 1;
-      while (await fileExists(targetPath)) {
-        const ext = path.extname(fileName);
-        const nameWithoutExt = path.basename(fileName, ext);
+      const MAX_ATTEMPTS = 9999;
+      
+      while (await fileExists(targetPath) && counter <= MAX_ATTEMPTS) {
+        const ext = path.extname(sanitizedFileName);
+        const nameWithoutExt = path.basename(sanitizedFileName, ext);
         targetPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
         counter++;
+      }
+      
+      if (counter > MAX_ATTEMPTS) {
+        throw new Error(`Не удалось найти уникальное имя файла после ${MAX_ATTEMPTS} попыток`);
       }
 
       await fs.writeFile(targetPath, buffer);
@@ -1274,6 +1347,7 @@ export function registerIPCHandlers(): void {
   /**
    * Добавить запись в историю действий
    * Сохраняет максимум 1000 последних записей
+   * Использует атомарную запись с резервным копированием
    */
   ipcMain.handle('add-history-entry', async (_event, workingDir: string | undefined, entry: {
     action: string;
@@ -1282,6 +1356,7 @@ export function registerIPCHandlers(): void {
   }) => {
     try {
       const historyPath = getHistoryFilePath(workingDir);
+      const historyBackupPath = historyPath + '.backup';
       console.log('[IPC] Добавление записи в историю:', entry.description);
       console.log('[IPC] Путь к файлу истории:', historyPath);
       console.log('[IPC] Рабочая директория:', workingDir);
@@ -1301,8 +1376,23 @@ export function registerIPCHandlers(): void {
           history = JSON.parse(content);
           console.log('[IPC] Прочитано записей из файла:', history.length);
         } catch (parseError) {
-          console.warn('[IPC] Не удалось прочитать историю, создаём новую:', parseError);
-          history = [];
+          console.warn('[IPC] Не удалось прочитать историю, пробуем восстановить из backup:', parseError);
+          
+          // Пытаемся восстановить из backup
+          const backupExists = await fileExists(historyBackupPath);
+          if (backupExists) {
+            try {
+              const backupContent = await fs.readFile(historyBackupPath, 'utf-8');
+              history = JSON.parse(backupContent);
+              console.log('[IPC] История восстановлена из backup, записей:', history.length);
+            } catch (backupError) {
+              console.error('[IPC] Backup также поврежден, создаём новую историю');
+              history = [];
+            }
+          } else {
+            console.log('[IPC] Backup не найден, создаём новую историю');
+            history = [];
+          }
         }
       } else {
         console.log('[IPC] Файл истории не существует, создаём новый');
@@ -1326,8 +1416,21 @@ export function registerIPCHandlers(): void {
         console.log('[IPC] История обрезана до 1000 записей');
       }
 
-      // Сохраняем обратно в файл
-      await fs.writeFile(historyPath, JSON.stringify(history, null, 2), 'utf-8');
+      // Создаем резервную копию перед записью (если существует оригинал)
+      if (exists) {
+        try {
+          await fs.copyFile(historyPath, historyBackupPath);
+          console.log('[IPC] Создана резервная копия истории');
+        } catch (backupError) {
+          console.warn('[IPC] Не удалось создать backup, продолжаем без него:', backupError);
+        }
+      }
+
+      // Атомарная запись: сначала во временный файл, потом rename
+      const tempPath = historyPath + '.tmp';
+      await fs.writeFile(tempPath, JSON.stringify(history, null, 2), 'utf-8');
+      await fs.rename(tempPath, historyPath);
+      
       console.log('[IPC] История успешно сохранена, всего записей:', history.length);
     } catch (error) {
       console.error('[IPC] ОШИБКА добавления записи в историю:', error);
@@ -1363,25 +1466,59 @@ export function registerIPCHandlers(): void {
 
   /**
    * Сохранить настройку приложения в userData
+   * Использует атомарную запись с резервным копированием
    */
   ipcMain.handle('save-setting', async (_event, key: string, value: any) => {
     try {
       const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+      const settingsBackupPath = settingsPath + '.backup';
       
       // Читаем существующие настройки
       let settings: Record<string, any> = {};
-      try {
-        const data = await fs.readFile(settingsPath, 'utf-8');
-        settings = JSON.parse(data);
-      } catch (error) {
-        // Файл не существует, создадим новый
+      const exists = await fileExists(settingsPath);
+      
+      if (exists) {
+        try {
+          const data = await fs.readFile(settingsPath, 'utf-8');
+          settings = JSON.parse(data);
+        } catch (parseError) {
+          console.warn('[IPC] Не удалось прочитать настройки, пробуем восстановить из backup:', parseError);
+          
+          // Пытаемся восстановить из backup
+          const backupExists = await fileExists(settingsBackupPath);
+          if (backupExists) {
+            try {
+              const backupData = await fs.readFile(settingsBackupPath, 'utf-8');
+              settings = JSON.parse(backupData);
+              console.log('[IPC] Настройки восстановлены из backup');
+            } catch (backupError) {
+              console.error('[IPC] Backup также поврежден, создаём новые настройки');
+              settings = {};
+            }
+          } else {
+            console.log('[IPC] Backup не найден, создаём новые настройки');
+            settings = {};
+          }
+        }
       }
       
       // Сохраняем новое значение
       settings[key] = value;
       
-      // Записываем обратно
-      await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+      // Создаем резервную копию перед записью (если существует оригинал)
+      if (exists) {
+        try {
+          await fs.copyFile(settingsPath, settingsBackupPath);
+        } catch (backupError) {
+          console.warn('[IPC] Не удалось создать backup настроек:', backupError);
+        }
+      }
+      
+      // Атомарная запись: сначала во временный файл, потом rename
+      const tempPath = settingsPath + '.tmp';
+      await fs.writeFile(tempPath, JSON.stringify(settings, null, 2), 'utf-8');
+      await fs.rename(tempPath, settingsPath);
+      
       console.log('[IPC] Настройка сохранена:', key);
     } catch (error) {
       console.error('[IPC] Ошибка сохранения настройки:', error);

@@ -15,11 +15,23 @@ import { DownloadManager } from './download-manager';
 const logFile = path.join(app.getPath('userData'), 'main-process.log');
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB
 let logStream = fs.createWriteStream(logFile, { flags: 'a' });
+let lastRotationCheck = Date.now();
+const ROTATION_CHECK_INTERVAL = 60000; // Проверяем ротацию раз в минуту
 
 /**
  * Ротация лог-файла если он превышает максимальный размер
+ * Оптимизировано: проверка не чаще раза в минуту
  */
 function rotateLogIfNeeded(): void {
+  const now = Date.now();
+  
+  // Проверяем не чаще раза в минуту для производительности
+  if (now - lastRotationCheck < ROTATION_CHECK_INTERVAL) {
+    return;
+  }
+  
+  lastRotationCheck = now;
+  
   try {
     const stats = fs.statSync(logFile);
     if (stats.size > MAX_LOG_SIZE) {
@@ -50,7 +62,7 @@ function rotateLogIfNeeded(): void {
       
       // Создаем новый stream
       logStream = fs.createWriteStream(logFile, { flags: 'a' });
-      console.log('[MAIN] Лог-файл ротирован');
+      originalLog('[MAIN] Лог-файл ротирован');
     }
   } catch (error) {
     // Игнорируем ошибки ротации

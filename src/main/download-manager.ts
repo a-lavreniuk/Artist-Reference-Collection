@@ -87,11 +87,12 @@ export class DownloadManager {
       // Создаем папку если её нет
       await fs.mkdir(this.tempDir, { recursive: true });
 
-      // Генерируем уникальное имя файла
+      // Генерируем уникальное имя файла (timestamp + random для уникальности)
       const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 9);
       const parsedUrl = new URL(url);
       const extension = path.extname(parsedUrl.pathname) || '.jpg';
-      const fileName = `import_${timestamp}${extension}`;
+      const fileName = `import_${timestamp}_${random}${extension}`;
       const filePath = path.join(this.tempDir, fileName);
 
       console.log('[DownloadManager] Сохранение в:', filePath);
@@ -178,13 +179,27 @@ export class DownloadManager {
           resolve();
         });
 
-        fileStream.on('error', (error) => {
-          fs.unlink(filePath).catch(() => {}); // Удаляем неполный файл
+        fileStream.on('error', async (error) => {
+          // Закрываем stream перед удалением
+          fileStream.close();
+          // Удаляем неполный файл (теперь с await для гарантии удаления)
+          try {
+            await fs.unlink(filePath);
+            console.log('[DownloadManager] Неполный файл удален:', filePath);
+          } catch (unlinkError) {
+            console.error('[DownloadManager] Ошибка удаления неполного файла:', unlinkError);
+          }
           reject(error);
         });
       });
 
-      request.on('error', (error) => {
+      request.on('error', async (error) => {
+        // При ошибке запроса также пытаемся удалить частично загруженный файл
+        try {
+          await fs.unlink(filePath);
+        } catch {
+          // Игнорируем, файл может еще не существовать
+        }
         reject(error);
       });
 
@@ -272,4 +287,9 @@ export class DownloadManager {
     }
   }
 }
+
+
+
+
+
 

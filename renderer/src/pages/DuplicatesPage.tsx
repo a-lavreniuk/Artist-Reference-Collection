@@ -9,16 +9,9 @@ import { Button, Icon } from '../components/common';
 import { useSearch } from '../contexts';
 import { useToast } from '../hooks/useToast';
 import { getAllCards } from '../services/db';
-import { findDuplicates, skipDuplicatePair, clearSkippedPairs } from '../services/duplicateService';
-import type { Card } from '../types';
+import { findDuplicates, skipDuplicatePair, clearSkippedPairs, type DuplicatePair } from '../services/duplicateService';
 import { DuplicateComparison } from '../components/duplicates/DuplicateComparison';
 import './DuplicatesPage.css';
-
-interface DuplicatePair {
-  card1: Card;
-  card2: Card;
-  similarity: number; // Процент схожести (0-100)
-}
 
 export const DuplicatesPage = () => {
   const { searchProps } = useSearch();
@@ -28,6 +21,7 @@ export const DuplicatesPage = () => {
   const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchProgress, setSearchProgress] = useState<{ current: number; total: number } | null>(null);
 
   /**
    * Поиск дублей в базе данных
@@ -37,26 +31,39 @@ export const DuplicatesPage = () => {
       setIsSearching(true);
       setDuplicates([]);
       setCurrentIndex(0);
+      setSearchProgress(null);
 
       // Загружаем все карточки с изображениями
       const allCards = await getAllCards();
       const imageCards = allCards.filter(card => card.type === 'image');
 
       if (imageCards.length < 2) {
-        // Нет достаточно изображений для поиска дублей
+        toast.info('Недостаточно изображений для поиска дублей. Необходимо минимум 2 изображения.');
         return;
       }
 
-      // Ищем дубли (порог схожести 80%)
-      const foundDuplicates = await findDuplicates(imageCards, 80);
+      // Ищем дубли (порог схожести 85%, с поддержкой поворотов)
+      const foundDuplicates = await findDuplicates(
+        imageCards, 
+        85, 
+        true, 
+        (current, total) => {
+          setSearchProgress({ current, total });
+        }
+      );
+      
       setDuplicates(foundDuplicates);
+      setSearchProgress(null);
       
       if (foundDuplicates.length === 0) {
-        // Показываем сообщение что дублей нет
-        console.log('Дубли не найдены');
+        toast.success('Дубликаты не найдены! Ваша коллекция уникальна.');
+      } else {
+        toast.success(`Найдено ${foundDuplicates.length} ${foundDuplicates.length === 1 ? 'дубликат' : 'дубликатов'}`);
       }
     } catch (error) {
       console.error('Ошибка поиска дублей:', error);
+      toast.error('Не удалось выполнить поиск дублей. Попробуйте снова.');
+      setSearchProgress(null);
     } finally {
       setIsSearching(false);
     }
@@ -192,7 +199,9 @@ export const DuplicatesPage = () => {
           <div className="layout__empty-state">
             <h3 className="layout__empty-title">Поиск дублей...</h3>
             <p className="layout__empty-text text-m">
-              Это может занять некоторое время
+              {searchProgress 
+                ? `Обработано: ${searchProgress.current.toLocaleString()} из ${searchProgress.total.toLocaleString()}`
+                : 'Это может занять некоторое время'}
             </p>
           </div>
         )}
@@ -202,6 +211,7 @@ export const DuplicatesPage = () => {
             card1={currentDuplicate.card1}
             card2={currentDuplicate.card2}
             similarity={currentDuplicate.similarity}
+            method={currentDuplicate.method}
             onDelete={handleDelete}
             isDeleting={isDeleting}
             currentIndex={currentIndex + 1}
