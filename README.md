@@ -1,6 +1,6 @@
 # ARC — Artist Reference Collection
 
-![Version](https://img.shields.io/badge/version-1.2.9-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
@@ -36,7 +36,7 @@
 ### Для пользователей
 
 1. Скачайте последнюю версию установщика из [Releases](https://github.com/rocontd/Artist-Reference-Collection/releases)
-2. Запустите **ARC-Setup-1.2.9.exe**
+2. Запустите **ARC-Setup-1.3.1.exe**
 3. Следуйте инструкциям установщика
 4. Запустите ARC через ярлык на рабочем столе или в меню Пуск
 
@@ -140,6 +140,13 @@ ARC использует умную организацию файлов:
 ---
 
 ## История изменений
+
+### v1.3.1 (4 декабря 2025)
+- Оптимизирована плавность прокрутки галереи: увеличен rootMargin до 1000px и предзагрузка скелетонов
+- Исправлены артефакты при переключении между компактным и обычным режимами отображения
+- Добавлен компонент CardSkeleton для единых плейсхолдеров карточек
+- Восстановлена корректная работа sticky toolbar в детальной карточке
+- Улучшена стабильность IntersectionObserver при большом количестве карточек
 
 ### v1.2.9 (3 декабря 2025)
 - **Критические исправления (блокировали запуск)**
