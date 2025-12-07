@@ -788,26 +788,49 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             console.log('[AddCardFlow] Файл сохранён:', savedFilePath);
           }
           
-          // Генерируем превью
-          const thumbnailPath = await window.electronAPI.generateThumbnail(
+          // Генерируем превью (новый формат возвращает объект с путями)
+          const thumbnailResult = await window.electronAPI.generateThumbnail(
             savedFilePath,
             directoryPath
           );
-          console.log('[AddCardFlow] Превью создано:', thumbnailPath);
           
-          // Проверяем существование файла превью перед чтением
-          const thumbnailExists = await window.electronAPI.fileExists(thumbnailPath);
-          console.log('[AddCardFlow] Превью существует:', thumbnailExists);
+          // Обрабатываем новый формат (объект) или старый (строка для обратной совместимости)
+          let blurThumbnailUrl = '';
+          let thumbnailUrlCompact = '';
+          let thumbnailUrlStandard = '';
+          let thumbnailUrl = ''; // Legacy для обратной совместимости
           
-          // Получаем Data URL для превью (если существует)
-          let thumbnailUrl = '';
-          if (thumbnailExists) {
-            thumbnailUrl = await window.electronAPI.getFileURL(thumbnailPath);
-            console.log('[AddCardFlow] Data URL создан');
+          if (typeof thumbnailResult === 'object' && thumbnailResult !== null) {
+            // Новый формат: объект с путями к разным размерам превью
+            // Проверяем существование файлов превью
+            if (thumbnailResult.blur) {
+              const blurExists = await window.electronAPI.fileExists(thumbnailResult.blur);
+              if (blurExists) {
+                blurThumbnailUrl = await window.electronAPI.getFileURL(thumbnailResult.blur);
+              }
+            }
+            
+            if (thumbnailResult.compact) {
+              const compactExists = await window.electronAPI.fileExists(thumbnailResult.compact);
+              if (compactExists) {
+                thumbnailUrlCompact = await window.electronAPI.getFileURL(thumbnailResult.compact);
+              }
+            }
+            
+            if (thumbnailResult.standard) {
+              const standardExists = await window.electronAPI.fileExists(thumbnailResult.standard);
+              if (standardExists) {
+                thumbnailUrlStandard = await window.electronAPI.getFileURL(thumbnailResult.standard);
+                thumbnailUrl = thumbnailUrlStandard; // Для обратной совместимости
+              }
+            }
           } else {
-            console.warn('[AddCardFlow] Превью не создано, будет использован placeholder');
-            // Для видео без превью используем пустую строку - UI покажет placeholder
-            thumbnailUrl = '';
+            // Старый формат: строка с путем (обратная совместимость)
+            const thumbnailExists = await window.electronAPI.fileExists(thumbnailResult);
+            if (thumbnailExists) {
+              thumbnailUrl = await window.electronAPI.getFileURL(thumbnailResult);
+              thumbnailUrlStandard = thumbnailUrl; // Используем как standard превью
+            }
           }
 
           // Создаём карточку с правильными путями
@@ -822,7 +845,10 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             fileSize: item.file.size,
             width: item.width,  // Ширина изображения
             height: item.height, // Высота изображения
-            thumbnailUrl, // file:// URL для превью
+            thumbnailUrl, // Legacy для обратной совместимости
+            blurThumbnailUrl, // Blur превью для placeholder
+            thumbnailUrlCompact, // Превью для компактного режима
+            thumbnailUrlStandard, // Превью для стандартного режима
             tags: item.tags,
             collections: item.collections,
             description: item.description?.trim() || undefined // Сохраняем описание, если оно не пустое

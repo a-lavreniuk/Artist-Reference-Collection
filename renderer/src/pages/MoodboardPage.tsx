@@ -8,7 +8,7 @@ import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards, addToMoodboard, removeFromMoodboard, getMoodboard, clearMoodboard } from '../services/db';
+import { getCardsByIds, getCard, addToMoodboard, removeFromMoodboard, getMoodboard, clearMoodboard } from '../services/db';
 import { logClearMoodboard } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
@@ -40,10 +40,9 @@ export const MoodboardPage = () => {
     const loadMoodboardCards = async () => {
       try {
         setIsLoading(true);
-        const allCards = await getAllCards();
         const moodboard = await getMoodboard();
-        // Фильтруем только карточки в мудборде
-        const moodboardCards = allCards.filter(card => moodboard.cardIds.includes(card.id));
+        // Загружаем карточки мудборда через bulkGet (оптимизированная загрузка)
+        const moodboardCards = await getCardsByIds(moodboard.cardIds);
         setCards(moodboardCards);
         setMoodboardCardIds(moodboard.cardIds);
       } catch (error) {
@@ -97,14 +96,13 @@ export const MoodboardPage = () => {
   // Обработчик обновления карточки
   const handleCardUpdated = async () => {
       // Перезагружаем карточки после обновления
-      const allCards = await getAllCards();
       const moodboard = await getMoodboard();
-      const moodboardCards = allCards.filter(card => moodboard.cardIds.includes(card.id));
+      const moodboardCards = await getCardsByIds(moodboard.cardIds);
       setCards(moodboardCards);
     
     // Обновляем просматриваемую карточку
     if (viewingCard) {
-      const updatedCard = allCards.find(c => c.id === viewingCard.id);
+      const updatedCard = await getCard(viewingCard.id);
       if (updatedCard) {
         setViewingCard(updatedCard);
       }
@@ -116,9 +114,8 @@ export const MoodboardPage = () => {
     setIsModalOpen(false);
     setViewingCard(null);
       // Перезагружаем список
-      const allCards = await getAllCards();
       const moodboard = await getMoodboard();
-      const moodboardCards = allCards.filter(card => moodboard.cardIds.includes(card.id));
+      const moodboardCards = await getCardsByIds(moodboard.cardIds);
       setCards(moodboardCards);
   };
 
@@ -143,9 +140,8 @@ export const MoodboardPage = () => {
         await addToMoodboard(card.id);
       }
       // Перезагружаем карточки мудборда
-      const allCards = await getAllCards();
       const updatedMoodboard = await getMoodboard();
-      const moodboardCards = allCards.filter(c => updatedMoodboard.cardIds.includes(c.id));
+      const moodboardCards = await getCardsByIds(updatedMoodboard.cardIds);
       setCards(moodboardCards);
       setMoodboardCardIds(updatedMoodboard.cardIds);
     } catch (error) {

@@ -53,7 +53,10 @@ export const Card = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  // Показываем blur только если есть blurThumbnailUrl (новые карточки)
+  const [showBlur, setShowBlur] = useState(!!card.blurThumbnailUrl);
   const cardRef = useRef<HTMLDivElement>(null);
+  const fullImageRef = useRef<HTMLImageElement | null>(null);
 
   // Intersection Observer для lazy loading
   useEffect(() => {
@@ -105,12 +108,79 @@ export const Card = ({
 
   const handleImageLoad = () => {
     setImageLoaded(true);
+    // Если было blur превью, убираем его
+    if (showBlur) {
+      setShowBlur(false);
+    }
   };
 
   const handleImageError = () => {
     setImageError(true);
     setImageLoaded(true);
+    setShowBlur(false);
   };
+
+  // Определяем URL превью в зависимости от режима и доступности
+  const getThumbnailUrl = () => {
+    // Приоритет: новый формат с разными размерами
+    if (compact && card.thumbnailUrlCompact) {
+      return card.thumbnailUrlCompact;
+    }
+    if (!compact && card.thumbnailUrlStandard) {
+      return card.thumbnailUrlStandard;
+    }
+    // Fallback на legacy thumbnailUrl
+    if (card.thumbnailUrl) {
+      return card.thumbnailUrl;
+    }
+    // Последний fallback на оригинальный файл
+    return card.filePath;
+  };
+
+  // Загружаем полное изображение в фоне после загрузки blur
+  useEffect(() => {
+    if (!isVisible || imageError) {
+      return;
+    }
+
+    // Если нет blur превью (старые карточки), сразу показываем полное изображение
+    if (!card.blurThumbnailUrl) {
+      setShowBlur(false);
+      return;
+    }
+
+    const fullUrl = getThumbnailUrl();
+    if (fullUrl === card.blurThumbnailUrl) {
+      // Если blur это единственное доступное превью, не заменяем
+      setShowBlur(false);
+      return;
+    }
+
+    // Предзагружаем полное изображение
+    const fullImg = new Image();
+    fullImg.src = fullUrl;
+    
+    fullImg.onload = () => {
+      setShowBlur(false);
+      setImageLoaded(true);
+    };
+    
+    fullImg.onerror = () => {
+      // Если полное изображение не загрузилось, оставляем blur
+      setShowBlur(false);
+      setImageError(true);
+      setImageLoaded(true);
+    };
+
+    fullImageRef.current = fullImg;
+
+    return () => {
+      if (fullImageRef.current) {
+        fullImageRef.current.onload = null;
+        fullImageRef.current.onerror = null;
+      }
+    };
+  }, [isVisible, card.blurThumbnailUrl, card.thumbnailUrlCompact, card.thumbnailUrlStandard, card.thumbnailUrl, compact, imageError]);
 
   // Форматирование размера файла
   // const formatFileSize = (bytes: number): string => {
@@ -136,14 +206,35 @@ export const Card = ({
 
       {/* Превью изображения - загружается только когда видимо */}
       {!imageError && isVisible && (
-        <img
-          src={card.thumbnailUrl || card.filePath}
-          alt={card.fileName}
-          className="card__image"
-          loading="lazy"
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-        />
+        <>
+          {/* Blur превью (показывается сначала) */}
+          {showBlur && card.blurThumbnailUrl && (
+            <img
+              src={card.blurThumbnailUrl}
+              alt=""
+              className="card__image card__image--blur"
+              loading="eager"
+              aria-hidden="true"
+            />
+          )}
+          
+          {/* Полное превью (заменяет blur когда загрузится, или показывается сразу если нет blur) */}
+          <img
+            src={getThumbnailUrl()}
+            alt={card.fileName}
+            className="card__image"
+            loading="lazy"
+            fetchPriority={isVisible ? 'high' : 'low'}
+            style={{ 
+              position: (showBlur && card.blurThumbnailUrl) ? 'absolute' : 'relative',
+              zIndex: (showBlur && card.blurThumbnailUrl) ? 1 : 0,
+              opacity: (showBlur && card.blurThumbnailUrl) ? 0 : 1,
+              transition: 'opacity 0.3s ease-in-out'
+            }}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        </>
       )}
 
       {/* Ошибка загрузки */}

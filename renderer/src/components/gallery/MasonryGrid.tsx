@@ -34,6 +34,15 @@ export interface MasonryGridProps {
   
   /** Массив ID карточек в мудборде (для определения статуса) */
   moodboardCardIds?: string[];
+  
+  /** Обработчик загрузки следующей порции карточек */
+  onLoadMore?: () => void;
+  
+  /** Есть ли еще карточки для загрузки */
+  hasMore?: boolean;
+  
+  /** Идет ли загрузка дополнительных карточек */
+  isLoadingMore?: boolean;
 }
 
 /**
@@ -47,11 +56,16 @@ export const MasonryGrid = ({
   onMoodboardToggle,
   selectedCards = [],
   showActions = true,
-  moodboardCardIds = []
+  moodboardCardIds = [],
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false
 }: MasonryGridProps) => {
   const [visibleCards, setVisibleCards] = useState<Set<string>>(new Set());
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const prevViewModeRef = useRef<ViewMode>(viewMode);
 
   // Инициализация видимых карточек при изменении списка cards
@@ -127,6 +141,38 @@ export const MasonryGrid = ({
       }
     };
   }, [cards, viewMode]); // Пересоздаем при изменении cards или viewMode
+
+  // Intersection Observer для автоматической подгрузки
+  useEffect(() => {
+    if (!onLoadMore || !hasMore || isLoadingMore) {
+      return;
+    }
+
+    // Создаем observer для отслеживания триггера подгрузки
+    loadMoreObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && hasMore && !isLoadingMore && onLoadMore) {
+            onLoadMore();
+          }
+        });
+      },
+      {
+        rootMargin: '200px' // Начинаем загрузку за 200px до конца списка
+      }
+    );
+
+    // Наблюдаем за триггером подгрузки
+    if (loadMoreTriggerRef.current && loadMoreObserverRef.current) {
+      loadMoreObserverRef.current.observe(loadMoreTriggerRef.current);
+    }
+
+    return () => {
+      if (loadMoreObserverRef.current) {
+        loadMoreObserverRef.current.disconnect();
+      }
+    };
+  }, [onLoadMore, hasMore, isLoadingMore, cards.length]);
 
   // Callback для установки ref карточки
   const setCardRef = useCallback((cardId: string, element: HTMLDivElement | null) => {
@@ -212,6 +258,27 @@ export const MasonryGrid = ({
             </div>
           );
         })}
+        
+        {/* Триггер для автоматической подгрузки */}
+        {onLoadMore && hasMore && (
+          <div
+            ref={loadMoreTriggerRef}
+            className="masonry-grid__load-more-trigger"
+            style={{ 
+              width: '100%', 
+              height: '1px', 
+              marginTop: '20px',
+              visibility: 'hidden'
+            }}
+          />
+        )}
+        
+        {/* Индикатор загрузки */}
+        {isLoadingMore && (
+          <div className="masonry-grid__loading-more" style={{ width: '100%', padding: '20px', textAlign: 'center' }}>
+            <div className="layout__spinner" style={{ margin: '0 auto' }} />
+          </div>
+        )}
       </Masonry>
     </div>
   );

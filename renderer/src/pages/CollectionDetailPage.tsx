@@ -9,7 +9,7 @@ import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { EditCollectionModal } from '../components/collections';
-import { getCollection, getAllCards, deleteCollection, addToMoodboard, removeFromMoodboard, getMoodboard } from '../services/db';
+import { getCollection, getCardsByIds, deleteCollection, addToMoodboard, removeFromMoodboard, getMoodboard } from '../services/db';
 import { logDeleteCollection } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
@@ -53,11 +53,8 @@ export const CollectionDetailPage = () => {
       
       setCollection(coll);
       
-      // Загружаем карточки коллекции
-      const allCards = await getAllCards();
-      const collectionCards = allCards.filter(card => 
-        coll.cardIds.includes(card.id)
-      );
+      // Загружаем карточки коллекции через bulkGet (оптимизированная загрузка)
+      const collectionCards = await getCardsByIds(coll.cardIds);
       setCards(collectionCards);
     } catch (error) {
       console.error('Ошибка загрузки коллекции:', error);

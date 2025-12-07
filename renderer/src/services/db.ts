@@ -19,6 +19,46 @@ import type {
 } from '../types';
 import { pathJoin } from '../utils/path';
 
+// Кеш результатов поиска с TTL
+interface SearchCacheEntry {
+  query: string;
+  results: Card[];
+  timestamp: number;
+}
+
+const searchCache = new Map<string, SearchCacheEntry>();
+const SEARCH_CACHE_TTL = 5 * 60 * 1000; // 5 минут
+const MAX_CACHE_SIZE = 50; // Максимум 50 записей в кеше
+
+/**
+ * Очистить устаревшие записи из кеша поиска
+ */
+function cleanSearchCache(): void {
+  const now = Date.now();
+  for (const [key, entry] of searchCache.entries()) {
+    if (now - entry.timestamp > SEARCH_CACHE_TTL) {
+      searchCache.delete(key);
+    }
+  }
+  
+  // Если кеш все еще слишком большой, удаляем самые старые записи
+  if (searchCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(searchCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    
+    const toDelete = entries.slice(0, searchCache.size - MAX_CACHE_SIZE);
+    toDelete.forEach(([key]) => searchCache.delete(key));
+  }
+}
+
+/**
+ * Инвалидировать кеш поиска (вызывать при изменении карточек/тегов)
+ */
+export function invalidateSearchCache(): void {
+  searchCache.clear();
+  console.log('[DB] Кеш поиска очищен');
+}
+
 /**
  * Класс базы данных ARC
  */
@@ -223,6 +263,9 @@ export async function addCard(card: Card): Promise<string> {
     }
   }
   
+  // Инвалидируем кеш поиска
+  invalidateSearchCache();
+  
   return cardId;
 }
 
@@ -234,6 +277,16 @@ export async function getCard(id: string): Promise<Card | undefined> {
 }
 
 /**
+ * Получить несколько карточек по массиву ID (оптимизированная загрузка)
+ */
+export async function getCardsByIds(ids: string[]): Promise<Card[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return await db.cards.bulkGet(ids);
+}
+
+/**
  * Получить все карточки
  */
 export async function getAllCards(): Promise<Card[]> {
@@ -241,7 +294,55 @@ export async function getAllCards(): Promise<Card[]> {
 }
 
 /**
+ * Получить количество карточек
+ */
+export async function getCardsCount(): Promise<number> {
+  return await db.cards.count();
+}
+
+/**
+ * Получить карточки с пагинацией
+ * @param offset - Смещение (сколько пропустить)
+ * @param limit - Лимит (сколько вернуть)
+ * @param orderBy - Поле для сортировки (по умолчанию dateAdded)
+ * @param reverse - Обратный порядок (по умолчанию true - новые сверху)
+ */
+export async function getCardsPaginated(
+  offset: number = 0,
+  limit: number = 100,
+  orderBy: 'dateAdded' | 'fileName' = 'dateAdded',
+  reverse: boolean = true
+): Promise<Card[]> {
+  try {
+    let query = db.cards.orderBy(orderBy);
+    
+    if (reverse) {
+      query = query.reverse();
+    }
+    
+    return await query.offset(offset).limit(limit).toArray();
+  } catch (error) {
+    console.error('[DB] Ошибка пагинации:', error);
+    // Fallback: загружаем все и делаем пагинацию в памяти
+    const allCards = await db.cards.toArray();
+    const sorted = allCards.sort((a, b) => {
+      if (orderBy === 'dateAdded') {
+        const aTime = new Date(a.dateAdded).getTime();
+        const bTime = new Date(b.dateAdded).getTime();
+        return reverse ? bTime - aTime : aTime - bTime;
+      } else {
+        return reverse 
+          ? b.fileName.localeCompare(a.fileName)
+          : a.fileName.localeCompare(b.fileName);
+      }
+    });
+    return sorted.slice(offset, offset + limit);
+  }
+}
+
+/**
  * Обновить карточку
+ * Оптимизированная версия с батчингом операций
  */
 export async function updateCard(id: string, changes: Partial<Card>): Promise<number> {
   console.log('[updateCard] Обновление карточки:', id, 'изменения:', changes);
@@ -255,32 +356,63 @@ export async function updateCard(id: string, changes: Partial<Card>): Promise<nu
   
   // Если изменяются метки, обновляем счётчики
   if (changes.tags) {
-    const oldCard = await db.cards.get(id);
-    if (oldCard && oldCard.tags) {
-      // Уменьшаем счётчик для старых меток
-      for (const tagId of oldCard.tags) {
-        const tag = await db.tags.get(tagId);
-        if (tag && tag.cardCount > 0) {
-          await db.tags.update(tagId, {
-            cardCount: tag.cardCount - 1
-          });
-        }
+    const oldCard = existingCard;
+    const oldTagIds = oldCard.tags || [];
+    const newTagIds = changes.tags || [];
+    
+    // Находим теги для удаления и добавления
+    const tagsToDecrement = oldTagIds.filter(tagId => !newTagIds.includes(tagId));
+    const tagsToIncrement = newTagIds.filter(tagId => !oldTagIds.includes(tagId));
+    
+    // Загружаем все нужные теги одним запросом (батчинг)
+    const allTagIds = [...new Set([...tagsToDecrement, ...tagsToIncrement])];
+    const tags = await db.tags.bulkGet(allTagIds);
+    
+    // Подготавливаем обновления для батчинга
+    const tagUpdates: Array<{ id: string; changes: Partial<Tag> }> = [];
+    
+    // Уменьшаем счётчик для старых меток
+    for (const tag of tags) {
+      if (tag && tagsToDecrement.includes(tag.id) && tag.cardCount > 0) {
+        tagUpdates.push({
+          id: tag.id,
+          changes: { cardCount: tag.cardCount - 1 }
+        });
       }
+    }
+    
+    // Увеличиваем счётчик для новых меток
+    for (const tag of tags) {
+      if (tag && tagsToIncrement.includes(tag.id)) {
+        tagUpdates.push({
+          id: tag.id,
+          changes: { cardCount: (tag.cardCount || 0) + 1 }
+        });
+      }
+    }
+    
+    // Выполняем все обновления тегов батчем через bulkPut
+    if (tagUpdates.length > 0) {
+      const tagsToUpdate = await db.tags.bulkGet(tagUpdates.map(u => u.id));
+      const updatedTags = tagsToUpdate.map((tag, index) => {
+        if (tag && tagUpdates[index]) {
+          return {
+            ...tag,
+            ...tagUpdates[index].changes
+          };
+        }
+        return tag;
+      }).filter((tag): tag is Tag => tag !== undefined);
       
-      // Увеличиваем счётчик для новых меток
-      for (const tagId of changes.tags) {
-        const tag = await db.tags.get(tagId);
-        if (tag) {
-          await db.tags.update(tagId, {
-            cardCount: (tag.cardCount || 0) + 1
-          });
-        }
-      }
+      await db.tags.bulkPut(updatedTags);
     }
   }
   
   const result = await db.cards.update(id, changes);
   console.log('[updateCard] Результат обновления:', result, result === 0 ? '(ОШИБКА: карточка не обновлена!)' : '(успех)');
+  
+  // Инвалидируем кеш поиска при изменении карточки
+  invalidateSearchCache();
   
   return result;
 }
@@ -359,6 +491,9 @@ export async function deleteCard(id: string): Promise<void> {
   });
   
   console.log('[DB] Карточка успешно удалена:', id);
+  
+  // Инвалидируем кеш поиска
+  invalidateSearchCache();
 }
 
 /**
@@ -401,7 +536,9 @@ export async function searchCards(filters: {
  * Добавить метку
  */
 export async function addTag(tag: Tag): Promise<string> {
-  return await db.tags.add(tag);
+  const result = await db.tags.add(tag);
+  invalidateSearchCache();
+  return result;
 }
 
 /**
@@ -415,7 +552,9 @@ export async function getAllTags(): Promise<Tag[]> {
  * Обновить метку
  */
 export async function updateTag(id: string, changes: Partial<Tag>): Promise<number> {
-  return await db.tags.update(id, changes);
+  const result = await db.tags.update(id, changes);
+  invalidateSearchCache();
+  return result;
 }
 
 /**
@@ -447,6 +586,9 @@ export async function deleteTag(id: string): Promise<void> {
   
   // Удаляем саму метку
   await db.tags.delete(id);
+  
+  // Инвалидируем кеш поиска (updateCard уже инвалидирует, но на всякий случай)
+  invalidateSearchCache();
 }
 
 /**
@@ -791,6 +933,7 @@ export async function getViewHistory(): Promise<ViewHistory[]> {
 
 /**
  * Поиск карточек по меткам, категориям и ID
+ * Использует кеширование для оптимизации повторных запросов
  * @param query - Поисковый запрос
  * @returns Массив найденных карточек
  */
@@ -808,6 +951,17 @@ export async function searchCardsAdvanced(query: string): Promise<Card[]> {
     return [];
   }
 
+  // Очищаем устаревшие записи из кеша
+  cleanSearchCache();
+
+  // Проверяем кеш
+  const cacheKey = trimmedQuery.toLowerCase();
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < SEARCH_CACHE_TTL) {
+    console.log(`[DB] Результаты поиска взяты из кеша для "${query}"`);
+    return cached.results;
+  }
+
   const searchLower = trimmedQuery.toLowerCase();
   const searchOriginal = trimmedQuery;
   
@@ -821,11 +975,20 @@ export async function searchCardsAdvanced(query: string): Promise<Card[]> {
   }
   
   // Если не найдено, ищем по части ID (если запрос похож на ID - содержит дефис или длинный)
+  // Используем курсор для оптимизации вместо загрузки всех карточек
   if (!cardById && (searchLower.includes('-') || searchLower.length > 10)) {
-    const allCards = await getAllCards();
-    const matchingById = allCards.filter(card => 
-      card.id.toLowerCase().includes(searchLower) || card.id.includes(searchOriginal)
-    );
+    const matchingById: Card[] = [];
+    // Используем курсор для итерации по карточкам без загрузки всех в память
+    await db.cards.each(card => {
+      if (card.id.toLowerCase().includes(searchLower) || card.id.includes(searchOriginal)) {
+        matchingById.push(card);
+      }
+      // Ограничиваем результаты для производительности
+      if (matchingById.length >= 100) {
+        return false; // Останавливаем итерацию
+      }
+    });
+    
     if (matchingById.length > 0) {
       console.log(`[DB] Найдено карточек по части ID "${query}": ${matchingById.length}`);
       return matchingById;
@@ -837,10 +1000,10 @@ export async function searchCardsAdvanced(query: string): Promise<Card[]> {
     return [cardById];
   }
 
-  // 2. Поиск по меткам и категориям
+  // 2. Поиск по меткам и категориям (оптимизированный через индексы)
+  // Загружаем только теги и категории (намного меньше данных чем все карточки)
   const allTags = await getAllTags();
   const allCategories = await getAllCategories();
-  const allCards = await getAllCards();
 
   // Находим метки, соответствующие запросу (по названию или описанию)
   const matchingTags = allTags.filter(tag => {
@@ -861,12 +1024,29 @@ export async function searchCardsAdvanced(query: string): Promise<Card[]> {
     cat.tagIds.forEach(tagId => tagIds.add(tagId));
   });
 
-  // Находим карточки с этими метками
-  const results = allCards.filter(card =>
-    card.tags.some(tagId => tagIds.has(tagId))
-  );
+  // Если нет подходящих меток, возвращаем пустой массив
+  if (tagIds.size === 0) {
+    console.log(`[DB] Не найдено меток по запросу "${query}"`);
+    return [];
+  }
+
+  // Используем индекс IndexedDB для поиска карточек с этими метками
+  // Это намного быстрее чем загружать все карточки в память
+  const tagIdsArray = Array.from(tagIds);
+  const results = await db.cards
+    .where('tags')
+    .anyOf(tagIdsArray)
+    .toArray();
 
   console.log(`[DB] Найдено карточек по запросу "${query}": ${results.length}`);
+  
+  // Сохраняем результаты в кеш
+  searchCache.set(cacheKey, {
+    query: trimmedQuery,
+    results,
+    timestamp: Date.now()
+  });
+  
   return results;
 }
 

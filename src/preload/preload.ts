@@ -71,9 +71,13 @@ export interface ElectronAPI {
    * Создать превью для изображения или видео
    * @param filePath - Путь к файлу
    * @param workingDir - Рабочая директория
-   * @returns Путь к созданному превью
+   * @returns Объект с путями к превью разных размеров или строка (для обратной совместимости)
    */
-  generateThumbnail: (filePath: string, workingDir: string) => Promise<string>;
+  generateThumbnail: (filePath: string, workingDir: string) => Promise<{
+    blur: string;
+    compact: string;
+    standard: string;
+  } | string>;
   
   /**
    * Получить URL для локального файла (file://)

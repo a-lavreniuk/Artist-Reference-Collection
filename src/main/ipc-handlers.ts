@@ -467,27 +467,38 @@ export function registerIPCHandlers(): void {
       const thumbsDir = path.join(workingDir, '_cache', 'thumbs');
       await fs.mkdir(thumbsDir, { recursive: true });
 
-      // Генерируем имя для превью
+      // Генерируем имена для превью
       const ext = path.extname(filePath).toLowerCase();
       const isVideo = ['.mp4', '.webm'].includes(ext);
       const fileName = path.basename(filePath, ext);
-      const thumbName = `${fileName}_thumb.jpg`;
-      const thumbPath = path.join(thumbsDir, thumbName);
+      
+      // Имена файлов превью (WebP формат)
+      const blurThumbName = `${fileName}_thumb_blur.webp`;
+      const compactThumbName = `${fileName}_thumb_compact.webp`;
+      const standardThumbName = `${fileName}_thumb_standard.webp`;
+      
+      const blurThumbPath = path.join(thumbsDir, blurThumbName);
+      const compactThumbPath = path.join(thumbsDir, compactThumbName);
+      const standardThumbPath = path.join(thumbsDir, standardThumbName);
 
       if (isVideo) {
         // Генерируем превью для видео через ffmpeg
         console.log('[IPC] Генерация превью для видео через ffmpeg...');
-        console.log('[IPC] Путь к ffmpeg:', ffmpegInstaller.path);
-        console.log('[IPC] Исходный файл:', filePath);
-        console.log('[IPC] Папка превью:', thumbsDir);
-        console.log('[IPC] Имя превью:', thumbName);
         
         // Проверяем существование исходного видео файла
         const videoExists = await fileExists(filePath);
         if (!videoExists) {
           console.error('[IPC] Исходный видео файл не найден!');
-          return thumbPath; // Возвращаем путь, UI покажет placeholder
+          // Возвращаем объект с пустыми путями для консистентности
+          return {
+            blur: '',
+            compact: '',
+            standard: ''
+          };
         }
+        
+        // Сначала создаем стандартное превью через ffmpeg (JPEG, так как ffmpeg не поддерживает WebP напрямую)
+        const tempJpegPath = path.join(thumbsDir, `${fileName}_temp.jpg`);
         
         await new Promise<void>((resolve, reject) => {
           ffmpeg(filePath)
@@ -497,67 +508,101 @@ export function registerIPCHandlers(): void {
             .screenshots({
               count: 1,
               folder: thumbsDir,
-              filename: thumbName,
-              size: '512x?', // 512px по ширине, высота автоматически
-              timemarks: ['00:00:00.100'] // Кадр на 0.1 секунде (для коротких видео)
+              filename: `${fileName}_temp.jpg`,
+              size: '512x?',
+              timemarks: ['00:00:00.100']
             })
             .on('end', () => {
               console.log('[IPC] ✅ Превью видео создано успешно');
               resolve();
             })
-        .on('error', (err, stdout, stderr) => {
-          console.error('[IPC] ❌ Ошибка ffmpeg:', err.message);
-          console.error('[IPC] stderr:', stderr);
-          
-          // Отправляем уведомление об ошибке в renderer процесс
-          if (_event && !_event.sender.isDestroyed()) {
-            _event.sender.send('thumbnail-error', {
-              filePath: filePath,
-              error: err.message,
-              stderr: stderr || ''
+            .on('error', (err, stdout, stderr) => {
+              console.error('[IPC] ❌ Ошибка ffmpeg:', err.message);
+              resolve(); // Не прерываем процесс
             });
-          }
-          
-          // Если не удалось создать превью, не прерываем процесс
-          // UI покажет placeholder
-          resolve();
-        });
         });
 
-        // Проверяем, создалось ли превью
-        const thumbExists = await fileExists(thumbPath);
-        if (thumbExists) {
-          const thumbStats = await fs.stat(thumbPath);
-          const originalStats = await fs.stat(filePath);
-          const compressionRatio = Math.round((1 - thumbStats.size / originalStats.size) * 100);
-          console.log(`[IPC] Размер превью видео: ${Math.round(thumbStats.size / 1024)}KB (сжатие ${compressionRatio}%)`);
+        // Конвертируем JPEG в WebP через sharp и создаем все размеры
+        if (await fileExists(tempJpegPath)) {
+          // Blur превью (20px с размытием)
+          await sharp(tempJpegPath)
+            .resize(20, 20, { fit: 'inside', withoutEnlargement: true })
+            .blur(10)
+            .webp({ quality: 50, effort: 4 })
+            .toFile(blurThumbPath);
+
+          // Compact превью (256px)
+          await sharp(tempJpegPath)
+            .resize(256, 256, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 85, effort: 4 })
+            .toFile(compactThumbPath);
+
+          // Standard превью (512px)
+          await sharp(tempJpegPath)
+            .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 85, effort: 4 })
+            .toFile(standardThumbPath);
+
+          // Удаляем временный JPEG
+          await fs.unlink(tempJpegPath);
         } else {
-          console.log('[IPC] Превью видео не создано, будет показан placeholder');
+          console.warn('[IPC] Временный JPEG не найден после генерации ffmpeg');
         }
       } else {
         // Генерируем превью для изображения через sharp
-        // 512px по широкой стороне, сохраняя пропорции
+        // Создаем три размера: blur (20px), compact (256px), standard (512px)
+        
+        // Blur превью (20px с размытием для placeholder)
+        await sharp(filePath)
+          .resize(20, 20, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .blur(10) // Размытие для эффекта blur-up
+          .webp({
+            quality: 50,
+            effort: 4
+          })
+          .toFile(blurThumbPath);
+
+        // Compact превью (256px для компактного режима)
+        await sharp(filePath)
+          .resize(256, 256, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .webp({
+            quality: 85,
+            effort: 4
+          })
+          .toFile(compactThumbPath);
+
+        // Standard превью (512px для стандартного режима)
         await sharp(filePath)
           .resize(512, 512, {
-            fit: 'inside', // Вписать внутрь, сохраняя пропорции
-            withoutEnlargement: true // Не увеличивать если меньше 512px
+            fit: 'inside',
+            withoutEnlargement: true
           })
-          .jpeg({
-            quality: 85, // Хорошее качество
-            progressive: true // Progressive JPEG для быстрой загрузки
+          .webp({
+            quality: 85,
+            effort: 4
           })
-          .toFile(thumbPath);
+          .toFile(standardThumbPath);
 
-        console.log('[IPC] Превью создано:', thumbPath);
-        
-        // Получаем размер превью
-        const thumbStats = await fs.stat(thumbPath);
-        const originalStats = await fs.stat(filePath);
-        const compressionRatio = Math.round((1 - thumbStats.size / originalStats.size) * 100);
-        console.log(`[IPC] Размер превью: ${Math.round(thumbStats.size / 1024)}KB (сжатие ${compressionRatio}%)`);
+        console.log('[IPC] Превью изображения созданы (blur, compact, standard)');
       }
 
-      return thumbPath;
+      // Проверяем существование всех созданных файлов
+      const blurExists = await fileExists(blurThumbPath);
+      const compactExists = await fileExists(compactThumbPath);
+      const standardExists = await fileExists(standardThumbPath);
+
+      // Возвращаем объект с путями ко всем превью
+      return {
+        blur: blurExists ? blurThumbPath : '',
+        compact: compactExists ? compactThumbPath : '',
+        standard: standardExists ? standardThumbPath : ''
+      };
     } catch (error) {
       console.error('[IPC] Ошибка генерации превью:', error);
       throw error;

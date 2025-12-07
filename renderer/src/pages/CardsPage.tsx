@@ -2,11 +2,11 @@
  * Страница карточек - главная страница приложения
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
-import { getAllCards, addToMoodboard, removeFromMoodboard, getMoodboard, searchCardsAdvanced } from '../services/db';
+import { getCardsPaginated, getCardsCount, getCard, addToMoodboard, removeFromMoodboard, getMoodboard, searchCardsAdvanced } from '../services/db';
 import { useSearch } from '../contexts';
 import type { Card, ViewMode, ContentFilter } from '../types';
 
@@ -33,21 +33,39 @@ export const CardsPage = () => {
   // Состояние данных
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [moodboardCardIds, setMoodboardCardIds] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<Card[] | null>(null);
+  
+  // Константы пагинации
+  const PAGE_SIZE = 100;
+  
+  // Кеш загруженных страниц карточек
+  const cardsCacheRef = useRef<Map<number, Card[]>>(new Map());
 
   // Загрузка карточек при монтировании
   useEffect(() => {
     const loadCards = async () => {
       try {
         setIsLoading(true);
+        setCards([]);
+        setHasMore(true);
+        cardsCacheRef.current.clear(); // Очищаем кеш при перезагрузке
         
-        const allCards = await getAllCards();
+        // Загружаем первую порцию карточек
+        const firstPage = await getCardsPaginated(0, PAGE_SIZE);
         const moodboard = await getMoodboard();
-        setCards(allCards);
+        
+        // Сохраняем в кеш
+        cardsCacheRef.current.set(0, firstPage);
+        
+        setCards(firstPage);
         setMoodboardCardIds(moodboard.cardIds);
-      } catch (error) {
-        console.error('Ошибка загрузки карточек:', error);
+        
+        // Проверяем есть ли еще карточки
+        const totalCount = await getCardsCount();
+        setHasMore(firstPage.length < totalCount);
       } finally {
         setIsLoading(false);
       }
@@ -55,6 +73,50 @@ export const CardsPage = () => {
 
     loadCards();
   }, []);
+
+  // Функция загрузки следующей порции карточек
+  const loadMoreCards = async () => {
+    // Не загружаем если уже загружаем, нет больше карточек, или идет поиск
+    if (isLoadingMore || !hasMore || searchResults !== null) {
+      return;
+    }
+
+    try {
+      setIsLoadingMore(true);
+      
+      const pageIndex = Math.floor(cards.length / PAGE_SIZE);
+      
+      // Проверяем кеш
+      if (cardsCacheRef.current.has(pageIndex)) {
+        const cachedPage = cardsCacheRef.current.get(pageIndex)!;
+        setCards(prev => [...prev, ...cachedPage]);
+        
+        const totalCount = await getCardsCount();
+        setHasMore(cards.length + cachedPage.length < totalCount);
+        setIsLoadingMore(false);
+        return;
+      }
+      
+      const nextPage = await getCardsPaginated(cards.length, PAGE_SIZE);
+      
+      if (nextPage.length > 0) {
+        // Сохраняем в кеш
+        cardsCacheRef.current.set(pageIndex, nextPage);
+        
+        setCards(prev => [...prev, ...nextPage]);
+        
+        // Проверяем есть ли еще карточки
+        const totalCount = await getCardsCount();
+        setHasMore(cards.length + nextPage.length < totalCount);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки дополнительных карточек:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Поиск по ID или меткам при изменении searchValue
   useEffect(() => {
@@ -124,23 +186,36 @@ export const CardsPage = () => {
 
   // Обработчик обновления карточки
   const handleCardUpdated = async () => {
-    // Перезагружаем карточки
-    const allCards = await getAllCards();
-    setCards(allCards);
+    // Инвалидируем кеш
+    cardsCacheRef.current.clear();
+    
+    // Перезагружаем первую страницу
+    const firstPage = await getCardsPaginated(0, PAGE_SIZE);
+    cardsCacheRef.current.set(0, firstPage);
+    setCards(firstPage);
     
     // Обновляем viewingCard если она открыта (без закрытия модалки)
     if (viewingCard) {
-      const updatedCard = allCards.find(c => c.id === viewingCard.id);
+      const updatedCard = firstPage.find(c => c.id === viewingCard.id);
       if (updatedCard) {
         updateViewingCard(updatedCard);
+      } else {
+        // Если карточка не в первой странице, загружаем её отдельно
+        const card = await getCard(viewingCard.id);
+        if (card) {
+          updateViewingCard(card);
+        }
       }
     }
   };
 
   // Обработчик удаления карточки
   const handleCardDeleted = async () => {
-    const allCards = await getAllCards();
-    setCards(allCards);
+    // Инвалидируем кеш и перезагружаем первую страницу
+    cardsCacheRef.current.clear();
+    const firstPage = await getCardsPaginated(0, PAGE_SIZE);
+    cardsCacheRef.current.set(0, firstPage);
+    setCards(firstPage);
     handleCloseModal();
   };
 
@@ -168,10 +243,12 @@ export const CardsPage = () => {
       }
       
       console.log('[CardsPage] Перезагружаем карточки');
-      // Перезагружаем карточки и мудборд для обновления состояния
-      const allCards = await getAllCards();
+      // Инвалидируем кеш и перезагружаем первую страницу
+      cardsCacheRef.current.clear();
+      const firstPage = await getCardsPaginated(0, PAGE_SIZE);
+      cardsCacheRef.current.set(0, firstPage);
       const moodboard = await getMoodboard();
-      setCards(allCards);
+      setCards(firstPage);
       setMoodboardCardIds(moodboard.cardIds);
     } catch (error) {
       console.error('[CardsPage] Ошибка переключения мудборда:', error);
@@ -232,6 +309,9 @@ export const CardsPage = () => {
         onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
         moodboardCardIds={moodboardCardIds}
+        onLoadMore={searchResults === null ? loadMoreCards : undefined}
+        hasMore={hasMore && searchResults === null}
+        isLoadingMore={isLoadingMore}
       />
 
       {/* Модальное окно просмотра карточки */}

@@ -19,7 +19,11 @@ interface ElectronAPI {
   organizeFile: (sourcePath: string, workingDir: string) => Promise<string>;
   moveFileToWorkingDir: (sourcePath: string, workingDir: string) => Promise<string>;
   saveFileFromBuffer: (buffer: ArrayBuffer, fileName: string, workingDir: string) => Promise<string>;
-  generateThumbnail: (filePath: string, workingDir: string) => Promise<string>;
+  generateThumbnail: (filePath: string, workingDir: string) => Promise<{
+    blur: string;
+    compact: string;
+    standard: string;
+  } | string>; // Возвращает объект с путями или строку (для обратной совместимости)
   getFileURL: (filePath: string) => Promise<string>;
   
   // === СИСТЕМНЫЕ ОПЕРАЦИИ ===

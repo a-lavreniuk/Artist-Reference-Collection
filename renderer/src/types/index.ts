@@ -25,7 +25,10 @@ export interface Card {
   width?: number;                      // Ширина (для изображений)
   height?: number;                     // Высота (для изображений)
   duration?: number;                   // Длительность (для видео)
-  thumbnailUrl?: string;               // URL превью из IndexedDB
+  thumbnailUrl?: string;               // URL превью из IndexedDB (legacy, для обратной совместимости)
+  blurThumbnailUrl?: string;          // URL маленького blur превью (20px) для placeholder
+  thumbnailUrlCompact?: string;       // URL превью для компактного режима (256px)
+  thumbnailUrlStandard?: string;      // URL превью для стандартного режима (512px)
   tags: string[];                      // Массив ID меток
   collections: string[];               // Массив ID коллекций
   description?: string;                // Описание карточки (опционально)
