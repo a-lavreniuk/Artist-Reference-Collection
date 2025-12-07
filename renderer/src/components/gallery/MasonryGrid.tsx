@@ -29,6 +29,9 @@ export interface MasonryGridProps {
   /** Выбранные карточки */
   selectedCards?: string[];
   
+  /** Текст для пустого состояния */
+  emptyStateText?: string;
+  
   /** Показывать действия на карточках */
   showActions?: boolean;
   
@@ -59,7 +62,8 @@ export const MasonryGrid = ({
   moodboardCardIds = [],
   onLoadMore,
   hasMore = false,
-  isLoadingMore = false
+  isLoadingMore = false,
+  emptyStateText
 }: MasonryGridProps) => {
   const [visibleCards, setVisibleCards] = useState<Set<string>>(new Set());
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -215,10 +219,9 @@ export const MasonryGrid = ({
     return (
       <div className="masonry-grid__empty">
         <div className="layout__empty-state">
-          <h3 className="layout__empty-title">Карточек не найдено</h3>
-          <p className="layout__empty-text text-m">
-            Попробуйте изменить фильтры или добавьте новые карточки
-          </p>
+          <h3 className="layout__empty-title">
+            {emptyStateText || 'Ещё не добавлено ни одной карточки…'}
+          </h3>
         </div>
       </div>
     );

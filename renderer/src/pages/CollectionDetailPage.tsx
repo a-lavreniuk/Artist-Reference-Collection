@@ -2,14 +2,14 @@
  * Страница детального просмотра коллекции
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
 import { Button, Icon } from '../components/common';
 import { MasonryGrid, CardViewModal } from '../components/gallery';
 import { EditCollectionModal } from '../components/collections';
-import { getCollection, getCardsByIds, deleteCollection, addToMoodboard, removeFromMoodboard, getMoodboard } from '../services/db';
+import { getCollection, getCardsByIds, deleteCollection, addToMoodboard, removeFromMoodboard, getMoodboard, getCard } from '../services/db';
 import { logDeleteCollection } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
@@ -34,12 +34,35 @@ export const CollectionDetailPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // Ref для сохранения позиции скролла
+  const scrollPositionRef = useRef<number>(0);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+
+  // Инициализация ref для контейнера скролла
+  useEffect(() => {
+    scrollContainerRef.current = document.querySelector('.layout__content') as HTMLElement;
+  }, []);
+
   // Загрузка коллекции и карточек
   useEffect(() => {
     if (id) {
       loadCollection(id);
     }
   }, [id]);
+
+  // Восстановление позиции скролла после обновления данных
+  useEffect(() => {
+    if (!isLoading && scrollContainerRef.current && scrollPositionRef.current > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+            scrollPositionRef.current = 0;
+          }
+        });
+      });
+    }
+  }, [isLoading, cards]);
 
   const loadCollection = async (collectionId: string) => {
     try {
@@ -121,9 +144,25 @@ export const CollectionDetailPage = () => {
   };
 
   const handleCollectionUpdated = async () => {
-    if (id) {
-      await loadCollection(id);
+    try {
+      if (!id || !collection) return;
+      
+      // Загружаем только обновленную коллекцию
+      const updatedCollection = await getCollection(id);
+      if (!updatedCollection) {
+        await loadCollection(id);
+        return;
+      }
+      
+      // Обновляем коллекцию локально
+      setCollection(updatedCollection);
       toast.success('Коллекция переименована');
+    } catch (error) {
+      console.error('Ошибка обновления состояния после переименования коллекции:', error);
+      // При ошибке перезагружаем данные
+      if (id) {
+        await loadCollection(id);
+      }
     }
   };
 
@@ -151,10 +190,7 @@ export const CollectionDetailPage = () => {
       } else {
         await addToMoodboard(card.id);
       }
-      // Перезагружаем карточки коллекции
-      if (id) {
-        await loadCollection(id);
-      }
+      // Мудборд не влияет на коллекцию, поэтому не нужно перезагружать коллекцию
     } catch (error) {
       console.error('Ошибка переключения мудборда:', error);
     }
@@ -175,24 +211,59 @@ export const CollectionDetailPage = () => {
 
   // Обработчик обновления карточки
   const handleCardUpdated = async () => {
-    if (id) {
-      await loadCollection(id);
+    try {
+      if (!viewingCard) return;
+      
+      // Загружаем обновленную карточку
+      const updatedCard = await getCard(viewingCard.id);
+      if (!updatedCard) {
+        // Если карточка не найдена, возможно она была удалена
+        if (id) {
+          await loadCollection(id);
+        }
+        return;
+      }
+      
+      // Обновляем карточку в списке локально
+      setCards(prev => 
+        prev.map(c => c.id === updatedCard.id ? updatedCard : c)
+      );
       
       // Обновляем viewingCard если она открыта
-      if (viewingCard) {
-        const allCards = await getAllCards();
-        const updatedCard = allCards.find(c => c.id === viewingCard.id);
-        if (updatedCard) {
-          setViewingCard(updatedCard);
-        }
+      setViewingCard(updatedCard);
+    } catch (error) {
+      console.error('Ошибка обновления состояния после изменения карточки:', error);
+      // При ошибке перезагружаем данные
+      if (id) {
+        await loadCollection(id);
       }
     }
   };
 
   // Обработчик удаления карточки
   const handleCardDeleted = async () => {
-    if (id) {
-      await loadCollection(id);
+    try {
+      if (!viewingCard || !collection) return;
+      
+      // Удаляем карточку из списка локально
+      setCards(prev => prev.filter(c => c.id !== viewingCard.id));
+      
+      // Обновляем коллекцию - удаляем ID карточки
+      const updatedCollection = {
+        ...collection,
+        cardIds: collection.cardIds.filter(id => id !== viewingCard.id)
+      };
+      setCollection(updatedCollection);
+      
+      // Закрываем модальное окно
+      setIsModalOpen(false);
+      setViewingCard(null);
+    } catch (error) {
+      console.error('Ошибка обновления состояния после удаления карточки:', error);
+      // При ошибке перезагружаем данные
+      if (id) {
+        await loadCollection(id);
+      }
     }
   };
 
@@ -263,6 +334,7 @@ export const CollectionDetailPage = () => {
         onCardSelect={handleCardSelect}
         onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
+        emptyStateText="Ещё не добавлено ни одной карточки…"
       />
 
       <CardViewModal

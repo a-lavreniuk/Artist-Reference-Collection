@@ -2,7 +2,7 @@
  * Страница категорий и меток
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
@@ -31,13 +31,42 @@ export const TagsPage = () => {
   // Состояние для drag-and-drop меток
   const [draggingTagId, setDraggingTagId] = useState<string | null>(null);
 
+  // Ref для сохранения позиции скролла
+  const scrollPositionRef = useRef<number>(0);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+
+  // Инициализация ref для контейнера скролла
+  useEffect(() => {
+    scrollContainerRef.current = document.querySelector('.layout__content') as HTMLElement;
+  }, []);
+
   // Загрузка категорий и меток
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  // Восстановление позиции скролла после обновления данных
+  useEffect(() => {
+    if (!isLoading && scrollContainerRef.current && scrollPositionRef.current > 0) {
+      // Используем двойной requestAnimationFrame для гарантированного восстановления после рендера
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+            scrollPositionRef.current = 0; // Сбрасываем сохраненную позицию
+          }
+        });
+      });
+    }
+  }, [isLoading, categories, tags]);
+
+  const loadData = async (preserveScroll = false) => {
     try {
+      // Сохраняем позицию скролла перед обновлением
+      if (preserveScroll && scrollContainerRef.current) {
+        scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+      }
+
       setIsLoading(true);
       const [allCategories, allTags] = await Promise.all([
         getAllCategories(),
@@ -57,21 +86,88 @@ export const TagsPage = () => {
     setIsEditCategoryModalOpen(true);
   };
 
-  const handleCategoryUpdated = () => {
-    loadData();
+  const handleCategoryCreated = async (newCategory: Category) => {
+    try {
+      // Загружаем метки новой категории
+      const allTags = await getAllTags();
+      const categoryTags = allTags.filter(t => t.categoryId === newCategory.id);
+      
+      // Добавляем категорию и метки локально
+      setCategories(prev => {
+        const sorted = [...prev, newCategory].sort((a, b) => {
+          if (a.order !== undefined && b.order !== undefined) {
+            return a.order - b.order;
+          }
+          if (a.order !== undefined) return -1;
+          if (b.order !== undefined) return 1;
+          return a.dateCreated.getTime() - b.dateCreated.getTime();
+        });
+        return sorted;
+      });
+      setTags(prev => [...prev, ...categoryTags]);
+    } catch (error) {
+      console.error('Ошибка обновления состояния после создания категории:', error);
+      // При ошибке перезагружаем данные
+      await loadData(true);
+    }
   };
 
-  const handleCategoryDeleted = () => {
-    loadData();
+  const handleCategoryUpdated = async () => {
+    try {
+      if (!editingCategoryId) return;
+      
+      // Загружаем только обновленную категорию и её метки
+      const [allCategories, allTags] = await Promise.all([
+        getAllCategories(),
+        getAllTags()
+      ]);
+      
+      const updatedCategory = allCategories.find(c => c.id === editingCategoryId);
+      if (!updatedCategory) {
+        await loadData(true);
+        return;
+      }
+      
+      const categoryTags = allTags.filter(t => t.categoryId === editingCategoryId);
+      
+      // Обновляем категорию и метки локально
+      setCategories(prev => 
+        prev.map(c => c.id === editingCategoryId ? updatedCategory : c)
+      );
+      setTags(prev => {
+        // Удаляем старые метки категории и добавляем новые
+        const withoutCategoryTags = prev.filter(t => t.categoryId !== editingCategoryId);
+        return [...withoutCategoryTags, ...categoryTags];
+      });
+    } catch (error) {
+      console.error('Ошибка обновления состояния после изменения категории:', error);
+      // При ошибке перезагружаем данные
+      await loadData(true);
+    }
   };
 
-  const handleCategoryCreated = () => {
-    loadData();
+  const handleCategoryDeleted = async () => {
+    try {
+      if (!editingCategoryId) return;
+      
+      // Удаляем категорию и связанные метки локально
+      setCategories(prev => prev.filter(c => c.id !== editingCategoryId));
+      setTags(prev => prev.filter(t => t.categoryId !== editingCategoryId));
+    } catch (error) {
+      console.error('Ошибка обновления состояния после удаления категории:', error);
+      // При ошибке перезагружаем данные
+      await loadData(true);
+    }
   };
 
   const handleMoveCategoryUp = async (categoryId: string) => {
     const currentIndex = categories.findIndex(c => c.id === categoryId);
     if (currentIndex <= 0) return;
+
+    // Сохраняем позицию скролла
+    if (scrollContainerRef.current) {
+      scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+    }
 
     const prevCategory = categories[currentIndex - 1];
     const currentCategory = categories[currentIndex];
@@ -85,12 +181,33 @@ export const TagsPage = () => {
       updateCategory(prevCategory.id, { order: currentOrder })
     ]);
 
-    loadData();
+    // Обновляем состояние локально без полной перезагрузки
+    setCategories(prev => {
+      const newCategories = [...prev];
+      [newCategories[currentIndex - 1], newCategories[currentIndex]] = 
+        [newCategories[currentIndex], newCategories[currentIndex - 1]];
+      return newCategories;
+    });
+
+    // Восстанавливаем позицию скролла
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+          scrollPositionRef.current = 0;
+        }
+      });
+    });
   };
 
   const handleMoveCategoryDown = async (categoryId: string) => {
     const currentIndex = categories.findIndex(c => c.id === categoryId);
     if (currentIndex < 0 || currentIndex >= categories.length - 1) return;
+
+    // Сохраняем позицию скролла
+    if (scrollContainerRef.current) {
+      scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+    }
 
     const nextCategory = categories[currentIndex + 1];
     const currentCategory = categories[currentIndex];
@@ -104,7 +221,23 @@ export const TagsPage = () => {
       updateCategory(nextCategory.id, { order: currentOrder })
     ]);
 
-    loadData();
+    // Обновляем состояние локально без полной перезагрузки
+    setCategories(prev => {
+      const newCategories = [...prev];
+      [newCategories[currentIndex], newCategories[currentIndex + 1]] = 
+        [newCategories[currentIndex + 1], newCategories[currentIndex]];
+      return newCategories;
+    });
+
+    // Восстанавливаем позицию скролла
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+          scrollPositionRef.current = 0;
+        }
+      });
+    });
   };
 
   // ========== DRAG-AND-DROP ДЛЯ МЕТОК ==========
@@ -118,8 +251,10 @@ export const TagsPage = () => {
   };
 
   const handleTagDrop = async (tagId: string, targetCategoryId: string) => {
+    // Сохраняем старое состояние для отката при ошибке
+    let oldCategoryId: string | undefined;
+    
     try {
-      
       // Получаем информацию о метке для уведомления
       const tag = tags.find(t => t.id === tagId);
       const targetCategory = categories.find(c => c.id === targetCategoryId);
@@ -133,16 +268,35 @@ export const TagsPage = () => {
         return;
       }
       
-      // Перемещаем метку
+      // Сохраняем старое состояние для отката при ошибке
+      oldCategoryId = tag.categoryId;
+      
+      // Оптимистичное обновление UI - обновляем состояние сразу
+      setTags(prevTags => 
+        prevTags.map(t => 
+          t.id === tagId ? { ...t, categoryId: targetCategoryId } : t
+        )
+      );
+      
+      // Перемещаем метку в базе данных
       await moveTagToCategory(tagId, targetCategoryId);
       
       // Показываем уведомление
       toast.success(`Метка "${tag.name}" перемещена в "${targetCategory.name}"`);
       
-      // Перезагружаем данные
-      await loadData();
-      
     } catch (error) {
+      // Откатываем изменения при ошибке
+      if (oldCategoryId !== undefined) {
+        setTags(prevTags => 
+          prevTags.map(t => 
+            t.id === tagId ? { ...t, categoryId: oldCategoryId! } : t
+          )
+        );
+      }
+      
+      // Перезагружаем данные для синхронизации
+      await loadData(true);
+      
       console.error('Ошибка перемещения метки:', error);
       if (error instanceof Error) {
         if (error.message.includes('не найдена')) {

@@ -2,7 +2,7 @@
  * Страница коллекций
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { Button, Icon } from '../components/common';
@@ -20,10 +20,33 @@ export const CollectionsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Ref для сохранения позиции скролла
+  const scrollPositionRef = useRef<number>(0);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+
+  // Инициализация ref для контейнера скролла
+  useEffect(() => {
+    scrollContainerRef.current = document.querySelector('.layout__content') as HTMLElement;
+  }, []);
+
   // Загрузка коллекций и карточек
   useEffect(() => {
     loadCollections();
   }, []);
+
+  // Восстановление позиции скролла после обновления данных
+  useEffect(() => {
+    if (!isLoading && scrollContainerRef.current && scrollPositionRef.current > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+            scrollPositionRef.current = 0;
+          }
+        });
+      });
+    }
+  }, [isLoading, collections]);
 
   const loadCollections = async () => {
     try {
@@ -67,8 +90,15 @@ export const CollectionsPage = () => {
     navigate(`/collections/${collection.id}`);
   };
 
-  const handleCollectionCreated = () => {
-    loadCollections();
+  const handleCollectionCreated = async (newCollection: Collection) => {
+    try {
+      // Добавляем коллекцию локально
+      setCollections(prev => [...prev, newCollection]);
+    } catch (error) {
+      console.error('Ошибка обновления состояния после создания коллекции:', error);
+      // При ошибке перезагружаем данные
+      await loadCollections();
+    }
   };
 
   if (isLoading) {
@@ -129,10 +159,7 @@ export const CollectionsPage = () => {
         </div>
       ) : (
         <div className="layout__empty-state">
-          <h3 className="layout__empty-title">Коллекций пока нет</h3>
-          <p className="layout__empty-text text-m">
-            Создайте первую коллекцию для организации карточек
-          </p>
+          <h3 className="layout__empty-title">Ещё не создано ни одной коллекции…</h3>
           <Button
             variant="primary"
             size="L"

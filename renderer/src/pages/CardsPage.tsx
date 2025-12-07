@@ -186,37 +186,77 @@ export const CardsPage = () => {
 
   // Обработчик обновления карточки
   const handleCardUpdated = async () => {
-    // Инвалидируем кеш
-    cardsCacheRef.current.clear();
-    
-    // Перезагружаем первую страницу
-    const firstPage = await getCardsPaginated(0, PAGE_SIZE);
-    cardsCacheRef.current.set(0, firstPage);
-    setCards(firstPage);
-    
-    // Обновляем viewingCard если она открыта (без закрытия модалки)
-    if (viewingCard) {
-      const updatedCard = firstPage.find(c => c.id === viewingCard.id);
-      if (updatedCard) {
-        updateViewingCard(updatedCard);
-      } else {
-        // Если карточка не в первой странице, загружаем её отдельно
-        const card = await getCard(viewingCard.id);
-        if (card) {
-          updateViewingCard(card);
+    try {
+      if (!viewingCard) return;
+      
+      // Загружаем обновленную карточку
+      const updatedCard = await getCard(viewingCard.id);
+      if (!updatedCard) {
+        // Если карточка не найдена, возможно она была удалена
+        cardsCacheRef.current.clear();
+        const firstPage = await getCardsPaginated(0, PAGE_SIZE);
+        cardsCacheRef.current.set(0, firstPage);
+        setCards(firstPage);
+        return;
+      }
+      
+      // Обновляем карточку в текущем списке локально
+      setCards(prev => 
+        prev.map(c => c.id === updatedCard.id ? updatedCard : c)
+      );
+      
+      // Обновляем карточку в кеше если она там есть
+      for (const [pageIndex, pageCards] of cardsCacheRef.current.entries()) {
+        const cardIndex = pageCards.findIndex(c => c.id === updatedCard.id);
+        if (cardIndex !== -1) {
+          const updatedPageCards = [...pageCards];
+          updatedPageCards[cardIndex] = updatedCard;
+          cardsCacheRef.current.set(pageIndex, updatedPageCards);
+          break;
         }
       }
+      
+      // Обновляем viewingCard если она открыта
+      updateViewingCard(updatedCard);
+    } catch (error) {
+      console.error('Ошибка обновления состояния после изменения карточки:', error);
+      // При ошибке перезагружаем данные
+      cardsCacheRef.current.clear();
+      const firstPage = await getCardsPaginated(0, PAGE_SIZE);
+      cardsCacheRef.current.set(0, firstPage);
+      setCards(firstPage);
     }
   };
 
   // Обработчик удаления карточки
   const handleCardDeleted = async () => {
-    // Инвалидируем кеш и перезагружаем первую страницу
-    cardsCacheRef.current.clear();
-    const firstPage = await getCardsPaginated(0, PAGE_SIZE);
-    cardsCacheRef.current.set(0, firstPage);
-    setCards(firstPage);
-    handleCloseModal();
+    try {
+      if (!viewingCard) return;
+      
+      // Удаляем карточку из текущего списка локально
+      setCards(prev => prev.filter(c => c.id !== viewingCard.id));
+      
+      // Удаляем карточку из кеша если она там есть
+      for (const [pageIndex, pageCards] of cardsCacheRef.current.entries()) {
+        const cardIndex = pageCards.findIndex(c => c.id === viewingCard.id);
+        if (cardIndex !== -1) {
+          const updatedPageCards = pageCards.filter(c => c.id !== viewingCard.id);
+          cardsCacheRef.current.set(pageIndex, updatedPageCards);
+          break;
+        }
+      }
+      
+      // Закрываем модальное окно
+      handleCloseModal();
+    } catch (error) {
+      console.error('Ошибка обновления состояния после удаления карточки:', error);
+      // При ошибке перезагружаем данные
+      cardsCacheRef.current.clear();
+      const firstPage = await getCardsPaginated(0, PAGE_SIZE);
+      cardsCacheRef.current.set(0, firstPage);
+      setCards(firstPage);
+      handleCloseModal();
+    }
   };
 
   // Обработчик выбора карточки

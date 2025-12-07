@@ -2,7 +2,7 @@
  * Страница мудборда
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { useSearch } from '../contexts';
@@ -35,6 +35,15 @@ export const MoodboardPage = () => {
   // Состояние экспорта
   const [isExporting, setIsExporting] = useState(false);
 
+  // Ref для сохранения позиции скролла
+  const scrollPositionRef = useRef<number>(0);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+
+  // Инициализация ref для контейнера скролла
+  useEffect(() => {
+    scrollContainerRef.current = document.querySelector('.layout__content') as HTMLElement;
+  }, []);
+
   // Загрузка карточек в мудборде
   useEffect(() => {
     const loadMoodboardCards = async () => {
@@ -54,6 +63,20 @@ export const MoodboardPage = () => {
 
     loadMoodboardCards();
   }, []);
+
+  // Восстановление позиции скролла после обновления данных
+  useEffect(() => {
+    if (!isLoading && scrollContainerRef.current && scrollPositionRef.current > 0) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+            scrollPositionRef.current = 0;
+          }
+        });
+      });
+    }
+  }, [isLoading, cards]);
 
   // Фильтрация карточек по типу
   const filteredCards = useMemo(() => {
@@ -95,28 +118,59 @@ export const MoodboardPage = () => {
 
   // Обработчик обновления карточки
   const handleCardUpdated = async () => {
-      // Перезагружаем карточки после обновления
+    try {
+      if (!viewingCard) return;
+      
+      // Загружаем обновленную карточку
+      const updatedCard = await getCard(viewingCard.id);
+      if (!updatedCard) {
+        // Если карточка не найдена, возможно она была удалена
+        const moodboard = await getMoodboard();
+        const moodboardCards = await getCardsByIds(moodboard.cardIds);
+        setCards(moodboardCards);
+        setMoodboardCardIds(moodboard.cardIds);
+        return;
+      }
+      
+      // Обновляем карточку в списке локально
+      setCards(prev => 
+        prev.map(c => c.id === updatedCard.id ? updatedCard : c)
+      );
+      
+      // Обновляем viewingCard если она открыта
+      setViewingCard(updatedCard);
+    } catch (error) {
+      console.error('Ошибка обновления состояния после изменения карточки:', error);
+      // При ошибке перезагружаем данные
       const moodboard = await getMoodboard();
       const moodboardCards = await getCardsByIds(moodboard.cardIds);
       setCards(moodboardCards);
-    
-    // Обновляем просматриваемую карточку
-    if (viewingCard) {
-      const updatedCard = await getCard(viewingCard.id);
-      if (updatedCard) {
-        setViewingCard(updatedCard);
-      }
+      setMoodboardCardIds(moodboard.cardIds);
     }
   };
 
   // Обработчик удаления карточки
   const handleCardDeleted = async () => {
-    setIsModalOpen(false);
-    setViewingCard(null);
-      // Перезагружаем список
+    try {
+      if (!viewingCard) return;
+      
+      // Удаляем карточку из списка локально
+      setCards(prev => prev.filter(c => c.id !== viewingCard.id));
+      setMoodboardCardIds(prev => prev.filter(id => id !== viewingCard.id));
+      
+      // Закрываем модальное окно
+      setIsModalOpen(false);
+      setViewingCard(null);
+    } catch (error) {
+      console.error('Ошибка обновления состояния после удаления карточки:', error);
+      // При ошибке перезагружаем данные
+      setIsModalOpen(false);
+      setViewingCard(null);
       const moodboard = await getMoodboard();
       const moodboardCards = await getCardsByIds(moodboard.cardIds);
       setCards(moodboardCards);
+      setMoodboardCardIds(moodboard.cardIds);
+    }
   };
 
   // Обработчик выбора карточки
@@ -131,21 +185,28 @@ export const MoodboardPage = () => {
   // Обработчик добавления/удаления из мудборда
   const handleMoodboardToggle = async (card: Card) => {
     try {
-      const moodboard = await getMoodboard();
-      const isInMoodboard = moodboard.cardIds.includes(card.id);
+      const isInMoodboard = moodboardCardIds.includes(card.id);
       
       if (isInMoodboard) {
+        // Удаляем из мудборда
         await removeFromMoodboard(card.id);
+        // Обновляем состояние локально
+        setCards(prev => prev.filter(c => c.id !== card.id));
+        setMoodboardCardIds(prev => prev.filter(id => id !== card.id));
       } else {
+        // Добавляем в мудборд
         await addToMoodboard(card.id);
+        // Обновляем состояние локально
+        setCards(prev => [...prev, card]);
+        setMoodboardCardIds(prev => [...prev, card.id]);
       }
-      // Перезагружаем карточки мудборда
-      const updatedMoodboard = await getMoodboard();
-      const moodboardCards = await getCardsByIds(updatedMoodboard.cardIds);
-      setCards(moodboardCards);
-      setMoodboardCardIds(updatedMoodboard.cardIds);
     } catch (error) {
       console.error('Ошибка переключения мудборда:', error);
+      // При ошибке перезагружаем данные
+      const moodboard = await getMoodboard();
+      const moodboardCards = await getCardsByIds(moodboard.cardIds);
+      setCards(moodboardCards);
+      setMoodboardCardIds(moodboard.cardIds);
     }
   };
 
@@ -308,6 +369,7 @@ export const MoodboardPage = () => {
         onMoodboardToggle={handleMoodboardToggle}
         selectedCards={selectedCards}
         moodboardCardIds={moodboardCardIds}
+        emptyStateText="Ещё не добавлено ни одной карточки…"
       />
 
       {/* Модальное окно просмотра карточки */}

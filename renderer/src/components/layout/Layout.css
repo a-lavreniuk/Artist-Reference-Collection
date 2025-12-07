@@ -104,7 +104,7 @@
   align-items: flex-start;
   justify-content: flex-start;
   min-height: 400px;
-  padding: var(--spacing-3xl);
+  padding: 0;
   text-align: left;
 }
 
