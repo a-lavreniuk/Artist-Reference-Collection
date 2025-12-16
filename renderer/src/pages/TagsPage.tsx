@@ -34,6 +34,8 @@ export const TagsPage = () => {
   // Ref для сохранения позиции скролла
   const scrollPositionRef = useRef<number>(0);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
+  // Флаг для отслеживания программного перемещения категории (чтобы useEffect не вмешивался)
+  const isMovingCategoryRef = useRef<boolean>(false);
 
   // Инициализация ref для контейнера скролла
   useEffect(() => {
@@ -46,12 +48,18 @@ export const TagsPage = () => {
   }, []);
 
   // Восстановление позиции скролла после обновления данных
+  // НЕ восстанавливаем, если идет программное перемещение категории
   useEffect(() => {
+    if (isMovingCategoryRef.current) {
+      // Пропускаем восстановление, если идет программное перемещение
+      return;
+    }
+    
     if (!isLoading && scrollContainerRef.current && scrollPositionRef.current > 0) {
       // Используем двойной requestAnimationFrame для гарантированного восстановления после рендера
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          if (scrollContainerRef.current) {
+          if (scrollContainerRef.current && !isMovingCategoryRef.current) {
             scrollContainerRef.current.scrollTop = scrollPositionRef.current;
             scrollPositionRef.current = 0; // Сбрасываем сохраненную позицию
           }
@@ -164,6 +172,9 @@ export const TagsPage = () => {
     const currentIndex = categories.findIndex(c => c.id === categoryId);
     if (currentIndex <= 0) return;
 
+    // Устанавливаем флаг программного перемещения
+    isMovingCategoryRef.current = true;
+
     // Сохраняем позицию скролла
     if (scrollContainerRef.current) {
       scrollPositionRef.current = scrollContainerRef.current.scrollTop;
@@ -189,13 +200,21 @@ export const TagsPage = () => {
       return newCategories;
     });
 
-    // Восстанавливаем позицию скролла
+    // Восстанавливаем позицию скролла после обновления DOM
+    // Используем тройной requestAnimationFrame для гарантии, что DOM обновлен
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
-          scrollPositionRef.current = 0;
-        }
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+            scrollPositionRef.current = 0;
+            // Сбрасываем флаг после восстановления скролла
+            isMovingCategoryRef.current = false;
+          } else {
+            // Если контейнер не найден, все равно сбрасываем флаг
+            isMovingCategoryRef.current = false;
+          }
+        });
       });
     });
   };
@@ -203,6 +222,9 @@ export const TagsPage = () => {
   const handleMoveCategoryDown = async (categoryId: string) => {
     const currentIndex = categories.findIndex(c => c.id === categoryId);
     if (currentIndex < 0 || currentIndex >= categories.length - 1) return;
+
+    // Устанавливаем флаг программного перемещения
+    isMovingCategoryRef.current = true;
 
     // Сохраняем позицию скролла
     if (scrollContainerRef.current) {
@@ -229,13 +251,21 @@ export const TagsPage = () => {
       return newCategories;
     });
 
-    // Восстанавливаем позицию скролла
+    // Восстанавливаем позицию скролла после обновления DOM
+    // Используем тройной requestAnimationFrame для гарантии, что DOM обновлен
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = scrollPositionRef.current;
-          scrollPositionRef.current = 0;
-        }
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+            scrollPositionRef.current = 0;
+            // Сбрасываем флаг после восстановления скролла
+            isMovingCategoryRef.current = false;
+          } else {
+            // Если контейнер не найден, все равно сбрасываем флаг
+            isMovingCategoryRef.current = false;
+          }
+        });
       });
     });
   };
