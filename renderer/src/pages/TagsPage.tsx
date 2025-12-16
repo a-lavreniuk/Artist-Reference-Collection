@@ -183,20 +183,28 @@ export const TagsPage = () => {
     const prevCategory = categories[currentIndex - 1];
     const currentCategory = categories[currentIndex];
 
-    // Меняем местами order
+    // Получаем текущие значения order (или используем индекс как fallback)
+    const prevOrder = prevCategory.order ?? (currentIndex - 1);
     const currentOrder = currentCategory.order ?? currentIndex;
-    const prevOrder = prevCategory.order ?? currentIndex - 1;
 
+    console.log('[handleMoveCategoryUp] Перемещение:', {
+      current: { name: currentCategory.name, oldOrder: currentOrder, newOrder: prevOrder },
+      prev: { name: prevCategory.name, oldOrder: prevOrder, newOrder: currentOrder }
+    });
+
+    // Меняем местами order в базе данных
     await Promise.all([
       updateCategory(currentCategory.id, { order: prevOrder }),
       updateCategory(prevCategory.id, { order: currentOrder })
     ]);
 
     // Обновляем состояние локально без полной перезагрузки
+    // Важно: создаем новые объекты с обновленным order (иммутабельность)
     setCategories(prev => {
       const newCategories = [...prev];
-      [newCategories[currentIndex - 1], newCategories[currentIndex]] = 
-        [newCategories[currentIndex], newCategories[currentIndex - 1]];
+      // Создаем новые объекты с обновленным order и меняем местами
+      newCategories[currentIndex - 1] = { ...currentCategory, order: prevOrder };
+      newCategories[currentIndex] = { ...prevCategory, order: currentOrder };
       return newCategories;
     });
 
@@ -231,23 +239,31 @@ export const TagsPage = () => {
       scrollPositionRef.current = scrollContainerRef.current.scrollTop;
     }
 
-    const nextCategory = categories[currentIndex + 1];
     const currentCategory = categories[currentIndex];
+    const nextCategory = categories[currentIndex + 1];
 
-    // Меняем местами order
+    // Получаем текущие значения order (или используем индекс как fallback)
     const currentOrder = currentCategory.order ?? currentIndex;
-    const nextOrder = nextCategory.order ?? currentIndex + 1;
+    const nextOrder = nextCategory.order ?? (currentIndex + 1);
 
+    console.log('[handleMoveCategoryDown] Перемещение:', {
+      current: { name: currentCategory.name, oldOrder: currentOrder, newOrder: nextOrder },
+      next: { name: nextCategory.name, oldOrder: nextOrder, newOrder: currentOrder }
+    });
+
+    // Меняем местами order в базе данных
     await Promise.all([
       updateCategory(currentCategory.id, { order: nextOrder }),
       updateCategory(nextCategory.id, { order: currentOrder })
     ]);
 
     // Обновляем состояние локально без полной перезагрузки
+    // Важно: создаем новые объекты с обновленным order (иммутабельность)
     setCategories(prev => {
       const newCategories = [...prev];
-      [newCategories[currentIndex], newCategories[currentIndex + 1]] = 
-        [newCategories[currentIndex + 1], newCategories[currentIndex]];
+      // Создаем новые объекты с обновленным order и меняем местами
+      newCategories[currentIndex] = { ...nextCategory, order: nextOrder };
+      newCategories[currentIndex + 1] = { ...currentCategory, order: currentOrder };
       return newCategories;
     });
 

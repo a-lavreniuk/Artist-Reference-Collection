@@ -145,7 +145,7 @@ export class ARCDatabase extends Dexie {
     this.version(5).stores({
       cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections',
       tags: 'id, name, categoryId, dateCreated, cardCount, description',
-      categories: 'id, name, dateCreated, *tagIds, order',
+      categories: 'id, name, dateCreated, *tagIds',
       collections: 'id, name, dateCreated, dateModified, *cardIds',
       moodboard: 'id, dateModified, *cardIds',
       settings: 'id',
@@ -159,6 +159,30 @@ export class ARCDatabase extends Dexie {
         await trans.table('categories').update(categories[i].id, { order: i });
       }
       console.log('[DB] Миграция версии 5: добавлено поле order к категориям');
+    });
+
+    // Версия 6: исправление сохранения order (убираем из индексов, оставляем как обычное поле)
+    this.version(6).stores({
+      cards: 'id, fileName, type, format, dateAdded, fileSize, *tags, *collections',
+      tags: 'id, name, categoryId, dateCreated, cardCount, description',
+      categories: 'id, name, dateCreated, *tagIds',
+      collections: 'id, name, dateCreated, dateModified, *cardIds',
+      moodboard: 'id, dateModified, *cardIds',
+      settings: 'id',
+      searchHistory: 'id, timestamp, *tagIds',
+      viewHistory: 'id, cardId, timestamp',
+      thumbnailCache: 'id, cardId, dateGenerated, expiresAt'
+    }).upgrade(async (trans) => {
+      // Проверяем, что у всех категорий есть order
+      const categories = await trans.table('categories').toArray();
+      console.log('[DB] Миграция версии 6: проверка order у категорий');
+      for (let i = 0; i < categories.length; i++) {
+        if (categories[i].order === undefined) {
+          await trans.table('categories').update(categories[i].id, { order: i });
+          console.log(`[DB] Установлен order=${i} для категории ${categories[i].name}`);
+        }
+      }
+      console.log('[DB] Миграция версии 6 завершена');
     });
   }
 }
@@ -283,7 +307,8 @@ export async function getCardsByIds(ids: string[]): Promise<Card[]> {
   if (ids.length === 0) {
     return [];
   }
-  return await db.cards.bulkGet(ids);
+  const cards = await db.cards.bulkGet(ids);
+  return cards.filter((card): card is Card => card !== undefined);
 }
 
 /**
@@ -655,8 +680,11 @@ export async function addCategory(category: Category): Promise<string> {
  */
 export async function getAllCategories(): Promise<Category[]> {
   const categories = await db.categories.toArray();
+  console.log('[getAllCategories] Загружено категорий:', categories.length);
+  console.log('[getAllCategories] Категории с order:', categories.map(c => ({ id: c.id, name: c.name, order: c.order })));
+  
   // Сортируем по order, если он есть, иначе по dateCreated
-  return categories.sort((a, b) => {
+  const sorted = categories.sort((a, b) => {
     if (a.order !== undefined && b.order !== undefined) {
       return a.order - b.order;
     }
@@ -664,13 +692,29 @@ export async function getAllCategories(): Promise<Category[]> {
     if (b.order !== undefined) return 1;
     return a.dateCreated.getTime() - b.dateCreated.getTime();
   });
+  
+  console.log('[getAllCategories] Отсортированные категории:', sorted.map(c => ({ id: c.id, name: c.name, order: c.order })));
+  return sorted;
 }
 
 /**
  * Обновить категорию
  */
 export async function updateCategory(id: string, changes: Partial<Category>): Promise<number> {
-  return await db.categories.update(id, changes);
+  console.log('[updateCategory] Обновление категории:', id, 'изменения:', changes);
+  const result = await db.categories.update(id, changes);
+  console.log('[updateCategory] Результат обновления:', result, 'изменено записей');
+  
+  // Проверяем, что обновление прошло успешно
+  if (result === 0) {
+    console.warn('[updateCategory] Категория не найдена или не была обновлена:', id);
+  } else {
+    // Проверяем результат после обновления
+    const updated = await db.categories.get(id);
+    console.log('[updateCategory] Категория после обновления:', updated);
+  }
+  
+  return result;
 }
 
 /**
