@@ -1,0 +1,128 @@
+/**
+ * Стили для компонента истории действий
+ */
+
+.history-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  width: 100%;
+}
+
+.history-section__title {
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-h2);
+  line-height: var(--line-height-h2);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.history-section__loading,
+.history-section__empty {
+  text-align: center;
+  padding: var(--spacing-3xl) var(--spacing-xl);
+  color: var(--text-secondary);
+}
+
+/* Фильтры */
+.history-section__filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.history-section__filter-buttons {
+  display: flex;
+  gap: var(--spacing-s);
+  flex-wrap: wrap;
+}
+
+/* Сообщения */
+.history-section__message {
+  padding: var(--spacing-m) var(--spacing-l);
+  border-radius: var(--radius-m);
+}
+
+/* Контейнер списка */
+.history-section__container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-xl);
+  background-color: transparent;
+  border-radius: var(--radius-l);
+  border: 2px solid var(--border-default);
+  width: 100%;
+  flex: 1;
+}
+
+/* Обёртка для записи (item + divider) */
+.history-section__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* Элемент истории */
+.history-section__item {
+  display: flex;
+  gap: var(--spacing-xl);
+  align-items: center;
+  font-family: var(--font-family-body);
+  font-weight: var(--font-weight-light);
+  font-size: var(--font-size-m);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  font-variation-settings: 'CRSV' 0, 'SHRP' 0;
+}
+
+.history-section__timestamp {
+  min-width: 150px;
+  width: 150px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.history-section__description {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.history-section__highlight {
+  text-decoration: underline;
+  text-underline-position: from-font;
+  text-decoration-skip-ink: none;
+}
+
+/* Разделитель */
+.history-section__divider {
+  height: 2px;
+  background-color: var(--border-default);
+  width: 100%;
+}
+
+/* Адаптивность для меньших экранов */
+@media (max-width: 768px) {
+  .history-section__item {
+    flex-direction: column;
+    gap: var(--spacing-s);
+  }
+
+  .history-section__timestamp {
+    width: auto;
+  }
+
+  .history-section__filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .history-section__filter-buttons {
+    width: 100%;
+  }
+}
+

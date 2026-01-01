@@ -1,0 +1,308 @@
+/**
+ * Стили для компонента Input
+ */
+
+/* ========== ОБЁРТКА ========== */
+
+.input-wrapper {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  /* Разрешаем выделение текста в дочерних элементах */
+  user-select: auto;
+}
+
+.input-wrapper--full-width {
+  width: 100%;
+}
+
+/* ========== МЕТКА ========== */
+
+.input-label {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-s);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* ========== КОНТЕЙНЕР ========== */
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 44px; /* Соответствует высоте .input--medium */
+  /* Разрешаем выделение текста в дочерних элементах */
+  user-select: auto;
+}
+
+/* ========== ПОЛЕ ВВОДА ========== */
+
+.input {
+  /* Базовые стили */
+  width: 100%;
+  
+  /* Типографика */
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-input);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-input);
+  color: var(--text-primary);
+  
+  /* Размеры */
+  height: var(--height-input);
+  padding: 0 16px;
+  
+  /* Оформление */
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: 12px;
+  
+  /* Переходы */
+  transition: all var(--transition-fast);
+  
+  /* Сброс */
+  outline: none;
+  appearance: none;
+  
+  /* КРИТИЧЕСКИ ВАЖНО: разрешаем выделение текста */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  
+  /* КРИТИЧЕСКИ ВАЖНО: отключаем drag для Electron */
+  -webkit-user-drag: none !important;
+  -webkit-app-region: no-drag !important;
+  
+  /* КРИТИЧЕСКИ ВАЖНО: разрешаем pointer events */
+  pointer-events: auto !important;
+  cursor: text !important;
+}
+
+/* Placeholder */
+.input::placeholder {
+  color: var(--text-disabled);
+  opacity: 1;
+}
+
+/* КРИТИЧЕСКИ ВАЖНО: Цвет выделения текста */
+.input::selection,
+input::selection {
+  background-color: #0078D4 !important; /* Синий цвет Windows */
+  color: white !important;
+}
+
+.input::-moz-selection,
+input::-moz-selection {
+  background-color: #0078D4 !important;
+  color: white !important;
+}
+
+/* ========== СОСТОЯНИЯ ========== */
+
+/* Hover */
+.input:hover:not(:disabled):not(:focus) {
+  background-color: var(--color-grayscale-200);
+}
+
+/* Focus - идентично Hover */
+.input:focus {
+  background-color: var(--color-grayscale-200);
+}
+
+/* Error */
+.input--error {
+  background-color: var(--color-red-100);
+}
+
+.input--error:focus {
+  background-color: var(--color-red-100);
+}
+
+/* Disabled */
+.input--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background-color: var(--color-grayscale-50);
+}
+
+/* ========== РАЗМЕРЫ ========== */
+
+.input--medium {
+  height: 44px;
+}
+
+.input--medium ~ .input__clear {
+  /* Для medium размера контейнер уже имеет высоту 44px */
+}
+
+.input--large {
+  height: 48px;
+  font-size: 18px;
+  padding: 0 16px;
+}
+
+/* Для large размера нужно увеличить высоту контейнера */
+.input-wrapper:has(.input--large) .input-container {
+  height: 48px;
+}
+
+/* ========== С ИКОНКАМИ ========== */
+
+/* С иконкой слева: 16px отступ + 24px иконка + 16px отступ = 56px */
+.input--with-icon-left {
+  padding-left: 56px;
+}
+
+.input--large.input--with-icon-left {
+  padding-left: 56px;
+}
+
+/* С иконкой справа: 16px отступ + 24px иконка + 16px отступ = 56px */
+.input--with-icon-right {
+  padding-right: 56px;
+}
+
+.input--large.input--with-icon-right {
+  padding-right: 56px;
+}
+
+/* ========== ИКОНКИ ========== */
+
+.input__icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--icon-default);
+  pointer-events: none;
+}
+
+.input__icon--left {
+  left: 16px;
+}
+
+.input__icon--right {
+  right: 16px;
+}
+
+.input--large ~ .input__icon {
+  width: 24px;
+  height: 24px;
+}
+
+.input--large ~ .input__icon--left {
+  left: 16px;
+}
+
+.input--large ~ .input__icon--right {
+  right: 16px;
+}
+
+.input__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ========== КНОПКА ОЧИСТКИ ========== */
+
+.input__clear {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--icon-default);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all var(--transition-fast);
+}
+
+.input__clear:hover {
+  opacity: 1;
+}
+
+.input--large ~ .input__clear {
+  right: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.input__clear svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ========== СООБЩЕНИЯ ========== */
+
+.input-message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  min-height: 16px;
+}
+
+.input-message--error {
+  font-size: var(--font-size-s);
+  line-height: var(--line-height-s);
+  color: var(--text-error);
+}
+
+.input-message--hint {
+  font-size: var(--font-size-s);
+  line-height: var(--line-height-s);
+  color: var(--text-secondary);
+}
+
+/* ========== СПЕЦИАЛЬНЫЕ ТИПЫ ========== */
+
+/* Поиск */
+.input[type="search"] {
+  -webkit-appearance: none;
+}
+
+.input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Число */
+.input[type="number"]::-webkit-inner-spin-button,
+.input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ========== TEXTAREA ========== */
+
+textarea.input {
+  min-height: 80px;
+  padding: 16px;
+  resize: vertical;
+  line-height: var(--line-height-m);
+  /* КРИТИЧЕСКИ ВАЖНО: разрешаем выделение текста */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+

@@ -1,0 +1,237 @@
+/**
+ * Стили для компонента Card
+ */
+
+.card {
+  /* Базовые стили */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--bg-secondary);
+  border: none; /* Убираем бордер у карточки, оставляем только у изображения (2px) */
+  border-radius: 16px; /* Скругление углов 16 пикселей */
+  overflow: hidden;
+  cursor: pointer;
+  
+  /* Переходы */
+  transition: all var(--transition-fast);
+  
+  /* Сброс */
+  outline: none;
+}
+
+/* ========== СОСТОЯНИЯ ========== */
+
+/* Active */
+.card:active {
+  /* Без эффектов */
+}
+
+/* Selected */
+.card--selected {
+  border-color: var(--bg-button-primary);
+  box-shadow: 0 0 0 2px var(--bg-button-primary);
+}
+
+/* Loading */
+.card--loading {
+  pointer-events: none;
+}
+
+/* Error */
+.card--error {
+  background-color: var(--color-grayscale-100);
+}
+
+/* ========== ВАРИАНТЫ ========== */
+
+/* Компактный вид */
+.card--compact {
+  border-radius: 16px; /* Единое скругление как у обычной карточки */
+  border: none; /* Убираем бордер у карточки, оставляем только у изображения (2px) */
+}
+
+.card--compact .card__info {
+  display: none;
+}
+
+/* ========== ЭЛЕМЕНТЫ ========== */
+
+/* Скелетон */
+.card__skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 150px;
+}
+
+/* Изображение */
+.card__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  opacity: 0;
+  border: 2px solid var(--color-grayscale-100);
+  border-radius: 16px;
+  transition: opacity var(--transition-base), border-color var(--transition-fast);
+  position: relative;
+}
+
+/* Blur превью (placeholder) */
+.card__image--blur {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(10px);
+  transform: scale(1.1);
+  opacity: 1;
+  z-index: 0;
+}
+
+/* Единое скругление для компактного вида */
+.card--compact .card__image {
+  border-radius: 16px;
+}
+
+.card:not(.card--loading) .card__image {
+  opacity: 1;
+}
+
+/* Hover эффект для border изображения */
+.card:hover .card__image {
+  border-color: var(--color-grayscale-200);
+}
+
+/* Ошибка загрузки */
+.card__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  padding: var(--spacing-xl);
+  color: var(--text-disabled);
+}
+
+.card__error svg {
+  margin-bottom: var(--spacing-s);
+}
+
+.card__error-text {
+  font-size: var(--font-size-s);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ========== ОВЕРЛЕЙ ========== */
+/* Удалён - больше не используется */
+
+/* ========== БЕЙДЖ ТИПА ФАЙЛА (первая иконка - статичная, всегда видна) ========== */
+
+.card__type-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(81, 79, 91, 0.48);
+  backdrop-filter: blur(64px);
+  border-radius: var(--radius-s);
+  color: var(--text-light);
+  z-index: 2;
+  /* Всегда видна, не зависит от оверлея */
+}
+
+.card--compact .card__type-badge {
+  top: var(--spacing-s);
+  left: var(--spacing-s);
+  width: 28px;
+  height: 28px;
+}
+
+.card__type-badge svg {
+  width: 20px;
+  height: 20px;
+}
+
+.card--compact .card__type-badge svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ========== ИНФОРМАЦИЯ ========== */
+/* Удалено - больше не используется */
+
+/* ========== КНОПКА МУДБОРДА (вторая иконка - появляется при ховере) ========== */
+
+.card__moodboard-button {
+  position: absolute;
+  top: 16px;
+  left: calc(16px + 32px + var(--spacing-xs)); /* Рядом с иконкой типа файла */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(81, 79, 91, 0.48);
+  backdrop-filter: blur(64px);
+  border: none;
+  border-radius: var(--radius-s);
+  color: var(--text-light);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  z-index: 2;
+}
+
+.card--compact .card__moodboard-button {
+  top: var(--spacing-s);
+  left: calc(var(--spacing-s) + 28px + var(--spacing-xs)); /* Рядом с иконкой типа файла */
+  width: 28px;
+  height: 28px;
+}
+
+/* Показываем при наведении на карточку */
+.card:hover .card__moodboard-button {
+  opacity: 1;
+}
+
+/* Всегда показываем, если уже в мудборде */
+.card__moodboard-button--active {
+  opacity: 1;
+  /* Фон как у обычной метки */
+}
+
+.card__moodboard-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.card--compact .card__moodboard-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ========== ФОКУС ========== */
+
+.card:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ========== АДАПТИВНОСТЬ ПОД РАЗМЕР ОКНА ========== */
+
+/* Примечание: отступы НЕ меняются на разных разрешениях */
+/* Padding остаётся константным как в основных стилях */
+

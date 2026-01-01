@@ -1,0 +1,25 @@
+/**
+ * Стили для страницы коллекций
+ */
+
+.collections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-xl);
+  width: 100%;
+}
+
+/* Адаптация под разные разрешения */
+@media (min-width: 2560px) {
+  .collections-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+@media (max-width: 1920px) {
+  .collections-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    /* gap остаётся как в основных стилях */
+  }
+}
+

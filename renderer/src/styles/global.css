@@ -1,0 +1,233 @@
+/**
+ * Глобальные стили для приложения ARC
+ * Сброс стилей, базовые настройки
+ */
+
+/* ========== ИМПОРТЫ ========== */
+@import './variables.css';
+@import './typography.css';
+
+/* ========== СБРОС СТИЛЕЙ ========== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ========== HTML И BODY ========== */
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-width: var(--min-window-width);
+  min-height: var(--min-window-height);
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-m);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ========== ТИПОГРАФИКА ========== */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+p {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--text-secondary);
+}
+
+/* ========== СПИСКИ ========== */
+
+ul, ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ========== КНОПКИ И ИНПУТЫ ========== */
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font-family-body);
+  color: inherit;
+  transition: all var(--transition-fast);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--font-family-body);
+  color: var(--text-primary);
+  border: none;
+  outline: none;
+  /* КРИТИЧЕСКИ ВАЖНО: разрешаем выделение текста во всех инпутах */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+/* ========== ИЗОБРАЖЕНИЯ ========== */
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ========== СКРОЛЛБАР ========== */
+
+/* Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-grayscale-100);
+  border-radius: var(--radius-s);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
+  transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grayscale-400);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-grayscale-300) var(--color-grayscale-100);
+}
+
+/* ========== SELECTION ========== */
+
+::selection {
+  background-color: var(--color-grayscale-200);
+  color: var(--text-primary);
+}
+
+::-moz-selection {
+  background-color: var(--color-grayscale-200);
+  color: var(--text-primary);
+}
+
+/* ========== УТИЛИТЫ ========== */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skeleton {
+  background: var(--color-grayscale-100);
+  border: 1px solid var(--border-default);
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ========== МОДАЛЬНЫЕ ОКНА ========== */
+/* Стили модальных окон перенесены в Modal.css */
+
+/* ========== TRANSITIONS ========== */
+
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity var(--transition-base);
+}
+
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+/* ========== СОСТОЯНИЯ ЗАГРУЗКИ ========== */
+
+.loading {
+  pointer-events: none;
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ========== АДАПТИВНОСТЬ ========== */
+
+/* Размеры шрифтов НЕ меняются на разных разрешениях */
+/* Приложение работает на всех разрешениях от 1920×1080 до 2560×1440 */
+
+/* Минимальный размер окна убран - приложение работает всегда */
+

@@ -1,0 +1,50 @@
+/**
+ * Стили компонента TagRow
+ */
+
+.tag-row {
+  width: 100%;
+}
+
+.tag-row__fields {
+  display: flex;
+  gap: var(--spacing-xs, 8px);
+  align-items: flex-start;
+  width: 100%;
+}
+
+.tag-row__field {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.tag-row__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: var(--spacing-xs, 14px);
+  background: var(--color-grayscale-100, #ebe9ee);
+  border: none;
+  border-radius: var(--radius-s, 12px);
+  color: var(--icon-default, #93919a);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s);
+  flex-shrink: 0;
+}
+
+.tag-row__remove:hover {
+  background: var(--color-grayscale-200, #d4d2d7);
+  color: var(--text-primary, #3b3946);
+}
+
+.tag-row__remove:active {
+  background: var(--color-grayscale-300, #b8b5bb);
+}
+
+.tag-row__remove:focus-visible {
+  outline: 2px solid var(--color-primary, #0f8948);
+  outline-offset: 2px;
+}
+

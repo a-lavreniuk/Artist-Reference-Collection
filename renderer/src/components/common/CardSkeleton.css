@@ -1,0 +1,35 @@
+/**
+ * Стили для компонента CardSkeleton
+ */
+
+.card-skeleton {
+  /* Базовые стили - повторяют структуру Card */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--bg-secondary);
+  border-radius: 16px;
+  overflow: hidden;
+  
+  /* Квадратная форма по умолчанию (aspect-ratio 1:1) */
+  aspect-ratio: 1 / 1;
+}
+
+/* Компактный вид */
+.card-skeleton--compact {
+  border-radius: 16px;
+  /* Компактный режим также квадратный */
+  aspect-ratio: 1 / 1;
+}
+
+/* Изображение-скелетон */
+.card-skeleton__image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+}
+

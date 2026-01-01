@@ -1,0 +1,29 @@
+/**
+ * Стили для компонента LinkifiedText
+ */
+
+.linkified-text {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  line-height: var(--line-height-m);
+  color: var(--text-primary);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.linkified-text__link {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.linkified-text__link:hover {
+  opacity: 0.7;
+}
+
+.linkified-text__link:active {
+  opacity: 0.5;
+}
+

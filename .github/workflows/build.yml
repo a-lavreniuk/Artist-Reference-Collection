@@ -1,0 +1,70 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (root)
+        run: npm ci
+
+      - name: Install dependencies (renderer)
+        run: |
+          cd renderer
+          npm ci
+
+      - name: Build TypeScript (main + preload)
+        run: |
+          npm run build:main
+          npm run build:preload
+
+      - name: Build Renderer (Vite)
+        run: npm run build:renderer
+
+      - name: Decode certificate
+        if: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+        run: |
+          $base64Certificate = "${{ secrets.WINDOWS_CERTIFICATE }}"
+          $certificateBytes = [Convert]::FromBase64String($base64Certificate)
+          $certificatePath = Join-Path $env:RUNNER_TEMP "certificate.pfx"
+          [IO.File]::WriteAllBytes($certificatePath, $certificateBytes)
+          echo "CSC_LINK=$certificatePath" >> $env:GITHUB_ENV
+          echo "CSC_KEY_PASSWORD=${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}" >> $env:GITHUB_ENV
+
+      - name: Build Electron app (with signing if available)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/ARC-Setup-*.exe
+            release/latest.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up certificate
+        if: always()
+        run: |
+          $certificatePath = Join-Path $env:RUNNER_TEMP "certificate.pfx"
+          if (Test-Path $certificatePath) {
+            Remove-Item $certificatePath -Force
+          }
+
+

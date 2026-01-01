@@ -1,0 +1,1889 @@
+/**
+ * Обработчики IPC событий для коммуникации между main и renderer процессами
+ * Здесь регистрируются все handlers для работы с файловой системой и системными функциями
+ */
+
+import { ipcMain, dialog, Notification, app, shell, clipboard } from 'electron';
+import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
+import * as mimeTypes from 'mime-types';
+import sharp from 'sharp';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import archiver from 'archiver';
+import extract from 'extract-zip';
+import { DownloadManager } from './download-manager';
+import { detectFileType } from './file-detector';
+import { renderPdfToImage, isValidPdf } from './pdf-renderer';
+
+// Настраиваем путь к ffmpeg бинарнику
+// В ASAR архиве ffmpeg не может быть запущен, используем распакованную версию
+let ffmpegPath = ffmpegInstaller.path;
+
+if (app.isPackaged) {
+  // В продакшене заменяем путь внутри ASAR на путь к распакованной версии
+  // app.asar -> app.asar.unpacked
+  ffmpegPath = ffmpegPath.replace('app.asar', 'app.asar.unpacked');
+  console.log('[IPC] Используется ffmpeg из распакованного ASAR:', ffmpegPath);
+}
+
+ffmpeg.setFfmpegPath(ffmpegPath);
+
+/**
+ * Регистрация всех IPC handlers
+ * Вызывается при инициализации приложения
+ */
+export function registerIPCHandlers(): void {
+  console.log('[IPC] Регистрация IPC handlers...');
+
+  // === ФАЙЛОВАЯ СИСТЕМА ===
+
+  /**
+   * Открыть диалог выбора рабочей папки
+   */
+  ipcMain.handle('select-working-directory', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Выберите рабочую папку для ARC',
+        buttonLabel: 'Выбрать папку'
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        console.log('[IPC] Выбор папки отменён');
+        return undefined;
+      }
+
+      const selectedPath = result.filePaths[0];
+      console.log('[IPC] Выбрана папка:', selectedPath);
+      
+      // Устанавливаем рабочую директорию для менеджера загрузок
+      DownloadManager.getInstance().setWorkingDirectory(selectedPath);
+      
+      return selectedPath;
+    } catch (error) {
+      console.error('[IPC] Ошибка выбора папки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Установить рабочую директорию (вызывается при старте)
+   */
+  ipcMain.handle('set-working-directory', async (_event, dirPath: string) => {
+    try {
+      if (dirPath && typeof dirPath === 'string') {
+        DownloadManager.getInstance().setWorkingDirectory(dirPath);
+        console.log('[IPC] Рабочая директория установлена:', dirPath);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[IPC] Ошибка установки рабочей директории:', error);
+      return false;
+    }
+  });
+
+  /**
+   * Открыть диалог выбора пути для сохранения backup
+   */
+  ipcMain.handle('select-backup-path', async (_event, defaultFileName: string) => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Сохранить резервную копию',
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'ZIP архивы', extensions: ['zip'] },
+          { name: 'ARC архивы', extensions: ['arc'] }
+        ]
+      });
+
+      if (result.canceled || !result.filePath) {
+        console.log('[IPC] Выбор пути отменён');
+        return undefined;
+      }
+
+      console.log('[IPC] Выбран путь для backup:', result.filePath);
+      return result.filePath;
+    } catch (error) {
+      console.error('[IPC] Ошибка выбора пути:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Открыть диалог выбора архива для восстановления
+   */
+  ipcMain.handle('select-archive-path', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: 'Выберите архив для восстановления',
+        properties: ['openFile'],
+        filters: [
+          { name: 'ZIP архивы', extensions: ['zip'] },
+          { name: 'Части архива', extensions: ['part01', 'part02', 'part03', 'part04', 'part05', 'part06', 'part07', 'part08'] },
+          { name: 'Все файлы', extensions: ['*'] }
+        ]
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        console.log('[IPC] Выбор архива отменён');
+        return undefined;
+      }
+
+      console.log('[IPC] Выбран архив:', result.filePaths[0]);
+      return result.filePaths[0];
+    } catch (error) {
+      console.error('[IPC] Ошибка выбора архива:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Сканировать директорию и получить список медиафайлов
+   */
+  ipcMain.handle('scan-directory', async (_event, dirPath: string) => {
+    try {
+      console.log('[IPC] Сканирование директории:', dirPath);
+      
+      // Все поддерживаемые расширения
+      const supportedExtensions = [
+        // Изображения - базовые
+        '.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp',
+        // Изображения - TIFF
+        '.tiff', '.tif',
+        // Изображения - HEIC/HEIF
+        '.heic', '.heif',
+        // Изображения - JPEG XL
+        '.jxl',
+        // Изображения - RAW
+        '.cr2', '.nef', '.dng', '.arw', '.orf', '.rw2',
+        // PDF
+        '.pdf',
+        // Видео - HTML5 совместимые
+        '.mp4', '.webm', '.ogv', '.m4v',
+        // Видео - частично совместимые
+        '.mov', '.avi', '.mkv', '.mpeg', '.mpg', '.m2v', '.3gp', '.ts', '.mts',
+        // Видео - legacy форматы
+        '.flv', '.wmv', '.vob', '.rmvb', '.swf'
+      ];
+      
+      const files: string[] = [];
+      const visitedPaths = new Set<string>(); // Отслеживание посещенных путей для защиты от symlinks
+      const MAX_DEPTH = 50; // Максимальная глубина рекурсии
+
+      /**
+       * Рекурсивное сканирование папки с защитой от бесконечной рекурсии
+       */
+      async function scanDir(currentPath: string, depth: number = 0): Promise<void> {
+        // Проверка глубины рекурсии
+        if (depth > MAX_DEPTH) {
+          console.warn(`[IPC] Достигнута максимальная глубина рекурсии (${MAX_DEPTH}) для: ${currentPath}`);
+          return;
+        }
+        
+        // Получаем реальный путь (resolve symlinks)
+        let realPath: string;
+        try {
+          realPath = await fs.realpath(currentPath);
+        } catch (err) {
+          console.error(`[IPC] Не удалось получить realpath для ${currentPath}:`, err);
+          return;
+        }
+        
+        // Проверка на циклические ссылки
+        if (visitedPaths.has(realPath)) {
+          console.warn(`[IPC] Обнаружена циклическая ссылка, пропускаем: ${currentPath} -> ${realPath}`);
+          return;
+        }
+        
+        visitedPaths.add(realPath);
+        
+        try {
+          const entries = await fs.readdir(currentPath, { withFileTypes: true });
+
+          for (const entry of entries) {
+            const fullPath = path.join(currentPath, entry.name);
+
+            if (entry.isDirectory()) {
+              // Пропускаем служебные папки
+              if (!entry.name.startsWith('.') && !entry.name.startsWith('_')) {
+                await scanDir(fullPath, depth + 1);
+              }
+            } else if (entry.isFile() || entry.isSymbolicLink()) {
+              // Проверяем расширение файла
+              const ext = path.extname(entry.name).toLowerCase();
+              if (supportedExtensions.includes(ext)) {
+                files.push(fullPath);
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`[IPC] Ошибка сканирования ${currentPath}:`, err);
+        }
+      }
+
+      await scanDir(dirPath);
+      console.log(`[IPC] Найдено файлов: ${files.length}`);
+      return files;
+    } catch (error) {
+      console.error('[IPC] Ошибка сканирования:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Сканировать папку импорта (_cache/imports)
+   */
+  ipcMain.handle('scan-import-directory', async () => {
+    try {
+      // Получаем путь через DownloadManager, так как он знает где лежит temp
+      const downloadManager = DownloadManager.getInstance();
+      const tempDir = downloadManager.getTempDir(); 
+      
+      console.log('[IPC] Сканирование папки импорта:', tempDir);
+      
+      if (!tempDir) {
+        console.log('[IPC] Папка импорта не определена');
+        return [];
+      }
+      
+      try {
+        await fs.access(tempDir);
+      } catch {
+        console.log('[IPC] Папка импорта не существует');
+        return [];
+      }
+
+      const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.mp4', '.webm'];
+      const files: string[] = [];
+      
+      const entries = await fs.readdir(tempDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (!entry.isDirectory()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          if (supportedExtensions.includes(ext)) {
+            files.push(path.join(tempDir, entry.name));
+          }
+        }
+      }
+      
+      console.log(`[IPC] В импорте найдено файлов: ${files.length}`);
+      return files;
+    } catch (error) {
+      console.error('[IPC] Ошибка сканирования папки импорта:', error);
+      return [];
+    }
+  });
+
+  /**
+   * Получить информацию о файле
+   */
+  ipcMain.handle('get-file-info', async (_event, filePath: string) => {
+    try {
+      const stats = await fs.stat(filePath);
+      const fileName = path.basename(filePath);
+
+      return {
+        name: fileName,
+        size: stats.size,
+        created: stats.birthtime,
+        modified: stats.mtime
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка получения информации о файле:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Проверить существование файла
+   */
+  ipcMain.handle('file-exists', async (_event, filePath: string) => {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  /**
+   * Скопировать файл в рабочую папку с организацией по дате
+   */
+  ipcMain.handle('organize-file', async (_event, sourcePath: string, workingDir: string) => {
+    try {
+      console.log('[IPC] Организация файла:', sourcePath);
+
+      // Создаём структуру папок год/месяц/день
+      const now = new Date();
+      const year = now.getFullYear().toString();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+
+      const targetDir = path.join(workingDir, year, month, day);
+      await fs.mkdir(targetDir, { recursive: true });
+
+      // Санитизация имени файла (удаляем запрещенные символы Windows)
+      let fileName = path.basename(sourcePath);
+      fileName = fileName.replace(/[<>:"|?*]/g, '_');
+      
+      // Проверка длины имени файла (максимум 255 символов для большинства ФС)
+      if (fileName.length > 255) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        fileName = nameWithoutExt.substring(0, 250 - ext.length) + ext;
+      }
+      
+      const targetPath = path.join(targetDir, fileName);
+
+      // Если файл с таким именем уже существует, добавляем counter
+      // Максимум 9999 попыток для защиты от бесконечного цикла
+      let finalPath = targetPath;
+      let counter = 1;
+      const MAX_ATTEMPTS = 9999;
+      
+      while (await fileExists(finalPath) && counter <= MAX_ATTEMPTS) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        finalPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
+        counter++;
+      }
+      
+      if (counter > MAX_ATTEMPTS) {
+        throw new Error(`Не удалось найти уникальное имя файла после ${MAX_ATTEMPTS} попыток`);
+      }
+
+      await fs.copyFile(sourcePath, finalPath);
+      console.log('[IPC] Файл скопирован в:', finalPath);
+
+      return finalPath;
+    } catch (error) {
+      console.error('[IPC] Ошибка организации файла:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Переместить файл из временной папки в рабочую папку с организацией по дате
+   */
+  ipcMain.handle('move-file-to-working-dir', async (_event, sourcePath: string, workingDir: string) => {
+    try {
+      console.log('[IPC] Перемещение файла:', sourcePath);
+
+      // Создаём структуру папок год/месяц/день
+      const now = new Date();
+      const year = now.getFullYear().toString();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+
+      const targetDir = path.join(workingDir, year, month, day);
+      await fs.mkdir(targetDir, { recursive: true });
+
+      // Санитизация имени файла
+      let fileName = path.basename(sourcePath);
+      fileName = fileName.replace(/[<>:"|?*]/g, '_');
+      
+      // Проверка длины имени файла
+      if (fileName.length > 255) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        fileName = nameWithoutExt.substring(0, 250 - ext.length) + ext;
+      }
+      
+      const targetPath = path.join(targetDir, fileName);
+
+      // Если файл с таким именем уже существует, добавляем counter
+      // Максимум 9999 попыток для защиты от бесконечного цикла
+      let finalPath = targetPath;
+      let counter = 1;
+      const MAX_ATTEMPTS = 9999;
+      
+      while (await fileExists(finalPath) && counter <= MAX_ATTEMPTS) {
+        const ext = path.extname(fileName);
+        const nameWithoutExt = path.basename(fileName, ext);
+        finalPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
+        counter++;
+      }
+      
+      if (counter > MAX_ATTEMPTS) {
+        throw new Error(`Не удалось найти уникальное имя файла после ${MAX_ATTEMPTS} попыток`);
+      }
+
+      // Перемещаем файл (rename = move в пределах одного диска)
+      await fs.rename(sourcePath, finalPath);
+      console.log('[IPC] Файл перемещен в:', finalPath);
+
+      return finalPath;
+    } catch (error) {
+      console.error('[IPC] Ошибка перемещения файла:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Сохранить файл из ArrayBuffer в рабочую папку с организацией по дате
+   */
+  ipcMain.handle('save-file-from-buffer', async (_event, buffer: Buffer, fileName: string, workingDir: string) => {
+    try {
+      console.log('[IPC] Сохранение файла из буфера:', fileName);
+
+      // Создаём структуру папок год/месяц/день
+      const now = new Date();
+      const year = now.getFullYear().toString();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+
+      const targetDir = path.join(workingDir, year, month, day);
+      await fs.mkdir(targetDir, { recursive: true });
+      console.log('[IPC] Создана директория:', targetDir);
+
+      // Санитизация имени файла
+      let sanitizedFileName = fileName.replace(/[<>:"|?*]/g, '_');
+      
+      // Проверка длины имени файла
+      if (sanitizedFileName.length > 255) {
+        const ext = path.extname(sanitizedFileName);
+        const nameWithoutExt = path.basename(sanitizedFileName, ext);
+        sanitizedFileName = nameWithoutExt.substring(0, 250 - ext.length) + ext;
+      }
+      
+      let targetPath = path.join(targetDir, sanitizedFileName);
+      
+      // Если файл с таким именем уже существует, добавляем счётчик
+      // Максимум 9999 попыток для защиты от бесконечного цикла
+      let counter = 1;
+      const MAX_ATTEMPTS = 9999;
+      
+      while (await fileExists(targetPath) && counter <= MAX_ATTEMPTS) {
+        const ext = path.extname(sanitizedFileName);
+        const nameWithoutExt = path.basename(sanitizedFileName, ext);
+        targetPath = path.join(targetDir, `${nameWithoutExt}_${counter}${ext}`);
+        counter++;
+      }
+      
+      if (counter > MAX_ATTEMPTS) {
+        throw new Error(`Не удалось найти уникальное имя файла после ${MAX_ATTEMPTS} попыток`);
+      }
+
+      await fs.writeFile(targetPath, buffer);
+      console.log('[IPC] Файл сохранён:', targetPath);
+
+      return targetPath;
+    } catch (error) {
+      console.error('[IPC] Ошибка сохранения файла из буфера:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Создать превью для изображения или видео
+   * Для изображений - sharp (512px по широкой стороне)
+   * Для видео - пока копия оригинала (TODO: ffmpeg)
+   */
+  ipcMain.handle('generate-thumbnail', async (_event, filePath: string, workingDir: string) => {
+    try {
+      console.log('[IPC] Генерация превью для:', filePath);
+
+      // Создаём папку для превью
+      const thumbsDir = path.join(workingDir, '_cache', 'thumbs');
+      await fs.mkdir(thumbsDir, { recursive: true });
+
+      // Определяем тип файла
+      const ext = path.extname(filePath).toLowerCase();
+      const videoExtensions = [
+        '.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv', '.wmv',
+        '.mpeg', '.mpg', '.m2v', '.3gp', '.ts', '.mts', '.m4v',
+        '.ogv', '.vob', '.rmvb', '.swf'
+      ];
+      const pdfExtensions = ['.pdf'];
+      
+      const isVideo = videoExtensions.includes(ext);
+      const isPdf = pdfExtensions.includes(ext);
+      const fileName = path.basename(filePath, ext);
+      
+      // Имена файлов превью (WebP формат)
+      const blurThumbName = `${fileName}_thumb_blur.webp`;
+      const compactThumbName = `${fileName}_thumb_compact.webp`;
+      const standardThumbName = `${fileName}_thumb_standard.webp`;
+      
+      const blurThumbPath = path.join(thumbsDir, blurThumbName);
+      const compactThumbPath = path.join(thumbsDir, compactThumbName);
+      const standardThumbPath = path.join(thumbsDir, standardThumbName);
+
+      if (isVideo) {
+        // Генерируем превью для видео через ffmpeg
+        console.log('[IPC] Генерация превью для видео через ffmpeg...');
+        
+        // Проверяем существование исходного видео файла
+        const videoExists = await fileExists(filePath);
+        if (!videoExists) {
+          console.error('[IPC] Исходный видео файл не найден!');
+          // Возвращаем объект с пустыми путями для консистентности
+          return {
+            blur: '',
+            compact: '',
+            standard: ''
+          };
+        }
+        
+        // Сначала создаем стандартное превью через ffmpeg (JPEG, так как ffmpeg не поддерживает WebP напрямую)
+        const tempJpegPath = path.join(thumbsDir, `${fileName}_temp.jpg`);
+        
+        // Генерация с timeout (30 секунд)
+        const FFMPEG_TIMEOUT = 30000;
+        let ffmpegTimedOut = false;
+        
+        await Promise.race([
+          new Promise<void>((resolve, reject) => {
+            const ffmpegProcess = ffmpeg(filePath)
+              .on('start', (commandLine) => {
+                console.log('[IPC] ffmpeg команда:', commandLine);
+              })
+              .screenshots({
+                count: 1,
+                folder: thumbsDir,
+                filename: `${fileName}_temp.jpg`,
+                size: '512x?',
+                timemarks: ['00:00:00.100']
+              })
+              .on('end', () => {
+                if (!ffmpegTimedOut) {
+                  console.log('[IPC] Превью видео создано успешно');
+                  resolve();
+                }
+              })
+              .on('error', (err, stdout, stderr) => {
+                if (!ffmpegTimedOut) {
+                  console.error('[IPC] Ошибка ffmpeg:', err.message);
+                  if (stderr) {
+                    console.error('[IPC] ffmpeg stderr:', stderr);
+                  }
+                  resolve(); // Не прерываем процесс
+                }
+              });
+          }),
+          new Promise<void>((resolve) => {
+            setTimeout(() => {
+              ffmpegTimedOut = true;
+              console.warn('[IPC] ffmpeg превысил timeout (30s), пропускаем...');
+              resolve();
+            }, FFMPEG_TIMEOUT);
+          })
+        ]);
+
+        // Конвертируем JPEG в WebP через sharp и создаем все размеры
+        if (await fileExists(tempJpegPath)) {
+          try {
+            // Blur превью (20px с размытием)
+            await sharp(tempJpegPath)
+              .resize(20, 20, { fit: 'inside', withoutEnlargement: true })
+              .blur(10)
+              .webp({ quality: 50, effort: 4 })
+              .toFile(blurThumbPath);
+
+            // Compact превью (256px)
+            await sharp(tempJpegPath)
+              .resize(256, 256, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 85, effort: 4 })
+              .toFile(compactThumbPath);
+
+            // Standard превью (512px)
+            await sharp(tempJpegPath)
+              .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 85, effort: 4 })
+              .toFile(standardThumbPath);
+
+            console.log('[IPC] Все превью созданы, удаляем временный JPEG');
+            
+            // Даём время на освобождение файла (sharp может держать дескриптор)
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Удаляем временный JPEG с повторными попытками
+            let deleteAttempts = 0;
+            const maxDeleteAttempts = 5;
+            let deleted = false;
+            
+            while (!deleted && deleteAttempts < maxDeleteAttempts) {
+              try {
+                await fs.unlink(tempJpegPath);
+                deleted = true;
+                console.log('[IPC] Временный JPEG удалён');
+              } catch (unlinkError: any) {
+                deleteAttempts++;
+                if (unlinkError.code === 'EPERM' || unlinkError.code === 'EBUSY') {
+                  console.warn(`[IPC] Файл занят, попытка ${deleteAttempts}/${maxDeleteAttempts}`);
+                  // Ждём перед следующей попыткой
+                  await new Promise(resolve => setTimeout(resolve, 200 * deleteAttempts));
+                } else {
+                  console.error('[IPC] Ошибка удаления временного JPEG:', unlinkError);
+                  break;
+                }
+              }
+            }
+            
+            if (!deleted) {
+              console.warn('[IPC] Не удалось удалить временный JPEG после', maxDeleteAttempts, 'попыток. Файл будет удалён позже.');
+              // Не бросаем ошибку, так как превью созданы успешно
+            }
+          } catch (sharpError) {
+            console.error('[IPC] Ошибка создания превью через sharp:', sharpError);
+            // Не бросаем ошибку выше, чтобы не прерывать весь процесс
+          }
+        } else {
+          console.warn('[IPC] Временный JPEG не найден после генерации ffmpeg');
+        }
+      } else if (isPdf) {
+        // Обработка PDF файла
+        console.log('[IPC] Обработка PDF файла...');
+        
+        try {
+          // Проверяем валидность PDF
+          const isValid = await isValidPdf(filePath);
+          if (!isValid) {
+            console.warn('[IPC] Файл не является валидным PDF');
+            // Создаем placeholder (пустые пути - будет использован дефолтный placeholder)
+            return {
+              blur: '',
+              compact: '',
+              standard: ''
+            };
+          }
+
+          // Рендерим PDF в изображение (пока возвращает null - placeholder)
+          const pdfBuffer = await renderPdfToImage(filePath);
+          
+          if (pdfBuffer) {
+            // Если рендеринг удался, создаем превью из buffer
+            // Blur превью
+            await sharp(pdfBuffer)
+              .resize(20, 20, { fit: 'inside', withoutEnlargement: true })
+              .blur(10)
+              .webp({ quality: 50, effort: 4 })
+              .toFile(blurThumbPath);
+
+            // Compact превью
+            await sharp(pdfBuffer)
+              .resize(256, 256, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 85, effort: 4 })
+              .toFile(compactThumbPath);
+
+            // Standard превью
+            await sharp(pdfBuffer)
+              .resize(512, 512, { fit: 'inside', withoutEnlargement: true })
+              .webp({ quality: 85, effort: 4 })
+              .toFile(standardThumbPath);
+
+            console.log('[IPC] Превью PDF созданы');
+          } else {
+            console.log('[IPC] PDF рендеринг вернул null - используется placeholder');
+            // Возвращаем пустые пути - будет использован placeholder
+            return {
+              blur: '',
+              compact: '',
+              standard: ''
+            };
+          }
+        } catch (pdfError) {
+          console.error('[IPC] Ошибка обработки PDF:', pdfError);
+          // Возвращаем пустые пути - будет использован placeholder
+          return {
+            blur: '',
+            compact: '',
+            standard: ''
+          };
+        }
+      } else {
+        // Генерируем превью для изображения через sharp
+        // Создаем три размера: blur (20px), compact (256px), standard (512px)
+        
+        try {
+          // Blur превью (20px с размытием для placeholder)
+          await sharp(filePath)
+            .resize(20, 20, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .blur(10) // Размытие для эффекта blur-up
+            .webp({
+              quality: 50,
+              effort: 4
+            })
+            .toFile(blurThumbPath);
+
+          // Compact превью (256px для компактного режима)
+          await sharp(filePath)
+            .resize(256, 256, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .webp({
+              quality: 85,
+              effort: 4
+            })
+            .toFile(compactThumbPath);
+
+          // Standard превью (512px для стандартного режима)
+          await sharp(filePath)
+            .resize(512, 512, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .webp({
+              quality: 85,
+              effort: 4
+            })
+            .toFile(standardThumbPath);
+
+          console.log('[IPC] Превью изображения созданы (blur, compact, standard)');
+        } catch (sharpError: any) {
+          console.error('[IPC] Ошибка Sharp при обработке изображения:', sharpError);
+          
+          // Для RAW форматов может потребоваться дополнительная настройка
+          const rawFormats = ['.cr2', '.nef', '.dng', '.arw', '.orf', '.rw2'];
+          if (rawFormats.includes(ext)) {
+            console.warn('[IPC] RAW формат обнаружен, но Sharp не смог обработать');
+            console.warn('[IPC] Убедитесь что Sharp скомпилирован с поддержкой libraw');
+          }
+          
+          // Возвращаем пустые пути - будет использован placeholder
+          return {
+            blur: '',
+            compact: '',
+            standard: ''
+          };
+        }
+      }
+
+      // Проверяем существование всех созданных файлов
+      const blurExists = await fileExists(blurThumbPath);
+      const compactExists = await fileExists(compactThumbPath);
+      const standardExists = await fileExists(standardThumbPath);
+
+      // Возвращаем объект с путями ко всем превью
+      return {
+        blur: blurExists ? blurThumbPath : '',
+        compact: compactExists ? compactThumbPath : '',
+        standard: standardExists ? standardThumbPath : ''
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка генерации превью:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Получить file:// URL для локального файла
+   * Для маленьких файлов (<5MB) возвращает Data URL (base64)
+   * Для больших файлов возвращает file:// URL для оптимизации памяти
+   */
+  ipcMain.handle('get-file-url', async (_event, filePath: string) => {
+    try {
+      console.log('[IPC] Получение URL для файла:', filePath);
+      
+      // Валидация пути - проверяем что файл внутри рабочей директории
+      const workingDir = await getSetting('workingDirectory');
+      if (workingDir) {
+        const normalizedPath = path.normalize(filePath);
+        const normalizedWorkingDir = path.normalize(workingDir);
+        
+        if (!normalizedPath.startsWith(normalizedWorkingDir)) {
+          console.error('[IPC] Доступ запрещен: файл вне рабочей директории');
+          console.error('[IPC] Файл:', normalizedPath);
+          console.error('[IPC] Рабочая папка:', normalizedWorkingDir);
+          throw new Error('Access denied: file outside working directory');
+        }
+      }
+      
+      // Проверяем размер файла
+      const stats = await fs.stat(filePath);
+      const fileSizeInMB = stats.size / (1024 * 1024);
+      const maxSizeForDataURL = 5; // 5MB
+      
+      // Для больших файлов возвращаем file:// URL
+      if (fileSizeInMB > maxSizeForDataURL) {
+        console.log(`[IPC] Файл слишком большой (${fileSizeInMB.toFixed(2)}MB), используем file:// URL`);
+        return `file:///${filePath.replace(/\\/g, '/')}`;
+      }
+      
+      console.log('[IPC] Чтение файла для Data URL:', filePath);
+      
+      // Читаем файл
+      const fileBuffer = await fs.readFile(filePath);
+      
+      // Определяем MIME тип через библиотеку mime-types
+      const mimeType = mimeTypes.lookup(filePath) || 'application/octet-stream';
+      
+      // Конвертируем в base64 Data URL
+      const base64 = fileBuffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      
+      console.log('[IPC] Data URL создан, размер:', Math.round(base64.length / 1024), 'KB');
+      return dataUrl;
+    } catch (error) {
+      console.error('[IPC] Ошибка чтения файла:', error);
+      throw error;
+    }
+  });
+
+  // === СИСТЕМНЫЕ ОПЕРАЦИИ С ФАЙЛАМИ ===
+
+  /**
+   * Открыть папку с файлом в проводнике Windows
+   */
+  ipcMain.handle('open-file-location', async (_event, filePath: string) => {
+    try {
+      console.log('[IPC] Открытие папки с файлом:', filePath);
+      
+      // Проверяем существование файла
+      const exists = await fileExists(filePath);
+      if (!exists) {
+        console.error('[IPC] Файл не найден:', filePath);
+        throw new Error('Файл не найден');
+      }
+      
+      // shell.showItemInFolder открывает проводник и выделяет файл
+      shell.showItemInFolder(filePath);
+      console.log('[IPC] Папка открыта успешно');
+      return true;
+    } catch (error) {
+      console.error('[IPC] Ошибка открытия папки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Открыть внешнюю ссылку в браузере по умолчанию
+   */
+  ipcMain.handle('open-external', async (_event, url: string) => {
+    try {
+      console.log('[IPC] Открытие внешней ссылки:', url);
+      
+      // Проверяем, что это валидный URL
+      if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+        console.error('[IPC] Некорректный URL:', url);
+        throw new Error('Некорректный URL');
+      }
+      
+      // Открываем ссылку в браузере по умолчанию
+      await shell.openExternal(url);
+      console.log('[IPC] Ссылка открыта успешно');
+    } catch (error) {
+      console.error('[IPC] Ошибка открытия ссылки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Экспортировать файл в выбранную папку
+   */
+  ipcMain.handle('export-file', async (_event, sourcePath: string, defaultFileName: string) => {
+    try {
+      console.log('[IPC] Экспорт файла:', sourcePath);
+      
+      // Проверяем существование исходного файла
+      const exists = await fileExists(sourcePath);
+      if (!exists) {
+        const errorMessage = `Файл не найден по пути:\n${sourcePath}\n\nВозможные причины:\n• Файл был удален или перемещен\n• Путь к файлу изменился\n• Диск недоступен\n\nЧто делать:\n• Проверьте целостность данных в настройках\n• Восстановите файл из резервной копии\n• Удалите карточку из базы данных`;
+        console.error('[IPC] Исходный файл не найден:', sourcePath);
+        throw new Error(errorMessage);
+      }
+      
+      // Диалог выбора места сохранения
+      const result = await dialog.showSaveDialog({
+        title: 'Экспорт файла',
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'Все файлы', extensions: ['*'] }
+        ]
+      });
+
+      if (result.canceled || !result.filePath) {
+        console.log('[IPC] Экспорт отменён');
+        return null;
+      }
+
+      // Копируем файл
+      await fs.copyFile(sourcePath, result.filePath);
+      console.log('[IPC] Файл экспортирован:', result.filePath);
+      
+      return result.filePath;
+    } catch (error: any) {
+      console.error('[IPC] Ошибка экспорта файла:', error);
+      
+      // Улучшаем сообщение об ошибке
+      if (error.code === 'ENOENT') {
+        throw new Error(`Файл не найден:\n${sourcePath}\n\nФайл был удален или перемещен. Проверьте целостность данных в настройках.`);
+      } else if (error.code === 'EACCES') {
+        throw new Error(`Нет доступа к файлу:\n${sourcePath}\n\nПроверьте права доступа к файлу.`);
+      } else if (error.code === 'ENOSPC') {
+        throw new Error(`Недостаточно места на диске для экспорта файла.`);
+      } else {
+        throw new Error(`Ошибка экспорта файла:\n${error.message || 'Неизвестная ошибка'}`);
+      }
+    }
+  });
+
+  /**
+   * Скопировать текст в буфер обмена
+   */
+  ipcMain.handle('copy-to-clipboard', async (_event, text: string) => {
+    try {
+      clipboard.writeText(text);
+      console.log('[IPC] Текст скопирован в буфер:', text.substring(0, 50) + '...');
+      return true;
+    } catch (error) {
+      console.error('[IPC] Ошибка копирования в буфер:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Удалить файл с диска
+   * @param filePath - Путь к файлу для удаления
+   * @returns true если успешно
+   */
+  ipcMain.handle('delete-file', async (_event, filePath: string) => {
+    try {
+      // Проверяем существование файла
+      const exists = await fileExists(filePath);
+      if (!exists) {
+        console.log('[IPC] Файл не найден (пропускаем):', filePath);
+        return true; // Возвращаем true так как файла уже нет
+      }
+
+      await fs.unlink(filePath);
+      console.log('[IPC] Файл удалён:', filePath);
+      return true;
+    } catch (error) {
+      console.error('[IPC] Ошибка удаления файла:', error);
+      throw error;
+    }
+  });
+
+  // === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
+
+  /**
+   * Создать резервную копию данных
+   * Создаёт ZIP архив с содержимым рабочей папки + база данных
+   */
+  ipcMain.handle('create-backup', async (event, outputPath: string, workingDir: string, parts: number, databaseJson: string) => {
+    try {
+      console.log('[IPC] Создание резервной копии...');
+      console.log('[IPC] Выходной путь:', outputPath);
+      console.log('[IPC] Рабочая директория:', workingDir);
+      console.log('[IPC] Количество частей:', parts);
+
+      // 1. Проверка доступности рабочей директории
+      try {
+        await fs.access(workingDir);
+      } catch {
+        throw new Error('Рабочая директория недоступна');
+      }
+
+      // 2. Подсчёт размера рабочей папки
+      let totalSize = 0;
+      let filesCount = 0;
+
+      async function calculateSize(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await calculateSize(fullPath);
+          } else if (entry.isFile()) {
+            const stats = await fs.stat(fullPath);
+            totalSize += stats.size;
+            filesCount++;
+          }
+        }
+      }
+
+      await calculateSize(workingDir);
+      console.log(`[IPC] Размер рабочей папки: ${Math.round(totalSize / 1024 / 1024)} MB, файлов: ${filesCount}`);
+
+      // 3. Создание архива
+      const archiveName = path.basename(outputPath);
+      const archiveDir = path.dirname(outputPath);
+      
+      // Создаём выходную директорию если не существует
+      await fs.mkdir(archiveDir, { recursive: true });
+
+      return new Promise(async (resolve, reject) => {
+        const output = fsSync.createWriteStream(outputPath);
+        const archive = archiver('zip', {
+          zlib: { level: 9 } // Максимальное сжатие
+        });
+
+        let processedSize = 0;
+        const startTime = Date.now();
+
+        // Обработка событий
+        output.on('close', async () => {
+          const archiveSize = archive.pointer();
+          const duration = Math.round((Date.now() - startTime) / 1000);
+          
+          console.log(`[IPC] Архив создан: ${Math.round(archiveSize / 1024 / 1024)} MB`);
+          console.log(`[IPC] Время создания: ${duration} сек`);
+          
+          // Разбиваем на части если нужно
+          let finalPaths: string[] = [outputPath];
+          if (parts > 1) {
+            try {
+              finalPaths = await splitFile(outputPath, parts);
+              console.log(`[IPC] Файл разбит на ${parts} частей`);
+            } catch (splitError) {
+              console.error('[IPC] Ошибка разбиения на части:', splitError);
+              // Продолжаем с одним файлом
+            }
+          }
+          
+          // Создаём manifest.json
+          const manifest = {
+            version: '1.0',
+            date: new Date().toISOString(),
+            workingDir: workingDir,
+            totalSize: archiveSize,
+            filesCount: filesCount,
+            parts: parts,
+            archiveName: parts > 1 ? path.basename(finalPaths[0]) : archiveName,
+            partFiles: finalPaths.map(p => path.basename(p))
+          };
+
+          resolve({
+            success: true,
+            size: archiveSize,
+            filesCount: filesCount,
+            duration: duration,
+            manifest: manifest
+          });
+        });
+
+        archive.on('error', (err) => {
+          console.error('[IPC] Ошибка архивирования:', err);
+          reject(err);
+        });
+
+        archive.on('progress', (progress) => {
+          processedSize = progress.fs.processedBytes;
+          const percent = Math.round((processedSize / totalSize) * 100);
+          
+          // Отправляем прогресс в renderer
+          event.sender.send('backup-progress', {
+            percent: percent,
+            processed: processedSize,
+            total: totalSize
+          });
+        });
+
+        // Подключаем поток
+        archive.pipe(output);
+
+        // 1. Добавляем базу данных как JSON файл
+        archive.append(databaseJson, { name: '_database/arc_database.json' });
+        console.log('[IPC] База данных добавлена в архив');
+
+        // 2. Добавляем всю рабочую папку в архив
+        // Вручную добавляем все файлы и папки рекурсивно
+        console.log('[IPC] Добавление файлов в архив...');
+        
+        async function addDirectoryToArchive(dirPath: string, archivePath: string = '') {
+          const entries = await fs.readdir(dirPath, { withFileTypes: true });
+          console.log(`[IPC] Сканирование папки: ${dirPath} (найдено ${entries.length} элементов)`);
+          
+          for (const entry of entries) {
+            const fullPath = path.join(dirPath, entry.name);
+            const archiveEntryPath = archivePath ? path.join(archivePath, entry.name) : entry.name;
+            
+            if (entry.isDirectory()) {
+              // Рекурсивно добавляем содержимое папки
+              console.log(`[IPC] Обход папки: ${entry.name}`);
+              await addDirectoryToArchive(fullPath, archiveEntryPath);
+            } else if (entry.isFile()) {
+              // Добавляем файл
+              console.log(`[IPC] Добавление файла: ${archiveEntryPath}`);
+              archive.file(fullPath, { name: archiveEntryPath });
+            }
+          }
+        }
+        
+        await addDirectoryToArchive(workingDir);
+        console.log('[IPC] Все файлы добавлены в очередь архива');
+
+        // Завершаем архивирование
+        archive.finalize();
+        console.log('[IPC] Finalize вызван, ждём завершения...');
+      });
+    } catch (error) {
+      console.error('[IPC] Ошибка создания backup:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Восстановить данные из резервной копии
+   * Распаковывает архив и возвращает JSON базы данных
+   */
+  ipcMain.handle('restore-backup', async (event, archivePath: string, targetDir: string) => {
+    try {
+      console.log('[IPC] Восстановление из backup...');
+      console.log('[IPC] Архив:', archivePath);
+      console.log('[IPC] Целевая директория:', targetDir);
+
+      // 1. Проверяем тип файла (одиночный или части)
+      let zipPath = archivePath;
+      const isPart = archivePath.includes('.arc.part');
+      
+      if (isPart) {
+        // Объединяем части в один файл
+        console.log('[IPC] Обнаружены части архива, объединяем...');
+        zipPath = await mergeFileParts(archivePath);
+      }
+
+      // 2. Создаём временную папку для распаковки
+      const tempDir = path.join(app.getPath('temp'), `arc_restore_${Date.now()}`);
+      await fs.mkdir(tempDir, { recursive: true });
+      console.log('[IPC] Временная папка:', tempDir);
+
+      // 3. Распаковываем архив
+      console.log('[IPC] Распаковка архива...');
+      await extract(zipPath, { dir: tempDir });
+      console.log('[IPC] Архив распакован');
+
+      // 4. Читаем базу данных из архива
+      const dbPath = path.join(tempDir, '_database', 'arc_database.json');
+      let databaseJson: string | null = null;
+      
+      try {
+        databaseJson = await fs.readFile(dbPath, 'utf-8');
+        console.log('[IPC] База данных прочитана из архива');
+      } catch {
+        console.log('[IPC] База данных не найдена в архиве');
+      }
+
+      // 5. Создаём целевую директорию если не существует
+      await fs.mkdir(targetDir, { recursive: true });
+
+      // 6. Копируем файлы из временной папки в целевую
+      console.log('[IPC] Копирование файлов...');
+      
+      async function copyDirectory(src: string, dest: string): Promise<void> {
+        const entries = await fs.readdir(src, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          
+          // Пропускаем папку _database (она не нужна в рабочей папке)
+          if (entry.name === '_database') {
+            continue;
+          }
+          
+          if (entry.isDirectory()) {
+            await fs.mkdir(destPath, { recursive: true });
+            await copyDirectory(srcPath, destPath);
+          } else if (entry.isFile()) {
+            await fs.copyFile(srcPath, destPath);
+          }
+        }
+      }
+      
+      await copyDirectory(tempDir, targetDir);
+      console.log('[IPC] Файлы скопированы');
+
+      // 7. Очищаем временную папку
+      await fs.rm(tempDir, { recursive: true, force: true });
+      console.log('[IPC] Временная папка удалена');
+      
+      // 8. Если был создан merged файл, удаляем его
+      if (isPart && zipPath.includes('_merged.zip')) {
+        await fs.unlink(zipPath);
+        console.log('[IPC] Временный объединенный файл удален');
+      }
+
+      console.log('[IPC] Восстановление завершено');
+      
+      // Возвращаем JSON базы данных для импорта в renderer
+      return {
+        success: true,
+        databaseJson: databaseJson
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка восстановления:', error);
+      throw error;
+    }
+  });
+
+  // === СИСТЕМНЫЕ ФУНКЦИИ ===
+
+  /**
+   * Показать системное уведомление
+   */
+  ipcMain.handle('show-notification', async (_event, title: string, body: string) => {
+    try {
+      const notification = new Notification({
+        title,
+        body
+      });
+      notification.show();
+    } catch (error) {
+      console.error('[IPC] Ошибка показа уведомления:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Получить версию приложения
+   */
+  ipcMain.handle('get-app-version', async () => {
+    return app.getVersion();
+  });
+
+  /**
+   * Открыть папку с логами приложения
+   */
+  ipcMain.handle('open-logs-folder', async () => {
+    try {
+      const userDataPath = app.getPath('userData');
+      await shell.openPath(userDataPath);
+      console.log('[IPC] Открыта папка с логами:', userDataPath);
+    } catch (error) {
+      console.error('[IPC] Ошибка открытия папки с логами:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Проверить наличие обновлений
+   */
+  ipcMain.handle('check-for-updates', async () => {
+    console.log('[IPC] Проверка обновлений...');
+    const { checkForUpdates } = await import('./auto-updater');
+    await checkForUpdates();
+  });
+
+  /**
+   * Установить загруженное обновление
+   */
+  ipcMain.handle('install-update', async () => {
+    console.log('[IPC] Установка обновления...');
+    const { installUpdate } = await import('./auto-updater');
+    installUpdate();
+  });
+
+  /**
+   * Переместить рабочую папку в новое место
+   * Копирует все файлы и папки из старой директории в новую
+   */
+  ipcMain.handle('move-working-directory', async (event, oldDir: string, newDir: string) => {
+    try {
+      console.log('[IPC] Перенос рабочей папки...');
+      console.log('[IPC] Из:', oldDir);
+      console.log('[IPC] В:', newDir);
+
+      // Проверяем что старая папка существует
+      try {
+        await fs.access(oldDir);
+      } catch {
+        throw new Error('Старая рабочая папка недоступна');
+      }
+
+      // Создаём новую папку
+      await fs.mkdir(newDir, { recursive: true });
+
+      // Подсчитываем количество файлов для прогресса
+      let totalFiles = 0;
+      let copiedFiles = 0;
+
+      async function countFiles(dir: string): Promise<void> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await countFiles(fullPath);
+          } else {
+            totalFiles++;
+          }
+        }
+      }
+
+      await countFiles(oldDir);
+      console.log(`[IPC] Найдено файлов для копирования: ${totalFiles}`);
+
+      // Рекурсивное копирование с прогрессом
+      async function copyDirectory(src: string, dest: string): Promise<void> {
+        const entries = await fs.readdir(src, { withFileTypes: true });
+        
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          
+          if (entry.isDirectory()) {
+            await fs.mkdir(destPath, { recursive: true });
+            await copyDirectory(srcPath, destPath);
+          } else if (entry.isFile()) {
+            await fs.copyFile(srcPath, destPath);
+            copiedFiles++;
+            
+            const percent = Math.round((copiedFiles / totalFiles) * 100);
+            event.sender.send('move-directory-progress', {
+              percent,
+              copied: copiedFiles,
+              total: totalFiles
+            });
+            
+            if (copiedFiles % 10 === 0) {
+              console.log(`[IPC] Скопировано: ${copiedFiles}/${totalFiles} (${percent}%)`);
+            }
+          }
+        }
+      }
+
+      await copyDirectory(oldDir, newDir);
+      
+      console.log('[IPC] Все файлы скопированы');
+      
+      return {
+        success: true,
+        copiedFiles: copiedFiles
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка переноса папки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Экспортировать мудборд в отдельную папку
+   * Копирует все файлы из мудборда в выбранную папку
+   */
+  ipcMain.handle('export-moodboard', async (event, filePaths: string[], targetDir: string) => {
+    try {
+      console.log('[IPC] Экспорт мудборда...');
+      console.log('[IPC] Файлов для экспорта:', filePaths.length);
+      console.log('[IPC] Целевая папка:', targetDir);
+
+      // Создаём целевую папку
+      await fs.mkdir(targetDir, { recursive: true });
+
+      let copiedCount = 0;
+      const failedFiles: string[] = [];
+
+      for (let i = 0; i < filePaths.length; i++) {
+        const sourcePath = filePaths[i];
+        
+        try {
+          // Проверяем существование файла
+          const exists = await fileExists(sourcePath);
+          if (!exists) {
+            console.warn(`[IPC] Файл не найден: ${sourcePath}`);
+            failedFiles.push(sourcePath);
+            continue;
+          }
+
+          // Копируем файл с оригинальным именем
+          const fileName = path.basename(sourcePath);
+          const targetPath = path.join(targetDir, fileName);
+          
+          await fs.copyFile(sourcePath, targetPath);
+          copiedCount++;
+          
+          // Отправляем прогресс
+          const percent = Math.round(((i + 1) / filePaths.length) * 100);
+          event.sender.send('export-progress', {
+            percent,
+            copied: copiedCount,
+            total: filePaths.length
+          });
+          
+          console.log(`[IPC] Экспортирован ${i + 1}/${filePaths.length}: ${fileName}`);
+        } catch (error) {
+          console.error(`[IPC] Ошибка копирования файла ${sourcePath}:`, error);
+          failedFiles.push(sourcePath);
+        }
+      }
+
+      console.log(`[IPC] Экспорт завершён. Скопировано: ${copiedCount}, ошибок: ${failedFiles.length}`);
+      
+      return {
+        success: true,
+        copiedCount,
+        failedCount: failedFiles.length,
+        failedFiles
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка экспорта мудборда:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Получить информацию о размерах файлов в рабочей папке
+   * Подсчитывает размеры изображений, видео и превью
+   */
+  ipcMain.handle('get-directory-size', async (_event, workingDir: string) => {
+    try {
+      console.log('[IPC] Подсчёт размеров для:', workingDir);
+      
+      let totalSize = 0;
+      let imagesSize = 0;
+      let videosSize = 0;
+      let cacheSize = 0;
+      let imageCount = 0;
+      let videoCount = 0;
+      
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi'];
+      
+      async function calculateSize(dir: string, isCache: boolean = false): Promise<void> {
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+          console.log(`[IPC] Сканирование: ${dir} (найдено ${entries.length} элементов)`);
+          
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            
+            if (entry.isDirectory()) {
+              // Рекурсивно обходим папки
+              const isCacheDir = entry.name === '_cache' || isCache;
+              console.log(`[IPC] Обход папки: ${entry.name} (isCache: ${isCacheDir})`);
+              await calculateSize(fullPath, isCacheDir);
+            } else if (entry.isFile()) {
+              try {
+                const stats = await fs.stat(fullPath);
+                const ext = path.extname(entry.name).toLowerCase();
+                
+                totalSize += stats.size;
+                
+                if (isCache) {
+                  cacheSize += stats.size;
+                  console.log(`[IPC] Файл кэша: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
+                } else if (imageExtensions.includes(ext)) {
+                  imagesSize += stats.size;
+                  imageCount++;
+                  console.log(`[IPC] Изображение: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
+                } else if (videoExtensions.includes(ext)) {
+                  videosSize += stats.size;
+                  videoCount++;
+                  console.log(`[IPC] Видео: ${entry.name} (${Math.round(stats.size / 1024)} KB)`);
+                }
+              } catch (error) {
+                // Пропускаем файлы с ошибками доступа
+                console.warn(`[IPC] Не удалось прочитать файл: ${fullPath}`, error);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`[IPC] ОШИБКА чтения директории: ${dir}`, error);
+        }
+      }
+      
+      console.log('[IPC] Начало сканирования:', workingDir);
+      await calculateSize(workingDir);
+      
+      console.log('[IPC] Подсчёт завершён:', {
+        total: Math.round(totalSize / 1024 / 1024) + ' MB',
+        images: Math.round(imagesSize / 1024 / 1024) + ' MB',
+        videos: Math.round(videosSize / 1024 / 1024) + ' MB',
+        cache: Math.round(cacheSize / 1024 / 1024) + ' MB'
+      });
+      
+      return {
+        totalSize,
+        imagesSize,
+        videosSize,
+        cacheSize,
+        imageCount,
+        videoCount
+      };
+    } catch (error) {
+      console.error('[IPC] Ошибка подсчёта размеров:', error);
+      throw error;
+    }
+  });
+
+  // === ИСТОРИЯ ДЕЙСТВИЙ ===
+
+  /**
+   * Получить путь к файлу истории
+   * Файл history.json хранится в рабочей папке рядом с данными
+   */
+  function getHistoryFilePath(workingDir?: string): string {
+    if (workingDir) {
+      // Храним в рабочей папке рядом с данными
+      return path.join(workingDir, 'history.json');
+    }
+    // Fallback на userData если рабочая папка не указана
+    const userDataPath = app.getPath('userData');
+    return path.join(userDataPath, 'history.json');
+  }
+
+  /**
+   * Получить историю действий из JSON файла
+   */
+  ipcMain.handle('get-history', async (_event, workingDir?: string) => {
+    try {
+      const historyPath = getHistoryFilePath(workingDir);
+      console.log('[IPC] Чтение истории из:', historyPath);
+
+      // Проверяем существование файла
+      const exists = await fileExists(historyPath);
+      if (!exists) {
+        console.log('[IPC] Файл истории не найден, возвращаем пустой массив');
+        return [];
+      }
+
+      // Читаем и парсим JSON
+      const content = await fs.readFile(historyPath, 'utf-8');
+      const history = JSON.parse(content);
+
+      console.log(`[IPC] Прочитано ${history.length} записей истории`);
+      return history;
+    } catch (error) {
+      console.error('[IPC] Ошибка чтения истории:', error);
+      // Возвращаем пустой массив в случае ошибки
+      return [];
+    }
+  });
+
+  /**
+   * Добавить запись в историю действий
+   * Сохраняет максимум 1000 последних записей
+   * Использует атомарную запись с резервным копированием
+   */
+  ipcMain.handle('add-history-entry', async (_event, workingDir: string | undefined, entry: {
+    action: string;
+    description: string;
+    metadata?: any;
+  }) => {
+    try {
+      const historyPath = getHistoryFilePath(workingDir);
+      const historyBackupPath = historyPath + '.backup';
+      console.log('[IPC] Добавление записи в историю:', entry.description);
+      console.log('[IPC] Путь к файлу истории:', historyPath);
+      console.log('[IPC] Рабочая директория:', workingDir);
+
+      // Убеждаемся что директория существует
+      const historyDir = path.dirname(historyPath);
+      await fs.mkdir(historyDir, { recursive: true });
+      console.log('[IPC] Директория истории проверена:', historyDir);
+
+      // Читаем текущую историю
+      let history: any[] = [];
+      const exists = await fileExists(historyPath);
+      
+      if (exists) {
+        try {
+          const content = await fs.readFile(historyPath, 'utf-8');
+          history = JSON.parse(content);
+          console.log('[IPC] Прочитано записей из файла:', history.length);
+        } catch (parseError) {
+          console.warn('[IPC] Не удалось прочитать историю, пробуем восстановить из backup:', parseError);
+          
+          // Пытаемся восстановить из backup
+          const backupExists = await fileExists(historyBackupPath);
+          if (backupExists) {
+            try {
+              const backupContent = await fs.readFile(historyBackupPath, 'utf-8');
+              history = JSON.parse(backupContent);
+              console.log('[IPC] История восстановлена из backup, записей:', history.length);
+            } catch (backupError) {
+              console.error('[IPC] Backup также поврежден, создаём новую историю');
+              history = [];
+            }
+          } else {
+            console.log('[IPC] Backup не найден, создаём новую историю');
+            history = [];
+          }
+        }
+      } else {
+        console.log('[IPC] Файл истории не существует, создаём новый');
+      }
+
+      // Добавляем новую запись в начало
+      const newEntry = {
+        id: `history_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        action: entry.action,
+        description: entry.description,
+        metadata: entry.metadata || {}
+      };
+
+      history.unshift(newEntry);
+      console.log('[IPC] Новая запись добавлена:', newEntry);
+
+      // Ограничиваем лимитом в 1000 записей
+      if (history.length > 1000) {
+        history = history.slice(0, 1000);
+        console.log('[IPC] История обрезана до 1000 записей');
+      }
+
+      // Создаем резервную копию перед записью (если существует оригинал)
+      if (exists) {
+        try {
+          await fs.copyFile(historyPath, historyBackupPath);
+          console.log('[IPC] Создана резервная копия истории');
+        } catch (backupError) {
+          console.warn('[IPC] Не удалось создать backup, продолжаем без него:', backupError);
+        }
+      }
+
+      // Атомарная запись: сначала во временный файл, потом rename
+      const tempPath = historyPath + '.tmp';
+      await fs.writeFile(tempPath, JSON.stringify(history, null, 2), 'utf-8');
+      await fs.rename(tempPath, historyPath);
+      
+      console.log('[IPC] История успешно сохранена, всего записей:', history.length);
+    } catch (error) {
+      console.error('[IPC] ОШИБКА добавления записи в историю:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Очистить всю историю действий
+   */
+  ipcMain.handle('clear-history', async (_event, workingDir?: string) => {
+    try {
+      const historyPath = getHistoryFilePath(workingDir);
+      console.log('[IPC] Очистка истории');
+      console.log('[IPC] Путь к файлу истории:', historyPath);
+
+      // Проверяем существование файла
+      const exists = await fileExists(historyPath);
+      if (exists) {
+        // Удаляем файл истории
+        await fs.unlink(historyPath);
+        console.log('[IPC] Файл истории удалён');
+      } else {
+        console.log('[IPC] Файл истории не существует, очистка не требуется');
+      }
+    } catch (error) {
+      console.error('[IPC] Ошибка очистки истории:', error);
+      throw error;
+    }
+  });
+
+  // === НАСТРОЙКИ ПРИЛОЖЕНИЯ ===
+
+  /**
+   * Сохранить настройку приложения в userData
+   * Использует атомарную запись с резервным копированием
+   */
+  ipcMain.handle('save-setting', async (_event, key: string, value: any) => {
+    try {
+      const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+      const settingsBackupPath = settingsPath + '.backup';
+      
+      // Читаем существующие настройки
+      let settings: Record<string, any> = {};
+      const exists = await fileExists(settingsPath);
+      
+      if (exists) {
+        try {
+          const data = await fs.readFile(settingsPath, 'utf-8');
+          settings = JSON.parse(data);
+        } catch (parseError) {
+          console.warn('[IPC] Не удалось прочитать настройки, пробуем восстановить из backup:', parseError);
+          
+          // Пытаемся восстановить из backup
+          const backupExists = await fileExists(settingsBackupPath);
+          if (backupExists) {
+            try {
+              const backupData = await fs.readFile(settingsBackupPath, 'utf-8');
+              settings = JSON.parse(backupData);
+              console.log('[IPC] Настройки восстановлены из backup');
+            } catch (backupError) {
+              console.error('[IPC] Backup также поврежден, создаём новые настройки');
+              settings = {};
+            }
+          } else {
+            console.log('[IPC] Backup не найден, создаём новые настройки');
+            settings = {};
+          }
+        }
+      }
+      
+      // Сохраняем новое значение
+      settings[key] = value;
+      
+      // Создаем резервную копию перед записью (если существует оригинал)
+      if (exists) {
+        try {
+          await fs.copyFile(settingsPath, settingsBackupPath);
+        } catch (backupError) {
+          console.warn('[IPC] Не удалось создать backup настроек:', backupError);
+        }
+      }
+      
+      // Атомарная запись: сначала во временный файл, потом rename
+      const tempPath = settingsPath + '.tmp';
+      await fs.writeFile(tempPath, JSON.stringify(settings, null, 2), 'utf-8');
+      await fs.rename(tempPath, settingsPath);
+      
+      console.log('[IPC] Настройка сохранена:', key);
+    } catch (error) {
+      console.error('[IPC] Ошибка сохранения настройки:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * Получить настройку приложения из userData
+   */
+  ipcMain.handle('get-setting', async (_event, key: string) => {
+    try {
+      const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+      
+      // Читаем настройки
+      try {
+        const data = await fs.readFile(settingsPath, 'utf-8');
+        const settings = JSON.parse(data);
+        return settings[key] !== undefined ? settings[key] : null;
+      } catch (error) {
+        // Файл не существует
+        return null;
+      }
+    } catch (error) {
+      console.error('[IPC] Ошибка чтения настройки:', error);
+      return null;
+    }
+  });
+
+  /**
+   * Удалить настройку приложения
+   */
+  ipcMain.handle('remove-setting', async (_event, key: string) => {
+    try {
+      const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+      
+      // Читаем существующие настройки
+      try {
+        const data = await fs.readFile(settingsPath, 'utf-8');
+        const settings = JSON.parse(data);
+        
+        // Удаляем ключ
+        delete settings[key];
+        
+        // Записываем обратно
+        await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+        console.log('[IPC] Настройка удалена:', key);
+      } catch (error) {
+        // Файл не существует, ничего делать не нужно
+      }
+    } catch (error) {
+      console.error('[IPC] Ошибка удаления настройки:', error);
+      throw error;
+    }
+  });
+
+  console.log('[IPC] Все IPC handlers зарегистрированы');
+}
+
+/**
+ * Вспомогательная функция проверки существования файла
+ */
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Вспомогательная функция получения настройки
+ */
+async function getSetting(key: string): Promise<any> {
+  try {
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    const data = await fs.readFile(settingsPath, 'utf-8');
+    const settings = JSON.parse(data);
+    return settings[key] !== undefined ? settings[key] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Разбить файл на части
+ * @param filePath - Путь к файлу для разбиения
+ * @param parts - Количество частей (2, 4, 8)
+ * @returns Массив путей к частям
+ */
+async function splitFile(filePath: string, parts: number): Promise<string[]> {
+  console.log(`[IPC] Разбиение файла на ${parts} частей...`);
+  
+  // Читаем файл
+  const fileBuffer = await fs.readFile(filePath);
+  const fileSize = fileBuffer.length;
+  const partSize = Math.ceil(fileSize / parts);
+  
+  const partPaths: string[] = [];
+  const basePath = filePath.replace(/\.(arc|zip)$/, '');
+  
+  for (let i = 0; i < parts; i++) {
+    const start = i * partSize;
+    const end = Math.min(start + partSize, fileSize);
+    const partBuffer = fileBuffer.slice(start, end);
+    
+    const partNum = (i + 1).toString().padStart(2, '0');
+    const partPath = `${basePath}.arc.part${partNum}`;
+    
+    await fs.writeFile(partPath, partBuffer);
+    partPaths.push(partPath);
+    
+    console.log(`[IPC] Создана часть ${partNum}: ${Math.round(partBuffer.length / 1024 / 1024)} MB`);
+  }
+  
+  // Удаляем оригинальный файл
+  await fs.unlink(filePath);
+  console.log('[IPC] Оригинальный файл удалён');
+  
+  return partPaths;
+}
+
+/**
+ * Объединить части архива в один файл
+ * @param firstPartPath - Путь к первой части (.part01)
+ * @returns Путь к объединенному файлу
+ */
+async function mergeFileParts(firstPartPath: string): Promise<string> {
+  console.log('[IPC] Объединение частей архива...');
+  
+  // Определяем базовое имя и ищем все части
+  const basePath = firstPartPath.replace(/\.arc\.part\d+$/, '');
+  const dir = path.dirname(firstPartPath);
+  const files = await fs.readdir(dir);
+  
+  // Находим все части
+  const partFiles = files
+    .filter(f => f.startsWith(path.basename(basePath)) && f.includes('.arc.part'))
+    .sort();
+  
+  console.log(`[IPC] Найдено частей: ${partFiles.length}`);
+  
+  // Объединяем в один файл
+  const outputPath = `${basePath}_merged.zip`;
+  const outputStream = fsSync.createWriteStream(outputPath);
+  
+  for (const partFile of partFiles) {
+    const partPath = path.join(dir, partFile);
+    const partBuffer = await fs.readFile(partPath);
+    outputStream.write(partBuffer);
+    console.log(`[IPC] Добавлена часть: ${partFile}`);
+  }
+  
+  outputStream.end();
+  
+  // Ждем завершения записи
+  await new Promise<void>((resolve) => outputStream.on('finish', () => resolve()));
+  
+  console.log('[IPC] Файл объединен:', outputPath);
+  return outputPath;
+}
+

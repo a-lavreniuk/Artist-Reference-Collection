@@ -1,0 +1,138 @@
+/**
+ * Стили для компонента CollectionCard
+ */
+
+.collection-card {
+  /* Отображение */
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-m);
+  cursor: pointer;
+  
+  /* Сброс */
+  outline: none;
+}
+
+/* ========== ПРЕВЬЮ ========== */
+
+.collection-card__preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: var(--color-grayscale-100);
+  overflow: hidden;
+  border-radius: 16px;
+  border: 2px solid var(--color-grayscale-100);
+  transition: border-color var(--transition-fast);
+}
+
+/* Hover эффект для border превью */
+.collection-card:hover .collection-card__preview {
+  border-color: var(--color-grayscale-200);
+}
+
+/* ========== СЕТКА ПРЕВЬЮ (3 слота) ========== */
+
+.collection-card__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+  gap: var(--spacing-2xs);
+  background-color: var(--color-grayscale-100);
+  transition: background-color var(--transition-fast);
+}
+
+/* Hover эффект для фона сетки */
+.collection-card:hover .collection-card__grid {
+  background-color: var(--color-grayscale-200);
+}
+
+/* Первый элемент занимает левую половину (2 строки) */
+.collection-card__grid-item:first-child {
+  grid-row: span 2;
+}
+
+.collection-card__grid-item {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.collection-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ========== ПЛЕЙСХОЛДЕР ========== */
+
+.collection-card__placeholder {
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-grayscale-200);
+}
+
+/* ========== СТАТИСТИКА (ВНУТРИ ПРЕВЬЮ) ========== */
+
+.collection-card__stats {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: var(--spacing-xs);
+  z-index: 2;
+}
+
+.collection-card__stat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--spacing-s);
+  background: rgba(81, 79, 91, 0.48);
+  backdrop-filter: blur(64px);
+  border-radius: var(--radius-s);
+  color: var(--text-light);
+}
+
+.collection-card__stat span {
+  font-size: var(--font-size-s);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-s);
+}
+
+/* ========== ИНФОРМАЦИЯ (ПОД ПРЕВЬЮ) ========== */
+
+.collection-card__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.collection-card__title {
+  margin: 0;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  
+  /* H4 типографика */
+  font-family: var(--font-family-heading); /* YS Music */
+  font-size: var(--font-size-h4); /* 22px */
+  font-style: normal;
+  font-weight: var(--font-weight-bold); /* 700 */
+  line-height: var(--line-height-h4); /* 22px = 100% */
+  letter-spacing: 0;
+}
+
+/* ========== ФОКУС ========== */
+
+.collection-card:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+

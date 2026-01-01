@@ -1,0 +1,101 @@
+/**
+ * Стили для компонента CategorySection
+ */
+
+.category-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  padding: var(--spacing-xl);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-l);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  width: 100%;
+}
+
+.category-section:hover {
+  border-color: var(--border-hover);
+}
+
+.category-section:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ========== ЗАГОЛОВОК ========== */
+
+.category-section__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-l);
+}
+
+.category-section__title {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.category-section__count {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+.category-section__order-buttons {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-left: auto;
+}
+
+.category-section__order-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-s);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.category-section__order-button:hover:not(:disabled) {
+  background-color: var(--color-grayscale-100);
+  border-color: var(--border-hover);
+}
+
+.category-section__order-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ========== СОСТОЯНИЯ DRAG-AND-DROP ========== */
+
+
+/* Категория - цель для drop метки */
+.category-section--tag-drag-over {
+  border-color: var(--color-primary, #0f8948);
+  transition: border-color 0.2s;
+}
+
+/* ========== МЕТКИ ========== */
+
+.category-section__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+

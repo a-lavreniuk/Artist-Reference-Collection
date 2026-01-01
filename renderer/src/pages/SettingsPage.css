@@ -1,0 +1,62 @@
+/**
+ * Стили для страницы настроек
+ */
+
+/* ========== КНОПКИ МЕТОК И КОЛЛЕКЦИЙ ========== */
+
+/* Кнопка метки/коллекции в статистике */
+.settings-tag-button {
+  background-color: var(--color-grayscale-100);
+  border-radius: 10px;
+  height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border: none;
+}
+
+.settings-tag-button:hover {
+  background-color: var(--color-grayscale-200);
+}
+
+/* Кнопка удаления метки */
+.settings-delete-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.settings-delete-button:hover {
+  background-color: var(--color-grayscale-200);
+}
+
+.settings-delete-button svg {
+  color: var(--color-grayscale-500);
+}
+
+/* Кнопка "Что нового" */
+.settings-whats-new-button {
+  padding: 6px 12px;
+  background-color: var(--color-grayscale-200);
+  border-radius: var(--radius-s);
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.settings-whats-new-button:hover {
+  background-color: var(--color-grayscale-300);
+}
+

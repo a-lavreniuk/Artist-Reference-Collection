@@ -1,0 +1,177 @@
+/**
+ * Стили для компонента OnboardingScreen
+ */
+
+.onboarding {
+  /* Позиционирование */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-modal, 201);
+  width: 100%;
+  height: 100%;
+  
+  /* Отображение */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Оформление */
+  background-color: var(--bg-primary, #f5f5f5);
+}
+
+/* ========== КОНТЕЙНЕР ========== */
+
+.onboarding__container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 714px;
+  text-align: center;
+}
+
+/* ========== ЗАГОЛОВОК ========== */
+
+.onboarding__title {
+  margin-bottom: var(--spacing-3xl);
+  color: var(--text-primary);
+  /* H1 стили применяются автоматически из typography.css */
+}
+
+/* ========== СЕТКА ВОЗМОЖНОСТЕЙ 2×2 ========== */
+
+.onboarding__features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-l);
+  width: 100%;
+  margin-bottom: 16px; /* Отступ до кнопок 16px */
+}
+
+/* Карточка фичи */
+.onboarding__feature-card {
+  display: flex;
+  flex-direction: column; /* Вертикальная раскладка: иконка, заголовок, подпись */
+  align-items: flex-start; /* Выравнивание по левому краю */
+  gap: 24px; /* Отступ от иконки до заголовка */
+  padding: var(--spacing-xl);
+  background-color: transparent; /* Без фоновой заливки */
+  border: 2px solid var(--border-default); /* Бордер 2px */
+  border-radius: var(--radius-l);
+  text-align: left; /* Выравнивание текста по левому краю */
+}
+
+/* Убираем hover эффект */
+.onboarding__feature-card:hover {
+  /* Нет hover эффектов */
+}
+
+/* Иконка фичи */
+.onboarding__feature-icon {
+  flex-shrink: 0;
+  /* Размер 24px задается через size prop в Icon компоненте */
+  color: var(--icon-default);
+}
+
+/* Контент фичи */
+.onboarding__feature-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Отступ от заголовка до подписи */
+  flex: 1; /* Занимает оставшееся место */
+}
+
+.onboarding__feature-title {
+  /* H3 стили применяются автоматически из typography.css */
+  /* YS Music, 28px, 700, line-height 28px */
+}
+
+.onboarding__feature-text {
+  /* text-l стили применяются автоматически из typography.css */
+  color: var(--text-secondary);
+}
+
+/* ========== ДЕЙСТВИЯ ========== */
+
+.onboarding__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-m);
+  width: 100%;
+  margin-bottom: var(--spacing-l);
+}
+
+/* Переопределяем gap в кнопках онбординга */
+.onboarding__actions .button {
+  gap: 8px; /* Отступ между текстом и иконкой */
+}
+
+/* Выравнивание иконок с текстом по центру */
+.onboarding__actions .button__icon {
+  color: #93919a; /* grayscale-500 */
+  display: inline-flex;
+  align-items: center; /* Вертикальное выравнивание по центру */
+}
+
+/* ========== ОШИБКА ========== */
+
+.onboarding__error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-s);
+  padding: var(--spacing-m) var(--spacing-l);
+  background-color: var(--color-red-100);
+  border: 1px solid var(--color-red-300);
+  border-radius: var(--radius-s);
+  color: var(--text-error);
+  font-size: var(--font-size-s);
+}
+
+.onboarding__error svg {
+  flex-shrink: 0;
+}
+
+/* ========== АДАПТАЦИЯ ========== */
+
+@media (max-height: 900px) {
+  .onboarding__container {
+    padding: var(--spacing-2xl);
+  }
+  
+  .onboarding__title {
+    margin-bottom: var(--spacing-2xl);
+    font-size: var(--font-size-2xl);
+  }
+  
+  .onboarding__features-grid {
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-2xl);
+  }
+  
+  .onboarding__feature-card {
+    padding: var(--spacing-l);
+  }
+  
+  .onboarding__feature-icon {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 1920px) {
+  .onboarding__container {
+    max-width: 600px;
+  }
+  
+  .onboarding__features-grid {
+    gap: var(--spacing-m);
+  }
+  
+  .onboarding__feature-card {
+    padding: var(--spacing-l);
+  }
+}
+

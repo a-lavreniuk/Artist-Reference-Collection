@@ -1,0 +1,148 @@
+/**
+ * Стили для модального окна создания категории
+ */
+
+.create-category-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  text-align: left;
+}
+
+/* Контейнер заголовка и подзаголовка вместе */
+.create-category-modal__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Заголовок в модальном окне */
+.create-category-modal__header .modal__title {
+  margin: 0;
+}
+
+/* Подзаголовок */
+.create-category-modal__subtitle {
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  color: var(--text-secondary);
+  margin: 0;
+  letter-spacing: 0;
+}
+
+/* Инпут в модальном окне */
+.create-category-modal__input .input {
+  height: 56px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-l);
+  padding: var(--spacing-l) var(--spacing-l) var(--spacing-l) 20px;
+}
+
+.create-category-modal__input .input::placeholder {
+  color: var(--text-secondary);
+}
+
+.create-category-modal__input .input:focus {
+  background-color: var(--color-grayscale-200);
+}
+
+/* Блок добавления меток */
+.create-category-modal__tags-section {
+  display: flex;
+  flex-direction: column;
+  /* Расстояние между инпутом категории и блоком меток: 32px (gap 16px + margin-top 16px) */
+  margin-top: calc(32px - var(--spacing-l));
+  gap: 0;
+}
+
+/* Заголовок блока меток */
+.create-category-modal__tags-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: var(--spacing-l);
+}
+
+.create-category-modal__tags-header .modal__title {
+  margin: 0;
+}
+
+/* Инпут метки должен иметь отступ снизу 8px до списка */
+.create-category-modal__tags-section .create-category-modal__input {
+  margin-bottom: 8px;
+}
+
+/* Список добавленных меток */
+.create-category-modal__tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-s);
+}
+
+/* Метка в списке */
+.create-category-modal__tag {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-s);
+  background-color: var(--color-grayscale-100);
+  border-radius: var(--radius-s);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-primary);
+}
+
+.create-category-modal__tag-name {
+  flex: 1;
+}
+
+.create-category-modal__tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.create-category-modal__tag-remove:hover {
+  color: var(--text-primary);
+}
+
+.create-category-modal__tag-remove svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Контейнер кнопок */
+.create-category-modal__actions {
+  display: flex;
+  gap: var(--spacing-s);
+  justify-content: flex-end; /* Кнопки по правой стороне */
+  align-items: center;
+  margin-top: 32px;
+}
+
+/* Если есть кнопка удаления, используем space-between */
+.create-category-modal__actions--with-delete {
+  justify-content: space-between; /* Кнопка удаления слева, остальные справа */
+}
+
+/* Кнопка Success должна иметь светлый текст */
+.create-category-modal__actions .button--success {
+  color: var(--color-grayscale-50);
+}
+
+.create-category-modal__actions .button--success .button__icon {
+  color: var(--color-grayscale-50);
+}
+

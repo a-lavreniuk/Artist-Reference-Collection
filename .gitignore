@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+/main/
+/preload/
+renderer/dist/
+renderer/node_modules/
+
+# Release builds
+release/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local

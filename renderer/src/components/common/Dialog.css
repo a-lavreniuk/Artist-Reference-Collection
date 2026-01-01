@@ -1,0 +1,205 @@
+/**
+ * Стили для компонента Dialog
+ * Модальные диалоги: confirm, info, prompt
+ * Позиция: центр экрана
+ */
+
+/* ========== OVERLAY ========== */
+
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-overlay);
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  
+  background-color: var(--bg-overlay);
+  
+  animation: dialog-overlay-enter var(--transition-base);
+}
+
+@keyframes dialog-overlay-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== DIALOG ========== */
+
+.dialog {
+  position: relative;
+  z-index: var(--z-modal);
+  
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Выравнивание по левой стороне */
+  gap: var(--spacing-l); /* 16px как у modal--medium */
+  
+  width: 822px; /* Ширина 822px как у modal--medium */
+  max-height: calc(100vh - 80px); /* Ограничение по высоте с отступами */
+  padding: var(--spacing-3xl); /* 40px как у modal--medium */
+  
+  background-color: var(--color-grayscale-50); /* Фон как у modal--medium */
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-xl); /* 24px как у modal--medium */
+  box-shadow: var(--shadow-xl);
+  
+  overflow: hidden; /* Контент не выходит за границы */
+  
+  animation: dialog-enter var(--transition-base);
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ========== КНОПКА ЗАКРЫТИЯ ========== */
+
+.dialog__close {
+  display: none; /* Убираем крестик закрытия */
+}
+
+/* ========== ИКОНКА ========== */
+
+.dialog__icon {
+  display: none !important; /* Убираем иконку */
+}
+
+/* ========== ЗАГОЛОВОК ========== */
+
+.dialog__title {
+  margin: 0;
+  width: 100%;
+  text-align: left; /* Текст по левой стороне */
+  
+  font-family: 'YS Music', sans-serif; /* Как у modal__title */
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+/* ========== ОПИСАНИЕ ========== */
+
+.dialog__description {
+  margin: 0;
+  width: 100%;
+  text-align: left; /* Текст по левой стороне */
+  
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  letter-spacing: 0;
+  color: var(--text-secondary); /* Цвет как у подзаголовка */
+  
+  white-space: pre-wrap;
+  
+  /* Ограничение высоты с прокруткой для длинных текстов */
+  max-height: calc(100vh - 320px); /* Учитываем заголовок, отступы и кнопки */
+  overflow-y: auto;
+  padding-right: var(--spacing-s); /* Отступ для скроллбара */
+}
+
+/* Кастомный скроллбар */
+.dialog__description::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog__description::-webkit-scrollbar-track {
+  background: var(--color-grayscale-100);
+  border-radius: var(--radius-s);
+}
+
+.dialog__description::-webkit-scrollbar-thumb {
+  background: var(--color-grayscale-300);
+  border-radius: var(--radius-s);
+  transition: background var(--transition-fast);
+}
+
+.dialog__description::-webkit-scrollbar-thumb:hover {
+  background: var(--color-grayscale-400);
+}
+
+/* ========== INPUT (для prompt) ========== */
+
+.dialog form {
+  width: 100%;
+}
+
+.dialog form .input-wrapper {
+  width: 100%;
+}
+
+.dialog form .input {
+  width: 100%;
+  height: 56px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-l);
+  padding: var(--spacing-l) var(--spacing-l) var(--spacing-l) 20px;
+}
+
+.dialog form .input::placeholder {
+  color: var(--text-secondary);
+}
+
+.dialog form .input:focus {
+  background-color: var(--color-grayscale-200);
+}
+
+/* ========== ДЕЙСТВИЯ ========== */
+
+.dialog__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Кнопки по правой стороне */
+  gap: var(--spacing-s); /* 8px между кнопками */
+  width: 100%;
+  margin-top: var(--spacing-l);
+}
+
+/* Для info с одной кнопкой тоже справа */
+.dialog--info .dialog__actions {
+  justify-content: flex-end;
+}
+
+/* ========== ВАРИАНТЫ ========== */
+
+/* Destructive dialogs (удаление и т.п.) */
+.dialog--destructive .dialog__title {
+  color: var(--text-primary);
+}
+
+/* ========== АДАПТАЦИЯ ========== */
+
+@media (max-width: 1366px) {
+  .dialog {
+    width: 400px;
+    padding: var(--spacing-xl);
+  }
+}
+
+@media (max-height: 800px) {
+  .dialog__description {
+    max-height: calc(100vh - 400px); /* Уменьшаем высоту на маленьких экранах */
+  }
+}
+

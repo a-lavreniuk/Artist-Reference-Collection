@@ -1,0 +1,531 @@
+/**
+ * Стили для компонента AddCardFlow
+ */
+
+.add-card-flow {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== DROPZONE ========== */
+
+.add-card-flow__dropzone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-l);
+  background-color: var(--color-grayscale-50);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-height: 400px;
+}
+
+.add-card-flow__dropzone:hover,
+.add-card-flow__dropzone--dragging {
+  border-color: var(--border-hover);
+  background-color: var(--color-grayscale-100);
+}
+
+.add-card-flow__dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: var(--spacing-3xl);
+  text-align: center;
+  pointer-events: none;
+}
+
+.add-card-flow__dropzone-content button {
+  pointer-events: auto;
+}
+
+.add-card-flow__dropzone-title {
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.add-card-flow__dropzone-text {
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ========== ОЧЕРЕДЬ ========== */
+
+.add-card-flow__queue-scroll {
+  display: flex;
+  gap: var(--spacing-m);
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: 32px;
+  /* Drag-to-scroll */
+  cursor: grab;
+  /* user-select: none убран - блокировал выделение текста в инпутах */
+  touch-action: pan-y;
+}
+
+.add-card-flow__queue-scroll.active {
+  cursor: grabbing;
+}
+
+/* Когда есть скролл - добавляем padding-bottom */
+.add-card-flow__queue-scroll--has-scroll {
+  padding-bottom: 32px;
+}
+
+/* Кастомный скролл-бар для очереди - когда нужен скролл */
+.add-card-flow__queue-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.add-card-flow__queue-scroll::-webkit-scrollbar-track {
+  background: var(--color-grayscale-100);
+  border-radius: 0;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+.add-card-flow__queue-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-grayscale-200);
+  border-radius: 3px;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.add-card-flow__queue-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-grayscale-300);
+}
+
+/* Разделитель - обычная линия когда нет скролла */
+.add-card-flow__divider-line {
+  width: 100%;
+  height: 2px;
+  background-color: var(--color-grayscale-100);
+  margin-bottom: 32px;
+  flex-shrink: 0;
+}
+
+/* Старый divider - удален */
+.add-card-flow__divider {
+  display: none;
+}
+
+.add-card-flow__queue-item {
+  position: relative;
+  flex-shrink: 0;
+  width: 128px;
+  height: 128px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid var(--color-grayscale-100);
+  transition: border-color var(--transition-fast);
+  background: none;
+  padding: 0;
+  /* Оптимизация производительности рендеринга */
+  contain: layout style paint;
+  will-change: border-color;
+  transform: translateZ(0); /* GPU-ускорение */
+}
+
+.add-card-flow__queue-item:hover {
+  border-color: var(--color-grayscale-200);
+}
+
+/* Пустая карточка для добавления файлов */
+.add-card-flow__queue-item--add {
+  border: 2px dashed var(--border-default);
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--icon-default);
+  overflow: visible;
+  pointer-events: auto !important;
+  z-index: 10;
+}
+
+.add-card-flow__queue-item--add * {
+  pointer-events: none;
+}
+
+.add-card-flow__queue-item--add:hover {
+  border-color: var(--border-hover);
+  background-color: var(--color-grayscale-100);
+}
+
+.add-card-flow__queue-item--add:active {
+  background-color: var(--color-grayscale-200);
+}
+
+.add-card-flow__queue-item--active {
+  border-color: var(--color-grayscale-200);
+}
+
+.add-card-flow__queue-item img,
+.add-card-flow__queue-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Оптимизация производительности изображений */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* Предотвращаем выделение */
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.add-card-flow__queue-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(81, 79, 91, 0.48);
+  backdrop-filter: blur(64px);
+  border: none;
+  border-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  opacity: 1;
+}
+
+.add-card-flow__queue-remove {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  background: rgba(81, 79, 91, 0.48);
+  backdrop-filter: blur(64px);
+  border: none;
+  border-radius: var(--radius-s);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.add-card-flow__queue-item:hover .add-card-flow__queue-remove {
+  opacity: 1;
+}
+
+/* ========== ОСНОВНОЙ КОНТЕНТ ========== */
+
+.add-card-flow__main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  /* Вычисляем высоту так, чтобы снизу оставалось 32px до края экрана */
+  /* 100vh - header(80px) - section-header(80px) - padding-top(32px) - queue(128px + 32px) - divider(2px + 32px) - padding-bottom(32px) */
+  height: calc(100vh - 80px - 80px - 32px - 160px - 34px - 32px);
+  max-height: calc(100vh - 80px - 80px - 32px - 160px - 34px - 32px);
+  overflow: hidden;
+}
+
+.add-card-flow__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-grayscale-100);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+}
+
+.add-card-flow__media {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+/* ========== НАСТРОЙКИ ========== */
+
+.add-card-flow__settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Общие стили для блоков */
+.add-card-flow__block {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-grayscale-50);
+  border-radius: var(--radius-l);
+  border: 2px solid var(--color-grayscale-100);
+  padding: var(--spacing-l);
+}
+
+.add-card-flow__block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-m);
+}
+
+.add-card-flow__block-title {
+  /* H2 */
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+  letter-spacing: 0;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.add-card-flow__block-counter {
+  color: var(--color-grayscale-500);
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-h2);
+}
+
+.add-card-flow__block-description {
+  /* M */
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-m);
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Блок-ряд для объединения шаблона и описания */
+.add-card-flow__block-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+/* Блок шаблона */
+.add-card-flow__block--template {
+  flex-shrink: 0;
+}
+
+.add-card-flow__template-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.add-card-flow__template-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  background-color: var(--bg-primary);
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-m);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-card-flow__template-button:hover:not(:disabled) {
+  background-color: var(--color-grayscale-100);
+  border-color: var(--border-hover);
+}
+
+.add-card-flow__template-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Блок коллекций */
+.add-card-flow__block--collections {
+  flex-shrink: 0;
+}
+
+/* Блок меток - растягивается и имеет внутренний скролл */
+.add-card-flow__block--tags {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.add-card-flow__block--description {
+  /* Стили для блока описания */
+}
+
+.add-card-flow__description-textarea {
+  width: 100%;
+  min-height: 92px;
+  padding: 16px;
+  background-color: var(--color-grayscale-100);
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--text-primary);
+  font-variation-settings: 'CRSV' 0, 'SHRP' 0;
+  resize: vertical;
+  transition: background-color var(--transition-fast);
+}
+
+.add-card-flow__description-textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.add-card-flow__description-textarea:hover:not(:focus) {
+  background-color: var(--color-grayscale-200);
+}
+
+.add-card-flow__description-textarea:focus {
+  outline: none;
+  background-color: var(--color-grayscale-200);
+}
+
+/* Поисковый инпут в блоках */
+.add-card-flow__search-input {
+  margin-bottom: 12px;
+}
+
+/* Список тегов */
+.add-card-flow__tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+/* Контейнер категорий с внутренним скроллом */
+.add-card-flow__categories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding-right: var(--spacing-xs);
+}
+
+/* Кастомный скроллбар для категорий */
+.add-card-flow__categories::-webkit-scrollbar {
+  width: 6px;
+}
+
+.add-card-flow__categories::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.add-card-flow__categories::-webkit-scrollbar-thumb {
+  background-color: var(--color-grayscale-200);
+  border-radius: 3px;
+}
+
+.add-card-flow__categories::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-grayscale-300);
+}
+
+.add-card-flow__category {
+  /* Убрали padding-bottom и border-bottom */
+}
+
+/* Кнопки меток и коллекций */
+.add-card-flow__tag-button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  height: 32px;
+  padding: 0 12px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-s);
+  color: var(--color-grayscale-900);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-card-flow__tag-button:hover {
+  background-color: var(--color-grayscale-200);
+}
+
+.add-card-flow__tag-button .text-s {
+  color: var(--color-grayscale-900);
+}
+
+/* Выбранная метка/коллекция */
+.add-card-flow__tag-button--selected {
+  background-color: var(--color-grayscale-800);
+  color: var(--text-light);
+}
+
+.add-card-flow__tag-button--selected:hover {
+  background-color: var(--color-grayscale-800);
+}
+
+.add-card-flow__tag-button--selected .text-s {
+  color: var(--text-light);
+}
+
+/* Кнопка добавления метки */
+.add-card-flow__add-tag-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-s);
+  color: var(--icon-default);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.add-card-flow__add-tag-button:hover {
+  background-color: var(--color-grayscale-200);
+}
+
+/* ========== ФУТЕР ========== */
+
+.add-card-flow__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto; /* Прижат к низу блока настроек */
+}
+
+/* ========== АДАПТАЦИЯ ========== */
+
+@media (max-width: 1920px) {
+  .add-card-flow__main {
+    grid-template-columns: 1fr 350px;
+    /* gap остаётся как в основных стилях */
+  }
+}
+

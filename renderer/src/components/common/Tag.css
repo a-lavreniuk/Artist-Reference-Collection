@@ -1,0 +1,217 @@
+/**
+ * Стили для компонента Tag
+ * 
+ * Метка - ключевой элемент для категоризации и классификации контента.
+ * Поддерживает три состояния (default, hover, active) и два стиля (default, blurred).
+ */
+
+.tag {
+  /* Базовые стили */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px; /* Отступ между внутренними элементами */
+  
+  /* Типографика - шрифт S */
+  font-family: var(--font-family-body);  /* Geologica */
+  font-size: var(--font-size-s);         /* 12px */
+  font-style: normal;
+  font-weight: 500; /* Medium - увеличена толщина с 400 */
+  line-height: var(--line-height-s);      /* 12px (100%) */
+  letter-spacing: 0;
+  
+  /* Размеры - фиксированная высота 32px, отступы 10px слева/справа */
+  height: 32px;
+  padding: 0 10px;
+  
+  /* Оформление - скругление 10px */
+  border: none;
+  border-radius: 10px;
+  cursor: default;
+  user-select: none;
+  
+  /* Переходы */
+  transition: all var(--transition-fast);
+  
+  /* Сброс */
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ========== ВАРИАНТЫ (СТИЛИ) ========== */
+
+/* Default - обычная метка на монотонном фоне */
+.tag--default {
+  background-color: var(--color-grayscale-100);
+  color: var(--text-primary);
+}
+
+/* Hover - при наведении курсора */
+.tag--default:hover {
+  background-color: var(--color-grayscale-200);
+}
+
+/* Active - выбранная/используемая метка */
+.tag--active {
+  background-color: var(--color-grayscale-800);
+  color: var(--text-light);
+}
+
+.tag--active:hover {
+  background-color: var(--color-grayscale-800);
+}
+
+/* Blurred - метка с размытием для размещения поверх изображений */
+.tag--blurred {
+  background-color: var(--bg-overlay-image);
+  backdrop-filter: var(--backdrop-blur);
+  color: var(--text-light);
+}
+
+.tag--blurred:hover {
+  background-color: var(--bg-overlay-image-hover);
+}
+
+/* ========== РАЗМЕРЫ ========== */
+
+.tag--small {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+  gap: 4px;
+}
+
+.tag--medium {
+  height: 32px;
+  padding: 0 10px;
+}
+
+/* ========== ЭЛЕМЕНТЫ ========== */
+
+/* Иконка */
+.tag__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.tag--small .tag__icon {
+  width: 10px;
+  height: 10px;
+}
+
+.tag__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Текст */
+.tag__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Счётчик - просто текст рядом с названием, тот же шрифт S */
+.tag__count {
+  font-size: var(--font-size-s);         /* 12px */
+  font-style: normal;
+  font-weight: 400; /* Regular для счетчика */
+  line-height: var(--line-height-s);      /* 12px (100%) */
+  letter-spacing: 0;
+  color: var(--text-secondary); /* Вторичный цвет для счетчика */
+}
+
+.tag--small .tag__count {
+  font-size: 11px;
+}
+
+/* Кнопка удаления - без фона, цвет меняется с grayscale-500 на grayscale-600 */
+.tag__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin-left: 4px; /* Отступ от текста/счетчика */
+  background: none;
+  border: none;
+  color: var(--color-grayscale-500);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.tag__remove:hover {
+  color: var(--color-grayscale-600);
+}
+
+/* Для активной метки крестик светлый */
+.tag--active .tag__remove {
+  color: var(--text-light);
+}
+
+.tag--active .tag__remove:hover {
+  color: var(--text-light);
+  opacity: 0.8;
+}
+
+/* Для размытой метки крестик светлый */
+.tag--blurred .tag__remove {
+  color: var(--text-light);
+}
+
+.tag--blurred .tag__remove:hover {
+  color: var(--text-light);
+  opacity: 0.8;
+}
+
+.tag--small .tag__remove {
+  width: 14px;
+  height: 14px;
+}
+
+.tag__remove svg {
+  width: 12px;
+  height: 12px;
+}
+
+.tag--small .tag__remove svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* ========== ИНТЕРАКТИВНОСТЬ ========== */
+
+/* Кликабельная метка */
+.tag[role="button"],
+.tag[onclick] {
+  cursor: pointer;
+}
+
+/* Draggable метка */
+.tag[draggable="true"] {
+  cursor: grab;
+  user-select: none;
+}
+
+.tag[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.tag--dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+/* Фокус */
+.tag:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+

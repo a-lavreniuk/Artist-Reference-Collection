@@ -1,0 +1,178 @@
+/**
+ * Базовые TypeScript типы для приложения ARC
+ * Artist Reference Collection
+ */
+
+// Тип медиафайла
+export type MediaType = 'image' | 'video';
+
+// Формат изображения
+export type ImageFormat = 
+  | 'jpg' | 'jpeg' | 'png' | 'webp' | 'gif' | 'bmp' 
+  | 'tiff' | 'tif' | 'heic' | 'heif' | 'jxl'
+  | 'cr2' | 'nef' | 'dng' | 'arw' | 'orf' | 'rw2' // RAW форматы
+  | 'pdf';
+
+// Формат видео
+export type VideoFormat = 
+  | 'mp4' | 'webm' | 'mov' | 'avi' | 'mkv' | 'flv' | 'wmv'
+  | 'mpeg' | 'mpg' | 'm2v' | '3gp' | 'ts' | 'mts' | 'm4v' 
+  | 'ogv' | 'vob' | 'rmvb' | 'swf';
+
+// Карточка - основная единица контента
+export interface Card {
+  id: string;                          // Уникальный ID карточки
+  fileName: string;                    // Имя файла
+  filePath: string;                    // Путь к файлу
+  type: MediaType;                     // Тип: изображение или видео
+  format: ImageFormat | VideoFormat;   // Формат файла
+  dateAdded: Date;                     // Дата добавления
+  dateModified?: Date;                 // Дата последнего изменения
+  fileSize: number;                    // Размер файла в байтах
+  width?: number;                      // Ширина (для изображений)
+  height?: number;                     // Высота (для изображений)
+  duration?: number;                   // Длительность (для видео)
+  thumbnailUrl?: string;               // URL превью из IndexedDB (legacy, для обратной совместимости)
+  blurThumbnailUrl?: string;          // URL маленького blur превью (20px) для placeholder
+  thumbnailUrlCompact?: string;       // URL превью для компактного режима (256px)
+  thumbnailUrlStandard?: string;      // URL превью для стандартного режима (512px)
+  tags: string[];                      // Массив ID меток
+  collections: string[];               // Массив ID коллекций
+  description?: string;                // Описание карточки (опционально)
+}
+
+// Метка для категоризации карточек
+export interface Tag {
+  id: string;                          // Уникальный ID метки
+  name: string;                        // Название метки
+  categoryId: string;                  // ID категории, к которой принадлежит
+  /** @deprecated Цветовая категоризация больше не используется */
+  color?: string;                      // Цвет метки (опционально, не используется)
+  description?: string;                // Описание метки (опционально, для мета-информации)
+  dateCreated: Date;                   // Дата создания
+  cardCount: number;                   // Количество карточек с этой меткой
+}
+
+// Категория для группировки меток
+export interface Category {
+  id: string;                          // Уникальный ID категории
+  name: string;                        // Название категории
+  /** @deprecated Цветовая категоризация больше не используется */
+  color?: string;                      // Цвет категории (опционально, не используется)
+  dateCreated: Date;                   // Дата создания
+  tagIds: string[];                    // Массив ID меток в категории
+  order?: number;                      // Порядок отображения категории (опционально)
+}
+
+// Коллекция - набор карточек
+export interface Collection {
+  id: string;                          // Уникальный ID коллекции
+  name: string;                        // Название коллекции
+  description?: string;                // Описание (опционально)
+  dateCreated: Date;                   // Дата создания
+  dateModified: Date;                  // Дата последнего изменения
+  cardIds: string[];                   // Массив ID карточек в коллекции
+  thumbnails: string[];                // Массив URL превью (первые 4 карточки)
+}
+
+// Мудборд - временное рабочее пространство
+export interface Moodboard {
+  id: string;                          // ID мудборда (обычно один - 'default')
+  cardIds: string[];                   // Массив ID карточек в мудборде
+  dateModified: Date;                  // Дата последнего изменения
+}
+
+// Настройки приложения
+export interface AppSettings {
+  id: string;                          // ID настроек (один - 'settings')
+  workingDirectory?: string;           // Путь к рабочей папке
+  theme: 'light' | 'dark';             // Тема (пока только светлая)
+  dateInstalled: Date;                 // Дата установки приложения
+  version: string;                     // Версия приложения
+}
+
+// История поиска
+export interface SearchHistory {
+  id: string;                          // Уникальный ID записи
+  query: string;                       // Поисковый запрос
+  timestamp: Date;                     // Время запроса
+  tagIds: string[];                    // ID меток из запроса
+}
+
+// История просмотра карточек
+export interface ViewHistory {
+  id: string;                          // Уникальный ID записи
+  cardId: string;                      // ID просмотренной карточки
+  timestamp: Date;                     // Время просмотра
+}
+
+// Состояние представления (вид галереи)
+export type ViewMode = 'standard' | 'compact';
+
+// Фильтр типа контента
+export type ContentFilter = 'all' | 'images' | 'videos';
+
+// Состояние фильтра
+export interface FilterState {
+  contentType: ContentFilter;          // Фильтр по типу
+  tags: string[];                      // Выбранные метки
+  searchQuery: string;                 // Поисковый запрос
+}
+
+// Превью изображения для кеширования
+export interface ThumbnailCache {
+  id: string;                          // ID кеша (обычно = cardId)
+  cardId: string;                      // ID карточки
+  standard: Blob;                      // Превью для стандартного вида
+  compact: Blob;                       // Превью для компактного вида
+  dateGenerated: Date;                 // Дата генерации
+  expiresAt: Date;                     // Дата истечения (30 дней)
+}
+
+// Статистика использования
+export interface AppStatistics {
+  totalCards: number;                  // Общее количество карточек
+  imageCount: number;                  // Количество изображений
+  videoCount: number;                  // Количество видео
+  totalSize: number;                   // Общий размер файлов (байты)
+  collectionCount: number;             // Количество коллекций
+  tagCount: number;                    // Количество меток
+  categoryCount: number;               // Количество категорий
+  moodboardCount: number;              // Количество карточек в мудборде
+}
+
+// Типы действий для истории
+export type HistoryActionType =
+  | 'import_files'              // Импорт файлов
+  | 'delete_cards'              // Удаление карточек
+  | 'move_storage'              // Перенос хранилища
+  | 'create_collection'         // Создание коллекции
+  | 'delete_collection'         // Удаление коллекции
+  | 'rename_collection'         // Переименование коллекции
+  | 'create_category'           // Создание категории
+  | 'delete_category'           // Удаление категории
+  | 'rename_category'           // Переименование категории
+  | 'create_backup'             // Создание бэкапа
+  | 'clear_cache'               // Очистка кэша
+  | 'clear_moodboard'           // Очистка мудборда
+  | 'rename_tag';               // Переименование метки
+
+// Запись истории действий пользователя
+export interface HistoryEntry {
+  id: string;                          // Уникальный ID записи
+  timestamp: Date;                     // Время действия
+  action: HistoryActionType;           // Тип действия
+  description: string;                 // Описание действия (для отображения)
+  metadata?: {                         // Дополнительные данные
+    count?: number;                    // Количество элементов
+    size?: number;                     // Размер в байтах
+    name?: string;                     // Название (коллекции, категории и т.д.)
+    oldName?: string;                  // Старое название (для переименования)
+    newName?: string;                  // Новое название (для переименования)
+    parts?: number;                    // Количество частей (для бэкапа)
+  };
+}
+
+// Период фильтрации истории
+export type HistoryPeriod = 'today' | 'week' | 'month' | 'all';
+

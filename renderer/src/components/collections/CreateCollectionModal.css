@@ -1,0 +1,68 @@
+/**
+ * Стили для модального окна создания коллекции
+ */
+
+.create-collection-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-l);
+  text-align: left;
+}
+
+/* Контейнер заголовка и подзаголовка вместе */
+.create-collection-modal__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Заголовок в модальном окне */
+.create-collection-modal__header .modal__title {
+  margin: 0;
+}
+
+/* Подзаголовок */
+.create-collection-modal__subtitle {
+  font-family: 'Geologica', sans-serif;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 22px;
+  color: var(--text-secondary);
+  margin: 0;
+  letter-spacing: 0;
+}
+
+/* Инпут в модальном окне */
+.create-collection-modal__input .input {
+  height: 56px;
+  background-color: var(--color-grayscale-100);
+  border: none;
+  border-radius: var(--radius-l);
+  padding: var(--spacing-l) var(--spacing-l) var(--spacing-l) 20px;
+}
+
+.create-collection-modal__input .input::placeholder {
+  color: var(--text-secondary);
+}
+
+.create-collection-modal__input .input:focus {
+  background-color: var(--color-grayscale-200);
+}
+
+/* Контейнер кнопок */
+.create-collection-modal__actions {
+  display: flex;
+  gap: var(--spacing-s);
+  justify-content: flex-end !important;
+  align-items: center;
+}
+
+/* Кнопка Success должна иметь светлый текст */
+.create-collection-modal__actions .button--success {
+  color: var(--color-grayscale-50);
+}
+
+.create-collection-modal__actions .button--success .button__icon {
+  color: var(--color-grayscale-50);
+}
+

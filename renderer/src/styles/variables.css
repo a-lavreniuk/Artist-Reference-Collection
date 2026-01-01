@@ -1,0 +1,179 @@
+/**
+ * CSS переменные для приложения ARC
+ * Цветовая палитра, отступы, скругления
+ */
+
+:root {
+  /* ========== ЦВЕТОВАЯ ПАЛИТРА ========== */
+  
+  /* Основная шкала серого (Grayscale) */
+  --color-grayscale-25: #FFFFFF;
+  --color-grayscale-50: #F5F4F7;
+  --color-grayscale-100: #EBE9EE;
+  --color-grayscale-200: #D5D3D9;
+  --color-grayscale-300: #BFBDC4;
+  --color-grayscale-400: #A9A7AF;
+  --color-grayscale-500: #93919A;
+  --color-grayscale-600: #7D7B85;
+  --color-grayscale-700: #676570;
+  --color-grayscale-800: #514F5B;
+  --color-grayscale-900: #3B3946;
+
+  /* Красная палитра (Danger) */
+  --color-red-100: #FDE8E8;
+  --color-red-200: #F8B8B5;
+  --color-red-300: #F48683;
+  --color-red-400: #F05451;
+  --color-red-500: #EC221F;
+  --color-red-600: #B61A17;
+  --color-red-700: #811210;
+  --color-red-800: #4C0A09;
+  --color-red-900: #170202;
+
+  /* Жёлтая палитра (Warning) */
+  --color-yellow-100: #FCF7E8;
+  --color-yellow-200: #F7E9BB;
+  --color-yellow-300: #F2D98D;
+  --color-yellow-400: #EDC95F;
+  --color-yellow-500: #E8B931;
+  --color-yellow-600: #B39027;
+  --color-yellow-700: #7F661B;
+  --color-yellow-800: #4B3C0F;
+  --color-yellow-900: #171203;
+
+  /* Зелёная палитра (Success) */
+  --color-green-100: #E8FCF2;
+  --color-green-200: #B3EACE;
+  --color-green-300: #7ED6A8;
+  --color-green-400: #49C282;
+  --color-green-500: #14AE5C;
+  --color-green-600: #0F8948;
+  --color-green-700: #0B6334;
+  --color-green-800: #073D20;
+  --color-green-900: #03170C;
+
+  /* ========== СЕМАНТИЧЕСКИЕ ЦВЕТА ========== */
+  
+  /* Текст */
+  --text-primary: var(--color-grayscale-900);
+  --text-secondary: var(--color-grayscale-500);
+  --text-light: var(--color-grayscale-50);
+  --text-disabled: var(--color-grayscale-200);
+  --text-success: var(--color-green-500);
+  --text-warning: var(--color-yellow-500);
+  --text-error: var(--color-red-500);
+
+  /* Иконки */
+  --icon-default: var(--color-grayscale-500);
+  --icon-light: var(--color-grayscale-50);
+  --icon-disabled: var(--color-grayscale-200);
+  --icon-success: var(--color-green-500);
+  --icon-warning: var(--color-yellow-500);
+  --icon-error: var(--color-red-500);
+
+  /* Фоны */
+  --bg-primary: var(--color-grayscale-50);
+  --bg-secondary: var(--color-grayscale-25);
+  --bg-overlay: rgba(59, 57, 70, 0.48);
+  
+  /* Фоны для кнопок */
+  --bg-button-primary: var(--color-grayscale-800);
+  --bg-button-primary-hover: var(--color-grayscale-900);
+  --bg-button-primary-disabled: var(--color-grayscale-100);
+  
+  --bg-button-secondary: var(--color-grayscale-100);
+  --bg-button-secondary-hover: var(--color-grayscale-200);
+  --bg-button-secondary-disabled: var(--color-grayscale-100);
+  
+  --bg-button-border-hover: var(--color-grayscale-200);
+  --bg-button-ghost-hover: var(--color-grayscale-200);
+  
+  --bg-success: var(--color-green-600);
+  --bg-success-hover: var(--color-green-700);
+  --bg-warning: var(--color-yellow-600);
+  --bg-warning-hover: var(--color-yellow-700);
+  --bg-error: var(--color-red-600);
+  --bg-error-hover: var(--color-red-700);
+  
+  /* Фоны для элементов поверх изображений */
+  --bg-overlay-image: rgba(81, 79, 91, 0.48);
+  --bg-overlay-image-hover: rgba(81, 79, 91, 0.64);
+
+  /* Обводки */
+  --border-default: var(--color-grayscale-100);
+  --border-hover: var(--color-grayscale-200);
+  --border-focus: var(--color-grayscale-300);
+
+  /* ========== ОТСТУПЫ (Padding) ========== */
+  
+  --spacing-2xs: 2px;
+  --spacing-xs: 4px;
+  --spacing-s: 8px;
+  --spacing-m: 12px;
+  --spacing-l: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 40px;
+
+  /* ========== СКРУГЛЕНИЯ (Border Radius) ========== */
+  
+  --radius-xs: 4px;
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --radius-xl: 24px;
+  --radius-round: 50%;
+
+  /* ========== ТЕНИ (Box Shadow) ========== */
+  
+  --shadow-s: 0px 1px 2px rgba(59, 57, 70, 0.08);
+  --shadow-m: 0px 2px 8px rgba(59, 57, 70, 0.12);
+  --shadow-l: 0px 4px 16px rgba(59, 57, 70, 0.16);
+  --shadow-xl: 0px 8px 32px rgba(59, 57, 70, 0.24);
+
+  /* ========== ПЕРЕХОДЫ (Transitions) ========== */
+  
+  --transition-fast: 150ms ease-in-out;
+  --transition-base: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
+
+  /* ========== РАЗМЕРЫ ========== */
+  
+  /* Высоты элементов */
+  --height-input: 40px;
+  --height-button: 40px;
+  --height-header: 64px;
+  
+  /* Ширины */
+  --width-sidebar: 120px;
+  --width-searchbar: 400px;
+  
+  /* Размеры окна */
+  --min-window-width: 1920px;
+  --min-window-height: 1080px;
+  --max-window-width: 2560px;
+  --max-window-height: 1440px;
+
+  /* ========== Z-INDEX ========== */
+  
+  --z-base: 0;
+  --z-header: 20;
+  --z-dropdown: 30;
+  --z-sidebar: 100; /* Sidebar и его тултипы */
+  --z-tooltip: 110;
+  --z-overlay: 200; /* Overlay модалки выше всего */
+  --z-modal: 201; /* Модалка выше overlay */
+  --z-toast: 300;
+
+  /* ========== ГАЛЕРЕЯ ========== */
+  
+  /* Колонки в masonry grid */
+  --gallery-columns-standard: 6;
+  --gallery-columns-compact: 10;
+  --gallery-gap: 16px;
+  
+  /* ========== BACKDROP FILTER ========== */
+  
+  --backdrop-blur: blur(64px);
+}
+
