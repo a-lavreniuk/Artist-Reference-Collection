@@ -9,7 +9,7 @@ import { Modal } from '../common/Modal';
 import { Button, Tag, Icon, Card as CardComponent, Input } from '../common';
 import { LinkifiedText } from '../common/LinkifiedText';
 import type { Card, Tag as TagType, Collection, Category } from '../../types';
-import { updateCard, getAllTags, getAllCollections, getAllCategories, getCollection, updateCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory, addTag, updateCategory, getMoodboard, db } from '../../services/db';
+import { updateCardWithCollections, getAllTags, getAllCollections, getAllCategories, getCollection, addToMoodboard, removeFromMoodboard, deleteCard, getSimilarCards, addViewHistory, addTag, updateCategory, getMoodboard, db } from '../../services/db';
 import { logDeleteCards } from '../../services/history';
 import { useToast } from '../../hooks/useToast';
 import { useAlert } from '../../hooks/useAlert';
@@ -430,37 +430,12 @@ export const CardViewModal = ({
   // Сохранение изменений
   const handleSaveEdit = async () => {
     try {
-      // Обновляем данные карточки
-      await updateCard(card.id, {
+      // Обновляем данные карточки и привязки к коллекциям в одной транзакции
+      await updateCardWithCollections(card.id, {
         tags: editedTags,
         collections: editedCollections,
         description: editedDescription.trim() || undefined
       });
-      
-      // Обновляем связи коллекций
-      // Удаляем карточку из старых коллекций
-      for (const oldCollId of card.collections) {
-        if (!editedCollections.includes(oldCollId)) {
-          const coll = await getCollection(oldCollId);
-          if (coll) {
-            await updateCollection(oldCollId, {
-              cardIds: coll.cardIds.filter(id => id !== card.id)
-            });
-          }
-        }
-      }
-      
-      // Добавляем карточку в новые коллекции
-      for (const newCollId of editedCollections) {
-        if (!card.collections.includes(newCollId)) {
-          const coll = await getCollection(newCollId);
-          if (coll) {
-            await updateCollection(newCollId, {
-              cardIds: [...coll.cardIds, card.id]
-            });
-          }
-        }
-      }
       
       setIsEditMode(false);
       showToast({ message: 'Изменения сохранены' });

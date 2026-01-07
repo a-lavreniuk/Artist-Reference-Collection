@@ -474,6 +474,74 @@ export async function updateCard(id: string, changes: Partial<Card>): Promise<nu
 }
 
 /**
+ * Обновить карточку вместе с её привязками к коллекциям
+ * Использует одну транзакцию для обновления карточки, счётчиков меток и коллекций
+ */
+export async function updateCardWithCollections(
+  id: string,
+  changes: Partial<Card> & { collections?: string[] }
+): Promise<void> {
+  console.log('[updateCardWithCollections] Старт обновления карточки и коллекций:', id, changes);
+
+  // Загружаем текущую карточку для вычисления дельты коллекций
+  const existingCard = await db.cards.get(id);
+  if (!existingCard) {
+    console.error('[updateCardWithCollections] Карточка не найдена:', id);
+    return;
+  }
+
+  const oldCollections = existingCard.collections || [];
+  const newCollections = changes.collections ?? oldCollections;
+
+  // Вычисляем какие коллекции нужно обновить
+  const collectionsToRemove = oldCollections.filter(collId => !newCollections.includes(collId));
+  const collectionsToAdd = newCollections.filter(collId => !oldCollections.includes(collId));
+
+  // Если коллекции не менялись, просто используем обычное обновление карточки
+  if (collectionsToRemove.length === 0 && collectionsToAdd.length === 0) {
+    await updateCard(id, changes);
+    return;
+  }
+
+  // Одна транзакция для:
+  // - обновления карточки (включая счётчики меток)
+  // - синхронизации массивов cardIds в коллекциях
+  await db.transaction('rw', db.cards, db.collections, db.tags, async () => {
+    // 1. Обновляем карточку (в том числе теги и кеш поиска)
+    await updateCard(id, changes);
+
+    // 2. Обновляем коллекции
+    // Сначала удаляем карточку из старых коллекций
+    if (collectionsToRemove.length > 0) {
+      const collections = await db.collections.bulkGet(collectionsToRemove);
+      for (const collection of collections) {
+        if (!collection) continue;
+        await updateCollection(collection.id, {
+          cardIds: collection.cardIds.filter(cardId => cardId !== id)
+        });
+      }
+    }
+
+    // Затем добавляем карточку в новые коллекции
+    if (collectionsToAdd.length > 0) {
+      const collections = await db.collections.bulkGet(collectionsToAdd);
+      for (const collection of collections) {
+        if (!collection) continue;
+        const cardIds = collection.cardIds || [];
+        // Защита от дубликатов
+        if (!cardIds.includes(id)) {
+          await updateCollection(collection.id, {
+            cardIds: [...cardIds, id]
+          });
+        }
+      }
+    }
+  });
+
+  console.log('[updateCardWithCollections] Обновление завершено:', id);
+}
+
+/**
  * Удалить карточку
  * Удаляет запись из БД + физические файлы (исходник и превью)
  * Использует транзакцию для обеспечения атомарности операций БД
