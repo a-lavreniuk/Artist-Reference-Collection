@@ -24,6 +24,8 @@ interface QueueFile {
   originalFilePath?: string; // Путь к исходному временному файлу (для удаления после сохранения)
 }
 
+type ActiveSettingsTab = 'tags' | 'collections' | 'description';
+
 // Мемоизированный компонент элемента очереди для оптимизации производительности
 interface QueueItemProps {
   item: QueueFile;
@@ -94,6 +96,7 @@ export interface AddCardFlowProps {
 
 export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerReady, onOpenFileDialogReady, initialFiles }: AddCardFlowProps) => {
   const alert = useAlert();
+  const MAX_QUEUE_FILES = 25;
   
   // Загружаем очередь из sessionStorage при инициализации
   // ВАЖНО: Сохраняются только файлы с originalFilePath (из браузерного расширения),
@@ -139,6 +142,7 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
   const [newTagName, setNewTagName] = useState('');
   const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
   const [hasScroll, setHasScroll] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<ActiveSettingsTab>('tags');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queueScrollRef = useRef<HTMLDivElement>(null);
@@ -540,9 +544,9 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
       return;
     }
 
-    // Проверяем общий лимит (45 файлов в очереди)
-    if (queue.length + files.length > 45) {
-      alert.warning(`Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
+    // Проверяем общий лимит (25 файлов в очереди)
+    if (queue.length + files.length > MAX_QUEUE_FILES) {
+      alert.warning(`Максимум ${MAX_QUEUE_FILES} файлов в очереди. Уже добавлено: ${queue.length}`);
       return;
     }
 
@@ -554,9 +558,9 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
     
     const files = Array.from(e.target.files);
     
-    // Проверяем общий лимит (45 файлов в очереди)
-    if (queue.length + files.length > 45) {
-      alert.warning(`Максимум 45 файлов в очереди. Уже добавлено: ${queue.length}`);
+    // Проверяем общий лимит (25 файлов в очереди)
+    if (queue.length + files.length > MAX_QUEUE_FILES) {
+      alert.warning(`Максимум ${MAX_QUEUE_FILES} файлов в очереди. Уже добавлено: ${queue.length}`);
       // Сбрасываем значение input
       if (e.target) {
         e.target.value = '';
@@ -912,7 +916,6 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
         >
           <div className="add-card-flow__dropzone-content">
             <h2 className="add-card-flow__dropzone-title">Добавить изображение или видео...</h2>
@@ -921,12 +924,16 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
               <br />
               Допускается загрузка нескольких файлов одновременно,
               <br />
-              но не более 50-ти в очереди
+              но не более 25-ти в очереди
             </p>
             <Button
               variant="primary"
               size="L"
               iconRight={<Icon name="plus" size={24} variant="border" />}
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
             >
               Добавить
             </Button>
@@ -978,8 +985,8 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
             />
           ))}
           
-          {/* Пустая карточка для добавления еще файлов (до 45 файлов в очереди) */}
-          {queue.length < 45 && (
+          {/* Пустая карточка для добавления еще файлов (до 25 файлов в очереди) */}
+          {queue.length < MAX_QUEUE_FILES && (
             <button
               className="add-card-flow__queue-item add-card-flow__queue-item--add"
               onClick={(e) => {
@@ -1013,37 +1020,103 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
 
         {/* Настройки */}
         <div className="add-card-flow__settings">
-          {/* Блок 1: Шаблон и Описание - объединены по горизонтали */}
-          <div className="add-card-flow__block-row">
-            {/* Блок шаблона */}
-            <div className="add-card-flow__block add-card-flow__block--template">
-              <div className="add-card-flow__block-header">
-                <h3 className="add-card-flow__block-title">Шаблон</h3>
-                <div className="add-card-flow__template-actions">
-                  <button 
-                    className="add-card-flow__template-button"
-                    onClick={handleCopySettings}
-                    disabled={currentFile.tags.length === 0 && currentFile.collections.length === 0}
-                    title="Копировать настройки"
-                  >
-                    <Icon name="save" size={24} variant="border" />
-                  </button>
-                  <button 
-                    className="add-card-flow__template-button"
-                    onClick={handlePasteSettings}
-                    disabled={!clipboard}
-                    title="Применить настройки"
-                  >
-                    <Icon name="download" size={24} variant="border" />
-                  </button>
-                </div>
+          {/* Блок шаблона */}
+          <div className="add-card-flow__block add-card-flow__block--template">
+            <div className="add-card-flow__block-header">
+              <h3 className="add-card-flow__block-title">Шаблон</h3>
+              <div className="add-card-flow__template-actions">
+                <button
+                  className="add-card-flow__template-button"
+                  onClick={handleCopySettings}
+                  disabled={currentFile.tags.length === 0}
+                  title="Копировать настройки"
+                >
+                  <Icon name="save" size={24} variant="border" />
+                </button>
+                <button
+                  className="add-card-flow__template-button"
+                  onClick={handlePasteSettings}
+                  disabled={!clipboard}
+                  title="Применить настройки"
+                >
+                  <Icon name="download" size={24} variant="border" />
+                </button>
               </div>
-              <p className="add-card-flow__block-description">
-                Сохранить настройки для применения к другим файлам
-              </p>
             </div>
+            <p className="add-card-flow__block-description">
+              Сохранить настройки для применения к другим файлам
+            </p>
+          </div>
 
-            {/* Блок описания */}
+          {/* Табы настроек */}
+          <div className="add-card-flow__tabs">
+            <button
+              type="button"
+              className={`add-card-flow__tab-button ${activeSettingsTab === 'tags' ? 'add-card-flow__tab-button--active' : ''}`}
+              onClick={() => setActiveSettingsTab('tags')}
+            >
+              Метки
+            </button>
+            <button
+              type="button"
+              className={`add-card-flow__tab-button ${activeSettingsTab === 'collections' ? 'add-card-flow__tab-button--active' : ''}`}
+              onClick={() => setActiveSettingsTab('collections')}
+            >
+              Коллекции
+            </button>
+            <button
+              type="button"
+              className={`add-card-flow__tab-button ${activeSettingsTab === 'description' ? 'add-card-flow__tab-button--active' : ''}`}
+              onClick={() => setActiveSettingsTab('description')}
+            >
+              Описание
+            </button>
+          </div>
+
+          {/* Контент выбранного таба */}
+          {activeSettingsTab === 'collections' && (
+            <div className="add-card-flow__block add-card-flow__block--collections">
+              <div className="add-card-flow__block-header">
+                <h3 className="add-card-flow__block-title">
+                  Коллекции
+                  {currentFile.collections.length > 0 && (
+                    <span className="add-card-flow__block-counter">{currentFile.collections.length}</span>
+                  )}
+                </h3>
+              </div>
+              <Input
+                placeholder="Поиск коллекций..."
+                value={collectionsSearchQuery}
+                onChange={(e) => setCollectionsSearchQuery(e.target.value)}
+                fullWidth
+                className="add-card-flow__search-input"
+                clearable
+                onClear={() => setCollectionsSearchQuery('')}
+              />
+              <div className="add-card-flow__tags-list">
+                {allCollections
+                  .filter(coll =>
+                    collectionsSearchQuery === '' ||
+                    coll.name.toLowerCase().includes(collectionsSearchQuery.toLowerCase())
+                  )
+                  .map((coll) => {
+                    const isSelected = currentFile.collections.includes(coll.id);
+                    return (
+                      <button
+                        key={coll.id}
+                        className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
+                        onClick={() => handleCollectionToggle(coll.id)}
+                      >
+                        <span className="text-s">{coll.name}</span>
+                        {isSelected && <Icon name="x" size={16} variant="border" />}
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {activeSettingsTab === 'description' && (
             <div className="add-card-flow__block add-card-flow__block--description">
               <div className="add-card-flow__block-header">
                 <h3 className="add-card-flow__block-title">Описание</h3>
@@ -1054,11 +1127,11 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
                 value={currentFile.description || ''}
                 onChange={(e) => handleDescriptionChange(e.target.value)}
                 maxLength={2000}
-                rows={4}
+                rows={8}
               />
               {(currentFile.description?.length || 0) > 0 && (
-                <p className="text-s" style={{ 
-                  color: 'var(--text-secondary)', 
+                <p className="text-s" style={{
+                  color: 'var(--text-secondary)',
                   marginTop: '8px',
                   textAlign: 'right'
                 }}>
@@ -1066,145 +1139,103 @@ export const AddCardFlow = ({ onComplete, onQueueStateChange, onFinishHandlerRea
                 </p>
               )}
             </div>
-          </div>
+          )}
 
-          {/* Блок 2: Коллекции */}
-          <div className="add-card-flow__block add-card-flow__block--collections">
-            <div className="add-card-flow__block-header">
-              <h3 className="add-card-flow__block-title">
-                Коллекции
-                {currentFile.collections.length > 0 && (
-                  <span className="add-card-flow__block-counter">{currentFile.collections.length}</span>
-                )}
-              </h3>
-            </div>
-            <Input
-              placeholder="Поиск коллекций..."
-              value={collectionsSearchQuery}
-              onChange={(e) => setCollectionsSearchQuery(e.target.value)}
-              fullWidth
-              className="add-card-flow__search-input"
-              clearable
-              onClear={() => setCollectionsSearchQuery('')}
-            />
-            <div className="add-card-flow__tags-list">
-              {allCollections
-                .filter(coll => 
-                  collectionsSearchQuery === '' || 
-                  coll.name.toLowerCase().includes(collectionsSearchQuery.toLowerCase())
-                )
-                .map((coll) => {
-                  const isSelected = currentFile.collections.includes(coll.id);
+          {activeSettingsTab === 'tags' && (
+            <div className="add-card-flow__block add-card-flow__block--tags">
+              <div className="add-card-flow__block-header">
+                <h3 className="add-card-flow__block-title">
+                  Метки
+                  {currentFile.tags.length > 0 && (
+                    <span className="add-card-flow__block-counter">{currentFile.tags.length}</span>
+                  )}
+                </h3>
+              </div>
+              <Input
+                placeholder="Поиск меток..."
+                value={tagsSearchQuery}
+                onChange={(e) => setTagsSearchQuery(e.target.value)}
+                fullWidth
+                className="add-card-flow__search-input"
+                clearable
+                onClear={() => setTagsSearchQuery('')}
+              />
+
+              <div className="add-card-flow__categories">
+                {allCategories.map((category) => {
+                  const categoryTags = allTags.filter(t => t.categoryId === category.id);
+                  const filteredTags = tagsSearchQuery
+                    ? categoryTags.filter(t => {
+                        const queryLower = tagsSearchQuery.toLowerCase();
+                        const nameMatch = t.name.toLowerCase().includes(queryLower);
+                        const descriptionMatch = t.description?.toLowerCase().includes(queryLower) || false;
+                        return nameMatch || descriptionMatch;
+                      })
+                    : categoryTags;
+
+                  if (filteredTags.length === 0) return null;
+
+                  const sortedTags = [...filteredTags].sort((a, b) => {
+                    return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
+                  });
+
                   return (
-                    <button
-                      key={coll.id}
-                      className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
-                      onClick={() => handleCollectionToggle(coll.id)}
-                    >
-                      <span className="text-s">{coll.name}</span>
-                      {isSelected && <Icon name="x" size={16} variant="border" />}
-                    </button>
+                    <div key={category.id} className="add-card-flow__category">
+                      <p className="text-s" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '8px' }}>
+                        {category.name}
+                      </p>
+                      <div className="add-card-flow__tags-list" style={{ marginBottom: '8px' }}>
+                        {sortedTags.map((tag) => {
+                          const isSelected = currentFile.tags.includes(tag.id);
+                          const tooltipContent = tag.description || tag.name;
+                          return (
+                            <Tooltip
+                              key={tag.id}
+                              content={tooltipContent}
+                              delay={500}
+                              position="top"
+                            >
+                              <button
+                                className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
+                                onClick={() => handleTagToggle(tag.id)}
+                              >
+                                <span className="text-s">{tag.name}</span>
+                                {isSelected && <Icon name="x" size={16} variant="border" />}
+                              </button>
+                            </Tooltip>
+                          );
+                        })}
+                        <button
+                          className="add-card-flow__add-tag-button"
+                          onClick={() => setShowNewTagInput(showNewTagInput === category.id ? null : category.id)}
+                        >
+                          <Icon name={showNewTagInput === category.id ? "x" : "plus"} size={16} variant="border" />
+                        </button>
+                      </div>
+
+                      {showNewTagInput === category.id && (
+                        <Input
+                          placeholder="Название метки"
+                          value={newTagName}
+                          onChange={(e) => setNewTagName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newTagName.trim()) {
+                              handleCreateTag(category.id);
+                            }
+                          }}
+                          autoFocus
+                          fullWidth
+                          style={{ marginTop: '8px' }}
+                          clearable
+                          onClear={() => setNewTagName('')}
+                        />
+                      )}
+                    </div>
                   );
                 })}
+              </div>
             </div>
-          </div>
-
-          {/* Блок 3: Метки с категориями */}
-          <div className="add-card-flow__block add-card-flow__block--tags">
-            <div className="add-card-flow__block-header">
-              <h3 className="add-card-flow__block-title">
-                Метки
-                {currentFile.tags.length > 0 && (
-                  <span className="add-card-flow__block-counter">{currentFile.tags.length}</span>
-                )}
-              </h3>
-            </div>
-            <Input
-              placeholder="Поиск меток..."
-              value={tagsSearchQuery}
-              onChange={(e) => setTagsSearchQuery(e.target.value)}
-              fullWidth
-              className="add-card-flow__search-input"
-              clearable
-              onClear={() => setTagsSearchQuery('')}
-            />
-
-            <div className="add-card-flow__categories">
-              {allCategories.map((category) => {
-                const categoryTags = allTags.filter(t => t.categoryId === category.id);
-                const filteredTags = tagsSearchQuery 
-                  ? categoryTags.filter(t => {
-                      const queryLower = tagsSearchQuery.toLowerCase();
-                      const nameMatch = t.name.toLowerCase().includes(queryLower);
-                      const descriptionMatch = t.description?.toLowerCase().includes(queryLower) || false;
-                      return nameMatch || descriptionMatch;
-                    })
-                  : categoryTags;
-
-                // Скрываем категорию если нет меток (или нет совпадений при поиске)
-                if (filteredTags.length === 0) return null;
-
-                // Сортируем метки по алфавиту (а→я, a→z)
-                const sortedTags = [...filteredTags].sort((a, b) => {
-                  return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
-                });
-
-                return (
-                  <div key={category.id} className="add-card-flow__category">
-                    <p className="text-s" style={{ fontWeight: 'var(--font-weight-bold)', marginBottom: '8px' }}>
-                      {category.name}
-                    </p>
-                    <div className="add-card-flow__tags-list" style={{ marginBottom: '8px' }}>
-                      {sortedTags.map((tag) => {
-                        const isSelected = currentFile.tags.includes(tag.id);
-                        const tooltipContent = tag.description || tag.name;
-                        return (
-                          <Tooltip
-                            key={tag.id}
-                            content={tooltipContent}
-                            delay={500}
-                            position="top"
-                          >
-                            <button
-                              className={`add-card-flow__tag-button ${isSelected ? 'add-card-flow__tag-button--selected' : ''}`}
-                              onClick={() => handleTagToggle(tag.id)}
-                            >
-                              <span className="text-s">{tag.name}</span>
-                              {isSelected && <Icon name="x" size={16} variant="border" />}
-                            </button>
-                          </Tooltip>
-                        );
-                      })}
-                      <button
-                        className="add-card-flow__add-tag-button"
-                        onClick={() => setShowNewTagInput(showNewTagInput === category.id ? null : category.id)}
-                      >
-                        <Icon name={showNewTagInput === category.id ? "x" : "plus"} size={16} variant="border" />
-                      </button>
-                    </div>
-                    
-                    {showNewTagInput === category.id && (
-                      <Input
-                        placeholder="Название метки"
-                        value={newTagName}
-                        onChange={(e) => setNewTagName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && newTagName.trim()) {
-                            handleCreateTag(category.id);
-                          }
-                        }}
-                        autoFocus
-                        fullWidth
-                        style={{ marginTop: '8px' }}
-                        clearable
-                        onClear={() => setNewTagName('')}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          )}
 
         </div>
       </div>

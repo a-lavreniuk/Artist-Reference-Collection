@@ -12,14 +12,13 @@ import { getCardsByIds, getCard, addToMoodboard, removeFromMoodboard, getMoodboa
 import { logClearMoodboard } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
-import type { Card, ViewMode, ContentFilter } from '../types';
+import type { Card, ContentFilter } from '../types';
 
 export const MoodboardPage = () => {
   const navigate = useNavigate();
   const { searchProps, setSelectedTags } = useSearch();
   const toast = useToast();
   const alert = useAlert();
-  const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [moodboardCardIds, setMoodboardCardIds] = useState<string[]>([]);
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
@@ -327,10 +326,6 @@ export const MoodboardPage = () => {
     <Layout
       headerProps={{
         title: 'Мудборд',
-        viewMode: {
-          current: viewMode,
-          onChange: setViewMode
-        },
         contentFilter: {
           current: contentFilter,
           counts,
@@ -363,7 +358,7 @@ export const MoodboardPage = () => {
     >
       <MasonryGrid
         cards={filteredCards}
-        viewMode={viewMode}
+        viewMode="standard"
         onCardClick={handleCardClick}
         onCardSelect={handleCardSelect}
         onMoodboardToggle={handleMoodboardToggle}

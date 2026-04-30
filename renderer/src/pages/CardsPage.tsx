@@ -26,7 +26,7 @@ export const CardsPage = () => {
     searchValue
   } = useSearch();
   
-  const [viewMode, setViewMode] = useState<ViewMode>('standard');
+  const [viewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   
@@ -42,7 +42,8 @@ export const CardsPage = () => {
   const [totalCounts, setTotalCounts] = useState({ images: 0, videos: 0, total: 0 });
   
   // Константы пагинации
-  const PAGE_SIZE = 100;
+  const INITIAL_PAGE_SIZE = 50;
+  const LOAD_MORE_PAGE_SIZE = 25;
   
   // Кеш загруженных страниц карточек
   const cardsCacheRef = useRef<Map<number, Card[]>>(new Map());
@@ -58,7 +59,7 @@ export const CardsPage = () => {
         
         // Загружаем первую порцию карточек и общую статистику
         const [firstPage, moodboard, counts] = await Promise.all([
-          getCardsPaginated(0, PAGE_SIZE),
+          getCardsPaginated(0, INITIAL_PAGE_SIZE),
           getMoodboard(),
           getCardsCountByType()
         ]);
@@ -90,7 +91,7 @@ export const CardsPage = () => {
     try {
       setIsLoadingMore(true);
       
-      const pageIndex = Math.floor(cards.length / PAGE_SIZE);
+      const pageIndex = cards.length;
       
       // Проверяем кеш
       if (cardsCacheRef.current.has(pageIndex)) {
@@ -103,7 +104,7 @@ export const CardsPage = () => {
         return;
       }
       
-      const nextPage = await getCardsPaginated(cards.length, PAGE_SIZE);
+      const nextPage = await getCardsPaginated(cards.length, LOAD_MORE_PAGE_SIZE);
       
       if (nextPage.length > 0) {
         // Сохраняем в кеш
@@ -213,7 +214,7 @@ export const CardsPage = () => {
         // Если карточка не найдена, возможно она была удалена
         cardsCacheRef.current.clear();
         const [firstPage, counts] = await Promise.all([
-          getCardsPaginated(0, PAGE_SIZE),
+          getCardsPaginated(0, INITIAL_PAGE_SIZE),
           getCardsCountByType()
         ]);
         cardsCacheRef.current.set(0, firstPage);
@@ -249,7 +250,7 @@ export const CardsPage = () => {
       // При ошибке перезагружаем данные
       cardsCacheRef.current.clear();
       const [firstPage, counts] = await Promise.all([
-        getCardsPaginated(0, PAGE_SIZE),
+        getCardsPaginated(0, INITIAL_PAGE_SIZE),
         getCardsCountByType()
       ]);
       cardsCacheRef.current.set(0, firstPage);
@@ -287,7 +288,7 @@ export const CardsPage = () => {
       // При ошибке перезагружаем данные
       cardsCacheRef.current.clear();
       const [firstPage, counts] = await Promise.all([
-        getCardsPaginated(0, PAGE_SIZE),
+        getCardsPaginated(0, INITIAL_PAGE_SIZE),
         getCardsCountByType()
       ]);
       cardsCacheRef.current.set(0, firstPage);
@@ -324,7 +325,7 @@ export const CardsPage = () => {
       // Инвалидируем кеш и перезагружаем первую страницу
       cardsCacheRef.current.clear();
       const [firstPage, moodboard, counts] = await Promise.all([
-        getCardsPaginated(0, PAGE_SIZE),
+        getCardsPaginated(0, INITIAL_PAGE_SIZE),
         getMoodboard(),
         getCardsCountByType()
       ]);
@@ -371,10 +372,6 @@ export const CardsPage = () => {
     <Layout
       headerProps={{
         title: 'Карточки',
-        viewMode: {
-          current: viewMode,
-          onChange: setViewMode
-        },
         contentFilter: {
           current: contentFilter,
           counts,

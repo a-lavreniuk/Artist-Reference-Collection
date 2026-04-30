@@ -18,7 +18,7 @@ export interface SectionHeaderProps {
     onClick: () => void;
   };
   
-  /** Переключатель вида (стандартный/компактный) */
+  /** Переключатель вида (сохранён для совместимости, UI скрыт по ТЗ) */
   viewMode?: {
     current: ViewMode;
     onChange: (mode: ViewMode) => void;
@@ -75,43 +75,6 @@ export const SectionHeader = ({
       </div>
 
       <div className="section-header__right">
-        {/* Переключатель вида */}
-        {viewMode && (
-          <div className="section-header__view-mode">
-            <button
-              className={`section-header__view-button ${
-                viewMode.current === 'standard' ? 'section-header__view-button--active' : ''
-              }`}
-              onClick={() => viewMode.onChange('standard')}
-              title="Стандартный вид"
-            >
-              <Icon 
-                name="grid-default" 
-                size={24} 
-                variant={viewMode.current === 'standard' ? 'fill' : 'border'} 
-              />
-            </button>
-            <button
-              className={`section-header__view-button ${
-                viewMode.current === 'compact' ? 'section-header__view-button--active' : ''
-              }`}
-              onClick={() => viewMode.onChange('compact')}
-              title="Компактный вид"
-            >
-              <Icon 
-                name="grid-small" 
-                size={24} 
-                variant={viewMode.current === 'compact' ? 'fill' : 'border'} 
-              />
-            </button>
-          </div>
-        )}
-
-        {/* Разделитель между переключателями вида и actions */}
-        {viewMode && actions && (
-          <div className="section-header__divider" />
-        )}
-
         {/* Дополнительные действия - идут после разделителя */}
         {actions && (
           <div className="section-header__actions">
@@ -120,7 +83,7 @@ export const SectionHeader = ({
         )}
 
         {/* Разделитель перед фильтрами */}
-        {((viewMode && !actions) || actions) && contentFilter && (
+        {(viewMode || actions) && contentFilter && (
           <div className="section-header__divider" />
         )}
 

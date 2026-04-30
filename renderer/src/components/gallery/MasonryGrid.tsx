@@ -46,6 +46,9 @@ export interface MasonryGridProps {
   
   /** Идет ли загрузка дополнительных карточек */
   isLoadingMore?: boolean;
+
+  /** Режим строгой фиксированной сетки (6 колонок) */
+  fixedColumns?: number;
 }
 
 /**
@@ -63,6 +66,7 @@ export const MasonryGrid = ({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  fixedColumns = 6,
   emptyStateText
 }: MasonryGridProps) => {
   const [visibleCards, setVisibleCards] = useState<Set<string>>(new Set());
@@ -194,25 +198,13 @@ export const MasonryGrid = ({
     }
   }, []);
 
-  // Определяем количество колонок в зависимости от режима
+  // Фиксированная сетка по ТЗ: 6 колонок вне зависимости от разрешения
   const breakpointColumns = useMemo(() => {
-    if (viewMode === 'compact') {
-      return {
-        default: 10,
-        2400: 10,
-        2000: 8,
-        1920: 10
-      };
-    }
-    
-    // Стандартный режим
     return {
-      default: 6,
-      2400: 6,
-      2000: 5,
-      1920: 6
+      default: fixedColumns,
+      100000: fixedColumns
     };
-  }, [viewMode]);
+  }, [fixedColumns]);
 
   // Пустое состояние
   if (cards.length === 0) {
@@ -246,7 +238,7 @@ export const MasonryGrid = ({
               {isVisible ? (
                 <Card
                   card={card}
-                  compact={viewMode === 'compact'}
+                  compact={false}
                   selected={selectedCards.includes(card.id)}
                   onClick={onCardClick}
                   onSelect={onCardSelect}
@@ -256,7 +248,10 @@ export const MasonryGrid = ({
                 />
               ) : (
                 // Скелетон для невидимых карточек (сохраняет layout и выглядит как настоящая карточка)
-                <CardSkeleton compact={viewMode === 'compact'} />
+                <CardSkeleton
+                  compact={false}
+                  aspectRatio={card.width && card.height ? card.width / card.height : 1}
+                />
               )}
             </div>
           );

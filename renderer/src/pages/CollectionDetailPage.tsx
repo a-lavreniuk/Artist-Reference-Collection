@@ -13,7 +13,7 @@ import { getCollection, getCardsByIds, deleteCollection, addToMoodboard, removeF
 import { logDeleteCollection } from '../services/history';
 import { useToast } from '../hooks/useToast';
 import { useAlert } from '../hooks/useAlert';
-import type { Collection, Card, ViewMode, ContentFilter } from '../types';
+import type { Collection, Card, ContentFilter } from '../types';
 
 export const CollectionDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +26,6 @@ export const CollectionDetailPage = () => {
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [viewMode, setViewMode] = useState<ViewMode>('standard');
   const [contentFilter, setContentFilter] = useState<ContentFilter>('all');
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   
@@ -296,8 +295,8 @@ export const CollectionDetailPage = () => {
           onClick: () => navigate('/collections')
         },
         viewMode: {
-          current: viewMode,
-          onChange: setViewMode
+          current: 'standard',
+          onChange: () => {}
         },
         contentFilter: {
           current: contentFilter,
@@ -329,7 +328,7 @@ export const CollectionDetailPage = () => {
     >
       <MasonryGrid
         cards={filteredCards}
-        viewMode={viewMode}
+        viewMode="standard"
         onCardClick={handleCardClick}
         onCardSelect={handleCardSelect}
         onMoodboardToggle={handleMoodboardToggle}
