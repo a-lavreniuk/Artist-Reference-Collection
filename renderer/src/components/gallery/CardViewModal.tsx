@@ -3,7 +3,7 @@
  * Отображает полноразмерное изображение/видео с метаданными
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Masonry from 'react-masonry-css';
 import { Modal } from '../common/Modal';
 import { Button, Tag, Icon, Card as CardComponent, Input } from '../common';
@@ -72,6 +72,8 @@ export const CardViewModal = ({
   const [showNewTagInput, setShowNewTagInput] = useState<string | null>(null);
   const [newTagName, setNewTagName] = useState('');
   const [isInMoodboard, setIsInMoodboard] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const savedScrollTopRef = useRef(0);
   
   const { showToast } = useToast();
   const alert = useAlert();
@@ -168,8 +170,8 @@ export const CardViewModal = ({
     
     try {
       const similar = await getSimilarCards(card.id, 15);
-      // Ограничиваем максимум 30 карточками
-      const limitedSimilar = similar.slice(0, 30);
+      // По ТЗ показываем максимум 15 похожих карточек
+      const limitedSimilar = similar.slice(0, 15);
       setSimilarCards(limitedSimilar);
       console.log('[CardViewModal] Найдено похожих карточек:', similar.length, 'показано:', limitedSimilar.length);
     } catch (error) {
@@ -540,11 +542,36 @@ export const CardViewModal = ({
     }
   };
 
+  // Сохраняем scroll-позицию контента при ресайзе окна и восстанавливаем ее после переразметки
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleResize = () => {
+      const contentEl = contentRef.current;
+      if (!contentEl) {
+        return;
+      }
+
+      savedScrollTopRef.current = contentEl.scrollTop;
+      requestAnimationFrame(() => {
+        if (contentRef.current) {
+          contentRef.current.scrollTop = savedScrollTopRef.current;
+        }
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isOpen]);
+
   return (
     <>
       <Modal
         isOpen={isOpen}
         onClose={onClose}
+        closeOnOverlayClick={false}
         size="large"
         showCloseButton={false}
         overlayClassName={!isEditMode && similarCards.length > 0 ? 'modal-overlay--scrollable' : ''}
@@ -610,7 +637,7 @@ export const CardViewModal = ({
         </div>
         
         {/* Основное содержимое */}
-        <div className="card-view__content">
+        <div className="card-view__content" ref={contentRef}>
           {/* Превью изображения/видео */}
           <div className="card-view__preview">
           {card.type === 'image' ? (

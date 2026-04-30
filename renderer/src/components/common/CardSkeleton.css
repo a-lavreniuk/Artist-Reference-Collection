@@ -12,15 +12,13 @@
   border-radius: 16px;
   overflow: hidden;
   
-  /* Квадратная форма по умолчанию (aspect-ratio 1:1) */
-  aspect-ratio: 1 / 1;
+  /* Базовое значение, переопределяется inline стилем из данных карточки */
+  aspect-ratio: var(--card-skeleton-aspect-ratio, 1);
 }
 
 /* Компактный вид */
 .card-skeleton--compact {
   border-radius: 16px;
-  /* Компактный режим также квадратный */
-  aspect-ratio: 1 / 1;
 }
 
 /* Изображение-скелетон */
