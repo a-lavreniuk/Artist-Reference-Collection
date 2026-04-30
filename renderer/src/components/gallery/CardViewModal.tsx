@@ -179,6 +179,30 @@ export const CardViewModal = ({
     }
   };
 
+  // Сохраняем scroll-позицию контента при ресайзе окна и восстанавливаем ее после переразметки
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleResize = () => {
+      const contentEl = contentRef.current;
+      if (!contentEl) {
+        return;
+      }
+
+      savedScrollTopRef.current = contentEl.scrollTop;
+      requestAnimationFrame(() => {
+        if (contentRef.current) {
+          contentRef.current.scrollTop = savedScrollTopRef.current;
+        }
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isOpen]);
+
   if (!card) {
     return null;
   }
@@ -541,30 +565,6 @@ export const CardViewModal = ({
       alert.error('Не удалось создать метку');
     }
   };
-
-  // Сохраняем scroll-позицию контента при ресайзе окна и восстанавливаем ее после переразметки
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleResize = () => {
-      const contentEl = contentRef.current;
-      if (!contentEl) {
-        return;
-      }
-
-      savedScrollTopRef.current = contentEl.scrollTop;
-      requestAnimationFrame(() => {
-        if (contentRef.current) {
-          contentRef.current.scrollTop = savedScrollTopRef.current;
-        }
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isOpen]);
 
   return (
     <>
