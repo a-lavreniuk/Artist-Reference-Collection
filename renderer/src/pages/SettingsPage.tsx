@@ -4,6 +4,7 @@ import SettingsStoragePanel from './settings/SettingsStoragePanel';
 import SettingsStatisticsPanel from './settings/SettingsStatisticsPanel';
 import SettingsHistoryPanel from './settings/SettingsHistoryPanel';
 import SettingsDuplicatesPanel from './settings/SettingsDuplicatesPanel';
+import SettingsVersionLabel from './SettingsVersionLabel';
 
 const VALID_SF = new Set(['storage', 'statistics', 'history', 'duplicates']);
 
@@ -48,6 +49,7 @@ export default function SettingsPage() {
       {active === 'statistics' ? <SettingsStatisticsPanel /> : null}
       {active === 'history' ? <SettingsHistoryPanel /> : null}
       {active === 'duplicates' ? <SettingsDuplicatesPanel /> : null}
+      <SettingsVersionLabel />
     </div>
   );
 }

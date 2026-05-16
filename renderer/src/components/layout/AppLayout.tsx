@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
+import AppUpdateHost from './AppUpdateHost';
 import PendingRestoreModal from './PendingRestoreModal';
 
 export default function AppLayout() {
@@ -34,6 +35,7 @@ export default function AppLayout() {
         <Outlet />
       </div>
       <PendingRestoreModal />
+      <AppUpdateHost />
     </main>
   );
 }

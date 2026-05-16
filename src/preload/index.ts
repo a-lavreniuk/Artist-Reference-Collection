@@ -79,5 +79,50 @@ contextBridge.exposeInMainWorld('arc', {
     };
     ipcRenderer.on('arc:maintenance', fn);
     return () => ipcRenderer.removeListener('arc:maintenance', fn);
+  },
+
+  getAppVersion: () => ipcRenderer.invoke('arc:get-app-version') as Promise<string>,
+  getReleaseNotes: (version?: string) =>
+    ipcRenderer.invoke('arc:get-release-notes', version) as Promise<{
+      buildDate: string;
+      changes: string[];
+    } | null>,
+  getLastSeenReleaseVersion: () =>
+    ipcRenderer.invoke('arc:get-last-seen-release-version') as Promise<string | null>,
+  setLastSeenReleaseVersion: (version: string) =>
+    ipcRenderer.invoke('arc:set-last-seen-release-version', version) as Promise<{ ok: boolean }>,
+  dismissUpdateVersion: (version: string) =>
+    ipcRenderer.invoke('arc:dismiss-update-version', version) as Promise<{ ok: boolean }>,
+  checkForUpdates: () =>
+    ipcRenderer.invoke('arc:check-for-updates') as Promise<
+      | { ok: true; updateInfo: unknown }
+      | { ok: false; reason?: string }
+    >,
+  downloadUpdate: () => ipcRenderer.invoke('arc:download-update') as Promise<{ ok: boolean }>,
+  quitAndInstall: () => ipcRenderer.invoke('arc:quit-and-install') as Promise<{ ok: boolean }>,
+  onUpdateAvailable: (cb: (detail: { version: string; releaseDate: string | null }) => void) => {
+    const fn = (_: unknown, payload: { version: string; releaseDate: string | null }) => cb(payload);
+    ipcRenderer.on('arc:update-available', fn);
+    return () => ipcRenderer.removeListener('arc:update-available', fn);
+  },
+  onUpdateNotAvailable: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('arc:update-not-available', fn);
+    return () => ipcRenderer.removeListener('arc:update-not-available', fn);
+  },
+  onUpdateDownloadProgress: (cb: (detail: { percent: number }) => void) => {
+    const fn = (_: unknown, payload: { percent: number }) => cb(payload);
+    ipcRenderer.on('arc:update-download-progress', fn);
+    return () => ipcRenderer.removeListener('arc:update-download-progress', fn);
+  },
+  onUpdateDownloaded: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('arc:update-downloaded', fn);
+    return () => ipcRenderer.removeListener('arc:update-downloaded', fn);
+  },
+  onUpdateError: (cb: (detail: { message: string }) => void) => {
+    const fn = (_: unknown, payload: { message: string }) => cb(payload);
+    ipcRenderer.on('arc:update-error', fn);
+    return () => ipcRenderer.removeListener('arc:update-error', fn);
   }
 });

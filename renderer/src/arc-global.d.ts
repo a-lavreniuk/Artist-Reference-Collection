@@ -69,6 +69,23 @@ declare global {
       maintenanceBegin: () => Promise<{ ok: true }>;
       maintenanceEnd: () => Promise<{ ok: true }>;
       onMaintenance: (cb: (locked: boolean) => void) => () => void;
+
+      getAppVersion: () => Promise<string>;
+      getReleaseNotes: (version?: string) => Promise<{ buildDate: string; changes: string[] } | null>;
+      getLastSeenReleaseVersion: () => Promise<string | null>;
+      setLastSeenReleaseVersion: (version: string) => Promise<{ ok: boolean }>;
+      dismissUpdateVersion: (version: string) => Promise<{ ok: boolean }>;
+      checkForUpdates: () => Promise<
+        | { ok: true; updateInfo: unknown }
+        | { ok: false; reason?: string }
+      >;
+      downloadUpdate: () => Promise<{ ok: boolean }>;
+      quitAndInstall: () => Promise<{ ok: boolean }>;
+      onUpdateAvailable: (cb: (detail: { version: string; releaseDate: string | null }) => void) => () => void;
+      onUpdateNotAvailable?: (cb: () => void) => () => void;
+      onUpdateDownloadProgress?: (cb: (detail: { percent: number }) => void) => () => void;
+      onUpdateDownloaded?: (cb: () => void) => () => void;
+      onUpdateError?: (cb: (detail: { message: string }) => void) => () => void;
     };
   }
 }

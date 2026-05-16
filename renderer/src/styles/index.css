@@ -1585,12 +1585,49 @@ button.color-swatch-inline:disabled {
 
 /* Настройки: стек секций и вспомогательные блоки */
 .arc2-settings-page {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+}
+
+.arc2-settings-version {
+  position: absolute;
+  right: var(--s-3);
+  bottom: var(--s-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-elev-secondary);
+  font: inherit;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.arc2-settings-version:hover {
+  color: var(--text-elev-primary);
+}
+
+.arc2-settings-version:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.arc2-release-notes-list {
+  margin: 0;
+  padding-left: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.arc2-release-notes-list__item {
+  color: var(--text-elev-primary);
 }
 
 .arc2-settings-page--duplicates {

@@ -1,0 +1,36 @@
+appId: com.arc.artist-reference-collection
+productName: ARC
+copyright: Copyright © ARC
+directories:
+  output: dist-electron
+  buildResources: build
+files:
+  - main/**/*
+  - preload/**/*
+  - renderer/dist/**/*
+  - package.json
+  - node_modules/**/*
+asarUnpack:
+  - "**/node_modules/ffmpeg-static/**"
+  - "**/node_modules/ffprobe-static/**"
+extraResources:
+  - from: release-notes.json
+    to: release-notes.json
+  - from: build/icons/icon-light.png
+    to: icons/icon-light.png
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icons/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  runAfterFinish: true
+  differentialPackage: true
+publish:
+  provider: github
+  owner: a-lavreniuk
+  repo: Artist-Reference-Collection-2

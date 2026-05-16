@@ -4,4 +4,5 @@ renderer/dist/
 /main/
 /preload/
 dist/
+dist-electron/
 npm-debug.log*

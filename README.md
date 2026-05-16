@@ -22,5 +22,20 @@
 | `npm run dev` | Vite (renderer) и Electron в режиме разработки |
 | `npm run renderer:dev` | только фронтенд Vite (порт 5173) |
 | `npm run build` | сборка `main`, `preload` и `renderer` |
+| `npm run dist:win` | установщик Windows (NSIS) в `dist-electron/` |
+| `npm run publish:win` | сборка и публикация в GitHub Releases (нужен `GH_TOKEN`) |
+
+## Установщик и обновления (Windows)
+
+1. Скачайте `ARC Setup X.Y.Z.exe` из [Releases](https://github.com/a-lavreniuk/Artist-Reference-Collection-2/releases).
+2. При первом запуске Windows может показать предупреждение SmartScreen (установщик не подписан): **Подробнее** → **Выполнить в любом случае**.
+3. Установленное приложение при запуске проверяет обновления на GitHub. При согласии обновление ставится в тихом режиме без повторного мастера установки.
+4. Настройки, рабочая папка с медиа и метаданные хранятся отдельно от папки программы.
+
+### Публикация новой версии
+
+1. Обновите `version` в `package.json` и добавьте запись в `release-notes.json`.
+2. Закоммитьте, создайте тег `vX.Y.Z` и отправьте: `git push origin vX.Y.Z`.
+3. Workflow `.github/workflows/release-windows.yml` соберёт установщик и опубликует Release с `latest.yml` для автообновления.
 
 Справочник по UI: `renderer/public/ui/arc-2-ui/arc-2-ui.html`, токены и стили кнопок/панелей — `renderer/public/ui/arc-2-ui/arc-2-ui.css`, навбар — `renderer/public/ui/arc-2-navbar.css`.
