@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Ellipse, Image as KonvaImage, Layer, Line, Rect, Stage, Text, Transformer } from 'react-konva';
 import type Konva from 'konva';
 import type { MoodboardBoardV1 } from '../../../services/arcSchema';
+import { getCardOriginalRelativePath } from './cardOriginalSize';
 import { getCardById } from '../../../services/db';
 import { SCALE_MAX, SCALE_MIN } from './constants';
 import { newEntityId } from './ids';
@@ -111,8 +112,8 @@ export default function MoodboardKonvaStage({
           next[inst.id] = null;
           continue;
         }
-        const rel = card.originalRelativePath || card.thumbRelativePath;
-        if (!rel || rel === 'legacy') {
+        const rel = getCardOriginalRelativePath(card);
+        if (!rel) {
           next[inst.id] = null;
           continue;
         }

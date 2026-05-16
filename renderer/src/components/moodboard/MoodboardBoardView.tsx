@@ -10,6 +10,7 @@ import MoodboardKonvaStage, {
 } from './board/MoodboardKonvaStage';
 import { cloneBoard } from './board/cloneBoard';
 import { newEntityId } from './board/ids';
+import { loadCardOriginalPixelSize } from './board/cardOriginalSize';
 import { fitBoardToViewport } from './board/fitViewport';
 import BoardColorModal from './BoardColorModal';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
@@ -603,19 +604,12 @@ export default function MoodboardBoardView() {
       const vp = b0.viewport;
       const wx = (sx - vp.x) / vp.scale;
       const wy = (sy - vp.y) / vp.scale;
-      const existing = b0.imageInstances.find((x) => x.cardId === cardId);
-      if (existing) {
-        setSelected({ kind: 'image', id: existing.id });
-        return;
-      }
       const card = await getCardById(cardId);
       if (!card) return;
-      const w0 = card.width || 320;
-      const h0 = card.height || 320;
-      const maxDim = 480;
-      const sc = Math.min(1, maxDim / Math.max(w0, h0));
-      const width = Math.max(48, w0 * sc);
-      const height = Math.max(48, h0 * sc);
+
+      const originalSize = await loadCardOriginalPixelSize(card);
+      const width = originalSize?.width ?? Math.max(1, card.width || 320);
+      const height = originalSize?.height ?? Math.max(1, card.height || 320);
       let maxZ = 0;
       for (const x of b0.imageInstances) maxZ = Math.max(maxZ, x.zIndex);
       for (const x of b0.strokes) maxZ = Math.max(maxZ, x.zIndex);
