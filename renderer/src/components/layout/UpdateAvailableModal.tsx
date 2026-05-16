@@ -1,46 +1,46 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
 
+export type UpdateModalPhase = 'prompt' | 'downloading' | 'installing';
+
 type Props = {
   version: string;
-  downloading: boolean;
+  phase: UpdateModalPhase;
   downloadPercent: number | null;
-  readyToInstall: boolean;
   onUpdate: () => void;
   onLater: () => void;
 };
 
 export default function UpdateAvailableModal({
   version,
-  downloading,
+  phase,
   downloadPercent,
-  readyToInstall,
   onUpdate,
   onLater
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const busy = phase === 'downloading' || phase === 'installing';
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArc2NavbarIcons(hostRef.current);
-  }, [version, downloading, readyToInstall]);
+  }, [version, phase, downloadPercent]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !downloading) onLater();
+      if (event.key === 'Escape' && phase === 'prompt') onLater();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [downloading, onLater]);
+  }, [phase, onLater]);
 
-  const message = readyToInstall
-    ? 'Обновление загружено. Перезапустить приложение сейчас?'
-    : downloading
-      ? downloadPercent != null
-        ? `Загрузка обновления… ${Math.round(downloadPercent)}%`
-        : 'Загрузка обновления…'
-      : `Доступна новая версия ${version}. Установить обновление?`;
-
-  const primaryLabel = readyToInstall ? 'Перезапустить' : downloading ? 'Загрузка…' : 'Обновить';
+  const message =
+    phase === 'installing'
+      ? 'Устанавливаем обновление… Приложение скоро перезапустится.'
+      : phase === 'downloading'
+        ? downloadPercent != null
+          ? `Загрузка обновления… ${Math.round(downloadPercent)}%`
+          : 'Загрузка обновления…'
+        : `Доступна новая версия ${version}. Нажмите «Обновить» — загрузка и перезапуск произойдут автоматически.`;
 
   return (
     <div
@@ -48,7 +48,7 @@ export default function UpdateAvailableModal({
       className="arc-modal-host"
       aria-hidden="false"
       onClick={(event) => {
-        if (event.target === event.currentTarget && !downloading) onLater();
+        if (event.target === event.currentTarget && phase === 'prompt') onLater();
       }}
     >
       <section
@@ -65,7 +65,7 @@ export default function UpdateAvailableModal({
           <h3 className="arc-modal__title" id="arc2UpdateModalTitle">
             Обновление ARC
           </h3>
-          {!downloading ? (
+          {phase === 'prompt' ? (
             <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onLater}>
               <span className="tab-icon arc2-icon-close" aria-hidden="true" />
             </button>
@@ -76,24 +76,22 @@ export default function UpdateAvailableModal({
             <p className="arc-modal__slot-text">{message}</p>
           </div>
         </div>
-        <footer className="arc-modal__footer arc-modal__footer--actions-2">
-          <button
-            type="button"
-            className="btn btn-outline btn-ds btn-s"
-            disabled={downloading}
-            onClick={onLater}
-          >
-            <span className="btn-ds__value">Позже</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary btn-ds btn-s"
-            disabled={downloading && !readyToInstall}
-            onClick={onUpdate}
-          >
-            <span className="btn-ds__value">{primaryLabel}</span>
-          </button>
-        </footer>
+        {phase === 'prompt' ? (
+          <footer className="arc-modal__footer arc-modal__footer--actions-2">
+            <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onLater}>
+              <span className="btn-ds__value">Позже</span>
+            </button>
+            <button type="button" className="btn btn-primary btn-ds btn-s" onClick={onUpdate}>
+              <span className="btn-ds__value">Обновить</span>
+            </button>
+          </footer>
+        ) : (
+          <footer className="arc-modal__footer arc-modal__footer--actions-1">
+            <button type="button" className="btn btn-primary btn-ds btn-s" disabled>
+              <span className="btn-ds__value">{busy ? 'Подождите…' : 'Обновить'}</span>
+            </button>
+          </footer>
+        )}
       </section>
     </div>
   );

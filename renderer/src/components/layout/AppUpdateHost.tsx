@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import ReleaseNotesModal, { type ReleaseNotesData } from './ReleaseNotesModal';
-import UpdateAvailableModal from './UpdateAvailableModal';
+import UpdateAvailableModal, { type UpdateModalPhase } from './UpdateAvailableModal';
 
 export default function AppUpdateHost() {
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  const [updatePhase, setUpdatePhase] = useState<UpdateModalPhase>('prompt');
   const [downloadPercent, setDownloadPercent] = useState<number | null>(null);
-  const [readyToInstall, setReadyToInstall] = useState(false);
   const [releaseNotes, setReleaseNotes] = useState<ReleaseNotesData | null>(null);
 
   const closeReleaseNotes = useCallback(async () => {
@@ -20,7 +19,7 @@ export default function AppUpdateHost() {
 
   useEffect(() => {
     const arc = window.arc;
-    if (!arc?.getAppVersion) return;
+    if (!arc?.getAppVersion || updateVersion) return;
 
     void (async () => {
       const version = await arc.getAppVersion();
@@ -36,7 +35,7 @@ export default function AppUpdateHost() {
         changes: notes.changes
       });
     })();
-  }, []);
+  }, [updateVersion]);
 
   useEffect(() => {
     const arc = window.arc;
@@ -44,9 +43,9 @@ export default function AppUpdateHost() {
 
     const unsubAvailable = arc.onUpdateAvailable(({ version }) => {
       setUpdateVersion(version);
-      setDownloading(false);
+      setUpdatePhase('prompt');
       setDownloadPercent(null);
-      setReadyToInstall(false);
+      setReleaseNotes(null);
     });
 
     const unsubProgress = arc.onUpdateDownloadProgress?.(({ percent }) => {
@@ -54,13 +53,14 @@ export default function AppUpdateHost() {
     });
 
     const unsubDownloaded = arc.onUpdateDownloaded?.(() => {
-      setDownloading(false);
-      setReadyToInstall(true);
+      setUpdatePhase('installing');
+      setDownloadPercent(100);
       void arc.quitAndInstall?.();
     });
 
     const unsubError = arc.onUpdateError?.(() => {
-      setDownloading(false);
+      setUpdatePhase('prompt');
+      setDownloadPercent(null);
     });
 
     return () => {
@@ -76,40 +76,37 @@ export default function AppUpdateHost() {
       await window.arc.dismissUpdateVersion(updateVersion);
     }
     setUpdateVersion(null);
-    setDownloading(false);
+    setUpdatePhase('prompt');
     setDownloadPercent(null);
-    setReadyToInstall(false);
   }, [updateVersion]);
 
   const handleUpdate = useCallback(async () => {
     const arc = window.arc;
-    if (!arc) return;
+    if (!arc?.downloadUpdate) return;
 
-    if (readyToInstall) {
-      await arc.quitAndInstall?.();
-      return;
-    }
-
-    setDownloading(true);
-    const res = await arc.downloadUpdate?.();
+    setUpdatePhase('downloading');
+    setDownloadPercent(0);
+    const res = await arc.downloadUpdate();
     if (!res?.ok) {
-      setDownloading(false);
+      setUpdatePhase('prompt');
+      setDownloadPercent(null);
     }
-  }, [readyToInstall]);
+  }, []);
 
   return (
     <>
       {updateVersion ? (
         <UpdateAvailableModal
           version={updateVersion}
-          downloading={downloading}
+          phase={updatePhase}
           downloadPercent={downloadPercent}
-          readyToInstall={readyToInstall}
           onUpdate={handleUpdate}
           onLater={handleLater}
         />
       ) : null}
-      {releaseNotes ? <ReleaseNotesModal data={releaseNotes} onClose={closeReleaseNotes} /> : null}
+      {releaseNotes && !updateVersion ? (
+        <ReleaseNotesModal data={releaseNotes} onClose={closeReleaseNotes} />
+      ) : null}
     </>
   );
 }
