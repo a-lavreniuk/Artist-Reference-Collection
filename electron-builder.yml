@@ -33,5 +33,5 @@ nsis:
 publish:
   provider: github
   owner: a-lavreniuk
-  repo: Artist-Reference-Collection-2
+  repo: Artist-Reference-Collection
   releaseType: release

@@ -1,5 +1,5 @@
 {
-  "name": "artist-reference-collection-2",
+  "name": "artist-reference-collection",
   "version": "0.1.2",
   "description": "ARC — десктопное приложение для организации визуальных материалов",
   "main": "main/index.js",
