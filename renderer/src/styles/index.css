@@ -1331,13 +1331,13 @@ button.color-swatch-inline:disabled {
 .input.search-live:focus-within {
   outline: none;
   border-color: var(--input-border-focus);
-  box-shadow: 0 0 0 3px var(--focus-white);
+  box-shadow: none;
 }
 
 .field-error .input.search-live:focus-within {
   outline: none;
   border-color: var(--input-border-error);
-  box-shadow: 0 0 0 3px var(--focus-danger);
+  box-shadow: none;
 }
 
 .arc-add-tags-scroll {
@@ -1410,9 +1410,7 @@ button.color-swatch-inline:disabled {
 
 .arc-add-page .tags-row .chip:focus-visible {
   outline: none;
-  box-shadow: var(--btn-focus-ring-white);
-  position: relative;
-  z-index: 1;
+  box-shadow: none;
 }
 
 .arc-add-tag-group-title {

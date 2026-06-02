@@ -67,7 +67,7 @@ export default function OnboardingStubPage() {
               дизайнеров с большими коллекциями референсов.
             </p>
           </div>
-          <button type="button" className="btn btn-primary btn-ds" onClick={noop}>
+          <button type="button" className="btn btn-brand btn-ds" onClick={noop}>
             <span className="btn-ds__value">Начать проект</span>
             <span className="btn-ds__icon arc-icon-folder-open" aria-hidden="true"></span>
           </button>

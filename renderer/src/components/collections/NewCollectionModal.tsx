@@ -72,7 +72,7 @@ export default function NewCollectionModal({ existingLowerNames, onClose, onSubm
       <section
         className="arc-modal"
         data-elevation="raised"
-        data-input-size="s"
+        data-input-size="m"
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
@@ -147,7 +147,7 @@ export default function NewCollectionModal({ existingLowerNames, onClose, onSubm
           <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={busy}>
             <span className="btn-ds__value">Отмена</span>
           </button>
-          <button type="button" className="btn btn-primary btn-ds btn-s" onClick={() => void handleSubmit()} disabled={busy}>
+          <button type="button" className="btn btn-brand btn-ds btn-s" onClick={() => void handleSubmit()} disabled={busy}>
             <span className="btn-ds__value">{busy ? 'Добавление…' : 'Добавить'}</span>
           </button>
         </footer>

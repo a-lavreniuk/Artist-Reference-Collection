@@ -35,7 +35,7 @@ export default function OldFolderModal({ pathLabel, onLeave, onTrash, onOpenInEx
       <section
         className="arc-modal"
         data-elevation="raised"
-        data-input-size="s"
+        data-input-size="m"
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
@@ -66,7 +66,7 @@ export default function OldFolderModal({ pathLabel, onLeave, onTrash, onOpenInEx
             <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onOpenInExplorer}>
               <span className="btn-ds__value">Открыть в проводнике</span>
             </button>
-            <button type="button" className="btn btn-primary btn-ds btn-s" onClick={onLeave}>
+            <button type="button" className="btn btn-brand btn-ds btn-s" onClick={onLeave}>
               <span className="btn-ds__value">Оставить</span>
             </button>
           </div>

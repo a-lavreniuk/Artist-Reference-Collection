@@ -201,7 +201,7 @@ export default function SettingsDuplicatesPanel() {
             }}
           />
         </div>
-        <button type="button" className="btn btn-primary btn-ds" onClick={() => setScanTick((t) => t + 1)} disabled={busy}>
+        <button type="button" className="btn btn-brand btn-ds" onClick={() => setScanTick((t) => t + 1)} disabled={busy}>
           <span className="btn-ds__value">{busy ? 'Поиск…' : 'Найти похожее'}</span>
         </button>
       </div>

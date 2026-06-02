@@ -34,7 +34,7 @@ export default function ConfirmModal({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onCancel]);
 
-  const confirmClass = confirmVariant === 'danger' ? 'btn btn-danger btn-ds btn-s' : 'btn btn-primary btn-ds btn-s';
+  const confirmClass = confirmVariant === 'danger' ? 'btn btn-danger btn-ds btn-s' : 'btn btn-brand btn-ds btn-s';
 
   return (
     <div
@@ -48,7 +48,7 @@ export default function ConfirmModal({
       <section
         className="arc-modal"
         data-elevation="raised"
-        data-input-size="s"
+        data-input-size="m"
         data-btn-size="s"
         role="dialog"
         aria-modal="true"

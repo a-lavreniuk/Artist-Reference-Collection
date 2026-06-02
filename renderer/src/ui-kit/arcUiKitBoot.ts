@@ -10,8 +10,19 @@ export function refreshArcUiKitGlyphs(scope: HTMLElement): Promise<unknown> | un
 }
 
 export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: AbortSignal }): void {
-  const signal = options?.signal;
-  const docOpts = signal ? ({ signal } as AddEventListenerOptions) : undefined;
+  const parentSignal = options?.signal;
+  const mountAc = new AbortController();
+  if (parentSignal) {
+    if (parentSignal.aborted) {
+      mountAc.abort();
+      return;
+    }
+    parentSignal.addEventListener("abort", () => mountAc.abort(), { once: true });
+  }
+  const priorAc = (scope as HTMLElement & { __arcUiKitMountAc?: AbortController }).__arcUiKitMountAc;
+  priorAc?.abort();
+  (scope as HTMLElement & { __arcUiKitMountAc?: AbortController }).__arcUiKitMountAc = mountAc;
+  const docOpts = { signal: mountAc.signal } as AddEventListenerOptions;
 
       const body = scope;
 
@@ -387,7 +398,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           btn.addEventListener("click", function () {
             const id = btn.getAttribute("data-arc-modal-open");
             if (id) openArcModal(id, btn);
-          });
+          }, docOpts);
         });
 
         scope.querySelectorAll("[data-arc-modal-close]").forEach(function (btn) {
@@ -410,21 +421,21 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               syncDirtyIndicator(host);
             }
             closeArcModal(host, lastTrigger);
-          });
+          }, docOpts);
         });
 
         hosts.forEach(function (host) {
           host.addEventListener("input", function () {
             syncDirtyIndicator(host);
-          });
+          }, docOpts);
           host.addEventListener("change", function () {
             syncDirtyIndicator(host);
-          });
+          }, docOpts);
           host.addEventListener("click", function () {
             requestAnimationFrame(function () {
               syncDirtyIndicator(host);
             });
-          });
+          }, docOpts);
         });
 
         if (confirmStayBtn) {
@@ -435,7 +446,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               const focusables = getFocusable(hostToFocus);
               if (focusables.length) focusables[0].focus();
             }
-          });
+          }, docOpts);
         }
 
         if (confirmDiscardBtn) {
@@ -450,7 +461,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             const trigger = pendingCloseTrigger;
             hideUnsavedConfirm();
             closeArcModal(host, trigger);
-          });
+          }, docOpts);
         }
 
         if (confirmSaveBtn) {
@@ -465,7 +476,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             const trigger = pendingCloseTrigger;
             hideUnsavedConfirm();
             closeArcModal(host, trigger);
-          });
+          }, docOpts);
         }
 
         document.addEventListener("keydown", function (event) {
@@ -486,7 +497,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             return;
           }
           closeSelectors();
-        });
+        }, docOpts);
 
         scope.querySelectorAll(".arc-modal .tabs").forEach(function (tabList) {
           const tabButtons = Array.from(tabList.querySelectorAll(".tab-button"));
@@ -495,7 +506,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               tabButtons.forEach(function (b) {
                 b.classList.toggle("is-active", b === button);
               });
-            });
+            }, docOpts);
           });
         });
       }
@@ -610,7 +621,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               move(event);
               document.addEventListener("pointermove", move);
               document.addEventListener("pointerup", up);
-            });
+            }, docOpts);
           }
 
           bindDrag(hueTrack, function (event, rect) {
@@ -634,7 +645,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             saturation = parsed.s;
             brightness = parsed.v;
             render();
-          });
+          }, docOpts);
 
           render();
           pickerStateMap.set(picker, {
@@ -678,18 +689,18 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           draftHex = next;
           applyMainColor(next);
           colorModalPicker.setFromHex(next);
-        });
+        }, docOpts);
 
         colorModalPicker.picker.querySelector("[data-color-value-input]").addEventListener("input", function () {
           draftHex = colorModalPicker.getHex();
-        });
+        }, docOpts);
 
         document.addEventListener("arc-modal:open", function (event) {
           const host = event.detail && event.detail.host;
           if (!host || host.id !== "arcModalHostColor") return;
           draftHex = committedHex;
           colorModalPicker.setFromHex(committedHex);
-        });
+        }, docOpts);
 
         document.addEventListener("arc-modal:close", function (event) {
           const host = event.detail && event.detail.host;
@@ -702,7 +713,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             colorModalPicker.setFromHex(committedHex);
             applyMainColor(committedHex);
           }
-        });
+        }, docOpts);
       }
 
       function initDemoAlerts() {
@@ -749,11 +760,11 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           if (messageNode) messageNode.textContent = message;
           alertNode.addEventListener("click", function () {
             closeAlert();
-          });
+          }, docOpts);
           if (closeNode) {
             closeNode.addEventListener("click", function () {
               closeAlert();
-            });
+            }, docOpts);
           }
           host.appendChild(alertNode);
           closeTimer = window.setTimeout(closeAlert, 3200);
@@ -762,7 +773,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         buttons.forEach(function (button) {
           button.addEventListener("click", function () {
             showAlert(button.getAttribute("data-demo-alert"));
-          });
+          }, docOpts);
         });
       }
 
@@ -777,7 +788,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         button.addEventListener("click", function () {
           body.setAttribute("data-elevation", button.getAttribute("data-elevation-tab"));
           setActive(elevationTabs, button);
-        });
+        }, docOpts);
       });
 
       const sizeTabs = Array.from(scope.querySelectorAll("[data-size-tab]"));
@@ -792,22 +803,21 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               console.warn("[arc-ui] hydrateInputGlyphs:", err);
             }
           });
-        });
+        }, docOpts);
       });
 
       const groupButtons = Array.from(scope.querySelectorAll(".btn-group-ds .btn"));
       groupButtons.forEach(function (button) {
         button.addEventListener("mousedown", function (event) {
           event.preventDefault();
-        });
+        }, docOpts);
       });
 
-      const tags = Array.from(scope.querySelectorAll("[data-tag-toggle]"));
-      tags.forEach(function (tag) {
-        tag.addEventListener("click", function () {
-          tag.classList.toggle("chip-active");
-        });
-      });
+      body.addEventListener("click", function (event) {
+        const tag = event.target && event.target.closest && event.target.closest("[data-tag-toggle]");
+        if (!tag || !body.contains(tag)) return;
+        tag.classList.toggle("chip-active");
+      }, docOpts);
 
       const demoTabLists = Array.from(scope.querySelectorAll('.tabs[aria-label="Tabs default"]'));
       demoTabLists.forEach(function (tabList) {
@@ -815,7 +825,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         tabButtons.forEach(function (button) {
           button.addEventListener("click", function () {
             setActive(tabButtons, button);
-          });
+          }, docOpts);
         });
       });
 
@@ -861,22 +871,22 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           closeSelectors();
           dropdown.hidden = !willOpen;
           trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
-        });
+        }, docOpts);
 
         dropdown.addEventListener("click", function (event) {
           event.stopPropagation();
-        });
+        }, docOpts);
 
         if (searchInput) {
           searchInput.addEventListener("click", function (event) {
             event.stopPropagation();
-          });
+          }, docOpts);
           searchInput.addEventListener("input", function () {
             applyRowFilter();
-          });
+          }, docOpts);
           searchInput.addEventListener("keydown", function (event) {
             event.stopPropagation();
-          });
+          }, docOpts);
         }
 
         const rows = Array.from(field.querySelectorAll(".dropdown-row"));
@@ -890,7 +900,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             field.classList.add("has-value");
             closeSelectors();
             trigger.focus();
-          });
+          }, docOpts);
         });
 
         const resetBtn = field.querySelector(".selector-reset");
@@ -905,7 +915,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             if (searchInput) searchInput.value = "";
             closeSelectors();
             trigger.focus();
-          });
+          }, docOpts);
         }
 
         applyRowFilter();
@@ -913,7 +923,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
 
       document.addEventListener("click", function () {
         closeSelectors();
-      });
+      }, docOpts);
 
       const liveInputs = Array.from(scope.querySelectorAll("[data-live-input]"));
       liveInputs.forEach(function (field) {
@@ -925,12 +935,12 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           field.classList.toggle("has-value", input.value.length > 0);
         }
 
-        input.addEventListener("input", syncInputState);
+        input.addEventListener("input", syncInputState, docOpts);
         clearBtn.addEventListener("click", function () {
           input.value = "";
           syncInputState();
           input.focus();
-        });
+        }, docOpts);
 
         syncInputState();
       });
@@ -945,12 +955,12 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           field.classList.toggle("has-value", input.value.length > 0);
         }
 
-        input.addEventListener("input", syncSearchState);
+        input.addEventListener("input", syncSearchState, docOpts);
         clearBtn.addEventListener("click", function () {
           input.value = "";
           syncSearchState();
           input.focus();
-        });
+        }, docOpts);
 
         syncSearchState();
       });
@@ -965,12 +975,12 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           field.classList.toggle("has-value", input.value.length > 0);
         }
 
-        input.addEventListener("input", syncMultiSearchState);
+        input.addEventListener("input", syncMultiSearchState, docOpts);
         clearBtn.addEventListener("click", function () {
           input.value = "";
           syncMultiSearchState();
           input.focus();
-        });
+        }, docOpts);
 
         syncMultiSearchState();
       });
@@ -1034,7 +1044,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             return;
           }
           fileInput.click();
-        });
+        }, docOpts);
 
         fileInput.addEventListener("change", function () {
           const file = fileInput.files && fileInput.files[0];
@@ -1044,11 +1054,11 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             delete valueNode.dataset.fullValue;
           }
           syncUploaderState();
-        });
+        }, docOpts);
 
         window.addEventListener("resize", function () {
           renderUploaderValue();
-        });
+        }, docOpts);
 
         syncUploaderState();
       });

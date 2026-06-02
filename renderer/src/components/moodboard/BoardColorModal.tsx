@@ -55,7 +55,7 @@ export default function BoardColorModal({
       <section
         className="arc-modal arc-modal--board-color"
         data-elevation="raised"
-        data-input-size="s"
+        data-input-size="m"
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
@@ -77,7 +77,7 @@ export default function BoardColorModal({
           <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose}>
             <span className="btn-ds__value">Отмена</span>
           </button>
-          <button type="button" className="btn btn-primary btn-ds btn-s" onClick={() => onApply(normalized)}>
+          <button type="button" className="btn btn-brand btn-ds btn-s" onClick={() => onApply(normalized)}>
             <span className="btn-ds__value">Готово</span>
           </button>
         </footer>

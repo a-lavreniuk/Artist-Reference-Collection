@@ -630,7 +630,7 @@ export default function AddCardsPage() {
             </p>
             <button
               type="button"
-              className="btn btn-primary btn-ds arc-add-dropzone-cta"
+              className="btn btn-brand btn-ds arc-add-dropzone-cta"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

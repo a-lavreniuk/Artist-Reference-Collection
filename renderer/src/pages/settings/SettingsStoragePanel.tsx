@@ -357,7 +357,7 @@ export default function SettingsStoragePanel() {
                   aria-invalid={fieldError}
                 />
               </div>
-              <button type="button" className="btn btn-primary btn-ds" onClick={() => void chooseLibraryFolderFlow()} disabled={busy || !window.arc}>
+              <button type="button" className="btn btn-brand btn-ds" onClick={() => void chooseLibraryFolderFlow()} disabled={busy || !window.arc}>
                 <span className="btn-ds__value">{busy ? '…' : 'Перенести'}</span>
               </button>
             </div>
@@ -429,7 +429,7 @@ export default function SettingsStoragePanel() {
             <div className="arc-settings-storage-controls">
               <button
                 type="button"
-                className="btn btn-primary btn-ds"
+                className="btn btn-brand btn-ds"
                 onClick={() => void runIntegrity()}
                 disabled={!window.arc || integrityBusy}
               >

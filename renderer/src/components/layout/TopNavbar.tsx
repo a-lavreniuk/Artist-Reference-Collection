@@ -320,7 +320,7 @@ export default function TopNavbar() {
 
           <div className="arc-navbar-group">
             <button
-              className="btn btn-primary btn-ds arc-navbar-add"
+              className="btn btn-brand btn-ds arc-navbar-add"
               type="button"
               disabled={maintenanceLocked}
               onClick={() => {

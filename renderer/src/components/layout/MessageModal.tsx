@@ -50,7 +50,7 @@ export default function MessageModal({
       <section
         className="arc-modal"
         data-elevation="raised"
-        data-input-size="s"
+        data-input-size="m"
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
@@ -71,7 +71,7 @@ export default function MessageModal({
           </div>
         </div>
         <footer className="arc-modal__footer arc-modal__footer--actions-1">
-          <button type="button" className="btn btn-primary btn-ds btn-s" onClick={onClose}>
+          <button type="button" className="btn btn-brand btn-ds btn-s" onClick={onClose}>
             <span className="btn-ds__value">{closeLabel}</span>
           </button>
         </footer>

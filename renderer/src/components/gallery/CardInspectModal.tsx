@@ -330,7 +330,6 @@ export default function CardInspectModal({
     <div
       ref={hostRef}
       className="arc-modal-host arc-modal-host--card-inspect"
-      data-elevation="default"
       aria-hidden="false"
       role="presentation"
       onClick={(event) => {
@@ -338,8 +337,8 @@ export default function CardInspectModal({
       }}
     >
       <section
-        className="arc-modal arc-modal--card-detail arc-ui-kit-scope"
-        data-elevation="default"
+        className="arc-modal arc-modal--card-detail"
+        data-elevation="raised"
         data-input-size="m"
         data-btn-size="m"
         role="dialog"

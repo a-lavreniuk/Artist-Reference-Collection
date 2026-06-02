@@ -249,7 +249,7 @@ export default function TagSettingsModal({
         <section
           className="arc-modal"
           data-elevation="raised"
-          data-input-size="s"
+          data-input-size="m"
           data-btn-size="s"
           role="dialog"
           aria-modal="true"
@@ -488,7 +488,7 @@ export default function TagSettingsModal({
               </button>
               <button
                 type="button"
-                className="btn btn-primary btn-ds btn-s"
+                className="btn btn-brand btn-ds btn-s"
                 disabled={primarySaveDisabled}
                 onClick={() => void submit()}
               >
