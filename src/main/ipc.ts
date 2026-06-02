@@ -14,8 +14,12 @@ import { migrateLibraryToFolder } from './libraryMigrate';
 import { appendHistory, readHistory } from './libraryHistory';
 import { runBackup } from './backupLibrary';
 import { discoverBackupParts, restoreFromParts } from './restoreLibrary';
-
-const METADATA_FILENAME = 'arc2-metadata.json';
+import {
+  ensureLibraryFilenamesMigrated,
+  LEGACY_PENDING_RESTORE_FILENAME,
+  METADATA_FILENAME,
+  PENDING_RESTORE_FILENAME
+} from './libraryFilenames';
 const LIBRARY_CONFIG_FILENAME = 'library-root.json';
 
 function libraryConfigPath(): string {
@@ -59,10 +63,25 @@ function assertNotMaintenance(): void {
   }
 }
 
-const PENDING_RESTORE_FILENAME = 'arc2-pending-restore.json';
-
 function pendingRestorePath(): string {
   return path.join(app.getPath('userData'), PENDING_RESTORE_FILENAME);
+}
+
+async function ensurePendingRestoreMigrated(): Promise<void> {
+  const nextAbs = pendingRestorePath();
+  const legacyAbs = path.join(app.getPath('userData'), LEGACY_PENDING_RESTORE_FILENAME);
+  try {
+    await stat(nextAbs);
+    return;
+  } catch {
+    /* continue */
+  }
+  try {
+    await stat(legacyAbs);
+    await rename(legacyAbs, nextAbs);
+  } catch {
+    /* no legacy file */
+  }
 }
 
 let backupAbortController: AbortController | null = null;
@@ -254,6 +273,7 @@ export function registerArcIpc(): void {
   ipcMain.handle('arc:read-metadata', async () => {
     const root = await readLibraryRootFromDisk();
     if (!root) return null;
+    await ensureLibraryFilenamesMigrated(root);
     try {
       const raw = await readFile(metadataPath(root), 'utf8');
       return JSON.parse(raw) as unknown;
@@ -266,6 +286,7 @@ export function registerArcIpc(): void {
     assertNotMaintenance();
     const root = await readLibraryRootFromDisk();
     if (!root) throw new Error('Библиотека не выбрана');
+    await ensureLibraryFilenamesMigrated(root);
     const dest = metadataPath(root);
     const tmp = `${dest}.${process.pid}.tmp`;
     const payload = JSON.stringify(data, null, 2);
@@ -732,6 +753,7 @@ export function registerArcIpc(): void {
   );
 
   ipcMain.handle('arc:consume-pending-restore-modal', async () => {
+    await ensurePendingRestoreMigrated();
     const p = pendingRestorePath();
     try {
       const raw = await readFile(p, 'utf8');
@@ -766,7 +788,7 @@ export function registerArcIpc(): void {
     return { missing };
   });
 
-  /** Файлы на диске в `media/` и в корне библиотеки (кроме arc2-metadata.json), которых нет в переданном списке ссылок из метаданных. */
+  /** Файлы на диске в `media/` и в корне библиотеки (кроме arc-metadata.json), которых нет в переданном списке ссылок из метаданных. */
   ipcMain.handle('arc:scan-library-orphan-files', async (_e, referencedList: unknown) => {
     const root = await readLibraryRootFromDisk();
     if (!root) return { orphans: [] as string[] };

@@ -14,17 +14,17 @@ export function TagTooltipBody({ description, imageDataUrl }: TagTooltipBodyProp
   const row = hasText && hasImage;
 
   return (
-    <div className={`arc2-tag-tooltip${row ? ' arc2-tag-tooltip--row' : ''}`}>
+    <div className={`arc-tag-tooltip${row ? ' arc-tag-tooltip--row' : ''}`}>
       {hasImage && (
         <img
-          className="arc2-tag-tooltip__image"
+          className="arc-tag-tooltip__image"
           src={imageDataUrl}
           alt=""
           loading="lazy"
           decoding="async"
         />
       )}
-      {hasText && <div className="arc2-tag-tooltip__text">{description}</div>}
+      {hasText && <div className="arc-tag-tooltip__text">{description}</div>}
     </div>
   );
 }

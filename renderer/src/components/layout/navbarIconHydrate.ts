@@ -1,5 +1,5 @@
 /**
- * Подставляет в узлы `arc2-icon-*` inline-SVG из `public/ui/icons/`:
+ * Подставляет в узлы `arc-icon-*` inline-SVG из `public/ui/icons/`:
  * `stroke`/`fill` с белого переводятся в `currentColor`, чтобы работали токены родителя.
  */
 const ICON_DIR = '/ui/icons/';
@@ -94,51 +94,51 @@ const SIZE_SUFFIX_RE = /_(s|m|l|xl)\.svg$/;
 type UiSize = 's' | 'm' | 'l' | 'xl';
 
 const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
-  arc2_icon_search: 'search',
-  arc2_icon_close: 'close',
-  arc2_icon_plus: 'plus',
-  arc2_icon_images: 'images',
-  arc2_icon_image: 'image',
-  arc2_icon_play: 'play',
-  arc2_icon_whiteboard: 'whiteboard',
-  arc2_icon_hard_drive: 'hardDrive',
-  arc2_icon_pie_chart: 'pieChart',
-  arc2_icon_history: 'history',
-  arc2_icon_copy: 'copy',
-  arc2_icon_save: 'save',
-  arc2_icon_chevron: 'chevron',
-  arc2_icon_arrow_up: 'arrowUp',
-  arc2_icon_arrow_down: 'arrowDown',
-  arc2_icon_arrow_up_right: 'arrowUpRight',
-  arc2_icon_trash: 'trash',
-  arc2_icon_bookmark: 'bookmark',
-  arc2_icon_bookmark_plus: 'bookmarkPlus',
-  arc2_icon_bookmark_minus: 'bookmarkMinus',
-  arc2_icon_download: 'download',
-  arc2_icon_folder_open: 'folderOpen',
-  arc2_icon_edit: 'edit',
-  arc2_icon_tag: 'tag',
-  arc2_icon_server: 'server',
-  arc2_icon_undo: 'undo',
-  arc2_icon_cursor: 'cursor',
-  arc2_icon_pan: 'pan',
-  arc2_icon_pencil: 'pencil',
-  arc2_icon_type: 'type',
-  arc2_icon_eraser: 'eraser',
-  arc2_icon_line_thin: 'lineThin',
-  arc2_icon_line_thik: 'lineThik',
-  arc2_icon_predictable: 'predictable',
-  arc2_icon_line: 'line',
-  arc2_icon_circle: 'circle',
-  arc2_icon_align_left: 'alignLeft',
-  arc2_icon_align_center: 'alignCenter',
-  arc2_icon_align_right: 'alignRight',
-  arc2_icon_minus: 'minus',
-  arc2_icon_minimize: 'minimize'
+  arc_icon_search: 'search',
+  arc_icon_close: 'close',
+  arc_icon_plus: 'plus',
+  arc_icon_images: 'images',
+  arc_icon_image: 'image',
+  arc_icon_play: 'play',
+  arc_icon_whiteboard: 'whiteboard',
+  arc_icon_hard_drive: 'hardDrive',
+  arc_icon_pie_chart: 'pieChart',
+  arc_icon_history: 'history',
+  arc_icon_copy: 'copy',
+  arc_icon_save: 'save',
+  arc_icon_chevron: 'chevron',
+  arc_icon_arrow_up: 'arrowUp',
+  arc_icon_arrow_down: 'arrowDown',
+  arc_icon_arrow_up_right: 'arrowUpRight',
+  arc_icon_trash: 'trash',
+  arc_icon_bookmark: 'bookmark',
+  arc_icon_bookmark_plus: 'bookmarkPlus',
+  arc_icon_bookmark_minus: 'bookmarkMinus',
+  arc_icon_download: 'download',
+  arc_icon_folder_open: 'folderOpen',
+  arc_icon_edit: 'edit',
+  arc_icon_tag: 'tag',
+  arc_icon_server: 'server',
+  arc_icon_undo: 'undo',
+  arc_icon_cursor: 'cursor',
+  arc_icon_pan: 'pan',
+  arc_icon_pencil: 'pencil',
+  arc_icon_type: 'type',
+  arc_icon_eraser: 'eraser',
+  arc_icon_line_thin: 'lineThin',
+  arc_icon_line_thik: 'lineThik',
+  arc_icon_predictable: 'predictable',
+  arc_icon_line: 'line',
+  arc_icon_circle: 'circle',
+  arc_icon_align_left: 'alignLeft',
+  arc_icon_align_center: 'alignCenter',
+  arc_icon_align_right: 'alignRight',
+  arc_icon_minus: 'minus',
+  arc_icon_minimize: 'minimize'
 };
 
 const ICON_SELECTOR =
-  '.arc2-icon-search, .arc2-icon-plus, .arc2-icon-minimize, .arc2-icon-images, .arc2-icon-image, .arc2-icon-play, .arc2-icon-whiteboard, .arc2-icon-hard-drive, .arc2-icon-pie-chart, .arc2-icon-history, .arc2-icon-copy, .arc2-icon-close, .arc2-icon-save, .arc2-icon-chevron, .arc2-icon-arrow-up, .arc2-icon-arrow-down, .arc2-icon-arrow-up-right, .arc2-icon-trash, .arc2-icon-bookmark, .arc2-icon-bookmark-plus, .arc2-icon-bookmark-minus, .arc2-icon-download, .arc2-icon-folder-open, .arc2-icon-edit, .arc2-icon-tag, .arc2-icon-server, .arc2-icon-undo, .arc2-icon-cursor, .arc2-icon-pan, .arc2-icon-pencil, .arc2-icon-type, .arc2-icon-eraser, .arc2-icon-line-thin, .arc2-icon-line-thik, .arc2-icon-predictable, .arc2-icon-line, .arc2-icon-circle, .arc2-icon-align-left, .arc2-icon-align-center, .arc2-icon-align-right, .arc2-icon-minus';
+  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-trash, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus';
 
 const svgMarkupCache = new Map<string, string>();
 let preloadPromise: Promise<void> | null = null;
@@ -180,7 +180,7 @@ function iconUrl(file: string): string {
 }
 
 function getIconSize(scope?: HTMLElement): UiSize {
-  const explicit = scope?.closest('[data-arc2-icon-size]')?.getAttribute('data-arc2-icon-size');
+  const explicit = scope?.closest('[data-arc-icon-size]')?.getAttribute('data-arc-icon-size');
   if (explicit === 's' || explicit === 'm' || explicit === 'l' || explicit === 'xl') return explicit;
   const btnSize =
     scope?.closest('[data-btn-size]')?.getAttribute('data-btn-size') ?? document.body?.getAttribute('data-btn-size');
@@ -228,7 +228,7 @@ function preloadAllIcons(): Promise<void> {
 
 function classToIconKey(element: HTMLElement): IconKey | null {
   for (const className of element.classList) {
-    if (!className.startsWith('arc2-icon-')) continue;
+    if (!className.startsWith('arc-icon-')) continue;
     const key = className.replace(/-/g, '_');
     const mapped = ICON_CLASS_TO_KEY[key];
     if (mapped) return mapped;
@@ -241,18 +241,18 @@ function injectSvgMarkup(host: HTMLElement, normalizedMarkup: string, file: stri
   const svg = host.querySelector('svg');
   if (!svg) {
     host.innerHTML = '';
-    delete host.dataset.arc2IconFile;
+    delete host.dataset.arcIconFile;
     return;
   }
   svg.classList.add('arc-navbar-icon-svg');
   svg.setAttribute('aria-hidden', 'true');
   svg.removeAttribute('width');
   svg.removeAttribute('height');
-  host.dataset.arc2IconFile = file;
+  host.dataset.arcIconFile = file;
 }
 
 /** Асинхронно: дожидается кэша файлов, затем вставляет SVG с currentColor. */
-export async function hydrateArc2NavbarIcons(scope: ParentNode = document): Promise<void> {
+export async function hydrateArcNavbarIcons(scope: ParentNode = document): Promise<void> {
   await preloadAllIcons();
 
   const nodes = scope.querySelectorAll(ICON_SELECTOR);
@@ -261,13 +261,13 @@ export async function hydrateArc2NavbarIcons(scope: ParentNode = document): Prom
     const iconKey = classToIconKey(node);
     if (!iconKey) continue;
     const { preferred, fallback } = resolveIconFile(iconKey, node);
-    if (node.dataset.arc2IconFile === preferred && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
+    if (node.dataset.arcIconFile === preferred && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
       continue;
     }
     const normalized = (await ensureSvgMarkup(preferred)) ?? (preferred !== fallback ? await ensureSvgMarkup(fallback) : null);
     if (!normalized) continue;
     const usedFile = svgMarkupCache.get(preferred) ? preferred : fallback;
-    if (node.dataset.arc2IconFile === usedFile && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
+    if (node.dataset.arcIconFile === usedFile && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
       continue;
     }
     injectSvgMarkup(node, normalized, usedFile);

@@ -25,7 +25,7 @@ export default function SettingsVersionLabel() {
 
   return (
     <>
-      <button type="button" className="arc2-settings-version typo-p-l" onClick={() => void openNotes()}>
+      <button type="button" className="arc-settings-version typo-p-l" onClick={() => void openNotes()}>
         v{version}
       </button>
       {releaseNotes ? (

@@ -2,22 +2,22 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   addCategory,
-  ARC2_CARDS_CHANGED_EVENT,
-  ARC2_COLLECTIONS_CHANGED_EVENT,
+  ARC_CARDS_CHANGED_EVENT,
+  ARC_COLLECTIONS_CHANGED_EVENT,
   getNavbarMetrics,
   notifyCategoriesChanged,
   type NavbarMetrics
 } from '../../services/db';
 import {
-  ARC2_ADD_CARDS_QUEUE_STATE_EVENT,
-  ARC2_ADD_CARDS_SUBMIT_REQUEST,
+  ARC_ADD_CARDS_QUEUE_STATE_EVENT,
+  ARC_ADD_CARDS_SUBMIT_REQUEST,
   getLastAddCardsQueueState,
-  ARC2_EDIT_CARD_SUBMIT_REQUEST,
-  ARC2_COLLECTIONS_ADD_REQUEST,
-  ARC2_NAVBAR_COLLECTION_TITLE_EVENT,
-  ARC2_RENAME_COLLECTION_REQUEST
+  ARC_EDIT_CARD_SUBMIT_REQUEST,
+  ARC_COLLECTIONS_ADD_REQUEST,
+  ARC_NAVBAR_COLLECTION_TITLE_EVENT,
+  ARC_RENAME_COLLECTION_REQUEST
 } from './navbarEvents';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import NewCategoryModal from './NewCategoryModal';
 import NavbarSearch, { formatNavbarTabCount } from './NavbarSearch';
 import {
@@ -159,13 +159,13 @@ export default function TopNavbar() {
   useEffect(() => {
     void refreshMetrics();
     const onMetrics = () => void refreshMetrics();
-    window.addEventListener(ARC2_CARDS_CHANGED_EVENT, onMetrics);
-    window.addEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onMetrics);
-    window.addEventListener('arc2:library-changed', onMetrics);
+    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onMetrics);
+    window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onMetrics);
+    window.addEventListener('arc:library-changed', onMetrics);
     return () => {
-      window.removeEventListener(ARC2_CARDS_CHANGED_EVENT, onMetrics);
-      window.removeEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onMetrics);
-      window.removeEventListener('arc2:library-changed', onMetrics);
+      window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onMetrics);
+      window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onMetrics);
+      window.removeEventListener('arc:library-changed', onMetrics);
     };
   }, []);
 
@@ -179,8 +179,8 @@ export default function TopNavbar() {
       const ce = e as CustomEvent<{ title?: string }>;
       setCollectionDetailTitle(typeof ce.detail?.title === 'string' ? ce.detail.title : '');
     };
-    window.addEventListener(ARC2_NAVBAR_COLLECTION_TITLE_EVENT, fn);
-    return () => window.removeEventListener(ARC2_NAVBAR_COLLECTION_TITLE_EVENT, fn);
+    window.addEventListener(ARC_NAVBAR_COLLECTION_TITLE_EVENT, fn);
+    return () => window.removeEventListener(ARC_NAVBAR_COLLECTION_TITLE_EVENT, fn);
   }, []);
 
   useEffect(() => {
@@ -193,8 +193,8 @@ export default function TopNavbar() {
       const ce = event as CustomEvent<{ hasItems?: boolean; count?: number }>;
       apply(ce.detail ?? {});
     };
-    window.addEventListener(ARC2_ADD_CARDS_QUEUE_STATE_EVENT, onQueueState);
-    return () => window.removeEventListener(ARC2_ADD_CARDS_QUEUE_STATE_EVENT, onQueueState);
+    window.addEventListener(ARC_ADD_CARDS_QUEUE_STATE_EVENT, onQueueState);
+    return () => window.removeEventListener(ARC_ADD_CARDS_QUEUE_STATE_EVENT, onQueueState);
   }, []);
 
   useEffect(() => {
@@ -225,21 +225,21 @@ export default function TopNavbar() {
   };
 
   const galleryTabs: TabItem[] = [
-    { key: 'all', label: 'Все карточки', count: metrics.totalCards, iconClass: 'arc2-icon-images' },
-    { key: 'images', label: 'Изображения', count: metrics.imageCards, iconClass: 'arc2-icon-image' },
-    { key: 'videos', label: 'Видео', count: metrics.videoCards, iconClass: 'arc2-icon-play' }
+    { key: 'all', label: 'Все карточки', count: metrics.totalCards, iconClass: 'arc-icon-images' },
+    { key: 'images', label: 'Изображения', count: metrics.imageCards, iconClass: 'arc-icon-image' },
+    { key: 'videos', label: 'Видео', count: metrics.videoCards, iconClass: 'arc-icon-play' }
   ];
 
   const moodboardTabs: TabItem[] = [
-    { key: 'cards', label: 'Карточки', count: metrics.moodboardCards, iconClass: 'arc2-icon-images' },
-    { key: 'board', label: 'Доска', iconClass: 'arc2-icon-whiteboard' }
+    { key: 'cards', label: 'Карточки', count: metrics.moodboardCards, iconClass: 'arc-icon-images' },
+    { key: 'board', label: 'Доска', iconClass: 'arc-icon-whiteboard' }
   ];
 
   const settingsTabs: TabItem[] = [
-    { key: 'storage', label: 'Хранилище', iconClass: 'arc2-icon-hard-drive' },
-    { key: 'statistics', label: 'Статистика', iconClass: 'arc2-icon-pie-chart' },
-    { key: 'history', label: 'История', iconClass: 'arc2-icon-history' },
-    { key: 'duplicates', label: 'Поиск дублей', iconClass: 'arc2-icon-copy' }
+    { key: 'storage', label: 'Хранилище', iconClass: 'arc-icon-hard-drive' },
+    { key: 'statistics', label: 'Статистика', iconClass: 'arc-icon-pie-chart' },
+    { key: 'history', label: 'История', iconClass: 'arc-icon-history' },
+    { key: 'duplicates', label: 'Поиск дублей', iconClass: 'arc-icon-copy' }
   ];
 
   const title = getTitle(activeView, collectionDetailTitle);
@@ -255,7 +255,7 @@ export default function TopNavbar() {
 
   useLayoutEffect(() => {
     if (headerRef.current) {
-      void hydrateArc2NavbarIcons(headerRef.current);
+      void hydrateArcNavbarIcons(headerRef.current);
     }
   }, [
     activeView,
@@ -273,28 +273,28 @@ export default function TopNavbar() {
   ]);
 
   const requestCollectionsAdd = () => {
-    window.dispatchEvent(new CustomEvent(ARC2_COLLECTIONS_ADD_REQUEST));
+    window.dispatchEvent(new CustomEvent(ARC_COLLECTIONS_ADD_REQUEST));
   };
 
   const requestAddCardsSubmit = () => {
-    window.dispatchEvent(new CustomEvent(ARC2_ADD_CARDS_SUBMIT_REQUEST));
+    window.dispatchEvent(new CustomEvent(ARC_ADD_CARDS_SUBMIT_REQUEST));
   };
 
   const requestEditCardSubmit = () => {
-    window.dispatchEvent(new CustomEvent(ARC2_EDIT_CARD_SUBMIT_REQUEST));
+    window.dispatchEvent(new CustomEvent(ARC_EDIT_CARD_SUBMIT_REQUEST));
   };
 
   return (
     <>
       <header
         ref={headerRef}
-        className="arc2-navbar panel elevation-default"
+        className="arc-navbar panel elevation-default"
         data-elevation="default"
         data-navbar-elevation="default"
       >
-        <div className="arc2-navbar-row">
-          <div className="arc2-navbar-group">
-            <div className="tabs arc2-navbar-main-tabs" role="tablist" aria-label="Основная навигация">
+        <div className="arc-navbar-row">
+          <div className="arc-navbar-group">
+            <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация">
               {MAIN_TABS.map((tab) => {
                 const isActive = tab.key === activeMainTab;
                 return (
@@ -314,13 +314,13 @@ export default function TopNavbar() {
             </div>
           </div>
 
-          <div className="arc2-navbar-group arc2-navbar-group--grow">
+          <div className="arc-navbar-group arc-navbar-group--grow">
             <NavbarSearch />
           </div>
 
-          <div className="arc2-navbar-group">
+          <div className="arc-navbar-group">
             <button
-              className="btn btn-primary btn-ds arc2-navbar-add"
+              className="btn btn-primary btn-ds arc-navbar-add"
               type="button"
               disabled={maintenanceLocked}
               onClick={() => {
@@ -329,7 +329,7 @@ export default function TopNavbar() {
               }}
             >
               <span className="btn-ds__value">Добавить карточки</span>
-              <span className="btn-ds__icon arc2-icon-plus" aria-hidden="true"></span>
+              <span className="btn-ds__icon arc-icon-plus" aria-hidden="true"></span>
             </button>
           </div>
         </div>
@@ -337,8 +337,8 @@ export default function TopNavbar() {
         <div
           className={
             activeView === 'collectionDetail'
-              ? 'arc2-navbar-row arc2-navbar-row--collection-detail'
-              : 'arc2-navbar-row'
+              ? 'arc-navbar-row arc-navbar-row--collection-detail'
+              : 'arc-navbar-row'
           }
         >
           {activeView === 'collectionDetail' ? (
@@ -349,27 +349,27 @@ export default function TopNavbar() {
                 aria-label="Назад к списку коллекций"
                 onClick={() => navigate('/collections')}
               >
-                <span className="btn-icon-only__glyph arc2-icon-undo" aria-hidden="true" />
+                <span className="btn-icon-only__glyph arc-icon-undo" aria-hidden="true" />
               </button>
-              <div className="arc2-navbar-collection-heading">
-                <h1 className="h1 arc2-navbar-title arc2-navbar-title--collection">{title}</h1>
+              <div className="arc-navbar-collection-heading">
+                <h1 className="h1 arc-navbar-title arc-navbar-title--collection">{title}</h1>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-ds btn-icon-only arc2-navbar-collection-rename"
+                  className="btn btn-ghost btn-ds btn-icon-only arc-navbar-collection-rename"
                   aria-label="Изменить название коллекции"
-                  onClick={() => window.dispatchEvent(new CustomEvent(ARC2_RENAME_COLLECTION_REQUEST))}
+                  onClick={() => window.dispatchEvent(new CustomEvent(ARC_RENAME_COLLECTION_REQUEST))}
                 >
-                  <span className="btn-icon-only__glyph arc2-icon-edit" aria-hidden="true" />
+                  <span className="btn-icon-only__glyph arc-icon-edit" aria-hidden="true" />
                 </button>
               </div>
             </>
           ) : activeView !== 'editCardDetail' ? (
-            <h1 className="h1 arc2-navbar-title">{title}</h1>
+            <h1 className="h1 arc-navbar-title">{title}</h1>
           ) : null}
           {activeView === 'collectionDetail' ? (
-            <div className="arc2-navbar-collection-row-spacer" aria-hidden="true" />
+            <div className="arc-navbar-collection-row-spacer" aria-hidden="true" />
           ) : null}
-          <div className="arc2-navbar-secondary-actions">
+          <div className="arc-navbar-secondary-actions">
             {activeView === 'uiKit' && (
               <UiKitNavbarToolbar
                 elevation={uiKitElev}
@@ -395,7 +395,7 @@ export default function TopNavbar() {
                 onClick={openAddCategoryModal}
               >
                 <span className="btn-ds__value">Добавить категорию</span>
-                <span className="btn-ds__icon arc2-icon-plus" aria-hidden="true"></span>
+                <span className="btn-ds__icon arc-icon-plus" aria-hidden="true"></span>
               </button>
             )}
             {activeView === 'collections' && (
@@ -406,7 +406,7 @@ export default function TopNavbar() {
                 onClick={requestCollectionsAdd}
               >
                 <span className="btn-ds__value">Добавить коллекцию</span>
-                <span className="btn-ds__icon arc2-icon-plus" aria-hidden="true"></span>
+                <span className="btn-ds__icon arc-icon-plus" aria-hidden="true"></span>
               </button>
             )}
             {activeView === 'moodboard' && (
@@ -427,24 +427,24 @@ export default function TopNavbar() {
               />
             )}
             {activeView === 'add' && addQueueHasItems && (
-              <div className="arc2-navbar-action-group">
+              <div className="arc-navbar-action-group">
                 <button className="btn btn-outline btn-ds" type="button" onClick={() => navigate('/gallery')}>
                   <span className="btn-ds__value">Отмена</span>
                 </button>
                 <button
-                  className="btn btn-success btn-ds arc2-navbar-add-submit"
+                  className="btn btn-success btn-ds arc-navbar-add-submit"
                   type="button"
                   onClick={requestAddCardsSubmit}
                   aria-label={`Добавить ${addQueueCount} карточек`}
                 >
                   <span className="btn-ds__value">Добавить</span>
                   <span className="btn-ds__counter">{addQueueCount}</span>
-                  <span className="btn-ds__icon arc2-navbar-add-submit-plus" aria-hidden="true"></span>
+                  <span className="btn-ds__icon arc-navbar-add-submit-plus" aria-hidden="true"></span>
                 </button>
               </div>
             )}
             {activeView === 'collectionDetail' && (
-              <div className="arc2-navbar-collection-detail">
+              <div className="arc-navbar-collection-detail">
                 <FilterTabs
                   ariaLabel="Фильтрация карточек коллекции"
                   items={galleryTabs}
@@ -455,15 +455,15 @@ export default function TopNavbar() {
               </div>
             )}
             {activeView === 'editCardDetail' && (
-              <div className="arc2-navbar-edit-detail">
-                <h1 className="h1 arc2-navbar-title">Изменить карточку</h1>
-                <div className="arc2-navbar-action-group">
+              <div className="arc-navbar-edit-detail">
+                <h1 className="h1 arc-navbar-title">Изменить карточку</h1>
+                <div className="arc-navbar-action-group">
                   <button className="btn btn-outline btn-ds" type="button" onClick={() => navigate('/gallery')}>
                     <span className="btn-ds__value">Отмена</span>
                   </button>
                   <button className="btn btn-success btn-ds" type="button" onClick={requestEditCardSubmit}>
                     <span className="btn-ds__value">Сохранить изменения</span>
-                    <span className="btn-ds__icon arc2-icon-save" aria-hidden="true"></span>
+                    <span className="btn-ds__icon arc-icon-save" aria-hidden="true"></span>
                   </button>
                 </div>
               </div>
@@ -509,9 +509,9 @@ function UiKitNavbarToolbar({
   ];
 
   return (
-    <div className="arc2-navbar-ui-kit-controls">
+    <div className="arc-navbar-ui-kit-controls">
       <div className="control-group">
-        <div className="tabs arc2-navbar-ui-kit-tabs" role="tablist" aria-label="Elevation">
+        <div className="tabs arc-navbar-ui-kit-tabs" role="tablist" aria-label="Elevation">
           {elevOptions.map((opt) => {
             const isActive = opt.key === elevation;
             return (
@@ -530,7 +530,7 @@ function UiKitNavbarToolbar({
         </div>
       </div>
       <div className="control-group">
-        <div className="tabs arc2-navbar-ui-kit-tabs" role="tablist" aria-label="Глобальный размер">
+        <div className="tabs arc-navbar-ui-kit-tabs" role="tablist" aria-label="Глобальный размер">
           {sizeOptions.map((opt) => {
             const isActive = opt.key === size;
             return (
@@ -566,7 +566,7 @@ function FilterTabs({
   disabled?: boolean;
 }) {
   return (
-    <div className="tabs arc2-navbar-filters" role="tablist" aria-label={ariaLabel}>
+    <div className="tabs arc-navbar-filters" role="tablist" aria-label={ariaLabel}>
       {items.map((item) => {
         const isActive = item.key === activeKey;
         return (

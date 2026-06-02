@@ -95,8 +95,8 @@ export default function SettingsStoragePanel() {
       void refresh();
       void refreshBytesTotal();
     };
-    window.addEventListener('arc2:library-changed', onLibraryChanged);
-    return () => window.removeEventListener('arc2:library-changed', onLibraryChanged);
+    window.addEventListener('arc:library-changed', onLibraryChanged);
+    return () => window.removeEventListener('arc:library-changed', onLibraryChanged);
   }, [refresh, refreshBytesTotal]);
 
   /**
@@ -151,7 +151,7 @@ export default function SettingsStoragePanel() {
         invalidateLibraryCache();
         await refresh();
         await getNavbarMetrics();
-        window.dispatchEvent(new CustomEvent('arc2:library-changed'));
+        window.dispatchEvent(new CustomEvent('arc:library-changed'));
       } finally {
         setBusy(false);
       }
@@ -190,7 +190,7 @@ export default function SettingsStoragePanel() {
       invalidateLibraryCache();
       await refresh();
       await getNavbarMetrics();
-      window.dispatchEvent(new CustomEvent('arc2:library-changed'));
+      window.dispatchEvent(new CustomEvent('arc:library-changed'));
       setOldFolderPath(res.oldLibraryPath);
     } finally {
       setBusy(false);
@@ -275,7 +275,7 @@ export default function SettingsStoragePanel() {
             const fixed = applyMetadataWarningFixes(meta);
             await arc.writeMetadata(fixed);
             invalidateLibraryCache();
-            window.dispatchEvent(new CustomEvent('arc2:library-changed'));
+            window.dispatchEvent(new CustomEvent('arc:library-changed'));
             const nextMeta = (await arc.readMetadata()) as ArcMetadataV1 | null;
             if (!nextMeta) {
               setInfoModal('Нет метаданных библиотеки.');
@@ -335,21 +335,21 @@ export default function SettingsStoragePanel() {
   };
 
   return (
-    <div className="arc2-settings-stack">
-      <div className="arc2-settings-storage-row">
-        <section className="arc2-settings-block panel elevation-sunken arc2-settings-block--tile">
-          <div className="arc2-settings-storage-layout">
-            <span className="arc2-settings-storage-icon arc2-settings-storage-icon--hard-drive" aria-hidden="true" />
-            <div className="arc2-settings-storage-head">
-              <h2 className="h2 arc2-settings-block__title arc2-settings-storage-title">Локальное хранилище</h2>
-              <p className="typo-p-l arc2-settings-storage-subtitle">
+    <div className="arc-settings-stack">
+      <div className="arc-settings-storage-row">
+        <section className="arc-settings-block panel elevation-sunken arc-settings-block--tile">
+          <div className="arc-settings-storage-layout">
+            <span className="arc-settings-storage-icon arc-settings-storage-icon--hard-drive" aria-hidden="true" />
+            <div className="arc-settings-storage-head">
+              <h2 className="h2 arc-settings-block__title arc-settings-storage-title">Локальное хранилище</h2>
+              <p className="typo-p-l arc-settings-storage-subtitle">
                 Папка на компьютере для автоматического сохранения загружаемых файлов
               </p>
             </div>
-            <div className="arc2-settings-storage-controls">
+            <div className="arc-settings-storage-controls">
               <div className={`field field-full input-live${fieldError ? ' field-error' : ''}`}>
                 <input
-                  id="arc2-settings-library-path"
+                  id="arc-settings-library-path"
                   className="input input--size-l"
                   readOnly
                   value={libraryPath ?? 'Не выбрана'}
@@ -364,20 +364,20 @@ export default function SettingsStoragePanel() {
           </div>
           {migrateError ? <p className="hint">{migrateError}</p> : null}
           {!window.arc && arcHint ? (
-            <div className="typo-p-m hint arc2-settings-electron-hint">{arcHint}</div>
+            <div className="typo-p-m hint arc-settings-electron-hint">{arcHint}</div>
           ) : null}
         </section>
 
-        <section className="arc2-settings-block panel elevation-sunken arc2-settings-block--tile">
-          <div className="arc2-settings-storage-layout">
-            <span className="arc2-settings-storage-icon arc2-settings-storage-icon--copy" aria-hidden="true" />
-            <div className="arc2-settings-storage-head">
-              <h2 className="h2 arc2-settings-block__title arc2-settings-storage-title">Резервная копия</h2>
-              <p className="typo-p-l arc2-settings-storage-subtitle">
+        <section className="arc-settings-block panel elevation-sunken arc-settings-block--tile">
+          <div className="arc-settings-storage-layout">
+            <span className="arc-settings-storage-icon arc-settings-storage-icon--copy" aria-hidden="true" />
+            <div className="arc-settings-storage-head">
+              <h2 className="h2 arc-settings-block__title arc-settings-storage-title">Резервная копия</h2>
+              <p className="typo-p-l arc-settings-storage-subtitle">
                 Создание архивной копии базы данных. Архив можно разделить на несколько частей
               </p>
             </div>
-            <div className="arc2-settings-backup-controls">
+            <div className="arc-settings-backup-controls">
               <div className="btn-group btn-group-ds" role="group" aria-label="Количество частей резервной копии">
                 {BACKUP_PARTS.map((n) => {
                   const selected = confirmedParts === n;
@@ -417,16 +417,16 @@ export default function SettingsStoragePanel() {
           </div>
         </section>
 
-        <section className="arc2-settings-block panel elevation-sunken arc2-settings-block--tile">
-          <div className="arc2-settings-storage-layout">
-            <span className="arc2-settings-storage-icon arc2-settings-storage-icon--file-search" aria-hidden="true" />
-            <div className="arc2-settings-storage-head">
-              <h2 className="h2 arc2-settings-block__title arc2-settings-storage-title">Проверка целостности файлов</h2>
-              <p className="typo-p-l arc2-settings-storage-subtitle">
+        <section className="arc-settings-block panel elevation-sunken arc-settings-block--tile">
+          <div className="arc-settings-storage-layout">
+            <span className="arc-settings-storage-icon arc-settings-storage-icon--file-search" aria-hidden="true" />
+            <div className="arc-settings-storage-head">
+              <h2 className="h2 arc-settings-block__title arc-settings-storage-title">Проверка целостности файлов</h2>
+              <p className="typo-p-l arc-settings-storage-subtitle">
                 Проверьте базу данных на наличие ошибок, отсутствующих файлов или некорректных ссылок
               </p>
             </div>
-            <div className="arc2-settings-storage-controls">
+            <div className="arc-settings-storage-controls">
               <button
                 type="button"
                 className="btn btn-primary btn-ds"

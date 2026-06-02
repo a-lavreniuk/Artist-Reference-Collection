@@ -23,9 +23,9 @@ export default function MaintenanceBanner() {
   if (!locked) return null;
 
   return (
-    <div className="arc2-maintenance-banner" role="status" aria-live="polite" aria-busy="true">
-      <div className="arc2-maintenance-banner__panel">
-        <p className="typo-p-m arc2-maintenance-banner__text">Идёт операция…</p>
+    <div className="arc-maintenance-banner" role="status" aria-live="polite" aria-busy="true">
+      <div className="arc-maintenance-banner__panel">
+        <p className="typo-p-m arc-maintenance-banner__text">Идёт операция…</p>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 type Props = {
   title?: string;
@@ -22,7 +22,7 @@ export default function MessageModal({
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [message, title]);
 
@@ -54,15 +54,15 @@ export default function MessageModal({
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2MessageModalTitle"
+        aria-labelledby="arcMessageModalTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2MessageModalTitle">
+          <h3 className="arc-modal__title" id="arcMessageModalTitle">
             {title}
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">

@@ -33,13 +33,13 @@ export default function UiKitPage() {
     applyUiKitScopeDataset(scope, elevation, size);
     refreshArcUiKitGlyphs(scope)?.catch(function (err) {
       if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[arc-2-ui] hydrateInputGlyphs:', err);
+        console.warn('[arc-ui] hydrateInputGlyphs:', err);
       }
     });
   }, [elevation, size]);
 
   return (
-    <div className="arc2-tags-outlet arc-ui-kit-route">
+    <div className="arc-tags-outlet arc-ui-kit-route">
       <div
         ref={scopeRef}
         className="arc-ui-kit-scope"

@@ -209,7 +209,7 @@ textarea {
 }
 
 body[data-elevation="sunken"],
-.arc2-category-panel-layout[data-elevation="sunken"],
+.arc-category-panel-layout[data-elevation="sunken"],
 .arc-ui-kit-scope[data-elevation="sunken"] {
   --app-bg: var(--gray-1000);
   --panel-bg: var(--gray-1000);
@@ -238,7 +238,7 @@ body[data-elevation="raised"],
 }
 
 body[data-elevation="sunken"][data-typo-tone="white"],
-.arc2-category-panel-layout[data-elevation="sunken"][data-typo-tone="white"],
+.arc-category-panel-layout[data-elevation="sunken"][data-typo-tone="white"],
 .arc-ui-kit-scope[data-elevation="sunken"][data-typo-tone="white"] { --typo-tone-primary: var(--gray-300); --typo-tone-primary-hover: var(--gray-50); --typo-tone-primary-disabled: var(--gray-800); --typo-tone-secondary: var(--gray-600); --typo-tone-secondary-hover: var(--gray-500); --typo-tone-secondary-disabled: var(--gray-800); }
 body[data-elevation="default"][data-typo-tone="white"],
 .arc-ui-kit-scope[data-elevation="default"][data-typo-tone="white"] { --typo-tone-primary: var(--gray-200); --typo-tone-primary-hover: var(--gray-50); --typo-tone-primary-disabled: var(--gray-700); --typo-tone-secondary: var(--gray-500); --typo-tone-secondary-hover: var(--gray-400); --typo-tone-secondary-disabled: var(--gray-700); }
@@ -1497,7 +1497,7 @@ button.input {
   color: var(--danger-500);
 }
 
-/* --- ARC-2 modals: без backdrop, только карточка (raised) --- */
+/* --- ARC modals: без backdrop, только карточка (raised) --- */
 .arc-modal-host {
   position: fixed;
   inset: 0;
@@ -2597,7 +2597,7 @@ button.input {
 }
 
 body[data-elevation="sunken"],
-.arc2-category-panel-layout[data-elevation="sunken"],
+.arc-category-panel-layout[data-elevation="sunken"],
 .arc-ui-kit-scope[data-elevation="sunken"] {
   --input-fill-default: var(--gray-1000);
   --input-fill-hover: var(--gray-900);

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ARC-2 UI Standalone</title>
-  <link rel="stylesheet" href="./arc-2-ui.css?v=20260428-alert-tokens-manual" />
+  <title>ARC UI Standalone</title>
+  <link rel="stylesheet" href="./arc-ui.css?v=20260428-alert-tokens-manual" />
 </head>
 <body data-elevation="default" data-typo-role="primary" data-typo-tone="white" data-typo-state="default" data-btn-size="m" data-input-size="m">
   <main class="page">
@@ -530,7 +530,7 @@
 
   <div id="demoAlertHost" class="demo-alert-host" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- ARC-2 modals: без backdrop, raised + box-shadow -->
+  <!-- ARC modals: без backdrop, raised + box-shadow -->
   <div class="arc-modal-host" id="arcModalHost1" hidden aria-hidden="true">
     <section
       class="arc-modal"
@@ -1149,7 +1149,7 @@
           }
           hydrateInputGlyphs().catch(function (err) {
             if (typeof console !== "undefined" && console.warn) {
-              console.warn("[arc-2-ui] hydrateInputGlyphs:", err);
+              console.warn("[arc-ui] hydrateInputGlyphs:", err);
             }
           });
         }
@@ -1575,7 +1575,7 @@
           setActive(sizeTabs, button);
           hydrateInputGlyphs().catch(function (err) {
             if (typeof console !== "undefined" && console.warn) {
-              console.warn("[arc-2-ui] hydrateInputGlyphs:", err);
+              console.warn("[arc-ui] hydrateInputGlyphs:", err);
             }
           });
         });
@@ -1846,7 +1846,7 @@
       injectButtonIcons();
       hydrateInputGlyphs().catch(function (err) {
         if (typeof console !== "undefined" && console.warn) {
-          console.warn("[arc-2-ui] hydrateInputGlyphs:", err);
+          console.warn("[arc-ui] hydrateInputGlyphs:", err);
         }
       });
     })();

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 type Props = {
   onClose: () => void;
@@ -12,7 +12,7 @@ export default function ConfirmCollectionDeleteModal({ onClose, onConfirm }: Pro
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [busy]);
 
@@ -55,15 +55,15 @@ export default function ConfirmCollectionDeleteModal({ onClose, onConfirm }: Pro
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2DeleteCollectionTitle"
+        aria-labelledby="arcDeleteCollectionTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2DeleteCollectionTitle">
+          <h3 className="arc-modal__title" id="arcDeleteCollectionTitle">
             Удалить коллекцию?
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">

@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import CategoryPanel from '../components/tags/CategoryPanel';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
 import {
-  ARC2_CARDS_CHANGED_EVENT,
-  ARC2_CATEGORIES_CHANGED_EVENT,
-  ARC2_TAGS_CHANGED_EVENT,
+  ARC_CARDS_CHANGED_EVENT,
+  ARC_CATEGORIES_CHANGED_EVENT,
+  ARC_TAGS_CHANGED_EVENT,
   deleteCategory,
   deleteTag,
   getAllCategories,
@@ -43,14 +43,14 @@ export default function TagsPage() {
   useEffect(() => {
     void load();
     const onRefresh = () => void load();
-    window.addEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onRefresh);
-    window.addEventListener(ARC2_TAGS_CHANGED_EVENT, onRefresh);
-    window.addEventListener(ARC2_CARDS_CHANGED_EVENT, onRefresh);
+    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onRefresh);
+    window.addEventListener(ARC_TAGS_CHANGED_EVENT, onRefresh);
+    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onRefresh);
     window.addEventListener('storage', onRefresh);
     return () => {
-      window.removeEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onRefresh);
-      window.removeEventListener(ARC2_TAGS_CHANGED_EVENT, onRefresh);
-      window.removeEventListener(ARC2_CARDS_CHANGED_EVENT, onRefresh);
+      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onRefresh);
+      window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onRefresh);
+      window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onRefresh);
       window.removeEventListener('storage', onRefresh);
     };
   }, [load]);
@@ -131,7 +131,7 @@ export default function TagsPage() {
 
   if (categories.length === 0) {
     return (
-      <div className="arc2-tags-outlet">
+      <div className="arc-tags-outlet">
         <p className="hint">Категорий пока нет. Нажмите «Добавить категорию» в шапке.</p>
       </div>
     );
@@ -139,7 +139,7 @@ export default function TagsPage() {
 
   return (
     <div
-      className="arc2-tags-outlet"
+      className="arc-tags-outlet"
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('application/tag-id')) {
           e.preventDefault();
@@ -152,7 +152,7 @@ export default function TagsPage() {
         }
       }}
     >
-      <div className="arc2-category-panels">
+      <div className="arc-category-panels">
         {categories.map((category, index) => (
           <CategoryPanel
             key={category.id}

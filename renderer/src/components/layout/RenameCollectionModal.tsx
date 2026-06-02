@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 type Props = {
   initialName: string;
@@ -36,7 +36,7 @@ export default function RenameCollectionModal({
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [name, busy, emptySubmitted, serverDuplicate]);
 
@@ -96,15 +96,15 @@ export default function RenameCollectionModal({
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2RenameCollectionTitle"
+        aria-labelledby="arcRenameCollectionTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2RenameCollectionTitle">
+          <h3 className="arc-modal__title" id="arcRenameCollectionTitle">
             Изменить название коллекции
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">
@@ -150,7 +150,7 @@ export default function RenameCollectionModal({
                 }}
               />
               <button
-                className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc2-icon-close"
+                className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
                 type="button"
                 aria-label="Очистить"
                 onClick={(ev) => {
@@ -167,7 +167,7 @@ export default function RenameCollectionModal({
         <footer className="arc-modal__footer arc-modal__footer--actions-3">
           <button
             type="button"
-            className="btn btn-outline btn-ds btn-s arc2-rename-collection-delete-ghost"
+            className="btn btn-outline btn-ds btn-s arc-rename-collection-delete-ghost"
             disabled={busy}
             onClick={() => onRequestDelete()}
           >

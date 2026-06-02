@@ -1,6 +1,6 @@
 /* Страница доски мудборда: очередь, островок инструментов, канвас, зум */
 
-.arc2-moodboard {
+.arc-moodboard {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
@@ -11,49 +11,49 @@
   overflow: hidden;
 }
 
-.arc2-moodboard--loading {
+.arc-moodboard--loading {
   align-items: center;
   justify-content: center;
   padding: var(--s-6);
 }
 
-.arc2-moodboard-loading-msg {
+.arc-moodboard-loading-msg {
   margin: 0;
   color: var(--text-elev-secondary);
 }
 
-.arc2-moodboard-queue {
+.arc-moodboard-queue {
   flex-shrink: 0;
 }
 
-.arc2-moodboard-queue-scroll {
+.arc-moodboard-queue-scroll {
   padding: var(--s-2);
 }
 
-.arc2-moodboard-queue-tile {
+.arc-moodboard-queue-tile {
   position: relative;
 }
 
-.arc2-moodboard-queue-tile-main {
+.arc-moodboard-queue-tile-main {
   cursor: grab;
 }
 
-.arc2-moodboard-queue-tile-main:active {
+.arc-moodboard-queue-tile-main:active {
   cursor: grabbing;
 }
 
-.arc2-moodboard-queue-tile-main.is-on-board {
+.arc-moodboard-queue-tile-main.is-on-board {
   cursor: default;
 }
 
-.arc2-moodboard-queue-tile-main.is-on-board::after {
+.arc-moodboard-queue-tile-main.is-on-board::after {
   content: "";
   position: absolute;
   inset: 0;
   background: rgb(59 57 70 / 48%);
 }
 
-.arc2-moodboard-queue-thumb {
+.arc-moodboard-queue-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -61,11 +61,11 @@
   pointer-events: none;
 }
 
-.arc2-moodboard-queue-remove {
+.arc-moodboard-queue-remove {
   z-index: 3;
 }
 
-.arc2-moodboard-body {
+.arc-moodboard-body {
   position: relative;
   flex: 1 1 auto;
   height: 100%;
@@ -75,19 +75,19 @@
   overflow: hidden;
 }
 
-.arc2-moodboard-toolbar {
+.arc-moodboard-toolbar {
   position: absolute;
   z-index: 5;
 }
 
-.arc2-moodboard-menu {
+.arc-moodboard-menu {
   position: absolute;
   top: var(--s-3);
   right: var(--s-3);
   z-index: 6;
 }
 
-.arc2-moodboard-menu-burger {
+.arc-moodboard-menu-burger {
   width: 12px;
   height: 2px;
   display: inline-block;
@@ -96,8 +96,8 @@
   border-radius: 999px;
 }
 
-.arc2-moodboard-menu-burger::before,
-.arc2-moodboard-menu-burger::after {
+.arc-moodboard-menu-burger::before,
+.arc-moodboard-menu-burger::after {
   content: "";
   position: absolute;
   left: 0;
@@ -107,15 +107,15 @@
   background: var(--btn-icon-default);
 }
 
-.arc2-moodboard-menu-burger::before {
+.arc-moodboard-menu-burger::before {
   top: -4px;
 }
 
-.arc2-moodboard-menu-burger::after {
+.arc-moodboard-menu-burger::after {
   top: 4px;
 }
 
-.arc2-moodboard-menu-dropdown {
+.arc-moodboard-menu-dropdown {
   position: absolute;
   top: calc(100% + var(--s-1));
   right: 0;
@@ -127,59 +127,59 @@
   width: max-content;
 }
 
-.arc2-moodboard-menu-dropdown .dropdown-list {
+.arc-moodboard-menu-dropdown .dropdown-list {
   max-height: none;
   overflow: visible;
 }
 
-.arc2-moodboard-menu-row {
+.arc-moodboard-menu-row {
   justify-content: space-between;
 }
 
-.arc2-moodboard-menu-row.is-disabled {
+.arc-moodboard-menu-row.is-disabled {
   opacity: 0.45;
 }
 
-.arc2-moodboard-menu-shortcut {
+.arc-moodboard-menu-shortcut {
   color: var(--text-elev-secondary);
   margin-left: var(--s-3);
   white-space: nowrap;
 }
 
-.arc2-moodboard-menu-sep {
+.arc-moodboard-menu-sep {
   height: 1px;
   margin: var(--s-1) var(--s-2);
   background: var(--panel-border);
 }
 
-.arc2-moodboard-toolbar--main {
+.arc-moodboard-toolbar--main {
   left: 50%;
   bottom: var(--s-3);
   transform: translateX(-50%);
 }
 
-.arc2-moodboard-toolbar--draw,
-.arc2-moodboard-toolbar--text {
+.arc-moodboard-toolbar--draw,
+.arc-moodboard-toolbar--text {
   left: 50%;
   bottom: calc(var(--s-3) + 40px + var(--s-3));
   transform: translateX(-50%);
 }
 
-.arc2-moodboard-toolbar--history {
+.arc-moodboard-toolbar--history {
   left: var(--s-3);
   bottom: var(--s-3);
 }
 
-.arc2-moodboard-toolbar--zoom {
+.arc-moodboard-toolbar--zoom {
   right: var(--s-3);
   bottom: var(--s-3);
 }
 
-.arc2-moodboard-history-redo .arc-navbar-icon-svg {
+.arc-moodboard-history-redo .arc-navbar-icon-svg {
   transform: scaleX(-1);
 }
 
-.arc2-moodboard-color-swatch {
+.arc-moodboard-color-swatch {
   display: block;
   width: var(--btn-icon-size);
   height: var(--btn-icon-size);
@@ -187,12 +187,12 @@
   border: 1px solid var(--panel-border);
 }
 
-.arc2-moodboard-toolbar .btn.is-active {
+.arc-moodboard-toolbar .btn.is-active {
   background: var(--btn-group-fill-focus);
   border-color: var(--btn-group-border-focus);
 }
 
-.arc2-moodboard-canvas-wrap {
+.arc-moodboard-canvas-wrap {
   flex: 1 1 auto;
   width: 100%;
   height: 100%;
@@ -205,15 +205,15 @@
   position: relative;
 }
 
-.arc2-moodboard-canvas-wrap--pan {
+.arc-moodboard-canvas-wrap--pan {
   cursor: grab;
 }
 
-.arc2-moodboard-canvas-wrap--eraser-deny {
+.arc-moodboard-canvas-wrap--eraser-deny {
   box-shadow: 0 0 0 2px var(--input-border-error);
 }
 
-.arc2-moodboard-text-edit {
+.arc-moodboard-text-edit {
   margin: 0;
   padding: var(--s-2);
   resize: none;

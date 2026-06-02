@@ -1,4 +1,4 @@
-/** Контракт файла arc2-metadata.json в корне библиотеки */
+/** Контракт файла arc-metadata.json в корне библиотеки */
 
 export type CardRecord = {
   id: string;

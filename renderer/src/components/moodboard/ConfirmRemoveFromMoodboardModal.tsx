@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { hydrateArc2NavbarIcons } from '../layout/navbarIconHydrate';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 type Props = {
   /** Карточка стоит на доске — расширенный текст предупреждения */
@@ -15,7 +15,7 @@ export default function ConfirmRemoveFromMoodboardModal({ cardOnBoard, onClose, 
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [busy, cardOnBoard]);
 
@@ -62,15 +62,15 @@ export default function ConfirmRemoveFromMoodboardModal({ cardOnBoard, onClose, 
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2RemoveMoodboardTitle"
+        aria-labelledby="arcRemoveMoodboardTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2RemoveMoodboardTitle">
+          <h3 className="arc-modal__title" id="arcRemoveMoodboardTitle">
             Мудборд
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">

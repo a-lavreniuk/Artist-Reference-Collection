@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'arc2.search.recentTagIds';
-const HAS_SEARCHED_KEY = 'arc2.search.hasCompletedSearchSession';
+const STORAGE_KEY = 'arc.search.recentTagIds';
+const HAS_SEARCHED_KEY = 'arc.search.hasCompletedSearchSession';
 const MAX_RECENT = 15;
 
 function readIds(): string[] {

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link } from 'react-router-dom';
 import CollectionPreviewMosaic from '../components/collections/CollectionPreviewMosaic';
 import NewCollectionModal from '../components/collections/NewCollectionModal';
-import { ARC2_COLLECTIONS_ADD_REQUEST } from '../components/layout/navbarEvents';
-import { hydrateArc2NavbarIcons } from '../components/layout/navbarIconHydrate';
+import { ARC_COLLECTIONS_ADD_REQUEST } from '../components/layout/navbarEvents';
+import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import {
   addCollection,
   getAllCollections,
   getCollectionCardCounts,
   getCollectionPreviewSlices,
-  ARC2_COLLECTIONS_CHANGED_EVENT,
+  ARC_COLLECTIONS_CHANGED_EVENT,
   type CardRecord,
   type CollectionRecord
 } from '../services/db';
@@ -33,50 +33,50 @@ export default function CollectionsPage() {
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [items]);
 
   useEffect(() => {
     void reload();
     const onEvt = () => void reload();
-    window.addEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onEvt);
+    window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onEvt);
     const onLib = () => void reload();
-    window.addEventListener('arc2:library-changed', onLib);
+    window.addEventListener('arc:library-changed', onLib);
     return () => {
-      window.removeEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onEvt);
-      window.removeEventListener('arc2:library-changed', onLib);
+      window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onEvt);
+      window.removeEventListener('arc:library-changed', onLib);
     };
   }, [reload]);
 
   useEffect(() => {
     const onAdd = () => setModalOpen(true);
-    window.addEventListener(ARC2_COLLECTIONS_ADD_REQUEST, onAdd);
-    return () => window.removeEventListener(ARC2_COLLECTIONS_ADD_REQUEST, onAdd);
+    window.addEventListener(ARC_COLLECTIONS_ADD_REQUEST, onAdd);
+    return () => window.removeEventListener(ARC_COLLECTIONS_ADD_REQUEST, onAdd);
   }, []);
 
   return (
-    <div ref={hostRef} className="arc2-collections-page">
+    <div ref={hostRef} className="arc-collections-page">
       {items.length === 0 ? (
-        <div className="arc2-page-empty panel elevation-default">
+        <div className="arc-page-empty panel elevation-default">
           <p className="typo-p-m">Коллекций пока нет. Нажмите «Добавить коллекцию» в шапке.</p>
         </div>
       ) : (
-        <div className="arc2-collections-grid">
+        <div className="arc-collections-grid">
           {items.map((c) => {
             const previews = previewByCollection[c.id] ?? [];
             const cnt = counts[c.id] ?? 0;
             return (
-              <article key={c.id} className="arc2-collections-card">
-                <div className="arc2-collections-card-mosaic-wrap">
-                  <Link className="arc2-collections-card-preview-link" to={`/collections/${c.id}`}>
+              <article key={c.id} className="arc-collections-card">
+                <div className="arc-collections-card-mosaic-wrap">
+                  <Link className="arc-collections-card-preview-link" to={`/collections/${c.id}`}>
                     <CollectionPreviewMosaic previews={previews} />
                   </Link>
                 </div>
-                <Link className="arc2-collections-card-footer-link" to={`/collections/${c.id}`}>
-                  <footer className="arc2-collections-card-footer">
-                    <h3 className="arc2-collections-card-name">{c.name}</h3>
-                    <span className="arc2-collections-card-count">{cnt}</span>
+                <Link className="arc-collections-card-footer-link" to={`/collections/${c.id}`}>
+                  <footer className="arc-collections-card-footer">
+                    <h3 className="arc-collections-card-name">{c.name}</h3>
+                    <span className="arc-collections-card-count">{cnt}</span>
                   </footer>
                 </Link>
               </article>

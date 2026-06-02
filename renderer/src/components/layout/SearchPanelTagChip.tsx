@@ -51,7 +51,7 @@ export default function SearchPanelTagChip({
   const chip = (
     <button
       type="button"
-      className={`chip arc2-search-tag-pill${selected ? ' chip-active' : ''}`}
+      className={`chip arc-search-tag-pill${selected ? ' chip-active' : ''}`}
       aria-label={
         onRemoveFromRecent
           ? `Метка «${tag.name}». Снять фильтр — клик по чипу; убрать из недавних — по ✕`

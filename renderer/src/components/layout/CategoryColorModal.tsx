@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ModalCategoryColorPicker from './ModalCategoryColorPicker';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { normalizeHex } from '../../utils/colorPicker';
 
 type Props = {
@@ -20,7 +20,7 @@ export default function CategoryColorModal({ initialHex, onClose, onSave }: Prop
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [colorHex, isSaving]);
 
@@ -65,15 +65,15 @@ export default function CategoryColorModal({ initialHex, onClose, onSave }: Prop
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2CategoryColorModalTitle"
+        aria-labelledby="arcCategoryColorModalTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2CategoryColorModalTitle">
+          <h3 className="arc-modal__title" id="arcCategoryColorModalTitle">
             Цвет меток категории
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">

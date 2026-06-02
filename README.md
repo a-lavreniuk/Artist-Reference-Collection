@@ -5,7 +5,7 @@
 ## Основные возможности
 
 - **Галерея** — карточки, фильтры по типу медиа и поиск по тегам (в т.ч. через URL).
-- **Коллекции** — список с превью и счётчиком карточек; экран коллекции с теми же фильтрами в навбаре, outline-кнопка «назад», переименование и удаление через модалки; обновление списков при событии `arc2:collections-changed` (константа `ARC2_COLLECTIONS_CHANGED_EVENT` в `renderer/src/services/db.ts`).
+- **Коллекции** — список с превью и счётчиком карточек; экран коллекции с теми же фильтрами в навбаре, outline-кнопка «назад», переименование и удаление через модалки; обновление списков при событии `arc:collections-changed` (константа `ARC_COLLECTIONS_CHANGED_EVENT` в `renderer/src/services/db.ts`).
 - **Мудборд** — избранные карточки и доска.
 - **Метки и категории** — иерархия, цвета, модалки создания и удаления.
 - **Добавление карточек** — очередь загрузки и назначение тегов.
@@ -38,4 +38,4 @@
 2. Закоммитьте, создайте тег `vX.Y.Z` и отправьте: `git push origin vX.Y.Z`.
 3. Workflow `.github/workflows/release-windows.yml` соберёт установщик и опубликует Release с `latest.yml` для автообновления.
 
-Справочник по UI: `renderer/public/ui/arc-2-ui/arc-2-ui.html`, токены и стили кнопок/панелей — `renderer/public/ui/arc-2-ui/arc-2-ui.css`, навбар — `renderer/public/ui/arc-2-navbar.css`.
+Справочник по UI: `renderer/public/ui/arc-ui/arc-ui.html`, токены и стили кнопок/панелей — `renderer/public/ui/arc-ui/arc-ui.css`, навбар — `renderer/public/ui/arc-navbar.css`.

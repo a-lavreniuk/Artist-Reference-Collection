@@ -1,5 +1,5 @@
 // @ts-nocheck
-/** Generated from renderer/public/ui/arc-2-ui/arc-2-ui.html — demo logic scoped to .arc-ui-kit-scope. Regenerate: node scripts/gen-ui-kit-boot.mjs */
+/** Generated from renderer/public/ui/arc-ui/arc-ui.html — demo logic scoped to .arc-ui-kit-scope. Regenerate: node scripts/gen-ui-kit-boot.mjs */
 
 const arcUiKitGlyphHydrators = new WeakMap<HTMLElement, () => Promise<unknown>>();
 
@@ -11,7 +11,7 @@ export function refreshArcUiKitGlyphs(scope: HTMLElement): Promise<unknown> | un
 
 export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: AbortSignal }): void {
   const signal = options?.signal;
-  const listenerOpts = signal ? ({ signal } as AddEventListenerOptions) : undefined;
+  const docOpts = signal ? ({ signal } as AddEventListenerOptions) : undefined;
 
       const body = scope;
 
@@ -363,7 +363,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           }
           hydrateInputGlyphs().catch(function (err) {
             if (typeof console !== "undefined" && console.warn) {
-              console.warn("[arc-2-ui] hydrateInputGlyphs:", err);
+              console.warn("[arc-ui] hydrateInputGlyphs:", err);
             }
           });
         }
@@ -387,7 +387,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           btn.addEventListener("click", function () {
             const id = btn.getAttribute("data-arc-modal-open");
             if (id) openArcModal(id, btn);
-          }, listenerOpts);
+          });
         });
 
         scope.querySelectorAll("[data-arc-modal-close]").forEach(function (btn) {
@@ -410,21 +410,21 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               syncDirtyIndicator(host);
             }
             closeArcModal(host, lastTrigger);
-          }, listenerOpts);
+          });
         });
 
         hosts.forEach(function (host) {
           host.addEventListener("input", function () {
             syncDirtyIndicator(host);
-          }, listenerOpts);
+          });
           host.addEventListener("change", function () {
             syncDirtyIndicator(host);
-          }, listenerOpts);
+          });
           host.addEventListener("click", function () {
             requestAnimationFrame(function () {
               syncDirtyIndicator(host);
             });
-          }, listenerOpts);
+          });
         });
 
         if (confirmStayBtn) {
@@ -435,7 +435,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               const focusables = getFocusable(hostToFocus);
               if (focusables.length) focusables[0].focus();
             }
-          }, listenerOpts);
+          });
         }
 
         if (confirmDiscardBtn) {
@@ -450,7 +450,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             const trigger = pendingCloseTrigger;
             hideUnsavedConfirm();
             closeArcModal(host, trigger);
-          }, listenerOpts);
+          });
         }
 
         if (confirmSaveBtn) {
@@ -465,7 +465,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             const trigger = pendingCloseTrigger;
             hideUnsavedConfirm();
             closeArcModal(host, trigger);
-          }, listenerOpts);
+          });
         }
 
         document.addEventListener("keydown", function (event) {
@@ -486,7 +486,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             return;
           }
           closeSelectors();
-        }, listenerOpts);
+        });
 
         scope.querySelectorAll(".arc-modal .tabs").forEach(function (tabList) {
           const tabButtons = Array.from(tabList.querySelectorAll(".tab-button"));
@@ -495,7 +495,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
               tabButtons.forEach(function (b) {
                 b.classList.toggle("is-active", b === button);
               });
-            }, listenerOpts);
+            });
           });
         });
       }
@@ -608,9 +608,9 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
                 document.removeEventListener("pointerup", up);
               }
               move(event);
-              document.addEventListener("pointermove", move, listenerOpts);
-              document.addEventListener("pointerup", up, listenerOpts);
-            }, listenerOpts);
+              document.addEventListener("pointermove", move);
+              document.addEventListener("pointerup", up);
+            });
           }
 
           bindDrag(hueTrack, function (event, rect) {
@@ -634,7 +634,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             saturation = parsed.s;
             brightness = parsed.v;
             render();
-          }, listenerOpts);
+          });
 
           render();
           pickerStateMap.set(picker, {
@@ -678,18 +678,18 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           draftHex = next;
           applyMainColor(next);
           colorModalPicker.setFromHex(next);
-        }, listenerOpts);
+        });
 
         colorModalPicker.picker.querySelector("[data-color-value-input]").addEventListener("input", function () {
           draftHex = colorModalPicker.getHex();
-        }, listenerOpts);
+        });
 
         document.addEventListener("arc-modal:open", function (event) {
           const host = event.detail && event.detail.host;
           if (!host || host.id !== "arcModalHostColor") return;
           draftHex = committedHex;
           colorModalPicker.setFromHex(committedHex);
-        }, listenerOpts);
+        });
 
         document.addEventListener("arc-modal:close", function (event) {
           const host = event.detail && event.detail.host;
@@ -702,7 +702,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             colorModalPicker.setFromHex(committedHex);
             applyMainColor(committedHex);
           }
-        }, listenerOpts);
+        });
       }
 
       function initDemoAlerts() {
@@ -749,11 +749,11 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           if (messageNode) messageNode.textContent = message;
           alertNode.addEventListener("click", function () {
             closeAlert();
-          }, listenerOpts);
+          });
           if (closeNode) {
             closeNode.addEventListener("click", function () {
               closeAlert();
-            }, listenerOpts);
+            });
           }
           host.appendChild(alertNode);
           closeTimer = window.setTimeout(closeAlert, 3200);
@@ -762,7 +762,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         buttons.forEach(function (button) {
           button.addEventListener("click", function () {
             showAlert(button.getAttribute("data-demo-alert"));
-          }, listenerOpts);
+          });
         });
       }
 
@@ -777,7 +777,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         button.addEventListener("click", function () {
           body.setAttribute("data-elevation", button.getAttribute("data-elevation-tab"));
           setActive(elevationTabs, button);
-        }, listenerOpts);
+        });
       });
 
       const sizeTabs = Array.from(scope.querySelectorAll("[data-size-tab]"));
@@ -789,24 +789,24 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           setActive(sizeTabs, button);
           hydrateInputGlyphs().catch(function (err) {
             if (typeof console !== "undefined" && console.warn) {
-              console.warn("[arc-2-ui] hydrateInputGlyphs:", err);
+              console.warn("[arc-ui] hydrateInputGlyphs:", err);
             }
           });
-        }, listenerOpts);
+        });
       });
 
       const groupButtons = Array.from(scope.querySelectorAll(".btn-group-ds .btn"));
       groupButtons.forEach(function (button) {
         button.addEventListener("mousedown", function (event) {
           event.preventDefault();
-        }, listenerOpts);
+        });
       });
 
       const tags = Array.from(scope.querySelectorAll("[data-tag-toggle]"));
       tags.forEach(function (tag) {
         tag.addEventListener("click", function () {
           tag.classList.toggle("chip-active");
-        }, listenerOpts);
+        });
       });
 
       const demoTabLists = Array.from(scope.querySelectorAll('.tabs[aria-label="Tabs default"]'));
@@ -815,7 +815,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         tabButtons.forEach(function (button) {
           button.addEventListener("click", function () {
             setActive(tabButtons, button);
-          }, listenerOpts);
+          });
         });
       });
 
@@ -861,22 +861,22 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           closeSelectors();
           dropdown.hidden = !willOpen;
           trigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
-        }, listenerOpts);
+        });
 
         dropdown.addEventListener("click", function (event) {
           event.stopPropagation();
-        }, listenerOpts);
+        });
 
         if (searchInput) {
           searchInput.addEventListener("click", function (event) {
             event.stopPropagation();
-          }, listenerOpts);
+          });
           searchInput.addEventListener("input", function () {
             applyRowFilter();
-          }, listenerOpts);
+          });
           searchInput.addEventListener("keydown", function (event) {
             event.stopPropagation();
-          }, listenerOpts);
+          });
         }
 
         const rows = Array.from(field.querySelectorAll(".dropdown-row"));
@@ -890,7 +890,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             field.classList.add("has-value");
             closeSelectors();
             trigger.focus();
-          }, listenerOpts);
+          });
         });
 
         const resetBtn = field.querySelector(".selector-reset");
@@ -905,7 +905,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             if (searchInput) searchInput.value = "";
             closeSelectors();
             trigger.focus();
-          }, listenerOpts);
+          });
         }
 
         applyRowFilter();
@@ -913,7 +913,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
 
       document.addEventListener("click", function () {
         closeSelectors();
-      }, listenerOpts);
+      });
 
       const liveInputs = Array.from(scope.querySelectorAll("[data-live-input]"));
       liveInputs.forEach(function (field) {
@@ -925,12 +925,12 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           field.classList.toggle("has-value", input.value.length > 0);
         }
 
-        input.addEventListener("input", syncInputState, listenerOpts);
+        input.addEventListener("input", syncInputState);
         clearBtn.addEventListener("click", function () {
           input.value = "";
           syncInputState();
           input.focus();
-        }, listenerOpts);
+        });
 
         syncInputState();
       });
@@ -945,12 +945,12 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           field.classList.toggle("has-value", input.value.length > 0);
         }
 
-        input.addEventListener("input", syncSearchState, listenerOpts);
+        input.addEventListener("input", syncSearchState);
         clearBtn.addEventListener("click", function () {
           input.value = "";
           syncSearchState();
           input.focus();
-        }, listenerOpts);
+        });
 
         syncSearchState();
       });
@@ -965,12 +965,12 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           field.classList.toggle("has-value", input.value.length > 0);
         }
 
-        input.addEventListener("input", syncMultiSearchState, listenerOpts);
+        input.addEventListener("input", syncMultiSearchState);
         clearBtn.addEventListener("click", function () {
           input.value = "";
           syncMultiSearchState();
           input.focus();
-        }, listenerOpts);
+        });
 
         syncMultiSearchState();
       });
@@ -1034,7 +1034,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             return;
           }
           fileInput.click();
-        }, listenerOpts);
+        });
 
         fileInput.addEventListener("change", function () {
           const file = fileInput.files && fileInput.files[0];
@@ -1044,11 +1044,11 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             delete valueNode.dataset.fullValue;
           }
           syncUploaderState();
-        }, listenerOpts);
+        });
 
         window.addEventListener("resize", function () {
           renderUploaderValue();
-        }, listenerOpts);
+        });
 
         syncUploaderState();
       });
@@ -1062,7 +1062,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
       injectButtonIcons();
       hydrateInputGlyphs().catch(function (err) {
         if (typeof console !== "undefined" && console.warn) {
-          console.warn("[arc-2-ui] hydrateInputGlyphs:", err);
+          console.warn("[arc-ui] hydrateInputGlyphs:", err);
         }
       });
 }

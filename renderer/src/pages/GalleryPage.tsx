@@ -6,7 +6,7 @@ import DemoAlert from '../components/layout/DemoAlert';
 import MessageModal from '../components/layout/MessageModal';
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
 import {
-  ARC2_CARDS_CHANGED_EVENT,
+  ARC_CARDS_CHANGED_EVENT,
   getAllCategories,
   getMoodboardCardIds,
   getTagsByCategory,
@@ -116,11 +116,11 @@ export default function GalleryPage() {
       void loadTagsIndex();
       void loadMoodboard();
     };
-    window.addEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
-    window.addEventListener('arc2:library-changed', onCards);
+    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
+    window.addEventListener('arc:library-changed', onCards);
     return () => {
-      window.removeEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
-      window.removeEventListener('arc2:library-changed', onCards);
+      window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
+      window.removeEventListener('arc:library-changed', onCards);
     };
   }, [loadPage, loadTagsIndex, loadMoodboard]);
 
@@ -149,7 +149,7 @@ export default function GalleryPage() {
   const overlay = useMemo(() => {
     if (!ready) {
       return (
-        <div className="arc2-page-empty panel elevation-default">
+        <div className="arc-page-empty panel elevation-default">
           <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Настройки».</p>
         </div>
       );
@@ -157,13 +157,13 @@ export default function GalleryPage() {
     if (cards.length === 0 && !loading) {
       if (hasSearchFilters) {
         return (
-          <div className="arc2-page-empty panel elevation-default">
+          <div className="arc-page-empty panel elevation-default">
             <p className="typo-p-m">Карточки не найдены. Измените фильтры поиска или сбросьте метки.</p>
           </div>
         );
       }
       return (
-        <div className="arc2-page-empty panel elevation-default">
+        <div className="arc-page-empty panel elevation-default">
           <p className="typo-p-m">Карточек пока нет. Добавьте изображения через «Добавить карточки».</p>
         </div>
       );
@@ -172,7 +172,7 @@ export default function GalleryPage() {
   }, [ready, cards.length, loading, hasSearchFilters]);
 
   return (
-    <div className="arc2-gallery-page">
+    <div className="arc-gallery-page">
       {overlay}
       {ready && cards.length > 0 ? (
         <>
@@ -208,8 +208,8 @@ export default function GalleryPage() {
               setOpenCardId(sim[0].id);
             }}
           />
-          <div ref={sentinelRef} className="arc2-gallery-sentinel" aria-hidden />
-          {loading ? <p className="hint arc2-gallery-loading">Загрузка…</p> : null}
+          <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
+          {loading ? <p className="hint arc-gallery-loading">Загрузка…</p> : null}
         </>
       ) : null}
 

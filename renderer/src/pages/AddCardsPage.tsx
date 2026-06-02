@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { hydrateArc2NavbarIcons } from '../components/layout/navbarIconHydrate';
-import { ARC2_ADD_CARDS_SUBMIT_REQUEST, publishAddCardsQueueState } from '../components/layout/navbarEvents';
+import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
+import { ARC_ADD_CARDS_SUBMIT_REQUEST, publishAddCardsQueueState } from '../components/layout/navbarEvents';
 import { Tooltip } from '../components/tooltip/Tooltip';
 import TagChipToggleWithTooltip from '../components/tags/TagChipToggleWithTooltip';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
 import {
-  ARC2_CATEGORIES_CHANGED_EVENT,
-  ARC2_TAGS_CHANGED_EVENT,
-  ARC2_COLLECTIONS_CHANGED_EVENT,
+  ARC_CATEGORIES_CHANGED_EVENT,
+  ARC_TAGS_CHANGED_EVENT,
+  ARC_COLLECTIONS_CHANGED_EVENT,
   addTag,
   deleteTag,
   getAllCategories,
@@ -177,7 +177,7 @@ export default function AddCardsPage() {
       if (next !== tab) {
         setTab(next);
         queueMicrotask(() => {
-          document.getElementById(`arc2-add-tab-${next}`)?.focus();
+          document.getElementById(`arc-add-tab-${next}`)?.focus();
         });
       }
     },
@@ -205,7 +205,7 @@ export default function AddCardsPage() {
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [queue.length, tab, activeIndex, active?.tagIds.length, active?.collectionIds.length, active?.description]);
 
@@ -236,13 +236,13 @@ export default function AddCardsPage() {
 
   useEffect(() => {
     const onRefresh = () => void reloadCatalog();
-    window.addEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onRefresh);
-    window.addEventListener(ARC2_TAGS_CHANGED_EVENT, onRefresh);
-    window.addEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onRefresh);
+    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onRefresh);
+    window.addEventListener(ARC_TAGS_CHANGED_EVENT, onRefresh);
+    window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onRefresh);
     return () => {
-      window.removeEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onRefresh);
-      window.removeEventListener(ARC2_TAGS_CHANGED_EVENT, onRefresh);
-      window.removeEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onRefresh);
+      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onRefresh);
+      window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onRefresh);
+      window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onRefresh);
     };
   }, [reloadCatalog]);
 
@@ -340,8 +340,8 @@ export default function AddCardsPage() {
 
   useEffect(() => {
     const onSubmit = () => void handleSubmitAll();
-    window.addEventListener(ARC2_ADD_CARDS_SUBMIT_REQUEST, onSubmit);
-    return () => window.removeEventListener(ARC2_ADD_CARDS_SUBMIT_REQUEST, onSubmit);
+    window.addEventListener(ARC_ADD_CARDS_SUBMIT_REQUEST, onSubmit);
+    return () => window.removeEventListener(ARC_ADD_CARDS_SUBMIT_REQUEST, onSubmit);
   }, [handleSubmitAll]);
 
   const appendPaths = useCallback((paths: string[]) => {
@@ -412,7 +412,7 @@ export default function AddCardsPage() {
 
   const onQueueStripPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest('.arc2-add-queue-remove-btn, .arc2-add-queue-add-tile')) return;
+    if (target.closest('.arc-add-queue-remove-btn, .arc-add-queue-add-tile')) return;
     const el = queueStripRef.current;
     if (!el) return;
     /* Без setPointerCapture здесь: иначе клик по превью уходит в полосу и не открывает настройки элемента. */
@@ -600,7 +600,7 @@ export default function AddCardsPage() {
 
   if (!ready) {
     return (
-      <div className="arc2-page-empty panel elevation-default">
+      <div className="arc-page-empty panel elevation-default">
         <p className="typo-p-m">Сначала укажите папку библиотеки в «Настройках».</p>
       </div>
     );
@@ -611,26 +611,26 @@ export default function AddCardsPage() {
   return (
     <div
       ref={hostRef}
-      className={`arc2-add-page${queue.length === 0 ? ' arc2-add-page--empty' : ' arc2-add-page--with-queue'}`}
+      className={`arc-add-page${queue.length === 0 ? ' arc-add-page--empty' : ' arc-add-page--with-queue'}`}
     >
       {queue.length === 0 ? (
         <div
-          className={`arc2-add-dropzone panel elevation-sunken${dropzoneActive ? ' arc2-add-dropzone--dropping' : ''}`}
+          className={`arc-add-dropzone panel elevation-sunken${dropzoneActive ? ' arc-add-dropzone--dropping' : ''}`}
           data-elevation="sunken"
           onDragEnter={onDragEnter}
           onDragLeave={onDragLeave}
           onDragOver={onDragOver}
           onDrop={onDrop}
         >
-          <div className="arc2-add-dropzone-inner">
-            <p className="h3 arc2-add-dropzone-title">Добавить изображение или видео...</p>
-            <p className="typo-p-m arc2-add-dropzone-sub">
+          <div className="arc-add-dropzone-inner">
+            <p className="h3 arc-add-dropzone-title">Добавить изображение или видео...</p>
+            <p className="typo-p-m arc-add-dropzone-sub">
               Можно перетащить файлы в это окно или нажать на кнопку. Допускается загрузка нескольких файлов
               одновременно, но не более 25-ти в очереди.
             </p>
             <button
               type="button"
-              className="btn btn-primary btn-ds arc2-add-dropzone-cta"
+              className="btn btn-primary btn-ds arc-add-dropzone-cta"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -638,15 +638,15 @@ export default function AddCardsPage() {
               }}
             >
               <span className="btn-ds__value">Добавить</span>
-              <span className="btn-ds__icon arc2-add-dropzone-plus-icon" aria-hidden="true" />
+              <span className="btn-ds__icon arc-add-dropzone-plus-icon" aria-hidden="true" />
             </button>
           </div>
         </div>
       ) : (
-        <div className="arc2-add-with-queue">
+        <div className="arc-add-with-queue">
           <div
             ref={queueStripRef}
-            className={`arc2-add-queue-scroll panel elevation-default${queueStripDragging ? ' is-dragging-queue' : ''}`}
+            className={`arc-add-queue-scroll panel elevation-default${queueStripDragging ? ' is-dragging-queue' : ''}`}
             role="list"
             onPointerDown={onQueueStripPointerDown}
             onPointerMove={onQueueStripPointerMove}
@@ -660,12 +660,12 @@ export default function AddCardsPage() {
               return (
                 <div
                   key={item.key}
-                  className={`arc2-add-queue-tile${isActive ? ' is-active' : ''}`}
+                  className={`arc-add-queue-tile${isActive ? ' is-active' : ''}`}
                   role="listitem"
                 >
                   <button
                     type="button"
-                    className="arc2-add-queue-tile-main"
+                    className="arc-add-queue-tile-main"
                     onClick={() => {
                       if (suppressQueueTileClickRef.current) {
                         suppressQueueTileClickRef.current = false;
@@ -678,7 +678,7 @@ export default function AddCardsPage() {
                     {previewSrc ? (
                       isVideoPath(item.absPath) ? (
                         <video
-                          className="arc2-add-queue-tile-video"
+                          className="arc-add-queue-tile-video"
                           src={previewSrc}
                           muted
                           playsInline
@@ -686,21 +686,21 @@ export default function AddCardsPage() {
                           aria-hidden
                         />
                       ) : (
-                        <img className="arc2-add-queue-tile-img" src={previewSrc} alt="" loading="lazy" decoding="async" />
+                        <img className="arc-add-queue-tile-img" src={previewSrc} alt="" loading="lazy" decoding="async" />
                       )
                     ) : null}
                   </button>
-                  <div className="arc-ui-kit-scope arc2-add-queue-tile-remove" data-btn-size="s">
+                  <div className="arc-ui-kit-scope arc-add-queue-tile-remove" data-btn-size="s">
                     <button
                       type="button"
-                      className="btn btn-danger btn-icon-only btn-ds arc2-add-queue-remove-btn"
+                      className="btn btn-danger btn-icon-only btn-ds arc-add-queue-remove-btn"
                       aria-label={`Убрать из очереди ${fileLabel}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         removeFromQueue(item.key);
                       }}
                     >
-                      <span className="btn-icon-only__glyph arc2-add-queue-remove-icon" aria-hidden="true" />
+                      <span className="btn-icon-only__glyph arc-add-queue-remove-icon" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -710,23 +710,23 @@ export default function AddCardsPage() {
               <Tooltip content={`${queue.length} / ${MAX_QUEUE}`} position="top">
                 <button
                   type="button"
-                  className="arc2-add-queue-add-tile"
+                  className="arc-add-queue-add-tile"
                   onClick={() => void pickFiles()}
                   aria-label={`Добавить файлы в очередь (${queue.length} из ${MAX_QUEUE})`}
                 >
-                  <span className="arc2-add-queue-add-tile-plus" aria-hidden="true" />
+                  <span className="arc-add-queue-add-tile-plus" aria-hidden="true" />
                 </button>
               </Tooltip>
             ) : null}
           </div>
 
           {active ? (
-            <div className="arc2-add-workspace">
-              <div className="arc2-add-preview panel">
+            <div className="arc-add-workspace">
+              <div className="arc-add-preview panel">
                 {activePreviewSrc ? (
                   active && isVideoPath(active.absPath) ? (
                     <video
-                      className="arc2-add-preview-image"
+                      className="arc-add-preview-image"
                       src={activePreviewSrc}
                       muted
                       playsInline
@@ -734,20 +734,20 @@ export default function AddCardsPage() {
                       preload="metadata"
                     />
                   ) : (
-                    <img className="arc2-add-preview-image" src={activePreviewSrc} alt="" />
+                    <img className="arc-add-preview-image" src={activePreviewSrc} alt="" />
                   )
                 ) : null}
               </div>
 
               <div
-                className="arc2-add-editor panel elevation-sunken arc-ui-kit-scope"
+                className="arc-add-editor panel elevation-sunken arc-ui-kit-scope"
                 data-elevation="sunken"
                 data-typo-tone="white"
                 data-input-size="m"
                 data-btn-size="m"
               >
                 <div
-                  className="tabs arc2-add-tabs"
+                  className="tabs arc-add-tabs"
                   role="tablist"
                   aria-label="Настройка карточки"
                   aria-orientation="horizontal"
@@ -764,9 +764,9 @@ export default function AddCardsPage() {
                       key={key}
                       type="button"
                       role="tab"
-                      id={`arc2-add-tab-${key}`}
+                      id={`arc-add-tab-${key}`}
                       aria-selected={tab === key}
-                      aria-controls={`arc2-add-panel-${key}`}
+                      aria-controls={`arc-add-panel-${key}`}
                       tabIndex={tab === key ? 0 : -1}
                       className={`tab-button${tab === key ? ' is-active' : ''}`}
                       onClick={() => setTab(key)}
@@ -775,7 +775,7 @@ export default function AddCardsPage() {
                       {key === 'description' ? (
                         count > 0 ? (
                           <Tooltip content="Есть текст" position="top">
-                            <span className="arc2-add-tab-dot" aria-hidden="true" />
+                            <span className="arc-add-tab-dot" aria-hidden="true" />
                           </Tooltip>
                         ) : null
                       ) : count > 0 ? (
@@ -785,18 +785,18 @@ export default function AddCardsPage() {
                   ))}
                 </div>
 
-                <div className="arc2-add-tab-panels">
+                <div className="arc-add-tab-panels">
                 <div
                   role="tabpanel"
-                  id="arc2-add-panel-tags"
-                  aria-labelledby="arc2-add-tab-tags"
+                  id="arc-add-panel-tags"
+                  aria-labelledby="arc-add-tab-tags"
                   hidden={tab !== 'tags'}
-                  className="arc2-add-tab-body"
+                  className="arc-add-tab-body"
                 >
-                    <div className="arc2-add-toolbar">
-                      <div className="field field-full input-live arc2-add-search">
+                    <div className="arc-add-toolbar">
+                      <div className="field field-full input-live arc-add-search">
                         <div className="input input--size-m input-slots search-live">
-                          <span className="search-icon slot-leading arc2-icon-search" aria-hidden="true" />
+                          <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
                           <input
                             className="search-inner slot-value"
                             placeholder="Поиск метки или категории"
@@ -806,7 +806,7 @@ export default function AddCardsPage() {
                           />
                         </div>
                       </div>
-                      <div className="btn-group btn-group-ds arc2-add-tags-btn-group">
+                      <div className="btn-group btn-group-ds arc-add-tags-btn-group">
                         {canCopyActiveCardSettings ? (
                           <button
                             type="button"
@@ -814,14 +814,14 @@ export default function AddCardsPage() {
                             onClick={copyTags}
                             aria-label="Скопировать настройки"
                           >
-                            <span className="btn-icon-only__glyph arc2-add-copy-settings-icon" aria-hidden="true" />
+                            <span className="btn-icon-only__glyph arc-add-copy-settings-icon" aria-hidden="true" />
                           </button>
                         ) : (
                           <Tooltip
                             content="Сначала выберите метку, опишите карточку или укажите коллекцию"
                             position="top"
                           >
-                            <span className="arc2-tooltip-anchor-inline">
+                            <span className="arc-tooltip-anchor-inline">
                               <button
                                 type="button"
                                 className="btn btn-outline btn-ds btn-icon-only"
@@ -829,7 +829,7 @@ export default function AddCardsPage() {
                                 disabled
                                 aria-label="Скопировать настройки"
                               >
-                                <span className="btn-icon-only__glyph arc2-add-copy-settings-icon" aria-hidden="true" />
+                                <span className="btn-icon-only__glyph arc-add-copy-settings-icon" aria-hidden="true" />
                               </button>
                             </span>
                           </Tooltip>
@@ -841,23 +841,23 @@ export default function AddCardsPage() {
                           disabled={clipboardTagIds === null}
                           aria-label="Применить настройки"
                         >
-                          <span className="btn-icon-only__glyph arc2-add-apply-tags-icon" aria-hidden="true" />
+                          <span className="btn-icon-only__glyph arc-add-apply-tags-icon" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
-                    <div className="arc2-add-tags-scroll">
+                    <div className="arc-add-tags-scroll">
                       {filteredTags.length === 0 ? (
                         <p className="hint">Нет совпадений поиска или категорий.</p>
                       ) : (
-                        <div className="arc2-add-tags-categories">
+                        <div className="arc-add-tags-categories">
                           {filteredTags.map(({ cat, tags }, index) => (
-                            <div key={cat.id} className="arc2-add-tag-category-row">
-                              <p className="text-m arc2-add-tag-category-title">{cat.name}</p>
-                              <div className="arc2-add-tag-chips-column">
+                            <div key={cat.id} className="arc-add-tag-category-row">
+                              <p className="text-m arc-add-tag-category-title">{cat.name}</p>
+                              <div className="arc-add-tag-chips-column">
                                 {index > 0 ? (
-                                  <div className="arc2-add-tag-sep" role="separator" aria-hidden="true" />
+                                  <div className="arc-add-tag-sep" role="separator" aria-hidden="true" />
                                 ) : null}
-                                <div className="tags-row arc2-add-tag-chips--with-add">
+                                <div className="tags-row arc-add-tag-chips--with-add">
                                   {tags.map((t) => (
                                     <TagChipToggleWithTooltip
                                       key={t.id}
@@ -876,11 +876,11 @@ export default function AddCardsPage() {
                                     <Tooltip content="Новая метка" position="top">
                                       <button
                                         type="button"
-                                        className="btn btn-outline btn-ds btn-icon-only arc2-add-tag-new-btn"
+                                        className="btn btn-outline btn-ds btn-icon-only arc-add-tag-new-btn"
                                         onClick={() => setTagModal({ mode: 'create', categoryId: cat.id })}
                                         aria-label={`Добавить метку в категорию «${cat.name}»`}
                                       >
-                                        <span className="btn-icon-only__glyph arc2-icon-plus" aria-hidden="true" />
+                                        <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
                                       </button>
                                     </Tooltip>
                                   </div>
@@ -895,15 +895,15 @@ export default function AddCardsPage() {
 
                 <div
                   role="tabpanel"
-                  id="arc2-add-panel-description"
-                  aria-labelledby="arc2-add-tab-description"
+                  id="arc-add-panel-description"
+                  aria-labelledby="arc-add-tab-description"
                   hidden={tab !== 'description'}
-                  className="arc2-add-tab-body arc2-add-tab-body--description"
+                  className="arc-add-tab-body arc-add-tab-body--description"
                 >
                     <div className="field field-full">
                       <textarea
-                        id="arc2AddDesc"
-                        className="input textarea arc2-add-textarea"
+                        id="arcAddDesc"
+                        className="input textarea arc-add-textarea"
                         rows={8}
                         placeholder="Кратко опишите содержимое — текст сохранится на карточке."
                         value={active.description}
@@ -915,14 +915,14 @@ export default function AddCardsPage() {
 
                 <div
                   role="tabpanel"
-                  id="arc2-add-panel-collections"
-                  aria-labelledby="arc2-add-tab-collections"
+                  id="arc-add-panel-collections"
+                  aria-labelledby="arc-add-tab-collections"
                   hidden={tab !== 'collections'}
-                  className="arc2-add-tab-body"
+                  className="arc-add-tab-body"
                 >
-                    <div className="field field-full input-live arc2-add-search">
+                    <div className="field field-full input-live arc-add-search">
                       <div className="input input--size-m input-slots search-live">
-                        <span className="search-icon slot-leading arc2-icon-search" aria-hidden="true" />
+                        <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
                         <input
                           className="search-inner slot-value"
                           placeholder="Поиск коллекции"
@@ -932,7 +932,7 @@ export default function AddCardsPage() {
                         />
                       </div>
                     </div>
-                    <div className="arc2-add-collection-chips">
+                    <div className="arc-add-collection-chips">
                       {filteredCols.map((c) => {
                         const sel = active.collectionIds.includes(c.id);
                         const n = collCounts[c.id] ?? 0;
@@ -940,11 +940,11 @@ export default function AddCardsPage() {
                           <button
                             key={c.id}
                             type="button"
-                            className={`arc2-add-collection-chip${sel ? ' is-selected' : ''}`}
+                            className={`arc-add-collection-chip${sel ? ' is-selected' : ''}`}
                             onClick={() => toggleCollection(c.id)}
                           >
-                            <span className="arc2-add-collection-chip-name">{c.name}</span>
-                            <span className="arc2-add-collection-chip-count">{n}</span>
+                            <span className="arc-add-collection-chip-name">{c.name}</span>
+                            <span className="arc-add-collection-chip-count">{n}</span>
                           </button>
                         );
                       })}
@@ -984,12 +984,12 @@ export default function AddCardsPage() {
       ) : null}
 
       {error ? (
-        <p className="hint input-inline-error arc2-add-error panel elevation-default" role="alert">
+        <p className="hint input-inline-error arc-add-error panel elevation-default" role="alert">
           {error}
         </p>
       ) : null}
 
-      {busy ? <p className="hint arc2-add-busy">Импортирование…</p> : null}
+      {busy ? <p className="hint arc-add-busy">Импортирование…</p> : null}
 
       {tagsSettingsToast ? (
         <div className="demo-alert-host" aria-live="polite" aria-atomic="true">

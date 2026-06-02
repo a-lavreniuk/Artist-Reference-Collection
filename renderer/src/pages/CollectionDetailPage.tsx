@@ -7,12 +7,12 @@ import ConfirmCollectionDeleteModal from '../components/layout/ConfirmCollection
 import DemoAlert from '../components/layout/DemoAlert';
 import RenameCollectionModal from '../components/layout/RenameCollectionModal';
 import {
-  ARC2_NAVBAR_COLLECTION_TITLE_EVENT,
-  ARC2_RENAME_COLLECTION_REQUEST
+  ARC_NAVBAR_COLLECTION_TITLE_EVENT,
+  ARC_RENAME_COLLECTION_REQUEST
 } from '../components/layout/navbarEvents';
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
 import {
-  ARC2_CARDS_CHANGED_EVENT,
+  ARC_CARDS_CHANGED_EVENT,
   deleteCollection,
   getAllCategories,
   getAllCollections,
@@ -94,7 +94,7 @@ export default function CollectionDetailPage() {
     const c = await getCollectionById(collectionId);
     const nextTitle = c?.name ?? '';
     setCollectionName(nextTitle);
-    window.dispatchEvent(new CustomEvent(ARC2_NAVBAR_COLLECTION_TITLE_EVENT, { detail: { title: nextTitle } }));
+    window.dispatchEvent(new CustomEvent(ARC_NAVBAR_COLLECTION_TITLE_EVENT, { detail: { title: nextTitle } }));
     await refreshOtherCollectionNames();
   }, [collectionId, refreshOtherCollectionNames]);
 
@@ -126,7 +126,7 @@ export default function CollectionDetailPage() {
     void loadMeta();
     void loadMoodboard();
     return () => {
-      window.dispatchEvent(new CustomEvent(ARC2_NAVBAR_COLLECTION_TITLE_EVENT, { detail: { title: '' } }));
+      window.dispatchEvent(new CustomEvent(ARC_NAVBAR_COLLECTION_TITLE_EVENT, { detail: { title: '' } }));
     };
   }, [loadMeta, loadTagsIndex, loadMoodboard]);
 
@@ -140,8 +140,8 @@ export default function CollectionDetailPage() {
 
   useEffect(() => {
     const onRenameRequest = () => setRenameModalOpen(true);
-    window.addEventListener(ARC2_RENAME_COLLECTION_REQUEST, onRenameRequest);
-    return () => window.removeEventListener(ARC2_RENAME_COLLECTION_REQUEST, onRenameRequest);
+    window.addEventListener(ARC_RENAME_COLLECTION_REQUEST, onRenameRequest);
+    return () => window.removeEventListener(ARC_RENAME_COLLECTION_REQUEST, onRenameRequest);
   }, []);
 
   useEffect(() => {
@@ -150,11 +150,11 @@ export default function CollectionDetailPage() {
       void loadTagsIndex();
       void loadMoodboard();
     };
-    window.addEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
-    window.addEventListener('arc2:library-changed', onCards);
+    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
+    window.addEventListener('arc:library-changed', onCards);
     return () => {
-      window.removeEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
-      window.removeEventListener('arc2:library-changed', onCards);
+      window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
+      window.removeEventListener('arc:library-changed', onCards);
     };
   }, [loadPage, loadTagsIndex, loadMoodboard]);
 
@@ -183,9 +183,9 @@ export default function CollectionDetailPage() {
   }
 
   return (
-    <div className="arc2-collection-detail">
+    <div className="arc-collection-detail">
       {cards.length === 0 && !loading ? (
-        <div className="arc2-page-empty panel elevation-default">
+        <div className="arc-page-empty panel elevation-default">
           <p className="typo-p-m">
             {hasSearchFilters
               ? 'Карточки не найдены. Измените фильтры поиска или сбросьте метки.'
@@ -226,8 +226,8 @@ export default function CollectionDetailPage() {
               setOpenCardId(sim[0].id);
             }}
           />
-          <div ref={sentinelRef} className="arc2-gallery-sentinel" aria-hidden />
-          {loading ? <p className="hint arc2-gallery-loading">Загрузка…</p> : null}
+          <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
+          {loading ? <p className="hint arc-gallery-loading">Загрузка…</p> : null}
         </>
       )}
 

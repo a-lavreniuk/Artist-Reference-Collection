@@ -34,17 +34,17 @@ export default function CollectionPreviewMosaic({ previews }: Props) {
     const card = previews[index];
     const href = card ? srcById[card.id] : null;
     return href ? (
-      <img className="arc2-collection-mosaic-thumb" src={href} alt="" loading="lazy" decoding="async" />
+      <img className="arc-collection-mosaic-thumb" src={href} alt="" loading="lazy" decoding="async" />
     ) : (
-      <div className="arc2-gallery-skeleton arc2-collection-mosaic-skeleton" aria-hidden />
+      <div className="arc-gallery-skeleton arc-collection-mosaic-skeleton" aria-hidden />
     );
   };
 
   return (
-    <div className="arc2-collection-mosaic" aria-hidden="true">
-      <div className="arc2-collection-mosaic-cell arc2-collection-mosaic-cell--main">{thumb(0)}</div>
-      <div className="arc2-collection-mosaic-cell arc2-collection-mosaic-cell--tr">{thumb(1)}</div>
-      <div className="arc2-collection-mosaic-cell arc2-collection-mosaic-cell--br">{thumb(2)}</div>
+    <div className="arc-collection-mosaic" aria-hidden="true">
+      <div className="arc-collection-mosaic-cell arc-collection-mosaic-cell--main">{thumb(0)}</div>
+      <div className="arc-collection-mosaic-cell arc-collection-mosaic-cell--tr">{thumb(1)}</div>
+      <div className="arc-collection-mosaic-cell arc-collection-mosaic-cell--br">{thumb(2)}</div>
     </div>
   );
 }

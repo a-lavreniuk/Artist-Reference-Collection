@@ -1,9 +1,11 @@
 import { copyFile, mkdir, readdir, readFile, realpath, stat } from 'fs/promises';
 import path from 'path';
 import fs from 'fs';
-
-const METADATA = 'arc2-metadata.json';
-const HISTORY = 'arc2-history.json';
+import {
+  ensureLibraryFilenamesMigrated,
+  HISTORY_FILENAME,
+  METADATA_FILENAME
+} from './libraryFilenames';
 
 async function isDirEmpty(abs: string): Promise<boolean> {
   try {
@@ -118,8 +120,9 @@ export async function migrateLibraryToFolder(oldRoot: string, newRoot: string): 
 }
 
 export async function readMetadataFromRoot(root: string): Promise<unknown | null> {
+  await ensureLibraryFilenamesMigrated(root);
   try {
-    const raw = await readFile(path.join(root, METADATA), 'utf8');
+    const raw = await readFile(path.join(root, METADATA_FILENAME), 'utf8');
     return JSON.parse(raw) as unknown;
   } catch {
     return null;
@@ -127,11 +130,11 @@ export async function readMetadataFromRoot(root: string): Promise<unknown | null
 }
 
 export function metadataFilename(): string {
-  return METADATA;
+  return METADATA_FILENAME;
 }
 
 export function historyFilename(): string {
-  return HISTORY;
+  return HISTORY_FILENAME;
 }
 
 /** Удалить каталог рекурсивно (без корзины) — только для отката копирования при необходимости. */

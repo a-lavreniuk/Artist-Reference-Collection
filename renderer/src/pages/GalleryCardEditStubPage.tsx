@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ARC2_EDIT_CARD_SUBMIT_REQUEST } from '../components/layout/navbarEvents';
-import { hydrateArc2NavbarIcons } from '../components/layout/navbarIconHydrate';
+import { ARC_EDIT_CARD_SUBMIT_REQUEST } from '../components/layout/navbarEvents';
+import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import { Tooltip } from '../components/tooltip/Tooltip';
 import TagChipToggleWithTooltip from '../components/tags/TagChipToggleWithTooltip';
 import {
-  ARC2_CATEGORIES_CHANGED_EVENT,
-  ARC2_COLLECTIONS_CHANGED_EVENT,
-  ARC2_TAGS_CHANGED_EVENT,
+  ARC_CATEGORIES_CHANGED_EVENT,
+  ARC_COLLECTIONS_CHANGED_EVENT,
+  ARC_TAGS_CHANGED_EVENT,
   getAllCategories,
   getAllCollections,
   getCardById,
@@ -43,7 +43,7 @@ export default function GalleryCardEditStubPage() {
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [tab, tagIds.length, collectionIds.length, description.length, busy]);
 
@@ -82,13 +82,13 @@ export default function GalleryCardEditStubPage() {
 
   useEffect(() => {
     const onCatalog = () => void reloadCatalog();
-    window.addEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onCatalog);
-    window.addEventListener(ARC2_TAGS_CHANGED_EVENT, onCatalog);
-    window.addEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onCatalog);
+    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCatalog);
+    window.addEventListener(ARC_TAGS_CHANGED_EVENT, onCatalog);
+    window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onCatalog);
     return () => {
-      window.removeEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onCatalog);
-      window.removeEventListener(ARC2_TAGS_CHANGED_EVENT, onCatalog);
-      window.removeEventListener(ARC2_COLLECTIONS_CHANGED_EVENT, onCatalog);
+      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCatalog);
+      window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onCatalog);
+      window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onCatalog);
     };
   }, [reloadCatalog]);
 
@@ -117,8 +117,8 @@ export default function GalleryCardEditStubPage() {
 
   useEffect(() => {
     const onSubmit = () => void handleSubmit();
-    window.addEventListener(ARC2_EDIT_CARD_SUBMIT_REQUEST, onSubmit);
-    return () => window.removeEventListener(ARC2_EDIT_CARD_SUBMIT_REQUEST, onSubmit);
+    window.addEventListener(ARC_EDIT_CARD_SUBMIT_REQUEST, onSubmit);
+    return () => window.removeEventListener(ARC_EDIT_CARD_SUBMIT_REQUEST, onSubmit);
   }, [handleSubmit]);
 
   const toggleTag = (tagId: string) => {
@@ -159,7 +159,7 @@ export default function GalleryCardEditStubPage() {
 
   if (!ready) {
     return (
-      <div className="arc2-page-empty panel elevation-default">
+      <div className="arc-page-empty panel elevation-default">
         <p className="typo-p-m">Сначала укажите папку библиотеки в «Настройках».</p>
       </div>
     );
@@ -167,22 +167,22 @@ export default function GalleryCardEditStubPage() {
 
   if (!loaded && !error) {
     return (
-      <div className="arc2-page-empty panel elevation-default">
+      <div className="arc-page-empty panel elevation-default">
         <p className="typo-p-m">Загрузка карточки...</p>
       </div>
     );
   }
 
   return (
-    <div ref={hostRef} className="arc2-add-page">
+    <div ref={hostRef} className="arc-add-page">
       <div
-        className="arc2-add-editor panel elevation-default arc-ui-kit-scope"
+        className="arc-add-editor panel elevation-default arc-ui-kit-scope"
         data-elevation="default"
         data-typo-tone="white"
         data-input-size="m"
         data-btn-size="m"
       >
-        <div className="tabs arc2-add-tabs" role="tablist" aria-label="Редактирование карточки">
+        <div className="tabs arc-add-tabs" role="tablist" aria-label="Редактирование карточки">
           {(
             [
               ['tags', 'Метки', tagIds.length],
@@ -202,7 +202,7 @@ export default function GalleryCardEditStubPage() {
               {key === 'description' ? (
                 count > 0 ? (
                   <Tooltip content="Есть текст" position="top">
-                    <span className="arc2-add-tab-dot" aria-hidden="true" />
+                    <span className="arc-add-tab-dot" aria-hidden="true" />
                   </Tooltip>
                 ) : null
               ) : count > 0 ? (
@@ -213,10 +213,10 @@ export default function GalleryCardEditStubPage() {
         </div>
 
         {tab === 'tags' ? (
-          <div className="arc2-add-tab-body">
-            <div className="field field-full input-live arc2-add-search">
+          <div className="arc-add-tab-body">
+            <div className="field field-full input-live arc-add-search">
               <div className="input input--size-m input-slots search-live">
-                <span className="search-icon slot-leading arc2-icon-search" aria-hidden="true" />
+                <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
                 <input
                   className="search-inner slot-value"
                   placeholder="Поиск метки или категории"
@@ -226,11 +226,11 @@ export default function GalleryCardEditStubPage() {
                 />
               </div>
             </div>
-            <div className="arc2-add-tags-scroll">
+            <div className="arc-add-tags-scroll">
               {filteredTags.map(({ cat, tags }) => (
-                <div key={cat.id} className="arc2-add-tag-group">
-                  <p className="text-m arc2-add-tag-group-title">
-                    <span className="arc2-add-cat-dot" style={{ background: cat.colorHex }} aria-hidden />
+                <div key={cat.id} className="arc-add-tag-group">
+                  <p className="text-m arc-add-tag-group-title">
+                    <span className="arc-add-cat-dot" style={{ background: cat.colorHex }} aria-hidden />
                     {cat.name}
                   </p>
                   <div className="tags-row">
@@ -251,10 +251,10 @@ export default function GalleryCardEditStubPage() {
         ) : null}
 
         {tab === 'collections' ? (
-          <div className="arc2-add-tab-body">
-            <div className="field field-full input-live arc2-add-search">
+          <div className="arc-add-tab-body">
+            <div className="field field-full input-live arc-add-search">
               <div className="input input--size-m input-slots search-live">
-                <span className="search-icon slot-leading arc2-icon-search" aria-hidden="true" />
+                <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
                 <input
                   className="search-inner slot-value"
                   placeholder="Поиск коллекции"
@@ -264,7 +264,7 @@ export default function GalleryCardEditStubPage() {
                 />
               </div>
             </div>
-            <div className="arc2-add-collection-chips">
+            <div className="arc-add-collection-chips">
               {filteredCols.map((c) => {
                 const sel = collectionIds.includes(c.id);
                 const n = collCounts[c.id] ?? 0;
@@ -272,11 +272,11 @@ export default function GalleryCardEditStubPage() {
                   <button
                     key={c.id}
                     type="button"
-                    className={`arc2-add-collection-chip${sel ? ' is-selected' : ''}`}
+                    className={`arc-add-collection-chip${sel ? ' is-selected' : ''}`}
                     onClick={() => toggleCollection(c.id)}
                   >
-                    <span className="arc2-add-collection-chip-name">{c.name}</span>
-                    <span className="arc2-add-collection-chip-count">{n}</span>
+                    <span className="arc-add-collection-chip-name">{c.name}</span>
+                    <span className="arc-add-collection-chip-count">{n}</span>
                   </button>
                 );
               })}
@@ -286,17 +286,17 @@ export default function GalleryCardEditStubPage() {
         ) : null}
 
         {tab === 'description' ? (
-          <div className="arc2-add-tab-body arc2-add-tab-body--description">
+          <div className="arc-add-tab-body arc-add-tab-body--description">
             <div className="field field-full">
-              <div className="arc2-add-desc-head">
-                <label className="field-label text-m" htmlFor="arc2EditDesc">
+              <div className="arc-add-desc-head">
+                <label className="field-label text-m" htmlFor="arcEditDesc">
                   Описание
                 </label>
-                <span className="text-s arc2-add-desc-counter">{description.length}</span>
+                <span className="text-s arc-add-desc-counter">{description.length}</span>
               </div>
               <textarea
-                id="arc2EditDesc"
-                className="input textarea arc2-add-textarea"
+                id="arcEditDesc"
+                className="input textarea arc-add-textarea"
                 rows={8}
                 placeholder="Кратко опишите содержимое — текст сохранится на карточке."
                 value={description}
@@ -308,11 +308,11 @@ export default function GalleryCardEditStubPage() {
       </div>
 
       {error ? (
-        <p className="hint input-inline-error arc2-add-error panel elevation-default" role="alert">
+        <p className="hint input-inline-error arc-add-error panel elevation-default" role="alert">
           {error}
         </p>
       ) : null}
-      {busy ? <p className="hint arc2-add-busy">Сохранение...</p> : null}
+      {busy ? <p className="hint arc-add-busy">Сохранение...</p> : null}
     </div>
   );
 }

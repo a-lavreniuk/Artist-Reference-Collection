@@ -1,11 +1,11 @@
 /* Якорь для выпадающего меню: измеряем getBoundingClientRect поля поиска. */
-.arc2-navbar-search-anchor {
+.arc-navbar-search-anchor {
   position: relative;
   width: 100%;
   min-width: 0;
 }
 
-.arc2-navbar-search-stack {
+.arc-navbar-search-stack {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -16,14 +16,14 @@
 }
 
 /* Панель поиска: dropdown под полем, ширина = якорь (см. инлайн left/top/width). */
-.arc2-search-backdrop {
+.arc-search-backdrop {
   position: fixed;
   inset: 0;
   z-index: 25;
   background: transparent;
 }
 
-.arc2-search-panel {
+.arc-search-panel {
   position: fixed;
   z-index: 30;
   display: flex;
@@ -40,7 +40,7 @@
 }
 
 /* M (16px) со всех сторон; без горизонтального скролла; full-bleed сеп — отриц. margin × padding */
-.arc2-add-tags-scroll.arc2-search-panel-scroll {
+.arc-add-tags-scroll.arc-search-panel-scroll {
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -49,36 +49,36 @@
   padding: var(--s-3);
 }
 
-.arc2-search-panel-fullbleed-sep {
+.arc-search-panel-fullbleed-sep {
   flex-shrink: 0;
 }
 
-.arc2-search-panel-sep-span,
-.arc2-search-panel-empty-span {
+.arc-search-panel-sep-span,
+.arc-search-panel-empty-span {
   grid-column: 1 / -1;
 }
 
 /* В raised-панели линии разделения = surface-border-raised (gray/700 через токен ui-kit) */
-.arc2-search-panel .arc2-add-tag-sep,
-.arc2-search-panel .arc2-card-inspect-sep {
+.arc-search-panel .arc-add-tag-sep,
+.arc-search-panel .arc-card-inspect-sep {
   border-top-color: var(--surface-border-raised);
 }
 
-/* Полная ширина без вертикальных margin у arc2-card-inspect-sep */
-.arc2-search-panel .arc2-card-inspect-sep.arc2-card-inspect-sep--full-bleed.arc2-search-panel-fullbleed-sep.arc2-search-panel-sep-span {
+/* Полная ширина без вертикальных margin у arc-card-inspect-sep */
+.arc-search-panel .arc-card-inspect-sep.arc-card-inspect-sep--full-bleed.arc-search-panel-fullbleed-sep.arc-search-panel-sep-span {
   margin: 0;
 }
 
 /* Первая категория после блока «Недавние» + сеп: без наследуемого padding-top как у первого ряда на Add */
-.arc2-search-panel-sep-span + .arc2-add-tag-category-row .arc2-add-tag-category-title {
+.arc-search-panel-sep-span + .arc-add-tag-category-row .arc-add-tag-category-title {
   padding-top: 0;
 }
 
-.arc2-search-tag-picker-grid {
+.arc-search-tag-picker-grid {
   margin-bottom: 0;
 }
 
-.arc2-search-tags-row {
+.arc-search-tags-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2);
@@ -86,11 +86,11 @@
   align-content: flex-start;
 }
 
-.arc2-search-empty-hint {
+.arc-search-empty-hint {
   margin: var(--s-2) 0 0;
 }
 
-.arc2-search-tag-pill {
+.arc-search-tag-pill {
   border: 0;
   cursor: pointer;
   font: inherit;

@@ -86,7 +86,7 @@ export default function TagCategoryDropSurface({
 
   return (
     <div
-      className={`${className}${isDropHighlight ? ' arc2-category-panel-tags--drop-target' : ''}`.trim()}
+      className={`${className}${isDropHighlight ? ' arc-category-panel-tags--drop-target' : ''}`.trim()}
       onDragOverCapture={(e) => {
         if (e.dataTransfer.types.includes('application/tag-id')) {
           e.preventDefault();

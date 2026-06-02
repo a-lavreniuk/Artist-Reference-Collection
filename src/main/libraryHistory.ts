@@ -1,7 +1,7 @@
 import { readFile, rename, writeFile } from 'fs/promises';
 import path from 'path';
+import { ensureLibraryFilenamesMigrated, HISTORY_FILENAME } from './libraryFilenames';
 
-const HISTORY = 'arc2-history.json';
 const MAX = 1000;
 
 export type HistoryEntry = {
@@ -25,7 +25,8 @@ function formatLocalTime(d: Date): string {
 }
 
 export async function readHistory(libraryRoot: string): Promise<HistoryEntry[]> {
-  const p = path.join(libraryRoot, HISTORY);
+  await ensureLibraryFilenamesMigrated(libraryRoot);
+  const p = path.join(libraryRoot, HISTORY_FILENAME);
   try {
     const raw = await readFile(p, 'utf8');
     const j = JSON.parse(raw) as HistoryFile;
@@ -37,7 +38,8 @@ export async function readHistory(libraryRoot: string): Promise<HistoryEntry[]> 
 }
 
 export async function appendHistory(libraryRoot: string, message: string): Promise<void> {
-  const p = path.join(libraryRoot, HISTORY);
+  await ensureLibraryFilenamesMigrated(libraryRoot);
+  const p = path.join(libraryRoot, HISTORY_FILENAME);
   const file = emptyFile();
   try {
     const raw = await readFile(p, 'utf8');

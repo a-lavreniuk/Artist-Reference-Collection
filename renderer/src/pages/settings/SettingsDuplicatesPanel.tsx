@@ -39,23 +39,23 @@ function PairCard({ card, imageUrl, absolutePath, onDelete, onSkip }: PairCardPr
   const info = formatImageInfo(card);
 
   return (
-    <article className="arc2-dup-card">
-      <div className="arc2-dup-card__preview">
-        <img className="arc2-dup-card__img" src={imageUrl} alt="" />
+    <article className="arc-dup-card">
+      <div className="arc-dup-card__preview">
+        <img className="arc-dup-card__img" src={imageUrl} alt="" />
       </div>
-      <div className="arc2-dup-card__body">
-        <p className="typo-p-m arc2-dup-card__path" title={absolutePath}>
+      <div className="arc-dup-card__body">
+        <p className="typo-p-m arc-dup-card__path" title={absolutePath}>
           {absolutePath}
         </p>
-        <div className="arc2-dup-card__meta typo-p-m">
+        <div className="arc-dup-card__meta typo-p-m">
           <span>{info.format}</span>
           <span>{info.resolution}</span>
           <span>{info.size}</span>
         </div>
-        <div className="arc2-dup-card__actions">
+        <div className="arc-dup-card__actions">
           <button type="button" className="btn btn-danger btn-ds" onClick={onDelete}>
             <span className="btn-ds__value">Удалить эту</span>
-            <span className="btn-ds__icon arc2-dup-delete-icon" aria-hidden="true" />
+            <span className="btn-ds__icon arc-dup-delete-icon" aria-hidden="true" />
           </button>
           <button type="button" className="btn btn-outline btn-ds" onClick={onSkip}>
             <span className="btn-ds__value">Пропустить</span>
@@ -183,9 +183,9 @@ export default function SettingsDuplicatesPanel() {
   };
 
   return (
-    <div className="arc2-dup-screen">
-      <div className="arc2-dup-controls">
-        <div className="field input-live arc2-dup-controls__threshold">
+    <div className="arc-dup-screen">
+      <div className="arc-dup-controls">
+        <div className="field input-live arc-dup-controls__threshold">
           <input
             id="dup-threshold"
             className="input input--size-l"
@@ -207,7 +207,7 @@ export default function SettingsDuplicatesPanel() {
       </div>
 
       {!busy && current && urlA && urlB ? (
-        <div className="arc2-dup-grid">
+        <div className="arc-dup-grid">
           <PairCard
             card={current.a}
             imageUrl={urlA}

@@ -6,7 +6,7 @@ import CardInspectModal from '../gallery/CardInspectModal';
 import DemoAlert from '../layout/DemoAlert';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
 import {
-  ARC2_CARDS_CHANGED_EVENT,
+  ARC_CARDS_CHANGED_EVENT,
   getAllCategories,
   getMoodboardCardIds,
   getTagsByCategory,
@@ -101,11 +101,11 @@ export default function MoodboardCardsView() {
       void loadTagsIndex();
       void loadMoodboard();
     };
-    window.addEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
-    window.addEventListener('arc2:library-changed', onCards);
+    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
+    window.addEventListener('arc:library-changed', onCards);
     return () => {
-      window.removeEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
-      window.removeEventListener('arc2:library-changed', onCards);
+      window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
+      window.removeEventListener('arc:library-changed', onCards);
     };
   }, [loadPage, loadTagsIndex, loadMoodboard]);
 
@@ -143,9 +143,9 @@ export default function MoodboardCardsView() {
   };
 
   return (
-    <div className="arc2-collection-detail arc2-moodboard-cards">
+    <div className="arc-collection-detail arc-moodboard-cards">
       {cards.length === 0 && !loading ? (
-        <div className="arc2-page-empty panel elevation-default">
+        <div className="arc-page-empty panel elevation-default">
           <p className="typo-p-m">
             {hasSearchFilters
               ? 'Карточки не найдены. Измените фильтры поиска или сбросьте метки.'
@@ -168,8 +168,8 @@ export default function MoodboardCardsView() {
               setOpenCardId(sim[0].id);
             }}
           />
-          <div ref={sentinelRef} className="arc2-gallery-sentinel" aria-hidden />
-          {loading ? <p className="hint arc2-gallery-loading">Загрузка…</p> : null}
+          <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
+          {loading ? <p className="hint arc-gallery-loading">Загрузка…</p> : null}
         </>
       )}
 

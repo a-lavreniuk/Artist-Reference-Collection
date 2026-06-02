@@ -8,7 +8,7 @@ import PendingRestoreModal from './PendingRestoreModal';
 export default function AppLayout() {
   useEffect(() => {
     const body = document.body;
-    body.classList.add('arc2-navbar-page');
+    body.classList.add('arc-navbar-page');
     body.setAttribute('data-elevation', 'default');
     body.setAttribute('data-typo-role', 'primary');
     body.setAttribute('data-typo-tone', 'white');
@@ -17,7 +17,7 @@ export default function AppLayout() {
     body.setAttribute('data-input-size', 'l');
 
     return () => {
-      body.classList.remove('arc2-navbar-page');
+      body.classList.remove('arc-navbar-page');
       body.removeAttribute('data-elevation');
       body.removeAttribute('data-typo-role');
       body.removeAttribute('data-typo-tone');
@@ -28,10 +28,10 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <main className="arc2-navbar-shell">
+    <main className="arc-navbar-shell">
       <MaintenanceBanner />
       <TopNavbar />
-      <div className="arc2-app-outlet">
+      <div className="arc-app-outlet">
         <Outlet />
       </div>
       <PendingRestoreModal />

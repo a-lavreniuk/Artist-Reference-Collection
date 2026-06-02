@@ -24,7 +24,7 @@ function pointInRect(x: number, y: number, r: DOMRect): boolean {
   return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
 }
 
-/** Расстояние между якорём и подсказкой (px), по смыслу как --s-2 в arc-2-ui (8px) */
+/** Расстояние между якорём и подсказкой (px), по смыслу как --s-2 в arc-ui (8px) */
 const ANCHOR_GAP = 8;
 
 /** Отступ подсказки от краёв окна при clamp (px), по смыслу как --s-2 */
@@ -251,7 +251,7 @@ export function Tooltip({
   return (
     <div
       ref={wrapperRef}
-      className={`arc2-tooltip-wrapper ${className}`}
+      className={`arc-tooltip-wrapper ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -259,7 +259,7 @@ export function Tooltip({
       {isVisible && content !== null && content !== undefined && (
         <div
           ref={tooltipRef}
-          className={`arc2-tooltip arc2-tooltip--variant-${variant} arc2-tooltip--arrow-edge-${arrowEdge}${showArrow ? '' : ' arc2-tooltip--no-arrow'}${layout ? ' arc2-tooltip--placed' : ''}`}
+          className={`arc-tooltip arc-tooltip--variant-${variant} arc-tooltip--arrow-edge-${arrowEdge}${showArrow ? '' : ' arc-tooltip--no-arrow'}${layout ? ' arc-tooltip--placed' : ''}`}
           style={{
             position: 'fixed',
             top: layout ? `${layout.top}px` : '-9999px',
@@ -267,10 +267,10 @@ export function Tooltip({
             visibility: layout ? 'visible' : 'hidden'
           }}
         >
-          <div className="arc2-tooltip__inner">{content}</div>
+          <div className="arc-tooltip__inner">{content}</div>
           {showArrow && (
-            <svg className="arc2-tooltip__arrow" width="12" height="6" viewBox="0 0 12 6" aria-hidden>
-              <polygon points="0,0 12,0 6,6" className="arc2-tooltip__arrow-fill" />
+            <svg className="arc-tooltip__arrow" width="12" height="6" viewBox="0 0 12 6" aria-hidden>
+              <polygon points="0,0 12,0 6,6" className="arc-tooltip__arrow-fill" />
             </svg>
           )}
         </div>

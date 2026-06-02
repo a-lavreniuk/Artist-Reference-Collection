@@ -2,16 +2,16 @@ import './NavbarSearch.css';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ARC2_CATEGORIES_CHANGED_EVENT,
-  ARC2_TAGS_CHANGED_EVENT,
+  ARC_CATEGORIES_CHANGED_EVENT,
+  ARC_TAGS_CHANGED_EVENT,
   getAllCategories,
   getTagsByCategory,
   type CategoryRecord,
   type TagRecord
 } from '../../services/db';
 import {
-  ARC2_SEARCH_QUERY_CARD,
-  ARC2_SEARCH_QUERY_TAG,
+  ARC_SEARCH_QUERY_CARD,
+  ARC_SEARCH_QUERY_TAG,
   parseSearchCardId,
   parseSearchTagIds
 } from '../../search/searchUrl';
@@ -85,11 +85,11 @@ export default function NavbarSearch() {
 
   useEffect(() => {
     const onCats = () => void loadIndex();
-    window.addEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onCats);
-    window.addEventListener(ARC2_TAGS_CHANGED_EVENT, onCats);
+    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCats);
+    window.addEventListener(ARC_TAGS_CHANGED_EVENT, onCats);
     return () => {
-      window.removeEventListener(ARC2_CATEGORIES_CHANGED_EVENT, onCats);
-      window.removeEventListener(ARC2_TAGS_CHANGED_EVENT, onCats);
+      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCats);
+      window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onCats);
     };
   }, [loadIndex]);
 
@@ -162,11 +162,11 @@ export default function NavbarSearch() {
     setSearchParams(
       (prev) => {
         const n = new URLSearchParams(prev);
-        n.delete(ARC2_SEARCH_QUERY_TAG);
+        n.delete(ARC_SEARCH_QUERY_TAG);
         for (const id of [...next]) {
-          n.append(ARC2_SEARCH_QUERY_TAG, id);
+          n.append(ARC_SEARCH_QUERY_TAG, id);
         }
-        n.delete(ARC2_SEARCH_QUERY_CARD);
+        n.delete(ARC_SEARCH_QUERY_CARD);
         return n;
       },
       { replace: true }
@@ -181,9 +181,9 @@ export default function NavbarSearch() {
     setSearchParams(
       (prev) => {
         const n = new URLSearchParams(prev);
-        n.delete(ARC2_SEARCH_QUERY_TAG);
+        n.delete(ARC_SEARCH_QUERY_TAG);
         for (const id of next) {
-          n.append(ARC2_SEARCH_QUERY_TAG, id);
+          n.append(ARC_SEARCH_QUERY_TAG, id);
         }
         return n;
       },
@@ -195,8 +195,8 @@ export default function NavbarSearch() {
   const resetSearchField = () => {
     panelHadInteraction.current = true;
     const n = new URLSearchParams(searchParams);
-    n.delete(ARC2_SEARCH_QUERY_TAG);
-    n.delete(ARC2_SEARCH_QUERY_CARD);
+    n.delete(ARC_SEARCH_QUERY_TAG);
+    n.delete(ARC_SEARCH_QUERY_CARD);
     setSearchParams(n, { replace: true });
     setDraft('');
     setFieldError(false);
@@ -207,7 +207,7 @@ export default function NavbarSearch() {
     if (!id) return;
     panelHadInteraction.current = true;
     const n = new URLSearchParams(searchParams);
-    n.set(ARC2_SEARCH_QUERY_CARD, id);
+    n.set(ARC_SEARCH_QUERY_CARD, id);
     setSearchParams(n, { replace: true });
     setDraft('');
     setFieldError(false);
@@ -267,14 +267,14 @@ export default function NavbarSearch() {
 
   return (
     <>
-      <div className="arc2-navbar-search-anchor" ref={searchAnchorRef}>
-      <div className="arc2-navbar-search-stack">
+      <div className="arc-navbar-search-anchor" ref={searchAnchorRef}>
+      <div className="arc-navbar-search-stack">
         <div
-          className={`field field-full search-multiselect-live arc2-navbar-search-live${hasValue ? ' has-value' : ''}${fieldError ? ' field-error' : ''}`}
+          className={`field field-full search-multiselect-live arc-navbar-search-live${hasValue ? ' has-value' : ''}${fieldError ? ' field-error' : ''}`}
           data-live-search-multi
         >
-          <div className="input search-multiselect input--size-l input-slots arc2-navbar-search">
-            <span className="search-icon slot-leading arc2-icon-search" aria-hidden="true" />
+          <div className="input search-multiselect input--size-l input-slots arc-navbar-search">
+            <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
             {selectedTagIds.map((id) => {
               const t = tagsIndex.get(id);
               const cat = t ? categoryById.get(t.categoryId) : undefined;
@@ -315,7 +315,7 @@ export default function NavbarSearch() {
                 onClick={() => {
                   panelHadInteraction.current = true;
                   const n = new URLSearchParams(searchParams);
-                  n.delete(ARC2_SEARCH_QUERY_CARD);
+                  n.delete(ARC_SEARCH_QUERY_CARD);
                   setSearchParams(n, { replace: true });
                 }}
                 onKeyDown={(e) => {
@@ -323,7 +323,7 @@ export default function NavbarSearch() {
                     e.preventDefault();
                     panelHadInteraction.current = true;
                     const n = new URLSearchParams(searchParams);
-                    n.delete(ARC2_SEARCH_QUERY_CARD);
+                    n.delete(ARC_SEARCH_QUERY_CARD);
                     setSearchParams(n, { replace: true });
                   }
                 }}
@@ -353,7 +353,7 @@ export default function NavbarSearch() {
               }}
             />
             <button
-              className="input-inline-icon search-multiselect-clear-btn input-inline-icon--close slot-trailing arc2-icon-close"
+              className="input-inline-icon search-multiselect-clear-btn input-inline-icon--close slot-trailing arc-icon-close"
               type="button"
               aria-label="Сбросить поиск"
               onClick={resetSearchField}
@@ -366,12 +366,12 @@ export default function NavbarSearch() {
         <>
           <button
             type="button"
-            className="arc2-search-backdrop"
+            className="arc-search-backdrop"
             aria-label="Закрыть поиск"
             onClick={closePanel}
           />
           <div
-            className="arc2-search-panel arc-ui-kit-scope"
+            className="arc-search-panel arc-ui-kit-scope"
             data-elevation="raised"
             data-typo-tone="white"
             style={{
@@ -380,13 +380,13 @@ export default function NavbarSearch() {
               width: dropdownLayout.width
             }}
           >
-            <div className="arc2-add-tags-scroll arc2-search-panel-scroll">
-              <div className="arc2-add-tags-categories arc2-search-tag-picker-grid">
+            <div className="arc-add-tags-scroll arc-search-panel-scroll">
+              <div className="arc-add-tags-categories arc-search-tag-picker-grid">
                 {showRecent ? (
-                  <div className="arc2-add-tag-category-row">
-                    <p className="text-m arc2-add-tag-category-title">Недавние запросы</p>
-                    <div className="arc2-add-tag-chips-column">
-                      <div className="tags-row arc2-search-tags-row">
+                  <div className="arc-add-tag-category-row">
+                    <p className="text-m arc-add-tag-category-title">Недавние запросы</p>
+                    <div className="arc-add-tag-chips-column">
+                      <div className="tags-row arc-search-tags-row">
                         {recentIds.map((rid) => {
                           const t = tagsIndex.get(rid);
                           if (!t) return null;
@@ -413,24 +413,24 @@ export default function NavbarSearch() {
 
                 {showRecent && (filteredTree.length > 0 || (filteredTree.length === 0 && Boolean(q))) ? (
                   <div
-                    className="arc2-card-inspect-sep arc2-card-inspect-sep--full-bleed arc2-search-panel-fullbleed-sep arc2-search-panel-sep-span"
+                    className="arc-card-inspect-sep arc-card-inspect-sep--full-bleed arc-search-panel-fullbleed-sep arc-search-panel-sep-span"
                     role="separator"
                   />
                 ) : null}
 
                 {filteredTree.length === 0 && q ? (
-                  <p className="typo-p-m arc2-search-empty-hint arc2-search-panel-empty-span">
+                  <p className="typo-p-m arc-search-empty-hint arc-search-panel-empty-span">
                     Нет совпадений по запросу.
                   </p>
                 ) : (
                   filteredTree.map(({ cat, tags }, index) => (
-                    <div key={cat.id} className="arc2-add-tag-category-row">
-                      <p className="text-m arc2-add-tag-category-title">{cat.name}</p>
-                      <div className="arc2-add-tag-chips-column">
+                    <div key={cat.id} className="arc-add-tag-category-row">
+                      <p className="text-m arc-add-tag-category-title">{cat.name}</p>
+                      <div className="arc-add-tag-chips-column">
                         {index > 0 ? (
-                          <div className="arc2-add-tag-sep" role="separator" aria-hidden="true" />
+                          <div className="arc-add-tag-sep" role="separator" aria-hidden="true" />
                         ) : null}
-                        <div className="tags-row arc2-search-tags-row">
+                        <div className="tags-row arc-search-tags-row">
                           {tags.map((t) => (
                             <SearchPanelTagChip
                               key={t.id}

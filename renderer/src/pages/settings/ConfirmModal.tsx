@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { hydrateArc2NavbarIcons } from '../../components/layout/navbarIconHydrate';
+import { hydrateArcNavbarIcons } from '../../components/layout/navbarIconHydrate';
 
 type Props = {
   title: string;
@@ -23,7 +23,7 @@ export default function ConfirmModal({
   const hostRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArc2NavbarIcons(hostRef.current);
+    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
   }, [title, message]);
 
   useEffect(() => {
@@ -52,15 +52,15 @@ export default function ConfirmModal({
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2ConfirmTitle"
+        aria-labelledby="arcConfirmTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2ConfirmTitle">
+          <h3 className="arc-modal__title" id="arcConfirmTitle">
             {title}
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onCancel}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">

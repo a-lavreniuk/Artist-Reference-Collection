@@ -1,26 +1,26 @@
-export const ARC2_NAVBAR_COLLECTION_TITLE_EVENT = 'arc2:navbar-collection-title';
+export const ARC_NAVBAR_COLLECTION_TITLE_EVENT = 'arc:navbar-collection-title';
 /** Открыть модалку переименования коллекции (кнопка в навбаре на детали коллекции). */
-export const ARC2_RENAME_COLLECTION_REQUEST = 'arc2:rename-collection-request';
-export const ARC2_COLLECTIONS_ADD_REQUEST = 'arc2:collections-add-request';
-export const ARC2_ADD_CARDS_SUBMIT_REQUEST = 'arc2:add-cards-submit-request';
-export const ARC2_EDIT_CARD_SUBMIT_REQUEST = 'arc2:edit-card-submit-request';
-export const ARC2_ADD_CARDS_QUEUE_STATE_EVENT = 'arc2:add-cards-queue-state';
+export const ARC_RENAME_COLLECTION_REQUEST = 'arc:rename-collection-request';
+export const ARC_COLLECTIONS_ADD_REQUEST = 'arc:collections-add-request';
+export const ARC_ADD_CARDS_SUBMIT_REQUEST = 'arc:add-cards-submit-request';
+export const ARC_EDIT_CARD_SUBMIT_REQUEST = 'arc:edit-card-submit-request';
+export const ARC_ADD_CARDS_QUEUE_STATE_EVENT = 'arc:add-cards-queue-state';
 
-export type Arc2AddCardsQueueStateDetail = {
+export type ArcAddCardsQueueStateDetail = {
   hasItems: boolean;
   count: number;
 };
 
-let lastAddCardsQueueState: Arc2AddCardsQueueStateDetail = { hasItems: false, count: 0 };
+let lastAddCardsQueueState: ArcAddCardsQueueStateDetail = { hasItems: false, count: 0 };
 
 /** Последнее состояние очереди (для навбара до первого события или после гонки mount). */
-export function getLastAddCardsQueueState(): Arc2AddCardsQueueStateDetail {
+export function getLastAddCardsQueueState(): ArcAddCardsQueueStateDetail {
   return lastAddCardsQueueState;
 }
 
-export function publishAddCardsQueueState(detail: Arc2AddCardsQueueStateDetail): void {
+export function publishAddCardsQueueState(detail: ArcAddCardsQueueStateDetail): void {
   lastAddCardsQueueState = detail;
   window.dispatchEvent(
-    new CustomEvent<Arc2AddCardsQueueStateDetail>(ARC2_ADD_CARDS_QUEUE_STATE_EVENT, { detail })
+    new CustomEvent<ArcAddCardsQueueStateDetail>(ARC_ADD_CARDS_QUEUE_STATE_EVENT, { detail })
   );
 }

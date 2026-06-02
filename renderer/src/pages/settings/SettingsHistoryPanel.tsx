@@ -79,8 +79,8 @@ export default function SettingsHistoryPanel() {
   ];
 
   return (
-    <div className="arc2-settings-stack arc2-history-screen">
-      <div className="tabs arc2-history-tabs" role="tablist" aria-label="Период истории">
+    <div className="arc-settings-stack arc-history-screen">
+      <div className="tabs arc-history-tabs" role="tablist" aria-label="Период истории">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -95,15 +95,15 @@ export default function SettingsHistoryPanel() {
         ))}
       </div>
 
-      <section className="panel elevation-sunken arc2-history-container" aria-label="История действий">
+      <section className="panel elevation-sunken arc-history-container" aria-label="История действий">
         {filtered.length === 0 ? (
-          <p className="typo-p-m arc2-history-empty">Нет записей за выбранный период.</p>
+          <p className="typo-p-m arc-history-empty">Нет записей за выбранный период.</p>
         ) : (
-          <ul className="arc2-history-list" aria-live="polite">
+          <ul className="arc-history-list" aria-live="polite">
             {filtered.map((e, i) => (
-              <li key={`${e.time}-${i}`} className="arc2-history-item">
-                <span className="typo-p-m arc2-history-time">{e.time}</span>
-                <p className="typo-p-m arc2-history-message">{e.message}</p>
+              <li key={`${e.time}-${i}`} className="arc-history-item">
+                <span className="typo-p-m arc-history-time">{e.time}</span>
+                <p className="typo-p-m arc-history-message">{e.message}</p>
               </li>
             ))}
           </ul>

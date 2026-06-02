@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import ModalCategoryColorPicker from './ModalCategoryColorPicker';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { normalizeHex } from '../../utils/colorPicker';
 
 const DEFAULT_COLOR = '#EAB308';
@@ -23,7 +23,7 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [newCategoryName, normalized, error, isSaving]);
 
@@ -75,15 +75,15 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2TagsCategoryModalTitle"
+        aria-labelledby="arcTagsCategoryModalTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2TagsCategoryModalTitle">
+          <h3 className="arc-modal__title" id="arcTagsCategoryModalTitle">
             Новая категория
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">
@@ -131,7 +131,7 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
                 }}
               />
               <button
-                className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc2-icon-close"
+                className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
                 type="button"
                 aria-label="Очистить"
                 onClick={(event) => {
@@ -146,7 +146,7 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
             <hr className="arc-modal__separator" />
           </div>
           <ModalCategoryColorPicker value={normalized} onChange={(hex) => setColorHex(hex)} />
-          {error && !hasDuplicateNameError ? <p className="hint-error arc2-category-modal-error">{error}</p> : null}
+          {error && !hasDuplicateNameError ? <p className="hint-error arc-category-modal-error">{error}</p> : null}
         </div>
         <footer className="arc-modal__footer arc-modal__footer--actions-3">
           <button type="button" className="btn btn-outline btn-ds btn-s" disabled aria-disabled="true">

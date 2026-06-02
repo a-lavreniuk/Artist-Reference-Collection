@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 
-/** Как в `initDemoAlerts` / `showAlert` в arc-2-ui.html (`setTimeout(..., 3200)`). */
+/** Как в `initDemoAlerts` / `showAlert` в arc-ui.html (`setTimeout(..., 3200)`). */
 const ARC_UI_KIT_ALERT_AUTO_DISMISS_MS = 3200;
 
-/** Типы блоков EL-ALERT в arc-2-ui (см. `.alert-*`). */
+/** Типы блоков EL-ALERT в arc-ui (см. `.alert-*`). */
 export type DemoAlertVariant = 'info' | 'success' | 'warning' | 'danger';
 
 type Props = {
@@ -18,7 +18,7 @@ type Props = {
 };
 
 /**
- * Фиксированное уведомление внизу экрана (разметка EL-ALERT / `demo-alert-host` из arc-2-ui).
+ * Фиксированное уведомление внизу экрана (разметка EL-ALERT / `demo-alert-host` из arc-ui).
  */
 export default function DemoAlert({
   message,

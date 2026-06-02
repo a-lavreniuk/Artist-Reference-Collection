@@ -72,24 +72,24 @@ export default function SettingsStatisticsPanel() {
   ];
 
   return (
-    <div className="arc2-settings-stack">
-      <div className="arc2-stats-panels-grid">
+    <div className="arc-settings-stack">
+      <div className="arc-stats-panels-grid">
         {summaryStats.map((item) => (
-          <section key={item.id} className="arc2-settings-block panel elevation-sunken arc2-stat-panel">
-            <span className={`arc2-stat-icon arc2-stat-icon--${item.icon}`} aria-hidden="true" />
-            <div className="arc2-stat-panel__content">
-              <p className="h2 arc2-stat-panel__value">{item.value}</p>
-              <p className="typo-p-l arc2-stat-panel__label">{item.label}</p>
+          <section key={item.id} className="arc-settings-block panel elevation-sunken arc-stat-panel">
+            <span className={`arc-stat-icon arc-stat-icon--${item.icon}`} aria-hidden="true" />
+            <div className="arc-stat-panel__content">
+              <p className="h2 arc-stat-panel__value">{item.value}</p>
+              <p className="typo-p-l arc-stat-panel__label">{item.label}</p>
             </div>
           </section>
         ))}
       </div>
 
-      <div className="arc2-stats-tags-grid">
-        <section className="arc2-settings-block panel elevation-sunken arc2-stats-tags-panel">
-          <span className="arc2-stat-icon arc2-stat-icon--arrow-up-right arc2-stat-icon--success" aria-hidden="true" />
-          <h2 className="h2 arc2-stats-tags-panel__title">Популярные метки</h2>
-          <div className="arc2-category-tag-cloud">
+      <div className="arc-stats-tags-grid">
+        <section className="arc-settings-block panel elevation-sunken arc-stats-tags-panel">
+          <span className="arc-stat-icon arc-stat-icon--arrow-up-right arc-stat-icon--success" aria-hidden="true" />
+          <h2 className="h2 arc-stats-tags-panel__title">Популярные метки</h2>
+          <div className="arc-category-tag-cloud">
             {topTags.length === 0 ? (
               <p className="hint">Нет популярных меток.</p>
             ) : (
@@ -114,10 +114,10 @@ export default function SettingsStatisticsPanel() {
           </div>
         </section>
 
-        <section className="arc2-settings-block panel elevation-sunken arc2-stats-tags-panel">
-          <span className="arc2-stat-icon arc2-stat-icon--arrow-down-left arc2-stat-icon--danger" aria-hidden="true" />
-          <h2 className="h2 arc2-stats-tags-panel__title">Малоиспользуемые (0–5 карточек)</h2>
-          <div className="arc2-category-tag-cloud">
+        <section className="arc-settings-block panel elevation-sunken arc-stats-tags-panel">
+          <span className="arc-stat-icon arc-stat-icon--arrow-down-left arc-stat-icon--danger" aria-hidden="true" />
+          <h2 className="h2 arc-stats-tags-panel__title">Малоиспользуемые (0–5 карточек)</h2>
+          <div className="arc-category-tag-cloud">
             {lowTags.length === 0 ? (
               <p className="hint">Нет непопулярных меток.</p>
             ) : (

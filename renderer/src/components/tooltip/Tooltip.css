@@ -1,11 +1,11 @@
-/* Tooltip (ARC-2): raised surface без тени; не конфликтует с .tooltip из arc-2-ui.css */
+/* Tooltip (ARC): raised surface без тени; не конфликтует с .tooltip из arc-ui.css */
 
-.arc2-tooltip-wrapper {
+.arc-tooltip-wrapper {
   position: relative;
   display: inline-block;
 }
 
-.arc2-tooltip {
+.arc-tooltip {
   position: fixed;
   z-index: 10040;
   font-family: "Google Sans", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -21,15 +21,15 @@
   opacity: 0;
 }
 
-.arc2-tooltip--variant-default {
+.arc-tooltip--variant-default {
   max-width: 192px;
 }
 
-.arc2-tooltip--variant-rich {
+.arc-tooltip--variant-rich {
   max-width: 256px;
 }
 
-.arc2-tooltip__inner {
+.arc-tooltip__inner {
   padding: var(--s-2);
   background: var(--raised-bg);
   border: 1px solid var(--surface-border-raised);
@@ -38,50 +38,50 @@
   min-width: 0;
 }
 
-.arc2-tooltip__arrow {
+.arc-tooltip__arrow {
   position: absolute;
   display: block;
   pointer-events: none;
 }
 
-.arc2-tooltip__arrow-fill {
+.arc-tooltip__arrow-fill {
   fill: var(--raised-bg);
 }
 
-.arc2-tooltip--arrow-edge-bottom .arc2-tooltip__arrow {
+.arc-tooltip--arrow-edge-bottom .arc-tooltip__arrow {
   bottom: -5px;
   left: 50%;
   transform: translateX(-50%);
 }
 
-.arc2-tooltip--arrow-edge-top .arc2-tooltip__arrow {
+.arc-tooltip--arrow-edge-top .arc-tooltip__arrow {
   top: -5px;
   left: 50%;
   transform: translateX(-50%) rotate(180deg);
 }
 
-.arc2-tooltip--arrow-edge-right .arc2-tooltip__arrow {
+.arc-tooltip--arrow-edge-right .arc-tooltip__arrow {
   right: -6px;
   top: 50%;
   transform: translateY(-50%) rotate(-90deg);
 }
 
-.arc2-tooltip--arrow-edge-left .arc2-tooltip__arrow {
+.arc-tooltip--arrow-edge-left .arc-tooltip__arrow {
   left: -6px;
   top: 50%;
   transform: translateY(-50%) rotate(90deg);
 }
 
-.arc2-tooltip--no-arrow .arc2-tooltip__arrow {
+.arc-tooltip--no-arrow .arc-tooltip__arrow {
   display: none;
 }
 
 /* duration + easing уже в --transition-fast (150ms ease); второй timing-function ломает shorthand и оставляет opacity: 0 */
-.arc2-tooltip.arc2-tooltip--placed {
-  animation: arc2-tooltip-fade-in var(--transition-fast) forwards;
+.arc-tooltip.arc-tooltip--placed {
+  animation: arc-tooltip-fade-in var(--transition-fast) forwards;
 }
 
-@keyframes arc2-tooltip-fade-in {
+@keyframes arc-tooltip-fade-in {
   from {
     opacity: 0;
   }
@@ -91,7 +91,7 @@
 }
 
 /* Обёртка над disabled-кнопкой: нативный title не срабатывает; тултип ловит hover на span */
-.arc2-tooltip-anchor-inline {
+.arc-tooltip-anchor-inline {
   display: inline-flex;
   vertical-align: middle;
 }

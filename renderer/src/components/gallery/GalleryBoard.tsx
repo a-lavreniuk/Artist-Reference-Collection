@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CardRecord } from '../../services/db';
-import { hydrateArc2NavbarIcons } from '../layout/navbarIconHydrate';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 
 type Props = {
@@ -46,29 +46,29 @@ export default function GalleryBoard({
 
   useLayoutEffect(() => {
     if (rootRef.current) {
-      void hydrateArc2NavbarIcons(rootRef.current);
+      void hydrateArcNavbarIcons(rootRef.current);
     }
   }, [cards, hoveredBookmarkCardId, moodboardCardIds]);
 
   const moodboardEnabled = Boolean(moodboardCardIds && onToggleMoodboard);
 
   return (
-    <div ref={rootRef} className="arc2-gallery-masonry">
+    <div ref={rootRef} className="arc-gallery-masonry">
       {cards.map((card) => {
         const inMoodboard = moodboardCardIds?.has(card.id) ?? false;
         const iconClass =
           hoveredBookmarkCardId === card.id
             ? inMoodboard
-              ? 'arc2-icon-bookmark-minus'
-              : 'arc2-icon-bookmark-plus'
-            : 'arc2-icon-bookmark';
-        const mediaTypeIconClass = card.type === 'video' ? 'arc2-icon-play' : 'arc2-icon-image';
+              ? 'arc-icon-bookmark-minus'
+              : 'arc-icon-bookmark-plus'
+            : 'arc-icon-bookmark';
+        const mediaTypeIconClass = card.type === 'video' ? 'arc-icon-play' : 'arc-icon-image';
         return (
         <div
           key={card.id}
           role="button"
           tabIndex={0}
-          className={`arc2-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}`}
+          className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}`}
           onClick={() => onOpenCard(card.id)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -77,28 +77,28 @@ export default function GalleryBoard({
             }
           }}
         >
-          <span className="arc2-gallery-card-stack">
-            <span className="arc2-gallery-card-badge" aria-hidden="true" data-btn-size="s">
+          <span className="arc-gallery-card-stack">
+            <span className="arc-gallery-card-badge" aria-hidden="true" data-btn-size="s">
               <span className={`tab-icon ${mediaTypeIconClass}`} />
             </span>
             {srcMap[card.id] ? (
-              <img className="arc2-gallery-thumb" src={srcMap[card.id]} alt="" loading="lazy" decoding="async" />
+              <img className="arc-gallery-thumb" src={srcMap[card.id]} alt="" loading="lazy" decoding="async" />
             ) : (
-              <div className="arc2-gallery-skeleton" aria-hidden />
+              <div className="arc-gallery-skeleton" aria-hidden />
             )}
-            <span className="arc2-gallery-card-overlay">
-              <span className="arc2-gallery-card-overlay-inner" data-btn-size="s">
+            <span className="arc-gallery-card-overlay">
+              <span className="arc-gallery-card-overlay-inner" data-btn-size="s">
                 {onFindSimilar ? (
                   <button
                     type="button"
-                    className="btn btn-secondary btn-ds arc2-gallery-overlay-btn arc2-card-slot-blur-btn"
+                    className="btn btn-secondary btn-ds arc-gallery-overlay-btn arc-card-slot-blur-btn"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       onFindSimilar(card.id);
                     }}
                   >
-                    <span className="btn-ds__icon arc2-icon-search" aria-hidden="true" />
+                    <span className="btn-ds__icon arc-icon-search" aria-hidden="true" />
                     <span className="btn-ds__value">Найти похожее</span>
                   </button>
                 ) : null}
@@ -109,7 +109,7 @@ export default function GalleryBoard({
                   >
                     <button
                       type="button"
-                      className="btn btn-outline btn-icon-only btn-ds arc2-gallery-overlay-bookmark arc2-card-slot-blur-btn"
+                      className="btn btn-outline btn-icon-only btn-ds arc-gallery-overlay-bookmark arc-card-slot-blur-btn"
                       aria-label={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
                       onMouseEnter={() => setHoveredBookmarkCardId(card.id)}
                       onMouseLeave={() => setHoveredBookmarkCardId((prev) => (prev === card.id ? null : prev))}

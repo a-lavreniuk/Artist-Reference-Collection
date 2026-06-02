@@ -1,4 +1,4 @@
-.arc2-tag-tooltip {
+.arc-tag-tooltip {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -6,12 +6,12 @@
   min-width: 0;
 }
 
-.arc2-tag-tooltip--row {
+.arc-tag-tooltip--row {
   flex-direction: row;
   align-items: flex-start;
 }
 
-.arc2-tag-tooltip__image {
+.arc-tag-tooltip__image {
   width: 64px;
   height: 64px;
   flex-shrink: 0;
@@ -21,7 +21,7 @@
   display: block;
 }
 
-.arc2-tag-tooltip__text {
+.arc-tag-tooltip__text {
   flex: 1 1 auto;
   min-width: 0;
   white-space: pre-wrap;

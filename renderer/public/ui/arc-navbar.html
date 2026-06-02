@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ARC-2 Navbar Sandbox</title>
-  <link rel="stylesheet" href="./arc-2-ui/arc-2-ui.css" />
-  <link rel="stylesheet" href="./arc-2-navbar.css" />
+  <title>ARC Navbar Sandbox</title>
+  <link rel="stylesheet" href="./arc-ui/arc-ui.css" />
+  <link rel="stylesheet" href="./arc-navbar.css" />
 </head>
-<body class="arc2-navbar-page" data-elevation="default" data-typo-role="primary" data-typo-tone="white" data-typo-state="default" data-btn-size="l" data-input-size="l">
-  <main class="arc2-navbar-shell">
-    <header class="arc2-navbar panel elevation-default" data-navbar-elevation="default">
-      <div class="arc2-navbar-row">
-        <div class="arc2-navbar-group">
-          <div class="tabs arc2-navbar-main-tabs" role="tablist" aria-label="Основная навигация">
+<body class="arc-navbar-page" data-elevation="default" data-typo-role="primary" data-typo-tone="white" data-typo-state="default" data-btn-size="l" data-input-size="l">
+  <main class="arc-navbar-shell">
+    <header class="arc-navbar panel elevation-default" data-navbar-elevation="default">
+      <div class="arc-navbar-row">
+        <div class="arc-navbar-group">
+          <div class="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация">
             <button class="tab-button is-active" data-section="gallery" type="button" role="tab" aria-selected="true">Галерея</button>
             <button class="tab-button" data-section="tags" type="button" role="tab" aria-selected="false">Метки</button>
             <button class="tab-button" data-section="collections" type="button" role="tab" aria-selected="false">Коллекции</button>
@@ -21,32 +21,32 @@
           </div>
         </div>
 
-        <div class="arc2-navbar-group arc2-navbar-group--grow">
-          <div class="field field-full search-multiselect-live arc2-navbar-search-live" data-live-search-multi>
-            <div class="input search-multiselect input--size-l input-slots arc2-navbar-search">
-              <span class="search-icon slot-leading arc2-icon-search" aria-hidden="true"></span>
+        <div class="arc-navbar-group arc-navbar-group--grow">
+          <div class="field field-full search-multiselect-live arc-navbar-search-live" data-live-search-multi>
+            <div class="input search-multiselect input--size-l input-slots arc-navbar-search">
+              <span class="search-icon slot-leading arc-icon-search" aria-hidden="true"></span>
               <input class="search-inner slot-value" type="text" placeholder="Поиск по названиям меток или ID карточек..." />
-              <button class="input-inline-icon search-multiselect-clear-btn input-inline-icon--close slot-trailing arc2-icon-close" type="button" aria-label="Очистить"></button>
+              <button class="input-inline-icon search-multiselect-clear-btn input-inline-icon--close slot-trailing arc-icon-close" type="button" aria-label="Очистить"></button>
             </div>
           </div>
         </div>
 
-        <div class="arc2-navbar-group">
-          <button class="btn btn-primary btn-ds arc2-navbar-add" type="button" id="arc2NavbarAddTrigger">
+        <div class="arc-navbar-group">
+          <button class="btn btn-primary btn-ds arc-navbar-add" type="button" id="arcNavbarAddTrigger">
             <span class="btn-ds__value">Добавить карточки</span>
-            <span class="btn-ds__icon arc2-icon-plus" aria-hidden="true"></span>
+            <span class="btn-ds__icon arc-icon-plus" aria-hidden="true"></span>
           </button>
         </div>
       </div>
 
-      <div class="arc2-navbar-row">
-        <h1 class="h1 arc2-navbar-title" id="arc2NavbarTitle">Карточки</h1>
-        <div class="arc2-navbar-secondary-actions" id="arc2NavbarSecondaryActions"></div>
+      <div class="arc-navbar-row">
+        <h1 class="h1 arc-navbar-title" id="arcNavbarTitle">Карточки</h1>
+        <div class="arc-navbar-secondary-actions" id="arcNavbarSecondaryActions"></div>
       </div>
     </header>
   </main>
 
-  <div class="arc-modal-host" id="arc2TagsCategoryModalHost" hidden aria-hidden="true">
+  <div class="arc-modal-host" id="arcTagsCategoryModalHost" hidden aria-hidden="true">
     <section
       class="arc-modal"
       data-elevation="raised"
@@ -54,15 +54,15 @@
       data-btn-size="s"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="arc2TagsCategoryModalTitle"
+      aria-labelledby="arcTagsCategoryModalTitle"
     >
       <header class="arc-modal__header arc-modal__header--title-subtitle">
         <div class="arc-modal__title-block">
-          <h3 class="arc-modal__title" id="arc2TagsCategoryModalTitle">Новая категория</h3>
+          <h3 class="arc-modal__title" id="arcTagsCategoryModalTitle">Новая категория</h3>
           <p class="arc-modal__subtitle">Введите название категории</p>
         </div>
-        <button type="button" class="arc-modal__close" data-arc2-modal-close aria-label="Закрыть">
-          <span class="tab-icon arc2-icon-close" aria-hidden="true"></span>
+        <button type="button" class="arc-modal__close" data-arc-modal-close aria-label="Закрыть">
+          <span class="tab-icon arc-icon-close" aria-hidden="true"></span>
         </button>
       </header>
       <div class="arc-modal__body">
@@ -74,20 +74,20 @@
         </div>
       </div>
       <footer class="arc-modal__footer arc-modal__footer--actions-2">
-        <button type="button" class="btn btn-outline btn-ds btn-s" data-arc2-modal-close><span class="btn-ds__value">Отмена</span></button>
-        <button type="button" class="btn btn-primary btn-ds btn-s" data-arc2-modal-close><span class="btn-ds__value">Создать</span></button>
+        <button type="button" class="btn btn-outline btn-ds btn-s" data-arc-modal-close><span class="btn-ds__value">Отмена</span></button>
+        <button type="button" class="btn btn-primary btn-ds btn-s" data-arc-modal-close><span class="btn-ds__value">Создать</span></button>
       </footer>
     </section>
   </div>
 
   <script>
     (() => {
-      const mainTabs = Array.from(document.querySelectorAll('.arc2-navbar-main-tabs .tab-button'));
-      const addTriggerButton = document.getElementById('arc2NavbarAddTrigger');
-      const titleNode = document.getElementById('arc2NavbarTitle');
-      const secondaryActionsNode = document.getElementById('arc2NavbarSecondaryActions');
-      const tagsCategoryModalHost = document.getElementById('arc2TagsCategoryModalHost');
-      let activeArc2ModalHost = null;
+      const mainTabs = Array.from(document.querySelectorAll('.arc-navbar-main-tabs .tab-button'));
+      const addTriggerButton = document.getElementById('arcNavbarAddTrigger');
+      const titleNode = document.getElementById('arcNavbarTitle');
+      const secondaryActionsNode = document.getElementById('arcNavbarSecondaryActions');
+      const tagsCategoryModalHost = document.getElementById('arcTagsCategoryModalHost');
+      let activeArcModalHost = null;
 
       const sectionConfigs = {
         gallery: {
@@ -95,9 +95,9 @@
           type: 'tabs',
           ariaLabel: 'Фильтрация карточек',
           items: [
-            { label: 'Все карточки', count: '1.4K', active: true, iconClass: 'arc2-icon-images' },
-            { label: 'Изображения', count: '1.4K', active: false, iconClass: 'arc2-icon-image' },
-            { label: 'Видео', count: '128', active: false, iconClass: 'arc2-icon-play' }
+            { label: 'Все карточки', count: '1.4K', active: true, iconClass: 'arc-icon-images' },
+            { label: 'Изображения', count: '1.4K', active: false, iconClass: 'arc-icon-image' },
+            { label: 'Видео', count: '128', active: false, iconClass: 'arc-icon-play' }
           ]
         },
         tags: {
@@ -115,8 +115,8 @@
           type: 'tabs',
           ariaLabel: 'Фильтрация мудборда',
           items: [
-            { label: 'Карточки', count: '32', active: true, iconClass: 'arc2-icon-images' },
-            { label: 'Доска', active: false, iconClass: 'arc2-icon-whiteboard' }
+            { label: 'Карточки', count: '32', active: true, iconClass: 'arc-icon-images' },
+            { label: 'Доска', active: false, iconClass: 'arc-icon-whiteboard' }
           ]
         },
         settings: {
@@ -124,10 +124,10 @@
           type: 'tabs',
           ariaLabel: 'Разделы настроек',
           items: [
-            { label: 'Хранилище', active: true, iconClass: 'arc2-icon-hard-drive' },
-            { label: 'Статистика', active: false, iconClass: 'arc2-icon-pie-chart' },
-            { label: 'История', active: false, iconClass: 'arc2-icon-history' },
-            { label: 'Поиск дублей', active: false, iconClass: 'arc2-icon-copy' }
+            { label: 'Хранилище', active: true, iconClass: 'arc-icon-hard-drive' },
+            { label: 'Статистика', active: false, iconClass: 'arc-icon-pie-chart' },
+            { label: 'История', active: false, iconClass: 'arc-icon-history' },
+            { label: 'Поиск дублей', active: false, iconClass: 'arc-icon-copy' }
           ]
         },
         add: {
@@ -148,9 +148,9 @@
           rightTabs: {
             ariaLabel: 'Фильтрация карточек коллекции',
             items: [
-              { label: 'Все карточки', count: '1.4K', active: true, iconClass: 'arc2-icon-images' },
-              { label: 'Изображения', count: '1.4K', active: false, iconClass: 'arc2-icon-image' },
-              { label: 'Видео', count: '128', active: false, iconClass: 'arc2-icon-play' }
+              { label: 'Все карточки', count: '1.4K', active: true, iconClass: 'arc-icon-images' },
+              { label: 'Изображения', count: '1.4K', active: false, iconClass: 'arc-icon-image' },
+              { label: 'Видео', count: '128', active: false, iconClass: 'arc-icon-play' }
             ]
           }
         },
@@ -159,7 +159,7 @@
           type: 'editCardDetail',
           actions: [
             { label: 'Отмена', variant: 'outline' },
-            { label: 'Сохранить изменения', variant: 'success', iconClass: 'arc2-icon-save' }
+            { label: 'Сохранить изменения', variant: 'success', iconClass: 'arc-icon-save' }
           ]
         }
       };
@@ -181,19 +181,19 @@
       };
 
       const ICON_CLASS_TO_KEY = {
-        arc2_icon_search: 'search',
-        arc2_icon_close: 'close',
-        arc2_icon_plus: 'plus',
-        arc2_icon_images: 'images',
-        arc2_icon_image: 'image',
-        arc2_icon_play: 'play',
-        arc2_icon_whiteboard: 'whiteboard',
-        arc2_icon_hard_drive: 'hardDrive',
-        arc2_icon_pie_chart: 'pieChart',
-        arc2_icon_history: 'history',
-        arc2_icon_copy: 'copy',
-        arc2_icon_save: 'save',
-        arc2_icon_chevron: 'chevron'
+        arc_icon_search: 'search',
+        arc_icon_close: 'close',
+        arc_icon_plus: 'plus',
+        arc_icon_images: 'images',
+        arc_icon_image: 'image',
+        arc_icon_play: 'play',
+        arc_icon_whiteboard: 'whiteboard',
+        arc_icon_hard_drive: 'hardDrive',
+        arc_icon_pie_chart: 'pieChart',
+        arc_icon_history: 'history',
+        arc_icon_copy: 'copy',
+        arc_icon_save: 'save',
+        arc_icon_chevron: 'chevron'
       };
 
       const normalizeSvgForCurrentColor = (svgText) =>
@@ -201,7 +201,7 @@
 
       const classToIconKey = (element) => {
         for (const className of element.classList) {
-          if (!className.startsWith('arc2-icon-')) continue;
+          if (!className.startsWith('arc-icon-')) continue;
           const key = className.replace(/-/g, '_');
           if (ICON_CLASS_TO_KEY[key]) return ICON_CLASS_TO_KEY[key];
         }
@@ -223,12 +223,12 @@
       };
 
       const hydrateNavbarIcons = (scope = document) => {
-        scope.querySelectorAll('.arc2-icon-search, .arc2-icon-plus, .arc2-icon-images, .arc2-icon-image, .arc2-icon-play, .arc2-icon-whiteboard, .arc2-icon-hard-drive, .arc2-icon-pie-chart, .arc2-icon-history, .arc2-icon-copy, .arc2-icon-close, .arc2-icon-save, .arc2-icon-chevron').forEach(hydrateIconNode);
+        scope.querySelectorAll('.arc-icon-search, .arc-icon-plus, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-close, .arc-icon-save, .arc-icon-chevron').forEach(hydrateIconNode);
       };
 
       const createTabsNode = (config) => {
         const tabs = document.createElement('div');
-        tabs.className = 'tabs arc2-navbar-filters';
+        tabs.className = 'tabs arc-navbar-filters';
         tabs.setAttribute('role', 'tablist');
         tabs.setAttribute('aria-label', config.ariaLabel);
 
@@ -249,8 +249,8 @@
         const button = document.createElement('button');
         button.className = 'btn btn-secondary btn-ds';
         button.type = 'button';
-        button.dataset.arc2NavbarAction = label;
-        button.innerHTML = `<span class="btn-ds__value">${label}</span><span class="btn-ds__icon arc2-icon-plus" aria-hidden="true"></span>`;
+        button.dataset.arcNavbarAction = label;
+        button.innerHTML = `<span class="btn-ds__value">${label}</span><span class="btn-ds__icon arc-icon-plus" aria-hidden="true"></span>`;
         return button;
       };
 
@@ -258,28 +258,28 @@
         if (!(tagsCategoryModalHost instanceof HTMLElement)) return;
         tagsCategoryModalHost.hidden = false;
         tagsCategoryModalHost.setAttribute('aria-hidden', 'false');
-        activeArc2ModalHost = tagsCategoryModalHost;
+        activeArcModalHost = tagsCategoryModalHost;
         const firstInput = tagsCategoryModalHost.querySelector('input');
         if (firstInput instanceof HTMLInputElement) {
           firstInput.focus();
         }
       };
 
-      const closeArc2Modal = () => {
-        if (!(activeArc2ModalHost instanceof HTMLElement)) return;
-        activeArc2ModalHost.hidden = true;
-        activeArc2ModalHost.setAttribute('aria-hidden', 'true');
-        activeArc2ModalHost = null;
+      const closeArcModal = () => {
+        if (!(activeArcModalHost instanceof HTMLElement)) return;
+        activeArcModalHost.hidden = true;
+        activeArcModalHost.setAttribute('aria-hidden', 'true');
+        activeArcModalHost = null;
       };
 
       const createButtonGroupNode = (buttonsConfig) => {
         const group = document.createElement('div');
-        group.className = 'arc2-navbar-action-group';
+        group.className = 'arc-navbar-action-group';
         buttonsConfig.forEach((item) => {
           const button = document.createElement('button');
           button.type = 'button';
           button.className = `btn ${item.variant === 'success' ? 'btn-success' : 'btn-outline'} btn-ds`;
-          button.innerHTML = `<span class="btn-ds__value">${item.label}</span>${item.count ? `<span class="btn-ds__counter">${item.count}</span>` : ''}${item.variant === 'success' ? '<span class="btn-ds__icon arc2-icon-plus" aria-hidden="true"></span>' : ''}`;
+          button.innerHTML = `<span class="btn-ds__value">${item.label}</span>${item.count ? `<span class="btn-ds__counter">${item.count}</span>` : ''}${item.variant === 'success' ? '<span class="btn-ds__icon arc-icon-plus" aria-hidden="true"></span>' : ''}`;
           group.appendChild(button);
         });
         return group;
@@ -287,20 +287,20 @@
 
       const createCollectionDetailNode = (config) => {
         const container = document.createElement('div');
-        container.className = 'arc2-navbar-collection-detail';
+        container.className = 'arc-navbar-collection-detail';
 
         const left = document.createElement('div');
-        left.className = 'arc2-navbar-collection-detail-left';
+        left.className = 'arc-navbar-collection-detail-left';
 
         const backBtn = document.createElement('button');
         backBtn.type = 'button';
         backBtn.className = 'btn btn-outline btn-icon-only';
         backBtn.setAttribute('aria-label', config.leftActions.backAriaLabel || 'Назад');
-        backBtn.innerHTML = '<span class="btn-icon-only__glyph arc2-icon-chevron" aria-hidden="true"></span>';
+        backBtn.innerHTML = '<span class="btn-icon-only__glyph arc-icon-chevron" aria-hidden="true"></span>';
         left.appendChild(backBtn);
 
         const title = document.createElement('h1');
-        title.className = 'h1 arc2-navbar-title';
+        title.className = 'h1 arc-navbar-title';
         title.textContent = config.title;
         left.appendChild(title);
 
@@ -309,12 +309,12 @@
           editBtn.type = 'button';
           editBtn.className = 'btn btn-ghost btn-icon-only';
           editBtn.setAttribute('aria-label', 'Редактировать коллекцию');
-          editBtn.innerHTML = '<span class="btn-icon-only__glyph arc2-icon-copy" aria-hidden="true"></span>';
+          editBtn.innerHTML = '<span class="btn-icon-only__glyph arc-icon-copy" aria-hidden="true"></span>';
           left.appendChild(editBtn);
         }
 
         const rightTabs = createTabsNode(config.rightTabs);
-        rightTabs.classList.add('arc2-navbar-filters');
+        rightTabs.classList.add('arc-navbar-filters');
         container.appendChild(left);
         container.appendChild(rightTabs);
         return container;
@@ -322,14 +322,14 @@
 
       const createEditCardDetailNode = (config) => {
         const container = document.createElement('div');
-        container.className = 'arc2-navbar-edit-detail';
+        container.className = 'arc-navbar-edit-detail';
 
         const title = document.createElement('h1');
-        title.className = 'h1 arc2-navbar-title';
+        title.className = 'h1 arc-navbar-title';
         title.textContent = config.title;
 
         const actions = document.createElement('div');
-        actions.className = 'arc2-navbar-action-group';
+        actions.className = 'arc-navbar-action-group';
         config.actions.forEach((item) => {
           const button = document.createElement('button');
           button.type = 'button';
@@ -394,7 +394,7 @@
           if (!(target instanceof HTMLElement)) return;
           const actionButton = target.closest('.btn.btn-secondary.btn-ds');
           if (!(actionButton instanceof HTMLButtonElement)) return;
-          const action = actionButton.dataset.arc2NavbarAction || actionButton.textContent || '';
+          const action = actionButton.dataset.arcNavbarAction || actionButton.textContent || '';
           if (action.includes('Добавить категорию')) {
             event.preventDefault();
             openTagsCategoryModal();
@@ -402,20 +402,20 @@
         });
       }
 
-      document.querySelectorAll('[data-arc2-modal-close]').forEach((button) => {
-        button.addEventListener('click', closeArc2Modal);
+      document.querySelectorAll('[data-arc-modal-close]').forEach((button) => {
+        button.addEventListener('click', closeArcModal);
       });
 
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
-          closeArc2Modal();
+          closeArcModal();
         }
       });
 
       if (tagsCategoryModalHost instanceof HTMLElement) {
         tagsCategoryModalHost.addEventListener('click', (event) => {
           if (event.target === tagsCategoryModalHost) {
-            closeArc2Modal();
+            closeArcModal();
           }
         });
       }
@@ -425,14 +425,14 @@
         if (!(target instanceof HTMLElement)) return;
         const button = target.closest('.tabs[role="tablist"] .tab-button');
         if (!(button instanceof HTMLButtonElement)) return;
-        if (button.closest('.arc2-navbar-main-tabs')) return;
+        if (button.closest('.arc-navbar-main-tabs')) return;
         const tabList = button.closest('.tabs[role="tablist"]');
         if (!(tabList instanceof HTMLElement)) return;
         const buttons = Array.from(tabList.querySelectorAll('.tab-button'));
         setActiveTab(buttons, button);
       });
 
-      const searchContainer = document.querySelector('.arc2-navbar-search-live');
+      const searchContainer = document.querySelector('.arc-navbar-search-live');
       const searchInput = searchContainer ? searchContainer.querySelector('.search-multiselect .search-inner') : null;
       const clearButton = searchContainer ? searchContainer.querySelector('.search-multiselect-clear-btn') : null;
 

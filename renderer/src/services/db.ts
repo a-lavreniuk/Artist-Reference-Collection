@@ -42,19 +42,44 @@ export type TagRecord = {
 export type { CardRecord, CollectionRecord } from './arcSchema';
 
 const STORAGE_KEYS = {
-  cards: 'arc2.cards',
-  collections: 'arc2.collections',
-  moodboard: 'arc2.moodboard.cards',
-  moodboardBoard: 'arc2.moodboard.board',
-  categories: 'arc2.categories',
-  tags: 'arc2.tags'
+  cards: 'arc.cards',
+  collections: 'arc.collections',
+  moodboard: 'arc.moodboard.cards',
+  moodboardBoard: 'arc.moodboard.board',
+  categories: 'arc.categories',
+  tags: 'arc.tags'
 } as const;
 
-export const ARC2_CATEGORIES_CHANGED_EVENT = 'arc2:categories-changed';
-export const ARC2_TAGS_CHANGED_EVENT = 'arc2:tags-changed';
-export const ARC2_CARDS_CHANGED_EVENT = 'arc2:cards-changed';
-export const ARC2_COLLECTIONS_CHANGED_EVENT = 'arc2:collections-changed';
-export const ARC2_MOODBOARD_BOARD_CHANGED_EVENT = 'arc2:moodboard-board-changed';
+export const ARC_CATEGORIES_CHANGED_EVENT = 'arc:categories-changed';
+export const ARC_TAGS_CHANGED_EVENT = 'arc:tags-changed';
+export const ARC_CARDS_CHANGED_EVENT = 'arc:cards-changed';
+export const ARC_COLLECTIONS_CHANGED_EVENT = 'arc:collections-changed';
+export const ARC_MOODBOARD_BOARD_CHANGED_EVENT = 'arc:moodboard-board-changed';
+
+const LEGACY_STORAGE_KEY_PAIRS: Array<[string, string]> = [
+  ['arc2.cards', STORAGE_KEYS.cards],
+  ['arc2.collections', STORAGE_KEYS.collections],
+  ['arc2.moodboard.cards', STORAGE_KEYS.moodboard],
+  ['arc2.moodboard.board', STORAGE_KEYS.moodboardBoard],
+  ['arc2.categories', STORAGE_KEYS.categories],
+  ['arc2.tags', STORAGE_KEYS.tags],
+  ['arc2.search.recentTagIds', 'arc.search.recentTagIds'],
+  ['arc2.search.hasCompletedSearchSession', 'arc.search.hasCompletedSearchSession']
+];
+
+function migrateLegacyStorageKeys(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  for (const [legacyKey, nextKey] of LEGACY_STORAGE_KEY_PAIRS) {
+    const legacyValue = window.localStorage.getItem(legacyKey);
+    if (legacyValue === null) continue;
+    if (window.localStorage.getItem(nextKey) === null) {
+      window.localStorage.setItem(nextKey, legacyValue);
+    }
+    window.localStorage.removeItem(legacyKey);
+  }
+}
+
+migrateLegacyStorageKeys();
 
 function hasArcApi(): boolean {
   return typeof window !== 'undefined' && typeof window.arc !== 'undefined';
@@ -201,17 +226,17 @@ async function migrateLocalIntoFileIfNeeded(): Promise<void> {
 
 function notifyCardsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(ARC2_CARDS_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(ARC_CARDS_CHANGED_EVENT));
 }
 
 function notifyCollectionsChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(ARC2_COLLECTIONS_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(ARC_COLLECTIONS_CHANGED_EVENT));
 }
 
 function notifyMoodboardBoardChanged(): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(ARC2_MOODBOARD_BOARD_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(ARC_MOODBOARD_BOARD_CHANGED_EVENT));
 }
 
 function pruneMoodboardBoardForCard(board: MoodboardBoardV1, cardId: string): MoodboardBoardV1 {
@@ -772,14 +797,14 @@ export function notifyCategoriesChanged(): void {
   if (typeof window === 'undefined') {
     return;
   }
-  window.dispatchEvent(new CustomEvent(ARC2_CATEGORIES_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(ARC_CATEGORIES_CHANGED_EVENT));
 }
 
 export function notifyTagsChanged(): void {
   if (typeof window === 'undefined') {
     return;
   }
-  window.dispatchEvent(new CustomEvent(ARC2_TAGS_CHANGED_EVENT));
+  window.dispatchEvent(new CustomEvent(ARC_TAGS_CHANGED_EVENT));
 }
 
 /* --- Коллекции --- */

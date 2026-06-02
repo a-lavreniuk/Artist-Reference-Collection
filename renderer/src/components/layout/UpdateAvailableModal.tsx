@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 export type UpdateModalPhase = 'prompt' | 'downloading' | 'installing';
 
@@ -22,7 +22,7 @@ export default function UpdateAvailableModal({
   const busy = phase === 'downloading' || phase === 'installing';
 
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArc2NavbarIcons(hostRef.current);
+    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
   }, [version, phase, downloadPercent]);
 
   useEffect(() => {
@@ -58,16 +58,16 @@ export default function UpdateAvailableModal({
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2UpdateModalTitle"
+        aria-labelledby="arcUpdateModalTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arc2UpdateModalTitle">
+          <h3 className="arc-modal__title" id="arcUpdateModalTitle">
             Обновление ARC
           </h3>
           {phase === 'prompt' ? (
             <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onLater}>
-              <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+              <span className="tab-icon arc-icon-close" aria-hidden="true" />
             </button>
           ) : null}
         </header>

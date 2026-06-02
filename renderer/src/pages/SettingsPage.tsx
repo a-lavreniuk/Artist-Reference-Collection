@@ -31,13 +31,13 @@ export default function SettingsPage() {
   useEffect(() => {
     const page = pageRef.current;
     if (!page) return;
-    page.style.removeProperty('--arc2-dup-outlet-height');
+    page.style.removeProperty('--arc-dup-outlet-height');
   }, [active]);
 
   return (
     <div
       ref={pageRef}
-      className={`arc2-settings-page arc-ui-kit-scope${active === 'duplicates' ? ' arc2-settings-page--duplicates' : ''}`}
+      className={`arc-settings-page arc-ui-kit-scope${active === 'duplicates' ? ' arc-settings-page--duplicates' : ''}`}
       data-elevation="sunken"
       data-typo-role="primary"
       data-typo-tone="white"

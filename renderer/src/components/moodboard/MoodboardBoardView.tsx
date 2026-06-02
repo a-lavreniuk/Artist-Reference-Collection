@@ -13,12 +13,12 @@ import { loadCardOriginalPixelSize } from './board/cardOriginalSize';
 import { fitBoardToViewport } from './board/fitViewport';
 import BoardColorModal from './BoardColorModal';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
-import { hydrateArc2NavbarIcons } from '../layout/navbarIconHydrate';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import type { MoodboardBoardV1 } from '../../services/arcSchema';
 import type { CardRecord } from '../../services/db';
 import {
-  ARC2_CARDS_CHANGED_EVENT,
-  ARC2_MOODBOARD_BOARD_CHANGED_EVENT,
+  ARC_CARDS_CHANGED_EVENT,
+  ARC_MOODBOARD_BOARD_CHANGED_EVENT,
   getCardById,
   getMoodboardBoard,
   getMoodboardCardIds,
@@ -28,7 +28,7 @@ import {
 } from '../../services/db';
 import { normalizeHex } from '../../utils/colorPicker';
 
-const MIME_CARD = 'application/x-arc2-card-id';
+const MIME_CARD = 'application/x-arc-card-id';
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!t || !(t instanceof HTMLElement)) return false;
@@ -113,14 +113,14 @@ export default function MoodboardBoardView() {
       }
       void reloadBoardFromDb();
     };
-    window.addEventListener(ARC2_MOODBOARD_BOARD_CHANGED_EVENT, onRemote);
-    return () => window.removeEventListener(ARC2_MOODBOARD_BOARD_CHANGED_EVENT, onRemote);
+    window.addEventListener(ARC_MOODBOARD_BOARD_CHANGED_EVENT, onRemote);
+    return () => window.removeEventListener(ARC_MOODBOARD_BOARD_CHANGED_EVENT, onRemote);
   }, [reloadBoardFromDb]);
 
   useEffect(() => {
     const onCards = () => void reloadQueue();
-    window.addEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
-    return () => window.removeEventListener(ARC2_CARDS_CHANGED_EVENT, onCards);
+    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
+    return () => window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onCards);
   }, [reloadQueue]);
 
   useEffect(() => {
@@ -145,7 +145,7 @@ export default function MoodboardBoardView() {
   }, [boardMenuOpen]);
 
   useLayoutEffect(() => {
-    if (toolbarRef.current) void hydrateArc2NavbarIcons(toolbarRef.current);
+    if (toolbarRef.current) void hydrateArcNavbarIcons(toolbarRef.current);
   }, [
     mainTool,
     drawTool,
@@ -561,7 +561,7 @@ export default function MoodboardBoardView() {
     const fs = Math.max(10, t.fontSize * vp.scale);
     return createPortal(
       <textarea
-        className="arc2-moodboard-text-edit input input-live"
+        className="arc-moodboard-text-edit input input-live"
         style={{
           position: 'fixed',
           left,
@@ -871,25 +871,25 @@ export default function MoodboardBoardView() {
 
   if (!board) {
     return (
-      <div className="arc2-moodboard arc2-moodboard--loading">
-        <p className="arc2-moodboard-loading-msg">Загрузка доски…</p>
+      <div className="arc-moodboard arc-moodboard--loading">
+        <p className="arc-moodboard-loading-msg">Загрузка доски…</p>
       </div>
     );
   }
 
   return (
-    <div className="arc2-moodboard">
-      <section className="arc2-moodboard-queue" aria-label="Очередь карточек мудборда">
+    <div className="arc-moodboard">
+      <section className="arc-moodboard-queue" aria-label="Очередь карточек мудборда">
         <div
-          className="arc2-moodboard-queue-scroll arc2-add-queue-scroll panel elevation-default"
+          className="arc-moodboard-queue-scroll arc-add-queue-scroll panel elevation-default"
           role="list"
         >
           {queueCards.map((c) => {
             const alreadyOnBoard = onBoardCardIds.has(c.id);
             return (
-              <div key={c.id} className={`arc2-add-queue-tile${alreadyOnBoard ? ' is-active' : ''}`} role="listitem">
+              <div key={c.id} className={`arc-add-queue-tile${alreadyOnBoard ? ' is-active' : ''}`} role="listitem">
                 <div
-                  className={`arc2-add-queue-tile-main arc2-moodboard-queue-tile-main${alreadyOnBoard ? ' is-on-board' : ''}`}
+                  className={`arc-add-queue-tile-main arc-moodboard-queue-tile-main${alreadyOnBoard ? ' is-on-board' : ''}`}
                   draggable={!alreadyOnBoard}
                   onDragStart={(e) => {
                     if (alreadyOnBoard) {
@@ -902,7 +902,7 @@ export default function MoodboardBoardView() {
                 >
                   {queueThumbs[c.id] ? (
                     <img
-                      className="arc2-add-queue-tile-img arc2-moodboard-queue-thumb"
+                      className="arc-add-queue-tile-img arc-moodboard-queue-thumb"
                       src={queueThumbs[c.id] ?? undefined}
                       alt=""
                       loading="lazy"
@@ -910,10 +910,10 @@ export default function MoodboardBoardView() {
                     />
                   ) : null}
                 </div>
-                <div className="arc-ui-kit-scope arc2-add-queue-tile-remove" data-btn-size="s">
+                <div className="arc-ui-kit-scope arc-add-queue-tile-remove" data-btn-size="s">
                   <button
                     type="button"
-                    className="btn btn-danger btn-icon-only btn-ds arc2-add-queue-remove-btn arc2-moodboard-queue-remove"
+                    className="btn btn-danger btn-icon-only btn-ds arc-add-queue-remove-btn arc-moodboard-queue-remove"
                     aria-label="Снять с мудборда"
                     onClick={async (e) => {
                       e.stopPropagation();
@@ -921,7 +921,7 @@ export default function MoodboardBoardView() {
                       setRemoveQueueConfirm({ cardId: c.id, onBoard });
                     }}
                   >
-                    <span className="btn-icon-only__glyph arc2-add-queue-remove-icon" aria-hidden="true" />
+                    <span className="btn-icon-only__glyph arc-add-queue-remove-icon" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -930,17 +930,17 @@ export default function MoodboardBoardView() {
         </div>
       </section>
 
-      <div ref={toolbarRef} className="arc2-moodboard-body">
+      <div ref={toolbarRef} className="arc-moodboard-body">
         <div
           ref={canvasWrapRef}
-          className={`arc2-moodboard-canvas-wrap${spaceHeld || panDragActive ? ' arc2-moodboard-canvas-wrap--pan' : ''}${eraserDeniedTick > 0 ? ' arc2-moodboard-canvas-wrap--eraser-deny' : ''}`}
+          className={`arc-moodboard-canvas-wrap${spaceHeld || panDragActive ? ' arc-moodboard-canvas-wrap--pan' : ''}${eraserDeniedTick > 0 ? ' arc-moodboard-canvas-wrap--eraser-deny' : ''}`}
           onDragOver={(e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
           }}
           onDrop={(e) => void onDropOnCanvas(e)}
         >
-          <div ref={boardMenuRef} className="arc2-moodboard-menu" data-btn-size="s">
+          <div ref={boardMenuRef} className="arc-moodboard-menu" data-btn-size="s">
             <button
               type="button"
               className={`btn btn-outline btn-icon-only${boardMenuOpen ? ' is-active' : ''}`}
@@ -949,25 +949,25 @@ export default function MoodboardBoardView() {
               aria-haspopup="menu"
               onClick={() => setBoardMenuOpen((v) => !v)}
             >
-              <span className="arc2-moodboard-menu-burger" aria-hidden="true" />
+              <span className="arc-moodboard-menu-burger" aria-hidden="true" />
             </button>
             {boardMenuOpen ? (
-              <div className="selector-dropdown arc2-moodboard-menu-dropdown" role="menu">
+              <div className="selector-dropdown arc-moodboard-menu-dropdown" role="menu">
                 <div className="dropdown-list">
                   {boardMenuItems.map((item, index) =>
                     item.type === 'sep' ? (
-                      <div key={`sep-${index}`} className="arc2-moodboard-menu-sep" role="separator" />
+                      <div key={`sep-${index}`} className="arc-moodboard-menu-sep" role="separator" />
                     ) : (
                       <button
                         key={item.label}
                         type="button"
                         role="menuitem"
-                        className={`dropdown-item arc2-moodboard-menu-row${item.disabled ? ' is-disabled' : ''}`}
+                        className={`dropdown-item arc-moodboard-menu-row${item.disabled ? ' is-disabled' : ''}`}
                         disabled={item.disabled}
                         onClick={() => item.onClick?.()}
                       >
                         <span>{item.label}</span>
-                        {item.shortcut ? <span className="arc2-moodboard-menu-shortcut">{item.shortcut}</span> : null}
+                        {item.shortcut ? <span className="arc-moodboard-menu-shortcut">{item.shortcut}</span> : null}
                       </button>
                     )
                   )}
@@ -977,12 +977,12 @@ export default function MoodboardBoardView() {
           </div>
 
           <div
-            className="arc2-moodboard-toolbar-host"
-            data-arc2-icon-size="s"
+            className="arc-moodboard-toolbar-host"
+            data-arc-icon-size="s"
             data-btn-size="s"
             aria-label="Инструменты доски"
           >
-            <div className="arc2-moodboard-toolbar arc2-moodboard-toolbar--history">
+            <div className="arc-moodboard-toolbar arc-moodboard-toolbar--history">
               <div className="btn-group btn-group-ds">
                 <button
                   type="button"
@@ -991,21 +991,21 @@ export default function MoodboardBoardView() {
                   disabled={undoStack.length === 0}
                   onClick={() => undo()}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-undo" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-undo" aria-hidden />
                 </button>
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only arc2-moodboard-history-redo"
+                  className="btn btn-outline btn-icon-only arc-moodboard-history-redo"
                   aria-label="Вернуть"
                   disabled={redoStack.length === 0}
                   onClick={() => redo()}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-undo" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-undo" aria-hidden />
                 </button>
               </div>
             </div>
 
-            <div className="arc2-moodboard-toolbar arc2-moodboard-toolbar--main">
+            <div className="arc-moodboard-toolbar arc-moodboard-toolbar--main">
               <div className="btn-group btn-group-ds">
                 <button
                   type="button"
@@ -1014,7 +1014,7 @@ export default function MoodboardBoardView() {
                   aria-pressed={mainTool === 'select'}
                   onClick={() => setMainTool('select')}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-cursor" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-cursor" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -1023,7 +1023,7 @@ export default function MoodboardBoardView() {
                   aria-pressed={mainTool === 'pan'}
                   onClick={() => setMainTool('pan')}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-pan" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-pan" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -1035,7 +1035,7 @@ export default function MoodboardBoardView() {
                     if (drawTool === 'eraser') setDrawTool('brush');
                   }}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-pencil" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-pencil" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -1044,7 +1044,7 @@ export default function MoodboardBoardView() {
                   aria-pressed={mainTool === 'text'}
                   onClick={() => setMainTool('text')}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-type" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-type" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -1056,13 +1056,13 @@ export default function MoodboardBoardView() {
                     setDrawTool('eraser');
                   }}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-eraser" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-eraser" aria-hidden />
                 </button>
               </div>
             </div>
 
             {mainTool === 'draw' ? (
-              <div className="arc2-moodboard-toolbar arc2-moodboard-toolbar--draw">
+              <div className="arc-moodboard-toolbar arc-moodboard-toolbar--draw">
                 <div className="btn-group btn-group-ds">
                   <button
                     type="button"
@@ -1071,7 +1071,7 @@ export default function MoodboardBoardView() {
                     aria-pressed={drawTool === 'brush'}
                     onClick={() => setDrawTool('brush')}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-pencil" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-pencil" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1080,7 +1080,7 @@ export default function MoodboardBoardView() {
                     aria-pressed={drawTool === 'rect'}
                     onClick={() => setDrawTool('rect')}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-predictable" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-predictable" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1089,7 +1089,7 @@ export default function MoodboardBoardView() {
                     aria-pressed={drawTool === 'ellipse'}
                     onClick={() => setDrawTool('ellipse')}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-circle" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-circle" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1098,7 +1098,7 @@ export default function MoodboardBoardView() {
                     aria-pressed={drawTool === 'line'}
                     onClick={() => setDrawTool('line')}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-line" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-line" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1106,7 +1106,7 @@ export default function MoodboardBoardView() {
                     aria-label="Тонкая линия"
                     onClick={() => setStrokeWidthPx(3)}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-line-thin" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-line-thin" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1114,7 +1114,7 @@ export default function MoodboardBoardView() {
                     aria-label="Толстая линия"
                     onClick={() => setStrokeWidthPx(10)}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-line-thik" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-line-thik" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1122,14 +1122,14 @@ export default function MoodboardBoardView() {
                     aria-label="Цвет линии"
                     onClick={() => setColorModal('stroke')}
                   >
-                    <span className="arc2-moodboard-color-swatch" style={{ backgroundColor: initialStrokeHex }} />
+                    <span className="arc-moodboard-color-swatch" style={{ backgroundColor: initialStrokeHex }} />
                   </button>
                 </div>
               </div>
             ) : null}
 
             {mainTool === 'text' ? (
-              <div className="arc2-moodboard-toolbar arc2-moodboard-toolbar--text">
+              <div className="arc-moodboard-toolbar arc-moodboard-toolbar--text">
                 <div className="btn-group btn-group-ds">
                   <button
                     type="button"
@@ -1171,7 +1171,7 @@ export default function MoodboardBoardView() {
                       patchTextProps({ align: 'left' });
                     }}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-align-left" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-align-left" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1183,7 +1183,7 @@ export default function MoodboardBoardView() {
                       patchTextProps({ align: 'center' });
                     }}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-align-center" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-align-center" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1195,7 +1195,7 @@ export default function MoodboardBoardView() {
                       patchTextProps({ align: 'right' });
                     }}
                   >
-                    <span className="btn-icon-only__glyph tab-icon arc2-icon-align-right" aria-hidden />
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-align-right" aria-hidden />
                   </button>
                   <button
                     type="button"
@@ -1203,13 +1203,13 @@ export default function MoodboardBoardView() {
                     aria-label="Цвет текста"
                     onClick={() => setColorModal('text')}
                   >
-                    <span className="arc2-moodboard-color-swatch" style={{ backgroundColor: initialTextHex }} />
+                    <span className="arc-moodboard-color-swatch" style={{ backgroundColor: initialTextHex }} />
                   </button>
                 </div>
               </div>
             ) : null}
 
-            <div className="arc2-moodboard-toolbar arc2-moodboard-toolbar--zoom" aria-label="Масштаб">
+            <div className="arc-moodboard-toolbar arc-moodboard-toolbar--zoom" aria-label="Масштаб">
               <div className="btn-group btn-group-ds">
                 <button
                   type="button"
@@ -1217,7 +1217,7 @@ export default function MoodboardBoardView() {
                   aria-label="Уменьшить"
                   onClick={() => zoomCenterFactor(1 / 1.08)}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-minus" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-minus" aria-hidden />
                 </button>
                 <button
                   type="button"
@@ -1225,7 +1225,7 @@ export default function MoodboardBoardView() {
                   aria-label="Увеличить"
                   onClick={() => zoomCenterFactor(1.08)}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-plus" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-plus" aria-hidden />
                 </button>
                 <button type="button" className="btn btn-outline btn-ds btn-s" onClick={() => resetZoom100()}>
                   <span className="btn-ds__value">{zoomPct}%</span>
@@ -1236,7 +1236,7 @@ export default function MoodboardBoardView() {
                   aria-label="Вписать в экран"
                   onClick={() => fitView()}
                 >
-                  <span className="btn-icon-only__glyph tab-icon arc2-icon-minimize" aria-hidden />
+                  <span className="btn-icon-only__glyph tab-icon arc-icon-minimize" aria-hidden />
                 </button>
               </div>
             </div>

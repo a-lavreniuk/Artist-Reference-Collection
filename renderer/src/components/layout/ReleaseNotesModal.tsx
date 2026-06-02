@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { hydrateArc2NavbarIcons } from './navbarIconHydrate';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 export type ReleaseNotesData = {
   version: string;
@@ -25,7 +25,7 @@ export default function ReleaseNotesModal({ data, onClose }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArc2NavbarIcons(hostRef.current);
+    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
   }, [data]);
 
   useEffect(() => {
@@ -46,31 +46,31 @@ export default function ReleaseNotesModal({ data, onClose }: Props) {
       }}
     >
       <section
-        className="arc-modal arc2-release-notes-modal"
+        className="arc-modal arc-release-notes-modal"
         data-elevation="raised"
         data-input-size="s"
         data-btn-size="s"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2ReleaseNotesTitle"
+        aria-labelledby="arcReleaseNotesTitle"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title-subtitle">
           <div className="arc-modal__title-block">
-            <h3 className="arc-modal__title" id="arc2ReleaseNotesTitle">
+            <h3 className="arc-modal__title" id="arcReleaseNotesTitle">
               Версия {data.version}
             </h3>
             <p className="arc-modal__subtitle">Сборка от {formatBuildDate(data.buildDate)}</p>
           </div>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+            <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">
           <div className="arc-modal__slot">
-            <ul className="arc2-release-notes-list">
+            <ul className="arc-release-notes-list">
               {data.changes.map((line) => (
-                <li key={line} className="arc2-release-notes-list__item">
+                <li key={line} className="arc-release-notes-list__item">
                   {line}
                 </li>
               ))}

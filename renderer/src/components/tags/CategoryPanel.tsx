@@ -2,7 +2,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CategoryRecord, CategoryWeight, TagRecord } from '../../services/db';
 import CategoryColorModal from '../layout/CategoryColorModal';
 import ConfirmDeleteCategoryModal from '../layout/ConfirmDeleteCategoryModal';
-import { hydrateArc2NavbarIcons } from '../layout/navbarIconHydrate';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import TagCategoryDropSurface from './TagCategoryDropSurface';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
@@ -75,7 +75,7 @@ export default function CategoryPanel({
 
   useLayoutEffect(() => {
     if (rootRef.current) {
-      void hydrateArc2NavbarIcons(rootRef.current);
+      void hydrateArcNavbarIcons(rootRef.current);
     }
   }, [category, tags, nameDraft, hexDraft, tagDraft, busy]);
 
@@ -141,15 +141,15 @@ export default function CategoryPanel({
     <>
       <div
         ref={rootRef}
-        className="arc2-category-panel-layout"
+        className="arc-category-panel-layout"
         data-elevation="sunken"
         data-typo-tone="white"
         data-input-size="m"
         data-btn-size="m"
       >
-        <div className="arc2-category-panel-settings">
+        <div className="arc-category-panel-settings">
           <label
-            className={`field input-live arc2-category-panel-stretch${nameDraft.trim() ? ' has-value' : ''}${nameHasError ? ' field-error' : ''}`}
+            className={`field input-live arc-category-panel-stretch${nameDraft.trim() ? ' has-value' : ''}${nameHasError ? ' field-error' : ''}`}
             data-live-input
           >
             <input
@@ -178,7 +178,7 @@ export default function CategoryPanel({
               disabled={busy}
             />
             <button
-              className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc2-icon-close"
+              className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
               type="button"
               aria-label="Очистить"
               onClick={(e) => {
@@ -190,7 +190,7 @@ export default function CategoryPanel({
             />
           </label>
 
-          <div className="input color-input input-slots arc2-category-panel-stretch" aria-label="Цвет категории">
+          <div className="input color-input input-slots arc-category-panel-stretch" aria-label="Цвет категории">
             <span className="color-prepend slot-prepend">HEX</span>
             <input
               className="color-value-input slot-value"
@@ -210,7 +210,7 @@ export default function CategoryPanel({
             />
           </div>
 
-          <div className="tabs arc2-category-priority" role="tablist" aria-label="Вес категории">
+          <div className="tabs arc-category-priority" role="tablist" aria-label="Вес категории">
             {WEIGHT_OPTIONS.map((opt) => {
               const isActive = opt.key === category.weight;
               return (
@@ -232,25 +232,25 @@ export default function CategoryPanel({
             })}
           </div>
 
-          <div className="arc2-category-panel-toolbar arc2-category-panel-stretch">
-            <div className="arc2-category-rank-buttons">
+          <div className="arc-category-panel-toolbar arc-category-panel-stretch">
+            <div className="arc-category-rank-buttons">
               <button
                 type="button"
-                className="btn btn-outline btn-icon-only arc2-category-rank-btn"
+                className="btn btn-outline btn-icon-only arc-category-rank-btn"
                 aria-label="Выше"
                 disabled={!canMoveUp || busy}
                 onClick={() => void onMoveUp()}
               >
-                <span className="btn-icon-only__glyph arc2-icon-arrow-up" aria-hidden="true" />
+                <span className="btn-icon-only__glyph arc-icon-arrow-up" aria-hidden="true" />
               </button>
               <button
                 type="button"
-                className="btn btn-outline btn-icon-only arc2-category-rank-btn"
+                className="btn btn-outline btn-icon-only arc-category-rank-btn"
                 aria-label="Ниже"
                 disabled={!canMoveDown || busy}
                 onClick={() => void onMoveDown()}
               >
-                <span className="btn-icon-only__glyph arc2-icon-arrow-down" aria-hidden="true" />
+                <span className="btn-icon-only__glyph arc-icon-arrow-down" aria-hidden="true" />
               </button>
             </div>
             <button
@@ -260,27 +260,27 @@ export default function CategoryPanel({
               disabled={busy}
               onClick={() => setDeleteConfirmOpen(true)}
             >
-              <span className="btn-icon-only__glyph arc2-icon-trash" aria-hidden="true" />
+              <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        <div className="arc2-category-panel-divider" aria-hidden="true" />
+        <div className="arc-category-panel-divider" aria-hidden="true" />
 
         <TagCategoryDropSurface
-          className="arc2-category-panel-tags"
+          className="arc-category-panel-tags"
           categoryId={category.id}
           draggingTagId={draggingTagId}
           allTags={allTags}
           onTagDrop={onTagDrop}
         >
-          <div className="arc2-category-add-tag">
+          <div className="arc-category-add-tag">
             <label
-              className={`field input-live arc2-category-add-tag-field${tagDraft.trim() ? ' has-value' : ''}${tagHasError ? ' field-error' : ''}`}
+              className={`field input-live arc-category-add-tag-field${tagDraft.trim() ? ' has-value' : ''}${tagHasError ? ' field-error' : ''}`}
               data-live-input
             >
               <input
-                className="input arc2-category-add-tag-input"
+                className="input arc-category-add-tag-input"
                 placeholder="Название новой метки…"
                 value={tagDraft}
                 onChange={(e) => {
@@ -310,7 +310,7 @@ export default function CategoryPanel({
                 }}
               />
               <button
-                className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc2-icon-close"
+                className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
                 type="button"
                 aria-label="Очистить"
                 onClick={(e) => {
@@ -328,10 +328,10 @@ export default function CategoryPanel({
               onClick={() => void handleAddTag()}
             >
               <span className="btn-ds__value">Добавить</span>
-              <span className="btn-ds__icon arc2-icon-plus" aria-hidden="true" />
+              <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
             </button>
           </div>
-          <div className="arc2-category-tag-cloud">
+          <div className="arc-category-tag-cloud">
             {tags.length === 0 ? (
               <p className="hint">В этой категории пока нет меток.</p>
             ) : (
@@ -351,7 +351,7 @@ export default function CategoryPanel({
                 const chip = (
                   <button
                     type="button"
-                    className={`chip${draggingTagId === tag.id ? ' arc2-tag-chip--dragging' : ''}`}
+                    className={`chip${draggingTagId === tag.id ? ' arc-tag-chip--dragging' : ''}`}
                     draggable={!busy}
                     aria-label={`Редактировать метку «${tag.name}»`}
                     aria-grabbed={draggingTagId === tag.id}

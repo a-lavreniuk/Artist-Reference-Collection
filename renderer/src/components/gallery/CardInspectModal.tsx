@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { hydrateArc2NavbarIcons } from '../layout/navbarIconHydrate';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import MessageModal from '../layout/MessageModal';
 import { Tooltip } from '../tooltip/Tooltip';
 import type { CardRecord, CategoryRecord, TagRecord } from '../../services/db';
@@ -18,7 +18,7 @@ import {
   removeCardFromMoodboard
 } from '../../services/db';
 import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodboardModal';
-import { ARC2_SEARCH_QUERY_CARD, ARC2_SEARCH_QUERY_TAG } from '../../search/searchUrl';
+import { ARC_SEARCH_QUERY_CARD, ARC_SEARCH_QUERY_TAG } from '../../search/searchUrl';
 import { pushRecentTagId } from '../../search/recentSearchTags';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 
@@ -56,11 +56,11 @@ function SimilarThumb({
   }, [card]);
 
   return (
-    <button type="button" className="arc2-gallery-card-wrap arc2-card-similar-tile" onClick={onPick}>
+    <button type="button" className="arc-gallery-card-wrap arc-card-similar-tile" onClick={onPick}>
       {href ? (
-        <img className="arc2-gallery-thumb" src={href} alt="" loading="lazy" decoding="async" />
+        <img className="arc-gallery-thumb" src={href} alt="" loading="lazy" decoding="async" />
       ) : (
-        <div className="arc2-gallery-skeleton arc2-card-similar-skeleton" aria-hidden />
+        <div className="arc-gallery-skeleton arc-card-similar-skeleton" aria-hidden />
       )}
     </button>
   );
@@ -76,7 +76,7 @@ function renderDescriptionWithLinks(value: string): ReactNode {
       return <span key={`text-${index}`}>{part}</span>;
     }
     return (
-      <a key={`link-${index}`} href={part} target="_blank" rel="noreferrer noopener" className="arc2-card-inspect-desc-link">
+      <a key={`link-${index}`} href={part} target="_blank" rel="noreferrer noopener" className="arc-card-inspect-desc-link">
         {part}
       </a>
     );
@@ -115,7 +115,7 @@ export default function CardInspectModal({
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [confirmDelete, busy, card, similar, categoriesById, inMoodboard, isBookmarkHovered]);
 
@@ -274,9 +274,9 @@ export default function CardInspectModal({
   const searchByTag = (tagId: string) => {
     pushRecentTagId(tagId);
     const n = new URLSearchParams(searchParams);
-    n.delete(ARC2_SEARCH_QUERY_TAG);
-    n.append(ARC2_SEARCH_QUERY_TAG, tagId);
-    n.delete(ARC2_SEARCH_QUERY_CARD);
+    n.delete(ARC_SEARCH_QUERY_TAG);
+    n.append(ARC_SEARCH_QUERY_TAG, tagId);
+    n.delete(ARC_SEARCH_QUERY_CARD);
     onClose();
     navigate(
       { pathname: location.pathname, search: n.toString() ? `?${n.toString()}` : '' },
@@ -319,9 +319,9 @@ export default function CardInspectModal({
 
   const bookmarkIconClass = isBookmarkHovered
     ? inMoodboard
-      ? 'arc2-icon-bookmark-minus'
-      : 'arc2-icon-bookmark-plus'
-    : 'arc2-icon-bookmark';
+      ? 'arc-icon-bookmark-minus'
+      : 'arc-icon-bookmark-plus'
+    : 'arc-icon-bookmark';
   const hasDescription = Boolean(card?.description?.trim());
   const hasCollections = collectionsResolved.length > 0;
   const hasTags = tagsSorted.length > 0;
@@ -344,30 +344,30 @@ export default function CardInspectModal({
         data-btn-size="m"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arc2CardInspectHeading"
+        aria-labelledby="arcCardInspectHeading"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="arc-modal__header arc2-card-inspect-toolbar">
-          <h2 id="arc2CardInspectHeading" className="sr-only">
+        <header className="arc-modal__header arc-card-inspect-toolbar">
+          <h2 id="arcCardInspectHeading" className="sr-only">
             Просмотр карточки
           </h2>
-          <div className="arc2-card-inspect-toolbar-left">
+          <div className="arc-card-inspect-toolbar-left">
             <button
               type="button"
               className="btn btn-danger btn-icon-only btn-ds"
               aria-label="Удалить карточку"
               onClick={() => setConfirmDelete(true)}
             >
-              <span className="btn-icon-only__glyph arc2-icon-trash" aria-hidden="true" />
+              <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
             </button>
           </div>
 
-          <div className="arc2-card-inspect-toolbar-right">
-            <div className="arc2-card-inspect-segmented" role="group" aria-label="Действия с карточкой">
+          <div className="arc-card-inspect-toolbar-right">
+            <div className="arc-card-inspect-segmented" role="group" aria-label="Действия с карточкой">
               <Tooltip content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'} position="top">
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only btn-ds arc2-card-inspect-segmented-btn"
+                  className="btn btn-outline btn-icon-only btn-ds arc-card-inspect-segmented-btn"
                   aria-label={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
                   onMouseEnter={() => setIsBookmarkHovered(true)}
                   onMouseLeave={() => setIsBookmarkHovered(false)}
@@ -400,34 +400,34 @@ export default function CardInspectModal({
               <Tooltip content="Выгрузить изображение" position="top">
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only btn-ds arc2-card-inspect-segmented-btn"
+                  className="btn btn-outline btn-icon-only btn-ds arc-card-inspect-segmented-btn"
                   onClick={() => void saveMedia()}
                   disabled={!card?.originalRelativePath || !window.arc}
                   aria-label="Выгрузить изображение"
                 >
-                  <span className="btn-icon-only__glyph arc2-icon-download" aria-hidden="true" />
+                  <span className="btn-icon-only__glyph arc-icon-download" aria-hidden="true" />
                 </button>
               </Tooltip>
               <Tooltip content="Показать файл в папке" position="top">
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only btn-ds arc2-card-inspect-segmented-btn"
+                  className="btn btn-outline btn-icon-only btn-ds arc-card-inspect-segmented-btn"
                   onClick={() => void openInFolder()}
                   disabled={!card?.originalRelativePath || !window.arc}
                   aria-label="Открыть папку с файлом"
                 >
-                  <span className="btn-icon-only__glyph arc2-icon-folder-open" aria-hidden="true" />
+                  <span className="btn-icon-only__glyph arc-icon-folder-open" aria-hidden="true" />
                 </button>
               </Tooltip>
               <Tooltip content="Редактировать карточку" position="top">
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only btn-ds arc2-card-inspect-segmented-btn"
+                  className="btn btn-outline btn-icon-only btn-ds arc-card-inspect-segmented-btn"
                   onClick={() => void editCard()}
                   disabled={!card}
                   aria-label="Редактировать карточку"
                 >
-                  <span className="btn-icon-only__glyph arc2-icon-edit" aria-hidden="true" />
+                  <span className="btn-icon-only__glyph arc-icon-edit" aria-hidden="true" />
                 </button>
               </Tooltip>
             </div>
@@ -435,29 +435,29 @@ export default function CardInspectModal({
             <Tooltip content="Скопировать ID" position="top">
               <button
                 type="button"
-                className="btn btn-outline btn-ds arc2-card-inspect-id-pill"
+                className="btn btn-outline btn-ds arc-card-inspect-id-pill"
                 onClick={() => void copyId()}
                 disabled={!card}
                 aria-label="Скопировать ID"
               >
-                <span className="arc2-card-inspect-id-text">{card?.id ?? ''}</span>
-                <span className="btn-ds__icon arc2-icon-copy" aria-hidden="true" />
+                <span className="arc-card-inspect-id-text">{card?.id ?? ''}</span>
+                <span className="btn-ds__icon arc-icon-copy" aria-hidden="true" />
               </button>
             </Tooltip>
           </div>
         </header>
 
-        <div ref={bodyRef} className="arc-modal__body arc2-card-inspect-body">
-          <div className="arc2-card-inspect-main">
-            <div className="arc2-card-inspect-preview panel">
+        <div ref={bodyRef} className="arc-modal__body arc-card-inspect-body">
+          <div className="arc-card-inspect-main">
+            <div className="arc-card-inspect-preview panel">
               {card?.type === 'video' && videoTier && videoTier !== 'html5' ? (
-                <p className="text-s arc2-card-inspect-video-note">{videoPlaybackDescription(videoTier)}</p>
+                <p className="text-s arc-card-inspect-video-note">{videoPlaybackDescription(videoTier)}</p>
               ) : null}
               {src && card?.type === 'video' ? (
-                <div className="arc2-card-inspect-media-fit">
+                <div className="arc-card-inspect-media-fit">
                   <video
                     ref={inspectVideoRef}
-                    className="arc2-card-inspect-video"
+                    className="arc-card-inspect-video"
                     src={src}
                     controls
                     preload="metadata"
@@ -472,72 +472,72 @@ export default function CardInspectModal({
                   />
                 </div>
               ) : src ? (
-                <div className="arc2-card-inspect-media-fit">
-                  <img className="arc2-card-inspect-img" src={src} alt="" />
+                <div className="arc-card-inspect-media-fit">
+                  <img className="arc-card-inspect-img" src={src} alt="" />
                 </div>
               ) : (
-                <div className="arc2-gallery-skeleton arc2-card-inspect-skeleton" aria-hidden />
+                <div className="arc-gallery-skeleton arc-card-inspect-skeleton" aria-hidden />
               )}
             </div>
 
-            <div className="arc2-card-inspect-sidebar">
-              <div className="arc2-card-inspect-scroll">
+            <div className="arc-card-inspect-sidebar">
+              <div className="arc-card-inspect-scroll">
                 {hasDescription ? (
-                  <section className="arc2-card-inspect-section">
-                    <div className="arc2-card-inspect-section-head">
+                  <section className="arc-card-inspect-section">
+                    <div className="arc-card-inspect-section-head">
                       <p className="text-l">Описание</p>
                     </div>
-                    <p className="text-m arc2-card-inspect-description">{renderDescriptionWithLinks(card?.description ?? '')}</p>
+                    <p className="text-m arc-card-inspect-description">{renderDescriptionWithLinks(card?.description ?? '')}</p>
                   </section>
                 ) : null}
 
-                {hasDescription && (hasCollections || hasTags) ? <div className="arc2-card-inspect-sep" role="separator" /> : null}
+                {hasDescription && (hasCollections || hasTags) ? <div className="arc-card-inspect-sep" role="separator" /> : null}
 
                 {hasCollections ? (
-                  <section className="arc2-card-inspect-section">
-                    <div className="arc2-card-inspect-section-head">
+                  <section className="arc-card-inspect-section">
+                    <div className="arc-card-inspect-section-head">
                       <p className="text-l">Коллекции</p>
-                      <span className="text-s arc2-card-inspect-count">{collectionsResolved.length}</span>
+                      <span className="text-s arc-card-inspect-count">{collectionsResolved.length}</span>
                     </div>
-                    <div className="arc2-card-meta-chips">
+                    <div className="arc-card-meta-chips">
                       {collectionsResolved.map((col) => (
                         <button
                           key={col.id}
                           type="button"
-                          className="arc2-card-meta-chip arc2-card-meta-chip--neutral arc2-card-meta-chip-btn"
+                          className="arc-card-meta-chip arc-card-meta-chip--neutral arc-card-meta-chip-btn"
                           onClick={() => {
                             onClose();
                             navigate(`/collections/${col.id}`);
                           }}
                         >
-                          <span className="arc2-card-meta-chip-name">{col.name}</span>
-                          <span className="arc2-card-meta-chip-count">{col.count}</span>
+                          <span className="arc-card-meta-chip-name">{col.name}</span>
+                          <span className="arc-card-meta-chip-count">{col.count}</span>
                         </button>
                       ))}
                     </div>
                   </section>
                 ) : null}
 
-                {hasCollections && hasTags ? <div className="arc2-card-inspect-sep" role="separator" /> : null}
+                {hasCollections && hasTags ? <div className="arc-card-inspect-sep" role="separator" /> : null}
 
                 {hasTags ? (
-                  <section className="arc2-card-inspect-section">
-                    <div className="arc2-card-inspect-section-head">
+                  <section className="arc-card-inspect-section">
+                    <div className="arc-card-inspect-section-head">
                       <p className="text-l">Метки</p>
-                      <span className="text-s arc2-card-inspect-count">{tagsSorted.length}</span>
+                      <span className="text-s arc-card-inspect-count">{tagsSorted.length}</span>
                     </div>
-                    <div className="arc2-card-meta-chips arc2-card-meta-chips--tags">
+                    <div className="arc-card-meta-chips arc-card-meta-chips--tags">
                       {tagsSorted.map(({ tag, colorHex }) => (
                         <button
                           key={tag.id}
                           type="button"
-                          className="arc2-card-meta-chip arc2-card-meta-chip--tag arc2-card-meta-chip-btn"
+                          className="arc-card-meta-chip arc-card-meta-chip--tag arc-card-meta-chip-btn"
                           onClick={() => searchByTag(tag.id)}
                           aria-label={`Искать по метке «${tag.name}»`}
                         >
-                          <span className="arc2-card-meta-chip-dot" style={{ background: colorHex }} aria-hidden="true" />
-                          <span className="arc2-card-meta-chip-name">{tag.name}</span>
-                          <span className="arc2-card-meta-chip-count">{tag.usageCount}</span>
+                          <span className="arc-card-meta-chip-dot" style={{ background: colorHex }} aria-hidden="true" />
+                          <span className="arc-card-meta-chip-name">{tag.name}</span>
+                          <span className="arc-card-meta-chip-count">{tag.usageCount}</span>
                         </button>
                       ))}
                     </div>
@@ -549,13 +549,13 @@ export default function CardInspectModal({
 
           {similar.length > 0 ? (
             <>
-              <div className="arc2-card-inspect-sep arc2-card-inspect-sep--full-bleed" role="separator" />
-              <section className="arc2-card-inspect-similar-block">
-                <div className="arc2-card-inspect-section-head">
+              <div className="arc-card-inspect-sep arc-card-inspect-sep--full-bleed" role="separator" />
+              <section className="arc-card-inspect-similar-block">
+                <div className="arc-card-inspect-section-head">
                   <p className="text-l">Похожие изображения</p>
-                  <span className="text-s arc2-card-inspect-count">{similar.length}</span>
+                  <span className="text-s arc-card-inspect-count">{similar.length}</span>
                 </div>
-                <div className="arc2-card-similar-masonry">
+                <div className="arc-card-similar-masonry">
                   {similar.map((sc) => (
                     <SimilarThumb key={sc.id} card={sc} onPick={() => onOpenCard(sc.id)} />
                   ))}
@@ -581,11 +581,11 @@ export default function CardInspectModal({
             data-btn-size="s"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="arc2CardDeleteTitle"
+            aria-labelledby="arcCardDeleteTitle"
             onClick={(e) => e.stopPropagation()}
           >
             <header className="arc-modal__header arc-modal__header--title">
-              <h3 className="arc-modal__title" id="arc2CardDeleteTitle">
+              <h3 className="arc-modal__title" id="arcCardDeleteTitle">
                 Удалить карточку?
               </h3>
               <button
@@ -594,7 +594,7 @@ export default function CardInspectModal({
                 aria-label="Закрыть"
                 onClick={() => setConfirmDelete(false)}
               >
-                <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+                <span className="tab-icon arc-icon-close" aria-hidden="true" />
               </button>
             </header>
             <div className="arc-modal__body">

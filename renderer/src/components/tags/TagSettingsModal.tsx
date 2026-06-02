@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
-import { hydrateArc2NavbarIcons } from '../layout/navbarIconHydrate';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 const MAX_IMAGE_BYTES = 1_200_000;
 
@@ -101,7 +101,7 @@ export default function TagSettingsModal({
 
   useLayoutEffect(() => {
     if (hostRef.current) {
-      void hydrateArc2NavbarIcons(hostRef.current);
+      void hydrateArcNavbarIcons(hostRef.current);
     }
   }, [
     tab,
@@ -263,8 +263,8 @@ export default function TagSettingsModal({
                 className={`tab-button${tab === 'main' ? ' is-active' : ''}`}
                 role="tab"
                 aria-selected={tab === 'main'}
-                id="arc2-tag-modal-tab-main"
-                aria-controls="arc2-tag-modal-panel-main"
+                id="arc-tag-modal-tab-main"
+                aria-controls="arc-tag-modal-panel-main"
                 onClick={() => setTab('main')}
               >
                 Основное
@@ -274,24 +274,24 @@ export default function TagSettingsModal({
                 className={`tab-button${tab === 'image' ? ' is-active' : ''}`}
                 role="tab"
                 aria-selected={tab === 'image'}
-                id="arc2-tag-modal-tab-image"
-                aria-controls="arc2-tag-modal-panel-image"
+                id="arc-tag-modal-tab-image"
+                aria-controls="arc-tag-modal-panel-image"
                 onClick={() => setTab('image')}
               >
                 Изображение
               </button>
             </div>
             <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-              <span className="tab-icon arc2-icon-close" aria-hidden="true" />
+              <span className="tab-icon arc-icon-close" aria-hidden="true" />
             </button>
           </header>
 
           <div className="arc-modal__body">
             {tab === 'main' ? (
               <div
-                id="arc2-tag-modal-panel-main"
+                id="arc-tag-modal-panel-main"
                 role="tabpanel"
-                aria-labelledby="arc2-tag-modal-tab-main"
+                aria-labelledby="arc-tag-modal-tab-main"
               >
                 <div className="arc-modal__slot">
                   <p className="arc-modal__slot-text">
@@ -339,7 +339,7 @@ export default function TagSettingsModal({
                       }}
                     />
                     <button
-                      className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc2-icon-close"
+                      className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
                       type="button"
                       aria-label="Очистить"
                       onClick={(event) => {
@@ -369,7 +369,7 @@ export default function TagSettingsModal({
                       <span className="selector-actions slot-trailing">
                         <span className="selector-clear" aria-hidden="true" />
                         <span
-                          className="selector-caret arc2-icon-chevron arc2-selector-dropdown-caret"
+                          className="selector-caret arc-icon-chevron arc-selector-dropdown-caret"
                           aria-hidden="true"
                         />
                       </span>
@@ -410,9 +410,9 @@ export default function TagSettingsModal({
               </div>
             ) : (
               <div
-                id="arc2-tag-modal-panel-image"
+                id="arc-tag-modal-panel-image"
                 role="tabpanel"
-                aria-labelledby="arc2-tag-modal-tab-image"
+                aria-labelledby="arc-tag-modal-tab-image"
               >
                 <div className="arc-modal__slot">
                   <p className="arc-modal__slot-text">
@@ -432,7 +432,7 @@ export default function TagSettingsModal({
                         {imageFileName || 'Файл не выбран'}
                       </span>
                       <span
-                        className="input-inline-icon input-inline-icon--trash uploader-clear slot-trailing arc2-icon-trash"
+                        className="input-inline-icon input-inline-icon--trash uploader-clear slot-trailing arc-icon-trash"
                         aria-hidden={!imageFileName}
                         onClick={
                           imageFileName
@@ -457,7 +457,7 @@ export default function TagSettingsModal({
                 </div>
                 <div className="arc-modal__slot">
                   {tooltipImageDataUrl ? (
-                    <div className="arc2-tag-modal-preview-wrap">
+                    <div className="arc-tag-modal-preview-wrap">
                       <img src={tooltipImageDataUrl} alt="Предпросмотр изображения метки" />
                     </div>
                   ) : (
@@ -466,7 +466,7 @@ export default function TagSettingsModal({
                 </div>
               </div>
             )}
-            {error && !hasDuplicateNameError ? <p className="hint-error arc2-category-modal-error">{error}</p> : null}
+            {error && !hasDuplicateNameError ? <p className="hint-error arc-category-modal-error">{error}</p> : null}
           </div>
 
           <footer className="arc-modal__footer arc-modal__footer--actions-3">
