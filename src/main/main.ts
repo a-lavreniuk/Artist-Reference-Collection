@@ -1,14 +1,16 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 
+import { WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH } from './windowSize';
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1600,
     height: 1000,
-    minWidth: 1200,
-    minHeight: 800,
+    minWidth: WINDOW_MIN_WIDTH,
+    minHeight: WINDOW_MIN_HEIGHT,
     backgroundColor: '#1a1a1d',
     webPreferences: {
       contextIsolation: true,

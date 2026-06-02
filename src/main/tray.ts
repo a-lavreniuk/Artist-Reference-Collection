@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, Tray } from 'electron';
 
 import { loadAppIconImage } from './appIcon';
+import { applySessionWindowSize, getSessionWindowSize } from './windowSize';
 
 let tray: Tray | null = null;
 
@@ -12,6 +13,11 @@ function resolveMainWindow(): BrowserWindow | null {
 export function showMainWindow(): void {
   const win = resolveMainWindow();
   if (!win) return;
+
+  if (getSessionWindowSize()) {
+    applySessionWindowSize(win);
+  }
+
   if (!win.isVisible()) win.show();
   if (win.isMinimized()) win.restore();
   win.focus();

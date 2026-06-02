@@ -6,6 +6,12 @@ import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts 
 import { registerArcIpc, registerArcMediaProtocol } from './ipc';
 import { createAppTray, destroyAppTray } from './tray';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
+import {
+  clearSessionWindowSize,
+  setSessionWindowSize,
+  WINDOW_MIN_HEIGHT,
+  WINDOW_MIN_WIDTH
+} from './windowSize';
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -24,8 +30,10 @@ function createWindow(): BrowserWindow {
   const iconPath = iconLightPath();
 
   const win = new BrowserWindow({
-    width: 1280,
-    height: 840,
+    width: WINDOW_MIN_WIDTH,
+    height: WINDOW_MIN_HEIGHT,
+    minWidth: WINDOW_MIN_WIDTH,
+    minHeight: WINDOW_MIN_HEIGHT,
     show: false,
     icon: iconPath,
     webPreferences: {
@@ -36,7 +44,20 @@ function createWindow(): BrowserWindow {
     }
   });
 
+  let resizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  win.on('resize', () => {
+    if (win.isMaximized()) return;
+    if (resizeSaveTimer) clearTimeout(resizeSaveTimer);
+    resizeSaveTimer = setTimeout(() => {
+      if (win.isDestroyed() || win.isMaximized()) return;
+      const [width, height] = win.getSize();
+      setSessionWindowSize(width, height);
+    }, 300);
+  });
+
   win.once('ready-to-show', () => {
+    win.maximize();
     win.show();
   });
 
@@ -67,6 +88,8 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   nativeTheme.themeSource = 'system';
+
+  clearSessionWindowSize();
 
   registerArcMediaProtocol();
   registerArcIpc();
