@@ -1135,6 +1135,10 @@ button.input {
   box-shadow: none;
 }
 
+.input:hover:not(:disabled):not([disabled]):not(.is-disabled) {
+  border-color: var(--input-border-focus);
+}
+
 .input:disabled,
 .input[disabled] {
   background: var(--input-fill-disabled);
@@ -1166,6 +1170,10 @@ button.input {
 
 .field-error .input {
   border-color: var(--input-border-error);
+}
+
+.field-error .input:hover:not(:disabled):not([disabled]):not(.is-disabled) {
+  border-color: var(--input-border-error-hover);
 }
 
 .field-error .input:focus-visible {
@@ -2177,10 +2185,6 @@ button.input {
   color: var(--input-value-entered);
 }
 
-.uploader:not(:disabled):hover .input-inline-icon--trash {
-  color: var(--input-icon-hover);
-}
-
 .uploader-live .uploader-value {
   color: var(--input-value-default);
 }
@@ -2738,6 +2742,7 @@ body[data-elevation="sunken"],
   --input-border-hover: var(--gray-900);
   --input-border-focus: var(--border-brand);
   --input-border-error: var(--red-900);
+  --input-border-error-hover: var(--red-850);
   --input-border-disabled: var(--gray-900);
   --input-icon-default: var(--gray-600);
   --input-icon-hover: var(--gray-50);
@@ -2903,6 +2908,7 @@ body[data-elevation="default"],
   --input-border-hover: var(--gray-850);
   --input-border-focus: var(--border-brand);
   --input-border-error: var(--red-850);
+  --input-border-error-hover: var(--red-800);
   --input-border-disabled: var(--gray-850);
   --input-icon-default: var(--gray-550);
   --input-icon-hover: var(--gray-50);
@@ -3066,6 +3072,7 @@ body[data-elevation="raised"],
   --input-border-hover: var(--gray-800);
   --input-border-focus: var(--border-brand);
   --input-border-error: var(--red-800);
+  --input-border-error-hover: var(--red-750);
   --input-border-disabled: var(--gray-800);
   --input-icon-default: var(--gray-500);
   --input-icon-hover: var(--gray-50);
