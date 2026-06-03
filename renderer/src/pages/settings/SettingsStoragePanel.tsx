@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getNavbarMetrics, invalidateLibraryCache, listCardsSorted } from '../../services/db';
+import { getNavbarMetrics, invalidateLibraryCache, listCardsSorted, loadLibraryMetadataSnapshot, applyLibraryIntegrityFixes } from '../../services/db';
 import type { ArcMetadataV1 } from '../../services/arcSchema';
 import {
   analyzeIntegrity,
   applyMetadataWarningFixes,
   collectReferencedMediaPathsFromMeta,
+  filterScanOrphanPaths,
   isWarningFixable
 } from '../../services/libraryIntegrity';
 import MessageModal from '../../components/layout/MessageModal';
@@ -236,7 +237,7 @@ export default function SettingsStoragePanel() {
     if (!window.arc) return;
     setIntegrityBusy(true);
     try {
-      const meta = (await window.arc.readMetadata()) as ArcMetadataV1 | null;
+      const meta = await loadLibraryMetadataSnapshot();
       if (!meta) {
         setInfoModal('Нет метаданных библиотеки.');
         return;
@@ -244,7 +245,9 @@ export default function SettingsStoragePanel() {
       const refs = collectReferencedMediaPathsFromMeta(meta);
       const [{ missing }, { orphans }] = await Promise.all([
         window.arc.verifyLibraryPaths(refs),
-        window.arc.scanLibraryOrphanFiles(refs)
+        window.arc.scanLibraryOrphanFiles(refs).then((r) => ({
+          orphans: filterScanOrphanPaths(r.orphans)
+        }))
       ]);
       const missSet = new Set(missing);
       const issues = analyzeIntegrity(meta, missSet, orphans);
@@ -273,10 +276,10 @@ export default function SettingsStoragePanel() {
             const arc = window.arc;
             if (!arc) return;
             const fixed = applyMetadataWarningFixes(meta);
-            await arc.writeMetadata(fixed);
+            await applyLibraryIntegrityFixes(fixed);
             invalidateLibraryCache();
             window.dispatchEvent(new CustomEvent('arc:library-changed'));
-            const nextMeta = (await arc.readMetadata()) as ArcMetadataV1 | null;
+            const nextMeta = await loadLibraryMetadataSnapshot();
             if (!nextMeta) {
               setInfoModal('Нет метаданных библиотеки.');
               return;
@@ -284,7 +287,9 @@ export default function SettingsStoragePanel() {
             const refs2 = collectReferencedMediaPathsFromMeta(nextMeta);
             const [{ missing: m2 }, { orphans: o2 }] = await Promise.all([
               arc.verifyLibraryPaths(refs2),
-              arc.scanLibraryOrphanFiles(refs2)
+              arc.scanLibraryOrphanFiles(refs2).then((r) => ({
+                orphans: filterScanOrphanPaths(r.orphans)
+              }))
             ]);
             const again = analyzeIntegrity(nextMeta, new Set(m2), o2);
             const err2 = again.filter((i) => i.level === 'error');

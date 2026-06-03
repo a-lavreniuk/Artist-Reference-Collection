@@ -4,7 +4,9 @@ import fs from 'fs';
 import {
   ensureLibraryFilenamesMigrated,
   HISTORY_FILENAME,
-  METADATA_FILENAME
+  libraryMetaFileRel,
+  METADATA_FILENAME,
+  resolveLegacyMetadataAbsPath
 } from './libraryFilenames';
 
 async function isDirEmpty(abs: string): Promise<boolean> {
@@ -121,8 +123,10 @@ export async function migrateLibraryToFolder(oldRoot: string, newRoot: string): 
 
 export async function readMetadataFromRoot(root: string): Promise<unknown | null> {
   await ensureLibraryFilenamesMigrated(root);
+  const metaAbs = await resolveLegacyMetadataAbsPath(root);
+  if (!metaAbs) return null;
   try {
-    const raw = await readFile(path.join(root, METADATA_FILENAME), 'utf8');
+    const raw = await readFile(metaAbs, 'utf8');
     return JSON.parse(raw) as unknown;
   } catch {
     return null;
@@ -130,11 +134,11 @@ export async function readMetadataFromRoot(root: string): Promise<unknown | null
 }
 
 export function metadataFilename(): string {
-  return METADATA_FILENAME;
+  return libraryMetaFileRel(METADATA_FILENAME);
 }
 
 export function historyFilename(): string {
-  return HISTORY_FILENAME;
+  return libraryMetaFileRel(HISTORY_FILENAME);
 }
 
 /** Удалить каталог рекурсивно (без корзины) — только для отката копирования при необходимости. */

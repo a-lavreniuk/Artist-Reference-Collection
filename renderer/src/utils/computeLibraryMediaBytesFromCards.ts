@@ -27,7 +27,12 @@ export async function computeSplitLibraryMediaBytesFromCards(
       else videoMeta += b;
       continue;
     }
-    const pair = [c.originalRelativePath, c.thumbRelativePath];
+    const pair = [
+      c.originalRelativePath,
+      c.thumbRelativePath,
+      c.thumbMRelativePath,
+      c.thumbLRelativePath
+    ].filter((p): p is string => Boolean(p && p !== 'legacy'));
     if (c.type === 'image') imageRels.push(...pair);
     else videoRels.push(...pair);
   }

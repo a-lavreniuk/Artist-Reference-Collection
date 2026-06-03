@@ -84,7 +84,11 @@ export default function GalleryBoard({
             {srcMap[card.id] ? (
               <img className="arc-gallery-thumb" src={srcMap[card.id]} alt="" loading="lazy" decoding="async" />
             ) : (
-              <div className="arc-gallery-skeleton" aria-hidden />
+              <div
+                className="arc-gallery-skeleton"
+                style={card.dominantColorHex ? { backgroundColor: card.dominantColorHex } : undefined}
+                aria-hidden
+              />
             )}
             <span className="arc-gallery-card-overlay">
               <span className="arc-gallery-card-overlay-inner" data-btn-size="s">

@@ -13,6 +13,9 @@ files:
 asarUnpack:
   - "**/node_modules/ffmpeg-static/**"
   - "**/node_modules/ffprobe-static/**"
+  - "**/node_modules/better-sqlite3/**"
+  - "**/node_modules/sharp/**"
+  - "**/node_modules/@img/**"
 extraResources:
   - from: release-notes.json
     to: release-notes.json

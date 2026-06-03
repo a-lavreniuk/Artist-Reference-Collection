@@ -3,7 +3,7 @@ import path from 'path';
 import { createHash } from 'crypto';
 import { ZipStoreWriter } from './zipStore';
 import { appendHistory } from './libraryHistory';
-import { ensureLibraryFilenamesMigrated, METADATA_FILENAME } from './libraryFilenames';
+import { ensureLibraryFilenamesMigrated, METADATA_FILENAME, resolveLegacyMetadataAbsPath } from './libraryFilenames';
 
 export type BackupProgress = {
   phase: 'scan' | 'pack' | 'hash' | 'done' | 'error';
@@ -52,12 +52,15 @@ async function walkFiles(root: string, sub: string): Promise<FileEntry[]> {
 async function collectBackupFiles(libraryRoot: string): Promise<FileEntry[]> {
   const root = path.resolve(libraryRoot);
   await ensureLibraryFilenamesMigrated(root);
-  const metaAbs = path.join(root, METADATA_FILENAME);
+  const metaAbs = await resolveLegacyMetadataAbsPath(root);
   const list: FileEntry[] = [];
-  try {
+  if (metaAbs) {
     const st = await stat(metaAbs);
-    list.push({ rel: METADATA_FILENAME, abs: metaAbs, size: st.size });
-  } catch {
+    const rel = metaAbs.startsWith(root)
+      ? metaAbs.slice(root.length + 1).replace(/\\/g, '/')
+      : METADATA_FILENAME;
+    list.push({ rel, abs: metaAbs, size: st.size });
+  } else {
     throw new Error('Нет файла arc-metadata.json в библиотеке.');
   }
   list.push(...(await walkFiles(root, 'media')));

@@ -15,18 +15,52 @@ export const NON_FIXABLE_WARNING_CODES = new Set([
 
 const ORPHAN_DETAIL_MAX_LINES = 40;
 
+/** Служебные файлы в meta/ и устаревшие дубликаты в корне — не «лишние». */
+export const KNOWN_LIBRARY_ROOT_BASENAMES = new Set([
+  'arc-metadata.json',
+  'arc-metadata.backup.json',
+  'arc-history.json',
+  'arc-pending-restore.json',
+  'arc-index.db',
+  'arc-index.db-wal',
+  'arc-index.db-shm',
+  'arc-system.json',
+  'arc-moodboard.json'
+]);
+
+/** Убирает из списка сканирования пути системных файлов библиотеки. */
+export function filterScanOrphanPaths(paths: string[]): string[] {
+  return paths.filter((rel) => {
+    const norm = rel.replace(/\\/g, '/');
+    if (norm === 'meta' || norm.startsWith('meta/')) return false;
+    if (/^cards\/[^/]+\/card\.json$/i.test(norm)) return false;
+    const base = norm.includes('/') ? norm.slice(norm.lastIndexOf('/') + 1) : norm;
+    return !KNOWN_LIBRARY_ROOT_BASENAMES.has(base);
+  });
+}
+
 export function isWarningFixable(issue: IntegrityIssue): boolean {
   return issue.level === 'warning' && !NON_FIXABLE_WARNING_CODES.has(issue.code);
 }
 
-/** Все относительные пути медиа из метаданных (для проверки диска и поиска лишних файлов). */
+/** Все относительные пути медиа и служебных файлов карточек из метаданных. */
 export function collectReferencedMediaPathsFromMeta(meta: ArcMetadataV1): string[] {
   const rels = new Set<string>();
   for (const raw of meta.cards ?? []) {
-    const c = asCard(raw);
-    if (!c) continue;
-    rels.add(c.originalRelativePath.replace(/\\/g, '/'));
-    rels.add(c.thumbRelativePath.replace(/\\/g, '/'));
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    const id = typeof o.id === 'string' ? o.id : '';
+    for (const key of [
+      'originalRelativePath',
+      'thumbRelativePath',
+      'thumbSRelativePath',
+      'thumbMRelativePath',
+      'thumbLRelativePath'
+    ] as const) {
+      const v = o[key];
+      if (typeof v === 'string' && v.trim()) rels.add(v.replace(/\\/g, '/'));
+    }
+    if (id) rels.add(`cards/${id}/card.json`);
   }
   return [...rels];
 }
@@ -78,6 +112,9 @@ function asCard(r: unknown): CardRecord | null {
   const type = o.type === 'video' ? ('video' as const) : ('image' as const);
   const originalRelativePath = typeof o.originalRelativePath === 'string' ? o.originalRelativePath : '';
   const thumbRelativePath = typeof o.thumbRelativePath === 'string' ? o.thumbRelativePath : originalRelativePath;
+  const thumbSRelativePath = typeof o.thumbSRelativePath === 'string' ? o.thumbSRelativePath : undefined;
+  const thumbMRelativePath = typeof o.thumbMRelativePath === 'string' ? o.thumbMRelativePath : undefined;
+  const thumbLRelativePath = typeof o.thumbLRelativePath === 'string' ? o.thumbLRelativePath : undefined;
   if (!originalRelativePath) return null;
   const tagIds = Array.isArray(o.tagIds) ? o.tagIds.filter((x): x is string => typeof x === 'string') : [];
   const collectionIds = Array.isArray(o.collectionIds)
@@ -89,6 +126,9 @@ function asCard(r: unknown): CardRecord | null {
     addedAt: typeof o.addedAt === 'string' ? o.addedAt : '',
     originalRelativePath,
     thumbRelativePath,
+    ...(thumbSRelativePath ? { thumbSRelativePath } : {}),
+    ...(thumbMRelativePath ? { thumbMRelativePath } : {}),
+    ...(thumbLRelativePath ? { thumbLRelativePath } : {}),
     tagIds,
     collectionIds
   };

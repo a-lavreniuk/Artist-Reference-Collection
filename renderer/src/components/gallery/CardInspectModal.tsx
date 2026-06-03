@@ -60,8 +60,12 @@ function SimilarThumb({
       {href ? (
         <img className="arc-gallery-thumb" src={href} alt="" loading="lazy" decoding="async" />
       ) : (
-        <div className="arc-gallery-skeleton arc-card-similar-skeleton" aria-hidden />
-      )}
+      <div
+        className="arc-gallery-skeleton arc-card-similar-skeleton"
+        style={card.dominantColorHex ? { backgroundColor: card.dominantColorHex } : undefined}
+        aria-hidden
+      />
+    )}
     </button>
   );
 }
@@ -120,6 +124,8 @@ export default function CardInspectModal({
   }, [confirmDelete, busy, card, similar, categoriesById, inMoodboard, isBookmarkHovered]);
 
   useEffect(() => {
+    setCard(null);
+    setSrc(null);
     void (async () => {
       const cats = await getAllCategories();
       const cm = new Map<string, CategoryRecord>();
@@ -475,7 +481,11 @@ export default function CardInspectModal({
                   <img className="arc-card-inspect-img" src={src} alt="" />
                 </div>
               ) : (
-                <div className="arc-gallery-skeleton arc-card-inspect-skeleton" aria-hidden />
+                <div
+                  className="arc-gallery-skeleton arc-card-inspect-skeleton"
+                  style={card?.dominantColorHex ? { backgroundColor: card.dominantColorHex } : undefined}
+                  aria-hidden
+                />
               )}
             </div>
 

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ArcMetadataV1 } from '../../services/arcSchema';
 import {
   addSkippedDuplicatePair,
   deleteCard,
@@ -8,7 +7,8 @@ import {
   setDuplicateSimilarityThresholdPct,
   type CardRecord
 } from '../../services/db';
-import { fingerprintFromUrl, similarityCombined, type ImageDupFingerprint } from './imageDupHash';
+import { storageCardsPhash, storageSkippedPairs } from '../../services/storageClient';
+import { similarityCombined, type ImageDupFingerprint } from './imageDupHash';
 import { cardSizeToBytes } from '../../utils/cardSizeToBytes';
 import { formatBytes } from '../../utils/formatBytes';
 type Pair = { a: CardRecord; b: CardRecord; sim: number };
@@ -96,24 +96,30 @@ export default function SettingsDuplicatesPanel() {
         if (cancelled) return;
         setBusy(true);
         try {
-          const meta = (await arc.readMetadata()) as ArcMetadataV1 | null;
           const skip = new Set(
-            (meta?.skippedDuplicatePairs ?? []).map(([x, y]) => {
+            (await storageSkippedPairs()).map(([x, y]) => {
               const a = x < y ? x : y;
               const b = x < y ? y : x;
               return `${a}:${b}`;
             })
           );
-          const images = (await listCardsSorted('all')).filter((c) => c.type === 'image').slice(0, 80);
+          const images = (await listCardsSorted('all')).filter((c) => c.type === 'image').slice(0, 200);
+          const storedPhash = await storageCardsPhash();
+          const phashById = new Map(storedPhash.map((x) => [x.id, x.phash]));
           const fps = new Map<string, ImageDupFingerprint | null>();
           for (const c of images) {
             if (cancelled) break;
+            const stored = phashById.get(c.id);
+            if (stored) {
+              fps.set(c.id, stored);
+              continue;
+            }
             const u = await arc.toFileUrl(c.thumbRelativePath);
             if (!u) {
               fps.set(c.id, null);
               continue;
             }
-            fps.set(c.id, await fingerprintFromUrl(u));
+            fps.set(c.id, null);
           }
           if (cancelled) return;
           const thr = await getDuplicateSimilarityThresholdPct();

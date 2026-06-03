@@ -7,7 +7,13 @@ export type CardRecord = {
   dateModified?: string;
   /** Относительно корня библиотеки, с прямыми слэшами */
   originalRelativePath: string;
+  /** Малое превью (thumb_s) — для галереи и ленивой загрузки */
   thumbRelativePath: string;
+  thumbSRelativePath?: string;
+  thumbMRelativePath?: string;
+  thumbLRelativePath?: string;
+  /** Доминирующий цвет для скелетона (#RRGGBB) */
+  dominantColorHex?: string;
   format?: string;
   width?: number;
   height?: number;

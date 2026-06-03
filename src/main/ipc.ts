@@ -3,12 +3,7 @@ import type { OpenDialogOptions } from 'electron';
 import fs from 'fs';
 import { copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'fs/promises';
 import path from 'path';
-import {
-  extractVideoFrameToJpeg,
-  isVideoExt,
-  probeVideoDimensions,
-  VIDEO_EXT
-} from './ffmpeg';
+import { isVideoExt, VIDEO_EXT } from './ffmpeg';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
 import { migrateLibraryToFolder } from './libraryMigrate';
 import { appendHistory, readHistory } from './libraryHistory';
@@ -16,10 +11,15 @@ import { runBackup } from './backupLibrary';
 import { discoverBackupParts, restoreFromParts } from './restoreLibrary';
 import {
   ensureLibraryFilenamesMigrated,
+  INDEX_DB_FILENAME,
   LEGACY_PENDING_RESTORE_FILENAME,
+  libraryMetaFileAbs,
   METADATA_FILENAME,
-  PENDING_RESTORE_FILENAME
+  PENDING_RESTORE_FILENAME,
+  resolveLegacyMetadataAbsPath
 } from './libraryFilenames';
+import { registerStorageIpc } from './ipcStorage';
+import { resetLibraryStorageCache } from './storage/libraryStorage';
 const LIBRARY_CONFIG_FILENAME = 'library-root.json';
 
 function libraryConfigPath(): string {
@@ -53,8 +53,8 @@ async function writeLibraryRootToDisk(abs: string): Promise<void> {
   await writeFile(libraryConfigPath(), JSON.stringify({ path: abs }, null, 2), 'utf8');
 }
 
-function metadataPath(root: string): string {
-  return path.join(root, METADATA_FILENAME);
+async function metadataPath(root: string): Promise<string | null> {
+  return resolveLegacyMetadataAbsPath(root);
 }
 
 function assertNotMaintenance(): void {
@@ -232,6 +232,8 @@ export function registerArcIpc(): void {
   if (ipcRegistered) return;
   ipcRegistered = true;
 
+  registerStorageIpc(readLibraryRootFromDisk, assertNotMaintenance);
+
   ipcMain.handle('arc:maintenance-begin', async () => {
     acquireMaintenanceLock();
     return { ok: true as const };
@@ -253,6 +255,7 @@ export function registerArcIpc(): void {
     try {
       await mkdir(resolved, { recursive: true });
       await writeLibraryRootToDisk(resolved);
+      resetLibraryStorageCache();
       return { ok: true as const };
     } catch (err) {
       return {
@@ -274,8 +277,14 @@ export function registerArcIpc(): void {
     const root = await readLibraryRootFromDisk();
     if (!root) return null;
     await ensureLibraryFilenamesMigrated(root);
+    const { libraryUsesNewStorage } = await import('./storage/db');
+    if (libraryUsesNewStorage(root)) {
+      return null;
+    }
     try {
-      const raw = await readFile(metadataPath(root), 'utf8');
+      const metaAbs = await metadataPath(root);
+      if (!metaAbs) return null;
+      const raw = await readFile(metaAbs, 'utf8');
       return JSON.parse(raw) as unknown;
     } catch {
       return null;
@@ -286,8 +295,12 @@ export function registerArcIpc(): void {
     assertNotMaintenance();
     const root = await readLibraryRootFromDisk();
     if (!root) throw new Error('Библиотека не выбрана');
+    const { libraryUsesNewStorage } = await import('./storage/db');
+    if (libraryUsesNewStorage(root)) {
+      throw new Error('Библиотека использует новый формат хранения');
+    }
     await ensureLibraryFilenamesMigrated(root);
-    const dest = metadataPath(root);
+    const dest = (await metadataPath(root)) ?? libraryMetaFileAbs(root, METADATA_FILENAME);
     const tmp = `${dest}.${process.pid}.tmp`;
     const payload = JSON.stringify(data, null, 2);
     await writeFile(tmp, payload, 'utf8');
@@ -324,141 +337,6 @@ export function registerArcIpc(): void {
     return res.filePaths;
   });
 
-  ipcMain.handle('arc:import-files', async (_e, absolutePaths: unknown) => {
-    assertNotMaintenance();
-    if (!Array.isArray(absolutePaths) || !absolutePaths.every((x) => typeof x === 'string')) {
-      throw new Error('Неверный список файлов');
-    }
-    const root = await readLibraryRootFromDisk();
-    if (!root) throw new Error('Библиотека не выбрана');
-
-    const now = new Date();
-    const y = String(now.getFullYear());
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    const dayDir = path.join(root, 'media', y, m, d);
-    const thumbDir = path.join(root, 'media', '_cache', 'thumbs');
-    await mkdir(dayDir, { recursive: true });
-    await mkdir(thumbDir, { recursive: true });
-
-    const results: ImportFileResult[] = [];
-
-    for (const abs of absolutePaths as string[]) {
-      const resolved = path.resolve(abs);
-      const ext = path.extname(resolved);
-      const baseName = path.basename(resolved);
-
-      if (!isAllowedLibraryMediaExt(ext)) {
-        results.push({
-          ok: false,
-          error: `Неподдерживаемый тип файла: ${baseName}`
-        });
-        continue;
-      }
-
-      let st;
-      try {
-        st = await stat(resolved);
-      } catch {
-        results.push({ ok: false, error: `Файл недоступен: ${baseName}` });
-        continue;
-      }
-      if (!st.isFile()) {
-        results.push({ ok: false, error: `Не файл: ${baseName}` });
-        continue;
-      }
-
-      const id = crypto.randomUUID();
-      const addedAt = new Date().toISOString();
-
-      if (isImageExt(ext)) {
-        const base = `${id}${ext}`;
-        const originalAbs = path.join(dayDir, base);
-        const thumbAbs = path.join(thumbDir, base);
-
-        try {
-          await copyFile(resolved, originalAbs);
-          await copyFile(resolved, thumbAbs);
-        } catch (err) {
-          results.push({
-            ok: false,
-            error: err instanceof Error ? err.message : `Не удалось скопировать ${baseName}`
-          });
-          continue;
-        }
-
-        const originalRelativePath = path.relative(root, originalAbs).split(path.sep).join('/');
-        const thumbRelativePath = path.relative(root, thumbAbs).split(path.sep).join('/');
-
-        results.push({
-          ok: true,
-          row: {
-            id,
-            type: 'image',
-            originalRelativePath,
-            thumbRelativePath,
-            fileSize: st.size,
-            addedAt
-          }
-        });
-        continue;
-      }
-
-      if (isVideoExt(ext)) {
-        const base = `${id}${ext}`;
-        const originalAbs = path.join(dayDir, base);
-        const thumbAbs = path.join(thumbDir, `${id}.jpg`);
-
-        try {
-          await copyFile(resolved, originalAbs);
-        } catch (err) {
-          results.push({
-            ok: false,
-            error: err instanceof Error ? err.message : `Не удалось скопировать ${baseName}`
-          });
-          continue;
-        }
-
-        try {
-          await extractVideoFrameToJpeg(originalAbs, thumbAbs);
-        } catch (err) {
-          try {
-            await unlink(originalAbs);
-          } catch {
-            /* ignore */
-          }
-          const msg = err instanceof Error ? err.message : 'Не удалось создать превью';
-          results.push({
-            ok: false,
-            error: `${baseName}: ${msg}`
-          });
-          continue;
-        }
-
-        const dims = await probeVideoDimensions(originalAbs);
-        const originalRelativePath = path.relative(root, originalAbs).split(path.sep).join('/');
-        const thumbRelativePath = path.relative(root, thumbAbs).split(path.sep).join('/');
-
-        results.push({
-          ok: true,
-          row: {
-            id,
-            type: 'video',
-            originalRelativePath,
-            thumbRelativePath,
-            fileSize: st.size,
-            addedAt,
-            ...(dims ? dims : {})
-          }
-        });
-        continue;
-      }
-
-      results.push({ ok: false, error: `Внутренняя ошибка для ${baseName}` });
-    }
-
-    return results;
-  });
 
   ipcMain.handle('arc:to-file-url', async (_e, relativePath: unknown) => {
     if (typeof relativePath !== 'string') return null;
@@ -521,15 +399,22 @@ export function registerArcIpc(): void {
     try {
       const st = await stat(abs);
       if (st.isDirectory()) {
-        const probe = path.join(abs, METADATA_FILENAME);
-        try {
-          await stat(probe);
-          shell.showItemInFolder(probe);
-          return;
-        } catch {
-          shell.openPath(abs);
-          return;
+        const probes = [
+          libraryMetaFileAbs(abs, METADATA_FILENAME),
+          libraryMetaFileAbs(abs, INDEX_DB_FILENAME),
+          path.join(abs, METADATA_FILENAME)
+        ];
+        for (const probe of probes) {
+          try {
+            await stat(probe);
+            shell.showItemInFolder(probe);
+            return;
+          } catch {
+            /* next */
+          }
         }
+        shell.openPath(abs);
+        return;
       }
       shell.showItemInFolder(abs);
     } catch {
@@ -788,31 +673,6 @@ export function registerArcIpc(): void {
     return { missing };
   });
 
-  /** Файлы на диске в `media/` и в корне библиотеки (кроме arc-metadata.json), которых нет в переданном списке ссылок из метаданных. */
-  ipcMain.handle('arc:scan-library-orphan-files', async (_e, referencedList: unknown) => {
-    const root = await readLibraryRootFromDisk();
-    if (!root) return { orphans: [] as string[] };
-    if (!Array.isArray(referencedList)) return { orphans: [] as string[] };
-    const referenced = new Set<string>();
-    for (const r of referencedList) {
-      if (typeof r !== 'string' || !r.trim()) continue;
-      referenced.add(r.replace(/\\/g, '/'));
-    }
-    const diskRel: string[] = [...(await walkLibraryMediaRelativeFiles(root))];
-    try {
-      const top = await readdir(root, { withFileTypes: true });
-      for (const ent of top) {
-        if (!ent.isFile()) continue;
-        if (ent.name === METADATA_FILENAME) continue;
-        diskRel.push(ent.name.replace(/\\/g, '/'));
-      }
-    } catch {
-      /* пропуск */
-    }
-    const orphans = diskRel.filter((rel) => !referenced.has(rel));
-    orphans.sort((a, b) => a.localeCompare(b, 'en'));
-    return { orphans };
-  });
 
   ipcMain.handle('arc:sum-library-files-bytes', async (_e, rels: unknown) => {
     const root = await readLibraryRootFromDisk();

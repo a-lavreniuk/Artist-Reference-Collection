@@ -1,6 +1,7 @@
 import type { ArcMetadataV1, CardRecord, CollectionRecord, MoodboardBoardV1 } from './arcSchema';
 import { createEmptyMoodboardBoard, normalizeMoodboardBoard } from './arcSchema';
 import { normalizeHex } from '../utils/colorPicker';
+import * as storage from './storageClient';
 
 export type NavbarMetrics = {
   totalCards: number;
@@ -96,132 +97,92 @@ async function tryAppendLibraryHistory(message: string): Promise<void> {
 
 /** После смены пути библиотеки в настройках */
 export function invalidateLibraryCache(): void {
-  metadataBlob = null;
   fileBackendResolved = false;
 }
 
-let metadataBlob: ArcMetadataV1 | null = null;
 let fileBackendResolved = false;
-
-function emptyMetadata(): ArcMetadataV1 {
-  return {
-    version: 1,
-    categories: [],
-    tags: [],
-    cards: [],
-    collections: [],
-    moodboardCardIds: []
-  };
-}
 
 async function resolveBackend(): Promise<'file' | 'local'> {
   if (!hasArcApi()) {
     fileBackendResolved = true;
     return 'local';
   }
-  if (fileBackendResolved && metadataBlob) {
-    return 'file';
-  }
-  if (fileBackendResolved && !metadataBlob) {
-    return 'local';
-  }
-
   const root = await window.arc!.getLibraryPath();
   if (!root) {
     fileBackendResolved = true;
-    metadataBlob = null;
     return 'local';
   }
-
-  let raw = await window.arc!.readMetadata();
-  if (!raw) {
-    raw = emptyMetadata();
+  if (!fileBackendResolved) {
+    await storage.storageEnsureReady();
+    await migrateLocalIntoStorageIfNeeded();
+    fileBackendResolved = true;
   }
-  metadataBlob = raw as ArcMetadataV1;
-  normalizeMetadataShape(metadataBlob);
-  await migrateLocalIntoFileIfNeeded();
-  fileBackendResolved = true;
   return 'file';
 }
 
-function normalizeMetadataShape(meta: ArcMetadataV1): void {
-  if (!Array.isArray(meta.categories)) meta.categories = [];
-  if (!Array.isArray(meta.tags)) meta.tags = [];
-  if (!Array.isArray(meta.cards)) meta.cards = [];
-  if (!Array.isArray(meta.collections)) meta.collections = [];
-  if (!Array.isArray(meta.moodboardCardIds)) meta.moodboardCardIds = [];
-  if (typeof meta.duplicateSimilarityThresholdPct !== 'number' || !Number.isFinite(meta.duplicateSimilarityThresholdPct)) {
-    meta.duplicateSimilarityThresholdPct = 85;
-  } else {
-    meta.duplicateSimilarityThresholdPct = Math.min(100, Math.max(50, meta.duplicateSimilarityThresholdPct));
+function mapStorageTag(raw: {
+  id: string;
+  categoryId: string;
+  name: string;
+  usageCount: number;
+  description?: string;
+  tooltipImage?: string;
+}): TagRecord {
+  return {
+    id: raw.id,
+    categoryId: raw.categoryId,
+    name: raw.name,
+    usageCount: raw.usageCount,
+    ...(raw.description ? { description: raw.description } : {}),
+    ...(raw.tooltipImage ? { tooltipImageDataUrl: raw.tooltipImage } : {})
+  };
+}
+
+function mapStorageTagToDb(tag: TagRecord): {
+  id: string;
+  categoryId: string;
+  name: string;
+  usageCount: number;
+  description?: string;
+  tooltipImage?: string;
+} {
+  return {
+    id: tag.id,
+    categoryId: tag.categoryId,
+    name: tag.name,
+    usageCount: tag.usageCount,
+    ...(tag.description ? { description: tag.description } : {}),
+    ...(tag.tooltipImageDataUrl ? { tooltipImage: tag.tooltipImageDataUrl } : {})
+  };
+}
+
+async function migrateLocalIntoStorageIfNeeded(): Promise<void> {
+  const cats = await storage.storageListCategories();
+  const tags = await storage.storageListAllTags();
+  if (cats.length > 0 || tags.length > 0) return;
+
+  const lsCats = safeReadArray<unknown>(STORAGE_KEYS.categories);
+  const lsTags = safeReadArray<unknown>(STORAGE_KEYS.tags);
+  if (lsCats.length === 0 && lsTags.length === 0) return;
+
+  for (const [index, item] of lsCats.entries()) {
+    const c = normalizeCategoryRecord(item, index);
+    await storage.storageUpsertCategory(c);
   }
-  if (!Array.isArray(meta.skippedDuplicatePairs)) meta.skippedDuplicatePairs = [];
-  else {
-    meta.skippedDuplicatePairs = meta.skippedDuplicatePairs
-      .filter((x): x is [string, string] => Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && typeof x[1] === 'string')
-      .map(([a, b]) => (a < b ? [a, b] : [b, a]) as [string, string]);
+  for (const item of lsTags) {
+    const t = normalizeTagRecord(item);
+    if (t) await storage.storageUpsertTag(mapStorageTagToDb(t));
   }
-  if (meta.moodboardBoard !== undefined && meta.moodboardBoard !== null) {
-    meta.moodboardBoard = normalizeMoodboardBoard(meta.moodboardBoard);
+
+  const lsCols = safeReadArray<unknown>(STORAGE_KEYS.collections);
+  for (const item of lsCols) {
+    const col = normalizeCollectionRecord(item);
+    if (col) await storage.storageUpsertCollection(col);
   }
 }
 
 async function persistBlob(): Promise<void> {
-  if (!hasArcApi() || !metadataBlob) return;
-  await window.arc!.writeMetadata(metadataBlob);
-}
-
-async function migrateLocalIntoFileIfNeeded(): Promise<void> {
-  if (!metadataBlob || !hasArcApi()) return;
-
-  const fileCatsEmpty = metadataBlob.categories.length === 0;
-  const fileTagsEmpty = metadataBlob.tags.length === 0;
-  const lsCats = safeReadArray<unknown>(STORAGE_KEYS.categories);
-  const lsTags = safeReadArray<unknown>(STORAGE_KEYS.tags);
-
-  if (!(fileCatsEmpty && fileTagsEmpty)) return;
-  if (lsCats.length === 0 && lsTags.length === 0) return;
-
-  metadataBlob.categories = lsCats;
-  metadataBlob.tags = lsTags;
-
-  const lsCols = safeReadArray<unknown>(STORAGE_KEYS.collections);
-  if (metadataBlob.collections.length === 0 && lsCols.length > 0) {
-    metadataBlob.collections = lsCols
-      .map((c) => normalizeCollectionRecord(c))
-      .filter((c): c is CollectionRecord => c !== null);
-  }
-
-  const lsMb = safeReadArray<{ id?: string }>(STORAGE_KEYS.moodboard);
-  if (metadataBlob.moodboardCardIds.length === 0 && lsMb.length > 0) {
-    metadataBlob.moodboardCardIds = lsMb.map((x) => x.id).filter((id): id is string => typeof id === 'string');
-  }
-
-  if (!metadataBlob.moodboardBoard) {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEYS.moodboardBoard);
-      if (raw) {
-        metadataBlob.moodboardBoard = normalizeMoodboardBoard(JSON.parse(raw) as unknown);
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  recomputeTagUsageCounts();
-
-  await persistBlob();
-
-  try {
-    window.localStorage.removeItem(STORAGE_KEYS.categories);
-    window.localStorage.removeItem(STORAGE_KEYS.tags);
-    window.localStorage.removeItem(STORAGE_KEYS.cards);
-    window.localStorage.removeItem(STORAGE_KEYS.collections);
-    window.localStorage.removeItem(STORAGE_KEYS.moodboard);
-    window.localStorage.removeItem(STORAGE_KEYS.moodboardBoard);
-  } catch {
-    /* ignore */
-  }
+  /* legacy no-op for new storage */
 }
 
 function notifyCardsChanged(): void {
@@ -390,8 +351,8 @@ function readTagsLocal(): TagRecord[] {
 
 async function readCategoriesUnified(): Promise<CategoryRecord[]> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    return metadataBlob.categories.map((item, index) => normalizeCategoryRecord(item, index));
+  if (b === 'file') {
+    return storage.storageListCategories();
   }
   const list = readCategoriesLocal();
   migrateCategoriesIfNeededLocal(list);
@@ -400,9 +361,16 @@ async function readCategoriesUnified(): Promise<CategoryRecord[]> {
 
 async function persistCategories(list: CategoryRecord[]): Promise<void> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.categories = list;
-    await persistBlob();
+  if (b === 'file') {
+    const prev = await storage.storageListCategories();
+    const prevIds = new Set(prev.map((c) => c.id));
+    const nextIds = new Set(list.map((c) => c.id));
+    for (const cat of list) {
+      await storage.storageUpsertCategory(cat);
+    }
+    for (const id of prevIds) {
+      if (!nextIds.has(id)) await storage.storageDeleteCategory(id);
+    }
     notifyCategoriesChanged();
     return;
   }
@@ -412,10 +380,16 @@ async function persistCategories(list: CategoryRecord[]): Promise<void> {
 
 async function persistTags(list: TagRecord[]): Promise<void> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.tags = list;
-    recomputeTagUsageCounts();
-    await persistBlob();
+  if (b === 'file') {
+    const prev = await storage.storageListAllTags();
+    const prevIds = new Set(prev.map((t) => t.id));
+    const nextIds = new Set(list.map((t) => t.id));
+    for (const tag of list) {
+      await storage.storageUpsertTag(mapStorageTagToDb(tag));
+    }
+    for (const id of prevIds) {
+      if (!nextIds.has(id)) await storage.storageDeleteTag(id);
+    }
     notifyTagsChanged();
     return;
   }
@@ -423,34 +397,13 @@ async function persistTags(list: TagRecord[]): Promise<void> {
   notifyTagsChanged();
 }
 
-function tagsFromBlob(): TagRecord[] {
-  if (!metadataBlob) return [];
-  const out: TagRecord[] = [];
-  for (const item of metadataBlob.tags) {
-    const t = normalizeTagRecord(item);
-    if (t) out.push(t);
-  }
-  return out;
-}
-
 async function readTagsUnified(): Promise<TagRecord[]> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    return tagsFromBlob();
+  if (b === 'file') {
+    const raw = await storage.storageListAllTags();
+    return raw.map(mapStorageTag);
   }
   return readTagsLocal();
-}
-
-function recomputeTagUsageCounts(): void {
-  if (!metadataBlob) return;
-  const tags = tagsFromBlob();
-  const counts = new Map<string, number>();
-  for (const card of metadataBlob.cards) {
-    for (const tid of card.tagIds) {
-      counts.set(tid, (counts.get(tid) ?? 0) + 1);
-    }
-  }
-  metadataBlob.tags = tags.map((t) => ({ ...t, usageCount: counts.get(t.id) ?? 0 }));
 }
 
 function normalizeCardRecord(item: unknown): CardRecord | null {
@@ -462,6 +415,14 @@ function normalizeCardRecord(item: unknown): CardRecord | null {
   const originalRelativePath = typeof r.originalRelativePath === 'string' ? r.originalRelativePath : '';
   const thumbRelativePath =
     typeof r.thumbRelativePath === 'string' ? r.thumbRelativePath : originalRelativePath;
+  const thumbSRelativePath =
+    typeof r.thumbSRelativePath === 'string' ? r.thumbSRelativePath : thumbRelativePath;
+  const thumbMRelativePath = typeof r.thumbMRelativePath === 'string' ? r.thumbMRelativePath : undefined;
+  const thumbLRelativePath = typeof r.thumbLRelativePath === 'string' ? r.thumbLRelativePath : undefined;
+  const dominantColorHex =
+    typeof r.dominantColorHex === 'string' && r.dominantColorHex.trim()
+      ? r.dominantColorHex.trim()
+      : undefined;
   if (!id || !originalRelativePath) return null;
   const tagIds = Array.isArray(r.tagIds)
     ? r.tagIds.filter((x): x is string => typeof x === 'string')
@@ -484,6 +445,10 @@ function normalizeCardRecord(item: unknown): CardRecord | null {
     addedAt,
     originalRelativePath,
     thumbRelativePath,
+    thumbSRelativePath,
+    ...(thumbMRelativePath ? { thumbMRelativePath } : {}),
+    ...(thumbLRelativePath ? { thumbLRelativePath } : {}),
+    ...(dominantColorHex ? { dominantColorHex } : {}),
     tagIds,
     collectionIds,
     ...(format ? { format } : {}),
@@ -514,18 +479,33 @@ export async function isLibraryConfigured(): Promise<boolean> {
 
 export async function getNavbarMetrics(): Promise<NavbarMetrics> {
   const b = await resolveBackend();
+
+  if (b === 'file') {
+    const [totalCards, imageCards, videoCards, collections, moodboard, categories] = await Promise.all([
+      storage.storageCountCards('all'),
+      storage.storageCountCards('images'),
+      storage.storageCountCards('videos'),
+      storage.storageListCollections(),
+      storage.storageGetMoodboard(),
+      storage.storageListCategories()
+    ]);
+    return {
+      totalCards,
+      imageCards,
+      videoCards,
+      totalCollections: collections.length,
+      moodboardCards: moodboard.moodboardCardIds.length,
+      totalCategories: categories.length
+    };
+  }
+
   let cards: CardRecord[] = [];
   let collections: CollectionRecord[] = [];
   let moodboardIds: string[] = [];
   let categories: CategoryRecord[] = [];
 
-  if (b === 'file' && metadataBlob) {
-    cards = metadataBlob.cards.map(normalizeCardRecord).filter((c): c is CardRecord => c !== null);
-    collections = metadataBlob.collections
-      .map(normalizeCollectionRecord)
-      .filter((c): c is CollectionRecord => c !== null);
-    moodboardIds = [...metadataBlob.moodboardCardIds];
-    categories = metadataBlob.categories.map((item, index) => normalizeCategoryRecord(item, index));
+  if (b === 'file') {
+    /* handled above */
   } else {
     cards = safeReadArray<{ id: string; type?: string }>(STORAGE_KEYS.cards).map((raw, i) => ({
       id: typeof raw.id === 'string' ? raw.id : `c-${i}`,
@@ -734,13 +714,6 @@ export async function deleteTag(tagId: string): Promise<void> {
     throw new Error('Метка не найдена');
   }
   await persistTags(tags.filter((t) => t.id !== tagId));
-  if (metadataBlob) {
-    metadataBlob.cards = metadataBlob.cards.map((c) => ({
-      ...c,
-      tagIds: c.tagIds.filter((id) => id !== tagId)
-    }));
-    await persistBlob();
-  }
   notifyTagsChanged();
   notifyCardsChanged();
   void tryAppendLibraryHistory(`Удалена метка «${removed.name}»`);
@@ -748,32 +721,33 @@ export async function deleteTag(tagId: string): Promise<void> {
 
 export async function getDuplicateSimilarityThresholdPct(): Promise<number> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    normalizeMetadataShape(metadataBlob);
-    return metadataBlob.duplicateSimilarityThresholdPct ?? 85;
+  if (b === 'file') {
+    const sys = await storage.storageGetSystem();
+    return sys?.duplicateSimilarityThresholdPct ?? 85;
   }
   return 85;
 }
 
 export async function setDuplicateSimilarityThresholdPct(pct: number): Promise<void> {
   const b = await resolveBackend();
-  if (b !== 'file' || !metadataBlob) return;
-  normalizeMetadataShape(metadataBlob);
-  metadataBlob.duplicateSimilarityThresholdPct = Math.min(100, Math.max(50, pct));
-  await persistBlob();
+  if (b !== 'file') return;
+  const sys = (await storage.storageGetSystem()) ?? {
+    version: 1 as const,
+    schemaVersion: 2,
+    duplicateSimilarityThresholdPct: 85
+  };
+  await storage.storageSaveSystem({
+    ...sys,
+    version: 1,
+    schemaVersion: sys.schemaVersion ?? 2,
+    duplicateSimilarityThresholdPct: Math.min(100, Math.max(50, pct))
+  });
 }
 
 export async function addSkippedDuplicatePair(idA: string, idB: string): Promise<void> {
   const b = await resolveBackend();
-  if (b !== 'file' || !metadataBlob) return;
-  normalizeMetadataShape(metadataBlob);
-  const pair: [string, string] = idA < idB ? [idA, idB] : [idB, idA];
-  const cur = [...(metadataBlob.skippedDuplicatePairs ?? [])];
-  if (!cur.some(([x, y]) => x === pair[0] && y === pair[1])) {
-    cur.push(pair);
-  }
-  metadataBlob.skippedDuplicatePairs = cur;
-  await persistBlob();
+  if (b !== 'file') return;
+  await storage.storageAddSkippedPair(idA, idB);
 }
 
 export async function moveTagToCategory(tagId: string, targetCategoryId: string): Promise<void> {
@@ -811,11 +785,8 @@ export function notifyTagsChanged(): void {
 
 export async function getAllCollections(): Promise<CollectionRecord[]> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    return metadataBlob.collections
-      .map(normalizeCollectionRecord)
-      .filter((c): c is CollectionRecord => c !== null)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (b === 'file') {
+    return (await storage.storageListCollections()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
   const ls = safeReadArray<unknown>(STORAGE_KEYS.collections);
   return ls
@@ -845,9 +816,8 @@ export async function addCollection(name: string): Promise<CollectionRecord> {
     createdAt: new Date().toISOString()
   };
 
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.collections = [...metadataBlob.collections, created];
-    await persistBlob();
+  if (b === 'file') {
+    await storage.storageUpsertCollection(created);
   } else {
     safeWriteArray(STORAGE_KEYS.collections, [...existing, created]);
   }
@@ -859,16 +829,8 @@ export async function deleteCollection(collectionId: string): Promise<void> {
   const existingCols = await getAllCollections();
   const removed = existingCols.find((c) => c.id === collectionId);
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.collections = metadataBlob.collections.filter((c) => {
-      const n = normalizeCollectionRecord(c);
-      return n?.id !== collectionId;
-    });
-    metadataBlob.cards = metadataBlob.cards.map((c) => ({
-      ...c,
-      collectionIds: c.collectionIds.filter((id) => id !== collectionId)
-    }));
-    await persistBlob();
+  if (b === 'file') {
+    await storage.storageDeleteCollection(collectionId);
   } else {
     const cols = (await getAllCollections()).filter((c) => c.id !== collectionId);
     safeWriteArray(STORAGE_KEYS.collections, cols);
@@ -900,13 +862,9 @@ export async function renameCollection(collectionId: string, name: string): Prom
     throw new Error('Коллекция с таким названием уже есть');
   }
 
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.collections = metadataBlob.collections.map((item) => {
-      const c = normalizeCollectionRecord(item);
-      if (!c || c.id !== collectionId) return item;
-      return { ...c, name: trimmed };
-    });
-    await persistBlob();
+  if (b === 'file') {
+    const col = all.find((c) => c.id === collectionId);
+    if (col) await storage.storageUpsertCollection({ ...col, name: trimmed });
   } else {
     safeWriteArray(
       STORAGE_KEYS.collections,
@@ -920,10 +878,7 @@ export async function renameCollection(collectionId: string, name: string): Prom
 
 async function persistCards(list: CardRecord[]): Promise<void> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.cards = list;
-    recomputeTagUsageCounts();
-    await persistBlob();
+  if (b === 'file') {
     notifyCardsChanged();
     return;
   }
@@ -936,9 +891,9 @@ async function persistCards(list: CardRecord[]): Promise<void> {
 
 async function readMoodboardIdsUnified(): Promise<string[]> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    normalizeMetadataShape(metadataBlob);
-    return [...metadataBlob.moodboardCardIds];
+  if (b === 'file') {
+    const mb = await storage.storageGetMoodboard();
+    return [...mb.moodboardCardIds];
   }
   return safeReadArray<{ id?: string }>(STORAGE_KEYS.moodboard)
     .map((x) => x.id)
@@ -948,9 +903,9 @@ async function readMoodboardIdsUnified(): Promise<string[]> {
 async function persistMoodboardIds(ids: string[]): Promise<void> {
   const normalized = [...new Set(ids)];
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.moodboardCardIds = normalized;
-    await persistBlob();
+  if (b === 'file') {
+    const mb = await storage.storageGetMoodboard();
+    await storage.storageSaveMoodboard({ ...mb, moodboardCardIds: normalized });
     notifyCardsChanged();
     return;
   }
@@ -980,9 +935,9 @@ export async function addCardToMoodboard(cardId: string): Promise<void> {
 async function persistMoodboardBoardInternal(board: MoodboardBoardV1): Promise<void> {
   const normalized = normalizeMoodboardBoard(board);
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.moodboardBoard = normalized;
-    await persistBlob();
+  if (b === 'file') {
+    const mb = await storage.storageGetMoodboard();
+    await storage.storageSaveMoodboard({ ...mb, moodboardBoard: normalized });
     notifyMoodboardBoardChanged();
     return;
   }
@@ -991,9 +946,10 @@ async function persistMoodboardBoardInternal(board: MoodboardBoardV1): Promise<v
 }
 
 export async function getMoodboardBoard(): Promise<MoodboardBoardV1> {
-  await resolveBackend();
-  if (metadataBlob?.moodboardBoard) {
-    return normalizeMoodboardBoard(metadataBlob.moodboardBoard);
+  const b = await resolveBackend();
+  if (b === 'file') {
+    const mb = await storage.storageGetMoodboard();
+    if (mb.moodboardBoard) return normalizeMoodboardBoard(mb.moodboardBoard);
   }
   const fromLs = readMoodboardBoardFromLocalStorage();
   if (fromLs) return fromLs;
@@ -1052,14 +1008,16 @@ export async function toggleCardInMoodboard(cardId: string): Promise<boolean> {
 
 export async function listCardsSorted(filter: 'all' | 'images' | 'videos'): Promise<CardRecord[]> {
   const b = await resolveBackend();
-  let cards: CardRecord[] = [];
-  if (b === 'file' && metadataBlob) {
-    cards = metadataBlob.cards.map(normalizeCardRecord).filter((c): c is CardRecord => c !== null);
-  } else {
-    cards = safeReadArray<unknown>(STORAGE_KEYS.cards)
-      .map(normalizeCardRecord)
-      .filter((c): c is CardRecord => c !== null);
+  if (b === 'file') {
+    return storage.storageListCards({
+      offset: 0,
+      limit: 1_000_000,
+      filter
+    });
   }
+  const cards = safeReadArray<unknown>(STORAGE_KEYS.cards)
+    .map(normalizeCardRecord)
+    .filter((c): c is CardRecord => c !== null);
   const filtered = cards.filter((c) => {
     if (filter === 'images') return c.type === 'image';
     if (filter === 'videos') return c.type === 'video';
@@ -1083,6 +1041,16 @@ export async function listCardsPage(params: {
   selectedTagIds?: string[];
   cardIdExact?: string | null;
 }): Promise<CardRecord[]> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    return storage.storageListCards({
+      offset: params.offset,
+      limit: params.limit,
+      filter: params.filter,
+      selectedTagIds: params.selectedTagIds,
+      cardIdExact: params.cardIdExact
+    });
+  }
   const sorted = await listCardsSorted(params.filter);
   const tagIds = (params.selectedTagIds ?? []).filter((id) => id.trim().length > 0);
   let list = sorted.filter((c) => cardHasAllTagIds(c, tagIds));
@@ -1104,6 +1072,17 @@ export async function listCardsInCollection(
     cardIdExact?: string | null;
   }
 ): Promise<CardRecord[]> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    return storage.storageListCards({
+      offset: params.offset,
+      limit: params.limit,
+      filter: params.filter,
+      selectedTagIds: params.selectedTagIds,
+      cardIdExact: params.cardIdExact,
+      collectionId
+    });
+  }
   const sorted = (await listCardsSorted(params.filter)).filter((c) => c.collectionIds.includes(collectionId));
   const tagIds = (params.selectedTagIds ?? []).filter((id) => id.trim().length > 0);
   let list = sorted.filter((c) => cardHasAllTagIds(c, tagIds));
@@ -1116,12 +1095,20 @@ export async function listCardsInCollection(
 }
 
 export async function getCardById(id: string): Promise<CardRecord | null> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    return storage.storageGetCard(id);
+  }
   const all = await listCardsSorted('all');
   return all.find((c) => c.id === id) ?? null;
 }
 
 /** Число карточек в каждой коллекции (по всей библиотеке). */
 export async function getCollectionCardCounts(): Promise<Record<string, number>> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    return storage.storageCollectionCounts();
+  }
   const all = await listCardsSorted('all');
   const m: Record<string, number> = {};
   for (const c of all) {
@@ -1234,12 +1221,23 @@ export async function listSimilarCards(cardId: string, limit = 15): Promise<Card
 
 export async function insertImportedCards(newCards: CardRecord[]): Promise<void> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    const existing = metadataBlob.cards.map(normalizeCardRecord).filter((c): c is CardRecord => c !== null);
-    metadataBlob.cards = [...existing, ...newCards];
-    recomputeTagUsageCounts();
-    await persistBlob();
+  if (b === 'file') {
+    await storage.storageInsertCardsMetadata(
+      newCards.map((c) => ({
+        id: c.id,
+        tagIds: c.tagIds,
+        collectionIds: c.collectionIds,
+        description: c.description,
+        format: c.format,
+        width: c.width,
+        height: c.height,
+        fileSize: c.fileSize,
+        fileSizeMb: c.fileSizeMb,
+        dateModified: c.dateModified
+      }))
+    );
     notifyCardsChanged();
+    notifyTagsChanged();
     const n = newCards.length;
     void tryAppendLibraryHistory(n === 1 ? 'Импорт: добавлена 1 карточка' : `Импорт: добавлено ${n} карточек`);
     return;
@@ -1254,27 +1252,8 @@ export async function updateCardPayload(
   patch: { tagIds?: string[]; collectionIds?: string[]; description?: string }
 ): Promise<void> {
   const b = await resolveBackend();
-  if (b === 'file' && metadataBlob) {
-    metadataBlob.cards = metadataBlob.cards.map((raw) => {
-      const c = normalizeCardRecord(raw);
-      if (!c || c.id !== cardId) return raw as CardRecord;
-      const next: CardRecord = {
-        ...c,
-        ...(patch.tagIds ? { tagIds: [...patch.tagIds] } : {}),
-        ...(patch.collectionIds ? { collectionIds: [...patch.collectionIds] } : {}),
-        ...(patch.description !== undefined
-          ? patch.description.trim()
-            ? { description: patch.description.trim() }
-            : { description: undefined }
-          : {})
-      };
-      if (patch.description !== undefined && !patch.description.trim()) {
-        delete next.description;
-      }
-      return next;
-    });
-    recomputeTagUsageCounts();
-    await persistBlob();
+  if (b === 'file') {
+    await storage.storageUpdateCard(cardId, patch);
     notifyCardsChanged();
     notifyTagsChanged();
     return;
@@ -1305,23 +1284,9 @@ export async function updateCardPayload(
 
 export async function deleteCard(cardId: string): Promise<void> {
   const b = await resolveBackend();
-  let relPath: string | null = null;
-  let thumbPath: string | null = null;
 
-  if (b === 'file' && metadataBlob) {
-    const card = metadataBlob.cards.map(normalizeCardRecord).find((c) => c?.id === cardId) ?? null;
-    relPath = card?.originalRelativePath ?? null;
-    thumbPath = card?.thumbRelativePath ?? null;
-    metadataBlob.cards = metadataBlob.cards.filter((raw) => {
-      const c = normalizeCardRecord(raw);
-      return c?.id !== cardId;
-    });
-    metadataBlob.moodboardCardIds = metadataBlob.moodboardCardIds.filter((id) => id !== cardId);
-    if (metadataBlob.moodboardBoard) {
-      metadataBlob.moodboardBoard = pruneMoodboardBoardForCard(metadataBlob.moodboardBoard, cardId);
-    }
-    recomputeTagUsageCounts();
-    await persistBlob();
+  if (b === 'file') {
+    await storage.storageDeleteCard(cardId);
     notifyMoodboardBoardChanged();
   } else {
     const legacy = safeReadArray<{ id: string; type?: string }>(STORAGE_KEYS.cards);
@@ -1336,15 +1301,73 @@ export async function deleteCard(cardId: string): Promise<void> {
     notifyMoodboardBoardChanged();
   }
 
-  if (hasArcApi()) {
-    if (relPath) {
-      await window.arc!.deleteFileIfInsideLibrary(relPath);
-    }
-    if (thumbPath && thumbPath !== relPath) {
-      await window.arc!.deleteFileIfInsideLibrary(thumbPath);
-    }
-  }
   void tryAppendLibraryHistory('Удалена карточка');
   notifyCardsChanged();
   notifyTagsChanged();
+}
+
+/** Снимок метаданных для проверки целостности (новый формат хранения). */
+export async function loadLibraryMetadataSnapshot(): Promise<ArcMetadataV1 | null> {
+  const b = await resolveBackend();
+  if (b !== 'file') return null;
+  const [categories, tagsRaw, cards, collections, moodboard] = await Promise.all([
+    getAllCategories(),
+    storage.storageListAllTags(),
+    listCardsSorted('all'),
+    getAllCollections(),
+    storage.storageGetMoodboard()
+  ]);
+  const tags = tagsRaw.map(mapStorageTag);
+  return {
+    version: 1,
+    categories,
+    tags,
+    cards,
+    collections,
+    moodboardCardIds: moodboard.moodboardCardIds,
+    moodboardBoard: moodboard.moodboardBoard
+      ? normalizeMoodboardBoard(moodboard.moodboardBoard)
+      : undefined
+  };
+}
+
+/** Применить автоисправления предупреждений целостности к новому хранилищу. */
+export async function applyLibraryIntegrityFixes(fixed: ArcMetadataV1): Promise<void> {
+  const b = await resolveBackend();
+  if (b !== 'file') return;
+  await persistCategories(
+    fixed.categories.map((item, index) => normalizeCategoryRecord(item, index))
+  );
+  const tags: TagRecord[] = [];
+  for (const item of fixed.tags) {
+    const t = normalizeTagRecord(item);
+    if (t) tags.push(t);
+  }
+  await persistTags(tags);
+  const cols = fixed.collections
+    .map(normalizeCollectionRecord)
+    .filter((c): c is CollectionRecord => c !== null);
+  const existingCols = await getAllCollections();
+  const nextColIds = new Set(cols.map((c) => c.id));
+  for (const col of cols) {
+    await storage.storageUpsertCollection(col);
+  }
+  for (const col of existingCols) {
+    if (!nextColIds.has(col.id)) await storage.storageDeleteCollection(col.id);
+  }
+  for (const raw of fixed.cards) {
+    const c = normalizeCardRecord(raw);
+    if (!c) continue;
+    await storage.storageUpdateCard(c.id, {
+      tagIds: c.tagIds,
+      collectionIds: c.collectionIds,
+      description: c.description
+    });
+  }
+  await storage.storageSaveMoodboard({
+    version: 1,
+    moodboardCardIds: fixed.moodboardCardIds ?? [],
+    moodboardBoard: fixed.moodboardBoard
+  });
+  notifyCollectionsChanged();
 }

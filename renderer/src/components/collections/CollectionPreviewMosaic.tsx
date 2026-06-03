@@ -36,7 +36,11 @@ export default function CollectionPreviewMosaic({ previews }: Props) {
     return href ? (
       <img className="arc-collection-mosaic-thumb" src={href} alt="" loading="lazy" decoding="async" />
     ) : (
-      <div className="arc-gallery-skeleton arc-collection-mosaic-skeleton" aria-hidden />
+      <div
+        className="arc-gallery-skeleton arc-collection-mosaic-skeleton"
+        style={card?.dominantColorHex ? { backgroundColor: card.dominantColorHex } : undefined}
+        aria-hidden
+      />
     );
   };
 

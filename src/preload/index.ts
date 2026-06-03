@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld('arc', {
               type: 'image' | 'video';
               originalRelativePath: string;
               thumbRelativePath: string;
+              thumbSRelativePath?: string;
+              thumbMRelativePath?: string;
+              thumbLRelativePath?: string;
+              dominantColorHex?: string;
               fileSize: number;
               addedAt: string;
               width?: number;
@@ -28,6 +32,41 @@ contextBridge.exposeInMainWorld('arc', {
         | { ok: false; error: string }
       >
     >,
+  storageEnsureReady: () =>
+    ipcRenderer.invoke('arc:storage-ensure-ready') as Promise<{ ok: true } | { ok: false; error: string }>,
+  storageListCards: (params: unknown) => ipcRenderer.invoke('arc:storage-list-cards', params),
+  storageGetCard: (cardId: string) => ipcRenderer.invoke('arc:storage-get-card', cardId),
+  storageUpdateCard: (cardId: string, patch: unknown) =>
+    ipcRenderer.invoke('arc:storage-update-card', { cardId, patch }),
+  storageInsertCardsMetadata: (cards: unknown) =>
+    ipcRenderer.invoke('arc:storage-insert-cards-metadata', cards),
+  storageDeleteCard: (cardId: string) => ipcRenderer.invoke('arc:storage-delete-card', cardId),
+  storageCountCards: (filter: string) => ipcRenderer.invoke('arc:storage-count-cards', filter),
+  storageListCategories: () => ipcRenderer.invoke('arc:storage-list-categories'),
+  storageUpsertCategory: (cat: unknown) => ipcRenderer.invoke('arc:storage-upsert-category', cat),
+  storageDeleteCategory: (id: string) => ipcRenderer.invoke('arc:storage-delete-category', id),
+  storageListTagsByCategory: (categoryId: string) =>
+    ipcRenderer.invoke('arc:storage-list-tags-by-category', categoryId),
+  storageListAllTags: () => ipcRenderer.invoke('arc:storage-list-all-tags'),
+  storageUpsertTag: (tag: unknown) => ipcRenderer.invoke('arc:storage-upsert-tag', tag),
+  storageDeleteTag: (tagId: string) => ipcRenderer.invoke('arc:storage-delete-tag', tagId),
+  storageListCollections: () => ipcRenderer.invoke('arc:storage-list-collections'),
+  storageUpsertCollection: (col: unknown) => ipcRenderer.invoke('arc:storage-upsert-collection', col),
+  storageDeleteCollection: (id: string) => ipcRenderer.invoke('arc:storage-delete-collection', id),
+  storageCollectionCounts: () => ipcRenderer.invoke('arc:storage-collection-counts'),
+  storageGetMoodboard: () => ipcRenderer.invoke('arc:storage-get-moodboard'),
+  storageSaveMoodboard: (data: unknown) => ipcRenderer.invoke('arc:storage-save-moodboard', data),
+  storageGetSystem: () => ipcRenderer.invoke('arc:storage-get-system'),
+  storageSaveSystem: (data: unknown) => ipcRenderer.invoke('arc:storage-save-system', data),
+  storageSkippedPairs: () => ipcRenderer.invoke('arc:storage-skipped-pairs'),
+  storageAddSkippedPair: (idA: string, idB: string) =>
+    ipcRenderer.invoke('arc:storage-add-skipped-pair', idA, idB),
+  storageCardsPhash: () => ipcRenderer.invoke('arc:storage-cards-phash'),
+  onMigrationProgress: (cb: (p: unknown) => void) => {
+    const fn = (_: unknown, payload: unknown) => cb(payload);
+    ipcRenderer.on('arc:migration-progress', fn);
+    return () => ipcRenderer.removeListener('arc:migration-progress', fn);
+  },
   toFileUrl: (relativePath: string) =>
     ipcRenderer.invoke('arc:to-file-url', relativePath) as Promise<string | null>,
   deleteFileIfInsideLibrary: (relativePath: string) =>
