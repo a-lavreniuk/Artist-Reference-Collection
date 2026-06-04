@@ -150,7 +150,7 @@ export default function GalleryPage() {
     if (!ready) {
       return (
         <div className="arc-page-empty panel elevation-default">
-          <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Настройки».</p>
+          <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Хранилище» (меню навбара).</p>
         </div>
       );
     }

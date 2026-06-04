@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
-import { ARC_ADD_CARDS_SUBMIT_REQUEST, publishAddCardsQueueState } from '../components/layout/navbarEvents';
 import { Tooltip } from '../components/tooltip/Tooltip';
 import TagChipToggleWithTooltip from '../components/tags/TagChipToggleWithTooltip';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
@@ -184,17 +183,6 @@ export default function AddCardsPage() {
     [tab]
   );
 
-  useLayoutEffect(() => {
-    const n = queue.length;
-    publishAddCardsQueueState({ hasItems: n > 0, count: n });
-  }, [queue]);
-
-  useEffect(() => {
-    return () => {
-      publishAddCardsQueueState({ hasItems: false, count: 0 });
-    };
-  }, []);
-
   useEffect(() => {
     return () => {
       if (tagsSettingsToastTimerRef.current) {
@@ -337,12 +325,6 @@ export default function AddCardsPage() {
       setBusy(false);
     }
   }, [queue, navigate]);
-
-  useEffect(() => {
-    const onSubmit = () => void handleSubmitAll();
-    window.addEventListener(ARC_ADD_CARDS_SUBMIT_REQUEST, onSubmit);
-    return () => window.removeEventListener(ARC_ADD_CARDS_SUBMIT_REQUEST, onSubmit);
-  }, [handleSubmitAll]);
 
   const appendPaths = useCallback((paths: string[]) => {
     const allowed = paths.filter((p) => isImportableMediaPath(p));
@@ -601,7 +583,7 @@ export default function AddCardsPage() {
   if (!ready) {
     return (
       <div className="arc-page-empty panel elevation-default">
-        <p className="typo-p-m">Сначала укажите папку библиотеки в «Настройках».</p>
+        <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Хранилище» (меню навбара).</p>
       </div>
     );
   }
@@ -613,6 +595,24 @@ export default function AddCardsPage() {
       ref={hostRef}
       className={`arc-add-page${queue.length === 0 ? ' arc-add-page--empty' : ' arc-add-page--with-queue'}`}
     >
+      {queue.length > 0 ? (
+        <div className="arc-page-actions">
+          <button className="btn btn-outline btn-ds" type="button" onClick={() => navigate('/gallery')}>
+            <span className="btn-ds__value">Отмена</span>
+          </button>
+          <button
+            className="btn btn-success btn-ds"
+            type="button"
+            disabled={busy}
+            onClick={() => void handleSubmitAll()}
+            aria-label={`Добавить ${queue.length} карточек`}
+          >
+            <span className="btn-ds__value">Добавить</span>
+            <span className="btn-ds__counter">{queue.length}</span>
+            <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       {queue.length === 0 ? (
         <div
           className={`arc-add-dropzone panel elevation-sunken${dropzoneActive ? ' arc-add-dropzone--dropping' : ''}`}

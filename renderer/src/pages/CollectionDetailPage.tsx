@@ -1,28 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import GalleryBoard from '../components/gallery/GalleryBoard';
 import CardInspectModal from '../components/gallery/CardInspectModal';
-import ConfirmCollectionDeleteModal from '../components/layout/ConfirmCollectionDeleteModal';
 import DemoAlert from '../components/layout/DemoAlert';
-import RenameCollectionModal from '../components/layout/RenameCollectionModal';
-import {
-  ARC_NAVBAR_COLLECTION_TITLE_EVENT,
-  ARC_RENAME_COLLECTION_REQUEST
-} from '../components/layout/navbarEvents';
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
 import {
   ARC_CARDS_CHANGED_EVENT,
-  deleteCollection,
   getAllCategories,
-  getAllCollections,
-  getCollectionById,
-  getMoodboardCardIds,
   getTagsByCategory,
+  getMoodboardCardIds,
   isCardOnBoard,
   listCardsInCollection,
   listSimilarCards,
-  renameCollection,
   addCardToMoodboard,
   removeCardFromMoodboard,
   type CardRecord,
@@ -39,23 +29,18 @@ function filterFromParams(raw: string | null): 'all' | 'images' | 'videos' {
 
 export default function CollectionDetailPage() {
   const { collectionId } = useParams<{ collectionId: string }>();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const filter = filterFromParams(searchParams.get('gf'));
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
   const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact);
 
-  const [collectionName, setCollectionName] = useState('');
-  const [otherCollectionsLowerNames, setOtherCollectionsLowerNames] = useState<Set<string>>(() => new Set());
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [openCardId, setOpenCardId] = useState<string | null>(null);
   const [tagsIndex, setTagsIndex] = useState<Map<string, TagRecord>>(new Map());
-  const [renameModalOpen, setRenameModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [noSimilarAlertOpen, setNoSimilarAlertOpen] = useState(false);
   const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
@@ -75,28 +60,6 @@ export default function CollectionDetailPage() {
     }
     setTagsIndex(m);
   }, []);
-
-  const refreshOtherCollectionNames = useCallback(async () => {
-    const allCols = await getAllCollections();
-    const id = collectionId ?? '';
-    setOtherCollectionsLowerNames(
-      new Set(
-        allCols
-          .filter((c) => c.id !== id)
-          .map((c) => c.name.trim().toLowerCase())
-          .filter(Boolean)
-      )
-    );
-  }, [collectionId]);
-
-  const loadMeta = useCallback(async () => {
-    if (!collectionId) return;
-    const c = await getCollectionById(collectionId);
-    const nextTitle = c?.name ?? '';
-    setCollectionName(nextTitle);
-    window.dispatchEvent(new CustomEvent(ARC_NAVBAR_COLLECTION_TITLE_EVENT, { detail: { title: nextTitle } }));
-    await refreshOtherCollectionNames();
-  }, [collectionId, refreshOtherCollectionNames]);
 
   const loadPage = useCallback(
     async (start: number, append: boolean) => {
@@ -123,12 +86,8 @@ export default function CollectionDetailPage() {
 
   useEffect(() => {
     void loadTagsIndex();
-    void loadMeta();
     void loadMoodboard();
-    return () => {
-      window.dispatchEvent(new CustomEvent(ARC_NAVBAR_COLLECTION_TITLE_EVENT, { detail: { title: '' } }));
-    };
-  }, [loadMeta, loadTagsIndex, loadMoodboard]);
+  }, [loadTagsIndex, loadMoodboard]);
 
   useEffect(() => {
     if (!collectionId) return;
@@ -137,12 +96,6 @@ export default function CollectionDetailPage() {
     setHasMore(true);
     void loadPage(0, false);
   }, [collectionId, filter, selectedTagIds, cardIdExact, loadPage]);
-
-  useEffect(() => {
-    const onRenameRequest = () => setRenameModalOpen(true);
-    window.addEventListener(ARC_RENAME_COLLECTION_REQUEST, onRenameRequest);
-    return () => window.removeEventListener(ARC_RENAME_COLLECTION_REQUEST, onRenameRequest);
-  }, []);
 
   useEffect(() => {
     const onCards = () => {
@@ -171,12 +124,6 @@ export default function CollectionDetailPage() {
     io.observe(el);
     return () => io.disconnect();
   }, [collectionId, hasMore, loading, offset, loadPage]);
-
-  const removeCollection = async () => {
-    if (!collectionId) return;
-    await deleteCollection(collectionId);
-    navigate('/collections');
-  };
 
   if (!collectionId) {
     return null;
@@ -255,27 +202,6 @@ export default function CollectionDetailPage() {
             });
           }}
         />
-      ) : null}
-
-      {renameModalOpen && collectionId ? (
-        <RenameCollectionModal
-          key={collectionId}
-          initialName={collectionName}
-          otherCollectionsLowerNames={otherCollectionsLowerNames}
-          onClose={() => setRenameModalOpen(false)}
-          onSubmit={async (next) => {
-            await renameCollection(collectionId, next);
-            await loadMeta();
-          }}
-          onRequestDelete={() => {
-            setRenameModalOpen(false);
-            setDeleteModalOpen(true);
-          }}
-        />
-      ) : null}
-
-      {deleteModalOpen ? (
-        <ConfirmCollectionDeleteModal onClose={() => setDeleteModalOpen(false)} onConfirm={removeCollection} />
       ) : null}
 
       {noSimilarAlertOpen ? (

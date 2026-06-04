@@ -34,7 +34,11 @@ function normalizePrefix(q: string): string {
   return q.trim().toLowerCase();
 }
 
-export default function NavbarSearch() {
+type NavbarSearchProps = {
+  onPanelOpenChange?: (open: boolean) => void;
+};
+
+export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -148,6 +152,18 @@ export default function NavbarSearch() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [panelOpen, closePanel]);
+
+  useEffect(() => {
+    onPanelOpenChange?.(panelOpen);
+  }, [panelOpen, onPanelOpenChange]);
+
+  useEffect(() => {
+    if (!panelOpen) return undefined;
+    document.body.classList.add('arc-search-panel-open');
+    return () => {
+      document.body.classList.remove('arc-search-panel-open');
+    };
+  }, [panelOpen]);
 
   const toggleTag = (tagId: string) => {
     panelHadInteraction.current = true;

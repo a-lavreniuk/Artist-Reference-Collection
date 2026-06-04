@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import CategoryPanel from '../components/tags/CategoryPanel';
+import NewCategoryModal from '../components/layout/NewCategoryModal';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
 import {
   ARC_CARDS_CHANGED_EVENT,
   ARC_CATEGORIES_CHANGED_EVENT,
   ARC_TAGS_CHANGED_EVENT,
+  addCategory,
+  notifyCategoriesChanged,
   deleteCategory,
   deleteTag,
   getAllCategories,
@@ -26,6 +29,7 @@ export default function TagsPage() {
   const [tagsByCategory, setTagsByCategory] = useState<Record<string, TagRecord[]>>({});
   const [draggingTagId, setDraggingTagId] = useState<string | null>(null);
   const [tagModal, setTagModal] = useState<TagSettingsModalState | null>(null);
+  const [addCategoryModalOpen, setAddCategoryModalOpen] = useState(false);
 
   const allTags = useMemo(() => Object.values(tagsByCategory).flat(), [tagsByCategory]);
 
@@ -132,7 +136,22 @@ export default function TagsPage() {
   if (categories.length === 0) {
     return (
       <div className="arc-tags-outlet">
-        <p className="hint">Категорий пока нет. Нажмите «Добавить категорию» в шапке.</p>
+        <div className="arc-collections-page__toolbar">
+          <button type="button" className="btn btn-secondary btn-ds" onClick={() => setAddCategoryModalOpen(true)}>
+            <span className="btn-ds__value">Добавить категорию</span>
+            <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+          </button>
+        </div>
+        <p className="hint">Категорий пока нет. Нажмите «Добавить категорию» выше.</p>
+        {addCategoryModalOpen ? (
+          <NewCategoryModal
+            onClose={() => setAddCategoryModalOpen(false)}
+            onSubmit={async (name, colorHex) => {
+              await addCategory(name, colorHex);
+              notifyCategoriesChanged();
+            }}
+          />
+        ) : null}
       </div>
     );
   }
@@ -152,6 +171,12 @@ export default function TagsPage() {
         }
       }}
     >
+      <div className="arc-collections-page__toolbar">
+        <button type="button" className="btn btn-secondary btn-ds" onClick={() => setAddCategoryModalOpen(true)}>
+          <span className="btn-ds__value">Добавить категорию</span>
+          <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+        </button>
+      </div>
       <div className="arc-category-panels">
         {categories.map((category, index) => (
           <CategoryPanel
@@ -176,6 +201,15 @@ export default function TagsPage() {
           />
         ))}
       </div>
+      {addCategoryModalOpen ? (
+        <NewCategoryModal
+          onClose={() => setAddCategoryModalOpen(false)}
+          onSubmit={async (name, colorHex) => {
+            await addCategory(name, colorHex);
+            notifyCategoriesChanged();
+          }}
+        />
+      ) : null}
       {tagModal ? (
         <TagSettingsModal
           state={tagModal}

@@ -1,5 +1,7 @@
 import { app, BrowserWindow, Menu, Tray } from 'electron';
 
+import { setAppQuitting } from './windowChrome';
+
 import { loadAppIconImage } from './appIcon';
 import { applySessionWindowSize, getSessionWindowSize } from './windowSize';
 
@@ -39,6 +41,7 @@ export function createAppTray(): Tray {
     {
       label: 'Выход',
       click: () => {
+        setAppQuitting();
         app.quit();
       }
     }

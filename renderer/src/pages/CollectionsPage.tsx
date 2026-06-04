@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link } from 'react-router-dom';
 import CollectionPreviewMosaic from '../components/collections/CollectionPreviewMosaic';
 import NewCollectionModal from '../components/collections/NewCollectionModal';
-import { ARC_COLLECTIONS_ADD_REQUEST } from '../components/layout/navbarEvents';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import {
   addCollection,
@@ -49,17 +48,21 @@ export default function CollectionsPage() {
     };
   }, [reload]);
 
-  useEffect(() => {
-    const onAdd = () => setModalOpen(true);
-    window.addEventListener(ARC_COLLECTIONS_ADD_REQUEST, onAdd);
-    return () => window.removeEventListener(ARC_COLLECTIONS_ADD_REQUEST, onAdd);
-  }, []);
-
   return (
     <div ref={hostRef} className="arc-collections-page">
+      <div className="arc-collections-page__toolbar">
+        <button
+          type="button"
+          className="btn btn-secondary btn-ds"
+          onClick={() => setModalOpen(true)}
+        >
+          <span className="btn-ds__value">Добавить коллекцию</span>
+          <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+        </button>
+      </div>
       {items.length === 0 ? (
         <div className="arc-page-empty panel elevation-default">
-          <p className="typo-p-m">Коллекций пока нет. Нажмите «Добавить коллекцию» в шапке.</p>
+          <p className="typo-p-m">Коллекций пока нет. Нажмите «Добавить коллекцию» выше.</p>
         </div>
       ) : (
         <div className="arc-collections-grid">

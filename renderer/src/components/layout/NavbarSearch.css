@@ -1,3 +1,25 @@
+/*
+ * Белая кайма по краю окна (Electron + backdrop-filter): перекрываем inset-тенью,
+ * не отключая blur на кнопках карточек.
+ */
+body.arc-search-panel-open::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 4px var(--app-bg);
+}
+
+body.arc-search-panel-open .arc-search-backdrop {
+  inset: -4px;
+  box-shadow: inset 0 0 0 4px var(--app-bg);
+}
+
+body.arc-search-panel-open .arc-gallery-card-wrap {
+  contain: paint;
+}
+
 /* Якорь для выпадающего меню: измеряем getBoundingClientRect поля поиска. */
 .arc-navbar-search-anchor {
   position: relative;

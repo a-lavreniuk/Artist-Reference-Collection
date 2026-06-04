@@ -151,6 +151,9 @@ declare global {
       >;
       downloadUpdate: () => Promise<{ ok: boolean }>;
       quitAndInstall: () => Promise<{ ok: boolean }>;
+      windowMinimizeToTray: () => Promise<{ ok: boolean }>;
+      windowToggleMaximize: () => Promise<{ ok: boolean; maximized?: boolean }>;
+      windowCloseToTray: () => Promise<{ ok: boolean }>;
       onUpdateAvailable: (cb: (detail: { version: string; releaseDate: string | null }) => void) => () => void;
       onUpdateNotAvailable?: (cb: () => void) => () => void;
       onUpdateDownloadProgress?: (cb: (detail: { percent: number }) => void) => () => void;

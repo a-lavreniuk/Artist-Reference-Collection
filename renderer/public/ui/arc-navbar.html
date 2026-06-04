@@ -8,7 +8,13 @@
   <link rel="stylesheet" href="./arc-navbar.css" />
 </head>
 <body class="arc-navbar-page" data-elevation="default" data-typo-role="primary" data-typo-tone="white" data-typo-state="default" data-btn-size="l" data-input-size="l">
-  <main class="arc-navbar-shell">
+  <main class="arc-navbar-shell" style="--arc-navbar-stack-height: 136px">
+    <div
+      class="arc-navbar-host"
+      style="--arc-navbar-panel-height: 72px; --arc-navbar-shade-band-height: 136px; --arc-navbar-stack-height: 136px"
+    >
+      <div class="arc-navbar-shade" aria-hidden="true"></div>
+      <div class="arc-navbar-host__inner">
     <header class="arc-navbar panel elevation-default" data-navbar-elevation="default">
       <div class="arc-navbar-row">
         <div class="arc-navbar-group">
@@ -44,6 +50,8 @@
         <div class="arc-navbar-secondary-actions" id="arcNavbarSecondaryActions"></div>
       </div>
     </header>
+      </div>
+    </div>
   </main>
 
   <div class="arc-modal-host" id="arcTagsCategoryModalHost" hidden aria-hidden="true">

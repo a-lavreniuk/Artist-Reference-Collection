@@ -7,7 +7,8 @@ import GalleryCardEditStubPage from './pages/GalleryCardEditStubPage';
 import GalleryPage from './pages/GalleryPage';
 import MoodboardPage from './pages/MoodboardPage';
 import OnboardingStubPage from './pages/OnboardingStubPage';
-import SettingsPage from './pages/SettingsPage';
+import SettingsLegacyRedirect from './pages/SettingsLegacyRedirect';
+import SettingsSectionPage from './pages/SettingsSectionPage';
 import TagsPage from './pages/TagsPage';
 import UiKitPage from './ui-kit/UiKitPage';
 
@@ -23,7 +24,11 @@ export default function App() {
         <Route path="collections/:collectionId" element={<CollectionDetailPage />} />
         <Route path="collections" element={<CollectionsPage />} />
         <Route path="moodboard" element={<MoodboardPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+        <Route path="storage" element={<SettingsSectionPage panel="storage" />} />
+        <Route path="statistics" element={<SettingsSectionPage panel="statistics" />} />
+        <Route path="history" element={<SettingsSectionPage panel="history" />} />
+        <Route path="duplicates" element={<SettingsSectionPage panel="duplicates" />} />
+        <Route path="settings" element={<SettingsLegacyRedirect />} />
         <Route path="ui-kit" element={<UiKitPage />} />
         <Route path="add" element={<AddCardsPage />} />
       </Route>

@@ -139,6 +139,11 @@ contextBridge.exposeInMainWorld('arc', {
     >,
   downloadUpdate: () => ipcRenderer.invoke('arc:download-update') as Promise<{ ok: boolean }>,
   quitAndInstall: () => ipcRenderer.invoke('arc:quit-and-install') as Promise<{ ok: boolean }>,
+  windowMinimizeToTray: () =>
+    ipcRenderer.invoke('arc:window-minimize-to-tray') as Promise<{ ok: boolean }>,
+  windowToggleMaximize: () =>
+    ipcRenderer.invoke('arc:window-toggle-maximize') as Promise<{ ok: boolean; maximized?: boolean }>,
+  windowCloseToTray: () => ipcRenderer.invoke('arc:window-close-to-tray') as Promise<{ ok: boolean }>,
   onUpdateAvailable: (cb: (detail: { version: string; releaseDate: string | null }) => void) => {
     const fn = (_: unknown, payload: { version: string; releaseDate: string | null }) => cb(payload);
     ipcRenderer.on('arc:update-available', fn);

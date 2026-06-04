@@ -5,6 +5,7 @@ import { iconLightPath } from './appIcon';
 import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts } from './devTools';
 import { registerArcIpc, registerArcMediaProtocol } from './ipc';
 import { createAppTray, destroyAppTray } from './tray';
+import { bindMainWindow, isAppQuitting, registerWindowChromeIpc } from './windowChrome';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
 import {
   clearSessionWindowSize,
@@ -35,6 +36,9 @@ function createWindow(): BrowserWindow {
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
     show: false,
+    frame: false,
+    backgroundColor: '#1a1a1e',
+    ...(process.platform === 'win32' ? { roundedCorners: false as const } : {}),
     icon: iconPath,
     webPreferences: {
       preload: preloadPath,
@@ -43,6 +47,9 @@ function createWindow(): BrowserWindow {
       sandbox: false
     }
   });
+
+  win.setBackgroundColor('#1a1a1e');
+  bindMainWindow(win);
 
   let resizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -93,6 +100,7 @@ app.whenReady().then(() => {
 
   registerArcMediaProtocol();
   registerArcIpc();
+  registerWindowChromeIpc();
   registerArcUpdaterIpc();
   registerDevToolsShortcuts();
   createWindow();
@@ -107,6 +115,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  if (isAppQuitting()) return;
   if (process.platform !== 'darwin') {
     app.quit();
   }

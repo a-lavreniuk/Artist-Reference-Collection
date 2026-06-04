@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ARC_EDIT_CARD_SUBMIT_REQUEST } from '../components/layout/navbarEvents';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import { Tooltip } from '../components/tooltip/Tooltip';
 import TagChipToggleWithTooltip from '../components/tags/TagChipToggleWithTooltip';
@@ -115,12 +114,6 @@ export default function GalleryCardEditStubPage() {
     }
   }, [params.cardId, busy, loaded, tagIds, collectionIds, description, navigate]);
 
-  useEffect(() => {
-    const onSubmit = () => void handleSubmit();
-    window.addEventListener(ARC_EDIT_CARD_SUBMIT_REQUEST, onSubmit);
-    return () => window.removeEventListener(ARC_EDIT_CARD_SUBMIT_REQUEST, onSubmit);
-  }, [handleSubmit]);
-
   const toggleTag = (tagId: string) => {
     setTagIds((prev) => {
       const set = new Set(prev);
@@ -160,7 +153,7 @@ export default function GalleryCardEditStubPage() {
   if (!ready) {
     return (
       <div className="arc-page-empty panel elevation-default">
-        <p className="typo-p-m">Сначала укажите папку библиотеки в «Настройках».</p>
+        <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Хранилище» (меню навбара).</p>
       </div>
     );
   }
@@ -175,6 +168,15 @@ export default function GalleryCardEditStubPage() {
 
   return (
     <div ref={hostRef} className="arc-add-page">
+      <div className="arc-page-actions">
+        <button className="btn btn-outline btn-ds" type="button" onClick={() => navigate('/gallery')}>
+          <span className="btn-ds__value">Отмена</span>
+        </button>
+        <button className="btn btn-success btn-ds" type="button" disabled={busy || !loaded} onClick={() => void handleSubmit()}>
+          <span className="btn-ds__value">Сохранить изменения</span>
+          <span className="btn-ds__icon arc-icon-save" aria-hidden="true" />
+        </button>
+      </div>
       <div
         className="arc-add-editor panel elevation-default arc-ui-kit-scope"
         data-elevation="default"
