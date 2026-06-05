@@ -1,0 +1,47 @@
+---
+description: Tooltip ARC — подсказки при длительном наведении для всех элементов UI
+alwaysApply: true
+---
+
+# Tooltip (ARC)
+
+Макет: [ARC-2 / Tooltip, node 28:387](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=28-387).
+
+## Когда нужен tooltip
+
+- Иконка или кнопка без видимой подписи.
+- Действие неочевидно из контекста (сокращённый текст, только символ).
+- Дополнительное пояснение при наведении (описание метки, статус «в разработке»).
+
+Не дублируй tooltip, если элемент уже полностью подписан и смысл очевиден.
+
+## Как реализовать
+
+- Используй общий компонент `Tooltip` из `renderer/src/components/tooltip/Tooltip.tsx`.
+- Для меток с описанием/картинкой — `TagTooltipBody` + `variant="rich"`.
+- Для `disabled`-кнопок оборачивай в `<span className="arc-tooltip-anchor-inline">` — нативный hover не срабатывает.
+
+```tsx
+// ✅ Хорошо
+<Tooltip content="Добавить в мудборд" delay={500} position="top">
+  <button type="button" aria-label="Добавить в мудборд">…</button>
+</Tooltip>
+
+// ❌ Плохо — системный title, не стиль ARC
+<button type="button" title="Добавить в мудборд">…</button>
+```
+
+## Визуал (сверка с Figma)
+
+- Фон и стрелка — токены raised/brand из дизайн-системы; не хардкодить `#…`.
+- Типографика: `Paragraph/S` (`--typo-p-s-*`), цвет `--ui-text-primary` или brand-тokens по макету.
+- `max-width`: `192px` (`default`), `256px` (`rich`); padding `--s-2`; radius `--radius-s`.
+- Стрелка на стороне, противоположной якорю (`top` / `bottom` / `left` / `right`).
+- Без тени; fade-in через `--transition-fast`.
+
+## Поведение
+
+- `position: fixed`, `pointer-events: none`.
+- Задержка показа по умолчанию **500 ms** (`delay={500}`); для rich-меток допустимо **1000 ms**.
+- Не выходить за viewport; пересчитывать позицию при `scroll` и `resize`.
+- Не создавай локальные tooltip-стили и одноразовые обёртки — расширяй общий компонент.
