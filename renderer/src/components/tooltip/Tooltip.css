@@ -1,4 +1,4 @@
-/* Tooltip (ARC): raised surface без тени; не конфликтует с .tooltip из arc-ui.css */
+/* Tooltip (ARC): brand surface по Figma node 28:387; не конфликтует с .tooltip из arc-ui.css */
 
 .arc-tooltip-wrapper {
   position: relative;
@@ -12,7 +12,7 @@
   font-size: var(--typo-p-s-size);
   line-height: var(--typo-p-s-line);
   font-weight: var(--typo-p-s-weight);
-  color: var(--ui-text-primary);
+  color: var(--brand-100);
   white-space: normal;
   word-wrap: break-word;
   pointer-events: none;
@@ -30,10 +30,10 @@
 }
 
 .arc-tooltip__inner {
-  padding: var(--s-2);
-  background: var(--raised-bg);
-  border: 1px solid var(--surface-border-raised);
-  border-radius: var(--radius-s);
+  padding: var(--s-1);
+  background: var(--brand-550);
+  border: none;
+  border-radius: var(--s-1);
   box-shadow: none;
   min-width: 0;
 }
@@ -45,7 +45,7 @@
 }
 
 .arc-tooltip__arrow-fill {
-  fill: var(--raised-bg);
+  fill: var(--brand-550);
 }
 
 .arc-tooltip--arrow-edge-bottom .arc-tooltip__arrow {

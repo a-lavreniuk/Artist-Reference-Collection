@@ -6,6 +6,7 @@ import NavbarMenu from './NavbarMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
 import NavbarWindowControls from './NavbarWindowControls';
+import { Tooltip } from '../tooltip/Tooltip';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import {
   applyNavbarStackCssVars,
@@ -107,15 +108,18 @@ export default function TopNavbar() {
 
             {variant === 'full' ? (
               <div className="arc-navbar-top-bar__search arc-navbar-no-drag">
-                <button
-                  type="button"
-                  className="btn btn-outline btn-ds btn-icon-only"
-                  disabled
-                  aria-label="Формат сетки (скоро)"
-                  title="Формат сетки — в разработке"
-                >
-                  <span className="btn-icon-only__glyph arc-icon-grid" aria-hidden="true" />
-                </button>
+                <Tooltip content="Формат сетки — в разработке" delay={500} position="top">
+                  <span className="arc-tooltip-anchor-inline">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-ds btn-icon-only"
+                      disabled
+                      aria-label="Формат сетки (скоро)"
+                    >
+                      <span className="btn-icon-only__glyph arc-icon-grid" aria-hidden="true" />
+                    </button>
+                  </span>
+                </Tooltip>
                 <button
                   type="button"
                   className={`btn btn-outline btn-ds btn-icon-only${filtersOpen ? ' is-active' : ''}`}
@@ -129,15 +133,18 @@ export default function TopNavbar() {
                 <div className="arc-navbar-search-wrap">
                   <NavbarSearch onPanelOpenChange={setSearchPanelOpen} />
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-brand btn-ds btn-icon-only"
-                  disabled
-                  aria-label="Добавить (скоро)"
-                  title="Добавить — в разработке"
-                >
-                  <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
-                </button>
+                <Tooltip content="Добавить — в разработке" delay={500} position="top">
+                  <span className="arc-tooltip-anchor-inline">
+                    <button
+                      type="button"
+                      className="btn btn-brand btn-ds btn-icon-only"
+                      disabled
+                      aria-label="Добавить (скоро)"
+                    >
+                      <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
+                    </button>
+                  </span>
+                </Tooltip>
               </div>
             ) : (
               <div className="arc-navbar-top-bar__search arc-navbar-top-bar__search--spacer" aria-hidden="true" />

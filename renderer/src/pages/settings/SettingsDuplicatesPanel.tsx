@@ -11,6 +11,7 @@ import { storageCardsPhash, storageSkippedPairs } from '../../services/storageCl
 import { similarityCombined, type ImageDupFingerprint } from './imageDupHash';
 import { cardSizeToBytes } from '../../utils/cardSizeToBytes';
 import { formatBytes } from '../../utils/formatBytes';
+import { Tooltip } from '../../components/tooltip/Tooltip';
 type Pair = { a: CardRecord; b: CardRecord; sim: number };
 
 type PairCardProps = {
@@ -44,9 +45,14 @@ function PairCard({ card, imageUrl, absolutePath, onDelete, onSkip }: PairCardPr
         <img className="arc-dup-card__img" src={imageUrl} alt="" />
       </div>
       <div className="arc-dup-card__body">
-        <p className="typo-p-m arc-dup-card__path" title={absolutePath}>
-          {absolutePath}
-        </p>
+        <Tooltip
+          content={absolutePath}
+          delay={500}
+          position="top"
+          className="arc-dup-card__path-tooltip"
+        >
+          <p className="typo-p-m arc-dup-card__path">{absolutePath}</p>
+        </Tooltip>
         <div className="arc-dup-card__meta typo-p-m">
           <span>{info.format}</span>
           <span>{info.resolution}</span>

@@ -1974,6 +1974,12 @@ button.color-swatch-inline:disabled {
   overflow: hidden;
 }
 
+.arc-dup-card__path-tooltip {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
 .arc-dup-card__path {
   margin: 0;
   color: var(--text-elev-primary);

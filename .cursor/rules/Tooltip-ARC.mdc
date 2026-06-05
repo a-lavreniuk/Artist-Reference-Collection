@@ -33,11 +33,10 @@ alwaysApply: true
 
 ## Визуал (сверка с Figma)
 
-- Фон и стрелка — токены raised/brand из дизайн-системы; не хардкодить `#…`.
-- Типографика: `Paragraph/S` (`--typo-p-s-*`), цвет `--ui-text-primary` или brand-тokens по макету.
-- `max-width`: `192px` (`default`), `256px` (`rich`); padding `--s-2`; radius `--radius-s`.
+- Фон и стрелка: `--brand-550`; текст: `--brand-100` (Paragraph/S, `--typo-p-s-*`).
+- `max-width`: `192px` (`default`), `256px` (`rich`); padding `--s-1` (6px); radius `--s-1` (6px по макету).
 - Стрелка на стороне, противоположной якорю (`top` / `bottom` / `left` / `right`).
-- Без тени; fade-in через `--transition-fast`.
+- Без border и тени; fade-in через `--transition-fast`.
 
 ## Поведение
 
