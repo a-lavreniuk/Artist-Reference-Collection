@@ -104,6 +104,7 @@ body::-webkit-scrollbar {
 
 .arc-navbar-top-bar__mgmt {
   flex: 0 0 auto;
+  align-self: flex-start;
   display: flex;
   align-items: center;
   gap: var(--s-2);
@@ -148,12 +149,17 @@ body::-webkit-scrollbar {
   padding: 0;
 }
 
-.arc-navbar-window-btn--close {
-  color: var(--icons-danger-default, var(--danger-500));
+.btn-ghost.arc-navbar-window-btn--close .btn-icon-only__glyph {
+  color: var(--icons-danger-default);
 }
 
-.arc-navbar-window-btn--close:hover:not(:disabled) {
-  color: var(--icons-danger-hover, var(--danger-500));
+.btn-ghost.arc-navbar-window-btn--close:hover:not(:disabled) .btn-icon-only__glyph,
+.btn-ghost.arc-navbar-window-btn--close:focus-visible:not(:disabled) .btn-icon-only__glyph {
+  color: var(--icons-danger-hover);
+}
+
+.btn-ghost.arc-navbar-window-btn--close:disabled .btn-icon-only__glyph {
+  color: var(--icons-danger-disabled);
 }
 
 .arc-navbar-window-btn--close .arc-navbar-icon-svg [stroke],
