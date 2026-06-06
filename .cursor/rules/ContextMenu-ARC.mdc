@@ -1,0 +1,44 @@
+---
+description: Context Menu ARC — единый компонент меню по клику (сетка, сортировка, фильтры, navbar)
+alwaysApply: true
+---
+
+# Context Menu (ARC)
+
+Макет: [ARC-2 / Menu Options, node 1168:23372](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1168-23372). Строка: [771:2110](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=771-2110). Заголовок секции: [771:2195](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=771-2195).
+
+## Когда использовать
+
+- Меню по **клику** на кнопку или якорь (не ПКМ): navbar, **выбор сетки**, **сортировка**, **фильтры**, списки действий.
+- Пункты с label, иконкой справа, shortcut, counter, секциями, разделителями, слотами под инпут.
+
+**Selector** (`selector` / `selector-dropdown`) — отдельный компонент для другого паттерна; для новых меню сетки, сортировки и фильтров **не** создавай локальные dropdown-обёртки — используй `ContextMenu`.
+
+## Как реализовать
+
+- Импорт из `renderer/src/components/context-menu`.
+- Обёртка: `ContextMenu` + `open` / `anchorRef` / `onClose` / `ariaLabel`.
+- Содержимое: `rows` (declarative) и/или `children` (`ContextMenuItem`, `ContextMenuHeader`, `ContextMenuSeparator`, `ContextMenuInput`).
+- Эталон: `renderer/src/components/layout/NavbarMenu.tsx`.
+
+```tsx
+// ✅ Хорошо
+<ContextMenu open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} ariaLabel="Сортировка" rows={rows} />
+
+// ❌ Плохо — локальное меню, дубли CSS
+<div className="selector-dropdown">…</div>
+<div className="arc-gallery-sort-menu">…</div>
+```
+
+## Визуал и стили
+
+- Классы только из `renderer/public/ui/arc-ui/arc-ui.css` (`.context-menu*`). Не копируй и не переопределяй локально.
+- Ширина **250px** (`CONTEXT_MENU_WIDTH`), строка **32px**, иконки **M** (`data-btn-size="m"` на панели).
+- Default без заливки; hover — `brand-600`. Label слева на одной линии с header (`--menu-content-inset-x`).
+- Контейнер обрамляет контент — **без** внутреннего вертикального скролла, если продукт не согласовал иное.
+
+## Поведение
+
+- Portal + backdrop; закрытие по backdrop и `Escape`.
+- Иконки через `arc-icon-*` + `hydrateArcNavbarIcons` (уже внутри `ContextMenu`).
+- Расширяй общий компонент и токены `--menu-row-*`, не плоди одноразовые варианты.

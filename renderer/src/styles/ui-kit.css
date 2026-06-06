@@ -1,6 +1,16 @@
 .arc-ui-kit-route {
-  overflow: visible;
-  max-height: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.arc-ui-kit-route::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .arc-ui-kit-route .page {
@@ -8,4 +18,5 @@
   flex-direction: column;
   gap: var(--s-3);
   padding: 0;
+  min-height: 0;
 }
