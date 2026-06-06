@@ -354,6 +354,25 @@ button.color-swatch-inline:disabled {
   margin: 0;
 }
 
+/* Scroll to top — Figma ARC-2 1193:11348 */
+.arc-scroll-to-top {
+  position: fixed;
+  right: var(--s-3);
+  bottom: var(--s-3);
+  z-index: 10;
+  box-shadow: var(--arc-modal-shadow);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), visibility var(--transition-fast);
+}
+
+.arc-scroll-to-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 /* Разводящая коллекций (Figma 137:8180) */
 .arc-collections-page {
   display: flex;

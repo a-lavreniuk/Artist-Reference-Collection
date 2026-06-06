@@ -11,6 +11,7 @@ import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import CardInspectModal from '../components/gallery/CardInspectModal';
 
 import DemoAlert from '../components/layout/DemoAlert';
+import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 
 import MessageModal from '../components/layout/MessageModal';
 
@@ -554,6 +555,8 @@ export default function GalleryPage() {
         />
 
       ) : null}
+
+      <ScrollToTopButton enabled={ready && cards.length > 0} />
 
     </div>
 

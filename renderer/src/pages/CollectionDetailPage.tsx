@@ -4,6 +4,7 @@ import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import GalleryBoard from '../components/gallery/GalleryBoard';
 import CardInspectModal from '../components/gallery/CardInspectModal';
 import DemoAlert from '../components/layout/DemoAlert';
+import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
 import {
   ARC_CARDS_CHANGED_EVENT,
@@ -207,6 +208,8 @@ export default function CollectionDetailPage() {
       {noSimilarAlertOpen ? (
         <DemoAlert message="Нет похожих изображений" variant="info" onClose={() => setNoSimilarAlertOpen(false)} />
       ) : null}
+
+      <ScrollToTopButton enabled={cards.length > 0} />
     </div>
   );
 }
