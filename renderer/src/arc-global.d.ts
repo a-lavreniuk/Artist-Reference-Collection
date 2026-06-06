@@ -41,12 +41,15 @@ declare global {
       writeMetadata: (data: ArcMetadataV1) => Promise<void>;
       pickImageFiles: () => Promise<string[]>;
       pickMediaFiles: () => Promise<string[]>;
+      getPathsForDroppedFiles: (files: FileList) => string[];
+      onFileDrop: (cb: (paths: string[]) => void) => () => void;
       importFiles: (absolutePaths: string[]) => Promise<ArcImportFileResult[]>;
       storageEnsureReady: () => Promise<{ ok: true } | { ok: false; error: string }>;
       storageListCards: (params: {
         offset: number;
         limit: number;
         filter: 'all' | 'images' | 'videos';
+        libraryScope?: 'all' | 'untagged' | 'trash';
         selectedTagIds?: string[];
         cardIdExact?: string | null;
         collectionId?: string | null;
@@ -70,8 +73,15 @@ declare global {
           dateModified?: string;
         }>
       ) => Promise<void>;
+      storageSoftDeleteCard: (cardId: string) => Promise<void>;
+      storageRestoreCard: (cardId: string) => Promise<void>;
+      storagePermanentDeleteCard: (cardId: string) => Promise<void>;
+      storageEmptyTrash: () => Promise<number>;
       storageDeleteCard: (cardId: string) => Promise<void>;
-      storageCountCards: (filter: 'all' | 'images' | 'videos') => Promise<number>;
+      storageCountCards: (
+        filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
+      ) => Promise<number>;
+      onImportFilesProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => () => void;
       storageListCategories: () => Promise<CategoryRecord[]>;
       storageUpsertCategory: (cat: CategoryRecord) => Promise<void>;
       storageDeleteCategory: (id: string) => Promise<void>;

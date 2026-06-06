@@ -4,8 +4,20 @@ import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
 import AppUpdateHost from './AppUpdateHost';
 import PendingRestoreModal from './PendingRestoreModal';
+import ImportHost from '../import/ImportHost';
+import { ensureGalleryBootstrap, scheduleGalleryWarmup } from '../gallery/galleryBootstrap';
+import { isLibraryConfigured } from '../../services/db';
 
 export default function AppLayout() {
+  useEffect(() => {
+    void (async () => {
+      const ok = await isLibraryConfigured();
+      if (!ok) return;
+      await ensureGalleryBootstrap();
+      scheduleGalleryWarmup();
+    })();
+  }, []);
+
   useEffect(() => {
     const body = document.body;
     body.classList.add('arc-navbar-page');
@@ -28,14 +40,16 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <main className="arc-navbar-shell">
-      <MaintenanceBanner />
-      <TopNavbar />
-      <div className="arc-app-outlet">
-        <Outlet />
-      </div>
-      <PendingRestoreModal />
-      <AppUpdateHost />
-    </main>
+    <ImportHost>
+      <main className="arc-navbar-shell">
+        <MaintenanceBanner />
+        <TopNavbar />
+        <div className="arc-app-outlet">
+          <Outlet />
+        </div>
+        <PendingRestoreModal />
+        <AppUpdateHost />
+      </main>
+    </ImportHost>
   );
 }

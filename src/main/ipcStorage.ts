@@ -9,6 +9,9 @@ import {
   addSkippedDuplicatePair,
   countCards,
   deleteCardFromStorage,
+  emptyTrashFromStorage,
+  restoreCardFromStorage,
+  softDeleteCardFromStorage,
   deleteCategoryFromDb,
   deleteCollectionFromDb,
   deleteTagFromDb,
@@ -39,6 +42,14 @@ import {
 import type { ArcMoodboardV1, ArcSystemV1, CategoryRow, CollectionRow, ListCardsParams, TagRow } from './storage/types';
 
 let storageIpcRegistered = false;
+
+function broadcastImportProgress(payload: { current: number; total: number; message?: string }): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('arc:import-files-progress', payload);
+    }
+  }
+}
 
 function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   return {
@@ -151,9 +162,13 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root) throw new Error('Библиотека не выбрана');
     await ensureLibraryReady(root);
+    const paths = absolutePaths as string[];
+    const total = paths.length;
     const results = [];
-    for (const abs of absolutePaths as string[]) {
-      results.push(await importMediaFile(root, abs));
+    for (let i = 0; i < paths.length; i++) {
+      broadcastImportProgress({ current: i, total, message: `Добавлено ${i} из ${total}` });
+      results.push(await importMediaFile(root, paths[i]));
+      broadcastImportProgress({ current: i + 1, total, message: `Добавлено ${i + 1} из ${total}` });
     }
     return results;
   });
@@ -190,19 +205,55 @@ export function registerStorageIpc(
     await insertCardMetadata(root, cards as Parameters<typeof insertCardMetadata>[1]);
   });
 
-  ipcMain.handle('arc:storage-delete-card', async (_e, cardId: unknown) => {
+  ipcMain.handle('arc:storage-soft-delete-card', async (_e, cardId: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root || typeof cardId !== 'string') return;
+    await softDeleteCardFromStorage(root, cardId);
+  });
+
+  ipcMain.handle('arc:storage-restore-card', async (_e, cardId: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root || typeof cardId !== 'string') return;
+    await restoreCardFromStorage(root, cardId);
+  });
+
+  ipcMain.handle('arc:storage-permanent-delete-card', async (_e, cardId: unknown) => {
     assertNotMaintenance();
     const root = await readLibraryRoot();
     if (!root || typeof cardId !== 'string') return;
     await deleteCardFromStorage(root, cardId);
   });
 
-  ipcMain.handle('arc:storage-count-cards', async (_e, filter: unknown) => {
+  ipcMain.handle('arc:storage-empty-trash', async () => {
+    assertNotMaintenance();
     const root = await readLibraryRoot();
     if (!root) return 0;
     await ensureLibraryReady(root);
-    const f = filter === 'images' || filter === 'videos' ? filter : 'all';
-    return countCards(root, f);
+    return emptyTrashFromStorage(root);
+  });
+
+  /** @deprecated Используйте arc:storage-soft-delete-card или arc:storage-permanent-delete-card */
+  ipcMain.handle('arc:storage-delete-card', async (_e, cardId: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root || typeof cardId !== 'string') return;
+    await softDeleteCardFromStorage(root, cardId);
+  });
+
+  ipcMain.handle('arc:storage-count-cards', async (_e, payload: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root) return 0;
+    await ensureLibraryReady(root);
+    const p =
+      typeof payload === 'string'
+        ? { filter: payload }
+        : (payload as { filter?: string; libraryScope?: string } | null) ?? {};
+    const f = p.filter === 'images' || p.filter === 'videos' ? p.filter : 'all';
+    const scope =
+      p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
+    return countCards(root, f, scope);
   });
 
   ipcMain.handle('arc:storage-list-categories', async () => {

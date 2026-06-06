@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS cards (
   thumb_s_rel TEXT NOT NULL,
   thumb_m_rel TEXT NOT NULL,
   thumb_l_rel TEXT NOT NULL,
-  description TEXT
+  description TEXT,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
+  deleted_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -81,6 +83,27 @@ CREATE INDEX IF NOT EXISTS idx_tags_category ON tags(category_id);
 let activeDb: Database.Database | null = null;
 let activeRoot: string | null = null;
 
+function tableHasColumn(db: Database.Database, table: string, column: string): boolean {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  return rows.some((r) => r.name === column);
+}
+
+function migrateLibraryDbSchema(db: Database.Database): void {
+  // Всегда проверяем колонки: user_version мог быть поднят до 3 без ALTER (частичная миграция).
+  if (!tableHasColumn(db, 'cards', 'is_deleted')) {
+    db.exec('ALTER TABLE cards ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!tableHasColumn(db, 'cards', 'deleted_at')) {
+    db.exec('ALTER TABLE cards ADD COLUMN deleted_at TEXT');
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
+
+  const userVersion = db.pragma('user_version', { simple: true }) as number;
+  if (userVersion < STORAGE_SCHEMA_VERSION) {
+    db.pragma(`user_version = ${STORAGE_SCHEMA_VERSION}`);
+  }
+}
+
 export { INDEX_DB_FILENAME };
 
 export function indexDbPath(libraryRoot: string): string {
@@ -101,10 +124,8 @@ export function openLibraryDb(libraryRoot: string): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA_SQL);
-  const userVersion = db.pragma('user_version', { simple: true }) as number;
-  if (userVersion < STORAGE_SCHEMA_VERSION) {
-    db.pragma(`user_version = ${STORAGE_SCHEMA_VERSION}`);
-  }
+  // Колонки is_deleted/deleted_at и idx_cards_deleted_added — только после ALTER на старых БД.
+  migrateLibraryDbSchema(db);
   activeDb = db;
   activeRoot = root;
   return db;

@@ -1,3 +1,4 @@
+import type { LibraryScope } from '../search/libraryScopeUrl';
 import type { CardRecord, CollectionRecord, MoodboardBoardV1 } from './arcSchema';
 import type { CategoryRecord, TagRecord } from './db';
 
@@ -5,6 +6,7 @@ export type StorageListCardsParams = {
   offset: number;
   limit: number;
   filter: 'all' | 'images' | 'videos';
+  libraryScope?: LibraryScope;
   selectedTagIds?: string[];
   cardIdExact?: string | null;
   collectionId?: string | null;
@@ -52,12 +54,32 @@ export async function storageInsertCardsMetadata(
   return arc().storageInsertCardsMetadata(cards);
 }
 
+export async function storageSoftDeleteCard(cardId: string): Promise<void> {
+  return arc().storageSoftDeleteCard(cardId);
+}
+
+export async function storageRestoreCard(cardId: string): Promise<void> {
+  return arc().storageRestoreCard(cardId);
+}
+
+export async function storagePermanentDeleteCard(cardId: string): Promise<void> {
+  return arc().storagePermanentDeleteCard(cardId);
+}
+
+export async function storageEmptyTrash(): Promise<number> {
+  return arc().storageEmptyTrash();
+}
+
+/** @deprecated Используйте storageSoftDeleteCard */
 export async function storageDeleteCard(cardId: string): Promise<void> {
   return arc().storageDeleteCard(cardId);
 }
 
-export async function storageCountCards(filter: 'all' | 'images' | 'videos'): Promise<number> {
-  return arc().storageCountCards(filter);
+export async function storageCountCards(
+  filter: 'all' | 'images' | 'videos',
+  libraryScope: LibraryScope = 'all'
+): Promise<number> {
+  return arc().storageCountCards({ filter, libraryScope });
 }
 
 export async function storageListCategories(): Promise<CategoryRecord[]> {

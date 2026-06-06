@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { pathsFromFileList, registerFileDropListener } from './fileDropBridge';
 
 contextBridge.exposeInMainWorld('arc', {
   getLibraryPath: () => ipcRenderer.invoke('arc:get-library-path') as Promise<string | null>,
@@ -9,6 +10,8 @@ contextBridge.exposeInMainWorld('arc', {
   writeMetadata: (data: unknown) => ipcRenderer.invoke('arc:write-metadata', data),
   pickImageFiles: () => ipcRenderer.invoke('arc:pick-image-files') as Promise<string[]>,
   pickMediaFiles: () => ipcRenderer.invoke('arc:pick-media-files') as Promise<string[]>,
+  getPathsForDroppedFiles: (files: FileList) => pathsFromFileList(files),
+  onFileDrop: (cb: (paths: string[]) => void) => registerFileDropListener(cb),
   importFiles: (absolutePaths: string[]) =>
     ipcRenderer.invoke('arc:import-files', absolutePaths) as Promise<
       Array<
@@ -40,8 +43,19 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:storage-update-card', { cardId, patch }),
   storageInsertCardsMetadata: (cards: unknown) =>
     ipcRenderer.invoke('arc:storage-insert-cards-metadata', cards),
+  storageSoftDeleteCard: (cardId: string) => ipcRenderer.invoke('arc:storage-soft-delete-card', cardId),
+  storageRestoreCard: (cardId: string) => ipcRenderer.invoke('arc:storage-restore-card', cardId),
+  storagePermanentDeleteCard: (cardId: string) =>
+    ipcRenderer.invoke('arc:storage-permanent-delete-card', cardId),
+  storageEmptyTrash: () => ipcRenderer.invoke('arc:storage-empty-trash') as Promise<number>,
   storageDeleteCard: (cardId: string) => ipcRenderer.invoke('arc:storage-delete-card', cardId),
-  storageCountCards: (filter: string) => ipcRenderer.invoke('arc:storage-count-cards', filter),
+  storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
+    ipcRenderer.invoke('arc:storage-count-cards', payload),
+  onImportFilesProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => {
+    const fn = (_: unknown, payload: { current: number; total: number; message?: string }) => cb(payload);
+    ipcRenderer.on('arc:import-files-progress', fn);
+    return () => ipcRenderer.removeListener('arc:import-files-progress', fn);
+  },
   storageListCategories: () => ipcRenderer.invoke('arc:storage-list-categories'),
   storageUpsertCategory: (cat: unknown) => ipcRenderer.invoke('arc:storage-upsert-category', cat),
   storageDeleteCategory: (id: string) => ipcRenderer.invoke('arc:storage-delete-category', id),

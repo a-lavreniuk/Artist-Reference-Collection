@@ -5,6 +5,7 @@ import { iconLightPath } from './appIcon';
 import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts } from './devTools';
 import { registerArcIpc, registerArcMediaProtocol } from './ipc';
 import { createAppTray, destroyAppTray } from './tray';
+import { bindFileDropGuards } from './fileDropGuards';
 import { bindMainWindow, isAppQuitting, registerWindowChromeIpc } from './windowChrome';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
 import {
@@ -91,6 +92,10 @@ function createWindow(): BrowserWindow {
 
   return win;
 }
+
+app.on('web-contents-created', (_event, contents) => {
+  bindFileDropGuards(contents);
+});
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);

@@ -8,6 +8,8 @@ import type { CardRecord, CategoryRecord, TagRecord } from '../../services/db';
 import {
   getMoodboardCardIds,
   deleteCard,
+  restoreCard,
+  permanentDeleteCard,
   getAllCategories,
   getAllCollections,
   getCardById,
@@ -18,9 +20,11 @@ import {
   removeCardFromMoodboard
 } from '../../services/db';
 import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodboardModal';
+import { parseLibraryScope } from '../../search/libraryScopeUrl';
 import { ARC_SEARCH_QUERY_CARD, ARC_SEARCH_QUERY_TAG } from '../../search/searchUrl';
 import { pushRecentTagId } from '../../search/recentSearchTags';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
+import { gallerySkeletonStyle } from './gallerySkeleton';
 
 type Props = {
   cardId: string;
@@ -62,7 +66,7 @@ function SimilarThumb({
       ) : (
       <div
         className="arc-gallery-skeleton arc-card-similar-skeleton"
-        style={card.dominantColorHex ? { backgroundColor: card.dominantColorHex } : undefined}
+        style={gallerySkeletonStyle(card)}
         aria-hidden
       />
     )}
@@ -110,6 +114,9 @@ export default function CardInspectModal({
   const [inMoodboard, setInMoodboard] = useState(false);
   const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
+  const libraryScope = parseLibraryScope(searchParams);
+  const inTrash = libraryScope === 'trash';
   const [busy, setBusy] = useState(false);
   const [copyAlertVisible, setCopyAlertVisible] = useState(false);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
@@ -229,11 +236,35 @@ export default function CardInspectModal({
       }))
       .filter((x) => x.name) ?? [];
 
-  const handleDelete = async () => {
+  const handleSoftDelete = async () => {
     if (!card || busy) return;
     setBusy(true);
     try {
       await deleteCard(card.id);
+      onDeleted();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!card || busy) return;
+    setBusy(true);
+    try {
+      await restoreCard(card.id);
+      onDeleted();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!card || busy) return;
+    setBusy(true);
+    try {
+      await permanentDeleteCard(card.id);
       onDeleted();
       onClose();
     } finally {
@@ -357,14 +388,36 @@ export default function CardInspectModal({
             Просмотр карточки
           </h2>
           <div className="arc-card-inspect-toolbar-left">
-            <button
-              type="button"
-              className="btn btn-danger btn-icon-only btn-ds"
-              aria-label="Удалить карточку"
-              onClick={() => setConfirmDelete(true)}
-            >
-              <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
-            </button>
+            {inTrash ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-ds"
+                  disabled={busy}
+                  onClick={() => void handleRestore()}
+                >
+                  <span className="btn-ds__value">{busy ? 'Восстановление…' : 'Восстановить'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-icon-only btn-ds"
+                  aria-label="Удалить навсегда"
+                  disabled={busy}
+                  onClick={() => setConfirmPermanentDelete(true)}
+                >
+                  <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-danger btn-icon-only btn-ds"
+                aria-label="Удалить карточку"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
+              </button>
+            )}
           </div>
 
           <div className="arc-card-inspect-toolbar-right">
@@ -483,7 +536,7 @@ export default function CardInspectModal({
               ) : (
                 <div
                   className="arc-gallery-skeleton arc-card-inspect-skeleton"
-                  style={card?.dominantColorHex ? { backgroundColor: card.dominantColorHex } : undefined}
+                  style={card ? gallerySkeletonStyle(card) : undefined}
                   aria-hidden
                 />
               )}
@@ -608,11 +661,11 @@ export default function CardInspectModal({
             </header>
             <div className="arc-modal__body">
               <div className="arc-modal__slot">
-                <p className="arc-modal__slot-text">Файл будет удалён из библиотеки. Это действие нельзя отменить.</p>
+                <p className="arc-modal__slot-text">Карточка переместится в корзину. Её можно будет восстановить позже.</p>
               </div>
             </div>
             <footer className="arc-modal__footer arc-modal__footer--actions-3">
-              <button type="button" className="btn btn-danger btn-ds btn-s" onClick={() => void handleDelete()} disabled={busy}>
+              <button type="button" className="btn btn-danger btn-ds btn-s" onClick={() => void handleSoftDelete()} disabled={busy}>
                 <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить'}</span>
               </button>
               <div className="arc-modal__footer-right">
@@ -620,6 +673,68 @@ export default function CardInspectModal({
                   type="button"
                   className="btn btn-outline btn-ds btn-s"
                   onClick={() => setConfirmDelete(false)}
+                  disabled={busy}
+                >
+                  <span className="btn-ds__value">Отмена</span>
+                </button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
+      {confirmPermanentDelete ? (
+        <div
+          className="arc-modal-host arc-modal-host--nested"
+          aria-hidden="false"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setConfirmPermanentDelete(false);
+          }}
+        >
+          <section
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="s"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcCardPermanentDeleteTitle"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="arc-modal__header arc-modal__header--title">
+              <h3 className="arc-modal__title" id="arcCardPermanentDeleteTitle">
+                Удалить навсегда?
+              </h3>
+              <button
+                type="button"
+                className="arc-modal__close"
+                aria-label="Закрыть"
+                onClick={() => setConfirmPermanentDelete(false)}
+              >
+                <span className="tab-icon arc-icon-close" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="arc-modal__body">
+              <div className="arc-modal__slot">
+                <p className="arc-modal__slot-text">
+                  Карточка и все файлы будут удалены без возможности восстановления.
+                </p>
+              </div>
+            </div>
+            <footer className="arc-modal__footer arc-modal__footer--actions-3">
+              <button
+                type="button"
+                className="btn btn-danger btn-ds btn-s"
+                onClick={() => void handlePermanentDelete()}
+                disabled={busy}
+              >
+                <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить навсегда'}</span>
+              </button>
+              <div className="arc-modal__footer-right">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-ds btn-s"
+                  onClick={() => setConfirmPermanentDelete(false)}
                   disabled={busy}
                 >
                   <span className="btn-ds__value">Отмена</span>

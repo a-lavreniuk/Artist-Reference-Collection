@@ -1,6 +1,9 @@
 /** Shared storage types for the new library format (v2). */
 
-export const STORAGE_SCHEMA_VERSION = 2;
+export const STORAGE_SCHEMA_VERSION = 3;
+
+/** Виртуальная библиотека в галерее: вся / без меток / корзина. */
+export type LibraryScope = 'all' | 'untagged' | 'trash';
 
 export const THUMB_S_MAX = 160;
 export const THUMB_M_MAX = 400;
@@ -29,6 +32,7 @@ export type CardJsonV1 = {
   tagIds: string[];
   collectionIds: string[];
   phash?: ImageDupFingerprint;
+  deletedAt?: string;
 };
 
 export type CategoryRow = {
@@ -92,6 +96,7 @@ export type ListCardsParams = {
   offset: number;
   limit: number;
   filter: 'all' | 'images' | 'videos';
+  libraryScope?: LibraryScope;
   selectedTagIds?: string[];
   cardIdExact?: string | null;
   collectionId?: string | null;

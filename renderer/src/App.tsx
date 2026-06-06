@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
-import AddCardsPage from './pages/AddCardsPage';
 import CollectionDetailPage from './pages/CollectionDetailPage';
 import CollectionsPage from './pages/CollectionsPage';
 import GalleryCardEditStubPage from './pages/GalleryCardEditStubPage';
@@ -30,7 +29,7 @@ export default function App() {
         <Route path="duplicates" element={<SettingsSectionPage panel="duplicates" />} />
         <Route path="settings" element={<SettingsLegacyRedirect />} />
         <Route path="ui-kit" element={<UiKitPage />} />
-        <Route path="add" element={<AddCardsPage />} />
+        <Route path="add" element={<Navigate to="/gallery" replace />} />
       </Route>
       <Route path="/navbar" element={<Navigate to="/gallery" replace />} />
       <Route path="*" element={<Navigate to="/gallery" replace />} />

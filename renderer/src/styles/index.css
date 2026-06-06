@@ -51,14 +51,25 @@ a {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: var(--s-3);
+  padding-top: calc(
+    var(--arc-navbar-stack-height, calc(var(--arc-layout-gutter) * 2 + 72px)) + var(--s-3)
+  );
   border-radius: var(--radius-l);
   background: var(--gray-1000);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   --panel-bg: var(--gray-1000);
   --panel-border: var(--gray-900);
   --text-elev-primary: var(--gray-300);
   --text-elev-secondary: var(--gray-600);
+}
+
+.arc-app-outlet::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .arc-tags-outlet {
@@ -265,6 +276,8 @@ button.color-swatch-inline:disabled {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .arc-gallery-masonry {
@@ -290,28 +303,46 @@ button.color-swatch-inline:disabled {
   outline-offset: 2px;
 }
 
+.arc-gallery-thumb-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+}
+
 .arc-gallery-thumb {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
   vertical-align: bottom;
+  object-fit: cover;
+  opacity: 0;
+}
+
+.arc-gallery-thumb.is-loaded {
+  opacity: 1;
 }
 
 .arc-gallery-skeleton {
   width: 100%;
-  min-height: 160px;
-  background: linear-gradient(90deg, var(--gray-900) 0%, var(--gray-800) 50%, var(--gray-900) 100%);
-  background-size: 200% 100%;
-  animation: arc-gallery-shimmer var(--transition-fast) ease-in-out infinite;
+  display: block;
+  aspect-ratio: 4 / 3;
+  background-color: var(--gray-900);
 }
 
-@keyframes arc-gallery-shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
+.arc-gallery-skeleton--under {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+.arc-gallery-boot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: var(--s-6);
 }
 
 .arc-gallery-sentinel {
@@ -438,6 +469,8 @@ button.color-swatch-inline:disabled {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .arc-page-empty {
@@ -1021,6 +1054,100 @@ button.color-swatch-inline:disabled {
   background-color: currentColor;
   -webkit-mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
   mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+}
+
+/* Глобальный overlay импорта — Figma ARC-2 Add Images / Drop Zone (1144:10685) */
+.arc-import-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 1200);
+  pointer-events: auto;
+  background: transparent;
+}
+
+.arc-import-dropzone {
+  --import-dropzone-border-color: var(--border-brand);
+  --import-dropzone-dash: var(--s-4);
+  --import-dropzone-gap: var(--s-3);
+  --import-dropzone-dash-period: calc(var(--import-dropzone-dash) + var(--import-dropzone-gap));
+
+  position: absolute;
+  inset: var(--s-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--s-4);
+  border: none;
+  border-radius: var(--radius-s);
+  pointer-events: auto;
+  background-color: color-mix(in srgb, var(--red-500) 32%, transparent);
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--import-dropzone-border-color) 0,
+      var(--import-dropzone-border-color) var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash-period)
+    ),
+    repeating-linear-gradient(
+      to right,
+      var(--import-dropzone-border-color) 0,
+      var(--import-dropzone-border-color) var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash-period)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--import-dropzone-border-color) 0,
+      var(--import-dropzone-border-color) var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash-period)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--import-dropzone-border-color) 0,
+      var(--import-dropzone-border-color) var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash),
+      transparent var(--import-dropzone-dash-period)
+    );
+  background-position: top left, bottom left, top left, top right;
+  background-size: 100% 1px, 100% 1px, 1px 100%, 1px 100%;
+  background-repeat: no-repeat;
+}
+
+.arc-import-dropzone--dropping {
+  --import-dropzone-border-color: var(--btn-brand-fill-default);
+}
+
+.arc-import-dropzone-cta {
+  --btn-icon-size: 24px;
+}
+
+.arc-import-dropzone-cta .btn-ds__icon {
+  width: var(--btn-icon-size);
+  height: var(--btn-icon-size);
+}
+
+.arc-import-dropzone-plus-icon {
+  background-color: currentColor;
+  -webkit-mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+  mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+}
+
+.arc-import-dropzone-cta-wrap {
+  flex-shrink: 0;
+  will-change: transform;
+}
+
+.arc-import-dropzone-cta-wrap .arc-import-dropzone-cta {
+  flex-shrink: 0;
+}
+
+.arc-gallery-trash-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 var(--s-3);
 }
 
 /* Navbar /add: «Добавить» + counter + plus (иконка через маску — те же токены, что у btn-success) */

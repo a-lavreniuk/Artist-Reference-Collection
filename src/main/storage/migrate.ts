@@ -287,7 +287,9 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
 
   db.prepare(
     `UPDATE tags SET usage_count = (
-      SELECT COUNT(*) FROM card_tags WHERE card_tags.tag_id = tags.id
+      SELECT COUNT(*) FROM card_tags ct
+      INNER JOIN cards c ON c.id = ct.card_id AND COALESCE(c.is_deleted, 0) = 0
+      WHERE ct.tag_id = tags.id
     )`
   ).run();
 

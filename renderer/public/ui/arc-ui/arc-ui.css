@@ -230,6 +230,10 @@
   --s-4: 32px;
 
   --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+  /* Только длительность — для animation (не смешивать с ease в shorthand animation) */
+  --duration-slow: 350ms;
   --paragraph-spacing-tight: 6px;
   --typo-h1-size: 34px;
   --typo-h1-line: 34px;

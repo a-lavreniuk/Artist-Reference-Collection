@@ -41,9 +41,13 @@ import type {
   CollectionRow,
   ImageDupFingerprint,
   ImportedMediaRow,
+  LibraryScope,
   ListCardsParams,
   TagRow
 } from './types';
+
+// TODO(settings-overlay): deleteCardsSkipTrash — при true deleteCard вызывает permanentDelete сразу
+export const DELETE_CARDS_SKIP_TRASH_DEFAULT = false;
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
 
@@ -112,9 +116,37 @@ function syncCardRelations(db: Database.Database, cardId: string, tagIds: string
 function recomputeTagUsage(db: Database.Database): void {
   db.prepare(
     `UPDATE tags SET usage_count = (
-      SELECT COUNT(*) FROM card_tags WHERE card_tags.tag_id = tags.id
+      SELECT COUNT(*) FROM card_tags ct
+      INNER JOIN cards c ON c.id = ct.card_id AND COALESCE(c.is_deleted, 0) = 0
+      WHERE ct.tag_id = tags.id
     )`
   ).run();
+}
+
+function appendLibraryScopeConditions(scope: LibraryScope | undefined, wh: string[]): void {
+  const s = scope ?? 'all';
+  if (s === 'trash') {
+    wh.push('COALESCE(c.is_deleted, 0) = 1');
+    return;
+  }
+  wh.push('COALESCE(c.is_deleted, 0) = 0');
+  if (s === 'untagged') {
+    wh.push('NOT EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = c.id)');
+  }
+}
+
+async function removeCardFromMoodboard(root: string, cardId: string): Promise<void> {
+  const mb = await readMoodboard(root);
+  mb.moodboardCardIds = mb.moodboardCardIds.filter((id) => id !== cardId);
+  if (mb.moodboardBoard && typeof mb.moodboardBoard === 'object') {
+    const board = mb.moodboardBoard as Record<string, unknown>;
+    if (Array.isArray(board.imageInstances)) {
+      board.imageInstances = board.imageInstances.filter(
+        (x) => !(x && typeof x === 'object' && (x as { cardId?: string }).cardId === cardId)
+      );
+    }
+  }
+  await writeMoodboard(root, mb);
 }
 
 let currentRoot: string | null = null;
@@ -402,6 +434,8 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
     binds.push(cardExact);
   }
 
+  appendLibraryScopeConditions(params.libraryScope, wh);
+
   if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
   sql += ' ORDER BY c.added_at DESC LIMIT ? OFFSET ?';
   binds.push(params.limit, params.offset);
@@ -418,15 +452,30 @@ export function getCardByIdFromDb(libraryRoot: string, cardId: string): CardInde
   return loadCardRow(db, cardId);
 }
 
-export function countCards(libraryRoot: string, filter: 'all' | 'images' | 'videos' = 'all'): number {
+export function countCards(
+  libraryRoot: string,
+  filter: 'all' | 'images' | 'videos' = 'all',
+  libraryScope: LibraryScope = 'all'
+): number {
   const db = openLibraryDb(libraryRoot);
-  if (filter === 'images') {
-    return (db.prepare("SELECT COUNT(*) AS n FROM cards WHERE type = 'image'").get() as { n: number }).n;
+  const wh: string[] = [];
+  if (libraryScope === 'trash') wh.push('COALESCE(is_deleted, 0) = 1');
+  else {
+    wh.push('COALESCE(is_deleted, 0) = 0');
+    if (libraryScope === 'untagged') {
+      wh.push('NOT EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = cards.id)');
+    }
   }
-  if (filter === 'videos') {
-    return (db.prepare("SELECT COUNT(*) AS n FROM cards WHERE type = 'video'").get() as { n: number }).n;
-  }
-  return (db.prepare('SELECT COUNT(*) AS n FROM cards').get() as { n: number }).n;
+  if (filter === 'images') wh.push("type = 'image'");
+  else if (filter === 'videos') wh.push("type = 'video'");
+  const where = wh.length ? ` WHERE ${wh.join(' AND ')}` : '';
+  return (db.prepare(`SELECT COUNT(*) AS n FROM cards${where}`).get() as { n: number }).n;
+}
+
+export function countTrashedCards(libraryRoot: string): number {
+  const db = openLibraryDb(libraryRoot);
+  return (db.prepare('SELECT COUNT(*) AS n FROM cards WHERE COALESCE(is_deleted, 0) = 1').get() as { n: number })
+    .n;
 }
 
 export async function updateCardInStorage(
@@ -501,24 +550,60 @@ export async function insertCardMetadata(
   }
 }
 
+export async function softDeleteCardFromStorage(libraryRoot: string, cardId: string): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const db = await ensureLibraryReady(root);
+  const cardJson = await readCardJson(root, cardId);
+  if (!cardJson) throw new Error('Карточка не найдена');
+  const deletedAt = new Date().toISOString();
+  cardJson.deletedAt = deletedAt;
+  cardJson.dateModified = deletedAt;
+  await writeCardJson(root, cardJson);
+  db.prepare('UPDATE cards SET is_deleted = 1, deleted_at = ?, date_modified = ? WHERE id = ?').run(
+    deletedAt,
+    deletedAt,
+    cardId
+  );
+  await removeCardFromMoodboard(root, cardId);
+  recomputeTagUsage(db);
+}
+
+export async function restoreCardFromStorage(libraryRoot: string, cardId: string): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const db = await ensureLibraryReady(root);
+  const cardJson = await readCardJson(root, cardId);
+  if (!cardJson) throw new Error('Карточка не найдена');
+  const modified = new Date().toISOString();
+  delete cardJson.deletedAt;
+  cardJson.dateModified = modified;
+  await writeCardJson(root, cardJson);
+  db.prepare('UPDATE cards SET is_deleted = 0, deleted_at = NULL, date_modified = ? WHERE id = ?').run(
+    modified,
+    cardId
+  );
+  recomputeTagUsage(db);
+}
+
 export async function deleteCardFromStorage(libraryRoot: string, cardId: string): Promise<void> {
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
   db.prepare('DELETE FROM cards WHERE id = ?').run(cardId);
   await deleteCardFolder(root, cardId);
   recomputeTagUsage(db);
+  await removeCardFromMoodboard(root, cardId);
+}
 
-  const mb = await readMoodboard(root);
-  mb.moodboardCardIds = mb.moodboardCardIds.filter((id) => id !== cardId);
-  if (mb.moodboardBoard && typeof mb.moodboardBoard === 'object') {
-    const board = mb.moodboardBoard as Record<string, unknown>;
-    if (Array.isArray(board.imageInstances)) {
-      board.imageInstances = board.imageInstances.filter(
-        (x) => !(x && typeof x === 'object' && (x as { cardId?: string }).cardId === cardId)
-      );
-    }
+export async function emptyTrashFromStorage(libraryRoot: string): Promise<number> {
+  const root = path.resolve(libraryRoot);
+  const db = openLibraryDb(root);
+  const ids = db
+    .prepare('SELECT id FROM cards WHERE COALESCE(is_deleted, 0) = 1')
+    .all()
+    .map((r) => String((r as { id: string }).id));
+  for (const id of ids) {
+    await deleteCardFromStorage(root, id);
   }
-  await writeMoodboard(root, mb);
+  return ids.length;
 }
 
 // --- Categories ---
@@ -657,7 +742,11 @@ export async function deleteCollectionFromDb(libraryRoot: string, id: string): P
 export function getCollectionCardCounts(libraryRoot: string): Record<string, number> {
   const db = openLibraryDb(libraryRoot);
   const rows = db
-    .prepare('SELECT collection_id, COUNT(*) AS n FROM card_collections GROUP BY collection_id')
+    .prepare(
+      `SELECT cc.collection_id, COUNT(*) AS n FROM card_collections cc
+       INNER JOIN cards c ON c.id = cc.card_id AND COALESCE(c.is_deleted, 0) = 0
+       GROUP BY cc.collection_id`
+    )
     .all() as Array<{ collection_id: string; n: number }>;
   const m: Record<string, number> = {};
   for (const r of rows) m[r.collection_id] = r.n;
@@ -706,7 +795,9 @@ export function addSkippedDuplicatePair(libraryRoot: string, idA: string, idB: s
 export function getCardsWithPhash(libraryRoot: string): Array<{ id: string; phash: ImageDupFingerprint }> {
   const db = openLibraryDb(libraryRoot);
   const rows = db
-    .prepare("SELECT id, phash_json FROM cards WHERE type = 'image' AND phash_json IS NOT NULL")
+    .prepare(
+      "SELECT id, phash_json FROM cards WHERE type = 'image' AND phash_json IS NOT NULL AND COALESCE(is_deleted, 0) = 0"
+    )
     .all() as Array<{ id: string; phash_json: string }>;
   const out: Array<{ id: string; phash: ImageDupFingerprint }> = [];
   for (const r of rows) {
@@ -742,11 +833,12 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
     const thumbM = thumbMRelPath(cardIdNorm);
     const thumbL = thumbLRelPath(cardIdNorm);
 
+    const isDeleted = cardJson.deletedAt ? 1 : 0;
     db.prepare(
       `INSERT INTO cards (
         id, type, added_at, date_modified, format, width, height, file_size, dominant_color, phash_json,
-        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, is_deleted, deleted_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardIdNorm,
       cardJson.type,
@@ -762,7 +854,9 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
       thumbS,
       thumbM,
       thumbL,
-      cardJson.description ?? null
+      cardJson.description ?? null,
+      isDeleted,
+      cardJson.deletedAt ?? null
     );
     syncCardRelations(db, cardIdNorm, cardJson.tagIds, cardJson.collectionIds);
   }

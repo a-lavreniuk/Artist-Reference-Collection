@@ -1,6 +1,8 @@
+/** @deprecated Маршрут /add перенаправляется на галерею; импорт — через глобальный overlay (ImportHost). */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
+import { extractDroppedFilePaths } from '../media/droppedFilePaths';
 import { Tooltip } from '../components/tooltip/Tooltip';
 import TagChipToggleWithTooltip from '../components/tags/TagChipToggleWithTooltip';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
@@ -471,13 +473,7 @@ export default function AddCardsPage() {
     setDragDepth(0);
     const dt = e.dataTransfer;
     if (!dt?.files?.length) return;
-    const paths: string[] = [];
-    for (let i = 0; i < dt.files.length; i++) {
-      const f = dt.files.item(i);
-      if (!f) continue;
-      const p = (f as File & { path?: string }).path;
-      if (typeof p === 'string') paths.push(p);
-    }
+    const paths = extractDroppedFilePaths(dt);
     if (!paths.length) {
       void pickFiles();
       return;

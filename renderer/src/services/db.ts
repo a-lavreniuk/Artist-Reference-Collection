@@ -1038,6 +1038,7 @@ export async function listCardsPage(params: {
   offset: number;
   limit: number;
   filter: 'all' | 'images' | 'videos';
+  libraryScope?: import('../search/libraryScopeUrl').LibraryScope;
   selectedTagIds?: string[];
   cardIdExact?: string | null;
 }): Promise<CardRecord[]> {
@@ -1047,6 +1048,7 @@ export async function listCardsPage(params: {
       offset: params.offset,
       limit: params.limit,
       filter: params.filter,
+      libraryScope: params.libraryScope,
       selectedTagIds: params.selectedTagIds,
       cardIdExact: params.cardIdExact
     });
@@ -1282,11 +1284,11 @@ export async function updateCardPayload(
   notifyTagsChanged();
 }
 
-export async function deleteCard(cardId: string): Promise<void> {
+export async function softDeleteCard(cardId: string): Promise<void> {
   const b = await resolveBackend();
 
   if (b === 'file') {
-    await storage.storageDeleteCard(cardId);
+    await storage.storageSoftDeleteCard(cardId);
     notifyMoodboardBoardChanged();
   } else {
     const legacy = safeReadArray<{ id: string; type?: string }>(STORAGE_KEYS.cards);
@@ -1304,6 +1306,58 @@ export async function deleteCard(cardId: string): Promise<void> {
   void tryAppendLibraryHistory('Удалена карточка');
   notifyCardsChanged();
   notifyTagsChanged();
+}
+
+export async function restoreCard(cardId: string): Promise<void> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    await storage.storageRestoreCard(cardId);
+  }
+  void tryAppendLibraryHistory('Восстановлена карточка');
+  notifyCardsChanged();
+  notifyTagsChanged();
+}
+
+export async function permanentDeleteCard(cardId: string): Promise<void> {
+  const b = await resolveBackend();
+
+  if (b === 'file') {
+    await storage.storagePermanentDeleteCard(cardId);
+    notifyMoodboardBoardChanged();
+  } else {
+    const legacy = safeReadArray<{ id: string; type?: string }>(STORAGE_KEYS.cards);
+    safeWriteArray(
+      STORAGE_KEYS.cards,
+      legacy.filter((x) => x.id !== cardId)
+    );
+    const mb = safeReadArray<{ id?: string }>(STORAGE_KEYS.moodboard).filter((x) => x.id !== cardId);
+    safeWriteArray(STORAGE_KEYS.moodboard, mb);
+    const boardLs = readMoodboardBoardFromLocalStorage() ?? createEmptyMoodboardBoard();
+    writeMoodboardBoardToLocalStorage(pruneMoodboardBoardForCard(boardLs, cardId));
+    notifyMoodboardBoardChanged();
+  }
+
+  void tryAppendLibraryHistory('Удалена карточка навсегда');
+  notifyCardsChanged();
+  notifyTagsChanged();
+}
+
+export async function emptyTrash(): Promise<number> {
+  const b = await resolveBackend();
+  if (b !== 'file') return 0;
+  const n = await storage.storageEmptyTrash();
+  if (n > 0) {
+    void tryAppendLibraryHistory(`Очищена корзина (${n})`);
+  }
+  notifyCardsChanged();
+  notifyTagsChanged();
+  notifyMoodboardBoardChanged();
+  return n;
+}
+
+/** Мягкое удаление в корзину. */
+export async function deleteCard(cardId: string): Promise<void> {
+  return softDeleteCard(cardId);
 }
 
 /** Снимок метаданных для проверки целостности (новый формат хранения). */

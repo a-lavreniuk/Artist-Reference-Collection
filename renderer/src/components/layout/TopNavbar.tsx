@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import NavbarFiltersRow from './NavbarFiltersRow';
-import NavbarLibraryPlaceholder from './NavbarLibraryPlaceholder';
+import NavbarLibrarySwitcher from './NavbarLibrarySwitcher';
+import { useImportContext } from '../import/ImportContext';
 import NavbarMenu from './NavbarMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
@@ -10,6 +11,7 @@ import { Tooltip } from '../tooltip/Tooltip';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import {
   applyNavbarStackCssVars,
+  applyNavbarTopBarLayoutVars,
   clearNavbarStackCssVars,
   MAIN_NAV_TABS,
   resolveMainTab,
@@ -17,6 +19,7 @@ import {
 } from './navbarLayout';
 
 export default function TopNavbar() {
+  const { openImportPicker } = useImportContext();
   const navigate = useNavigate();
   const location = useLocation();
   const hostRef = useRef<HTMLDivElement>(null);
@@ -52,6 +55,7 @@ export default function TopNavbar() {
 
     const syncMetrics = () => {
       applyNavbarStackCssVars(host, headerRef.current);
+      applyNavbarTopBarLayoutVars(headerRef.current);
     };
 
     syncMetrics();
@@ -61,13 +65,19 @@ export default function TopNavbar() {
     const header = headerRef.current;
     if (header) {
       observer.observe(header);
+      const topBar = header.querySelector('.arc-navbar-top-bar');
+      const nav = header.querySelector('.arc-navbar-top-bar__nav');
+      const mgmt = header.querySelector('.arc-navbar-top-bar__mgmt');
+      if (topBar) observer.observe(topBar);
+      if (nav) observer.observe(nav);
+      if (mgmt) observer.observe(mgmt);
     }
 
     return () => {
       observer.disconnect();
       clearNavbarStackCssVars();
     };
-  }, [variant, filtersOpen, activeMainTab, maintenanceLocked, location.pathname]);
+  }, [variant, filtersOpen, activeMainTab, maintenanceLocked, location.pathname, location.search]);
 
   const handleMainTabClick = (path: string) => {
     if (maintenanceLocked) return;
@@ -133,17 +143,16 @@ export default function TopNavbar() {
                 <div className="arc-navbar-search-wrap">
                   <NavbarSearch onPanelOpenChange={setSearchPanelOpen} />
                 </div>
-                <Tooltip content="Добавить — в разработке" delay={500} position="top">
-                  <span className="arc-tooltip-anchor-inline">
-                    <button
-                      type="button"
-                      className="btn btn-brand btn-ds btn-icon-only"
-                      disabled
-                      aria-label="Добавить (скоро)"
-                    >
-                      <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
-                    </button>
-                  </span>
+                <Tooltip content="Добавить" delay={500} position="top">
+                  <button
+                    type="button"
+                    className="btn btn-brand btn-ds btn-icon-only"
+                    disabled={maintenanceLocked}
+                    aria-label="Добавить"
+                    onClick={openImportPicker}
+                  >
+                    <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
+                  </button>
                 </Tooltip>
               </div>
             ) : (
@@ -155,7 +164,7 @@ export default function TopNavbar() {
               data-btn-size="s"
               data-elevation="default"
             >
-              <NavbarLibraryPlaceholder />
+              <NavbarLibrarySwitcher />
               <NavbarMenu />
               <NavbarWindowControls />
             </div>

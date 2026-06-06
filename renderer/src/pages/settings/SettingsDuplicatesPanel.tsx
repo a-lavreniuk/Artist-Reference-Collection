@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   addSkippedDuplicatePair,
-  deleteCard,
+  permanentDeleteCard,
   getDuplicateSimilarityThresholdPct,
   listCardsSorted,
   setDuplicateSimilarityThresholdPct,
@@ -186,7 +186,7 @@ export default function SettingsDuplicatesPanel() {
 
   const removeOne = async (id: string) => {
     if (!current) return;
-    await deleteCard(id);
+    await permanentDeleteCard(id);
     await addSkippedDuplicatePair(current.a.id, current.b.id);
     setCurrent(null);
     setUrlA(null);
