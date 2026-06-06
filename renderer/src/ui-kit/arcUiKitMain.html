@@ -244,9 +244,10 @@
               </span>
             </button>
             <div class="selector-dropdown" hidden>
-              <div class="input search-field selector-search input-slots">
+              <div class="input search-field selector-search search-live input-slots">
                 <span class="search-icon slot-leading" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
@@ -267,7 +268,7 @@
                 <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
-              <button class="btn btn-outline btn-ds selector-reset" type="button">Очистить</button>
+              <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
             </div>
           </div>
           <div class="field field-error selector-field" data-selector>
@@ -279,9 +280,10 @@
               </span>
             </button>
             <div class="selector-dropdown" hidden>
-              <div class="input search-field selector-search input-slots">
+              <div class="input search-field selector-search search-live input-slots">
                 <span class="search-icon slot-leading" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
@@ -302,7 +304,7 @@
                 <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
-              <button class="btn btn-outline btn-ds selector-reset" type="button">Очистить</button>
+              <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
             </div>
           </div>
           <div class="field">
@@ -402,6 +404,77 @@
             <input class="color-value-input slot-value" data-main-color-input value="#EAB308" />
             <button class="color-swatch-inline slot-trailing" data-main-color-swatch data-arc-modal-open="arcModalHostColor" type="button" aria-label="Открыть палитру" style="background:#EAB308"></button>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel elevation-default">
+      <h2 class="h2">Context Menu</h2>
+      <div class="id-tag">EL-MENU-GROUP</div>
+      <div class="context-menu-demo">
+        <div class="sample">
+          <div class="id-tag">EL-MENU-STATIC-FILLED</div>
+          <div
+            class="context-menu panel elevation-raised arc-ui-kit-scope context-menu--static"
+            data-elevation="raised"
+            data-typo-tone="white"
+            data-input-size="s"
+            data-btn-size="m"
+            role="menu"
+            aria-label="Пример меню"
+          >
+            <div class="context-menu__list">
+              <button type="button" class="context-menu__item" role="menuitem">
+                <span class="context-menu__item-inner">
+                  <span class="context-menu__item-icon tab-icon arc-icon-tag" aria-hidden="true"></span>
+                  <span class="context-menu__item-label">Категории и метки</span>
+                </span>
+              </button>
+              <button type="button" class="context-menu__item" role="menuitem">
+                <span class="context-menu__item-inner">
+                  <span class="context-menu__item-label">Поиск дублей</span>
+                  <span class="context-menu__item-icon tab-icon arc-icon-copy" aria-hidden="true"></span>
+                </span>
+              </button>
+              <div class="context-menu__sep" role="separator"></div>
+              <p class="context-menu__header text-s" role="presentation">Оформление</p>
+              <button type="button" class="context-menu__item is-disabled" role="menuitem" disabled>
+                <span class="context-menu__item-inner">
+                  <span class="context-menu__item-label">Светлая</span>
+                </span>
+              </button>
+              <button type="button" class="context-menu__item" role="menuitem">
+                <span class="context-menu__item-inner">
+                  <span class="context-menu__item-label">Отменить</span>
+                  <span class="context-menu__item-shortcut">Ctrl+Z</span>
+                </span>
+              </button>
+              <button type="button" class="context-menu__item" role="menuitem">
+                <span class="context-menu__item-inner">
+                  <span class="context-menu__item-label">Файлы</span>
+                  <span class="context-menu__item-counter">12</span>
+                </span>
+              </button>
+              <div class="context-menu__sep" role="separator"></div>
+              <div class="context-menu__slot">
+                <label class="field input-live">
+                  <input class="input" placeholder="Фильтр" />
+                </label>
+              </div>
+              <div class="context-menu__slot">
+                <div class="input search-field input-slots">
+                  <span class="search-icon slot-leading" aria-hidden="true"></span>
+                  <input class="search-inner slot-value" placeholder="Search" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sample">
+          <div class="id-tag">EL-MENU-TRIGGER-PORTAL</div>
+          <button type="button" class="btn btn-outline btn-ds" data-context-menu-trigger aria-haspopup="menu" aria-expanded="false">
+            <span class="btn-ds__value">Открыть меню</span>
+          </button>
         </div>
       </div>
     </section>
@@ -641,9 +714,10 @@
               </span>
             </button>
             <div class="selector-dropdown" hidden>
-              <div class="input search-field selector-search input-slots">
+              <div class="input search-field selector-search search-live input-slots">
                 <span class="search-icon slot-leading" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
@@ -651,7 +725,7 @@
                 <button class="dropdown-row" type="button"><span>Два</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
-              <button class="btn btn-outline btn-ds selector-reset" type="button">Очистить</button>
+              <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
             </div>
           </div>
         </div>

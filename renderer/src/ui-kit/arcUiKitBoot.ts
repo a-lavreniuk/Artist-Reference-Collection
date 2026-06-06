@@ -1,6 +1,8 @@
 // @ts-nocheck
 /** Generated from renderer/public/ui/arc-ui/arc-ui.html — demo logic scoped to .arc-ui-kit-scope. Regenerate: node scripts/gen-ui-kit-boot.mjs */
 
+import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
+
 const arcUiKitGlyphHydrators = new WeakMap<HTMLElement, () => Promise<unknown>>();
 
 /** Повторная подстановка SVG в инпутах после смены `data-input-size` на контейнере стенда. */
@@ -845,7 +847,14 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         const valueNode = field.querySelector(".selector-value");
         const clearNode = field.querySelector(".selector-clear");
         const searchInput = field.querySelector(".selector-search .search-inner");
+        const searchContainer = field.querySelector(".selector-search");
+        const searchClearBtn = field.querySelector(".selector-search .search-clear-btn");
         if (!trigger || !dropdown || !valueNode) return;
+
+        function syncSelectorSearchState() {
+          if (!searchContainer || !searchInput) return;
+          searchContainer.classList.toggle("has-value", searchInput.value.length > 0);
+        }
 
         function applyRowFilter() {
           const rows = Array.from(field.querySelectorAll(".dropdown-row"));
@@ -883,9 +892,20 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           }, docOpts);
           searchInput.addEventListener("input", function () {
             applyRowFilter();
+            syncSelectorSearchState();
           }, docOpts);
           searchInput.addEventListener("keydown", function (event) {
             event.stopPropagation();
+          }, docOpts);
+        }
+
+        if (searchClearBtn && searchInput) {
+          searchClearBtn.addEventListener("click", function (event) {
+            event.stopPropagation();
+            searchInput.value = "";
+            syncSelectorSearchState();
+            applyRowFilter();
+            searchInput.focus();
           }, docOpts);
         }
 
@@ -913,11 +933,13 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             valueNode.textContent = "Выберите значение";
             field.classList.remove("has-value");
             if (searchInput) searchInput.value = "";
+            syncSelectorSearchState();
             closeSelectors();
             trigger.focus();
           }, docOpts);
         }
 
+        syncSelectorSearchState();
         applyRowFilter();
       });
 
@@ -1063,13 +1085,84 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         syncUploaderState();
       });
 
+      function initContextMenuDemo() {
+        const trigger = scope.querySelector("[data-context-menu-trigger]");
+        if (!trigger || !(trigger instanceof HTMLButtonElement)) return;
+
+        let menuEl = null;
+        let backdropEl = null;
+
+        function closeMenu() {
+          if (menuEl) menuEl.remove();
+          if (backdropEl) backdropEl.remove();
+          menuEl = null;
+          backdropEl = null;
+          trigger.setAttribute("aria-expanded", "false");
+        }
+
+        document.querySelectorAll("[data-arc-ui-kit-context-menu]").forEach(function (node) {
+          node.remove();
+        });
+
+        function openMenu() {
+          closeMenu();
+          const rect = trigger.getBoundingClientRect();
+          backdropEl = document.createElement("button");
+          backdropEl.type = "button";
+          backdropEl.className = "context-menu-backdrop";
+          backdropEl.dataset.arcUiKitContextMenu = "backdrop";
+          backdropEl.setAttribute("aria-label", "Закрыть меню");
+          backdropEl.addEventListener("click", closeMenu, docOpts);
+
+          menuEl = document.createElement("div");
+          menuEl.className = "context-menu panel elevation-raised arc-ui-kit-scope";
+          menuEl.dataset.arcUiKitContextMenu = "panel";
+          menuEl.setAttribute("role", "menu");
+          menuEl.setAttribute("aria-label", "Демо меню");
+          menuEl.dataset.elevation = "raised";
+          menuEl.dataset.typoTone = "white";
+          menuEl.dataset.inputSize = "s";
+          menuEl.dataset.btnSize = "m";
+          menuEl.style.top = rect.bottom + 8 + "px";
+          menuEl.style.left = Math.max(8, rect.right - 250) + "px";
+          menuEl.style.width = "250px";
+          menuEl.innerHTML =
+            '<div class="context-menu__list">' +
+            '<button type="button" class="context-menu__item" role="menuitem"><span class="context-menu__item-inner"><span class="context-menu__item-label">Действие</span></span></button>' +
+            '<button type="button" class="context-menu__item" role="menuitem"><span class="context-menu__item-inner"><span class="context-menu__item-label">Ещё пункт</span><span class="context-menu__item-shortcut">Ctrl+K</span></span></button>' +
+            "</div>";
+
+          menuEl.querySelectorAll(".context-menu__item").forEach(function (item) {
+            item.addEventListener("click", closeMenu, docOpts);
+          });
+
+          document.body.appendChild(backdropEl);
+          document.body.appendChild(menuEl);
+          trigger.setAttribute("aria-expanded", "true");
+        }
+
+        trigger.addEventListener("click", function () {
+          if (menuEl) closeMenu();
+          else openMenu();
+        }, docOpts);
+
+        window.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") closeMenu();
+        }, docOpts);
+
+        mountAc.signal.addEventListener("abort", closeMenu, { once: true });
+      }
+
       arcUiKitGlyphHydrators.set(scope, hydrateInputGlyphs);
 
       initArcModals();
+      initContextMenuDemo();
       initModalColorPickers();
       initDemoAlerts();
 
       injectButtonIcons();
+      const staticMenu = scope.querySelector(".context-menu--static");
+      if (staticMenu) void hydrateArcNavbarIcons(staticMenu);
       hydrateInputGlyphs().catch(function (err) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn("[arc-ui] hydrateInputGlyphs:", err);

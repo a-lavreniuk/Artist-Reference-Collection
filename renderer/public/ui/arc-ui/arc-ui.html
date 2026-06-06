@@ -274,9 +274,10 @@
               </span>
             </button>
             <div class="selector-dropdown" hidden>
-              <div class="input search-field selector-search input-slots">
+              <div class="input search-field selector-search search-live input-slots">
                 <span class="search-icon slot-leading" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
@@ -297,7 +298,7 @@
                 <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
-              <button class="btn btn-outline btn-ds selector-reset" type="button">Очистить</button>
+              <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
             </div>
           </div>
           <div class="field field-error selector-field" data-selector>
@@ -309,9 +310,10 @@
               </span>
             </button>
             <div class="selector-dropdown" hidden>
-              <div class="input search-field selector-search input-slots">
+              <div class="input search-field selector-search search-live input-slots">
                 <span class="search-icon slot-leading" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
@@ -332,7 +334,7 @@
                 <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
-              <button class="btn btn-outline btn-ds selector-reset" type="button">Очистить</button>
+              <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
             </div>
           </div>
           <div class="field">
@@ -692,9 +694,10 @@
               </span>
             </button>
             <div class="selector-dropdown" hidden>
-              <div class="input search-field selector-search input-slots">
+              <div class="input search-field selector-search search-live input-slots">
                 <span class="search-icon slot-leading" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
@@ -702,7 +705,7 @@
                 <button class="dropdown-row" type="button"><span>Два</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
-              <button class="btn btn-outline btn-ds selector-reset" type="button">Очистить</button>
+              <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
             </div>
           </div>
         </div>
@@ -1648,7 +1651,14 @@
         const valueNode = field.querySelector(".selector-value");
         const clearNode = field.querySelector(".selector-clear");
         const searchInput = field.querySelector(".selector-search .search-inner");
+        const searchContainer = field.querySelector(".selector-search");
+        const searchClearBtn = field.querySelector(".selector-search .search-clear-btn");
         if (!trigger || !dropdown || !valueNode) return;
+
+        function syncSelectorSearchState() {
+          if (!searchContainer || !searchInput) return;
+          searchContainer.classList.toggle("has-value", searchInput.value.length > 0);
+        }
 
         function applyRowFilter() {
           const rows = Array.from(field.querySelectorAll(".dropdown-row"));
@@ -1686,9 +1696,20 @@
           });
           searchInput.addEventListener("input", function () {
             applyRowFilter();
+            syncSelectorSearchState();
           });
           searchInput.addEventListener("keydown", function (event) {
             event.stopPropagation();
+          });
+        }
+
+        if (searchClearBtn && searchInput) {
+          searchClearBtn.addEventListener("click", function (event) {
+            event.stopPropagation();
+            searchInput.value = "";
+            syncSelectorSearchState();
+            applyRowFilter();
+            searchInput.focus();
           });
         }
 
@@ -1716,11 +1737,13 @@
             valueNode.textContent = "Выберите значение";
             field.classList.remove("has-value");
             if (searchInput) searchInput.value = "";
+            syncSelectorSearchState();
             closeSelectors();
             trigger.focus();
           });
         }
 
+        syncSelectorSearchState();
         applyRowFilter();
       });
 
