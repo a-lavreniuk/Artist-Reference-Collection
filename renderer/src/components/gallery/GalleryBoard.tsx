@@ -6,6 +6,7 @@ import GalleryThumb from './GalleryThumb';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import { mergeCardsSrcMap, peekCardsSrcMap } from './galleryMediaCache';
 import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
+import { cardFileFormatLabel } from '../../utils/cardFileFormatLabel';
 
 type Props = {
   cards: CardRecord[];
@@ -71,6 +72,7 @@ export default function GalleryBoard({
               : 'arc-icon-bookmark-plus'
             : 'arc-icon-bookmark';
         const mediaTypeIconClass = card.type === 'video' ? 'arc-icon-play' : 'arc-icon-image';
+        const formatLabel = cardFileFormatLabel(card);
         const thumbSrc = srcMap[card.id];
 
         return (
@@ -88,8 +90,18 @@ export default function GalleryBoard({
             }}
           >
             <span className="arc-gallery-card-stack">
-              <span className="arc-gallery-card-badge" aria-hidden="true" data-btn-size="s">
-                <span className={`tab-icon ${mediaTypeIconClass}`} />
+              <span
+                className={`arc-gallery-card-badge${formatLabel ? '' : ' arc-gallery-card-badge--icon-only'}`}
+                data-btn-size="s"
+              >
+                <span
+                  className={`tab-icon ${mediaTypeIconClass}`}
+                  data-arc-icon-size="s"
+                  aria-hidden="true"
+                />
+                {formatLabel ? (
+                  <span className="arc-gallery-card-badge-label">{formatLabel}</span>
+                ) : null}
               </span>
               {thumbSrc ? (
                 <GalleryThumb card={card} src={thumbSrc} />

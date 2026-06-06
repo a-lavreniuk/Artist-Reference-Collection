@@ -600,6 +600,14 @@ button.color-swatch-inline:disabled {
 }
 
 .arc-gallery-card-badge {
+  --btn-h: 24px;
+  --btn-radius: 8px;
+  --btn-pad-x: 8px;
+  --btn-gap: 6px;
+  --btn-font-size: 12px;
+  --btn-line-height: 16px;
+  --btn-icon-size: 12px;
+  --tab-icon-size: 12px;
   position: absolute;
   top: var(--s-3);
   left: var(--s-3);
@@ -607,15 +615,31 @@ button.color-swatch-inline:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-s);
+  gap: var(--btn-gap);
+  height: var(--btn-h);
+  padding: 0 var(--btn-pad-x);
+  border-radius: var(--btn-radius);
   pointer-events: none;
 }
 
 .arc-gallery-card-badge .tab-icon {
-  width: 16px;
-  height: 16px;
+  flex-shrink: 0;
+  width: var(--btn-icon-size);
+  min-width: var(--btn-icon-size);
+  height: var(--btn-icon-size);
+}
+
+.arc-gallery-card-badge-label {
+  font-size: var(--btn-font-size);
+  line-height: var(--btn-line-height);
+  font-weight: var(--typo-p-s-weight);
+  color: var(--gray-50);
+  white-space: nowrap;
+}
+
+.arc-gallery-card-badge--icon-only {
+  width: var(--btn-h);
+  padding: 0;
 }
 
 /* Единый blur/fill для бейджа и overlay-кнопок карточки */
