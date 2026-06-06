@@ -11,6 +11,7 @@ export type ContextMenuRow =
       shortcut?: string;
       counter?: string | number;
       slotOrder?: ContextMenuSlot[];
+      selected?: boolean;
       disabled?: boolean;
       onSelect?: () => void;
     }

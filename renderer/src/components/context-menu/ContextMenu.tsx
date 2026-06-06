@@ -43,6 +43,7 @@ function renderRow(row: ContextMenuRow, onClose: () => void) {
       shortcut={row.shortcut}
       counter={row.counter}
       slotOrder={row.slotOrder}
+      selected={row.selected}
       disabled={row.disabled}
       onSelect={() => {
         row.onSelect?.();

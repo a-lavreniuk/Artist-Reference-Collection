@@ -1694,14 +1694,31 @@ button.input {
   cursor: not-allowed;
 }
 
-.context-menu__item-label {
+.context-menu__item-label-cluster {
   order: -1;
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
   flex: 1 1 auto;
+  min-width: 0;
+}
+
+.context-menu__item-label {
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
+}
+
+.context-menu__item-check {
+  flex-shrink: 0;
+  color: var(--menu-row-icon-default);
+}
+
+.context-menu__item:hover:not(:disabled):not(.is-disabled) .context-menu__item-check {
+  color: var(--menu-row-icon-hover);
 }
 
 .context-menu__item-icon,

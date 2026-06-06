@@ -59,7 +59,11 @@ type IconKey =
   | 'weight'
   | 'resolution'
   | 'duration'
-  | 'filterList';
+  | 'filterList'
+  | 'check'
+  | 'gridL'
+  | 'gridM'
+  | 'gridS';
 
 const ICON_FILES: Record<IconKey, string> = {
   search: 'search_m.svg',
@@ -116,7 +120,11 @@ const ICON_FILES: Record<IconKey, string> = {
   weight: 'weight_s.svg',
   resolution: 'resolution_s.svg',
   duration: 'duration_s.svg',
-  filterList: 'filter-list_s.svg'
+  filterList: 'filter-list_s.svg',
+  check: 'check_s.svg',
+  gridL: 'grid-L_s.svg',
+  gridM: 'grid-M_s.svg',
+  gridS: 'grid-S_s.svg'
 };
 const SIZE_SUFFIX_RE = /_(s|m|l|xl)\.svg$/;
 type UiSize = 's' | 'm' | 'l' | 'xl';
@@ -177,11 +185,15 @@ const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
   arc_icon_weight: 'weight',
   arc_icon_resolution: 'resolution',
   arc_icon_duration: 'duration',
-  arc_icon_filter_list: 'filterList'
+  arc_icon_filter_list: 'filterList',
+  arc_icon_check: 'check',
+  arc_icon_grid_l: 'gridL',
+  arc_icon_grid_m: 'gridM',
+  arc_icon_grid_s: 'gridS'
 };
 
 const ICON_SELECTOR =
-  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-menu, .arc-icon-grid, .arc-icon-layout-grid, .arc-icon-filter, .arc-icon-sorting, .arc-icon-aspect-ratio, .arc-icon-file-type, .arc-icon-description, .arc-icon-link, .arc-icon-calendar, .arc-icon-weight, .arc-icon-resolution, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-trash, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus';
+  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-menu, .arc-icon-grid, .arc-icon-grid-l, .arc-icon-grid-m, .arc-icon-grid-s, .arc-icon-check, .arc-icon-layout-grid, .arc-icon-filter, .arc-icon-sorting, .arc-icon-aspect-ratio, .arc-icon-file-type, .arc-icon-description, .arc-icon-link, .arc-icon-calendar, .arc-icon-weight, .arc-icon-resolution, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-trash, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus';
 
 const svgMarkupCache = new Map<string, string>();
 let preloadPromise: Promise<void> | null = null;

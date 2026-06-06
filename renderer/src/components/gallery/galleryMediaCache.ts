@@ -1,10 +1,23 @@
+import type { GridSize } from '../../layout/gridSizePreference';
 import type { CardRecord } from '../../services/db';
 
 const urlByRel = new Map<string, string>();
 
-export function cardThumbRel(card: CardRecord): string | null {
-  const rel = card.thumbRelativePath || card.originalRelativePath;
-  if (!rel || rel === 'legacy') return null;
+export function cardThumbRel(card: CardRecord, gridSize: GridSize = 'm'): string | null {
+  const thumbS = card.thumbSRelativePath ?? card.thumbRelativePath;
+  const thumbM = card.thumbMRelativePath ?? thumbS;
+  const thumbL = card.thumbLRelativePath ?? thumbM ?? thumbS;
+
+  let rel: string | undefined;
+  if (gridSize === 'l') rel = thumbL;
+  else if (gridSize === 's') rel = thumbS;
+  else rel = thumbM;
+
+  if (!rel || rel === 'legacy') {
+    const fallback = card.originalRelativePath;
+    if (!fallback || fallback === 'legacy') return null;
+    return fallback;
+  }
   return rel;
 }
 
@@ -22,10 +35,10 @@ export async function resolveMediaUrl(rel: string): Promise<string | null> {
   return href;
 }
 
-export function peekCardsSrcMap(cards: readonly CardRecord[]): Record<string, string> {
+export function peekCardsSrcMap(cards: readonly CardRecord[], gridSize: GridSize = 'm'): Record<string, string> {
   const next: Record<string, string> = {};
   for (const card of cards) {
-    const rel = cardThumbRel(card);
+    const rel = cardThumbRel(card, gridSize);
     if (!rel) continue;
     const href = urlByRel.get(rel);
     if (href) next[card.id] = href;
@@ -33,10 +46,13 @@ export function peekCardsSrcMap(cards: readonly CardRecord[]): Record<string, st
   return next;
 }
 
-export async function resolveCardsSrcMap(cards: readonly CardRecord[]): Promise<Record<string, string>> {
+export async function resolveCardsSrcMap(
+  cards: readonly CardRecord[],
+  gridSize: GridSize = 'm'
+): Promise<Record<string, string>> {
   const entries = await Promise.all(
     cards.map(async (card) => {
-      const rel = cardThumbRel(card);
+      const rel = cardThumbRel(card, gridSize);
       if (!rel) return null;
       const href = await resolveMediaUrl(rel);
       return href ? ([card.id, href] as const) : null;
@@ -51,9 +67,10 @@ export async function resolveCardsSrcMap(cards: readonly CardRecord[]): Promise<
 
 export async function mergeCardsSrcMap(
   cards: readonly CardRecord[],
-  base: Record<string, string>
+  base: Record<string, string>,
+  gridSize: GridSize = 'm'
 ): Promise<Record<string, string>> {
-  const resolved = await resolveCardsSrcMap(cards);
+  const resolved = await resolveCardsSrcMap(cards, gridSize);
   return { ...base, ...resolved };
 }
 

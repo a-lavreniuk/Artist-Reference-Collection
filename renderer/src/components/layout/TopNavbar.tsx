@@ -4,6 +4,7 @@ import NavbarFiltersRow from './NavbarFiltersRow';
 import NavbarLibrarySwitcher from './NavbarLibrarySwitcher';
 import { useImportContext } from '../import/ImportContext';
 import NavbarMenu from './NavbarMenu';
+import NavbarGridSizeMenu from './NavbarGridSizeMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
 import NavbarWindowControls from './NavbarWindowControls';
@@ -118,16 +119,9 @@ export default function TopNavbar() {
 
             {variant === 'full' ? (
               <div className="arc-navbar-top-bar__search arc-navbar-no-drag">
-                <Tooltip content="Формат сетки — в разработке" delay={500} position="top">
+                <Tooltip content="Размер сетки" delay={500} position="top">
                   <span className="arc-tooltip-anchor-inline">
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-ds btn-icon-only"
-                      disabled
-                      aria-label="Формат сетки (скоро)"
-                    >
-                      <span className="btn-icon-only__glyph arc-icon-grid" aria-hidden="true" />
-                    </button>
+                    <NavbarGridSizeMenu />
                   </span>
                 </Tooltip>
                 <button

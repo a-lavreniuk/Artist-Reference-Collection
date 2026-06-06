@@ -6,6 +6,7 @@ export type ContextMenuItemProps = {
   shortcut?: string;
   counter?: string | number;
   slotOrder?: ContextMenuSlot[];
+  selected?: boolean;
   disabled?: boolean;
   onSelect?: () => void;
 };
@@ -23,8 +24,15 @@ function renderSlot(slot: ContextMenuSlot, props: ContextMenuItemProps) {
       ) : null;
     case 'label':
       return (
-        <span className="context-menu__item-label" key="label">
-          {props.label}
+        <span className="context-menu__item-label-cluster" key="label">
+          <span className="context-menu__item-label">{props.label}</span>
+          {props.selected ? (
+            <span
+              className="context-menu__item-check tab-icon arc-icon-check"
+              data-arc-icon-size="m"
+              aria-hidden="true"
+            />
+          ) : null}
         </span>
       );
     case 'counter':
@@ -50,6 +58,7 @@ export default function ContextMenuItem({
   shortcut,
   counter,
   slotOrder = DEFAULT_CONTEXT_MENU_SLOT_ORDER,
+  selected,
   disabled,
   onSelect
 }: ContextMenuItemProps) {
@@ -67,7 +76,9 @@ export default function ContextMenuItem({
       }}
     >
       <span className="context-menu__item-inner">
-        {order.map((slot) => renderSlot(slot, { label, iconClass, shortcut, counter, slotOrder, disabled, onSelect }))}
+        {order.map((slot) =>
+          renderSlot(slot, { label, iconClass, shortcut, counter, slotOrder, selected, disabled, onSelect })
+        )}
       </span>
     </button>
   );

@@ -25,6 +25,8 @@ import { ARC_SEARCH_QUERY_CARD, ARC_SEARCH_QUERY_TAG } from '../../search/search
 import { pushRecentTagId } from '../../search/recentSearchTags';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
+import { cardThumbRel } from './galleryMediaCache';
+import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
 
 type Props = {
   cardId: string;
@@ -44,20 +46,27 @@ function SimilarThumb({
   onPick: () => void;
 }) {
   const [href, setHref] = useState<string | null>(null);
+  const [gridSizeVersion, setGridSizeVersion] = useState(0);
+
+  useEffect(() => {
+    const onGridSizeChanged = () => setGridSizeVersion((v) => v + 1);
+    window.addEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
+    return () => window.removeEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       if (!window.arc) return;
-      const rel = card.thumbRelativePath || card.originalRelativePath;
-      if (!rel || rel === 'legacy') return;
+      const rel = cardThumbRel(card, readGridSize());
+      if (!rel) return;
       const u = await window.arc.toFileUrl(rel);
       if (!cancelled) setHref(u);
     })();
     return () => {
       cancelled = true;
     };
-  }, [card]);
+  }, [card, gridSizeVersion]);
 
   return (
     <button type="button" className="arc-gallery-card-wrap arc-card-similar-tile" onClick={onPick}>

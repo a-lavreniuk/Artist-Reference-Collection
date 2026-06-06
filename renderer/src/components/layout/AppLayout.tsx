@@ -6,6 +6,7 @@ import AppUpdateHost from './AppUpdateHost';
 import PendingRestoreModal from './PendingRestoreModal';
 import ImportHost from '../import/ImportHost';
 import { ensureGalleryBootstrap, scheduleGalleryWarmup } from '../gallery/galleryBootstrap';
+import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
 import { isLibraryConfigured } from '../../services/db';
 
 export default function AppLayout() {
@@ -27,8 +28,10 @@ export default function AppLayout() {
     body.setAttribute('data-typo-state', 'default');
     body.setAttribute('data-btn-size', 'l');
     body.setAttribute('data-input-size', 'l');
+    applyGridSizeToDocument(readGridSize());
 
     return () => {
+      body.removeAttribute('data-grid-size');
       body.classList.remove('arc-navbar-page');
       body.removeAttribute('data-elevation');
       body.removeAttribute('data-typo-role');

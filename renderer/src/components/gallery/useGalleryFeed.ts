@@ -14,6 +14,7 @@ import {
   peekCardsSrcMap,
   preloadDecodedImages
 } from './galleryMediaCache';
+import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
 import {
   getGallerySnapshot,
   invalidateAllGallerySnapshots,
@@ -81,6 +82,7 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
 
       if (seq !== loadSeqRef.current) return;
 
+      const gridSize = readGridSize();
       const hasMoreNext = chunk.length === take;
       const nextOffset = start + chunk.length;
       const prevCards = cardsRef.current;
@@ -90,7 +92,11 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
       if (!append) {
         const cached = getGallerySnapshot(queryKey);
         if (cached && sameCardOrder(cached.cards, chunk)) {
-          const mergedSrc = await mergeCardsSrcMap(chunk, { ...cached.srcMap, ...peekCardsSrcMap(chunk) });
+          const mergedSrc = await mergeCardsSrcMap(
+            chunk,
+            { ...cached.srcMap, ...peekCardsSrcMap(chunk, gridSize) },
+            gridSize
+          );
           if (seq !== loadSeqRef.current) return;
           persistSnapshot({
             cards: chunk,
@@ -105,9 +111,9 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
         }
       }
 
-      const peek = peekCardsSrcMap(nextCards);
+      const peek = peekCardsSrcMap(nextCards, gridSize);
       const baseSrc = append ? { ...prevSrcMap, ...peek } : peek;
-      const resolved = await mergeCardsSrcMap(append ? chunk : nextCards, baseSrc);
+      const resolved = await mergeCardsSrcMap(append ? chunk : nextCards, baseSrc, gridSize);
       if (seq !== loadSeqRef.current) return;
 
       persistSnapshot({
@@ -209,6 +215,24 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
       window.removeEventListener('arc:library-changed', onLibraryChanged);
     };
   }, [fetchPage, reloadFromStart]);
+
+  useEffect(() => {
+    const onGridSizeChanged = () => {
+      clearGalleryMediaUrlCache();
+      invalidateAllGallerySnapshots();
+      const seq = ++loadSeqRef.current;
+      setLoading(true);
+      void (async () => {
+        try {
+          await fetchPage(0, false, seq);
+        } finally {
+          if (seq === loadSeqRef.current) setLoading(false);
+        }
+      })();
+    };
+    window.addEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
+    return () => window.removeEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
+  }, [fetchPage]);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;

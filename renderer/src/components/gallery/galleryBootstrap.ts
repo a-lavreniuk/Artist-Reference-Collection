@@ -6,6 +6,7 @@ import {
   GALLERY_WARMUP_SCOPES,
   type GalleryFeedQuery
 } from './galleryQuery';
+import { readGridSize } from '../../layout/gridSizePreference';
 import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages } from './galleryMediaCache';
 import { getGallerySnapshot, setGallerySnapshot } from './galleryScopeCache';
 
@@ -24,8 +25,9 @@ async function loadFirstPageIntoCache(query: GalleryFeedQuery, preloadDecode: bo
     cardIdExact: query.cardIdExact
   });
 
-  const peek = peekCardsSrcMap(chunk);
-  const srcMap = await mergeCardsSrcMap(chunk, peek);
+  const gridSize = readGridSize();
+  const peek = peekCardsSrcMap(chunk, gridSize);
+  const srcMap = await mergeCardsSrcMap(chunk, peek, gridSize);
   const snapshot = {
     cards: chunk,
     srcMap,

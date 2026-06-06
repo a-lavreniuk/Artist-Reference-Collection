@@ -5,6 +5,7 @@ import { Tooltip } from '../tooltip/Tooltip';
 import GalleryThumb from './GalleryThumb';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import { mergeCardsSrcMap, peekCardsSrcMap } from './galleryMediaCache';
+import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
 
 type Props = {
   cards: CardRecord[];
@@ -26,22 +27,30 @@ export default function GalleryBoard({
 }: Props) {
   const [localSrcMap, setLocalSrcMap] = useState<Record<string, string>>({});
   const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState<string | null>(null);
+  const [gridSizeVersion, setGridSizeVersion] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const srcMap = srcMapProp ?? localSrcMap;
 
   useEffect(() => {
+    const onGridSizeChanged = () => setGridSizeVersion((v) => v + 1);
+    window.addEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
+    return () => window.removeEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
+  }, []);
+
+  useEffect(() => {
     if (srcMapProp) return;
-    const peek = peekCardsSrcMap(cards);
+    const gridSize = readGridSize();
+    const peek = peekCardsSrcMap(cards, gridSize);
     setLocalSrcMap((prev) => ({ ...prev, ...peek }));
     let cancelled = false;
     void (async () => {
-      const resolved = await mergeCardsSrcMap(cards, peek);
+      const resolved = await mergeCardsSrcMap(cards, peek, gridSize);
       if (!cancelled) setLocalSrcMap((prev) => ({ ...prev, ...resolved }));
     })();
     return () => {
       cancelled = true;
     };
-  }, [cards, srcMapProp]);
+  }, [cards, srcMapProp, gridSizeVersion]);
 
   useLayoutEffect(() => {
     if (rootRef.current) {
