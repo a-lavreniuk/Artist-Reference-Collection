@@ -1,6 +1,6 @@
 /** Shared storage types for the new library format (v2). */
 
-export const STORAGE_SCHEMA_VERSION = 3;
+export const STORAGE_SCHEMA_VERSION = 4;
 
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';
@@ -22,6 +22,7 @@ export type CardJsonV1 = {
   type: CardType;
   addedAt: string;
   dateModified?: string;
+  fileCreatedAt?: string;
   originalFileName: string;
   format?: string;
   width?: number;
@@ -29,6 +30,8 @@ export type CardJsonV1 = {
   fileSize?: number;
   dominantColorHex?: string;
   description?: string;
+  name?: string;
+  linkUrl?: string;
   tagIds: string[];
   collectionIds: string[];
   phash?: ImageDupFingerprint;

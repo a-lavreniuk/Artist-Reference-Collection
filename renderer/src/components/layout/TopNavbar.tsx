@@ -10,6 +10,7 @@ import NavbarShade from './NavbarShade';
 import NavbarWindowControls from './NavbarWindowControls';
 import { Tooltip } from '../tooltip/Tooltip';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
+import { requestCloseCardDetail } from '../gallery/cardDetailEvents';
 import {
   applyNavbarStackCssVars,
   applyNavbarTopBarLayoutVars,
@@ -82,6 +83,10 @@ export default function TopNavbar() {
 
   const handleMainTabClick = (path: string) => {
     if (maintenanceLocked) return;
+    const nextTab = resolveMainTab(path);
+    if (nextTab !== activeMainTab) {
+      requestCloseCardDetail();
+    }
     navigate(path);
   };
 

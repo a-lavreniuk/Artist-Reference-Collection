@@ -1,0 +1,1028 @@
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import DemoAlert from '../layout/DemoAlert';
+import { Tooltip } from '../tooltip/Tooltip';
+import CollapsibleSection from './CollapsibleSection';
+import CardInfoModal from './CardInfoModal';
+import CardDetailSimilarThumb from './CardDetailSimilarThumb';
+import CardDetailTagsModal from './CardDetailTagsModal';
+import CardDetailCollectionsModal from './CardDetailCollectionsModal';
+import CardDetailCollectionStrip from './CardDetailCollectionStrip';
+import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodboardModal';
+import type { CardRecord, CategoryRecord, TagRecord } from '../../services/db';
+import {
+  getMoodboardCardIds,
+  deleteCard,
+  restoreCard,
+  permanentDeleteCard,
+  getAllCategories,
+  getAllCollections,
+  getCardById,
+  getCollectionCardCounts,
+  getCollectionPreviewSlices,
+  listSimilarCards,
+  toggleCardInMoodboard,
+  isCardOnBoard,
+  removeCardFromMoodboard,
+  updateCardPayload
+} from '../../services/db';
+import { parseLibraryScope } from '../../search/libraryScopeUrl';
+import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
+import { gallerySkeletonStyle } from './gallerySkeleton';
+import { mergeCardsSrcMap, peekCardsSrcMap } from './galleryMediaCache';
+import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
+import { readGridSize } from '../../layout/gridSizePreference';
+import { extractImagePalette, type PaletteSwatch } from './cardDetailPalette';
+import {
+  CARD_DETAIL_SETTINGS_WIDTH_MAX,
+  CARD_DETAIL_SETTINGS_WIDTH_MIN,
+  readCardDetailSettingsWidth,
+  writeCardDetailSettingsWidth
+} from './cardDetailSettingsWidth';
+import { ARC_CARD_DETAIL_CLOSE_EVENT } from './cardDetailEvents';
+
+type Props = {
+  cardId: string;
+  tagsIndex: Map<string, TagRecord>;
+  onClose: () => void;
+  onDeleted: () => void;
+  onOpenCard: (id: string) => void;
+  moodboardRemoveConfirm?: 'gallery' | 'moodboard';
+};
+
+const DESCRIPTION_SAVE_MS = 600;
+const FIELD_SAVE_MS = 600;
+
+function normalizeExternalUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+export default function CardDetailOverlay({
+  cardId,
+  tagsIndex,
+  onClose,
+  onDeleted,
+  onOpenCard,
+  moodboardRemoveConfirm = 'gallery'
+}: Props) {
+  const [searchParams] = useSearchParams();
+  const hostRef = useRef<HTMLDivElement>(null);
+  const settingsScrollRef = useRef<HTMLDivElement>(null);
+  const inspectVideoRef = useRef<HTMLVideoElement | null>(null);
+  const descriptionSaveTimerRef = useRef<number | null>(null);
+  const nameSaveTimerRef = useRef<number | null>(null);
+  const linkSaveTimerRef = useRef<number | null>(null);
+  const copyAlertTimerRef = useRef<number | null>(null);
+  const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
+
+  const [card, setCard] = useState<CardRecord | null>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  const [categoriesById, setCategoriesById] = useState<Map<string, CategoryRecord>>(new Map());
+  const [collectionsById, setCollectionsById] = useState<Map<string, string>>(new Map());
+  const [collCounts, setCollCounts] = useState<Record<string, number>>({});
+  const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
+  const [similar, setSimilar] = useState<CardRecord[]>([]);
+  const [similarSrcMap, setSimilarSrcMap] = useState<Record<string, string>>({});
+  const [inMoodboard, setInMoodboard] = useState(false);
+  const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
+
+  const [draftName, setDraftName] = useState('');
+  const [draftLink, setDraftLink] = useState('');
+  const [description, setDescription] = useState('');
+  const [palette, setPalette] = useState<PaletteSwatch[]>([]);
+  const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
+  const settingsWidthRef = useRef(settingsWidth);
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [tagsModalOpen, setTagsModalOpen] = useState(false);
+  const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
+  const [stubAlert, setStubAlert] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copyAlertVisible, setCopyAlertVisible] = useState(false);
+  const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ onBoard: boolean } | null>(null);
+
+  const libraryScope = parseLibraryScope(searchParams);
+  const inTrash = libraryScope === 'trash';
+
+  const reloadCard = useCallback(async (id: string) => {
+    let c = await getCardById(id);
+    if (c) {
+      const draft = readCardDetailDraft(id);
+      const patch: { name?: string; linkUrl?: string } = {};
+      if (!c.name?.trim() && draft.name.trim()) patch.name = draft.name.trim();
+      if (!c.linkUrl?.trim() && draft.linkUrl.trim()) patch.linkUrl = draft.linkUrl.trim();
+      if (patch.name !== undefined || patch.linkUrl !== undefined) {
+        await updateCardPayload(id, patch);
+        clearCardDetailDraft(id);
+        c = (await getCardById(id)) ?? c;
+      }
+      setDraftName(c.name ?? draft.name ?? '');
+      setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
+      setDescription(c.description ?? '');
+    } else {
+      setDraftName('');
+      setDraftLink('');
+      setDescription('');
+    }
+    setCard(c);
+    return c;
+  }, []);
+
+  useLayoutEffect(() => {
+    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
+  }, [
+    confirmDelete,
+    confirmPermanentDelete,
+    busy,
+    card,
+    similar,
+    categoriesById,
+    inMoodboard,
+    isBookmarkHovered,
+    infoOpen,
+    stubAlert,
+    tagsModalOpen,
+    collectionsModalOpen,
+    palette,
+    settingsWidth,
+    draftName,
+    draftLink,
+    description
+  ]);
+
+  useEffect(() => {
+    setCard(null);
+    setSrc(null);
+    void (async () => {
+      const cats = await getAllCategories();
+      const cm = new Map<string, CategoryRecord>();
+      for (const c of cats) cm.set(c.id, c);
+      setCategoriesById(cm);
+
+      const cols = await getAllCollections();
+      const colm = new Map<string, string>();
+      for (const c of cols) colm.set(c.id, c.name);
+      setCollectionsById(colm);
+
+      setCollCounts(await getCollectionCardCounts());
+      setCollectionPreviews(await getCollectionPreviewSlices(3));
+
+      const c = await reloadCard(cardId);
+
+      if (c && window.arc) {
+        const rel = c.originalRelativePath || c.thumbRelativePath;
+        if (rel && rel !== 'legacy') {
+          setSrc(await window.arc.toFileUrl(rel));
+        } else {
+          setSrc(null);
+        }
+      } else {
+        setSrc(null);
+      }
+
+      setSimilar(await listSimilarCards(cardId, 15));
+      const moodboardIds = await getMoodboardCardIds();
+      setInMoodboard(moodboardIds.includes(cardId));
+    })();
+  }, [cardId, reloadCard]);
+
+  useEffect(() => {
+    if (similar.length === 0) {
+      setSimilarSrcMap({});
+      return;
+    }
+    const gridSize = readGridSize();
+    const peek = peekCardsSrcMap(similar, gridSize);
+    setSimilarSrcMap(peek);
+    let cancelled = false;
+    void mergeCardsSrcMap(similar, peek, gridSize).then((next) => {
+      if (!cancelled) setSimilarSrcMap(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [similar]);
+
+  useEffect(() => {
+    settingsWidthRef.current = settingsWidth;
+  }, [settingsWidth]);
+
+  useEffect(() => {
+    if (!src || card?.type !== 'image') {
+      setPalette([]);
+      return;
+    }
+    let cancelled = false;
+    void extractImagePalette(src)
+      .then((rows) => {
+        if (!cancelled) setPalette(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setPalette([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [src, card?.type, cardId]);
+
+  useEffect(() => {
+    const onCloseRequest = () => onClose();
+    window.addEventListener(ARC_CARD_DETAIL_CLOSE_EVENT, onCloseRequest);
+    return () => window.removeEventListener(ARC_CARD_DETAIL_CLOSE_EVENT, onCloseRequest);
+  }, [onClose]);
+
+  useEffect(() => {
+    document.body.classList.add('arc-card-detail-open');
+    return () => {
+      document.body.classList.remove('arc-card-detail-open');
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (stubAlert) setStubAlert(null);
+      else if (collectionsModalOpen) setCollectionsModalOpen(false);
+      else if (tagsModalOpen) setTagsModalOpen(false);
+      else if (infoOpen) setInfoOpen(false);
+      else if (removeMoodboardConfirm) setRemoveMoodboardConfirm(null);
+      else if (confirmPermanentDelete) setConfirmPermanentDelete(false);
+      else if (confirmDelete) setConfirmDelete(false);
+      else onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, confirmDelete, confirmPermanentDelete, removeMoodboardConfirm, infoOpen, stubAlert, tagsModalOpen, collectionsModalOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (descriptionSaveTimerRef.current) window.clearTimeout(descriptionSaveTimerRef.current);
+      if (nameSaveTimerRef.current) window.clearTimeout(nameSaveTimerRef.current);
+      if (linkSaveTimerRef.current) window.clearTimeout(linkSaveTimerRef.current);
+      if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
+    };
+  }, []);
+
+  const scheduleDescriptionSave = useCallback(
+    (next: string) => {
+      if (descriptionSaveTimerRef.current) window.clearTimeout(descriptionSaveTimerRef.current);
+      descriptionSaveTimerRef.current = window.setTimeout(() => {
+        descriptionSaveTimerRef.current = null;
+        void updateCardPayload(cardId, { description: next }).then(() => reloadCard(cardId));
+      }, DESCRIPTION_SAVE_MS);
+    },
+    [cardId, reloadCard]
+  );
+
+  const scheduleNameSave = useCallback(
+    (next: string) => {
+      if (nameSaveTimerRef.current) window.clearTimeout(nameSaveTimerRef.current);
+      nameSaveTimerRef.current = window.setTimeout(() => {
+        nameSaveTimerRef.current = null;
+        void updateCardPayload(cardId, { name: next }).then(() => reloadCard(cardId));
+      }, FIELD_SAVE_MS);
+    },
+    [cardId, reloadCard]
+  );
+
+  const scheduleLinkSave = useCallback(
+    (next: string) => {
+      if (linkSaveTimerRef.current) window.clearTimeout(linkSaveTimerRef.current);
+      linkSaveTimerRef.current = window.setTimeout(() => {
+        linkSaveTimerRef.current = null;
+        void updateCardPayload(cardId, { linkUrl: next }).then(() => reloadCard(cardId));
+      }, FIELD_SAVE_MS);
+    },
+    [cardId, reloadCard]
+  );
+
+  const clampSettingsWidth = useCallback((px: number) => {
+    return Math.min(CARD_DETAIL_SETTINGS_WIDTH_MAX, Math.max(CARD_DETAIL_SETTINGS_WIDTH_MIN, px));
+  }, []);
+
+  const onSplitPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    splitDragRef.current = { startX: event.clientX, startW: settingsWidth };
+  };
+
+  const onSplitPointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    if (!splitDragRef.current) return;
+    const delta = splitDragRef.current.startX - event.clientX;
+    setSettingsWidth(clampSettingsWidth(splitDragRef.current.startW + delta));
+  };
+
+  const finishSplitDrag = () => {
+    if (!splitDragRef.current) return;
+    splitDragRef.current = null;
+    writeCardDetailSettingsWidth(settingsWidthRef.current);
+  };
+
+  const tagsResolved = useMemo(() => {
+    return (
+      card?.tagIds
+        .map((id) => {
+          const t = tagsIndex.get(id);
+          if (!t) return null;
+          const cat = categoriesById.get(t.categoryId);
+          return {
+            tag: t,
+            colorHex: cat?.colorHex ?? '#989aa4',
+            categorySort: cat?.sortIndex ?? Number.MAX_SAFE_INTEGER
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null) ?? []
+    );
+  }, [card?.tagIds, tagsIndex, categoriesById]);
+
+  const tagsSorted = useMemo(() => {
+    return [...tagsResolved].sort((a, b) => {
+      if (a.categorySort !== b.categorySort) return a.categorySort - b.categorySort;
+      return a.tag.name.localeCompare(b.tag.name, 'ru');
+    });
+  }, [tagsResolved]);
+
+  const collectionsResolved = useMemo(() => {
+    return (
+      card?.collectionIds
+        .map((id) => ({
+          id,
+          name: collectionsById.get(id) ?? id,
+          count: collCounts[id] ?? 0
+        }))
+        .filter((x) => x.name) ?? []
+    );
+  }, [card?.collectionIds, collectionsById, collCounts]);
+
+  const handleSoftDelete = async () => {
+    if (!card || busy) return;
+    setBusy(true);
+    try {
+      await deleteCard(card.id);
+      onDeleted();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!card || busy) return;
+    setBusy(true);
+    try {
+      await restoreCard(card.id);
+      onDeleted();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!card || busy) return;
+    setBusy(true);
+    try {
+      await permanentDeleteCard(card.id);
+      onDeleted();
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyId = async () => {
+    if (!card) return;
+    try {
+      await navigator.clipboard.writeText(card.id);
+      setCopyAlertVisible(true);
+      if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
+      copyAlertTimerRef.current = window.setTimeout(() => {
+        setCopyAlertVisible(false);
+        copyAlertTimerRef.current = null;
+      }, 2400);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
+  const openInFolder = () => {
+    if (!card?.originalRelativePath || !window.arc) return;
+    void window.arc.showItemInFolder(card.originalRelativePath);
+  };
+
+  const openDraftLink = () => {
+    const url = normalizeExternalUrl(draftLink);
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const removeTag = async (tagId: string) => {
+    if (!card) return;
+    const next = card.tagIds.filter((id) => id !== tagId);
+    await updateCardPayload(card.id, { tagIds: next });
+    await reloadCard(card.id);
+  };
+
+  const removeCollection = async (collectionId: string) => {
+    if (!card) return;
+    const next = card.collectionIds.filter((id) => id !== collectionId);
+    await updateCardPayload(card.id, { collectionIds: next });
+    setCollectionPreviews(await getCollectionPreviewSlices(3));
+    setCollCounts(await getCollectionCardCounts());
+    await reloadCard(card.id);
+  };
+
+  const applyTags = async (tagIds: string[]) => {
+    if (!card) return;
+    await updateCardPayload(card.id, { tagIds });
+    await reloadCard(card.id);
+  };
+
+  const applyCollections = async (collectionIds: string[]) => {
+    if (!card) return;
+    await updateCardPayload(card.id, { collectionIds });
+    setCollectionPreviews(await getCollectionPreviewSlices(3));
+    setCollCounts(await getCollectionCardCounts());
+    await reloadCard(card.id);
+  };
+
+  const copyPaletteHex = async (hex: string) => {
+    try {
+      await navigator.clipboard.writeText(hex);
+      setCopyAlertVisible(true);
+      if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
+      copyAlertTimerRef.current = window.setTimeout(() => {
+        setCopyAlertVisible(false);
+        copyAlertTimerRef.current = null;
+      }, 2400);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
+  const videoTier =
+    card?.type === 'video' && card.originalRelativePath
+      ? getVideoPlaybackTierFromPath(card.originalRelativePath)
+      : null;
+
+  const bookmarkIconClass = isBookmarkHovered
+    ? inMoodboard
+      ? 'arc-icon-bookmark-minus'
+      : 'arc-icon-bookmark-plus'
+    : 'arc-icon-bookmark';
+
+  const mainRowStyle = {
+    ['--arc-card-detail-settings-w']: `${settingsWidth}px`
+  } as CSSProperties;
+
+  const addRowButton = (label: string, onClick: () => void) => (
+    <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
+      <button type="button" className="btn btn-outline btn-ds arc-card-detail-add-row" onClick={onClick}>
+        <span className="btn-ds__value">{label}</span>
+        <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+      </button>
+    </div>
+  );
+
+  const overlay = (
+    <>
+      <div className="arc-card-detail-backdrop" aria-hidden="true" />
+      <div
+        ref={hostRef}
+        className="arc-card-detail-overlay arc-ui-kit-scope"
+        data-elevation="sunken"
+        data-input-size="l"
+        data-btn-size="l"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="arcCardDetailHeading"
+      >
+      <h2 id="arcCardDetailHeading" className="sr-only">
+        Карточка
+      </h2>
+
+      <div className="arc-card-detail-scroll">
+        <div
+          className={`arc-card-detail-shell${similar.length > 0 ? ' arc-card-detail-shell--has-similar' : ''}`}
+        >
+        <div className="arc-card-detail-main-row" style={mainRowStyle}>
+          <div className="arc-card-detail-preview panel elevation-sunken">
+            {card?.type === 'video' && videoTier && videoTier !== 'html5' ? (
+              <p className="text-s arc-card-detail-video-note">{videoPlaybackDescription(videoTier)}</p>
+            ) : null}
+            {src && card?.type === 'video' ? (
+              <div className="arc-card-detail-media-fit">
+                <video
+                  ref={inspectVideoRef}
+                  className="arc-card-detail-media"
+                  src={src}
+                  controls
+                  preload="metadata"
+                  autoPlay
+                  muted
+                  playsInline
+                  onLoadedData={() => {
+                    void inspectVideoRef.current?.play().catch(() => undefined);
+                  }}
+                />
+              </div>
+            ) : src ? (
+              <div className="arc-card-detail-media-fit">
+                <img className="arc-card-detail-media" src={src} alt="" />
+              </div>
+            ) : (
+              <div
+                className="arc-gallery-skeleton arc-card-detail-skeleton"
+                style={card ? gallerySkeletonStyle(card) : undefined}
+                aria-hidden
+              />
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="arc-card-detail-splitter"
+            aria-label="Изменить ширину панелей"
+            onPointerDown={onSplitPointerDown}
+            onPointerMove={onSplitPointerMove}
+            onPointerUp={finishSplitDrag}
+            onPointerCancel={finishSplitDrag}
+            onLostPointerCapture={finishSplitDrag}
+          />
+
+          <aside className="arc-card-detail-settings panel elevation-sunken">
+            <div className="arc-card-detail-options">
+              <div className="arc-card-detail-options-left">
+                <div className="arc-card-detail-segmented" role="group" aria-label="Действия с карточкой">
+                  {!inTrash ? (
+                    <Tooltip content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'} position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
+                        aria-label={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
+                        onMouseEnter={() => setIsBookmarkHovered(true)}
+                        onMouseLeave={() => setIsBookmarkHovered(false)}
+                        onFocus={() => setIsBookmarkHovered(true)}
+                        onBlur={() => setIsBookmarkHovered(false)}
+                        onClick={async () => {
+                          if (!card) return;
+                          if (!inMoodboard) {
+                            setInMoodboard(await toggleCardInMoodboard(card.id));
+                            return;
+                          }
+                          const onBoard = await isCardOnBoard(card.id);
+                          if (moodboardRemoveConfirm === 'moodboard') {
+                            setRemoveMoodboardConfirm({ onBoard });
+                            return;
+                          }
+                          if (onBoard) {
+                            setRemoveMoodboardConfirm({ onBoard: true });
+                            return;
+                          }
+                          await removeCardFromMoodboard(card.id);
+                          setInMoodboard(false);
+                        }}
+                        disabled={!card}
+                      >
+                        <span className={`btn-icon-only__glyph ${bookmarkIconClass}`} aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  ) : null}
+                  <Tooltip content="Открыть папку с файлом" position="top">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
+                      onClick={() => openInFolder()}
+                      disabled={!card?.originalRelativePath || !window.arc}
+                      aria-label="Открыть папку с файлом"
+                    >
+                      <span className="btn-icon-only__glyph arc-icon-folder-open" aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Информация о файле" position="top">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
+                      onClick={() => setInfoOpen(true)}
+                      disabled={!card}
+                      aria-label="Информация о файле"
+                    >
+                      <span className="btn-icon-only__glyph arc-icon-pie-chart" aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="Скопировать ID" position="top">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-ds arc-card-detail-id-pill arc-card-detail-segmented-btn"
+                      onClick={() => void copyId()}
+                      disabled={!card}
+                      aria-label="Скопировать ID"
+                    >
+                      <span className="arc-card-detail-id-text">{card?.id ?? ''}</span>
+                      <span className="btn-ds__icon arc-icon-copy" aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                </div>
+                {inTrash ? (
+                  <>
+                    <Tooltip content={busy ? 'Восстановление…' : 'Восстановить'} position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds"
+                        aria-label={busy ? 'Восстановление…' : 'Восстановить'}
+                        disabled={busy}
+                        onClick={() => void handleRestore()}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-undo" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Удалить навсегда" position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds"
+                        aria-label="Удалить навсегда"
+                        disabled={busy}
+                        onClick={() => setConfirmPermanentDelete(true)}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  </>
+                ) : (
+                  <Tooltip content="Удалить карточку" position="top">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-icon-only btn-ds"
+                      aria-label="Удалить карточку"
+                      disabled={!card}
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                )}
+              </div>
+
+              <Tooltip content="Закрыть" position="top">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-icon-only btn-ds arc-card-detail-close-btn"
+                  aria-label="Закрыть"
+                  onClick={onClose}
+                >
+                  <span className="btn-icon-only__glyph arc-icon-close" aria-hidden="true" />
+                </button>
+              </Tooltip>
+            </div>
+
+            <div ref={settingsScrollRef} className="arc-card-detail-settings-scroll">
+              <CollapsibleSection title="Описание">
+                <div
+                  className="arc-card-detail-description-fields arc-ui-kit-scope"
+                  data-input-size="m"
+                  data-btn-size="m"
+                >
+                  {palette.length > 0 ? (
+                    <div className="arc-card-detail-palette">
+                      {palette.map((swatch) => (
+                        <Tooltip
+                          key={swatch.hex}
+                          content={`${swatch.pct}%`}
+                          variant="rich"
+                          delay={1000}
+                          position="top"
+                        >
+                          <button
+                            type="button"
+                            className="arc-card-detail-palette-swatch"
+                            style={{ backgroundColor: swatch.hex }}
+                            aria-label={`${swatch.hex}, ${swatch.pct} процентов`}
+                            onClick={() => void copyPaletteHex(swatch.hex)}
+                          />
+                        </Tooltip>
+                      ))}
+                    </div>
+                  ) : null}
+                  <label className="field input-live">
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="Имя"
+                      value={draftName}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setDraftName(v);
+                        scheduleNameSave(v);
+                      }}
+                    />
+                  </label>
+                  <div className="arc-card-detail-link-row">
+                    <label className="field input-live arc-card-detail-link-field">
+                      <input
+                        className="input"
+                        type="url"
+                        placeholder="Ссылка"
+                        value={draftLink}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDraftLink(v);
+                          scheduleLinkSave(v);
+                        }}
+                      />
+                    </label>
+                    <Tooltip content="Открыть ссылку" position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds"
+                        aria-label="Открыть ссылку"
+                        disabled={!normalizeExternalUrl(draftLink)}
+                        onClick={openDraftLink}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-arrow-up-right" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <label className="field input-live">
+                    <textarea
+                      className="input textarea"
+                      placeholder="Описание"
+                      rows={4}
+                      value={description}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setDescription(v);
+                        scheduleDescriptionSave(v);
+                      }}
+                    />
+                  </label>
+                </div>
+              </CollapsibleSection>
+
+              <div className="arc-card-detail-section-sep" role="separator" />
+
+              <CollapsibleSection
+                title="Метки"
+                count={tagsSorted.length}
+                footer={addRowButton('Добавить метку', () => setTagsModalOpen(true))}
+              >
+                {tagsSorted.length > 0 ? (
+                  <div className="arc-card-detail-tags">
+                    {tagsSorted.map(({ tag, colorHex }) => (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        className="arc-card-detail-tag-chip"
+                        onClick={() => void removeTag(tag.id)}
+                        aria-label={`Снять метку «${tag.name}»`}
+                      >
+                        <span className="arc-card-detail-tag-dot" style={{ background: colorHex }} aria-hidden="true" />
+                        <span className="arc-card-detail-tag-name">{tag.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-s arc-card-detail-empty">Меток пока нет</p>
+                )}
+              </CollapsibleSection>
+
+              <div className="arc-card-detail-section-sep" role="separator" />
+
+              <CollapsibleSection
+                title="Коллекции"
+                count={collectionsResolved.length}
+                footer={addRowButton('Добавить в коллекцию', () => setCollectionsModalOpen(true))}
+              >
+                {collectionsResolved.length > 0 ? (
+                  <ul className="arc-card-detail-collections">
+                    {collectionsResolved.map((col) => (
+                      <li key={col.id} className="arc-card-detail-collection-row panel elevation-sunken">
+                        <CardDetailCollectionStrip
+                          collectionId={col.id}
+                          previews={collectionPreviews[col.id] ?? []}
+                        />
+                        <div className="arc-card-detail-collection-main">
+                          <p className="text-m arc-card-detail-collection-name">{col.name}</p>
+                          <div className="arc-card-detail-collection-meta">
+                            <span className="text-s">{col.count} карточек</span>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-ds btn-s arc-card-detail-collection-remove"
+                              onClick={() => void removeCollection(col.id)}
+                            >
+                              <span className="btn-ds__value">Снять</span>
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-s arc-card-detail-empty">Коллекций пока нет</p>
+                )}
+              </CollapsibleSection>
+            </div>
+          </aside>
+        </div>
+
+        {similar.length > 0 ? (
+          <section className="arc-card-detail-similar">
+            <div className="arc-card-detail-similar-head">
+              <p className="text-l">Похожие изображения</p>
+              <span className="text-s arc-card-detail-section-count">{similar.length}</span>
+            </div>
+            <div className="arc-card-similar-masonry">
+              {similar.map((sc) => (
+                <CardDetailSimilarThumb
+                  key={sc.id}
+                  card={sc}
+                  src={similarSrcMap[sc.id]}
+                  onPick={() => onOpenCard(sc.id)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+        </div>
+      </div>
+
+      {confirmDelete ? (
+        <div
+          className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
+          aria-hidden="false"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setConfirmDelete(false);
+          }}
+        >
+          <section
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="s"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcCardDeleteTitle"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="arc-modal__header arc-modal__header--title">
+              <h3 className="arc-modal__title" id="arcCardDeleteTitle">
+                Удалить карточку?
+              </h3>
+              <button
+                type="button"
+                className="arc-modal__close"
+                aria-label="Закрыть"
+                onClick={() => setConfirmDelete(false)}
+              >
+                <span className="tab-icon arc-icon-close" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="arc-modal__body">
+              <div className="arc-modal__slot">
+                <p className="arc-modal__slot-text">Карточка переместится в корзину. Её можно будет восстановить позже.</p>
+              </div>
+            </div>
+            <footer className="arc-modal__footer arc-modal__footer--actions-3">
+              <button type="button" className="btn btn-danger btn-ds btn-s" onClick={() => void handleSoftDelete()} disabled={busy}>
+                <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить'}</span>
+              </button>
+              <div className="arc-modal__footer-right">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-ds btn-s"
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={busy}
+                >
+                  <span className="btn-ds__value">Отмена</span>
+                </button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
+      {confirmPermanentDelete ? (
+        <div
+          className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
+          aria-hidden="false"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setConfirmPermanentDelete(false);
+          }}
+        >
+          <section
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="s"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcCardPermanentDeleteTitle"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="arc-modal__header arc-modal__header--title">
+              <h3 className="arc-modal__title" id="arcCardPermanentDeleteTitle">
+                Удалить навсегда?
+              </h3>
+              <button
+                type="button"
+                className="arc-modal__close"
+                aria-label="Закрыть"
+                onClick={() => setConfirmPermanentDelete(false)}
+              >
+                <span className="tab-icon arc-icon-close" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="arc-modal__body">
+              <div className="arc-modal__slot">
+                <p className="arc-modal__slot-text">
+                  Карточка и все файлы будут удалены без возможности восстановления.
+                </p>
+              </div>
+            </div>
+            <footer className="arc-modal__footer arc-modal__footer--actions-3">
+              <button
+                type="button"
+                className="btn btn-danger btn-ds btn-s"
+                onClick={() => void handlePermanentDelete()}
+                disabled={busy}
+              >
+                <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить навсегда'}</span>
+              </button>
+              <div className="arc-modal__footer-right">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-ds btn-s"
+                  onClick={() => setConfirmPermanentDelete(false)}
+                  disabled={busy}
+                >
+                  <span className="btn-ds__value">Отмена</span>
+                </button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
+      {removeMoodboardConfirm && card ? (
+        <ConfirmRemoveFromMoodboardModal
+          hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
+          cardOnBoard={removeMoodboardConfirm.onBoard}
+          onClose={() => setRemoveMoodboardConfirm(null)}
+          onConfirm={async () => {
+            await removeCardFromMoodboard(card.id);
+            setInMoodboard(false);
+          }}
+        />
+      ) : null}
+
+      {infoOpen && card ? <CardInfoModal card={card} onClose={() => setInfoOpen(false)} /> : null}
+
+      {tagsModalOpen && card ? (
+        <CardDetailTagsModal
+          selectedTagIds={card.tagIds}
+          onClose={() => setTagsModalOpen(false)}
+          onApply={(tagIds) => void applyTags(tagIds)}
+        />
+      ) : null}
+
+      {collectionsModalOpen && card ? (
+        <CardDetailCollectionsModal
+          selectedCollectionIds={card.collectionIds}
+          onClose={() => setCollectionsModalOpen(false)}
+          onApply={(collectionIds) => void applyCollections(collectionIds)}
+        />
+      ) : null}
+
+      {stubAlert ? (
+        <DemoAlert message={stubAlert} variant="info" onClose={() => setStubAlert(null)} />
+      ) : null}
+
+      {copyAlertVisible ? (
+        <div className="demo-alert-host arc-card-detail-alert-host" aria-live="polite" aria-atomic="true">
+          <div className="alert alert-success" role="status">
+            <p className="demo-alert__message">ID карточки скопирован</p>
+            <button
+              type="button"
+              className="demo-alert__close"
+              aria-label="Закрыть уведомление"
+              onClick={() => setCopyAlertVisible(false)}
+            >
+              <svg className="demo-alert__close-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 6L18 18" strokeWidth="2" strokeLinecap="round" />
+                <path d="M18 6L6 18" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      ) : null}
+      </div>
+    </>
+  );
+
+  return createPortal(overlay, document.body);
+}

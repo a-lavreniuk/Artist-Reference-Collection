@@ -21,6 +21,8 @@ import {
 
   getAllCategories,
 
+  getCardById,
+
   getMoodboardCardIds,
 
   getTagsByCategory,
@@ -90,6 +92,7 @@ export default function GalleryPage() {
   const [ready, setReady] = useState(false);
 
   const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const dismissedCardFilterRef = useRef<string | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -132,6 +135,25 @@ export default function GalleryPage() {
     }
 
   }, [location.pathname, location.search, location.state, navigate]);
+
+  useEffect(() => {
+    const openId = (location.state as { openCardId?: string } | null)?.openCardId;
+    if (!openId) return;
+    setOpenCardId(openId);
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
+  }, [location.state, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    dismissedCardFilterRef.current = null;
+  }, [feedQuery.cardIdExact]);
+
+  useEffect(() => {
+    if (!ready || !feedQuery.cardIdExact) return;
+    if (dismissedCardFilterRef.current === feedQuery.cardIdExact) return;
+    void getCardById(feedQuery.cardIdExact).then((c) => {
+      if (c) setOpenCardId(c.id);
+    });
+  }, [feedQuery.cardIdExact, ready]);
 
 
 
@@ -448,7 +470,10 @@ export default function GalleryPage() {
 
           tagsIndex={tagsIndex}
 
-          onClose={() => setOpenCardId(null)}
+          onClose={() => {
+            if (feedQuery.cardIdExact) dismissedCardFilterRef.current = feedQuery.cardIdExact;
+            setOpenCardId(null);
+          }}
 
           onDeleted={() => void reloadFromStart()}
 

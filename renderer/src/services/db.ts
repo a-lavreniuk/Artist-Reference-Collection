@@ -435,10 +435,14 @@ function normalizeCardRecord(item: unknown): CardRecord | null {
   const format = typeof r.format === 'string' && r.format.trim() ? r.format.trim().toLowerCase() : undefined;
   const dateModified =
     typeof r.dateModified === 'string' && r.dateModified.trim() ? r.dateModified : undefined;
+  const fileCreatedAt =
+    typeof r.fileCreatedAt === 'string' && r.fileCreatedAt.trim() ? r.fileCreatedAt : undefined;
   const width = typeof r.width === 'number' && Number.isFinite(r.width) ? r.width : undefined;
   const height = typeof r.height === 'number' && Number.isFinite(r.height) ? r.height : undefined;
   const description =
     typeof r.description === 'string' && r.description.trim() ? String(r.description).trim() : undefined;
+  const name = typeof r.name === 'string' && r.name.trim() ? String(r.name).trim() : undefined;
+  const linkUrl = typeof r.linkUrl === 'string' && r.linkUrl.trim() ? String(r.linkUrl).trim() : undefined;
   return {
     id,
     type,
@@ -453,9 +457,12 @@ function normalizeCardRecord(item: unknown): CardRecord | null {
     collectionIds,
     ...(format ? { format } : {}),
     ...(dateModified ? { dateModified } : {}),
+    ...(fileCreatedAt ? { fileCreatedAt } : {}),
     ...(width !== undefined ? { width } : {}),
     ...(height !== undefined ? { height } : {}),
     ...(description ? { description } : {}),
+    ...(name ? { name } : {}),
+    ...(linkUrl ? { linkUrl } : {}),
     ...(fileSize !== undefined ? { fileSize } : {}),
     ...(fileSizeMb !== undefined ? { fileSizeMb } : {})
   };
@@ -1251,7 +1258,7 @@ export async function insertImportedCards(newCards: CardRecord[]): Promise<void>
 
 export async function updateCardPayload(
   cardId: string,
-  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string }
+  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
 ): Promise<void> {
   const b = await resolveBackend();
   if (b === 'file') {
@@ -1275,6 +1282,16 @@ export async function updateCardPayload(
         const trimmed = patch.description.trim();
         if (trimmed) updated.description = trimmed;
         else delete updated.description;
+      }
+      if (patch.name !== undefined) {
+        const trimmed = patch.name.trim();
+        if (trimmed) updated.name = trimmed;
+        else delete updated.name;
+      }
+      if (patch.linkUrl !== undefined) {
+        const trimmed = patch.linkUrl.trim();
+        if (trimmed) updated.linkUrl = trimmed;
+        else delete updated.linkUrl;
       }
       return updated;
     });

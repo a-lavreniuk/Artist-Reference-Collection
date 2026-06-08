@@ -4,6 +4,8 @@ export type CardRecord = {
   id: string;
   type: 'image' | 'video';
   addedAt: string;
+  /** ISO-время создания исходного файла на диске (при импорте). */
+  fileCreatedAt?: string;
   dateModified?: string;
   /** Относительно корня библиотеки, с прямыми слэшами */
   originalRelativePath: string;
@@ -20,6 +22,10 @@ export type CardRecord = {
   tagIds: string[];
   collectionIds: string[];
   description?: string;
+  /** Пользовательское имя карточки (не имя файла). */
+  name?: string;
+  /** Внешняя ссылка, связанная с карточкой. */
+  linkUrl?: string;
   fileSize?: number;
   fileSizeMb?: number;
 };

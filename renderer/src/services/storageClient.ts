@@ -32,7 +32,7 @@ export async function storageGetCard(cardId: string): Promise<CardRecord | null>
 
 export async function storageUpdateCard(
   cardId: string,
-  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string }
+  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
 ): Promise<void> {
   return arc().storageUpdateCard(cardId, patch);
 }

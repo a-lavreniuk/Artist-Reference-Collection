@@ -2,10 +2,6 @@ import { BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { readdir, stat, unlink } from 'fs/promises';
 import {
-  CARDS_DIR,
-  LIBRARY_META_DIR
-} from './libraryFilenames';
-import {
   addSkippedDuplicatePair,
   countCards,
   deleteCardFromStorage,
@@ -39,6 +35,11 @@ import {
   upsertCollection,
   upsertTag
 } from './storage/libraryStorage';
+import { readCardJson } from './storage/cardFolder';
+import {
+  CARDS_DIR,
+  LIBRARY_META_DIR
+} from './libraryFilenames';
 import type { ArcMoodboardV1, ArcSystemV1, CategoryRow, CollectionRow, ListCardsParams, TagRow } from './storage/types';
 
 let storageIpcRegistered = false;
@@ -186,14 +187,26 @@ export function registerStorageIpc(
     if (!root || typeof cardId !== 'string') return null;
     await ensureLibraryReady(root);
     const row = getCardByIdFromDb(root, cardId);
-    return row ? cardIndexToRenderer(rowToCardRecord(row)) : null;
+    if (!row) return null;
+    const base = cardIndexToRenderer(rowToCardRecord(row));
+    const cardJson = await readCardJson(root, cardId);
+    if (!cardJson) return base;
+    return {
+      ...base,
+      ...(cardJson.fileCreatedAt ? { fileCreatedAt: cardJson.fileCreatedAt } : {}),
+      ...(cardJson.name ? { name: cardJson.name } : {}),
+      ...(cardJson.linkUrl ? { linkUrl: cardJson.linkUrl } : {})
+    };
   });
 
   ipcMain.handle('arc:storage-update-card', async (_e, payload: unknown) => {
     assertNotMaintenance();
     const root = await readLibraryRoot();
     if (!root) throw new Error('Библиотека не выбрана');
-    const p = payload as { cardId: string; patch: { tagIds?: string[]; collectionIds?: string[]; description?: string } };
+    const p = payload as {
+      cardId: string;
+      patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string };
+    };
     await updateCardInStorage(root, p.cardId, p.patch);
   });
 

@@ -292,6 +292,9 @@ export async function importMediaFile(
 
   const id = crypto.randomUUID();
   const addedAt = new Date().toISOString();
+  const birthMs = st.birthtimeMs ?? st.birthtime.getTime();
+  const fileCreatedAt =
+    Number.isFinite(birthMs) && birthMs > 0 ? new Date(birthMs).toISOString() : st.mtime.toISOString();
   const cardId = id;
   const dir = cardDirAbs(root, cardId);
   await mkdir(dir, { recursive: true });
@@ -341,6 +344,7 @@ export async function importMediaFile(
       id: cardId,
       type,
       addedAt,
+      fileCreatedAt,
       originalFileName: baseName,
       format: ext.slice(1).toLowerCase(),
       width,
@@ -481,7 +485,7 @@ export function countTrashedCards(libraryRoot: string): number {
 export async function updateCardInStorage(
   libraryRoot: string,
   cardId: string,
-  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string }
+  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
 ): Promise<void> {
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
@@ -495,18 +499,35 @@ export async function updateCardInStorage(
     if (trimmed) cardJson.description = trimmed;
     else delete cardJson.description;
   }
+  if (patch.name !== undefined) {
+    const trimmed = patch.name.trim();
+    if (trimmed) cardJson.name = trimmed;
+    else delete cardJson.name;
+  }
+  if (patch.linkUrl !== undefined) {
+    const trimmed = patch.linkUrl.trim();
+    if (trimmed) cardJson.linkUrl = trimmed;
+    else delete cardJson.linkUrl;
+  }
   cardJson.dateModified = new Date().toISOString();
   await writeCardJson(root, cardJson);
 
+  const sets: string[] = ['date_modified = ?'];
+  const vals: unknown[] = [cardJson.dateModified];
   if (patch.description !== undefined) {
-    db.prepare('UPDATE cards SET description = ?, date_modified = ? WHERE id = ?').run(
-      cardJson.description ?? null,
-      cardJson.dateModified,
-      cardId
-    );
-  } else {
-    db.prepare('UPDATE cards SET date_modified = ? WHERE id = ?').run(cardJson.dateModified, cardId);
+    sets.push('description = ?');
+    vals.push(cardJson.description ?? null);
   }
+  if (patch.name !== undefined) {
+    sets.push('name = ?');
+    vals.push(cardJson.name ?? null);
+  }
+  if (patch.linkUrl !== undefined) {
+    sets.push('link_url = ?');
+    vals.push(cardJson.linkUrl ?? null);
+  }
+  vals.push(cardId);
+  db.prepare(`UPDATE cards SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
 
   if (patch.tagIds || patch.collectionIds) {
     syncCardRelations(db, cardId, cardJson.tagIds, cardJson.collectionIds);

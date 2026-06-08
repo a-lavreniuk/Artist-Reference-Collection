@@ -57,7 +57,7 @@ declare global {
       storageGetCard: (cardId: string) => Promise<CardRecord | null>;
       storageUpdateCard: (
         cardId: string,
-        patch: { tagIds?: string[]; collectionIds?: string[]; description?: string }
+        patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
       ) => Promise<void>;
       storageInsertCardsMetadata: (
         cards: Array<{

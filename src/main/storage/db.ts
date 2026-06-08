@@ -96,6 +96,12 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'cards', 'deleted_at')) {
     db.exec('ALTER TABLE cards ADD COLUMN deleted_at TEXT');
   }
+  if (!tableHasColumn(db, 'cards', 'name')) {
+    db.exec('ALTER TABLE cards ADD COLUMN name TEXT');
+  }
+  if (!tableHasColumn(db, 'cards', 'link_url')) {
+    db.exec('ALTER TABLE cards ADD COLUMN link_url TEXT');
+  }
   db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
 
   const userVersion = db.pragma('user_version', { simple: true }) as number;
