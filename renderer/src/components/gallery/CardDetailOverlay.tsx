@@ -470,9 +470,11 @@ export default function CardDetailOverlay({
     await reloadCard(card.id);
   };
 
-  const applyTags = async (tagIds: string[]) => {
+  const toggleTagOnCard = async (tagId: string) => {
     if (!card) return;
-    await updateCardPayload(card.id, { tagIds });
+    const has = card.tagIds.includes(tagId);
+    const next = has ? card.tagIds.filter((id) => id !== tagId) : [...card.tagIds, tagId];
+    await updateCardPayload(card.id, { tagIds: next });
     await reloadCard(card.id);
   };
 
@@ -1041,7 +1043,7 @@ export default function CardDetailOverlay({
         <CardDetailTagsModal
           selectedTagIds={card.tagIds}
           onClose={() => setTagsModalOpen(false)}
-          onApply={(tagIds) => void applyTags(tagIds)}
+          onToggleTag={(tagId) => void toggleTagOnCard(tagId)}
         />
       ) : null}
 

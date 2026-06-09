@@ -23,7 +23,7 @@ type EditPayload = {
 };
 
 export type TagSettingsModalState =
-  | { mode: 'create'; categoryId: string }
+  | { mode: 'create'; categoryId: string; initialName?: string }
   | { mode: 'edit'; tag: TagRecord };
 
 type Props = {
@@ -33,6 +33,7 @@ type Props = {
   onCreate: (payload: CreatePayload) => Promise<void>;
   onSave: (payload: EditPayload) => Promise<void>;
   onDelete: (tagId: string) => Promise<void>;
+  hostClassName?: string;
 };
 
 export default function TagSettingsModal({
@@ -41,7 +42,8 @@ export default function TagSettingsModal({
   onClose,
   onCreate,
   onSave,
-  onDelete
+  onDelete,
+  hostClassName
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +53,9 @@ export default function TagSettingsModal({
   const [categoryId, setCategoryId] = useState(() =>
     state.mode === 'create' ? state.categoryId : state.tag.categoryId
   );
-  const [name, setName] = useState(() => (state.mode === 'edit' ? state.tag.name : ''));
+  const [name, setName] = useState(() =>
+    state.mode === 'edit' ? state.tag.name : state.mode === 'create' ? (state.initialName ?? '') : ''
+  );
   const [description, setDescription] = useState(() =>
     state.mode === 'edit' ? (state.tag.description ?? '') : ''
   );
@@ -90,7 +94,7 @@ export default function TagSettingsModal({
   useEffect(() => {
     setTab('main');
     setCategoryId(state.mode === 'create' ? state.categoryId : state.tag.categoryId);
-    setName(state.mode === 'edit' ? state.tag.name : '');
+    setName(state.mode === 'edit' ? state.tag.name : state.mode === 'create' ? (state.initialName ?? '') : '');
     setDescription(state.mode === 'edit' ? (state.tag.description ?? '') : '');
     setTooltipImageDataUrl(state.mode === 'edit' ? state.tag.tooltipImageDataUrl : undefined);
     setImageFileName(state.mode === 'edit' && state.tag.tooltipImageDataUrl ? 'Изображение метки' : '');
@@ -238,7 +242,7 @@ export default function TagSettingsModal({
     <>
       <div
         ref={hostRef}
-        className="arc-modal-host"
+        className={hostClassName ? `arc-modal-host ${hostClassName}` : 'arc-modal-host'}
         aria-hidden="false"
         onClick={(event) => {
           if (event.target === event.currentTarget) {

@@ -846,7 +846,6 @@ body.arc-card-detail-open .arc-app-outlet {
   touch-action: none;
 }
 
-.arc-card-detail-tags-modal,
 .arc-card-detail-collections-modal {
   width: min(560px, calc(100vw - var(--s-4) * 2));
   max-height: min(720px, calc(100vh - var(--s-4) * 4));
@@ -854,7 +853,6 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-direction: column;
 }
 
-.arc-card-detail-tags-modal-body,
 .arc-card-detail-collections-modal-body {
   display: flex;
   flex-direction: column;
@@ -863,18 +861,201 @@ body.arc-card-detail-open .arc-app-outlet {
   overflow: hidden;
 }
 
-.arc-card-detail-tags-modal-scroll {
+.arc-add-tags-picker-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-4);
+  pointer-events: auto;
+}
+
+.arc-add-tags-picker {
+  display: flex;
+  flex-direction: row;
+  width: 690px;
+  height: 400px;
+  max-width: calc(100vw - var(--s-4) * 2);
+  max-height: calc(100vh - var(--s-4) * 2);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.arc-add-tags-picker__sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 223px;
+  width: 223px;
+  min-height: 0;
+  height: 100%;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.arc-add-tags-picker__sidebar.context-menu.panel {
+  width: 100%;
+  padding: 0;
+  overflow-x: visible;
+  border-radius: 0;
+  border: none;
+}
+
+/* Пункты на всю ширину внутри inset контейнера; inner — как в context-menu */
+.arc-add-tags-picker__sidebar .context-menu__item {
+  padding: 0;
+}
+
+.arc-add-tags-picker-nested-modal {
+  z-index: 10070;
+}
+
+.arc-add-tags-picker__sidebar-head {
+  flex: 0 0 auto;
+  padding-top: var(--s-3);
+}
+
+.arc-add-tags-picker__sidebar-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-x: hidden;
+  padding-bottom: var(--s-3);
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.arc-card-detail-tags-modal-scroll::-webkit-scrollbar {
+.arc-add-tags-picker__sidebar-pad {
+  padding: 0 var(--s-3);
+}
+
+.arc-add-tags-picker__sidebar-head .context-menu__sep {
+  margin: var(--s-3) 0 0;
+}
+
+.arc-add-tags-picker__sidebar-scroll::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+.arc-add-tags-picker__sidebar .context-menu__item.is-active .context-menu__item-inner {
+  background: var(--brand-600);
+  color: var(--brand-50);
+}
+
+.arc-add-tags-picker__sidebar .context-menu__item.is-active:hover .context-menu__item-inner {
+  background: var(--brand-600);
+  color: var(--brand-50);
+}
+
+.arc-add-tags-picker__sidebar .context-menu__item.is-active .context-menu__item-label {
+  color: var(--brand-50);
+}
+
+.arc-add-tags-picker__content.panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--panel-border);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.arc-add-tags-picker__content-fixed {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: var(--s-3) 0 0;
+  box-sizing: border-box;
+}
+
+.arc-add-tags-picker__content-inset,
+.arc-add-tags-picker__group-inset {
+  padding: 0 var(--s-3);
+}
+
+.arc-add-tags-picker__search {
+  padding: 0;
+}
+
+.arc-add-tags-picker__sidebar .context-menu__sep,
+.arc-add-tags-picker__content-fixed .context-menu__sep,
+.arc-add-tags-picker__tags-scroll .context-menu__sep {
+  width: 100%;
+  height: 1px;
+  margin: var(--s-3) 0;
+  padding: 0;
+  border: 0;
+  background: var(--panel-border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.arc-add-tags-picker__tags-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0 var(--s-3);
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.arc-add-tags-picker__tags-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.arc-add-tags-picker__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.arc-add-tags-picker__group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.arc-add-tags-picker__group-inset .tags-row {
+  gap: var(--s-2);
+}
+
+.arc-add-tags-picker__group-name {
+  margin: 0;
+  font-size: var(--typo-p-s-size);
+  line-height: var(--typo-p-s-line);
+  font-weight: var(--typo-p-s-weight);
+  color: var(--text-elev-primary);
+}
+
+.arc-add-tags-picker__group-count {
+  margin: 0;
+  font-size: var(--typo-p-s-size);
+  line-height: var(--typo-p-s-line);
+  font-weight: var(--typo-p-s-weight);
+  color: var(--text-elev-secondary);
+}
+
+.arc-add-tags-picker__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+.arc-add-tags-picker__empty-text {
+  margin: 0;
+  color: var(--text-elev-secondary);
 }
 
 .arc-card-detail-collections-modal-chips {
@@ -1097,7 +1278,7 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-card-detail-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-3);
+  gap: var(--s-2);
 }
 
 .arc-card-detail-tag-chip {
