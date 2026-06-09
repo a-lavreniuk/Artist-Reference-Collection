@@ -1289,11 +1289,7 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-card-detail-alert-host {
-  position: fixed;
   z-index: 10070;
-  right: var(--s-4);
-  bottom: var(--s-4);
-  pointer-events: auto;
 }
 
 .arc-card-similar-skeleton {

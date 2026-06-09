@@ -31,7 +31,7 @@ import {
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
-import { mergeCardsSrcMap, peekCardsSrcMap } from './galleryMediaCache';
+import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDetailPreviewUrls } from './galleryMediaCache';
 import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
 import { readGridSize } from '../../layout/gridSizePreference';
 import { extractImagePalette, type PaletteSwatch } from './cardDetailPalette';
@@ -80,6 +80,7 @@ export default function CardDetailOverlay({
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const [card, setCard] = useState<CardRecord | null>(null);
+  const [thumbSrc, setThumbSrc] = useState<string | null>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [categoriesById, setCategoriesById] = useState<Map<string, CategoryRecord>>(new Map());
   const [collectionsById, setCollectionsById] = useState<Map<string, string>>(new Map());
@@ -151,45 +152,63 @@ export default function CardDetailOverlay({
     collectionsModalOpen,
     palette,
     settingsWidth,
+    thumbSrc,
     draftName,
     draftLink,
     description
   ]);
 
   useEffect(() => {
+    let cancelled = false;
     setCard(null);
+    setThumbSrc(null);
     setSrc(null);
     void (async () => {
-      const cats = await getAllCategories();
-      const cm = new Map<string, CategoryRecord>();
-      for (const c of cats) cm.set(c.id, c);
-      setCategoriesById(cm);
-
-      const cols = await getAllCollections();
-      const colm = new Map<string, string>();
-      for (const c of cols) colm.set(c.id, c.name);
-      setCollectionsById(colm);
-
-      setCollCounts(await getCollectionCardCounts());
-      setCollectionPreviews(await getCollectionPreviewSlices(3));
-
       const c = await reloadCard(cardId);
+      if (cancelled) return;
 
       if (c && window.arc) {
-        const rel = c.originalRelativePath || c.thumbRelativePath;
-        if (rel && rel !== 'legacy') {
-          setSrc(await window.arc.toFileUrl(rel));
-        } else {
-          setSrc(null);
+        let lastThumbHref: string | null = null;
+        const gridSize = readGridSize();
+        const fullHref = await resolveCardDetailPreviewUrls(c, gridSize, (thumbHref) => {
+          lastThumbHref = thumbHref;
+          if (!cancelled) setThumbSrc(thumbHref);
+        });
+        if (cancelled) return;
+        if (fullHref && c.type === 'image') {
+          await preloadDecodedImages([fullHref], 1);
         }
-      } else {
+        if (!cancelled) {
+          setSrc(fullHref);
+          if (fullHref && fullHref === lastThumbHref) setThumbSrc(null);
+        }
+      } else if (!cancelled) {
+        setThumbSrc(null);
         setSrc(null);
       }
 
-      setSimilar(await listSimilarCards(cardId, 15));
-      const moodboardIds = await getMoodboardCardIds();
-      setInMoodboard(moodboardIds.includes(cardId));
+      const cats = await getAllCategories();
+      const cm = new Map<string, CategoryRecord>();
+      for (const cat of cats) cm.set(cat.id, cat);
+      if (!cancelled) setCategoriesById(cm);
+
+      const cols = await getAllCollections();
+      const colm = new Map<string, string>();
+      for (const col of cols) colm.set(col.id, col.name);
+      if (!cancelled) setCollectionsById(colm);
+
+      if (!cancelled) setCollCounts(await getCollectionCardCounts());
+      if (!cancelled) setCollectionPreviews(await getCollectionPreviewSlices(3));
+
+      if (!cancelled) setSimilar(await listSimilarCards(cardId, 15));
+      if (!cancelled) {
+        const moodboardIds = await getMoodboardCardIds();
+        setInMoodboard(moodboardIds.includes(cardId));
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [cardId, reloadCard]);
 
   useEffect(() => {
@@ -530,6 +549,7 @@ export default function CardDetailOverlay({
                   ref={inspectVideoRef}
                   className="arc-card-detail-media"
                   src={src}
+                  poster={thumbSrc && thumbSrc !== src ? thumbSrc : undefined}
                   controls
                   preload="metadata"
                   autoPlay
@@ -540,9 +560,9 @@ export default function CardDetailOverlay({
                   }}
                 />
               </div>
-            ) : src ? (
+            ) : src || thumbSrc ? (
               <div className="arc-card-detail-media-fit">
-                <img className="arc-card-detail-media" src={src} alt="" />
+                <img className="arc-card-detail-media" src={src ?? thumbSrc ?? ''} alt="" />
               </div>
             ) : (
               <div
@@ -1033,33 +1053,25 @@ export default function CardDetailOverlay({
         />
       ) : null}
 
+      </div>
+
       {actionAlert ? (
         <DemoAlert
           message={actionAlert.message}
           variant={actionAlert.variant}
+          hostClassName="arc-card-detail-alert-host"
           onClose={() => setActionAlert(null)}
         />
       ) : null}
 
       {copyAlertMessage ? (
-        <div className="demo-alert-host arc-card-detail-alert-host" aria-live="polite" aria-atomic="true">
-          <div className="alert alert-success" role="status">
-            <p className="demo-alert__message">{copyAlertMessage}</p>
-            <button
-              type="button"
-              className="demo-alert__close"
-              aria-label="Закрыть уведомление"
-              onClick={() => setCopyAlertMessage(null)}
-            >
-              <svg className="demo-alert__close-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 6L18 18" strokeWidth="2" strokeLinecap="round" />
-                <path d="M18 6L6 18" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <DemoAlert
+          message={copyAlertMessage}
+          variant="success"
+          hostClassName="arc-card-detail-alert-host"
+          onClose={() => setCopyAlertMessage(null)}
+        />
       ) : null}
-      </div>
     </>
   );
 

@@ -25,6 +25,35 @@ export function peekMediaUrl(rel: string): string | null {
   return urlByRel.get(rel) ?? null;
 }
 
+export function cardOriginalRel(card: CardRecord): string | null {
+  const rel = card.originalRelativePath || card.thumbRelativePath;
+  if (!rel || rel === 'legacy') return null;
+  return rel;
+}
+
+/** Thumb из кэша сетки, затем полный файл (оригинал). */
+export async function resolveCardDetailPreviewUrls(
+  card: CardRecord,
+  gridSize: GridSize,
+  onThumb: (url: string) => void
+): Promise<string | null> {
+  const thumbRel = cardThumbRel(card, gridSize);
+  const originalRel = cardOriginalRel(card);
+
+  if (thumbRel) {
+    const peeked = peekMediaUrl(thumbRel);
+    if (peeked) onThumb(peeked);
+    else {
+      const thumbHref = await resolveMediaUrl(thumbRel);
+      if (thumbHref) onThumb(thumbHref);
+    }
+  }
+
+  if (!originalRel) return null;
+  if (originalRel === thumbRel) return peekMediaUrl(originalRel) ?? resolveMediaUrl(originalRel);
+  return resolveMediaUrl(originalRel);
+}
+
 export async function resolveMediaUrl(rel: string): Promise<string | null> {
   if (!rel || rel === 'legacy') return null;
   const cached = urlByRel.get(rel);

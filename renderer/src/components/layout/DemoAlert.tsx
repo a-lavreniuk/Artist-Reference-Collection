@@ -15,6 +15,8 @@ type Props = {
    * Автоскрытие, мс (0 — не скрывать). По умолчанию как в UI-kit: {@link ARC_UI_KIT_ALERT_AUTO_DISMISS_MS}.
    */
   autoDismissMs?: number;
+  /** Доп. класс на хост (например, z-index поверх вложенных модалок). */
+  hostClassName?: string;
 };
 
 /**
@@ -24,7 +26,8 @@ export default function DemoAlert({
   message,
   variant = 'info',
   onClose,
-  autoDismissMs = ARC_UI_KIT_ALERT_AUTO_DISMISS_MS
+  autoDismissMs = ARC_UI_KIT_ALERT_AUTO_DISMISS_MS,
+  hostClassName
 }: Props) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -44,7 +47,11 @@ export default function DemoAlert({
   }, [onClose]);
 
   return (
-    <div className="demo-alert-host" aria-live="polite" aria-atomic="true">
+    <div
+      className={hostClassName ? `demo-alert-host ${hostClassName}` : 'demo-alert-host'}
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <div className={`alert alert-${variant}`} role="status">
         <p className="demo-alert__message">{message}</p>
         <button type="button" className="demo-alert__close" aria-label="Закрыть уведомление" onClick={onClose}>
