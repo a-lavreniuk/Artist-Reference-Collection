@@ -219,6 +219,7 @@
   --arc-modal-shadow: 0 10px 32px 0 rgba(0, 0, 0, 0.32), 0 3px 16px 0 rgba(0, 0, 0, 0.16);
 
   /* Radius */
+  --radius-xs: 6px;
   --radius-s: 8px;
   --radius-m: 12px;
   --radius-l: 16px;

@@ -1,31 +1,31 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
-import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { peekCardsSrcMap, resolveCardsSrcMap } from './galleryMediaCache';
-import { gallerySkeletonStyle } from './gallerySkeleton';
 
 type Props = {
   collectionId: string;
   previews: CardRecord[];
 };
 
+const STACK_LAYERS = [
+  { key: 'top', zIndex: 3, overlap: true },
+  { key: 'mid', zIndex: 2, overlap: true, overlay: 'mid' as const },
+  { key: 'back', zIndex: 1, overlap: false, overlay: 'back' as const }
+] as const;
+
 export default function CardDetailCollectionStrip({ collectionId, previews }: Props) {
-  const hostRef = useRef<HTMLDivElement>(null);
   const [srcMap, setSrcMap] = useState<Record<string, string>>({});
 
-  useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [previews, srcMap]);
-
   useEffect(() => {
-    if (previews.length === 0) {
+    const cards = previews.slice(0, 3);
+    if (cards.length === 0) {
       setSrcMap({});
       return;
     }
-    const peek = peekCardsSrcMap(previews, 's');
+    const peek = peekCardsSrcMap(cards, 's');
     setSrcMap(peek);
     let cancelled = false;
-    void resolveCardsSrcMap(previews, 's').then((next) => {
+    void resolveCardsSrcMap(cards, 's').then((next) => {
       if (!cancelled) setSrcMap((prev) => ({ ...prev, ...next }));
     });
     return () => {
@@ -33,27 +33,48 @@ export default function CardDetailCollectionStrip({ collectionId, previews }: Pr
     };
   }, [previews, collectionId]);
 
-  const slots = useMemo(() => previews.slice(0, 3), [previews]);
-
-  if (slots.length === 0) return null;
-
   return (
-    <div ref={hostRef} className="arc-card-detail-collection-strip" aria-hidden="true">
-      {slots.map((card, index) => {
-        const href = srcMap[card.id];
+    <div className="arc-card-detail-collection-stack-box" aria-hidden="true">
+      <div className="arc-card-detail-collection-stack">
+      {STACK_LAYERS.map((layer, index) => {
+        const card = previews[index];
+        const href = card ? srcMap[card.id] : undefined;
+        const hasPhoto = Boolean(card && href);
+
         return (
-          <span key={`${collectionId}-${card.id}-${index}`} className="arc-card-detail-collection-strip-thumb">
-            {href ? (
-              <img className="arc-card-detail-collection-strip-img" src={href} alt="" loading="lazy" decoding="async" />
-            ) : (
+          <div
+            key={`${collectionId}-${layer.key}`}
+            className={`arc-card-detail-collection-stack-layer arc-card-detail-collection-stack-layer--${layer.key}${layer.overlap ? ' arc-card-detail-collection-stack-layer--overlap' : ''}`}
+            style={{ zIndex: layer.zIndex }}
+          >
+            {hasPhoto ? (
+              <>
+                <img
+                  className="arc-card-detail-collection-stack-img"
+                  src={href}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+                {layer.overlay ? (
+                  <span
+                    className={`arc-card-detail-collection-stack-overlay arc-card-detail-collection-stack-overlay--${layer.overlay}`}
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </>
+            ) : card ? (
               <span
-                className="arc-gallery-skeleton arc-card-detail-collection-strip-skeleton"
-                style={gallerySkeletonStyle(card)}
+                className="arc-card-detail-collection-stack-fill"
+                style={card.dominantColorHex ? { backgroundColor: card.dominantColorHex } : undefined}
               />
+            ) : (
+              <span className="arc-card-detail-collection-stack-fill arc-card-detail-collection-stack-fill--empty" />
             )}
-          </span>
+          </div>
         );
       })}
+      </div>
     </div>
   );
 }

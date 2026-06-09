@@ -14,6 +14,7 @@ import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodb
 import type { CardRecord, CategoryRecord, TagRecord } from '../../services/db';
 import {
   getMoodboardCardIds,
+  addCardToMoodboard,
   deleteCard,
   restoreCard,
   permanentDeleteCard,
@@ -41,6 +42,7 @@ import {
   writeCardDetailSettingsWidth
 } from './cardDetailSettingsWidth';
 import { ARC_CARD_DETAIL_CLOSE_EVENT } from './cardDetailEvents';
+import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 
 type Props = {
   cardId: string;
@@ -88,6 +90,7 @@ export default function CardDetailOverlay({
   const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
   const [similar, setSimilar] = useState<CardRecord[]>([]);
   const [similarSrcMap, setSimilarSrcMap] = useState<Record<string, string>>({});
+  const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
   const [inMoodboard, setInMoodboard] = useState(false);
   const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
 
@@ -106,7 +109,9 @@ export default function CardDetailOverlay({
   const [actionAlert, setActionAlert] = useState<{ message: string; variant: DemoAlertVariant } | null>(null);
   const [busy, setBusy] = useState(false);
   const [copyAlertMessage, setCopyAlertMessage] = useState<string | null>(null);
-  const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ onBoard: boolean } | null>(null);
+  const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(
+    null
+  );
 
   const libraryScope = parseLibraryScope(searchParams);
   const inTrash = libraryScope === 'trash';
@@ -203,6 +208,7 @@ export default function CardDetailOverlay({
       if (!cancelled) setSimilar(await listSimilarCards(cardId, 15));
       if (!cancelled) {
         const moodboardIds = await getMoodboardCardIds();
+        setMoodboardCardIds(new Set(moodboardIds));
         setInMoodboard(moodboardIds.includes(cardId));
       }
     })();
@@ -389,7 +395,7 @@ export default function CardDetailOverlay({
           name: collectionsById.get(id) ?? id,
           count: collCounts[id] ?? 0
         }))
-        .filter((x) => x.name) ?? []
+        .filter((x) => x.name && x.count > 0) ?? []
     );
   }, [card?.collectionIds, collectionsById, collCounts]);
 
@@ -509,6 +515,37 @@ export default function CardDetailOverlay({
   const mainRowStyle = {
     ['--arc-card-detail-settings-w']: `${settingsWidth}px`
   } as CSSProperties;
+
+  const handleSimilarFind = async (targetId: string) => {
+    const matches = await listSimilarCards(targetId, 1);
+    if (matches.length === 0) {
+      setActionAlert({ message: 'Нет похожих изображений', variant: 'info' });
+      return;
+    }
+    onOpenCard(matches[0].id);
+  };
+
+  const handleSimilarToggleMoodboard = async (targetId: string) => {
+    const ids = await getMoodboardCardIds();
+    if (!ids.includes(targetId)) {
+      await addCardToMoodboard(targetId);
+      setMoodboardCardIds((prev) => new Set(prev).add(targetId));
+      if (targetId === cardId) setInMoodboard(true);
+      return;
+    }
+    const onBoard = await isCardOnBoard(targetId);
+    if (onBoard) {
+      setRemoveMoodboardConfirm({ cardId: targetId, onBoard: true });
+      return;
+    }
+    await removeCardFromMoodboard(targetId);
+    setMoodboardCardIds((prev) => {
+      const next = new Set(prev);
+      next.delete(targetId);
+      return next;
+    });
+    if (targetId === cardId) setInMoodboard(false);
+  };
 
   const addRowButton = (label: string, onClick: () => void) => (
     <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
@@ -641,21 +678,30 @@ export default function CardDetailOverlay({
                         onClick={async () => {
                           if (!card) return;
                           if (!inMoodboard) {
-                            setInMoodboard(await toggleCardInMoodboard(card.id));
+                            const added = await toggleCardInMoodboard(card.id);
+                            setInMoodboard(added);
+                            if (added) {
+                              setMoodboardCardIds((prev) => new Set(prev).add(card.id));
+                            }
                             setActionAlert({ message: 'Карточка добавлена в мудборд', variant: 'success' });
                             return;
                           }
                           const onBoard = await isCardOnBoard(card.id);
                           if (moodboardRemoveConfirm === 'moodboard') {
-                            setRemoveMoodboardConfirm({ onBoard });
+                            setRemoveMoodboardConfirm({ cardId: card.id, onBoard });
                             return;
                           }
                           if (onBoard) {
-                            setRemoveMoodboardConfirm({ onBoard: true });
+                            setRemoveMoodboardConfirm({ cardId: card.id, onBoard: true });
                             return;
                           }
                           await removeCardFromMoodboard(card.id);
                           setInMoodboard(false);
+                          setMoodboardCardIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(card.id);
+                            return next;
+                          });
                         }}
                         disabled={!card}
                       >
@@ -864,15 +910,15 @@ export default function CardDetailOverlay({
                           previews={collectionPreviews[col.id] ?? []}
                         />
                         <div className="arc-card-detail-collection-main">
-                          <p className="text-m arc-card-detail-collection-name">{col.name}</p>
+                          <p className="text-l arc-card-detail-collection-name">{col.name}</p>
                           <div className="arc-card-detail-collection-meta">
-                            <span className="text-s">{col.count} карточек</span>
+                            <span className="text-s">{formatCardCountLabel(col.count)}</span>
                             <button
                               type="button"
-                              className="btn btn-ghost btn-ds btn-s arc-card-detail-collection-remove"
+                              className="text-s arc-card-detail-collection-remove"
                               onClick={() => void removeCollection(col.id)}
                             >
-                              <span className="btn-ds__value">Снять</span>
+                              Снять
                             </button>
                           </div>
                         </div>
@@ -900,6 +946,9 @@ export default function CardDetailOverlay({
                   card={sc}
                   src={similarSrcMap[sc.id]}
                   onPick={() => onOpenCard(sc.id)}
+                  onFindSimilar={(id) => void handleSimilarFind(id)}
+                  inMoodboard={moodboardCardIds.has(sc.id)}
+                  onToggleMoodboard={inTrash ? undefined : (id) => void handleSimilarToggleMoodboard(id)}
                 />
               ))}
             </div>
@@ -1025,14 +1074,20 @@ export default function CardDetailOverlay({
         </div>
       ) : null}
 
-      {removeMoodboardConfirm && card ? (
+      {removeMoodboardConfirm ? (
         <ConfirmRemoveFromMoodboardModal
           hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
           cardOnBoard={removeMoodboardConfirm.onBoard}
           onClose={() => setRemoveMoodboardConfirm(null)}
           onConfirm={async () => {
-            await removeCardFromMoodboard(card.id);
-            setInMoodboard(false);
+            const targetId = removeMoodboardConfirm.cardId;
+            await removeCardFromMoodboard(targetId);
+            setMoodboardCardIds((prev) => {
+              const next = new Set(prev);
+              next.delete(targetId);
+              return next;
+            });
+            if (targetId === cardId) setInMoodboard(false);
           }}
         />
       ) : null}

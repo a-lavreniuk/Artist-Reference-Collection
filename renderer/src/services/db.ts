@@ -1128,7 +1128,7 @@ export async function getCollectionCardCounts(): Promise<Record<string, number>>
   return m;
 }
 
-/** До `limitPerCollection` карточек на коллекцию для превью на разводящей (порядок как в галерее). */
+/** До `limitPerCollection` последних по `addedAt` карточек на коллекцию (новые первыми). */
 export async function getCollectionPreviewSlices(limitPerCollection = 3): Promise<Record<string, CardRecord[]>> {
   const all = await listCardsSorted('all');
   const cols = await getAllCollections();
