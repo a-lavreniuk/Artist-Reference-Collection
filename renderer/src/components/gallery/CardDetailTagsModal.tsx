@@ -56,6 +56,7 @@ function PickerCategoryItem({
 
 export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleTag }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const tagSearchInputRef = useRef<HTMLInputElement>(null);
   const [tagSearch, setTagSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
@@ -179,15 +180,27 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
         >
           <div className="arc-add-tags-picker__content-fixed">
             <div className="arc-add-tags-picker__content-inset">
-              <div className="field field-full input-live arc-add-tags-picker__search">
-                <div className="input input--size-m input-slots search-live">
+              <div
+                className={`field field-full search-live arc-add-tags-picker__search${tagSearch.length > 0 ? ' has-value' : ''}`}
+              >
+                <div className="input search-field input-slots">
                   <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
                   <input
+                    ref={tagSearchInputRef}
                     className="search-inner slot-value"
                     placeholder="Поиск по категориям и меткам…"
                     value={tagSearch}
                     onChange={(e) => setTagSearch(e.target.value)}
                     aria-label="Поиск по категориям и меткам"
+                  />
+                  <button
+                    type="button"
+                    className="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing arc-icon-close"
+                    aria-label="Очистить"
+                    onClick={() => {
+                      setTagSearch('');
+                      tagSearchInputRef.current?.focus();
+                    }}
                   />
                 </div>
               </div>
@@ -227,7 +240,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                       <Tooltip content="Новая метка" position="top">
                         <button
                           type="button"
-                          className="btn btn-outline btn-ds btn-icon-only arc-add-tag-new-btn"
+                          className="btn btn-secondary btn-ds btn-icon-only arc-add-tag-new-btn"
                           onClick={() => openCreateTag(cat.id)}
                           aria-label={`Добавить метку в категорию «${cat.name}»`}
                         >

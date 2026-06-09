@@ -981,6 +981,12 @@ body.arc-card-detail-open .arc-app-outlet {
   padding: 0 var(--s-3);
 }
 
+.arc-add-tags-picker__group-inset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
 .arc-add-tags-picker__search {
   padding: 0;
 }
@@ -1056,6 +1062,9 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-add-tags-picker__empty-text {
   margin: 0;
   color: var(--text-elev-secondary);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-card-detail-collections-modal-chips {
