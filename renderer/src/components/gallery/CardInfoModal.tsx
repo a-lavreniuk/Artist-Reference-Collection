@@ -10,8 +10,8 @@ type Props = {
 function formatBytes(bytes: number | undefined): string {
   if (bytes === undefined || !Number.isFinite(bytes)) return '—';
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Кб`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} Мб`;
 }
 
 function formatDate(iso: string | undefined): string {
@@ -33,10 +33,22 @@ function formatResolution(card: CardRecord): string {
 }
 
 type InfoRow = {
-  iconClass: string;
   label: string;
   value: string;
 };
+
+function InfoRows({ rows }: { rows: InfoRow[] }) {
+  return (
+    <div className="arc-card-info-group">
+      {rows.map((row) => (
+        <div key={row.label} className="arc-card-info-row">
+          <span className="arc-card-info-row__label text-m">{row.label}</span>
+          <span className="arc-card-info-row__value text-m">{row.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function CardInfoModal({ card, onClose }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -45,13 +57,16 @@ export default function CardInfoModal({ card, onClose }: Props) {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
   }, [card.id]);
 
-  const rows: InfoRow[] = [
-    { iconClass: 'arc-icon-resolution', label: 'Разрешение', value: formatResolution(card) },
-    { iconClass: 'arc-icon-weight', label: 'Размер файла', value: formatBytes(card.fileSize) },
-    { iconClass: 'arc-icon-file-type', label: 'Тип файла', value: card.format?.toUpperCase() ?? '—' },
-    { iconClass: 'arc-icon-calendar', label: 'Создание файла', value: formatDate(card.fileCreatedAt) },
-    { iconClass: 'arc-icon-calendar', label: 'Добавлено в ARC', value: formatDate(card.addedAt) },
-    { iconClass: 'arc-icon-history', label: 'Изменение карточки', value: formatDate(card.dateModified) }
+  const fileRows: InfoRow[] = [
+    { label: 'Разрешение', value: formatResolution(card) },
+    { label: 'Вес', value: formatBytes(card.fileSize) },
+    { label: 'Тип', value: card.format?.toUpperCase() ?? '—' }
+  ];
+
+  const dateRows: InfoRow[] = [
+    { label: 'Дата создания', value: formatDate(card.fileCreatedAt) },
+    { label: 'Дата добавления', value: formatDate(card.addedAt) },
+    { label: 'Дата изменения', value: formatDate(card.dateModified) }
   ];
 
   return (
@@ -75,22 +90,22 @@ export default function CardInfoModal({ card, onClose }: Props) {
       >
         <header className="arc-modal__header arc-modal__header--title">
           <h3 className="arc-modal__title" id="arcCardInfoTitle">
-            Информация
+            Информация о файле
           </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
             <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">
-          <ul className="arc-card-info-list">
-            {rows.map((row) => (
-              <li key={row.label} className="arc-card-info-row">
-                <span className={`arc-card-info-row__icon ${row.iconClass}`} aria-hidden="true" />
-                <span className="arc-card-info-row__label text-m">{row.label}</span>
-                <span className="arc-card-info-row__value text-m">{row.value}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="arc-modal__slot">
+            <InfoRows rows={fileRows} />
+          </div>
+          <div className="arc-modal__slot">
+            <hr className="arc-modal__separator" />
+          </div>
+          <div className="arc-modal__slot">
+            <InfoRows rows={dateRows} />
+          </div>
         </div>
       </section>
     </div>

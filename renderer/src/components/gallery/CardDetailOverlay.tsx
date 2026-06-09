@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import DemoAlert from '../layout/DemoAlert';
+import DemoAlert, { type DemoAlertVariant } from '../layout/DemoAlert';
 import { Tooltip } from '../tooltip/Tooltip';
 import CollapsibleSection from './CollapsibleSection';
 import CardInfoModal from './CardInfoModal';
@@ -36,8 +36,7 @@ import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
 import { readGridSize } from '../../layout/gridSizePreference';
 import { extractImagePalette, type PaletteSwatch } from './cardDetailPalette';
 import {
-  CARD_DETAIL_SETTINGS_WIDTH_MAX,
-  CARD_DETAIL_SETTINGS_WIDTH_MIN,
+  clampCardDetailSettingsWidth,
   readCardDetailSettingsWidth,
   writeCardDetailSettingsWidth
 } from './cardDetailSettingsWidth';
@@ -103,9 +102,9 @@ export default function CardDetailOverlay({
   const [infoOpen, setInfoOpen] = useState(false);
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
   const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
-  const [stubAlert, setStubAlert] = useState<string | null>(null);
+  const [actionAlert, setActionAlert] = useState<{ message: string; variant: DemoAlertVariant } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [copyAlertVisible, setCopyAlertVisible] = useState(false);
+  const [copyAlertMessage, setCopyAlertMessage] = useState<string | null>(null);
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ onBoard: boolean } | null>(null);
 
   const libraryScope = parseLibraryScope(searchParams);
@@ -147,7 +146,7 @@ export default function CardDetailOverlay({
     inMoodboard,
     isBookmarkHovered,
     infoOpen,
-    stubAlert,
+    actionAlert,
     tagsModalOpen,
     collectionsModalOpen,
     palette,
@@ -248,7 +247,7 @@ export default function CardDetailOverlay({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (stubAlert) setStubAlert(null);
+      if (actionAlert) setActionAlert(null);
       else if (collectionsModalOpen) setCollectionsModalOpen(false);
       else if (tagsModalOpen) setTagsModalOpen(false);
       else if (infoOpen) setInfoOpen(false);
@@ -259,7 +258,7 @@ export default function CardDetailOverlay({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, confirmDelete, confirmPermanentDelete, removeMoodboardConfirm, infoOpen, stubAlert, tagsModalOpen, collectionsModalOpen]);
+  }, [onClose, confirmDelete, confirmPermanentDelete, removeMoodboardConfirm, infoOpen, actionAlert, tagsModalOpen, collectionsModalOpen]);
 
   useEffect(() => {
     return () => {
@@ -303,8 +302,23 @@ export default function CardDetailOverlay({
     [cardId, reloadCard]
   );
 
-  const clampSettingsWidth = useCallback((px: number) => {
-    return Math.min(CARD_DETAIL_SETTINGS_WIDTH_MAX, Math.max(CARD_DETAIL_SETTINGS_WIDTH_MIN, px));
+  const clampSettingsWidth = useCallback((px: number) => clampCardDetailSettingsWidth(px), []);
+
+  useEffect(() => {
+    const onResize = () => {
+      setSettingsWidth((current) => clampCardDetailSettingsWidth(current));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const showCopyAlert = useCallback((message: string) => {
+    setCopyAlertMessage(message);
+    if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
+    copyAlertTimerRef.current = window.setTimeout(() => {
+      setCopyAlertMessage(null);
+      copyAlertTimerRef.current = null;
+    }, 2400);
   }, []);
 
   const onSplitPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
@@ -400,12 +414,7 @@ export default function CardDetailOverlay({
     if (!card) return;
     try {
       await navigator.clipboard.writeText(card.id);
-      setCopyAlertVisible(true);
-      if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
-      copyAlertTimerRef.current = window.setTimeout(() => {
-        setCopyAlertVisible(false);
-        copyAlertTimerRef.current = null;
-      }, 2400);
+      showCopyAlert('ID карточки скопирован');
     } catch {
       /* clipboard unavailable */
     }
@@ -419,6 +428,10 @@ export default function CardDetailOverlay({
   const openDraftLink = () => {
     const url = normalizeExternalUrl(draftLink);
     if (!url) return;
+    if (window.arc?.openExternalUrl) {
+      void window.arc.openExternalUrl(url);
+      return;
+    }
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -455,12 +468,7 @@ export default function CardDetailOverlay({
   const copyPaletteHex = async (hex: string) => {
     try {
       await navigator.clipboard.writeText(hex);
-      setCopyAlertVisible(true);
-      if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
-      copyAlertTimerRef.current = window.setTimeout(() => {
-        setCopyAlertVisible(false);
-        copyAlertTimerRef.current = null;
-      }, 2400);
+      showCopyAlert('Цвет скопирован');
     } catch {
       /* clipboard unavailable */
     }
@@ -559,6 +567,44 @@ export default function CardDetailOverlay({
           <aside className="arc-card-detail-settings panel elevation-sunken">
             <div className="arc-card-detail-options">
               <div className="arc-card-detail-options-left">
+                {inTrash ? (
+                  <>
+                    <Tooltip content="Удалить навсегда" position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds"
+                        aria-label="Удалить навсегда"
+                        disabled={busy}
+                        onClick={() => setConfirmPermanentDelete(true)}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content={busy ? 'Восстановление…' : 'Восстановить'} position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds"
+                        aria-label={busy ? 'Восстановление…' : 'Восстановить'}
+                        disabled={busy}
+                        onClick={() => void handleRestore()}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-undo" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  </>
+                ) : (
+                  <Tooltip content="Удалить карточку" position="top">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-icon-only btn-ds"
+                      aria-label="Удалить карточку"
+                      disabled={!card}
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
+                    </button>
+                  </Tooltip>
+                )}
                 <div className="arc-card-detail-segmented" role="group" aria-label="Действия с карточкой">
                   {!inTrash ? (
                     <Tooltip content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'} position="top">
@@ -574,6 +620,7 @@ export default function CardDetailOverlay({
                           if (!card) return;
                           if (!inMoodboard) {
                             setInMoodboard(await toggleCardInMoodboard(card.id));
+                            setActionAlert({ message: 'Карточка добавлена в мудборд', variant: 'success' });
                             return;
                           }
                           const onBoard = await isCardOnBoard(card.id);
@@ -629,44 +676,6 @@ export default function CardDetailOverlay({
                     </button>
                   </Tooltip>
                 </div>
-                {inTrash ? (
-                  <>
-                    <Tooltip content={busy ? 'Восстановление…' : 'Восстановить'} position="top">
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-icon-only btn-ds"
-                        aria-label={busy ? 'Восстановление…' : 'Восстановить'}
-                        disabled={busy}
-                        onClick={() => void handleRestore()}
-                      >
-                        <span className="btn-icon-only__glyph arc-icon-undo" aria-hidden="true" />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Удалить навсегда" position="top">
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-icon-only btn-ds"
-                        aria-label="Удалить навсегда"
-                        disabled={busy}
-                        onClick={() => setConfirmPermanentDelete(true)}
-                      >
-                        <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
-                      </button>
-                    </Tooltip>
-                  </>
-                ) : (
-                  <Tooltip content="Удалить карточку" position="top">
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-icon-only btn-ds"
-                      aria-label="Удалить карточку"
-                      disabled={!card}
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
-                    </button>
-                  </Tooltip>
-                )}
               </div>
 
               <Tooltip content="Закрыть" position="top">
@@ -693,9 +702,7 @@ export default function CardDetailOverlay({
                       {palette.map((swatch) => (
                         <Tooltip
                           key={swatch.hex}
-                          content={`${swatch.pct}%`}
-                          variant="rich"
-                          delay={1000}
+                          content={`${swatch.hex.toUpperCase()} (${swatch.pct}%)`}
                           position="top"
                         >
                           <button
@@ -709,7 +716,10 @@ export default function CardDetailOverlay({
                       ))}
                     </div>
                   ) : null}
-                  <label className="field input-live">
+                  <label
+                    className={`field input-live${draftName.trim() ? ' has-value' : ''}`}
+                    data-live-input
+                  >
                     <input
                       className="input"
                       type="text"
@@ -721,18 +731,43 @@ export default function CardDetailOverlay({
                         scheduleNameSave(v);
                       }}
                     />
+                    <button
+                      className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
+                      type="button"
+                      aria-label="Очистить"
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        setDraftName('');
+                        scheduleNameSave('');
+                      }}
+                    />
                   </label>
                   <div className="arc-card-detail-link-row">
-                    <label className="field input-live arc-card-detail-link-field">
+                    <label
+                      className={`field input-live arc-card-detail-link-field${draftLink.trim() ? ' has-value' : ''}`}
+                      data-live-input
+                    >
                       <input
                         className="input"
-                        type="url"
+                        type="text"
                         placeholder="Ссылка"
                         value={draftLink}
                         onChange={(e) => {
                           const v = e.target.value;
                           setDraftLink(v);
                           scheduleLinkSave(v);
+                        }}
+                      />
+                      <button
+                        className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
+                        type="button"
+                        aria-label="Очистить"
+                        onClick={(ev) => {
+                          ev.preventDefault();
+                          ev.stopPropagation();
+                          setDraftLink('');
+                          scheduleLinkSave('');
                         }}
                       />
                     </label>
@@ -748,7 +783,7 @@ export default function CardDetailOverlay({
                       </button>
                     </Tooltip>
                   </div>
-                  <label className="field input-live">
+                  <label className="field">
                     <textarea
                       className="input textarea"
                       placeholder="Описание"
@@ -998,19 +1033,23 @@ export default function CardDetailOverlay({
         />
       ) : null}
 
-      {stubAlert ? (
-        <DemoAlert message={stubAlert} variant="info" onClose={() => setStubAlert(null)} />
+      {actionAlert ? (
+        <DemoAlert
+          message={actionAlert.message}
+          variant={actionAlert.variant}
+          onClose={() => setActionAlert(null)}
+        />
       ) : null}
 
-      {copyAlertVisible ? (
+      {copyAlertMessage ? (
         <div className="demo-alert-host arc-card-detail-alert-host" aria-live="polite" aria-atomic="true">
           <div className="alert alert-success" role="status">
-            <p className="demo-alert__message">ID карточки скопирован</p>
+            <p className="demo-alert__message">{copyAlertMessage}</p>
             <button
               type="button"
               className="demo-alert__close"
               aria-label="Закрыть уведомление"
-              onClick={() => setCopyAlertVisible(false)}
+              onClick={() => setCopyAlertMessage(null)}
             >
               <svg className="demo-alert__close-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M6 6L18 18" strokeWidth="2" strokeLinecap="round" />

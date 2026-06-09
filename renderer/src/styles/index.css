@@ -897,7 +897,7 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-card-detail-settings {
   flex: 0 0 var(--arc-card-detail-settings-w, 600px);
   width: var(--arc-card-detail-settings-w, 600px);
-  max-width: min(var(--arc-card-detail-settings-w, 600px), 42vw);
+  max-width: min(var(--arc-card-detail-settings-w, 600px), 50vw);
   min-width: 500px;
   min-height: 0;
   display: flex;
@@ -1035,14 +1035,6 @@ body.arc-card-detail-open .arc-app-outlet {
 
 .arc-card-detail-section-toggle {
   flex-shrink: 0;
-}
-
-.arc-card-detail-section-chevron {
-  transition: transform var(--transition-fast);
-}
-
-.arc-card-detail-section-chevron.is-open {
-  transform: rotate(180deg);
 }
 
 .arc-card-detail-section-body {
@@ -1265,29 +1257,21 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-card-info-modal {
-  width: min(480px, calc(100vw - var(--s-4) * 2));
+  width: min(400px, calc(100vw - var(--s-4) * 2));
 }
 
-.arc-card-info-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.arc-card-info-group {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-2);
+  width: 100%;
 }
 
 .arc-card-info-row {
   display: grid;
-  grid-template-columns: var(--btn-h) 1fr auto;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
-  gap: var(--s-2);
-}
-
-.arc-card-info-row__icon {
-  width: var(--btn-icon-size);
-  height: var(--btn-icon-size);
-  color: var(--text-elev-secondary);
+  gap: var(--s-4);
 }
 
 .arc-card-info-row__label {
@@ -1302,7 +1286,6 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-modal-host.arc-modal-host--card-detail-nested {
   z-index: 10060;
   pointer-events: auto;
-  background: color-mix(in srgb, var(--gray-1000) 48%, transparent);
 }
 
 .arc-card-detail-alert-host {
@@ -1436,7 +1419,6 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-modal-host.arc-modal-host--nested {
   z-index: 10060;
   pointer-events: auto;
-  background: color-mix(in srgb, var(--gray-1000) 48%, transparent);
 }
 
 /* --- Добавление карточек /add (Figma: 129:11873, 129:13555, 207:12307, 210:13403, 210:14543) --- */

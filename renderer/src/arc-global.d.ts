@@ -122,6 +122,7 @@ declare global {
       toFileUrl: (path: string) => Promise<string | null>;
       deleteFileIfInsideLibrary: (relativePath: string) => Promise<void>;
       showItemInFolder: (relativePath: string) => Promise<void>;
+      openExternalUrl: (url: string) => Promise<{ ok: true } | { ok: false; error?: string }>;
       showAbsoluteInFolder: (absPath: string) => Promise<void>;
       saveMediaToFolder: (
         relativePath: string

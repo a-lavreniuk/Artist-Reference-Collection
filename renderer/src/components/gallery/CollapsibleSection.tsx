@@ -1,4 +1,5 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 
 type Props = {
@@ -13,6 +14,11 @@ export default function CollapsibleSection({ title, count, defaultOpen = true, c
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
   const headId = useId();
+  const toggleScopeRef = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => {
+    if (toggleScopeRef.current) void hydrateArcNavbarIcons(toggleScopeRef.current);
+  }, [open]);
 
   return (
     <section className="arc-card-detail-section" aria-labelledby={headId}>
@@ -22,16 +28,20 @@ export default function CollapsibleSection({ title, count, defaultOpen = true, c
           {count !== undefined ? <span className="text-s arc-card-detail-section-count">{count}</span> : null}
         </div>
         <Tooltip content={open ? 'Свернуть' : 'Развернуть'} position="top">
-          <span className="arc-card-detail-section-toggle-scope arc-ui-kit-scope" data-btn-size="s">
+          <span
+            ref={toggleScopeRef}
+            className="arc-card-detail-section-toggle-scope arc-ui-kit-scope"
+            data-btn-size="s"
+          >
             <button
               type="button"
-              className="btn btn-ghost btn-icon-only btn-ds arc-card-detail-section-toggle"
+              className="btn btn-outline btn-icon-only btn-ds arc-card-detail-section-toggle"
               aria-expanded={open}
               aria-controls={panelId}
               onClick={() => setOpen((v) => !v)}
             >
               <span
-                className={`btn-icon-only__glyph arc-icon-chevron arc-card-detail-section-chevron${open ? ' is-open' : ''}`}
+                className={`btn-icon-only__glyph ${open ? 'arc-icon-chevron-peak' : 'arc-icon-chevron-bottom'}`}
                 aria-hidden="true"
               />
             </button>

@@ -86,6 +86,8 @@ contextBridge.exposeInMainWorld('arc', {
   deleteFileIfInsideLibrary: (relativePath: string) =>
     ipcRenderer.invoke('arc:delete-file-if-inside-library', relativePath),
   showItemInFolder: (relativePath: string) => ipcRenderer.invoke('arc:show-item-in-folder', relativePath),
+  openExternalUrl: (url: string) =>
+    ipcRenderer.invoke('arc:open-external-url', url) as Promise<{ ok: true } | { ok: false; error?: string }>,
   showAbsoluteInFolder: (absPath: string) => ipcRenderer.invoke('arc:show-absolute-in-folder', absPath),
   saveMediaToFolder: (relativePath: string) =>
     ipcRenderer.invoke('arc:save-media-to-folder', relativePath) as Promise<

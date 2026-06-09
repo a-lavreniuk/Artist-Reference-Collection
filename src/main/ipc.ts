@@ -431,6 +431,23 @@ export function registerArcIpc(): void {
     shell.showItemInFolder(abs);
   });
 
+  ipcMain.handle('arc:open-external-url', async (_e, url: unknown) => {
+    if (typeof url !== 'string' || !url.trim()) {
+      return { ok: false as const, error: 'Пустой URL' };
+    }
+    const trimmed = url.trim();
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return { ok: false as const, error: 'Недопустимый URL' };
+    }
+    try {
+      await shell.openExternal(trimmed);
+      return { ok: true as const };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Не удалось открыть ссылку';
+      return { ok: false as const, error: message };
+    }
+  });
+
   ipcMain.handle('arc:save-media-to-folder', async (_e, relativePath: unknown) => {
     assertNotMaintenance();
     if (typeof relativePath !== 'string') {
