@@ -1,59 +1,93 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ARC_COLLECTIONS_CHANGED_EVENT,
   getAllCollections,
   getCollectionCardCounts,
+  getCollectionPreviewSlices,
+  type CardRecord,
   type CollectionRecord
 } from '../../services/db';
+import NewCollectionModal from '../collections/NewCollectionModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import CollectionPickerRow from './CollectionPickerRow';
 
 type Props = {
   selectedCollectionIds: string[];
   onClose: () => void;
-  onApply: (collectionIds: string[]) => void;
+  onToggleCollection: (collectionId: string) => void | Promise<void>;
+  onCreateAndAssign: (name: string) => Promise<void>;
 };
 
-export default function CardDetailCollectionsModal({ selectedCollectionIds, onClose, onApply }: Props) {
+export default function CardDetailCollectionsModal({
+  selectedCollectionIds,
+  onClose,
+  onToggleCollection,
+  onCreateAndAssign
+}: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [colSearch, setColSearch] = useState('');
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [collCounts, setCollCounts] = useState<Record<string, number>>({});
-  const [draftIds, setDraftIds] = useState<string[]>(selectedCollectionIds);
+  const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
+  const [pendingCollectionId, setPendingCollectionId] = useState<string | null>(null);
+  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+
+  const reloadCatalog = async () => {
+    const [cols, counts, previews] = await Promise.all([
+      getAllCollections(),
+      getCollectionCardCounts(),
+      getCollectionPreviewSlices(3)
+    ]);
+    setCollections(cols);
+    setCollCounts(counts);
+    setCollectionPreviews(previews);
+  };
 
   useEffect(() => {
-    setDraftIds(selectedCollectionIds);
-  }, [selectedCollectionIds]);
-
-  useEffect(() => {
-    const reload = async () => {
-      setCollections(await getAllCollections());
-      setCollCounts(await getCollectionCardCounts());
-    };
-    void reload();
-    const onCatalog = () => void reload();
+    void reloadCatalog();
+    const onCatalog = () => void reloadCatalog();
     window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onCatalog);
     return () => window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onCatalog);
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !newCollectionOpen) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, newCollectionOpen]);
+
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [collections, draftIds, colSearch]);
+  }, [collections, selectedCollectionIds, colSearch, collectionPreviews, newCollectionOpen]);
 
   const filteredCols = useMemo(() => {
     const q = colSearch.trim().toLowerCase();
     return collections.filter((c) => !q || c.name.toLowerCase().includes(q));
   }, [collections, colSearch]);
 
-  const toggleCollection = (colId: string) => {
-    setDraftIds((prev) => {
-      const set = new Set(prev);
-      if (set.has(colId)) set.delete(colId);
-      else set.add(colId);
-      return [...set];
-    });
+  const existingLowerNames = useMemo(
+    () => new Set(collections.map((c) => c.name.trim().toLowerCase())),
+    [collections]
+  );
+
+  const handleToggle = async (collectionId: string) => {
+    if (pendingCollectionId) return;
+    setPendingCollectionId(collectionId);
+    try {
+      await onToggleCollection(collectionId);
+    } finally {
+      setPendingCollectionId(null);
+    }
   };
 
-  return (
+  const showEmptyCatalog = collections.length === 0;
+  const showEmptySearch = !showEmptyCatalog && filteredCols.length === 0;
+
+  const picker = (
     <div
       ref={hostRef}
       className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
@@ -62,71 +96,96 @@ export default function CardDetailCollectionsModal({ selectedCollectionIds, onCl
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <section
-        className="arc-modal arc-card-detail-collections-modal arc-ui-kit-scope"
+      <div
+        className="arc-card-detail-collections-picker panel elevation-raised arc-ui-kit-scope"
         data-elevation="raised"
         data-input-size="m"
         data-btn-size="m"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="arcCardDetailCollectionsTitle"
+        aria-label="Коллекции"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arcCardDetailCollectionsTitle">
-            Коллекции
-          </h3>
-          <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc-icon-close" aria-hidden="true" />
-          </button>
-        </header>
-        <div className="arc-modal__body arc-card-detail-collections-modal-body">
-          <div className="field field-full input-live arc-card-detail-tags-modal-search">
-            <div className="input input--size-m input-slots search-live">
-              <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
-              <input
-                className="search-inner slot-value"
-                placeholder="Поиск коллекции"
-                value={colSearch}
-                onChange={(e) => setColSearch(e.target.value)}
-                aria-label="Поиск коллекции"
-              />
+        <div className="arc-card-detail-collections-picker__fixed">
+          <div className="arc-card-detail-collections-picker__inset">
+            <div
+              className={`field field-full search-live arc-card-detail-collections-picker__search${colSearch.length > 0 ? ' has-value' : ''}`}
+            >
+              <div className="input search-field input-slots">
+                <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
+                <input
+                  ref={searchInputRef}
+                  className="search-inner slot-value"
+                  placeholder="Поиск по коллекциям"
+                  value={colSearch}
+                  onChange={(e) => setColSearch(e.target.value)}
+                  aria-label="Поиск по коллекциям"
+                />
+                <button
+                  type="button"
+                  className="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing arc-icon-close"
+                  aria-label="Очистить"
+                  onClick={() => {
+                    setColSearch('');
+                    searchInputRef.current?.focus();
+                  }}
+                />
+              </div>
             </div>
           </div>
-          <div className="arc-add-collection-chips arc-card-detail-collections-modal-chips">
-            {filteredCols.map((c) => {
-              const sel = draftIds.includes(c.id);
-              const n = collCounts[c.id] ?? 0;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`arc-add-collection-chip${sel ? ' is-selected' : ''}`}
-                  onClick={() => toggleCollection(c.id)}
-                >
-                  <span className="arc-add-collection-chip-name">{c.name}</span>
-                  <span className="arc-add-collection-chip-count">{n}</span>
-                </button>
-              );
-            })}
+          <div className="context-menu__sep" role="separator" aria-hidden="true" />
+        </div>
+
+        <div className="arc-card-detail-collections-picker__scroll">
+          {showEmptyCatalog ? (
+            <p className="text-s arc-card-detail-collections-picker__empty">Коллекций пока нет.</p>
+          ) : showEmptySearch ? (
+            <p className="text-s arc-card-detail-collections-picker__empty">Нет совпадений по запросу.</p>
+          ) : (
+            <div className="arc-card-detail-collections-picker__list">
+              {filteredCols.map((collection) => (
+                <CollectionPickerRow
+                  key={collection.id}
+                  collection={collection}
+                  previews={collectionPreviews[collection.id] ?? []}
+                  count={collCounts[collection.id] ?? 0}
+                  selected={selectedCollectionIds.includes(collection.id)}
+                  disabled={pendingCollectionId !== null}
+                  onToggle={() => void handleToggle(collection.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="arc-card-detail-collections-picker__footer">
+          <div className="context-menu__sep" role="separator" aria-hidden="true" />
+          <div className="arc-card-detail-collections-picker__inset">
+            <button
+              type="button"
+              className="btn btn-outline btn-ds arc-card-detail-collections-picker__new"
+              onClick={() => setNewCollectionOpen(true)}
+            >
+              <span className="btn-ds__value">Новая коллекция</span>
+              <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+            </button>
           </div>
         </div>
-        <footer className="arc-modal__footer arc-modal__footer--actions-2">
-          <button type="button" className="btn btn-outline btn-ds" onClick={onClose}>
-            <span className="btn-ds__value">Отмена</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-brand btn-ds"
-            onClick={() => {
-              onApply(draftIds);
-              onClose();
-            }}
-          >
-            <span className="btn-ds__value">Готово</span>
-          </button>
-        </footer>
-      </section>
+      </div>
+
+      {newCollectionOpen ? (
+        <NewCollectionModal
+          existingLowerNames={existingLowerNames}
+          hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
+          onClose={() => setNewCollectionOpen(false)}
+          onSubmit={async (name) => {
+            await onCreateAndAssign(name);
+            await reloadCatalog();
+          }}
+        />
+      ) : null}
     </div>
   );
+
+  return createPortal(picker, document.body);
 }

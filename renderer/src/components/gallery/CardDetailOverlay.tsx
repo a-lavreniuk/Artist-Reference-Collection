@@ -1,9 +1,21 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type PointerEvent
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import DemoAlert, { type DemoAlertVariant } from '../layout/DemoAlert';
 import { Tooltip } from '../tooltip/Tooltip';
+import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
 import CardInfoModal from './CardInfoModal';
 import CardDetailSimilarThumb from './CardDetailSimilarThumb';
@@ -18,6 +30,7 @@ import {
   deleteCard,
   restoreCard,
   permanentDeleteCard,
+  addCollection,
   getAllCategories,
   getAllCollections,
   getCardById,
@@ -43,6 +56,18 @@ import {
 } from './cardDetailSettingsWidth';
 import { ARC_CARD_DETAIL_CLOSE_EVENT } from './cardDetailEvents';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
+import CopyCardSettingsMenu from './CopyCardSettingsMenu';
+import {
+  buildCardSettingsSnapshot,
+  syncCardDetailDraftsFromPatch,
+  buildCardSettingsApplyPatch
+} from './applyCardSettingsClipboard';
+import {
+  getCardSettingsClipboard,
+  setCardSettingsClipboard,
+  subscribeCardSettingsClipboard,
+  type CardSettingsFieldSelection
+} from './cardSettingsClipboard';
 
 type Props = {
   cardId: string;
@@ -79,6 +104,7 @@ export default function CardDetailOverlay({
   const nameSaveTimerRef = useRef<number | null>(null);
   const linkSaveTimerRef = useRef<number | null>(null);
   const copyAlertTimerRef = useRef<number | null>(null);
+  const copySettingsAnchorRef = useRef<HTMLButtonElement>(null);
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const [card, setCard] = useState<CardRecord | null>(null);
@@ -109,6 +135,12 @@ export default function CardDetailOverlay({
   const [actionAlert, setActionAlert] = useState<{ message: string; variant: DemoAlertVariant } | null>(null);
   const [busy, setBusy] = useState(false);
   const [copyAlertMessage, setCopyAlertMessage] = useState<string | null>(null);
+  const [copySettingsMenuOpen, setCopySettingsMenuOpen] = useState(false);
+  const hasSettingsClipboard = useSyncExternalStore(
+    subscribeCardSettingsClipboard,
+    () => getCardSettingsClipboard() !== null,
+    () => false
+  );
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(
     null
   );
@@ -273,6 +305,7 @@ export default function CardDetailOverlay({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (actionAlert) setActionAlert(null);
+      else if (copySettingsMenuOpen) setCopySettingsMenuOpen(false);
       else if (collectionsModalOpen) setCollectionsModalOpen(false);
       else if (tagsModalOpen) setTagsModalOpen(false);
       else if (infoOpen) setInfoOpen(false);
@@ -283,7 +316,17 @@ export default function CardDetailOverlay({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, confirmDelete, confirmPermanentDelete, removeMoodboardConfirm, infoOpen, actionAlert, tagsModalOpen, collectionsModalOpen]);
+  }, [
+    onClose,
+    confirmDelete,
+    confirmPermanentDelete,
+    removeMoodboardConfirm,
+    infoOpen,
+    actionAlert,
+    tagsModalOpen,
+    collectionsModalOpen,
+    copySettingsMenuOpen
+  ]);
 
   useEffect(() => {
     return () => {
@@ -435,6 +478,59 @@ export default function CardDetailOverlay({
     }
   };
 
+  const handleCopySettings = useCallback(
+    (fields: CardSettingsFieldSelection) => {
+      if (!card) return;
+      const values = buildCardSettingsSnapshot(fields, {
+        draftName,
+        draftLink,
+        description,
+        card
+      });
+      setCardSettingsClipboard({ fields, values });
+      showCopyAlert('Настройки скопированы');
+    },
+    [card, draftName, draftLink, description, showCopyAlert]
+  );
+
+  const applySettingsClipboard = useCallback(async () => {
+    const clipboard = getCardSettingsClipboard();
+    if (!card || !clipboard) return;
+
+    if (descriptionSaveTimerRef.current) {
+      window.clearTimeout(descriptionSaveTimerRef.current);
+      descriptionSaveTimerRef.current = null;
+    }
+    if (nameSaveTimerRef.current) {
+      window.clearTimeout(nameSaveTimerRef.current);
+      nameSaveTimerRef.current = null;
+    }
+    if (linkSaveTimerRef.current) {
+      window.clearTimeout(linkSaveTimerRef.current);
+      linkSaveTimerRef.current = null;
+    }
+
+    const patch = buildCardSettingsApplyPatch(clipboard, {
+      validTagIds: new Set(tagsIndex.keys()),
+      validCollectionIds: new Set(collectionsById.keys())
+    });
+
+    await updateCardPayload(card.id, patch);
+    syncCardDetailDraftsFromPatch(patch, {
+      setDraftName,
+      setDraftLink,
+      setDescription
+    });
+
+    if (patch.collectionIds !== undefined) {
+      setCollectionPreviews(await getCollectionPreviewSlices(3));
+      setCollCounts(await getCollectionCardCounts());
+    }
+
+    await reloadCard(card.id);
+    showCopyAlert('Настройки применены');
+  }, [card, tagsIndex, collectionsById, reloadCard, showCopyAlert]);
+
   const copyId = async () => {
     if (!card) return;
     try {
@@ -490,6 +586,29 @@ export default function CardDetailOverlay({
     setCollectionPreviews(await getCollectionPreviewSlices(3));
     setCollCounts(await getCollectionCardCounts());
     await reloadCard(card.id);
+  };
+
+  const toggleCollectionOnCard = async (collectionId: string) => {
+    if (!card) return;
+    const has = card.collectionIds.includes(collectionId);
+    const next = has
+      ? card.collectionIds.filter((id) => id !== collectionId)
+      : [...card.collectionIds, collectionId];
+    await updateCardPayload(card.id, { collectionIds: next });
+    setCollectionPreviews(await getCollectionPreviewSlices(3));
+    setCollCounts(await getCollectionCardCounts());
+    await reloadCard(card.id);
+  };
+
+  const createAndAssignCollection = async (name: string) => {
+    if (!card) return;
+    const created = await addCollection(name);
+    if (!card.collectionIds.includes(created.id)) {
+      await updateCardPayload(card.id, { collectionIds: [...card.collectionIds, created.id] });
+      setCollectionPreviews(await getCollectionPreviewSlices(3));
+      setCollCounts(await getCollectionCardCounts());
+      await reloadCard(card.id);
+    }
   };
 
   const copyPaletteHex = async (hex: string) => {
@@ -664,6 +783,35 @@ export default function CardDetailOverlay({
                     </button>
                   </Tooltip>
                 )}
+                {!inTrash ? (
+                  <div className="arc-card-detail-segmented" role="group" aria-label="Копирование настроек">
+                    <Tooltip content="Копировать настройки" position="top">
+                      <button
+                        ref={copySettingsAnchorRef}
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
+                        aria-label="Копировать настройки"
+                        aria-haspopup="menu"
+                        aria-expanded={copySettingsMenuOpen}
+                        disabled={!card}
+                        onClick={() => setCopySettingsMenuOpen((open) => !open)}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-copy-settings" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Применить настройки" position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
+                        aria-label="Применить настройки"
+                        disabled={!card || !hasSettingsClipboard}
+                        onClick={() => void applySettingsClipboard()}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-paste-settings" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  </div>
+                ) : null}
                 <div className="arc-card-detail-segmented" role="group" aria-label="Действия с карточкой">
                   {!inTrash ? (
                     <Tooltip content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'} position="top">
@@ -746,7 +894,7 @@ export default function CardDetailOverlay({
                 </div>
               </div>
 
-              <Tooltip content="Закрыть" position="top">
+              <Tooltip content="Закрыть" position="top" className="arc-card-detail-close-slot">
                 <button
                   type="button"
                   className="btn btn-outline btn-icon-only btn-ds arc-card-detail-close-btn"
@@ -876,18 +1024,41 @@ export default function CardDetailOverlay({
               >
                 {tagsSorted.length > 0 ? (
                   <div className="arc-card-detail-tags">
-                    {tagsSorted.map(({ tag, colorHex }) => (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        className="arc-card-detail-tag-chip"
-                        onClick={() => void removeTag(tag.id)}
-                        aria-label={`Снять метку «${tag.name}»`}
-                      >
-                        <span className="arc-card-detail-tag-dot" style={{ background: colorHex }} aria-hidden="true" />
-                        <span className="arc-card-detail-tag-name">{tag.name}</span>
-                      </button>
-                    ))}
+                    {tagsSorted.map(({ tag, colorHex }) => {
+                      const hasTipText = Boolean(tag.description?.trim());
+                      const hasTipImage = Boolean(tag.tooltipImageDataUrl?.startsWith('data:image/'));
+                      const canShowTooltip = hasTipText || hasTipImage;
+
+                      const chipButton = (
+                        <button
+                          type="button"
+                          className="arc-card-detail-tag-chip"
+                          onClick={() => void removeTag(tag.id)}
+                          aria-label={`Снять метку «${tag.name}»`}
+                        >
+                          <span className="arc-card-detail-tag-dot" style={{ background: colorHex }} aria-hidden="true" />
+                          <span className="arc-card-detail-tag-name">{tag.name}</span>
+                        </button>
+                      );
+
+                      if (!canShowTooltip) {
+                        return <Fragment key={tag.id}>{chipButton}</Fragment>;
+                      }
+
+                      return (
+                        <Tooltip
+                          key={tag.id}
+                          content={
+                            <TagTooltipBody description={tag.description} imageDataUrl={tag.tooltipImageDataUrl} />
+                          }
+                          delay={1000}
+                          position="top"
+                          variant="rich"
+                        >
+                          {chipButton}
+                        </Tooltip>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-s arc-card-detail-empty">Меток пока нет</p>
@@ -1106,7 +1277,8 @@ export default function CardDetailOverlay({
         <CardDetailCollectionsModal
           selectedCollectionIds={card.collectionIds}
           onClose={() => setCollectionsModalOpen(false)}
-          onApply={(collectionIds) => void applyCollections(collectionIds)}
+          onToggleCollection={(collectionId) => void toggleCollectionOnCard(collectionId)}
+          onCreateAndAssign={(name) => createAndAssignCollection(name)}
         />
       ) : null}
 
@@ -1118,6 +1290,15 @@ export default function CardDetailOverlay({
           variant={actionAlert.variant}
           hostClassName="arc-card-detail-alert-host"
           onClose={() => setActionAlert(null)}
+        />
+      ) : null}
+
+      {!inTrash ? (
+        <CopyCardSettingsMenu
+          open={copySettingsMenuOpen}
+          anchorRef={copySettingsAnchorRef}
+          onClose={() => setCopySettingsMenuOpen(false)}
+          onCopy={handleCopySettings}
         />
       ) : null}
 

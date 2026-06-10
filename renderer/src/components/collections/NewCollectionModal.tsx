@@ -3,11 +3,12 @@ import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 type Props = {
   existingLowerNames: Set<string>;
+  hostClassName?: string;
   onClose: () => void;
   onSubmit: (name: string) => Promise<void>;
 };
 
-export default function NewCollectionModal({ existingLowerNames, onClose, onSubmit }: Props) {
+export default function NewCollectionModal({ existingLowerNames, hostClassName = '', onClose, onSubmit }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const lastNonEmptyRef = useRef('');
   const [name, setName] = useState('');
@@ -61,7 +62,7 @@ export default function NewCollectionModal({ existingLowerNames, onClose, onSubm
   return (
     <div
       ref={hostRef}
-      className="arc-modal-host"
+      className={['arc-modal-host', hostClassName].filter(Boolean).join(' ')}
       aria-hidden="false"
       onClick={(event) => {
         if (event.target === event.currentTarget) {

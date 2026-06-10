@@ -1,7 +1,8 @@
 const STORAGE_KEY = 'arc-card-detail-settings-width-v1';
 
 export const CARD_DETAIL_SETTINGS_WIDTH_DEFAULT = 600;
-export const CARD_DETAIL_SETTINGS_WIDTH_MIN = 500;
+/** Минимум для вмещения `.arc-card-detail-options` (см. `--arc-card-detail-settings-min-w` в index.css). */
+export const CARD_DETAIL_SETTINGS_WIDTH_MIN = 588;
 
 export function getCardDetailSettingsWidthBounds(): { min: number; max: number } {
   const min = CARD_DETAIL_SETTINGS_WIDTH_MIN;

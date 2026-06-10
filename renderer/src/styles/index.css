@@ -846,19 +846,159 @@ body.arc-card-detail-open .arc-app-outlet {
   touch-action: none;
 }
 
-.arc-card-detail-collections-modal {
-  width: min(560px, calc(100vw - var(--s-4) * 2));
-  max-height: min(720px, calc(100vh - var(--s-4) * 4));
+.arc-card-detail-collections-picker {
+  --arc-collections-picker-size: min(560px, calc(100vw - var(--s-4) * 2), calc(100vh - var(--s-4) * 4));
+  width: var(--arc-collections-picker-size);
+  height: var(--arc-collections-picker-size);
+  max-height: var(--arc-collections-picker-size);
   display: flex;
   flex-direction: column;
+  padding: 0;
+  border-radius: var(--radius-l);
+  border: 1px solid var(--panel-border);
+  overflow: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 
-.arc-card-detail-collections-modal-body {
+.arc-card-detail-collections-picker__fixed {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-top: var(--s-3);
+  box-sizing: border-box;
+}
+
+.arc-card-detail-collections-picker__inset {
+  padding: 0 var(--s-3);
+}
+
+.arc-card-detail-collections-picker__search {
+  padding: 0;
+}
+
+.arc-card-detail-collections-picker__fixed .context-menu__sep {
+  width: 100%;
+  height: 1px;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  border: 0;
+  background: var(--panel-border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.arc-card-detail-collections-picker__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--s-3) 0;
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.arc-card-detail-collections-picker__scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.arc-card-detail-collections-picker__list {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
-  min-height: 0;
+  gap: var(--s-2);
+  padding: 0 var(--s-3);
+}
+
+.arc-card-detail-collections-picker__empty {
+  margin: 0;
+  padding: 0 var(--s-3);
+  color: var(--text-elev-secondary);
+}
+
+.arc-card-detail-collections-picker__footer {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-bottom: var(--s-3);
+  box-sizing: border-box;
+}
+
+.arc-card-detail-collections-picker__footer .context-menu__sep {
+  width: 100%;
+  height: 1px;
+  margin: 0 0 var(--s-3);
+  padding: 0;
+  border: 0;
+  background: var(--panel-border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.arc-card-detail-collections-picker__new {
+  width: 100%;
+  justify-content: center;
+}
+
+.arc-card-detail-collection-row--picker {
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--panel-border);
+}
+
+.arc-card-detail-collection-row--picker .arc-card-detail-collection-stack-layer {
+  background: var(--raised-bg);
+}
+
+.arc-card-detail-collection-row--picker .arc-card-detail-collection-stack-fill--empty {
+  background: var(--raised-bg);
+}
+
+.arc-card-detail-collection-row--picker:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.arc-card-detail-collection-name--picker {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+.arc-card-detail-collection-picker-count {
+  color: var(--text-elev-secondary);
+}
+
+.arc-card-detail-collection-row__checkbox {
+  align-self: center;
+}
+
+.arc-checkbox {
+  flex-shrink: 0;
+  width: var(--input-icon-size);
+  height: var(--input-icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid var(--icons-white-default);
+  border-radius: 2px;
+  background: transparent;
+}
+
+.arc-checkbox--checked {
+  border-color: var(--brand-550);
+  background: var(--brand-550);
+}
+
+.arc-checkbox__check {
+  color: var(--brand-50);
 }
 
 .arc-add-tags-picker-host {
@@ -1084,11 +1224,20 @@ body.arc-card-detail-open .arc-app-outlet {
   padding: 0;
 }
 
+.arc-card-detail-overlay[data-btn-size="l"] {
+  --arc-card-detail-settings-min-w: calc(
+    var(--s-4) * 2 + var(--s-3) * 3 + var(--btn-h) * 7 + min(200px, 28vw) - 4px
+  );
+}
+
 .arc-card-detail-settings {
   flex: 0 0 var(--arc-card-detail-settings-w, 600px);
   width: var(--arc-card-detail-settings-w, 600px);
-  max-width: min(var(--arc-card-detail-settings-w, 600px), 50vw);
-  min-width: 500px;
+  max-width: max(
+    var(--arc-card-detail-settings-min-w, 588px),
+    min(var(--arc-card-detail-settings-w, 600px), 50vw)
+  );
+  min-width: var(--arc-card-detail-settings-min-w, 588px);
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1103,10 +1252,10 @@ body.arc-card-detail-open .arc-app-outlet {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--s-2);
+  justify-content: flex-start;
   margin: 0;
   padding: var(--s-4);
+  padding-right: calc(var(--s-4) + var(--btn-h) + var(--s-3));
   border-bottom: 1px solid var(--panel-border);
   background: var(--panel-bg);
 }
@@ -1115,8 +1264,16 @@ body.arc-card-detail-open .arc-app-outlet {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--s-3);
+  flex: 0 1 auto;
   min-width: 0;
+}
+
+.arc-card-detail-close-slot {
+  position: absolute;
+  top: 50%;
+  right: var(--s-4);
+  transform: translateY(-50%);
 }
 
 .arc-card-detail-segmented {
@@ -1355,12 +1512,17 @@ body.arc-card-detail-open .arc-app-outlet {
   gap: var(--s-3);
   padding: var(--s-3);
   border-radius: var(--radius-s);
-  transition: border-color var(--transition-fast);
 }
 
-.arc-card-detail-collection-row.panel:hover,
-.arc-card-detail-collection-row.panel:focus-within {
-  border-color: var(--surface-border-raised);
+.arc-card-detail-collection-row.panel.elevation-sunken {
+  background: var(--button-outline-default);
+  border-color: var(--button-outline-border-default);
+  transition: background-color var(--transition-fast);
+}
+
+.arc-card-detail-collection-row.panel.elevation-sunken:hover,
+.arc-card-detail-collection-row.panel.elevation-sunken:focus-within {
+  background: var(--button-outline-hover);
 }
 
 .arc-card-detail-collection-stack-box {
@@ -1618,9 +1780,15 @@ body.arc-card-detail-open .arc-app-outlet {
 
 @media (max-width: 1200px) {
   .arc-card-detail-settings {
-    flex-basis: min(500px, 38vw);
-    width: min(500px, 38vw);
-    min-width: 500px;
+    flex-basis: max(
+      var(--arc-card-detail-settings-min-w, 588px),
+      min(var(--arc-card-detail-settings-w, 600px), 38vw)
+    );
+    width: max(
+      var(--arc-card-detail-settings-min-w, 588px),
+      min(var(--arc-card-detail-settings-w, 600px), 38vw)
+    );
+    min-width: var(--arc-card-detail-settings-min-w, 588px);
   }
 
   [data-grid-size='l'] .arc-card-similar-masonry {
