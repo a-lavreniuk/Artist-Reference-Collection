@@ -1,4 +1,4 @@
-/** Закрыть открытую детальную карточку (например при смене таба Navbar). */
+/** Закрыть открытую детальную карточку без шага «назад» (смена таба Navbar). */
 export const ARC_CARD_DETAIL_CLOSE_EVENT = 'arc:card-detail-close';
 
 export function requestCloseCardDetail(): void {

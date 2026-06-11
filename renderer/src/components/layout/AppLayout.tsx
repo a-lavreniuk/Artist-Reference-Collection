@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
+import ArcTopBar from './ArcTopBar';
 import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
 import AppUpdateHost from './AppUpdateHost';
@@ -7,6 +8,7 @@ import PendingRestoreModal from './PendingRestoreModal';
 import ImportHost from '../import/ImportHost';
 import { ensureGalleryBootstrap, scheduleGalleryWarmup } from '../gallery/galleryBootstrap';
 import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
+import { applyTopbarCssVars } from './navbarLayout';
 import { isLibraryConfigured } from '../../services/db';
 
 export default function AppLayout() {
@@ -29,6 +31,7 @@ export default function AppLayout() {
     body.setAttribute('data-btn-size', 'l');
     body.setAttribute('data-input-size', 'l');
     applyGridSizeToDocument(readGridSize());
+    applyTopbarCssVars();
 
     return () => {
       body.removeAttribute('data-grid-size');
@@ -46,6 +49,7 @@ export default function AppLayout() {
     <ImportHost>
       <main className="arc-navbar-shell">
         <MaintenanceBanner />
+        <ArcTopBar />
         <TopNavbar />
         <div className="arc-app-outlet">
           <Outlet />

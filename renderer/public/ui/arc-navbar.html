@@ -8,7 +8,28 @@
   <link rel="stylesheet" href="./arc-navbar.css" />
 </head>
 <body class="arc-navbar-page" data-elevation="default" data-typo-role="primary" data-typo-tone="white" data-typo-state="default" data-btn-size="l" data-input-size="l">
-  <main class="arc-navbar-shell" style="--arc-navbar-stack-height: 136px">
+  <main class="arc-navbar-shell" style="--arc-chrome-top-height: 160px; --arc-navbar-stack-height: 136px">
+    <header class="arc-topbar arc-ui-kit-scope" data-elevation="default" data-typo-tone="white" aria-label="Панель окна">
+      <div class="arc-topbar__steps arc-navbar-no-drag">
+        <button type="button" class="arc-topbar-btn" aria-label="Назад" disabled>
+          <span class="arc-topbar-btn__glyph arc-icon-chevron arc-chevron-point-left" data-arc-icon-size="s" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="arc-topbar-btn" aria-label="Вперёд" disabled>
+          <span class="arc-topbar-btn__glyph arc-icon-chevron arc-chevron-point-right" data-arc-icon-size="s" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="arc-topbar__window arc-navbar-no-drag">
+        <button type="button" class="arc-topbar-btn" aria-label="Свернуть в трей">
+          <span class="arc-topbar-btn__glyph arc-icon-minimize" data-arc-icon-size="s" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="arc-topbar-btn" aria-label="Развернуть окно">
+          <span class="arc-topbar-btn__glyph arc-icon-maximize" data-arc-icon-size="s" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="arc-topbar-btn arc-topbar-btn--close" aria-label="Закрыть в трей">
+          <span class="arc-topbar-btn__glyph arc-icon-close" data-arc-icon-size="s" aria-hidden="true"></span>
+        </button>
+      </div>
+    </header>
     <div
       class="arc-navbar-host"
       style="--arc-navbar-panel-height: 72px; --arc-navbar-shade-band-height: 136px; --arc-navbar-stack-height: 136px"

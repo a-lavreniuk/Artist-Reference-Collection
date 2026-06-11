@@ -1,0 +1,35 @@
+---
+description: Top Bar ARC — чёрная полоса окна с историей и window controls
+globs:
+  - renderer/src/components/layout/ArcTopBar.tsx
+  - renderer/public/ui/arc-navbar.css
+---
+
+# Top Bar (ARC)
+
+Макет: [ARC-2 / Top Bar, node 1225:11377](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1225-11377).
+
+## Когда использовать
+
+- Управление окном (свернуть / развернуть / закрыть в трей) и навигация «Назад / Вперёд» по истории маршрутов.
+- Отдельный слой **над** панелью навбара; не смешивать с `arc-navbar` panel.
+
+## Как реализовать
+
+- Компонент: `renderer/src/components/layout/ArcTopBar.tsx`.
+- История: `useArcHistoryNav` (`navigate(-1)` / `navigate(1)`).
+- Стили: `.arc-topbar`, `.arc-topbar-btn` в `renderer/public/ui/arc-navbar.css`.
+- Drag окна: `-webkit-app-region: drag` на `.arc-topbar`; кнопки — `arc-navbar-no-drag`.
+- Window controls: существующие `arc-icon-minimize` / `maximize` / `close` (`*_s.svg`), цвет через CSS.
+- Без tooltip на кнопках топбара (достаточно `aria-label`).
+
+## Визуал
+
+- Фон `#000`, высота `24px` (`--arc-topbar-height`), edge-to-edge.
+- Hit-area кнопок `48×24px`, иконки `12px`.
+- Назад/вперёд: `arc-icon-chevron` + `arc-chevron-point-left` / `arc-chevron-point-right`.
+
+## Поведение
+
+- Не дублировать window controls в `TopNavbar` / `mgmt`.
+- Метрики chrome: `--arc-chrome-top-height` = topbar + navbar stack (`navbarLayout.ts`).

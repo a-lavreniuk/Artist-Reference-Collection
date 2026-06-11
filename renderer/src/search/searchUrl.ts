@@ -1,6 +1,6 @@
 /** Повторяющиеся query-параметры `tag=` — выбранные метки (AND). */
 export const ARC_SEARCH_QUERY_TAG = 'tag';
-/** Один параметр `card=` — точное совпадение id карточки вместе с фильтрами по типу и меткам. */
+/** Один параметр `card=` — фильтр ленты по id (вместе с типом и метками). Открытие оверлея — `detail=` (см. openCardUrl.ts). */
 export const ARC_SEARCH_QUERY_CARD = 'card';
 
 export function parseSearchTagIds(searchParams: URLSearchParams): string[] {
