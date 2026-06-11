@@ -38,6 +38,7 @@ type GalleryFilterContextValue = {
   setFilters: (next: GalleryAdvancedFilters) => void;
   patchFilters: (patch: Partial<GalleryAdvancedFilters>) => void;
   clearFilters: () => void;
+  clearFilterCategory: (id: GalleryFilterId) => void;
   sort: GallerySortState;
   setSort: (next: GallerySortState) => void;
   layout: GalleryFilterLayoutState;
@@ -82,6 +83,40 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   const clearFilters = useCallback(() => {
     setFilters(emptyGalleryAdvancedFilters());
   }, []);
+
+  const clearFilterCategory = useCallback(
+    (id: GalleryFilterId) => {
+      switch (id) {
+        case 'aspectRatio':
+          patchFilters({ aspectRatios: [] });
+          break;
+        case 'fileType':
+          patchFilters({ fileExtensions: [] });
+          break;
+        case 'description':
+          patchFilters({ description: null });
+          break;
+        case 'link':
+          patchFilters({ link: null });
+          break;
+        case 'dateAdded':
+          patchFilters({ dateAdded: [] });
+          break;
+        case 'fileWeight':
+          patchFilters({ fileWeight: [] });
+          break;
+        case 'resolution':
+          patchFilters({ resolution: [] });
+          break;
+        case 'duration':
+          patchFilters({ duration: [] });
+          break;
+        default:
+          break;
+      }
+    },
+    [patchFilters]
+  );
 
   const moveFilter = useCallback(
     (id: GalleryFilterId, direction: 'up' | 'down') => {
@@ -199,6 +234,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       setFilters,
       patchFilters,
       clearFilters,
+      clearFilterCategory,
       sort,
       setSort,
       layout,
@@ -221,6 +257,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       filters,
       patchFilters,
       clearFilters,
+      clearFilterCategory,
       sort,
       layout,
       setLayout,
@@ -248,20 +285,41 @@ export function useGalleryFilters(): GalleryFilterContextValue {
   return ctx;
 }
 
+function feedScopeKey(scope: GalleryFeedScope): string {
+  return JSON.stringify({
+    libraryScope: scope.libraryScope ?? 'all',
+    selectedTagIds: [...(scope.selectedTagIds ?? [])].sort(),
+    cardIdExact: scope.cardIdExact ?? '',
+    collectionId: scope.collectionId ?? '',
+    moodboardCardIds: [...(scope.moodboardCardIds ?? [])].sort()
+  });
+}
+
+function normalizeFeedScope(scope: GalleryFeedScope): GalleryFeedScope {
+  return {
+    libraryScope: scope.libraryScope ?? 'all',
+    selectedTagIds: scope.selectedTagIds ?? [],
+    cardIdExact: scope.cardIdExact ?? null,
+    collectionId: scope.collectionId ?? null,
+    moodboardCardIds: scope.moodboardCardIds ?? null
+  };
+}
+
 export function useRegisterGalleryFeedScope(scope: GalleryFeedScope): void {
   const { setFeedScope } = useGalleryFilters();
   const key = useMemo(
-    () =>
-      JSON.stringify({
-        libraryScope: scope.libraryScope ?? 'all',
-        selectedTagIds: [...(scope.selectedTagIds ?? [])].sort(),
-        cardIdExact: scope.cardIdExact ?? '',
-        collectionId: scope.collectionId ?? '',
-        moodboardCardIds: [...(scope.moodboardCardIds ?? [])].sort()
-      }),
-    [scope]
+    () => feedScopeKey(scope),
+    [
+      scope.libraryScope,
+      scope.cardIdExact,
+      scope.collectionId,
+      scope.selectedTagIds,
+      scope.moodboardCardIds
+    ]
   );
   useEffect(() => {
-    setFeedScope(scope);
-  }, [key, scope, setFeedScope]);
+    const next = normalizeFeedScope(scope);
+    setFeedScope((prev) => (feedScopeKey(prev) === key ? prev : next));
+    // key уже сериализует scope; scope берём из замыкания текущего рендера при смене key
+  }, [key, setFeedScope]);
 }

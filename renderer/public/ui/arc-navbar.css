@@ -286,15 +286,114 @@ body::-webkit-scrollbar {
   max-width: 100%;
 }
 
-.arc-navbar-filter-chip .btn-ds__value {
+.arc-navbar-filter-chip .btn-ds__value,
+.arc-navbar-filter-chip-group .btn-ds__value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
-.arc-navbar-filter-chip.is-active {
-  background: var(--brand-600);
-  color: var(--brand-100);
+/* Active chip: Figma «Filter» + «Clear» (node 1293:8696) */
+.arc-navbar-filter-chip-group {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  height: var(--btn-h);
+  border-radius: var(--btn-radius);
+  background: var(--btn-brand-fill-default);
+  overflow: hidden;
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible)) {
+  background: var(--btn-brand-fill-hover);
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0 0 0 var(--s-2);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--btn-font-size);
+  line-height: var(--btn-line-height);
+  color: inherit;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__value {
+  color: var(--btn-brand-value-default);
+  font-weight: 500;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__counter {
+  color: var(--btn-brand-counter-default);
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__icon {
+  color: var(--btn-brand-icon-default);
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible))
+  .arc-navbar-filter-chip-filter
+  .btn-ds__value {
+  color: var(--btn-brand-value-hover);
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible))
+  .arc-navbar-filter-chip-filter
+  .btn-ds__counter {
+  color: var(--btn-brand-counter-hover);
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible))
+  .arc-navbar-filter-chip-filter
+  .btn-ds__icon {
+  color: var(--btn-brand-icon-hover);
+}
+
+.arc-navbar-filter-chip-group > .arc-tooltip-wrapper {
+  display: flex;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 100%;
+  margin: 0;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-1);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear .btn-ds__icon {
+  color: var(--btn-brand-icon-default);
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear:hover .btn-ds__icon,
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear:focus-visible .btn-ds__icon {
+  color: var(--btn-brand-icon-hover);
 }
 
 .arc-navbar-filters-options .btn-icon-only {

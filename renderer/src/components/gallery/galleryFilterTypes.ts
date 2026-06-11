@@ -151,6 +151,47 @@ export const SORT_FIELD_LABELS: Record<GallerySortField, string> = {
   duration: 'Длительность'
 };
 
+/** Подписи направления сортировки для каждого критерия (вариант A). */
+export const SORT_DIRECTION_OPTIONS: Record<
+  GallerySortField,
+  { primary: GallerySortDirection; primaryLabel: string; secondary: GallerySortDirection; secondaryLabel: string }
+> = {
+  addedAt: {
+    primary: 'desc',
+    primaryLabel: 'Сначала новые',
+    secondary: 'asc',
+    secondaryLabel: 'Сначала старые'
+  },
+  fileType: {
+    primary: 'asc',
+    primaryLabel: 'Сначала изображения',
+    secondary: 'desc',
+    secondaryLabel: 'Сначала видео'
+  },
+  fileWeight: {
+    primary: 'desc',
+    primaryLabel: 'Сначала тяжёлые',
+    secondary: 'asc',
+    secondaryLabel: 'Сначала лёгкие'
+  },
+  resolution: {
+    primary: 'desc',
+    primaryLabel: 'Сначала большие',
+    secondary: 'asc',
+    secondaryLabel: 'Сначала маленькие'
+  },
+  duration: {
+    primary: 'desc',
+    primaryLabel: 'Сначала длинные',
+    secondary: 'asc',
+    secondaryLabel: 'Сначала короткие'
+  }
+};
+
+export function defaultSortDirectionForField(field: GallerySortField): GallerySortDirection {
+  return SORT_DIRECTION_OPTIONS[field].primary;
+}
+
 export function emptyGalleryAdvancedFilters(): GalleryAdvancedFilters {
   return {
     aspectRatios: [],
@@ -186,25 +227,40 @@ export function countActiveFilterCategories(filters: GalleryAdvancedFilters): nu
 }
 
 export function isFilterCategoryActive(filters: GalleryAdvancedFilters, id: GalleryFilterId): boolean {
+  return countFilterCategorySelections(filters, id) > 0;
+}
+
+export function countFilterCategorySelections(
+  filters: GalleryAdvancedFilters,
+  id: GalleryFilterId
+): number {
   switch (id) {
     case 'aspectRatio':
-      return filters.aspectRatios.length > 0;
+      return filters.aspectRatios.length;
     case 'fileType':
-      return filters.fileExtensions.length > 0;
-    case 'description':
-      return filters.description != null;
-    case 'link':
-      return filters.link != null;
+      return filters.fileExtensions.length;
+    case 'description': {
+      if (!filters.description) return 0;
+      let n = 1;
+      if (filters.description.keywords?.trim()) n++;
+      return n;
+    }
+    case 'link': {
+      if (!filters.link) return 0;
+      let n = 1;
+      if (filters.link.keywords?.trim()) n++;
+      return n;
+    }
     case 'dateAdded':
-      return filters.dateAdded.length > 0;
+      return filters.dateAdded.length;
     case 'fileWeight':
-      return filters.fileWeight.length > 0;
+      return filters.fileWeight.length;
     case 'resolution':
-      return filters.resolution.length > 0;
+      return filters.resolution.length;
     case 'duration':
-      return filters.duration.length > 0;
+      return filters.duration.length;
     default:
-      return false;
+      return 0;
   }
 }
 

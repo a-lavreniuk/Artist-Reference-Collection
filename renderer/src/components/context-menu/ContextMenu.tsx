@@ -69,14 +69,17 @@ export default function ContextMenu({
 
   useLayoutEffect(() => {
     if (!open || !anchorRef.current) {
-      setLayout(null);
+      setLayout((prev) => (prev === null ? prev : null));
       return;
     }
     const rect = anchorRef.current.getBoundingClientRect();
     const rawTop = rect.bottom + CONTEXT_MENU_ANCHOR_GAP;
     const rawLeft = rect.right - CONTEXT_MENU_WIDTH;
-    setLayout(clampMenuPosition(rawTop, rawLeft));
-  }, [open, anchorRef]);
+    const nextLayout = clampMenuPosition(rawTop, rawLeft);
+    setLayout((prev) =>
+      prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
+    );
+  }, [open, ariaLabel]);
 
   useLayoutEffect(() => {
     if (!open || !panelRef.current) return;

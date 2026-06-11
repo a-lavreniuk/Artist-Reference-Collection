@@ -1,4 +1,12 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type RefObject
+} from 'react';
 import { ContextMenu, ContextMenuInput, type ContextMenuRow } from '../../context-menu';
 import ContextMenuItem from '../../context-menu/ContextMenuItem';
 import ContextMenuHeader from '../../context-menu/ContextMenuHeader';
@@ -9,9 +17,11 @@ import { useGalleryFilters } from '../../gallery/GalleryFilterContext';
 import {
   FILTER_CHIP_META,
   IMAGE_FILE_EXTENSIONS,
+  SORT_DIRECTION_OPTIONS,
   SORT_FIELD_LABELS,
+  defaultSortDirectionForField,
   VIDEO_FILE_EXTENSIONS,
-  isFilterCategoryActive,
+  countFilterCategorySelections,
   type AspectRatioFilterValue,
   type DateAddedFilterValue,
   type DurationFilterValue,
@@ -42,6 +52,7 @@ export default function GalleryNavbarFilters() {
     filters,
     patchFilters,
     clearFilters,
+    clearFilterCategory,
     sort,
     setSort,
     layout,
@@ -66,9 +77,16 @@ export default function GalleryNavbarFilters() {
   const [customDateTo, setCustomDateTo] = useState('');
 
   const sortRef = useRef<HTMLButtonElement>(null);
-  const chipRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const chipAnchorRefs = useRef<Record<string, RefObject<HTMLElement | null>>>({});
   const optionsRef = useRef<HTMLButtonElement>(null);
   const presetsRef = useRef<HTMLButtonElement>(null);
+
+  const getChipAnchorRef = (id: GalleryFilterId): RefObject<HTMLElement | null> => {
+    if (!chipAnchorRefs.current[id]) {
+      chipAnchorRefs.current[id] = { current: null };
+    }
+    return chipAnchorRefs.current[id];
+  };
 
   useLayoutEffect(() => {
     if (rowRef.current) void hydrateArcNavbarIcons(rowRef.current);
@@ -86,23 +104,29 @@ export default function GalleryNavbarFilters() {
         label: SORT_FIELD_LABELS[field],
         selected: sort.field === field,
         closeOnSelect: false,
-        onSelect: () => setSort({ field, direction: sort.field === field ? sort.direction : 'desc' })
+        onSelect: () =>
+          setSort({
+            field,
+            direction:
+              sort.field === field ? sort.direction : defaultSortDirectionForField(field)
+          })
       });
     }
+    const dirOpts = SORT_DIRECTION_OPTIONS[sort.field];
     items.push({ type: 'separator', key: 'sort-sep' });
     items.push({
       type: 'item',
-      key: 'sort-asc',
-      label: 'По увеличению',
-      selected: sort.direction === 'asc',
-      onSelect: () => setSort({ ...sort, direction: 'asc' })
+      key: 'sort-primary',
+      label: dirOpts.primaryLabel,
+      selected: sort.direction === dirOpts.primary,
+      onSelect: () => setSort({ ...sort, direction: dirOpts.primary })
     });
     items.push({
       type: 'item',
-      key: 'sort-desc',
-      label: 'По уменьшению',
-      selected: sort.direction === 'desc',
-      onSelect: () => setSort({ ...sort, direction: 'desc' })
+      key: 'sort-secondary',
+      label: dirOpts.secondaryLabel,
+      selected: sort.direction === dirOpts.secondary,
+      onSelect: () => setSort({ ...sort, direction: dirOpts.secondary })
     });
     return items;
   }, [setSort, sort]);
@@ -478,10 +502,11 @@ export default function GalleryNavbarFilters() {
   });
 
   const renderChipMenu = (id: GalleryFilterId) => {
-    const anchorRef = { current: chipRefs.current[id] ?? null };
+    const anchorRef = getChipAnchorRef(id);
     const open = openMenu === id;
     const meta = FILTER_CHIP_META[id];
-    const active = isFilterCategoryActive(filters, id);
+    const selectionCount = countFilterCategorySelections(filters, id);
+    const active = selectionCount > 0;
 
     let rows: ContextMenuRow[] | null = null;
     let children: React.ReactNode = null;
@@ -593,21 +618,63 @@ export default function GalleryNavbarFilters() {
         break;
     }
 
+    const handleClearCategory = (e: MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      clearFilterCategory(id);
+      closeMenu();
+    };
+
     return (
       <>
-        <button
-          ref={(el) => {
-            chipRefs.current[id] = el;
-          }}
-          type="button"
-          className={`btn btn-ghost btn-ds btn-m arc-navbar-filter-chip${active ? ' is-active' : ''}`}
-          aria-expanded={open}
-          aria-haspopup="menu"
-          onClick={() => setOpenMenu(open ? null : id)}
-        >
-          <span className={`btn-ds__icon ${meta.iconClass}`} aria-hidden="true" />
-          <span className="btn-ds__value">{meta.label}</span>
-        </button>
+        {active ? (
+          <div
+            ref={(el) => {
+              anchorRef.current = el;
+            }}
+            className="arc-navbar-filter-chip-group arc-navbar-no-drag"
+          >
+            <button
+              type="button"
+              className="arc-navbar-filter-chip arc-navbar-filter-chip-filter"
+              aria-expanded={open}
+              aria-haspopup="menu"
+              onClick={() => setOpenMenu(open ? null : id)}
+            >
+              <span className={`btn-ds__icon ${meta.iconClass}`} aria-hidden="true" />
+              <span className="btn-ds__value">{meta.label}</span>
+              <span className="btn-ds__counter">{selectionCount}</span>
+            </button>
+            <Tooltip
+              content="Очистить фильтр"
+              delay={500}
+              position="top"
+              className="arc-navbar-filter-chip-clear-tooltip"
+            >
+              <button
+                type="button"
+                className="arc-navbar-filter-chip-clear arc-navbar-no-drag"
+                aria-label="Очистить фильтр"
+                onClick={handleClearCategory}
+              >
+                <span className="btn-ds__icon arc-icon-close" aria-hidden="true" />
+              </button>
+            </Tooltip>
+          </div>
+        ) : (
+          <button
+            ref={(el) => {
+              anchorRef.current = el;
+            }}
+            type="button"
+            className="btn btn-ghost btn-ds btn-m arc-navbar-filter-chip"
+            aria-expanded={open}
+            aria-haspopup="menu"
+            onClick={() => setOpenMenu(open ? null : id)}
+          >
+            <span className={`btn-ds__icon ${meta.iconClass}`} aria-hidden="true" />
+            <span className="btn-ds__value">{meta.label}</span>
+          </button>
+        )}
         <ContextMenu
           open={open}
           anchorRef={anchorRef}
