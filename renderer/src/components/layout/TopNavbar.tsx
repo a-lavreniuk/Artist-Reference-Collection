@@ -7,7 +7,6 @@ import NavbarMenu from './NavbarMenu';
 import NavbarGridSizeMenu from './NavbarGridSizeMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
-import NavbarWindowControls from './NavbarWindowControls';
 import { Tooltip } from '../tooltip/Tooltip';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { requestCloseCardDetail } from '../gallery/cardDetailEvents';
@@ -160,12 +159,11 @@ export default function TopNavbar() {
 
             <div
               className="arc-navbar-top-bar__mgmt arc-navbar-no-drag arc-ui-kit-scope"
-              data-btn-size="s"
+              data-btn-size="l"
               data-elevation="default"
             >
               <NavbarLibrarySwitcher />
               <NavbarMenu />
-              <NavbarWindowControls />
             </div>
           </div>
 

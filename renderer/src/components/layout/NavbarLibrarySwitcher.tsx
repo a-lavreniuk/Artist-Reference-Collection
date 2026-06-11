@@ -53,7 +53,7 @@ export default function NavbarLibrarySwitcher() {
       <button
         ref={anchorRef}
         type="button"
-        className="btn btn-outline btn-ds btn-s arc-navbar-library-btn arc-navbar-no-drag"
+        className="btn btn-outline btn-ds btn-l arc-navbar-library-btn arc-navbar-no-drag"
         aria-label={`Библиотека: ${activeLabel}`}
         aria-expanded={open}
         aria-haspopup="menu"

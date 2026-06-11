@@ -23,6 +23,9 @@ export function resolveNavbarVariant(pathname: string): NavbarVariant {
 /** L в макете ARC-2: отступ Shade/навбара от края окна (= --s-4). */
 export const NAVBAR_LAYOUT_GUTTER_PX = 32;
 
+/** Высота Top Bar (Figma 1225:11377). */
+export const TOPBAR_HEIGHT_PX = 24;
+
 export function navbarPanelHeightPx(filtersOpen: boolean, variant: NavbarVariant): number {
   if (variant === 'full' && filtersOpen) return 128;
   return 72;
@@ -38,22 +41,31 @@ export function navbarShadeBandHeightPx(filtersOpen: boolean, variant: NavbarVar
 }
 
 const NAVBAR_STACK_CSS_VARS = [
+  '--arc-topbar-height',
   '--arc-navbar-stack-height',
   '--arc-navbar-shade-band-height',
   '--arc-navbar-panel-height',
+  '--arc-chrome-top-height',
   '--arc-navbar-search-max-width'
 ] as const;
 
 const NAVBAR_SEARCH_WIDTH_CAP_PX = 1008;
 
-/** Синхронизирует высоту Shade (L + panel + L) с фактическим layout host. */
+/** Синхронизирует высоту Shade (L + panel + L) и chrome stack с фактическим layout host. */
 export function applyNavbarStackCssVars(hostEl: HTMLElement, headerEl: HTMLElement | null): void {
   const panelHeight = headerEl?.offsetHeight ?? 0;
   const bandHeight = hostEl.offsetHeight;
+  const chromeTopHeight = TOPBAR_HEIGHT_PX + bandHeight;
   const root = document.body;
+  root.style.setProperty('--arc-topbar-height', `${TOPBAR_HEIGHT_PX}px`);
   root.style.setProperty('--arc-navbar-panel-height', `${panelHeight}px`);
   root.style.setProperty('--arc-navbar-stack-height', `${bandHeight}px`);
   root.style.setProperty('--arc-navbar-shade-band-height', `${bandHeight}px`);
+  root.style.setProperty('--arc-chrome-top-height', `${chromeTopHeight}px`);
+}
+
+export function applyTopbarCssVars(): void {
+  document.body.style.setProperty('--arc-topbar-height', `${TOPBAR_HEIGHT_PX}px`);
 }
 
 export function clearNavbarStackCssVars(): void {

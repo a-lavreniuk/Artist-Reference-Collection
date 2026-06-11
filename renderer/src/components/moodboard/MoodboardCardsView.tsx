@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useOpenCardUrl } from '../../search/openCardUrl';
 import { parseSearchCardId, parseSearchTagIds } from '../../search/searchUrl';
 import GalleryBoard from '../gallery/GalleryBoard';
 import CardInspectModal from '../gallery/CardInspectModal';
@@ -40,7 +41,7 @@ export default function MoodboardCardsView() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [openCardId, setOpenCardId] = useState<string | null>(null);
+  const { openCardId, openCard, closeCard } = useOpenCardUrl();
   const [tagsIndex, setTagsIndex] = useState<Map<string, TagRecord>>(new Map());
   const [noSimilarAlertOpen, setNoSimilarAlertOpen] = useState(false);
   const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
@@ -157,7 +158,7 @@ export default function MoodboardCardsView() {
         <>
           <GalleryBoard
             cards={cards}
-            onOpenCard={(id) => setOpenCardId(id)}
+            onOpenCard={openCard}
             moodboardCardIds={moodboardCardIds}
             onToggleMoodboard={handleToggleMoodboard}
             onFindSimilar={async (id) => {
@@ -166,7 +167,7 @@ export default function MoodboardCardsView() {
                 setNoSimilarAlertOpen(true);
                 return;
               }
-              setOpenCardId(sim[0].id);
+              openCard(sim[0].id);
             }}
           />
           <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
@@ -178,9 +179,9 @@ export default function MoodboardCardsView() {
         <CardInspectModal
           cardId={openCardId}
           tagsIndex={tagsIndex}
-          onClose={() => setOpenCardId(null)}
+          onClose={closeCard}
           onDeleted={() => void loadPage(0, false)}
-          onOpenCard={(cid) => setOpenCardId(cid)}
+          onOpenCard={openCard}
           moodboardRemoveConfirm="moodboard"
         />
       ) : null}

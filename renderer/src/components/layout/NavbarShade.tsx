@@ -51,6 +51,7 @@ export default function NavbarShade({ filtersOpen, pauseBackdropBlur = false }: 
           ))}
         </div>
       ) : null}
+      <div className="arc-navbar-shade__tint" />
     </div>
   );
 }

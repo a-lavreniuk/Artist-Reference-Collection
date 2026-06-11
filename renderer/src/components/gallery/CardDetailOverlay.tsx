@@ -41,7 +41,6 @@ import {
   readCardDetailSettingsWidth,
   writeCardDetailSettingsWidth
 } from './cardDetailSettingsWidth';
-import { ARC_CARD_DETAIL_CLOSE_EVENT } from './cardDetailEvents';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 
 type Props = {
@@ -255,12 +254,6 @@ export default function CardDetailOverlay({
       cancelled = true;
     };
   }, [src, card?.type, cardId]);
-
-  useEffect(() => {
-    const onCloseRequest = () => onClose();
-    window.addEventListener(ARC_CARD_DETAIL_CLOSE_EVENT, onCloseRequest);
-    return () => window.removeEventListener(ARC_CARD_DETAIL_CLOSE_EVENT, onCloseRequest);
-  }, [onClose]);
 
   useEffect(() => {
     document.body.classList.add('arc-card-detail-open');

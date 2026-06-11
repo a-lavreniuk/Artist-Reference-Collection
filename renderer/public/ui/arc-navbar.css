@@ -5,6 +5,8 @@
   color: var(--text-elev-primary);
   /* L в макете ARC-2 (844:23306): 32px от края окна */
   --arc-layout-gutter: var(--s-4);
+  --arc-topbar-height: 24px;
+  --arc-chrome-top-height: calc(var(--arc-topbar-height) + var(--arc-layout-gutter) * 2 + 72px);
 }
 
 html,
@@ -30,12 +32,114 @@ body::-webkit-scrollbar {
 
 .arc-navbar-host {
   position: fixed;
-  top: 0;
+  top: var(--arc-topbar-height, 24px);
   left: 0;
   right: 0;
   z-index: 20;
   pointer-events: none;
   isolation: isolate;
+}
+
+.arc-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--arc-topbar-height, 24px);
+  min-height: var(--arc-topbar-height, 24px);
+  padding: 0;
+  box-sizing: border-box;
+  background: #000;
+  -webkit-app-region: drag;
+  pointer-events: auto;
+  --icons-white-default: var(--gray-600);
+  --icons-white-hover: var(--gray-50);
+  --icons-white-disabled: var(--gray-850);
+  --icons-danger-default: var(--red-750);
+  --icons-danger-hover: var(--red-600);
+  --icons-danger-disabled: var(--red-900);
+}
+
+.arc-topbar__steps,
+.arc-topbar__window {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.arc-topbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: var(--arc-topbar-height, 24px);
+  min-width: 48px;
+  min-height: var(--arc-topbar-height, 24px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--icons-white-default);
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.arc-topbar-btn:hover:not(:disabled),
+.arc-topbar-btn:focus-visible:not(:disabled) {
+  background: var(--input-fill-hover);
+}
+
+.arc-topbar-btn:disabled {
+  color: var(--icons-white-disabled);
+  cursor: default;
+}
+
+.arc-topbar-btn--close {
+  color: var(--icons-danger-default);
+}
+
+.arc-topbar-btn--close:hover:not(:disabled),
+.arc-topbar-btn--close:focus-visible:not(:disabled) {
+  background: var(--button-danger-hover);
+}
+
+.arc-topbar-btn--close:disabled {
+  color: var(--icons-danger-disabled);
+}
+
+.arc-topbar-btn__glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.arc-topbar-btn__glyph > .arc-navbar-icon-svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.arc-topbar-btn--close .arc-navbar-icon-svg [stroke],
+.arc-topbar-btn--close .arc-navbar-icon-svg [fill]:not([fill="none"]) {
+  stroke: currentColor;
+}
+
+.arc-topbar-btn--close .arc-navbar-icon-svg [fill]:not([fill="none"]) {
+  fill: currentColor;
+}
+
+.arc-chevron-point-right > .arc-navbar-icon-svg {
+  transform: rotate(-90deg);
 }
 
 .arc-navbar-host__inner {
@@ -48,7 +152,7 @@ body::-webkit-scrollbar {
 .arc-navbar {
   position: relative;
   z-index: 3;
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -138,50 +242,11 @@ body::-webkit-scrollbar {
 }
 
 .arc-navbar-library-btn {
-  max-width: 160px;
+  max-width: none;
 }
 
 .arc-navbar-library-btn__value {
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.arc-navbar-window-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-}
-
-.arc-navbar-window-btn {
-  width: var(--btn-h, 24px);
-  height: var(--btn-h, 24px);
-  min-height: var(--btn-h, 24px);
-  min-width: var(--btn-h, 24px);
-  padding: 0;
-}
-
-.btn-ghost.arc-navbar-window-btn--close .btn-icon-only__glyph {
-  color: var(--icons-danger-default);
-}
-
-.btn-ghost.arc-navbar-window-btn--close:hover:not(:disabled) .btn-icon-only__glyph,
-.btn-ghost.arc-navbar-window-btn--close:focus-visible:not(:disabled) .btn-icon-only__glyph {
-  color: var(--icons-danger-hover);
-}
-
-.btn-ghost.arc-navbar-window-btn--close:disabled .btn-icon-only__glyph {
-  color: var(--icons-danger-disabled);
-}
-
-.arc-navbar-window-btn--close .arc-navbar-icon-svg [stroke],
-.arc-navbar-window-btn--close .arc-navbar-icon-svg [fill]:not([fill="none"]) {
-  stroke: currentColor;
-}
-
-.arc-navbar-window-btn--close .arc-navbar-icon-svg [fill]:not([fill="none"]) {
-  fill: currentColor;
 }
 
 .arc-navbar-separator {
@@ -237,12 +302,12 @@ body::-webkit-scrollbar {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(180deg, var(--app-bg) 0%, transparent 100%);
 }
 
 .arc-navbar-shade__blur {
   position: absolute;
   inset: 0;
+  z-index: 0;
   overflow: hidden;
 }
 
@@ -250,6 +315,15 @@ body::-webkit-scrollbar {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+/* Чёрный градиент поверх blur-слоёв — иначе размытый контент просвечивает у стыка с топбаром */
+.arc-navbar-shade__tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, #000 0%, transparent 100%);
 }
 
 

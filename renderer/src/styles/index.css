@@ -55,7 +55,7 @@ a {
   overflow-y: auto;
   padding: var(--s-4);
   padding-top: calc(
-    var(--arc-navbar-stack-height, calc(var(--arc-layout-gutter) * 2 + 72px)) + var(--s-4)
+    var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px)) + var(--s-4)
   );
   border-radius: var(--radius-l);
   background: var(--gray-1000);
@@ -775,7 +775,7 @@ body.arc-card-detail-open .arc-app-outlet {
   overflow: hidden;
   background: transparent;
   --arc-card-detail-viewport-h: calc(
-    100vh - var(--arc-navbar-stack-height, calc(var(--arc-layout-gutter) * 2 + 72px)) - var(--s-4)
+    100vh - var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px)) - var(--s-4)
   );
   --arc-card-detail-main-h: var(--arc-card-detail-viewport-h);
   --arc-card-detail-similar-peek-ratio: 0.24;
@@ -786,7 +786,7 @@ body.arc-card-detail-open .arc-app-outlet {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-top: var(--arc-navbar-stack-height, calc(var(--arc-layout-gutter) * 2 + 72px));
+  padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px));
   scrollbar-width: none;
   -ms-overflow-style: none;
 }

@@ -10,6 +10,11 @@ import {
   type TagRecord
 } from '../../services/db';
 import {
+  ARC_DETAIL_QUERY_CARD,
+  removeCardFilterFromParams,
+  setSearchAndDetailCardInParams
+} from '../../search/openCardUrl';
+import {
   ARC_SEARCH_QUERY_CARD,
   ARC_SEARCH_QUERY_TAG,
   parseSearchCardId,
@@ -213,6 +218,7 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     const n = new URLSearchParams(searchParams);
     n.delete(ARC_SEARCH_QUERY_TAG);
     n.delete(ARC_SEARCH_QUERY_CARD);
+    n.delete(ARC_DETAIL_QUERY_CARD);
     setSearchParams(n, { replace: true });
     setDraft('');
     setFieldError(false);
@@ -222,9 +228,7 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     const id = raw.trim();
     if (!id) return;
     panelHadInteraction.current = true;
-    const n = new URLSearchParams(searchParams);
-    n.set(ARC_SEARCH_QUERY_CARD, id);
-    setSearchParams(n, { replace: true });
+    setSearchParams(setSearchAndDetailCardInParams(searchParams, id));
     setDraft('');
     setFieldError(false);
     markSearchSessionCompleted();
@@ -330,17 +334,13 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
                 aria-label="Сбросить фильтр по ID"
                 onClick={() => {
                   panelHadInteraction.current = true;
-                  const n = new URLSearchParams(searchParams);
-                  n.delete(ARC_SEARCH_QUERY_CARD);
-                  setSearchParams(n, { replace: true });
+                  setSearchParams(removeCardFilterFromParams(searchParams), { replace: true });
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     panelHadInteraction.current = true;
-                    const n = new URLSearchParams(searchParams);
-                    n.delete(ARC_SEARCH_QUERY_CARD);
-                    setSearchParams(n, { replace: true });
+                    setSearchParams(removeCardFilterFromParams(searchParams), { replace: true });
                   }
                 }}
               >

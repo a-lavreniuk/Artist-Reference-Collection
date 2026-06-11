@@ -34,7 +34,7 @@ export default function NavbarMenu() {
       <button
         ref={anchorRef}
         type="button"
-        className="btn btn-outline btn-ds btn-icon-only arc-navbar-no-drag"
+        className="btn btn-outline btn-ds btn-l btn-icon-only arc-navbar-no-drag"
         aria-label="Меню"
         aria-expanded={open}
         aria-haspopup="menu"
