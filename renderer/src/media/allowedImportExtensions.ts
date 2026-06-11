@@ -2,8 +2,9 @@
  * Whitelist расширений при добавлении в очередь (синхронизирован с main: IMAGE_EXT + VIDEO_EXT).
  * Точка с опусканием: `src/main/ffmpeg.ts` и `src/main/ipc.ts`.
  */
-const IMAGE = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp']);
+const IMAGE = new Set(['jpg', 'jpeg', 'png', 'webp', 'bmp']);
 const VIDEO = new Set([
+  'gif',
   'mp4',
   'webm',
   'mov',

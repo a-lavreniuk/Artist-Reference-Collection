@@ -7,6 +7,7 @@ import GalleryBoard from '../components/gallery/GalleryBoard';
 import { useGalleryFeed } from '../components/gallery/useGalleryFeed';
 
 import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
+import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
 
 import CardInspectModal from '../components/gallery/CardInspectModal';
 
@@ -51,16 +52,6 @@ import { emptyTrash } from '../services/db';
 
 
 
-function filterFromParams(raw: string | null): GalleryFeedQuery['filter'] {
-
-  if (raw === 'images' || raw === 'videos') return raw;
-
-  return 'all';
-
-}
-
-
-
 export default function GalleryPage() {
 
   const [searchParams] = useSearchParams();
@@ -69,23 +60,37 @@ export default function GalleryPage() {
 
   const navigate = useNavigate();
 
+  const { filters, sort } = useGalleryFilters();
+
   const feedQuery = useMemo<GalleryFeedQuery>(
 
     () => ({
-
-      filter: filterFromParams(searchParams.get('gf')),
 
       libraryScope: parseLibraryScope(searchParams),
 
       selectedTagIds: parseSearchTagIds(searchParams),
 
-      cardIdExact: parseSearchCardId(searchParams)
+      cardIdExact: parseSearchCardId(searchParams),
+
+      advancedFilters: filters,
+
+      sort
 
     }),
 
-    [searchParams]
+    [searchParams, filters, sort]
 
   );
+
+  useRegisterGalleryFeedScope({
+
+    libraryScope: feedQuery.libraryScope,
+
+    selectedTagIds: feedQuery.selectedTagIds,
+
+    cardIdExact: feedQuery.cardIdExact
+
+  });
 
   const hasSearchFilters = feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact);
 

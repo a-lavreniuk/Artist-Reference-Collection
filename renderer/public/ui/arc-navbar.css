@@ -286,10 +286,202 @@ body::-webkit-scrollbar {
   max-width: 100%;
 }
 
-.arc-navbar-filter-chip .btn-ds__value {
+.arc-navbar-filter-chip .btn-ds__value,
+.arc-navbar-filter-chip-group .btn-ds__value {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+/* Active chip: Figma «Filter» + «Clear» (node 1293:8696) */
+.arc-navbar-filter-chip-group {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  height: var(--btn-h);
+  border-radius: var(--btn-radius);
+  background: var(--btn-brand-fill-default);
+  overflow: hidden;
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible)) {
+  background: var(--btn-brand-fill-hover);
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0 0 0 var(--s-2);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--btn-font-size);
+  line-height: var(--btn-line-height);
+  color: inherit;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__value {
+  color: var(--btn-brand-value-default);
+  font-weight: 500;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__counter {
+  color: var(--btn-brand-counter-default);
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__icon {
+  color: var(--btn-brand-icon-default);
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible))
+  .arc-navbar-filter-chip-filter
+  .btn-ds__value {
+  color: var(--btn-brand-value-hover);
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible))
+  .arc-navbar-filter-chip-filter
+  .btn-ds__counter {
+  color: var(--btn-brand-counter-hover);
+}
+
+.arc-navbar-filter-chip-group:has(.arc-navbar-filter-chip-filter:hover):not(
+    :has(.arc-navbar-filter-chip-clear:hover)
+  ):not(:has(.arc-navbar-filter-chip-clear:focus-visible))
+  .arc-navbar-filter-chip-filter
+  .btn-ds__icon {
+  color: var(--btn-brand-icon-hover);
+}
+
+.arc-navbar-filter-chip-group > .arc-tooltip-wrapper {
+  display: flex;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 100%;
+  margin: 0;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-1);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear .btn-ds__icon {
+  color: var(--btn-brand-icon-default);
+}
+
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear:hover .btn-ds__icon,
+.arc-navbar-filter-chip-group .arc-navbar-filter-chip-clear:focus-visible .btn-ds__icon {
+  color: var(--btn-brand-icon-hover);
+}
+
+.arc-navbar-filters-options .btn-icon-only {
+  position: relative;
+}
+
+.arc-navbar-filters-options .btn-icon-only__badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: var(--s-3);
+  background: var(--brand-550);
+  color: var(--brand-100);
+  font: var(--typo-p-xs-medium);
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.arc-range-slider {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  width: 100%;
+}
+
+.arc-range-slider__track {
+  position: relative;
+  height: var(--s-2);
+  border-radius: var(--s-3);
+  background: var(--brand-700);
+}
+
+.arc-range-slider__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: var(--brand-450);
+}
+
+.arc-range-slider__thumb {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: var(--s-3);
+  margin: 0;
+  transform: translateY(-50%);
+  background: transparent;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.arc-range-slider__thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 50%;
+  background: var(--brand-100);
+  border: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.arc-range-slider__thumb::-moz-range-thumb {
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 50%;
+  background: var(--brand-100);
+  border: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.arc-range-slider__thumb--max {
+  z-index: 2;
+}
+
+.arc-range-slider__values {
+  display: flex;
+  justify-content: space-between;
+  color: var(--brand-200);
+  font: var(--typo-p-xs-regular);
 }
 
 .arc-navbar-filters-options {

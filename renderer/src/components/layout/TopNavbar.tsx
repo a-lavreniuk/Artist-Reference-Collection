@@ -29,7 +29,10 @@ export default function TopNavbar() {
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [maintenanceLocked, setMaintenanceLocked] = useState(false);
 
-  const variant = useMemo(() => resolveNavbarVariant(location.pathname), [location.pathname]);
+  const variant = useMemo(
+    () => resolveNavbarVariant(location.pathname, location.search),
+    [location.pathname, location.search]
+  );
   const activeMainTab = useMemo(() => resolveMainTab(location.pathname), [location.pathname]);
   const showFiltersSection = variant === 'full' && filtersOpen;
 

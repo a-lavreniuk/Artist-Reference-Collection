@@ -51,6 +51,16 @@ contextBridge.exposeInMainWorld('arc', {
   storageDeleteCard: (cardId: string) => ipcRenderer.invoke('arc:storage-delete-card', cardId),
   storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
     ipcRenderer.invoke('arc:storage-count-cards', payload),
+  storageGalleryFilterStats: (payload: unknown) =>
+    ipcRenderer.invoke('arc:storage-gallery-filter-stats', payload),
+  storageListFilterPresets: () => ipcRenderer.invoke('arc:storage-list-filter-presets'),
+  storageUpsertFilterPreset: (payload: unknown) =>
+    ipcRenderer.invoke('arc:storage-upsert-filter-preset', payload),
+  storageDeleteFilterPreset: (id: string) => ipcRenderer.invoke('arc:storage-delete-filter-preset', id),
+  storageRenameFilterPreset: (payload: unknown) =>
+    ipcRenderer.invoke('arc:storage-rename-filter-preset', payload),
+  storageBackfillDuration: () =>
+    ipcRenderer.invoke('arc:storage-backfill-duration') as Promise<{ updated: number; failed: number }>,
   onImportFilesProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => {
     const fn = (_: unknown, payload: { current: number; total: number; message?: string }) => cb(payload);
     ipcRenderer.on('arc:import-files-progress', fn);

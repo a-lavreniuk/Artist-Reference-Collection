@@ -1,3 +1,10 @@
+import type {
+  GalleryAdvancedFilters,
+  GalleryFilterPresetPayload,
+  GalleryFilterStats,
+  GallerySortState,
+  SavedFilterPreset
+} from './components/gallery/galleryFilterTypes';
 import type { ArcMetadataV1, CardRecord, CollectionRecord, MoodboardBoardV1 } from './services/arcSchema';
 import type { CategoryRecord, TagRecord } from './services/db';
 
@@ -48,11 +55,13 @@ declare global {
       storageListCards: (params: {
         offset: number;
         limit: number;
-        filter: 'all' | 'images' | 'videos';
         libraryScope?: 'all' | 'untagged' | 'trash';
         selectedTagIds?: string[];
         cardIdExact?: string | null;
         collectionId?: string | null;
+        moodboardCardIds?: string[] | null;
+        advancedFilters?: GalleryAdvancedFilters;
+        sort?: GallerySortState;
       }) => Promise<CardRecord[]>;
       storageGetCard: (cardId: string) => Promise<CardRecord | null>;
       storageUpdateCard: (
@@ -81,6 +90,22 @@ declare global {
       storageCountCards: (
         filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
       ) => Promise<number>;
+      storageGalleryFilterStats: (payload: {
+        libraryScope?: 'all' | 'untagged' | 'trash';
+        selectedTagIds?: string[];
+        cardIdExact?: string | null;
+        collectionId?: string | null;
+        moodboardCardIds?: string[] | null;
+      }) => Promise<GalleryFilterStats | null>;
+      storageListFilterPresets: () => Promise<SavedFilterPreset[]>;
+      storageUpsertFilterPreset: (payload: {
+        id: string;
+        name: string;
+        payload: GalleryFilterPresetPayload;
+      }) => Promise<void>;
+      storageDeleteFilterPreset: (id: string) => Promise<void>;
+      storageRenameFilterPreset: (payload: { id: string; name: string }) => Promise<void>;
+      storageBackfillDuration: () => Promise<{ updated: number; failed: number }>;
       onImportFilesProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => () => void;
       storageListCategories: () => Promise<CategoryRecord[]>;
       storageUpsertCategory: (cat: CategoryRecord) => Promise<void>;

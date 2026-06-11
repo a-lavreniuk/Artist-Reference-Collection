@@ -975,13 +975,26 @@ export async function isCardOnBoard(cardId: string): Promise<boolean> {
 export async function listMoodboardCards(params: {
   offset: number;
   limit: number;
-  filter: 'all' | 'images' | 'videos';
   selectedTagIds?: string[];
   cardIdExact?: string | null;
+  advancedFilters?: import('../components/gallery/galleryFilterTypes').GalleryAdvancedFilters;
+  sort?: import('../components/gallery/galleryFilterTypes').GallerySortState;
 }): Promise<CardRecord[]> {
   const mbIds = await readMoodboardIdsUnified();
+  const b = await resolveBackend();
+  if (b === 'file') {
+    return storage.storageListCards({
+      offset: params.offset,
+      limit: params.limit,
+      selectedTagIds: params.selectedTagIds,
+      cardIdExact: params.cardIdExact,
+      moodboardCardIds: mbIds,
+      advancedFilters: params.advancedFilters,
+      sort: params.sort
+    });
+  }
   const mbSet = new Set(mbIds);
-  const sorted = await listCardsSorted(params.filter);
+  const sorted = await listCardsSorted('all');
   let list = sorted.filter((c) => mbSet.has(c.id));
   const tagIds = (params.selectedTagIds ?? []).filter((id) => id.trim().length > 0);
   list = list.filter((c) => cardHasAllTagIds(c, tagIds));
@@ -1016,10 +1029,14 @@ export async function toggleCardInMoodboard(cardId: string): Promise<boolean> {
 export async function listCardsSorted(filter: 'all' | 'images' | 'videos'): Promise<CardRecord[]> {
   const b = await resolveBackend();
   if (b === 'file') {
-    return storage.storageListCards({
+    const all = await storage.storageListCards({
       offset: 0,
-      limit: 1_000_000,
-      filter
+      limit: 1_000_000
+    });
+    return all.filter((c) => {
+      if (filter === 'images') return c.type === 'image';
+      if (filter === 'videos') return c.type === 'video';
+      return true;
     });
   }
   const cards = safeReadArray<unknown>(STORAGE_KEYS.cards)
@@ -1044,23 +1061,29 @@ function cardHasAllTagIds(c: CardRecord, selectedTagIds: string[]): boolean {
 export async function listCardsPage(params: {
   offset: number;
   limit: number;
-  filter: 'all' | 'images' | 'videos';
   libraryScope?: import('../search/libraryScopeUrl').LibraryScope;
   selectedTagIds?: string[];
   cardIdExact?: string | null;
+  collectionId?: string | null;
+  moodboardCardIds?: string[] | null;
+  advancedFilters?: import('../components/gallery/galleryFilterTypes').GalleryAdvancedFilters;
+  sort?: import('../components/gallery/galleryFilterTypes').GallerySortState;
 }): Promise<CardRecord[]> {
   const b = await resolveBackend();
   if (b === 'file') {
     return storage.storageListCards({
       offset: params.offset,
       limit: params.limit,
-      filter: params.filter,
       libraryScope: params.libraryScope,
       selectedTagIds: params.selectedTagIds,
-      cardIdExact: params.cardIdExact
+      cardIdExact: params.cardIdExact,
+      collectionId: params.collectionId,
+      moodboardCardIds: params.moodboardCardIds,
+      advancedFilters: params.advancedFilters,
+      sort: params.sort
     });
   }
-  const sorted = await listCardsSorted(params.filter);
+  const sorted = await listCardsSorted('all');
   const tagIds = (params.selectedTagIds ?? []).filter((id) => id.trim().length > 0);
   let list = sorted.filter((c) => cardHasAllTagIds(c, tagIds));
   const cardExact = params.cardIdExact?.trim() ?? '';
@@ -1076,9 +1099,10 @@ export async function listCardsInCollection(
   params: {
     offset: number;
     limit: number;
-    filter: 'all' | 'images' | 'videos';
     selectedTagIds?: string[];
     cardIdExact?: string | null;
+    advancedFilters?: import('../components/gallery/galleryFilterTypes').GalleryAdvancedFilters;
+    sort?: import('../components/gallery/galleryFilterTypes').GallerySortState;
   }
 ): Promise<CardRecord[]> {
   const b = await resolveBackend();
@@ -1086,13 +1110,14 @@ export async function listCardsInCollection(
     return storage.storageListCards({
       offset: params.offset,
       limit: params.limit,
-      filter: params.filter,
       selectedTagIds: params.selectedTagIds,
       cardIdExact: params.cardIdExact,
-      collectionId
+      collectionId,
+      advancedFilters: params.advancedFilters,
+      sort: params.sort
     });
   }
-  const sorted = (await listCardsSorted(params.filter)).filter((c) => c.collectionIds.includes(collectionId));
+  const sorted = (await listCardsSorted('all')).filter((c) => c.collectionIds.includes(collectionId));
   const tagIds = (params.selectedTagIds ?? []).filter((id) => id.trim().length > 0);
   let list = sorted.filter((c) => cardHasAllTagIds(c, tagIds));
   const cardExact = params.cardIdExact?.trim() ?? '';

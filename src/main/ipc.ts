@@ -130,7 +130,7 @@ async function walkLibraryMediaRelativeFiles(rootAbs: string): Promise<string[]>
   return out;
 }
 
-const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
+const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp']);
 
 function isImageExt(ext: string): boolean {
   return IMAGE_EXT.has(ext.toLowerCase());
@@ -138,6 +138,7 @@ function isImageExt(ext: string): boolean {
 
 function isAllowedLibraryMediaExt(ext: string): boolean {
   const e = ext.toLowerCase();
+  if (e === '.gif') return true;
   return isImageExt(e) || isVideoExt(e);
 }
 

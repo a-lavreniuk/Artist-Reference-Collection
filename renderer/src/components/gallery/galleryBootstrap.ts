@@ -19,10 +19,13 @@ async function loadFirstPageIntoCache(query: GalleryFeedQuery, preloadDecode: bo
   const chunk = await listCardsPage({
     offset: 0,
     limit: GALLERY_PAGE_INITIAL,
-    filter: query.filter,
     libraryScope: query.libraryScope,
     selectedTagIds: query.selectedTagIds,
-    cardIdExact: query.cardIdExact
+    cardIdExact: query.cardIdExact,
+    collectionId: query.collectionId,
+    moodboardCardIds: query.moodboardCardIds,
+    advancedFilters: query.advancedFilters,
+    sort: query.sort
   });
 
   const gridSize = readGridSize();
