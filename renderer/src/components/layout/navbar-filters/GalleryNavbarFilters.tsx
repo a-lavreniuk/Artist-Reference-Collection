@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -7,10 +8,12 @@ import {
   type MouseEvent,
   type RefObject
 } from 'react';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { ContextMenu, ContextMenuInput, type ContextMenuRow } from '../../context-menu';
+import type { ContextMenuSlot } from '../../context-menu/types';
 import ContextMenuItem from '../../context-menu/ContextMenuItem';
-import ContextMenuHeader from '../../context-menu/ContextMenuHeader';
 import ContextMenuSeparator from '../../context-menu/ContextMenuSeparator';
+import { Datepicker } from '../../datepicker';
 import RangeSlider from '../../range-slider/RangeSlider';
 import { Tooltip } from '../../tooltip/Tooltip';
 import { useGalleryFilters } from '../../gallery/GalleryFilterContext';
@@ -36,6 +39,12 @@ import FilterPresetModal from './FilterPresetModal';
 function toggleInList<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
+
+/** Слоты пункта фильтра: название + чек слева, счётчик справа */
+const FILTER_COUNTER_ITEM_SLOTS: ContextMenuSlot[] = ['label', 'counter'];
+
+const FILTER_KEYWORDS_DEBOUNCE_MS = 400;
+const FILTER_KEYWORDS_PLACEHOLDER = 'Ключевые слова — через пробел, все обязательны';
 
 function formatMb(v: number): string {
   return `${Math.round(v * 10) / 10} Мб`;
@@ -70,11 +79,43 @@ export default function GalleryNavbarFilters() {
   const [presetModalOpen, setPresetModalOpen] = useState(false);
   const [descKeywords, setDescKeywords] = useState('');
   const [linkKeywords, setLinkKeywords] = useState('');
+  const descKeywordsDebounced = useDebouncedValue(descKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
+  const linkKeywordsDebounced = useDebouncedValue(linkKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
   const [customWeight, setCustomWeight] = useState({ min: 0, max: 10 });
   const [customRes, setCustomRes] = useState({ minW: 0, maxW: 3840, minH: 0, maxH: 2160 });
   const [customDuration, setCustomDuration] = useState({ min: 0, max: 60 });
-  const [customDateFrom, setCustomDateFrom] = useState('');
-  const [customDateTo, setCustomDateTo] = useState('');
+
+  useEffect(() => {
+    if (openMenu !== 'description') return;
+    setDescKeywords(filters.description?.keywords ?? '');
+  }, [openMenu, filters.description?.keywords]);
+
+  useEffect(() => {
+    if (openMenu !== 'link') return;
+    setLinkKeywords(filters.link?.keywords ?? '');
+  }, [openMenu, filters.link?.keywords]);
+
+  useEffect(() => {
+    if (filters.description === null) setDescKeywords('');
+  }, [filters.description]);
+
+  useEffect(() => {
+    if (filters.link === null) setLinkKeywords('');
+  }, [filters.link]);
+
+  useEffect(() => {
+    if (filters.description?.mode !== 'has') return;
+    const applied = filters.description.keywords ?? '';
+    if (descKeywordsDebounced === applied) return;
+    patchFilters({ description: { mode: 'has', keywords: descKeywordsDebounced } });
+  }, [descKeywordsDebounced, filters.description?.keywords, filters.description?.mode, patchFilters]);
+
+  useEffect(() => {
+    if (filters.link?.mode !== 'has') return;
+    const applied = filters.link.keywords ?? '';
+    if (linkKeywordsDebounced === applied) return;
+    patchFilters({ link: { mode: 'has', keywords: linkKeywordsDebounced } });
+  }, [linkKeywordsDebounced, filters.link?.keywords, filters.link?.mode, patchFilters]);
 
   const sortRef = useRef<HTMLButtonElement>(null);
   const chipAnchorRefs = useRef<Record<string, RefObject<HTMLElement | null>>>({});
@@ -132,11 +173,11 @@ export default function GalleryNavbarFilters() {
   }, [setSort, sort]);
 
   const buildAspectRows = (): ContextMenuRow[] => {
-    const opts: { key: AspectRatioFilterValue; label: string }[] = [
-      { key: 'horizontal', label: 'Горизонтальное' },
-      { key: 'vertical', label: 'Вертикальное' },
-      { key: 'square', label: 'Квадрат' },
-      { key: 'panoramic', label: 'Панорамное' }
+    const opts: { key: AspectRatioFilterValue; label: string; iconClass: string }[] = [
+      { key: 'horizontal', label: 'Горизонтальное', iconClass: 'arc-icon-aspect-ratio-horizontal' },
+      { key: 'vertical', label: 'Вертикальное', iconClass: 'arc-icon-aspect-ratio-vertical' },
+      { key: 'square', label: 'Квадратное', iconClass: 'arc-icon-aspect-ratio-square' },
+      { key: 'panoramic', label: 'Панорамное', iconClass: 'arc-icon-aspect-ratio-panoramic' }
     ];
     return opts
       .filter((o) => (stats?.aspectRatio[o.key] ?? 0) > 0)
@@ -144,7 +185,9 @@ export default function GalleryNavbarFilters() {
         type: 'item' as const,
         key: o.key,
         label: o.label,
+        iconClass: o.iconClass,
         counter: stats?.aspectRatio[o.key],
+        slotOrder: ['label', 'counter', 'icon'] as const,
         selected: filters.aspectRatios.includes(o.key),
         closeOnSelect: false,
         onSelect: () =>
@@ -162,6 +205,7 @@ export default function GalleryNavbarFilters() {
         key: `ext-${ext}`,
         label: ext,
         counter: n,
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
         selected: filters.fileExtensions.includes(ext),
         closeOnSelect: false,
         onSelect: () =>
@@ -178,6 +222,7 @@ export default function GalleryNavbarFilters() {
         key: `ext-${ext}`,
         label: ext,
         counter: n,
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
         selected: filters.fileExtensions.includes(ext),
         closeOnSelect: false,
         onSelect: () =>
@@ -187,70 +232,125 @@ export default function GalleryNavbarFilters() {
     return rows;
   };
 
-  const buildDescriptionMenu = () => (
-    <>
-      <ContextMenuHeader>Описание</ContextMenuHeader>
-      <ContextMenuItem
-        label="Есть"
-        counter={stats?.description.has}
-        selected={filters.description?.mode === 'has'}
-        onSelect={() =>
-          patchFilters({
-            description: { mode: 'has', keywords: descKeywords || filters.description?.keywords }
-          })
-        }
-      />
-      <ContextMenuItem
-        label="Нет"
-        counter={stats?.description.missing}
-        selected={filters.description?.mode === 'missing'}
-        onSelect={() => patchFilters({ description: { mode: 'missing' } })}
-      />
-      {filters.description?.mode === 'has' ? (
+  const buildDescriptionMenu = () => {
+    const keywordsEnabled = filters.description?.mode === 'has';
+    return (
+      <>
+        <ContextMenuItem
+          label="Есть"
+          counter={stats?.description.has}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={keywordsEnabled}
+          onSelect={() => {
+            if (filters.description?.mode === 'has') {
+              patchFilters({ description: null });
+              return;
+            }
+            patchFilters({
+              description: {
+                mode: 'has',
+                keywords: descKeywords || filters.description?.keywords || ''
+              }
+            });
+          }}
+        />
+        <ContextMenuItem
+          label="Нет"
+          counter={stats?.description.missing}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={filters.description?.mode === 'missing'}
+          onSelect={() => {
+            if (filters.description?.mode === 'missing') {
+              patchFilters({ description: null });
+              return;
+            }
+            patchFilters({ description: { mode: 'missing' } });
+          }}
+        />
+        <ContextMenuSeparator />
         <ContextMenuInput
-          variant="live"
-          label="Ключевые слова"
-          placeholder="Ключевые слова"
-          value={descKeywords || filters.description.keywords || ''}
+          variant="textarea"
+          placeholder={FILTER_KEYWORDS_PLACEHOLDER}
+          value={descKeywords}
+          disabled={!keywordsEnabled}
           onChange={(v) => {
+            if (!keywordsEnabled) return;
             setDescKeywords(v);
-            patchFilters({ description: { mode: 'has', keywords: v } });
           }}
         />
-      ) : null}
-    </>
-  );
+      </>
+    );
+  };
 
-  const buildLinkMenu = () => (
-    <>
-      <ContextMenuHeader>Ссылка</ContextMenuHeader>
-      <ContextMenuItem
-        label="Есть"
-        counter={stats?.link.has}
-        selected={filters.link?.mode === 'has'}
-        onSelect={() =>
-          patchFilters({ link: { mode: 'has', keywords: linkKeywords || filters.link?.keywords } })
-        }
-      />
-      <ContextMenuItem
-        label="Нет"
-        counter={stats?.link.missing}
-        selected={filters.link?.mode === 'missing'}
-        onSelect={() => patchFilters({ link: { mode: 'missing' } })}
-      />
-      {filters.link?.mode === 'has' ? (
-        <ContextMenuInput
-          variant="live"
-          label="Ключевые слова"
-          placeholder="Ключевые слова"
-          value={linkKeywords || filters.link.keywords || ''}
-          onChange={(v) => {
-            setLinkKeywords(v);
-            patchFilters({ link: { mode: 'has', keywords: v } });
+  const buildLinkMenu = () => {
+    const keywordsEnabled = filters.link?.mode === 'has';
+    return (
+      <>
+        <ContextMenuItem
+          label="Есть"
+          counter={stats?.link.has}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={keywordsEnabled}
+          onSelect={() => {
+            if (filters.link?.mode === 'has') {
+              patchFilters({ link: null });
+              return;
+            }
+            patchFilters({
+              link: { mode: 'has', keywords: linkKeywords || filters.link?.keywords || '' }
+            });
           }}
         />
-      ) : null}
-    </>
+        <ContextMenuItem
+          label="Нет"
+          counter={stats?.link.missing}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={filters.link?.mode === 'missing'}
+          onSelect={() => {
+            if (filters.link?.mode === 'missing') {
+              patchFilters({ link: null });
+              return;
+            }
+            patchFilters({ link: { mode: 'missing' } });
+          }}
+        />
+        <ContextMenuSeparator />
+        <ContextMenuInput
+          variant="textarea"
+          placeholder={FILTER_KEYWORDS_PLACEHOLDER}
+          value={linkKeywords}
+          disabled={!keywordsEnabled}
+          onChange={(v) => {
+            if (!keywordsEnabled) return;
+            setLinkKeywords(v);
+          }}
+        />
+      </>
+    );
+  };
+
+  const customDateValue = useMemo(() => {
+    const custom = filters.dateAdded.find((d) => d.preset === 'custom');
+    if (!custom) return null;
+    return { from: custom.from, to: custom.to };
+  }, [filters.dateAdded]);
+
+  const handleCustomDateChange = useCallback(
+    (value: { from: string; to: string } | null) => {
+      if (!value) {
+        patchFilters({
+          dateAdded: filters.dateAdded.filter((d) => d.preset !== 'custom')
+        });
+        return;
+      }
+      patchFilters({
+        dateAdded: [
+          ...filters.dateAdded.filter((d) => d.preset !== 'custom'),
+          { preset: 'custom', from: value.from, to: value.to ?? value.from }
+        ]
+      });
+    },
+    [filters.dateAdded, patchFilters]
   );
 
   const buildDateRows = (): ContextMenuRow[] => {
@@ -259,16 +359,17 @@ export default function GalleryNavbarFilters() {
       { key: 'yesterday', label: 'Вчера' },
       { key: 'week', label: 'Неделя' },
       { key: 'month', label: 'Месяц' },
-      { key: 'threeMonths', label: '3 месяца' },
+      { key: 'threeMonths', label: 'Три месяца' },
       { key: 'year', label: 'Год' }
     ];
-    const rows: ContextMenuRow[] = [{ type: 'header', key: 'date-h', label: 'Дата добавления' }];
+    const rows: ContextMenuRow[] = [];
     for (const p of presets) {
       rows.push({
         type: 'item',
         key: p.key,
         label: p.label,
         counter: stats?.dateAdded[p.key],
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
         selected: filters.dateAdded.some((d) => d.preset === p.key),
         closeOnSelect: false,
         onSelect: () => {
@@ -280,24 +381,23 @@ export default function GalleryNavbarFilters() {
         }
       });
     }
-    rows.push({
-      type: 'item',
-      key: 'custom-date',
-      label: 'Другой период',
-      selected: filters.dateAdded.some((d) => d.preset === 'custom'),
-      closeOnSelect: false,
-      onSelect: () => {
-        if (!customDateFrom) return;
-        const entry: DateAddedFilterValue = {
-          preset: 'custom',
-          from: customDateFrom,
-          to: customDateTo || customDateFrom
-        };
-        patchFilters({ dateAdded: [entry] });
-      }
-    });
     return rows;
   };
+
+  const buildDateMenu = () => (
+    <>
+      <ContextMenuSeparator />
+      <div className="context-menu__slot arc-navbar-no-drag">
+        <Datepicker
+          size="s"
+          mode="optional_range"
+          value={customDateValue}
+          aria-label="Дата добавления"
+          onChange={handleCustomDateChange}
+        />
+      </div>
+    </>
+  );
 
   const buildWeightRows = (): ContextMenuRow[] => {
     const b = stats?.weightBuckets;
@@ -335,10 +435,15 @@ export default function GalleryNavbarFilters() {
       label: 'Другой вес',
       selected: filters.fileWeight.some((w) => w.preset === 'custom'),
       closeOnSelect: false,
-      onSelect: () =>
+      onSelect: () => {
+        if (filters.fileWeight.some((w) => w.preset === 'custom')) {
+          patchFilters({ fileWeight: filters.fileWeight.filter((w) => w.preset !== 'custom') });
+          return;
+        }
         patchFilters({
           fileWeight: [{ preset: 'custom', minMb: customWeight.min, maxMb: customWeight.max }]
-        })
+        });
+      }
     });
     return rows;
   };
@@ -370,7 +475,11 @@ export default function GalleryNavbarFilters() {
       label: 'Другое',
       selected: filters.resolution.some((r) => r.preset === 'custom'),
       closeOnSelect: false,
-      onSelect: () =>
+      onSelect: () => {
+        if (filters.resolution.some((r) => r.preset === 'custom')) {
+          patchFilters({ resolution: filters.resolution.filter((r) => r.preset !== 'custom') });
+          return;
+        }
         patchFilters({
           resolution: [
             {
@@ -381,7 +490,8 @@ export default function GalleryNavbarFilters() {
               maxHeight: customRes.maxH
             }
           ]
-        })
+        });
+      }
     });
     return rows;
   };
@@ -420,12 +530,17 @@ export default function GalleryNavbarFilters() {
       label: 'Свой диапазон',
       selected: filters.duration.some((x) => x.preset === 'custom'),
       closeOnSelect: false,
-      onSelect: () =>
+      onSelect: () => {
+        if (filters.duration.some((x) => x.preset === 'custom')) {
+          patchFilters({ duration: filters.duration.filter((x) => x.preset !== 'custom') });
+          return;
+        }
         patchFilters({
           duration: [
             { preset: 'custom', minMinutes: customDuration.min, maxMinutes: customDuration.max }
           ]
-        })
+        });
+      }
     });
     return rows;
   };
@@ -526,27 +641,7 @@ export default function GalleryNavbarFilters() {
         break;
       case 'dateAdded':
         rows = buildDateRows();
-        children =
-          openMenu === 'dateAdded' ? (
-            <div className="context-menu__slot arc-navbar-no-drag">
-              <label className="field input-live">
-                <input
-                  className="input"
-                  type="date"
-                  value={customDateFrom}
-                  onChange={(e) => setCustomDateFrom(e.target.value)}
-                />
-              </label>
-              <label className="field input-live">
-                <input
-                  className="input"
-                  type="date"
-                  value={customDateTo}
-                  onChange={(e) => setCustomDateTo(e.target.value)}
-                />
-              </label>
-            </div>
-          ) : null;
+        children = openMenu === 'dateAdded' ? buildDateMenu() : null;
         break;
       case 'fileWeight':
         rows = buildWeightRows();

@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import path from 'path';
 import { INDEX_DB_FILENAME, libraryMetaFileAbs } from '../libraryFilenames';
+import { ensureCardsFtsSchema } from './cardFts';
 import { STORAGE_SCHEMA_VERSION } from './types';
 
 const SCHEMA_SQL = `
@@ -106,6 +107,8 @@ function migrateLibraryDbSchema(db: Database.Database): void {
     db.exec('ALTER TABLE cards ADD COLUMN duration_ms INTEGER');
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
+
+  ensureCardsFtsSchema(db);
 
   // .gif classified as video per product spec
   db.prepare("UPDATE cards SET type = 'video' WHERE LOWER(COALESCE(format, '')) = 'gif' AND type = 'image'").run();

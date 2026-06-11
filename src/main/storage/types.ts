@@ -2,7 +2,7 @@
 
 import type { GalleryAdvancedFilters, GallerySortState } from './galleryFilters';
 
-export const STORAGE_SCHEMA_VERSION = 5;
+export const STORAGE_SCHEMA_VERSION = 6;
 
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';

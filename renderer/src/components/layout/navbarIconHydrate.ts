@@ -56,6 +56,10 @@ type IconKey =
   | 'maximize'
   | 'sorting'
   | 'aspectRatio'
+  | 'aspectRatioHorizontal'
+  | 'aspectRatioVertical'
+  | 'aspectRatioSquare'
+  | 'aspectRatioPanoramic'
   | 'fileType'
   | 'description'
   | 'link'
@@ -122,6 +126,10 @@ const ICON_FILES: Record<IconKey, string> = {
   maximize: 'maximize_s.svg',
   sorting: 'sorting_m.svg',
   aspectRatio: 'aspect-ratio_m.svg',
+  aspectRatioHorizontal: 'aspect-ratio-horizontal_m.svg',
+  aspectRatioVertical: 'aspect-ratio-vertical_m.svg',
+  aspectRatioSquare: 'aspect-ratio-square_m.svg',
+  aspectRatioPanoramic: 'aspect-ratio-panoramic_m.svg',
   fileType: 'file-type_m.svg',
   description: 'description_m.svg',
   link: 'link_m.svg',
@@ -192,6 +200,10 @@ const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
   arc_icon_maximize: 'maximize',
   arc_icon_sorting: 'sorting',
   arc_icon_aspect_ratio: 'aspectRatio',
+  arc_icon_aspect_ratio_horizontal: 'aspectRatioHorizontal',
+  arc_icon_aspect_ratio_vertical: 'aspectRatioVertical',
+  arc_icon_aspect_ratio_square: 'aspectRatioSquare',
+  arc_icon_aspect_ratio_panoramic: 'aspectRatioPanoramic',
   arc_icon_file_type: 'fileType',
   arc_icon_description: 'description',
   arc_icon_link: 'link',
@@ -208,7 +220,7 @@ const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
 };
 
 const ICON_SELECTOR =
-  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-menu, .arc-icon-grid, .arc-icon-grid-l, .arc-icon-grid-m, .arc-icon-grid-s, .arc-icon-check, .arc-icon-layout-grid, .arc-icon-filter, .arc-icon-sorting, .arc-icon-aspect-ratio, .arc-icon-file-type, .arc-icon-description, .arc-icon-link, .arc-icon-calendar, .arc-icon-weight, .arc-icon-resolution, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-eye, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-copy-settings, .arc-icon-paste-settings, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-chevron-bottom, .arc-icon-chevron-peak, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-trash, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus';
+  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-menu, .arc-icon-grid, .arc-icon-grid-l, .arc-icon-grid-m, .arc-icon-grid-s, .arc-icon-check, .arc-icon-layout-grid, .arc-icon-filter, .arc-icon-sorting, .arc-icon-aspect-ratio, .arc-icon-aspect-ratio-horizontal, .arc-icon-aspect-ratio-vertical, .arc-icon-aspect-ratio-square, .arc-icon-aspect-ratio-panoramic, .arc-icon-file-type, .arc-icon-description, .arc-icon-link, .arc-icon-calendar, .arc-icon-weight, .arc-icon-resolution, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-eye, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-copy-settings, .arc-icon-paste-settings, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-chevron-bottom, .arc-icon-chevron-peak, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-trash, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus';
 
 const svgMarkupCache = new Map<string, string>();
 let preloadPromise: Promise<void> | null = null;

@@ -1,3 +1,4 @@
+import { buildFtsColumnMatchQuery, type FtsTextColumn } from './cardFts';
 import type { LibraryScope } from './types';
 
 export const GALLERY_FILTER_IDS = [
@@ -203,17 +204,14 @@ export function aspectRatioSql(alias: string): Record<AspectRatioFilterValue, st
 function appendKeywordsCondition(
   wh: string[],
   binds: unknown[],
-  column: string,
+  alias: string,
+  column: FtsTextColumn,
   keywords: string | undefined
 ): void {
-  const parts = (keywords ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  for (const word of parts) {
-    wh.push(`LOWER(COALESCE(${column}, '')) LIKE ?`);
-    binds.push(`%${word.toLowerCase()}%`);
-  }
+  const match = buildFtsColumnMatchQuery(column, keywords);
+  if (!match) return;
+  wh.push(`${alias}.id IN (SELECT card_id FROM cards_fts WHERE cards_fts MATCH ?)`);
+  binds.push(match);
 }
 
 export function buildGalleryFilterWhere(
@@ -277,7 +275,7 @@ export function buildGalleryFilterWhere(
       wh.push(`(COALESCE(${alias}.description, '') = '')`);
     } else {
       wh.push(`(COALESCE(${alias}.description, '') != '')`);
-      appendKeywordsCondition(wh, binds, `${alias}.description`, f.description.keywords);
+      appendKeywordsCondition(wh, binds, alias, 'description', f.description.keywords);
     }
   }
 
@@ -286,7 +284,7 @@ export function buildGalleryFilterWhere(
       wh.push(`(COALESCE(${alias}.link_url, '') = '')`);
     } else {
       wh.push(`(COALESCE(${alias}.link_url, '') != '')`);
-      appendKeywordsCondition(wh, binds, `${alias}.link_url`, f.link.keywords);
+      appendKeywordsCondition(wh, binds, alias, 'link_url', f.link.keywords);
     }
   }
 

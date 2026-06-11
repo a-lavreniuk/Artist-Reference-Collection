@@ -1,12 +1,20 @@
 type Props = {
-  variant: 'live' | 'search';
+  variant: 'live' | 'search' | 'textarea';
   label?: string;
   placeholder?: string;
   value?: string;
+  disabled?: boolean;
   onChange?: (value: string) => void;
 };
 
-export default function ContextMenuInput({ variant, label, placeholder, value, onChange }: Props) {
+export default function ContextMenuInput({
+  variant,
+  label,
+  placeholder,
+  value,
+  disabled,
+  onChange
+}: Props) {
   if (variant === 'search') {
     return (
       <div className="context-menu__slot">
@@ -23,6 +31,22 @@ export default function ContextMenuInput({ variant, label, placeholder, value, o
     );
   }
 
+  if (variant === 'textarea') {
+    return (
+      <div className="context-menu__slot">
+        <label className="field">
+          <textarea
+            className="input textarea"
+            placeholder={placeholder ?? label ?? 'Ключевые слова'}
+            value={value}
+            disabled={disabled}
+            onChange={(e) => onChange?.(e.target.value)}
+          />
+        </label>
+      </div>
+    );
+  }
+
   return (
     <div className="context-menu__slot">
       <label className="field input-live">
@@ -30,6 +54,7 @@ export default function ContextMenuInput({ variant, label, placeholder, value, o
           className="input"
           placeholder={placeholder ?? label}
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange?.(e.target.value)}
         />
       </label>
