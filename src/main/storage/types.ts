@@ -1,6 +1,8 @@
 /** Shared storage types for the new library format (v2). */
 
-export const STORAGE_SCHEMA_VERSION = 4;
+import type { GalleryAdvancedFilters, GallerySortState } from './galleryFilters';
+
+export const STORAGE_SCHEMA_VERSION = 5;
 
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';
@@ -36,6 +38,7 @@ export type CardJsonV1 = {
   collectionIds: string[];
   phash?: ImageDupFingerprint;
   deletedAt?: string;
+  durationMs?: number;
 };
 
 export type CategoryRow = {
@@ -80,6 +83,9 @@ export type CardIndexRow = {
   tagIds: string[];
   collectionIds: string[];
   description?: string;
+  name?: string;
+  linkUrl?: string;
+  durationMs?: number;
 };
 
 export type ArcSystemV1 = {
@@ -98,11 +104,13 @@ export type ArcMoodboardV1 = {
 export type ListCardsParams = {
   offset: number;
   limit: number;
-  filter: 'all' | 'images' | 'videos';
   libraryScope?: LibraryScope;
   selectedTagIds?: string[];
   cardIdExact?: string | null;
   collectionId?: string | null;
+  moodboardCardIds?: string[] | null;
+  advancedFilters?: GalleryAdvancedFilters;
+  sort?: GallerySortState;
 };
 
 export type ImportedMediaRow = {

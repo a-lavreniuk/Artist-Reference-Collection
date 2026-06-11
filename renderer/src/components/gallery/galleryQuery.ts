@@ -1,17 +1,33 @@
 import type { LibraryScope } from '../../search/libraryScopeUrl';
-
-export type GalleryFeedFilter = 'all' | 'images' | 'videos';
+import type { GalleryAdvancedFilters, GallerySortState } from './galleryFilterTypes';
+import { DEFAULT_GALLERY_SORT, emptyGalleryAdvancedFilters } from './galleryFilterTypes';
 
 export type GalleryFeedQuery = {
-  filter: GalleryFeedFilter;
   libraryScope: LibraryScope;
   selectedTagIds: string[];
   cardIdExact: string | null;
+  collectionId?: string | null;
+  moodboardCardIds?: string[] | null;
+  advancedFilters: GalleryAdvancedFilters;
+  sort: GallerySortState;
 };
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(value);
+}
 
 export function buildGalleryQueryKey(query: GalleryFeedQuery): string {
   const tags = [...query.selectedTagIds].sort().join('\u0001');
-  return `${query.libraryScope}|${query.filter}|${tags}|${query.cardIdExact ?? ''}`;
+  const mb = [...(query.moodboardCardIds ?? [])].sort().join('\u0001');
+  return [
+    query.libraryScope,
+    query.collectionId ?? '',
+    mb,
+    tags,
+    query.cardIdExact ?? '',
+    stableJson(query.advancedFilters),
+    `${query.sort.field}:${query.sort.direction}`
+  ].join('|');
 }
 
 export const GALLERY_PAGE_INITIAL = 50;
@@ -21,9 +37,10 @@ export const GALLERY_WARMUP_SCOPES: readonly LibraryScope[] = ['all', 'untagged'
 
 export function defaultGalleryFeedQuery(scope: LibraryScope = 'all'): GalleryFeedQuery {
   return {
-    filter: 'all',
     libraryScope: scope,
     selectedTagIds: [],
-    cardIdExact: null
+    cardIdExact: null,
+    advancedFilters: emptyGalleryAdvancedFilters(),
+    sort: DEFAULT_GALLERY_SORT
   };
 }

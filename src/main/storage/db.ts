@@ -102,7 +102,13 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'cards', 'link_url')) {
     db.exec('ALTER TABLE cards ADD COLUMN link_url TEXT');
   }
+  if (!tableHasColumn(db, 'cards', 'duration_ms')) {
+    db.exec('ALTER TABLE cards ADD COLUMN duration_ms INTEGER');
+  }
   db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
+
+  // .gif classified as video per product spec
+  db.prepare("UPDATE cards SET type = 'video' WHERE LOWER(COALESCE(format, '')) = 'gif' AND type = 'image'").run();
 
   const userVersion = db.pragma('user_version', { simple: true }) as number;
   if (userVersion < STORAGE_SCHEMA_VERSION) {

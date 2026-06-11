@@ -14,9 +14,15 @@ export function resolveMainTab(pathname: string): MainTabKey {
   return 'gallery';
 }
 
-/** Полный Search Container только на списке библиотеки */
-export function resolveNavbarVariant(pathname: string): NavbarVariant {
+/** Полный Search Container: библиотека, коллекция, список карточек мудборда */
+export function resolveNavbarVariant(pathname: string, search = ''): NavbarVariant {
   if (pathname === '/gallery') return 'full';
+  if (pathname.startsWith('/collections/')) return 'full';
+  if (pathname.startsWith('/moodboard')) {
+    const params = new URLSearchParams(search);
+    if (params.get('mf') === 'board') return 'compact';
+    return 'full';
+  }
   return 'compact';
 }
 
@@ -27,7 +33,7 @@ export const NAVBAR_LAYOUT_GUTTER_PX = 32;
 export const TOPBAR_HEIGHT_PX = 24;
 
 export function navbarPanelHeightPx(filtersOpen: boolean, variant: NavbarVariant): number {
-  if (variant === 'full' && filtersOpen) return 128;
+  if (variant === 'full' && filtersOpen) return 152;
   return 72;
 }
 

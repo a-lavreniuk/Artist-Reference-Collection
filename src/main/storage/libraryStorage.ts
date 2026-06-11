@@ -2,7 +2,12 @@ import type Database from 'better-sqlite3';
 import { mkdir, readdir, readFile, stat, unlink } from 'fs/promises';
 import path from 'path';
 import { app } from 'electron';
-import { extractVideoFrameToJpeg, isVideoExt, probeVideoDimensions } from '../ffmpeg';
+import {
+  extractVideoFrameToJpeg,
+  isVideoExt,
+  probeVideoDimensions,
+  probeVideoDurationMs
+} from '../ffmpeg';
 import {
   ensureLibraryFilenamesMigrated,
   fileExists,
@@ -31,6 +36,14 @@ import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
 import { defaultMoodboard, defaultSystem, readMoodboard, readSystem, writeMoodboard, writeSystem } from './systemFiles';
 import { generateImageThumbnails, generateVideoThumbnailsFromFrame } from './thumbnails';
+import {
+  buildGalleryFilterWhere,
+  buildGallerySortSql,
+  computeFileWeightBuckets,
+  DEFAULT_GALLERY_SORT,
+  emptyGalleryAdvancedFilters,
+  getMaxFileSizeBytes
+} from './galleryFilters';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
@@ -46,13 +59,30 @@ import type {
   TagRow
 } from './types';
 
+export { backfillVideoDurationMs } from './galleryFilterBackfill';
+export { getGalleryFilterStats } from './galleryFilterStats';
+export {
+  deleteFilterPreset,
+  listFilterPresets,
+  renameFilterPreset,
+  upsertFilterPreset
+} from './filterPresets';
+
 // TODO(settings-overlay): deleteCardsSkipTrash — при true deleteCard вызывает permanentDelete сразу
 export const DELETE_CARDS_SKIP_TRASH_DEFAULT = false;
 
-const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
+const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp']);
 
 function isImageExt(ext: string): boolean {
   return IMAGE_EXT.has(ext.toLowerCase());
+}
+
+function cardTypeForExt(ext: string): CardType | null {
+  const e = ext.toLowerCase();
+  if (e === '.gif') return 'video';
+  if (isImageExt(e)) return 'image';
+  if (isVideoExt(e)) return 'video';
+  return null;
 }
 
 function rowToCardRecord(row: CardIndexRow): CardIndexRow & { thumbRelativePath: string } {
@@ -80,7 +110,10 @@ function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collection
     thumbLRel: String(row.thumb_l_rel),
     tagIds,
     collectionIds,
-    description: row.description ? String(row.description) : undefined
+    description: row.description ? String(row.description) : undefined,
+    name: row.name ? String(row.name) : undefined,
+    linkUrl: row.link_url ? String(row.link_url) : undefined,
+    durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined
   };
 }
 
@@ -278,7 +311,8 @@ export async function importMediaFile(
   const ext = path.extname(resolved);
   const baseName = path.basename(resolved);
 
-  if (!isImageExt(ext) && !isVideoExt(ext)) {
+  const type = cardTypeForExt(ext);
+  if (!type) {
     return { ok: false, error: `Неподдерживаемый тип файла: ${baseName}` };
   }
 
@@ -305,11 +339,11 @@ export async function importMediaFile(
 
   try {
     const { originalAbs, originalRel } = await copyOriginalToCard(root, cardId, resolved, ext);
-    const type: CardType = isImageExt(ext) ? 'image' : 'video';
     let dominantColorHex = '#2a2a2a';
     let width: number | undefined;
     let height: number | undefined;
     let phash: ImageDupFingerprint | undefined;
+    let durationMs: number | undefined;
 
     if (type === 'image') {
       const thumbRes = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
@@ -330,6 +364,7 @@ export async function importMediaFile(
           width = dims.width;
           height = dims.height;
         }
+        durationMs = (await probeVideoDurationMs(originalAbs)) ?? undefined;
       } finally {
         try {
           await unlink(frameTmp);
@@ -353,7 +388,8 @@ export async function importMediaFile(
       dominantColorHex,
       tagIds: [],
       collectionIds: [],
-      ...(phash ? { phash } : {})
+      ...(phash ? { phash } : {}),
+      ...(durationMs ? { durationMs } : {})
     };
     await writeCardJson(root, cardJson);
 
@@ -363,9 +399,9 @@ export async function importMediaFile(
 
     db.prepare(
       `INSERT INTO cards (
-        id, type, added_at, format, width, height, file_size, dominant_color, phash_json,
+        id, type, added_at, format, width, height, file_size, duration_ms, dominant_color, phash_json,
         original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardId,
       type,
@@ -374,6 +410,7 @@ export async function importMediaFile(
       width ?? null,
       height ?? null,
       st.size,
+      durationMs ?? null,
       dominantColorHex,
       phash ? JSON.stringify(phash) : null,
       originalRel,
@@ -409,39 +446,27 @@ export async function importMediaFile(
 
 export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): CardIndexRow[] {
   const db = openLibraryDb(libraryRoot);
-  const tagIds = (params.selectedTagIds ?? []).filter((t) => t.trim());
-  const collectionId = params.collectionId?.trim() ?? '';
+  const maxBytes = getMaxFileSizeBytes(db);
+  const weightBuckets = computeFileWeightBuckets(maxBytes);
+  const sort = params.sort ?? DEFAULT_GALLERY_SORT;
+  const filters = params.advancedFilters ?? emptyGalleryAdvancedFilters();
+  const { wh, binds } = buildGalleryFilterWhere(
+    {
+      libraryScope: params.libraryScope,
+      selectedTagIds: params.selectedTagIds,
+      cardIdExact: params.cardIdExact,
+      collectionId: params.collectionId,
+      moodboardCardIds: params.moodboardCardIds,
+      filters,
+      sort
+    },
+    'c',
+    weightBuckets
+  );
 
   let sql = 'SELECT c.* FROM cards c';
-  const binds: unknown[] = [];
-
-  if (tagIds.length > 0) {
-    sql += ` INNER JOIN (
-      SELECT card_id FROM card_tags WHERE tag_id IN (${tagIds.map(() => '?').join(',')})
-      GROUP BY card_id HAVING COUNT(DISTINCT tag_id) = ?
-    ) tf ON tf.card_id = c.id`;
-    binds.push(...tagIds, tagIds.length);
-  }
-
-  if (collectionId) {
-    sql += ' INNER JOIN card_collections cc ON cc.card_id = c.id AND cc.collection_id = ?';
-    binds.push(collectionId);
-  }
-
-  const wh: string[] = [];
-  if (params.filter === 'images') wh.push("c.type = 'image'");
-  else if (params.filter === 'videos') wh.push("c.type = 'video'");
-
-  const cardExact = params.cardIdExact?.trim() ?? '';
-  if (cardExact) {
-    wh.push('c.id = ?');
-    binds.push(cardExact);
-  }
-
-  appendLibraryScopeConditions(params.libraryScope, wh);
-
   if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
-  sql += ' ORDER BY c.added_at DESC LIMIT ? OFFSET ?';
+  sql += ` ${buildGallerySortSql(sort, 'c')} LIMIT ? OFFSET ?`;
   binds.push(params.limit, params.offset);
 
   const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];

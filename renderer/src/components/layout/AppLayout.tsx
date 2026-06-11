@@ -6,6 +6,7 @@ import MaintenanceBanner from './MaintenanceBanner';
 import AppUpdateHost from './AppUpdateHost';
 import PendingRestoreModal from './PendingRestoreModal';
 import ImportHost from '../import/ImportHost';
+import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
 import { ensureGalleryBootstrap, scheduleGalleryWarmup } from '../gallery/galleryBootstrap';
 import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
 import { applyTopbarCssVars } from './navbarLayout';
@@ -46,6 +47,7 @@ export default function AppLayout() {
   }, []);
 
   return (
+    <GalleryFilterProvider>
     <ImportHost>
       <main className="arc-navbar-shell">
         <MaintenanceBanner />
@@ -58,5 +60,6 @@ export default function AppLayout() {
         <AppUpdateHost />
       </main>
     </ImportHost>
+    </GalleryFilterProvider>
   );
 }

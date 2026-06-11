@@ -1,15 +1,24 @@
 import type { LibraryScope } from '../search/libraryScopeUrl';
+import type {
+  GalleryAdvancedFilters,
+  GalleryFilterPresetPayload,
+  GalleryFilterStats,
+  GallerySortState,
+  SavedFilterPreset
+} from '../components/gallery/galleryFilterTypes';
 import type { CardRecord, CollectionRecord, MoodboardBoardV1 } from './arcSchema';
 import type { CategoryRecord, TagRecord } from './db';
 
 export type StorageListCardsParams = {
   offset: number;
   limit: number;
-  filter: 'all' | 'images' | 'videos';
   libraryScope?: LibraryScope;
   selectedTagIds?: string[];
   cardIdExact?: string | null;
   collectionId?: string | null;
+  moodboardCardIds?: string[] | null;
+  advancedFilters?: GalleryAdvancedFilters;
+  sort?: GallerySortState;
 };
 
 function arc() {
@@ -168,4 +177,38 @@ export async function storageCardsPhash(): Promise<
   Array<{ id: string; phash: { rotHashes: [string, string, string, string]; hist: number[] } }>
 > {
   return arc().storageCardsPhash();
+}
+
+export async function storageGalleryFilterStats(payload: {
+  libraryScope?: LibraryScope;
+  selectedTagIds?: string[];
+  cardIdExact?: string | null;
+  collectionId?: string | null;
+  moodboardCardIds?: string[] | null;
+}): Promise<GalleryFilterStats | null> {
+  return arc().storageGalleryFilterStats(payload);
+}
+
+export async function storageListFilterPresets(): Promise<SavedFilterPreset[]> {
+  return arc().storageListFilterPresets();
+}
+
+export async function storageUpsertFilterPreset(
+  id: string,
+  name: string,
+  payload: GalleryFilterPresetPayload
+): Promise<void> {
+  return arc().storageUpsertFilterPreset({ id, name, payload });
+}
+
+export async function storageDeleteFilterPreset(id: string): Promise<void> {
+  return arc().storageDeleteFilterPreset(id);
+}
+
+export async function storageRenameFilterPreset(id: string, name: string): Promise<void> {
+  return arc().storageRenameFilterPreset({ id, name });
+}
+
+export async function storageBackfillDuration(): Promise<{ updated: number; failed: number }> {
+  return arc().storageBackfillDuration();
 }

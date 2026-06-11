@@ -7,6 +7,7 @@ import CardInspectModal from '../gallery/CardInspectModal';
 import DemoAlert from '../layout/DemoAlert';
 import ScrollToTopButton from '../layout/ScrollToTopButton';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
+import { useGalleryFilters, useRegisterGalleryFeedScope } from '../gallery/GalleryFilterContext';
 import {
   ARC_CARDS_CHANGED_EVENT,
   getAllCategories,
@@ -25,17 +26,13 @@ import {
 const PAGE_INITIAL = 50;
 const PAGE_MORE = 25;
 
-function filterFromParams(raw: string | null): 'all' | 'images' | 'videos' {
-  if (raw === 'images' || raw === 'videos') return raw;
-  return 'all';
-}
-
 export default function MoodboardCardsView() {
   const [searchParams] = useSearchParams();
-  const filter = filterFromParams(searchParams.get('gf'));
+  const { filters, sort } = useGalleryFilters();
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
   const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact);
+  const [mbIdsForScope, setMbIdsForScope] = useState<string[]>([]);
 
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [offset, setOffset] = useState(0);
@@ -51,7 +48,14 @@ export default function MoodboardCardsView() {
   const loadMoodboard = useCallback(async () => {
     const ids = await getMoodboardCardIds();
     setMoodboardCardIds(new Set(ids));
+    setMbIdsForScope(ids);
   }, []);
+
+  useRegisterGalleryFeedScope({
+    selectedTagIds,
+    cardIdExact,
+    moodboardCardIds: mbIdsForScope
+  });
 
   const loadTagsIndex = useCallback(async () => {
     const cats = await getAllCategories();
@@ -71,9 +75,10 @@ export default function MoodboardCardsView() {
         const chunk = await listMoodboardCards({
           offset: start,
           limit: take,
-          filter,
           selectedTagIds,
-          cardIdExact
+          cardIdExact,
+          advancedFilters: filters,
+          sort
         });
         setHasMore(chunk.length === take);
         setOffset(start + chunk.length);
@@ -82,7 +87,7 @@ export default function MoodboardCardsView() {
         setLoading(false);
       }
     },
-    [filter, selectedTagIds, cardIdExact]
+    [filters, sort, selectedTagIds, cardIdExact]
   );
 
   useEffect(() => {
@@ -95,7 +100,7 @@ export default function MoodboardCardsView() {
     setOffset(0);
     setHasMore(true);
     void loadPage(0, false);
-  }, [filter, selectedTagIds, cardIdExact, loadPage]);
+  }, [filters, sort, selectedTagIds, cardIdExact, loadPage]);
 
   useEffect(() => {
     const onCards = () => {

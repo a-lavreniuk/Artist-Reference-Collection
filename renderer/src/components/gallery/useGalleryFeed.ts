@@ -74,10 +74,13 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
       const chunk = await listCardsPage({
         offset: start,
         limit: take,
-        filter: query.filter,
         libraryScope: query.libraryScope,
         selectedTagIds: query.selectedTagIds,
-        cardIdExact: query.cardIdExact
+        cardIdExact: query.cardIdExact,
+        collectionId: query.collectionId,
+        moodboardCardIds: query.moodboardCardIds,
+        advancedFilters: query.advancedFilters,
+        sort: query.sort
       });
 
       if (seq !== loadSeqRef.current) return;

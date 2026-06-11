@@ -12,6 +12,7 @@ const execFileAsync = promisify(execFile) as (
 
 /** Расширения видео, допустимые при импорте (совпадают с whitelist в renderer). */
 export const VIDEO_EXT = new Set([
+  '.gif',
   '.mp4',
   '.webm',
   '.mov',
@@ -143,6 +144,31 @@ export async function extractVideoFrameToJpeg(
       /* ignore */
     }
     throw e;
+  }
+}
+
+export async function probeVideoDurationMs(inputAbs: string): Promise<number | null> {
+  const ffprobe = resolveFfprobeExecutable();
+  const args = [
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-of',
+    'default=noprint_wrappers=1:nokey=1',
+    inputAbs
+  ];
+  try {
+    const { stdout } = await execFileAsync(ffprobe, args, {
+      windowsHide: true,
+      timeout: PROBE_TIMEOUT_MS,
+      maxBuffer: 1024 * 1024
+    });
+    const sec = parseFloat(String(stdout).trim());
+    if (!Number.isFinite(sec) || sec <= 0) return null;
+    return Math.round(sec * 1000);
+  } catch {
+    return null;
   }
 }
 

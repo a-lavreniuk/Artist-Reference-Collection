@@ -47,7 +47,7 @@ function renderRow(row: ContextMenuRow, onClose: () => void) {
       disabled={row.disabled}
       onSelect={() => {
         row.onSelect?.();
-        onClose();
+        if (row.closeOnSelect !== false) onClose();
       }}
     />
   );

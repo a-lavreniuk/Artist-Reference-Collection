@@ -21,8 +21,9 @@ import {
   insertCardMetadata,
   listAllTags,
   listCardsFromDb,
-  listCategories,
   listCollections,
+  listFilterPresets,
+  listCategories,
   listSkippedDuplicatePairs,
   listTagsByCategory,
   rebuildIndexFromCardJson,
@@ -33,6 +34,11 @@ import {
   updateCardInStorage,
   upsertCategory,
   upsertCollection,
+  upsertFilterPreset,
+  deleteFilterPreset,
+  renameFilterPreset,
+  getGalleryFilterStats,
+  backfillVideoDurationMs,
   upsertTag
 } from './storage/libraryStorage';
 import { readCardJson } from './storage/cardFolder';
@@ -71,7 +77,10 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
     fileSizeMb: row.fileSize ? row.fileSize / (1024 * 1024) : undefined,
     tagIds: row.tagIds,
     collectionIds: row.collectionIds,
-    description: row.description
+    description: row.description,
+    name: row.name,
+    linkUrl: row.linkUrl,
+    durationMs: row.durationMs
   };
 }
 
@@ -253,6 +262,67 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root || typeof cardId !== 'string') return;
     await softDeleteCardFromStorage(root, cardId);
+  });
+
+  ipcMain.handle('arc:storage-gallery-filter-stats', async (_e, payload: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root) return null;
+    await ensureLibraryReady(root);
+    const p = (payload ?? {}) as {
+      libraryScope?: string;
+      selectedTagIds?: string[];
+      cardIdExact?: string | null;
+      collectionId?: string | null;
+      moodboardCardIds?: string[] | null;
+    };
+    const scope =
+      p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
+    return getGalleryFilterStats(root, {
+      libraryScope: scope,
+      selectedTagIds: Array.isArray(p.selectedTagIds) ? p.selectedTagIds : [],
+      cardIdExact: typeof p.cardIdExact === 'string' ? p.cardIdExact : null,
+      collectionId: typeof p.collectionId === 'string' ? p.collectionId : null,
+      moodboardCardIds: Array.isArray(p.moodboardCardIds) ? p.moodboardCardIds : null
+    });
+  });
+
+  ipcMain.handle('arc:storage-list-filter-presets', async () => {
+    const root = await readLibraryRoot();
+    if (!root) return [];
+    await ensureLibraryReady(root);
+    return listFilterPresets(root);
+  });
+
+  ipcMain.handle('arc:storage-upsert-filter-preset', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    const p = payload as { id: string; name: string; payload: unknown };
+    upsertFilterPreset(root, p.id, p.name, p.payload as import('./storage/galleryFilters').GalleryFilterPresetPayload);
+  });
+
+  ipcMain.handle('arc:storage-delete-filter-preset', async (_e, id: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root || typeof id !== 'string') return;
+    deleteFilterPreset(root, id);
+  });
+
+  ipcMain.handle('arc:storage-rename-filter-preset', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) return;
+    const p = payload as { id: string; name: string };
+    if (!p?.id || !p?.name) return;
+    renameFilterPreset(root, p.id, p.name);
+  });
+
+  ipcMain.handle('arc:storage-backfill-duration', async () => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) return { updated: 0, failed: 0 };
+    await ensureLibraryReady(root);
+    return backfillVideoDurationMs(root);
   });
 
   ipcMain.handle('arc:storage-count-cards', async (_e, payload: unknown) => {

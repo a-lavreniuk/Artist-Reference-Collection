@@ -7,6 +7,7 @@ import CardInspectModal from '../components/gallery/CardInspectModal';
 import DemoAlert from '../components/layout/DemoAlert';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
+import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
 import {
   ARC_CARDS_CHANGED_EVENT,
   getAllCategories,
@@ -24,18 +25,20 @@ import {
 const PAGE_INITIAL = 50;
 const PAGE_MORE = 25;
 
-function filterFromParams(raw: string | null): 'all' | 'images' | 'videos' {
-  if (raw === 'images' || raw === 'videos') return raw;
-  return 'all';
-}
-
 export default function CollectionDetailPage() {
   const { collectionId } = useParams<{ collectionId: string }>();
   const [searchParams] = useSearchParams();
-  const filter = filterFromParams(searchParams.get('gf'));
+  const { filters, sort } = useGalleryFilters();
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
   const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact);
+
+  useRegisterGalleryFeedScope({
+    libraryScope: 'all',
+    selectedTagIds,
+    cardIdExact,
+    collectionId: collectionId ?? null
+  });
 
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [offset, setOffset] = useState(0);
@@ -72,9 +75,10 @@ export default function CollectionDetailPage() {
         const chunk = await listCardsInCollection(collectionId, {
           offset: start,
           limit: take,
-          filter,
           selectedTagIds,
-          cardIdExact
+          cardIdExact,
+          advancedFilters: filters,
+          sort
         });
         setHasMore(chunk.length === take);
         setOffset(start + chunk.length);
@@ -83,7 +87,7 @@ export default function CollectionDetailPage() {
         setLoading(false);
       }
     },
-    [collectionId, filter, selectedTagIds, cardIdExact]
+    [collectionId, filters, sort, selectedTagIds, cardIdExact]
   );
 
   useEffect(() => {
@@ -97,7 +101,7 @@ export default function CollectionDetailPage() {
     setOffset(0);
     setHasMore(true);
     void loadPage(0, false);
-  }, [collectionId, filter, selectedTagIds, cardIdExact, loadPage]);
+  }, [collectionId, filters, sort, selectedTagIds, cardIdExact, loadPage]);
 
   useEffect(() => {
     const onCards = () => {
