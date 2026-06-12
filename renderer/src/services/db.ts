@@ -481,14 +481,74 @@ function normalizeCardRecord(item: unknown): CardRecord | null {
   };
 }
 
-function normalizeCollectionRecord(item: unknown): CollectionRecord | null {
+function normalizeCollectionRecord(item: unknown, index = 0): CollectionRecord | null {
   if (!item || typeof item !== 'object') return null;
   const r = item as Record<string, unknown>;
   const id = typeof r.id === 'string' ? r.id : '';
   const name = typeof r.name === 'string' ? r.name.trim() : '';
   const createdAt = typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString();
+  const sortIndex = typeof r.sortIndex === 'number' ? r.sortIndex : index;
+  const description = typeof r.description === 'string' ? r.description.trim() : undefined;
   if (!id) return null;
-  return { id, name: name || 'Без названия', createdAt };
+  return {
+    id,
+    name: name || 'Без названия',
+    createdAt,
+    sortIndex,
+    ...(description ? { description } : {})
+  };
+}
+
+function readCollectionsLocal(): CollectionRecord[] {
+  const raw = safeReadArray<unknown>(STORAGE_KEYS.collections);
+  return raw
+    .map((item, index) => normalizeCollectionRecord(item, index))
+    .filter((c): c is CollectionRecord => c !== null);
+}
+
+function migrateCollectionsIfNeededLocal(list: CollectionRecord[]): void {
+  const raw = safeReadArray<unknown>(STORAGE_KEYS.collections);
+  const needsSort = raw.some((item) => {
+    if (!item || typeof item !== 'object') return false;
+    return typeof (item as Record<string, unknown>).sortIndex !== 'number';
+  });
+  if (!needsSort) return;
+  const sorted = [...list].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.name.localeCompare(b.name, 'ru'));
+  const next = sorted.map((c, index) => ({ ...c, sortIndex: index }));
+  safeWriteArray(STORAGE_KEYS.collections, next);
+}
+
+async function readCollectionsUnified(): Promise<CollectionRecord[]> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    return storage.storageListCollections();
+  }
+  const list = readCollectionsLocal();
+  migrateCollectionsIfNeededLocal(list);
+  return readCollectionsLocal();
+}
+
+async function persistCollections(list: CollectionRecord[]): Promise<void> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    const prev = await storage.storageListCollections();
+    const prevIds = new Set(prev.map((c) => c.id));
+    const nextIds = new Set(list.map((c) => c.id));
+    for (const id of prevIds) {
+      if (!nextIds.has(id)) await storage.storageDeleteCollection(id);
+    }
+    for (const col of list) {
+      await storage.storageUpsertCollection(col);
+    }
+    notifyCollectionsChanged();
+    return;
+  }
+  safeWriteArray(STORAGE_KEYS.collections, list);
+  notifyCollectionsChanged();
+}
+
+function sortCollections(list: CollectionRecord[]): CollectionRecord[] {
+  return [...list].sort((a, b) => a.sortIndex - b.sortIndex || a.name.localeCompare(b.name, 'ru'));
 }
 
 export async function isLibraryConfigured(): Promise<boolean> {
@@ -930,16 +990,14 @@ export function notifyTagsChanged(): void {
 
 /* --- Коллекции --- */
 
+export type CollectionStats = {
+  cardCount: number;
+  totalSizeMb: number;
+  createdAt: string;
+};
+
 export async function getAllCollections(): Promise<CollectionRecord[]> {
-  const b = await resolveBackend();
-  if (b === 'file') {
-    return (await storage.storageListCollections()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-  const ls = safeReadArray<unknown>(STORAGE_KEYS.collections);
-  return ls
-    .map(normalizeCollectionRecord)
-    .filter((c): c is CollectionRecord => c !== null)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return sortCollections(await readCollectionsUnified());
 }
 
 export async function getCollectionById(id: string): Promise<CollectionRecord | null> {
@@ -947,29 +1005,109 @@ export async function getCollectionById(id: string): Promise<CollectionRecord | 
   return all.find((c) => c.id === id) ?? null;
 }
 
-export async function addCollection(name: string): Promise<CollectionRecord> {
+export async function addCollection(
+  name: string,
+  extras?: { description?: string }
+): Promise<CollectionRecord> {
   const trimmed = name.trim();
   if (!trimmed) {
     throw new Error('Название коллекции не может быть пустым');
   }
-  const b = await resolveBackend();
   const existing = await getAllCollections();
   if (existing.some((c) => c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
     throw new Error('Коллекция с таким названием уже есть');
   }
+  const maxSort = existing.reduce((m, c) => Math.max(m, c.sortIndex), -1);
+  const desc = extras?.description?.trim();
   const created: CollectionRecord = {
     id: newId(),
     name: trimmed,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    sortIndex: maxSort + 1,
+    ...(desc ? { description: desc } : {})
   };
 
-  if (b === 'file') {
-    await storage.storageUpsertCollection(created);
-  } else {
-    safeWriteArray(STORAGE_KEYS.collections, [...existing, created]);
-  }
-  notifyCollectionsChanged();
+  await persistCollections([...existing, created]);
   return created;
+}
+
+export async function updateCollection(
+  collectionId: string,
+  patch: { name?: string; description?: string }
+): Promise<void> {
+  const list = await readCollectionsUnified();
+  const current = list.find((c) => c.id === collectionId);
+  if (!current) return;
+
+  let name = current.name;
+  if (patch.name !== undefined) {
+    const trimmed = patch.name.trim();
+    if (!trimmed) throw new Error('Название не может быть пустым');
+    if (list.some((c) => c.id !== collectionId && c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+      throw new Error('Коллекция с таким названием уже есть');
+    }
+    name = trimmed;
+  }
+
+  const next = list.map((c) => {
+    if (c.id !== collectionId) return c;
+    const updated: CollectionRecord = { ...c, name };
+    if (patch.description !== undefined) {
+      const desc = patch.description.trim();
+      if (desc) updated.description = desc;
+      else delete updated.description;
+    }
+    return updated;
+  });
+  await persistCollections(next);
+}
+
+export async function renameCollection(collectionId: string, name: string): Promise<void> {
+  await updateCollection(collectionId, { name });
+}
+
+export async function reorderCollectionToIndex(id: string, insertIndex: number): Promise<void> {
+  const sorted = await getAllCollections();
+  const fromIndex = sorted.findIndex((c) => c.id === id);
+  if (fromIndex < 0) return;
+
+  const clamped = Math.max(0, Math.min(insertIndex, sorted.length));
+  if (clamped === fromIndex || clamped === fromIndex + 1) return;
+
+  const next = [...sorted];
+  const [item] = next.splice(fromIndex, 1);
+  const targetIndex = clamped > fromIndex ? clamped - 1 : clamped;
+  next.splice(targetIndex, 0, item);
+
+  const idToSort = new Map(next.map((c, i) => [c.id, i]));
+  const list = (await readCollectionsUnified()).map((c) => ({
+    ...c,
+    sortIndex: idToSort.get(c.id) ?? c.sortIndex
+  }));
+  await persistCollections(list);
+}
+
+export async function getCollectionStats(collectionId: string): Promise<CollectionStats> {
+  const collection = await getCollectionById(collectionId);
+  if (!collection) {
+    return { cardCount: 0, totalSizeMb: 0, createdAt: new Date().toISOString() };
+  }
+
+  const b = await resolveBackend();
+  if (b === 'file') {
+    const stats = await storage.storageCollectionStats(collectionId);
+    if (stats) return stats;
+    return { cardCount: 0, totalSizeMb: 0, createdAt: collection.createdAt };
+  }
+
+  const counts = await getCollectionCardCounts();
+  const cards = await listCardsInCollection(collectionId, { offset: 0, limit: 100000 });
+  const totalBytes = cards.reduce((sum, c) => sum + (c.fileSize ?? 0), 0);
+  return {
+    cardCount: counts[collectionId] ?? cards.length,
+    totalSizeMb: Math.round((totalBytes / (1024 * 1024)) * 100) / 100,
+    createdAt: collection.createdAt
+  };
 }
 
 export async function deleteCollection(collectionId: string): Promise<void> {
@@ -979,8 +1117,7 @@ export async function deleteCollection(collectionId: string): Promise<void> {
   if (b === 'file') {
     await storage.storageDeleteCollection(collectionId);
   } else {
-    const cols = (await getAllCollections()).filter((c) => c.id !== collectionId);
-    safeWriteArray(STORAGE_KEYS.collections, cols);
+    await persistCollections(existingCols.filter((c) => c.id !== collectionId));
     const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
       .map(normalizeCardRecord)
       .filter((c): c is CardRecord => c !== null);
@@ -998,27 +1135,6 @@ export async function deleteCollection(collectionId: string): Promise<void> {
   if (removed?.name) {
     void tryAppendLibraryHistory(`Удалена коллекция «${removed.name}»`);
   }
-}
-
-export async function renameCollection(collectionId: string, name: string): Promise<void> {
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error('Название не может быть пустым');
-  const b = await resolveBackend();
-  const all = await getAllCollections();
-  if (all.some((c) => c.id !== collectionId && c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
-    throw new Error('Коллекция с таким названием уже есть');
-  }
-
-  if (b === 'file') {
-    const col = all.find((c) => c.id === collectionId);
-    if (col) await storage.storageUpsertCollection({ ...col, name: trimmed });
-  } else {
-    safeWriteArray(
-      STORAGE_KEYS.collections,
-      all.map((c) => (c.id === collectionId ? { ...c, name: trimmed } : c))
-    );
-  }
-  notifyCollectionsChanged();
 }
 
 /* --- Карточки --- */

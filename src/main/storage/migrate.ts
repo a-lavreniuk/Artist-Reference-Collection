@@ -132,12 +132,10 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
   }
 
   // Collections
-  for (const col of legacy.collections ?? []) {
-    db.prepare('INSERT OR IGNORE INTO collections (id, name, created_at) VALUES (?, ?, ?)').run(
-      col.id,
-      col.name,
-      col.createdAt
-    );
+  for (const [index, col] of (legacy.collections ?? []).entries()) {
+    db.prepare(
+      'INSERT OR IGNORE INTO collections (id, name, created_at, sort_index) VALUES (?, ?, ?, ?)'
+    ).run(col.id, col.name, col.createdAt, index);
   }
 
   // Skipped pairs

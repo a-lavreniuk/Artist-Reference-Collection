@@ -78,6 +78,8 @@ contextBridge.exposeInMainWorld('arc', {
   storageUpsertCollection: (col: unknown) => ipcRenderer.invoke('arc:storage-upsert-collection', col),
   storageDeleteCollection: (id: string) => ipcRenderer.invoke('arc:storage-delete-collection', id),
   storageCollectionCounts: () => ipcRenderer.invoke('arc:storage-collection-counts'),
+  storageCollectionStats: (collectionId: string) =>
+    ipcRenderer.invoke('arc:storage-collection-stats', collectionId),
   storageGetMoodboard: () => ipcRenderer.invoke('arc:storage-get-moodboard'),
   storageSaveMoodboard: (data: unknown) => ipcRenderer.invoke('arc:storage-save-moodboard', data),
   storageGetSystem: () => ipcRenderer.invoke('arc:storage-get-system'),

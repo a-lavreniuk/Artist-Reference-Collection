@@ -8,7 +8,7 @@ import {
   type CardRecord,
   type CollectionRecord
 } from '../../services/db';
-import NewCollectionModal from '../collections/NewCollectionModal';
+import CollectionSettingsModal from '../collections/CollectionSettingsModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import CollectionPickerRow from './CollectionPickerRow';
 
@@ -68,11 +68,6 @@ export default function CardDetailCollectionsModal({
     const q = colSearch.trim().toLowerCase();
     return collections.filter((c) => !q || c.name.toLowerCase().includes(q));
   }, [collections, colSearch]);
-
-  const existingLowerNames = useMemo(
-    () => new Set(collections.map((c) => c.name.trim().toLowerCase())),
-    [collections]
-  );
 
   const handleToggle = async (collectionId: string) => {
     if (pendingCollectionId) return;
@@ -174,14 +169,17 @@ export default function CardDetailCollectionsModal({
       </div>
 
       {newCollectionOpen ? (
-        <NewCollectionModal
-          existingLowerNames={existingLowerNames}
+        <CollectionSettingsModal
+          state={{ mode: 'create' }}
+          stats={null}
           hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
           onClose={() => setNewCollectionOpen(false)}
-          onSubmit={async (name) => {
-            await onCreateAndAssign(name);
+          onCreate={async (payload) => {
+            await onCreateAndAssign(payload.name);
             await reloadCatalog();
           }}
+          onSave={async () => {}}
+          onDelete={async () => {}}
         />
       ) : null}
     </div>

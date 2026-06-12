@@ -118,6 +118,11 @@ declare global {
       storageUpsertCollection: (col: CollectionRecord) => Promise<void>;
       storageDeleteCollection: (id: string) => Promise<void>;
       storageCollectionCounts: () => Promise<Record<string, number>>;
+      storageCollectionStats: (collectionId: string) => Promise<{
+        cardCount: number;
+        totalSizeMb: number;
+        createdAt: string;
+      } | null>;
       storageGetMoodboard: () => Promise<{
         version: 1;
         moodboardCardIds: string[];

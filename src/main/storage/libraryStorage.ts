@@ -51,6 +51,7 @@ import type {
   CardType,
   CategoryRow,
   CollectionRow,
+  CollectionStatsRow,
   ImageDupFingerprint,
   ImportedMediaRow,
   LibraryScope,
@@ -764,20 +765,31 @@ export async function deleteTagFromDb(libraryRoot: string, tagId: string): Promi
 export function listCollections(libraryRoot: string): CollectionRow[] {
   const db = openLibraryDb(libraryRoot);
   return db
-    .prepare('SELECT * FROM collections ORDER BY created_at ASC')
+    .prepare('SELECT * FROM collections ORDER BY sort_index ASC, name ASC')
     .all()
     .map((r) => {
       const row = r as Record<string, unknown>;
-      return { id: String(row.id), name: String(row.name), createdAt: String(row.created_at) };
+      return {
+        id: String(row.id),
+        name: String(row.name),
+        createdAt: String(row.created_at),
+        sortIndex: typeof row.sort_index === 'number' ? row.sort_index : Number(row.sort_index) || 0,
+        ...(typeof row.description === 'string' && row.description.trim()
+          ? { description: row.description.trim() }
+          : {})
+      };
     });
 }
 
 export function upsertCollection(libraryRoot: string, col: CollectionRow): void {
   const db = openLibraryDb(libraryRoot);
   db.prepare(
-    `INSERT INTO collections (id, name, created_at) VALUES (?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET name=excluded.name`
-  ).run(col.id, col.name, col.createdAt);
+    `INSERT INTO collections (id, name, created_at, sort_index, description) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name=excluded.name,
+       sort_index=excluded.sort_index,
+       description=excluded.description`
+  ).run(col.id, col.name, col.createdAt, col.sortIndex, col.description ?? null);
 }
 
 export async function deleteCollectionFromDb(libraryRoot: string, id: string): Promise<void> {
@@ -809,6 +821,28 @@ export function getCollectionCardCounts(libraryRoot: string): Record<string, num
   const m: Record<string, number> = {};
   for (const r of rows) m[r.collection_id] = r.n;
   return m;
+}
+
+export function getCollectionStats(libraryRoot: string, collectionId: string): CollectionStatsRow | null {
+  const db = openLibraryDb(libraryRoot);
+  const col = db.prepare('SELECT created_at FROM collections WHERE id = ?').get(collectionId) as
+    | { created_at: string }
+    | undefined;
+  if (!col) return null;
+  const agg = db
+    .prepare(
+      `SELECT COUNT(*) AS card_count, COALESCE(SUM(c.file_size), 0) AS total_size
+       FROM card_collections cc
+       INNER JOIN cards c ON c.id = cc.card_id AND COALESCE(c.is_deleted, 0) = 0
+       WHERE cc.collection_id = ?`
+    )
+    .get(collectionId) as { card_count: number; total_size: number };
+  const totalBytes = Number(agg?.total_size) || 0;
+  return {
+    cardCount: Number(agg?.card_count) || 0,
+    totalSizeMb: Math.round((totalBytes / (1024 * 1024)) * 100) / 100,
+    createdAt: String(col.created_at)
+  };
 }
 
 // --- Moodboard & system ---

@@ -15,6 +15,7 @@ import {
   getCardByIdFromDb,
   getCardsWithPhash,
   getCollectionCardCounts,
+  getCollectionStats,
   getMoodboardData,
   getSystemData,
   importMediaFile,
@@ -418,6 +419,13 @@ export function registerStorageIpc(
     if (!root) return {};
     await ensureLibraryReady(root);
     return getCollectionCardCounts(root);
+  });
+
+  ipcMain.handle('arc:storage-collection-stats', async (_e, collectionId: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root || typeof collectionId !== 'string') return null;
+    await ensureLibraryReady(root);
+    return getCollectionStats(root, collectionId);
   });
 
   ipcMain.handle('arc:storage-get-moodboard', async () => {

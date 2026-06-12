@@ -34,6 +34,8 @@ export type CollectionRecord = {
   id: string;
   name: string;
   createdAt: string;
+  sortIndex: number;
+  description?: string;
 };
 
 /** Состояние доски мудборда (один глобальный мудборд на библиотеку). */

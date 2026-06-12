@@ -135,6 +135,12 @@ export async function storageCollectionCounts(): Promise<Record<string, number>>
   return arc().storageCollectionCounts();
 }
 
+export async function storageCollectionStats(
+  collectionId: string
+): Promise<{ cardCount: number; totalSizeMb: number; createdAt: string } | null> {
+  return arc().storageCollectionStats(collectionId);
+}
+
 export async function storageGetMoodboard(): Promise<{
   version: 1;
   moodboardCardIds: string[];

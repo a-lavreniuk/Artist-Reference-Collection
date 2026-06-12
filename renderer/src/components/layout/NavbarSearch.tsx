@@ -102,7 +102,10 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     };
   }, [loadIndex]);
 
-  const navigateToGallery = useCallback(() => {
+  const navigateToSearchHost = useCallback(() => {
+    if (location.pathname.startsWith('/collections')) {
+      return;
+    }
     if (location.pathname !== '/gallery') {
       const s = searchParams.toString();
       navigate({ pathname: '/gallery', search: s ? `?${s}` : '' });
@@ -111,9 +114,9 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
 
   const openPanel = useCallback(() => {
     setPanelOpen(true);
-    navigateToGallery();
+    navigateToSearchHost();
     void loadIndex();
-  }, [loadIndex, navigateToGallery]);
+  }, [loadIndex, navigateToSearchHost]);
 
   const panelHadInteraction = useRef(false);
 

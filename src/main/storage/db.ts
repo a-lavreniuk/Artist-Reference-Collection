@@ -47,7 +47,9 @@ CREATE TABLE IF NOT EXISTS tags (
 CREATE TABLE IF NOT EXISTS collections (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  sort_index INTEGER NOT NULL DEFAULT 0,
+  description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS card_tags (
@@ -79,6 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_cards_type_added ON cards(type, added_at DESC);
 CREATE INDEX IF NOT EXISTS idx_card_tags_tag ON card_tags(tag_id);
 CREATE INDEX IF NOT EXISTS idx_card_collections_col ON card_collections(collection_id);
 CREATE INDEX IF NOT EXISTS idx_tags_category ON tags(category_id);
+CREATE INDEX IF NOT EXISTS idx_collections_sort ON collections(sort_index);
 `;
 
 let activeDb: Database.Database | null = null;
@@ -109,7 +112,24 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'categories', 'description')) {
     db.exec('ALTER TABLE categories ADD COLUMN description TEXT');
   }
+  if (!tableHasColumn(db, 'collections', 'sort_index')) {
+    db.exec('ALTER TABLE collections ADD COLUMN sort_index INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!tableHasColumn(db, 'collections', 'description')) {
+    db.exec('ALTER TABLE collections ADD COLUMN description TEXT');
+  }
+  const needsCollectionSortBackfill = db
+    .prepare('SELECT COUNT(*) AS n FROM collections WHERE sort_index = 0')
+    .get() as { n: number };
+  if (needsCollectionSortBackfill.n > 0) {
+    const rows = db.prepare('SELECT id FROM collections ORDER BY created_at ASC, name ASC').all() as Array<{
+      id: string;
+    }>;
+    const upd = db.prepare('UPDATE collections SET sort_index = ? WHERE id = ?');
+    rows.forEach((row, index) => upd.run(index, row.id));
+  }
   db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_collections_sort ON collections(sort_index)');
 
   ensureCardsFtsSchema(db);
 

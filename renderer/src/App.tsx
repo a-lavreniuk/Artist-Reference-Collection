@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
-import CollectionDetailPage from './pages/CollectionDetailPage';
 import CollectionsPage from './pages/CollectionsPage';
 import GalleryCardEditRedirect from './pages/GalleryCardEditRedirect';
 import GalleryPage from './pages/GalleryPage';
@@ -20,8 +19,8 @@ export default function App() {
         <Route path="gallery/:cardId/edit" element={<GalleryCardEditRedirect />} />
         <Route path="onboarding" element={<OnboardingStubPage />} />
         <Route path="tags" element={<TagsPage />} />
-        <Route path="collections/:collectionId" element={<CollectionDetailPage />} />
         <Route path="collections" element={<CollectionsPage />} />
+        <Route path="collections/:collectionId" element={<CollectionsPage />} />
         <Route path="moodboard" element={<MoodboardPage />} />
         <Route path="storage" element={<SettingsSectionPage panel="storage" />} />
         <Route path="statistics" element={<SettingsSectionPage panel="statistics" />} />
