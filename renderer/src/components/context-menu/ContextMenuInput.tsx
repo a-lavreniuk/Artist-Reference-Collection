@@ -33,7 +33,7 @@ export default function ContextMenuInput({
 
   if (variant === 'textarea') {
     return (
-      <div className="context-menu__slot">
+      <div className="context-menu__slot arc-filter-menu-slot">
         <label className="field">
           <textarea
             className="input textarea"

@@ -1,4 +1,13 @@
 import { buildFtsColumnMatchQuery, type FtsTextColumn } from './cardFts';
+import type { DurationMeta, FileWeightMeta, ResolutionMeta } from './filterBucketLabels';
+import {
+  buildDurationSegments,
+  buildResolutionSegmentsFromFineBuckets,
+  buildWeightSegments,
+  PIXEL_GRID,
+  type NumericDistribution,
+  type ResolutionFineBucket
+} from './filterBucketLabels';
 import type { LibraryScope } from './types';
 
 export const GALLERY_FILTER_IDS = [
@@ -43,15 +52,15 @@ export type FileWeightFilterValue =
   | { preset: Exclude<FileWeightPreset, 'custom'> }
   | { preset: 'custom'; minMb: number; maxMb: number };
 
-export type ResolutionPreset = '720p' | '1080p' | '4k' | 'custom';
+export type ResolutionPreset = 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4' | 'custom';
 export type ResolutionFilterValue =
   | { preset: Exclude<ResolutionPreset, 'custom'> }
   | { preset: 'custom'; minWidth?: number; maxWidth?: number; minHeight?: number; maxHeight?: number };
 
-export type DurationPreset = 'up5' | '5to15' | '15to30' | '30to60' | 'over60' | 'custom';
+export type DurationPreset = 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4' | 'custom';
 export type DurationFilterValue =
   | { preset: Exclude<DurationPreset, 'custom'> }
-  | { preset: 'custom'; minMinutes: number; maxMinutes: number };
+  | { preset: 'custom'; minSeconds: number; maxSeconds: number };
 
 export type GalleryAdvancedFilters = {
   aspectRatios: AspectRatioFilterValue[];
@@ -127,6 +136,13 @@ export type GalleryFilterQueryContext = {
   sort: GallerySortState;
 };
 
+export type GalleryFilterBoundaries = {
+  fileWeight: FileWeightMeta;
+  duration: DurationMeta;
+  resolution: ResolutionMeta;
+};
+
+/** @deprecated Используйте fileWeight из GalleryFilterBoundaries */
 export type FileWeightBuckets = {
   maxMb: number;
   b1: number;
@@ -134,6 +150,150 @@ export type FileWeightBuckets = {
   b3: number;
 };
 
+function percentileValue(
+  db: { prepare: (sql: string) => { get: (...args: unknown[]) => unknown } },
+  column: string,
+  whereSql: string,
+  percentile: number
+): number {
+  const countRow = db
+    .prepare(`SELECT COUNT(*) AS n FROM cards c WHERE ${whereSql}`)
+    .get() as { n: number };
+  const count = countRow?.n ?? 0;
+  if (count <= 0) return 0;
+  const offset = Math.max(0, Math.min(count - 1, Math.floor(count * percentile)));
+  const row = db
+    .prepare(`SELECT ${column} AS v FROM cards c WHERE ${whereSql} ORDER BY ${column} LIMIT 1 OFFSET ?`)
+    .get(offset) as { v: number | null };
+  return typeof row?.v === 'number' && row.v > 0 ? row.v : 0;
+}
+
+function getNumericDistribution(
+  db: { prepare: (sql: string) => { get: (...args: unknown[]) => unknown } },
+  column: string,
+  whereSql: string
+): NumericDistribution | null {
+  const minMax = db
+    .prepare(`SELECT MIN(${column}) AS minV, MAX(${column}) AS maxV FROM cards c WHERE ${whereSql}`)
+    .get() as { minV: number | null; maxV: number | null };
+  const min = typeof minMax?.minV === 'number' && minMax.minV > 0 ? minMax.minV : 0;
+  const max = typeof minMax?.maxV === 'number' && minMax.maxV > 0 ? minMax.maxV : 0;
+  if (max <= 0) return null;
+  return {
+    min,
+    max,
+    p25: percentileValue(db, column, whereSql, 0.25) || min,
+    p50: percentileValue(db, column, whereSql, 0.5) || min,
+    p75: percentileValue(db, column, whereSql, 0.75) || max
+  };
+}
+
+export function getFileSizeDistribution(db: Parameters<typeof getMaxFileSizeBytes>[0]): NumericDistribution | null {
+  return getNumericDistribution(
+    db,
+    'COALESCE(c.file_size, 0)',
+    'COALESCE(c.is_deleted, 0) = 0 AND COALESCE(c.file_size, 0) > 0'
+  );
+}
+
+export function getVideoDurationDistribution(
+  db: Parameters<typeof getMaxDurationMs>[0]
+): NumericDistribution | null {
+  return getNumericDistribution(
+    db,
+    'COALESCE(c.duration_ms, 0)',
+    "COALESCE(c.is_deleted, 0) = 0 AND c.type = 'video' AND COALESCE(c.duration_ms, 0) > 0"
+  );
+}
+
+export function longSideSql(alias = 'c'): string {
+  const w = `COALESCE(${alias}.width, 0)`;
+  const h = `COALESCE(${alias}.height, 0)`;
+  return `CASE WHEN ${w} >= ${h} THEN ${w} ELSE ${h} END`;
+}
+
+const RESOLUTION_DIMENSION_WHERE =
+  'COALESCE(c.is_deleted, 0) = 0 AND COALESCE(c.width, 0) > 0 AND COALESCE(c.height, 0) > 0';
+
+export function getLongSideDistribution(
+  db: Parameters<typeof getMaxFileSizeBytes>[0]
+): NumericDistribution | null {
+  return getNumericDistribution(db, longSideSql('c'), RESOLUTION_DIMENSION_WHERE);
+}
+
+type SqliteGetDb = {
+  prepare: (sql: string) => { get: (...args: unknown[]) => unknown };
+};
+
+export function computeResolutionFineBuckets(
+  db: SqliteGetDb
+): { minPx: number; maxPx: number; buckets: ResolutionFineBucket[] } {
+  const longSide = longSideSql('c');
+  const dist = getLongSideDistribution(db);
+  if (!dist) return { minPx: 0, maxPx: 0, buckets: [] };
+
+  const minPx = Math.round(dist.min);
+  const maxPx = Math.round(dist.max);
+  if (maxPx <= 0) return { minPx: 0, maxPx: 0, buckets: [] };
+
+  const countLoHi = (lo: number, hi: number) => {
+    if (lo === 0) {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM cards c WHERE ${RESOLUTION_DIMENSION_WHERE} AND (${longSide} > 0 AND ${longSide} <= ?)`
+        )
+        .get(hi) as { n: number };
+      return row?.n ?? 0;
+    }
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM cards c WHERE ${RESOLUTION_DIMENSION_WHERE} AND (${longSide} > ? AND ${longSide} <= ?)`
+      )
+      .get(lo, hi) as { n: number };
+    return row?.n ?? 0;
+  };
+
+  const gridSplits = PIXEL_GRID.filter((g) => g >= minPx && g < maxPx);
+  const buckets: ResolutionFineBucket[] = [];
+  let prev = 0;
+
+  for (const hi of gridSplits) {
+    buckets.push({ minPx: prev, maxPx: hi, count: countLoHi(prev, hi) });
+    prev = hi;
+  }
+
+  if (gridSplits.length === 0) {
+    buckets.push({ minPx: 0, maxPx: maxPx, count: countLoHi(0, maxPx) });
+    return { minPx, maxPx, buckets };
+  }
+
+  const tailRow = db
+    .prepare(`SELECT COUNT(*) AS n FROM cards c WHERE ${RESOLUTION_DIMENSION_WHERE} AND (${longSide} > ?)`)
+    .get(prev) as { n: number };
+  const tailCount = tailRow?.n ?? 0;
+  if (tailCount > 0) {
+    buckets.push({ minPx: prev, maxPx: maxPx, count: tailCount, openEnd: true });
+  }
+
+  return { minPx, maxPx, buckets };
+}
+
+export function computeGalleryFilterBoundaries(
+  db: Parameters<typeof getMaxFileSizeBytes>[0]
+): GalleryFilterBoundaries {
+  const resolutionFine = computeResolutionFineBuckets(db);
+  return {
+    fileWeight: buildWeightSegments(getFileSizeDistribution(db)),
+    duration: buildDurationSegments(getVideoDurationDistribution(db)),
+    resolution: buildResolutionSegmentsFromFineBuckets(
+      resolutionFine.buckets,
+      resolutionFine.minPx,
+      resolutionFine.maxPx
+    )
+  };
+}
+
+/** @deprecated Используйте computeGalleryFilterBoundaries */
 export function computeFileWeightBuckets(maxBytes: number): FileWeightBuckets {
   const maxMb = Math.max(0.1, Math.round((maxBytes / (1024 * 1024)) * 10) / 10);
   const step = Math.round((maxMb / 4) * 10) / 10;
@@ -143,6 +303,18 @@ export function computeFileWeightBuckets(maxBytes: number): FileWeightBuckets {
     b2: step * 2,
     b3: step * 3
   };
+}
+
+function findWeightSegment(meta: FileWeightMeta, key: string) {
+  return meta.segments.find((s) => s.key === key);
+}
+
+function findDurationSegment(meta: DurationMeta, key: string) {
+  return meta.segments.find((s) => s.key === key);
+}
+
+function findResolutionSegment(meta: ResolutionMeta, key: string) {
+  return meta.segments.find((s) => s.key === key);
 }
 
 function startOfLocalDay(d: Date): Date {
@@ -217,7 +389,7 @@ function appendKeywordsCondition(
 export function buildGalleryFilterWhere(
   ctx: GalleryFilterQueryContext,
   alias = 'c',
-  weightBuckets?: FileWeightBuckets
+  boundaries?: GalleryFilterBoundaries
 ): { wh: string[]; binds: unknown[] } {
   const wh: string[] = [];
   const binds: unknown[] = [];
@@ -305,8 +477,7 @@ export function buildGalleryFilterWhere(
     wh.push(`(${dateParts.join(' OR ')})`);
   }
 
-  if (f.fileWeight.length && weightBuckets) {
-    const { b1, b2, b3, maxMb } = weightBuckets;
+  if (f.fileWeight.length && boundaries) {
     const mb = (col: string) => `(${col} * 1.0 / (1024 * 1024))`;
     const sizeMb = mb(`COALESCE(${alias}.file_size, 0)`);
     const parts: string[] = [];
@@ -314,18 +485,19 @@ export function buildGalleryFilterWhere(
       if (w.preset === 'custom') {
         parts.push(`(${sizeMb} >= ? AND ${sizeMb} <= ?)`);
         binds.push(w.minMb, w.maxMb);
-      } else if (w.preset === 'bucket1') {
-        parts.push(`(${sizeMb} <= ?)`);
-        binds.push(b1);
-      } else if (w.preset === 'bucket2') {
-        parts.push(`(${sizeMb} > ? AND ${sizeMb} <= ?)`);
-        binds.push(b1, b2);
-      } else if (w.preset === 'bucket3') {
-        parts.push(`(${sizeMb} > ? AND ${sizeMb} <= ?)`);
-        binds.push(b2, b3);
+        continue;
+      }
+      const seg = findWeightSegment(boundaries.fileWeight, w.preset);
+      if (!seg) continue;
+      if (w.preset === 'bucket1') {
+        parts.push(`(${sizeMb} > 0 AND ${sizeMb} <= ?)`);
+        binds.push(seg.maxMb);
       } else if (w.preset === 'bucket4') {
         parts.push(`(${sizeMb} > ?)`);
-        binds.push(b3);
+        binds.push(seg.minMb);
+      } else {
+        parts.push(`(${sizeMb} > ? AND ${sizeMb} <= ?)`);
+        binds.push(seg.minMb, seg.maxMb);
       }
     }
     if (parts.length) wh.push(`(${parts.join(' OR ')})`);
@@ -334,13 +506,10 @@ export function buildGalleryFilterWhere(
   if (f.resolution.length) {
     const w = `COALESCE(${alias}.width, 0)`;
     const h = `COALESCE(${alias}.height, 0)`;
-    const longSide = `CASE WHEN ${w} >= ${h} THEN ${w} ELSE ${h} END`;
+    const longSide = longSideSql(alias);
     const parts: string[] = [];
     for (const r of f.resolution) {
-      if (r.preset === '720p') parts.push(`(${longSide} >= 720)`);
-      else if (r.preset === '1080p') parts.push(`(${longSide} >= 1080)`);
-      else if (r.preset === '4k') parts.push(`(${longSide} >= 2160)`);
-      else if (r.preset === 'custom') {
+      if (r.preset === 'custom') {
         const conds: string[] = [];
         if (r.minWidth != null) {
           conds.push(`${w} >= ?`);
@@ -359,34 +528,46 @@ export function buildGalleryFilterWhere(
           binds.push(r.maxHeight);
         }
         if (conds.length) parts.push(`(${conds.join(' AND ')})`);
+        continue;
+      }
+      if (!boundaries) continue;
+      const seg = findResolutionSegment(boundaries.resolution, r.preset);
+      if (!seg) continue;
+      if (seg.openEnd) {
+        parts.push(`(${longSide} > ?)`);
+        binds.push(seg.minPx);
+      } else if (seg.minPx === 0) {
+        parts.push(`(${longSide} > 0 AND ${longSide} <= ?)`);
+        binds.push(seg.maxPx);
+      } else {
+        parts.push(`(${longSide} > ? AND ${longSide} <= ?)`);
+        binds.push(seg.minPx, seg.maxPx);
       }
     }
     if (parts.length) wh.push(`(${parts.join(' OR ')})`);
   }
 
-  if (f.duration.length) {
+  if (f.duration.length && boundaries) {
     wh.push(`${alias}.type = 'video'`);
     const ms = `COALESCE(${alias}.duration_ms, 0)`;
     const parts: string[] = [];
     for (const d of f.duration) {
       if (d.preset === 'custom') {
         parts.push(`(${ms} >= ? AND ${ms} <= ?)`);
-        binds.push(d.minMinutes * 60_000, d.maxMinutes * 60_000);
-      } else if (d.preset === 'up5') {
+        binds.push(d.minSeconds * 1000, d.maxSeconds * 1000);
+        continue;
+      }
+      const seg = findDurationSegment(boundaries.duration, d.preset);
+      if (!seg) continue;
+      if (d.preset === 'bucket1') {
         parts.push(`(${ms} > 0 AND ${ms} <= ?)`);
-        binds.push(5 * 60_000);
-      } else if (d.preset === '5to15') {
-        parts.push(`(${ms} > ? AND ${ms} <= ?)`);
-        binds.push(5 * 60_000, 15 * 60_000);
-      } else if (d.preset === '15to30') {
-        parts.push(`(${ms} > ? AND ${ms} <= ?)`);
-        binds.push(15 * 60_000, 30 * 60_000);
-      } else if (d.preset === '30to60') {
-        parts.push(`(${ms} > ? AND ${ms} <= ?)`);
-        binds.push(30 * 60_000, 60 * 60_000);
-      } else if (d.preset === 'over60') {
+        binds.push(seg.maxMs);
+      } else if (d.preset === 'bucket4') {
         parts.push(`(${ms} > ?)`);
-        binds.push(60 * 60_000);
+        binds.push(seg.minMs);
+      } else {
+        parts.push(`(${ms} > ? AND ${ms} <= ?)`);
+        binds.push(seg.minMs, seg.maxMs);
       }
     }
     if (parts.length) wh.push(`(${parts.join(' OR ')})`);

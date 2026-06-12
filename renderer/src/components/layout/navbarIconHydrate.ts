@@ -66,9 +66,13 @@ type IconKey =
   | 'calendar'
   | 'weight'
   | 'resolution'
+  | 'arrowsHorizontal'
+  | 'arrowsVertical'
   | 'duration'
   | 'filterList'
   | 'eye'
+  | 'eyeOff'
+  | 'chevronsUpDown'
   | 'check'
   | 'gridL'
   | 'gridM'
@@ -136,9 +140,13 @@ const ICON_FILES: Record<IconKey, string> = {
   calendar: 'date_m.svg',
   weight: 'file-weight_m.svg',
   resolution: 'resolution_m.svg',
+  arrowsHorizontal: 'arrows-horizontal_s.svg',
+  arrowsVertical: 'arrows-vertical_s.svg',
   duration: 'duration_m.svg',
   filterList: 'filter-list_m.svg',
   eye: 'eye_m.svg',
+  eyeOff: 'eye-off_m.svg',
+  chevronsUpDown: 'chevrons-up-down_m.svg',
   check: 'check_s.svg',
   gridL: 'grid-L_s.svg',
   gridM: 'grid-M_s.svg',
@@ -210,9 +218,13 @@ const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
   arc_icon_calendar: 'calendar',
   arc_icon_weight: 'weight',
   arc_icon_resolution: 'resolution',
+  arc_icon_arrows_horizontal: 'arrowsHorizontal',
+  arc_icon_arrows_vertical: 'arrowsVertical',
   arc_icon_duration: 'duration',
   arc_icon_filter_list: 'filterList',
   arc_icon_eye: 'eye',
+  arc_icon_eye_off: 'eyeOff',
+  arc_icon_chevrons_up_down: 'chevronsUpDown',
   arc_icon_check: 'check',
   arc_icon_grid_l: 'gridL',
   arc_icon_grid_m: 'gridM',
@@ -220,7 +232,7 @@ const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
 };
 
 const ICON_SELECTOR =
-  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-menu, .arc-icon-grid, .arc-icon-grid-l, .arc-icon-grid-m, .arc-icon-grid-s, .arc-icon-check, .arc-icon-layout-grid, .arc-icon-filter, .arc-icon-sorting, .arc-icon-aspect-ratio, .arc-icon-aspect-ratio-horizontal, .arc-icon-aspect-ratio-vertical, .arc-icon-aspect-ratio-square, .arc-icon-aspect-ratio-panoramic, .arc-icon-file-type, .arc-icon-description, .arc-icon-link, .arc-icon-calendar, .arc-icon-weight, .arc-icon-resolution, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-eye, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-copy-settings, .arc-icon-paste-settings, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-chevron-bottom, .arc-icon-chevron-peak, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-trash, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus';
+  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-menu, .arc-icon-grid, .arc-icon-grid-l, .arc-icon-grid-m, .arc-icon-grid-s, .arc-icon-check, .arc-icon-layout-grid, .arc-icon-filter, .arc-icon-sorting, .arc-icon-aspect-ratio, .arc-icon-aspect-ratio-horizontal, .arc-icon-aspect-ratio-vertical, .arc-icon-aspect-ratio-square, .arc-icon-aspect-ratio-panoramic, .arc-icon-file-type, .arc-icon-description, .arc-icon-link, .arc-icon-calendar, .arc-icon-weight, .arc-icon-resolution, .arc-icon-arrows-horizontal, .arc-icon-arrows-vertical, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-eye, .arc-icon-eye-off, .arc-icon-chevrons-up-down, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-copy-settings, .arc-icon-paste-settings, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-chevron-bottom, .arc-icon-chevron-peak, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-trash, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus';
 
 const svgMarkupCache = new Map<string, string>();
 let preloadPromise: Promise<void> | null = null;

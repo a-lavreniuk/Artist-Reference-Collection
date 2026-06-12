@@ -40,15 +40,15 @@ export type FileWeightFilterValue =
   | { preset: Exclude<FileWeightPreset, 'custom'> }
   | { preset: 'custom'; minMb: number; maxMb: number };
 
-export type ResolutionPreset = '720p' | '1080p' | '4k' | 'custom';
+export type ResolutionPreset = 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4' | 'custom';
 export type ResolutionFilterValue =
   | { preset: Exclude<ResolutionPreset, 'custom'> }
   | { preset: 'custom'; minWidth?: number; maxWidth?: number; minHeight?: number; maxHeight?: number };
 
-export type DurationPreset = 'up5' | '5to15' | '15to30' | '30to60' | 'over60' | 'custom';
+export type DurationPreset = 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4' | 'custom';
 export type DurationFilterValue =
   | { preset: Exclude<DurationPreset, 'custom'> }
-  | { preset: 'custom'; minMinutes: number; maxMinutes: number };
+  | { preset: 'custom'; minSeconds: number; maxSeconds: number };
 
 export type GalleryAdvancedFilters = {
   aspectRatios: AspectRatioFilterValue[];
@@ -78,9 +78,51 @@ export type GalleryFilterLayoutState = {
   visible: Record<GalleryFilterId, boolean>;
 };
 
-export type GalleryFilterStats = {
-  weightBuckets: { maxMb: number; b1: number; b2: number; b3: number };
+export type WeightSegment = {
+  key: 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4';
+  label: string;
+  minMb: number;
+  maxMb: number;
+};
+
+export type DurationSegment = {
+  key: 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4';
+  label: string;
+  minMs: number;
+  maxMs: number;
+};
+
+export type FileWeightMeta = {
+  minMb: number;
+  maxMb: number;
+  segments: WeightSegment[];
+};
+
+export type DurationMeta = {
+  minSec: number;
+  maxSec: number;
   maxDurationMs: number;
+  segments: DurationSegment[];
+};
+
+export type ResolutionSegment = {
+  key: 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4';
+  label: string;
+  minPx: number;
+  maxPx: number;
+  openEnd?: boolean;
+};
+
+export type ResolutionMeta = {
+  minPx: number;
+  maxPx: number;
+  segments: ResolutionSegment[];
+};
+
+export type GalleryFilterStats = {
+  fileWeightMeta: FileWeightMeta;
+  durationMeta: DurationMeta;
+  resolutionMeta: ResolutionMeta;
   hasVideo: boolean;
   aspectRatio: Record<AspectRatioFilterValue, number>;
   fileExtensions: Record<string, number>;
@@ -91,6 +133,60 @@ export type GalleryFilterStats = {
   resolution: Record<string, number>;
   duration: Record<string, number>;
 };
+
+const LEGACY_DURATION_PRESETS: Record<string, DurationPreset> = {
+  up5: 'bucket1',
+  '5to15': 'bucket2',
+  '15to30': 'bucket3',
+  '30to60': 'bucket4',
+  over60: 'bucket4'
+};
+
+function migrateDurationFilterValue(d: DurationFilterValue): DurationFilterValue {
+  if (d.preset !== 'custom') {
+    const legacy = LEGACY_DURATION_PRESETS[d.preset as string];
+    if (legacy) return { preset: legacy };
+    return d;
+  }
+  const legacy = d as DurationFilterValue & { minMinutes?: number; maxMinutes?: number };
+  if (typeof legacy.minSeconds === 'number' && typeof legacy.maxSeconds === 'number') {
+    return { preset: 'custom', minSeconds: legacy.minSeconds, maxSeconds: legacy.maxSeconds };
+  }
+  if (typeof legacy.minMinutes === 'number' && typeof legacy.maxMinutes === 'number') {
+    return {
+      preset: 'custom',
+      minSeconds: Math.round(legacy.minMinutes * 60),
+      maxSeconds: Math.round(legacy.maxMinutes * 60)
+    };
+  }
+  return d;
+}
+
+const LEGACY_RESOLUTION_PRESETS = new Set(['720p', '1080p', '4k']);
+
+function migrateResolutionFilterValue(r: ResolutionFilterValue): ResolutionFilterValue | null {
+  if (r.preset === 'custom') return r;
+  if (LEGACY_RESOLUTION_PRESETS.has(r.preset as string)) return null;
+  if (
+    r.preset === 'bucket1' ||
+    r.preset === 'bucket2' ||
+    r.preset === 'bucket3' ||
+    r.preset === 'bucket4'
+  ) {
+    return r;
+  }
+  return null;
+}
+
+export function migrateGalleryAdvancedFilters(filters: GalleryAdvancedFilters): GalleryAdvancedFilters {
+  return {
+    ...filters,
+    duration: filters.duration.map(migrateDurationFilterValue),
+    resolution: filters.resolution
+      .map(migrateResolutionFilterValue)
+      .filter((r): r is ResolutionFilterValue => r !== null)
+  };
+}
 
 export type SavedFilterPreset = {
   id: string;

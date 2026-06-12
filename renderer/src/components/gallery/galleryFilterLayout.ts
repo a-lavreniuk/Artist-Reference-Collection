@@ -26,17 +26,19 @@ export function writeGalleryFilterLayout(layout: GalleryFilterLayoutState): void
   localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
 }
 
-export function moveFilterInLayout(
+export function reorderFilterInLayout(
   layout: GalleryFilterLayoutState,
   id: GalleryFilterId,
-  direction: 'up' | 'down'
+  insertIndex: number
 ): GalleryFilterLayoutState {
   const order = [...layout.order];
-  const idx = order.indexOf(id);
-  if (idx < 0) return layout;
-  const swap = direction === 'up' ? idx - 1 : idx + 1;
-  if (swap < 0 || swap >= order.length) return layout;
-  [order[idx], order[swap]] = [order[swap], order[idx]];
+  const fromIndex = order.indexOf(id);
+  if (fromIndex < 0) return layout;
+  const bounded = Math.max(0, Math.min(insertIndex, order.length));
+  order.splice(fromIndex, 1);
+  let target = bounded;
+  if (fromIndex < bounded) target -= 1;
+  order.splice(target, 0, id);
   return { ...layout, order };
 }
 
