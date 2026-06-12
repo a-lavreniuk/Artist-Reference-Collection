@@ -29,6 +29,7 @@ export type CategoryRecord = {
   weight: CategoryWeight;
   sortIndex: number;
   createdAt: string;
+  description?: string;
 };
 
 export type TagRecord = {
@@ -281,7 +282,19 @@ function normalizeCategoryRecord(item: unknown, index: number): CategoryRecord {
   }
   const weight = parseWeight(r.weight);
   const sortIndex = typeof r.sortIndex === 'number' ? r.sortIndex : index;
-  return { id, name, colorHex, weight, sortIndex, createdAt };
+  let description: string | undefined;
+  if (typeof r.description === 'string' && r.description.trim()) {
+    description = r.description.trim();
+  }
+  return {
+    id,
+    name,
+    colorHex,
+    weight,
+    sortIndex,
+    createdAt,
+    ...(description ? { description } : {})
+  };
 }
 
 function readCategoriesLocal(): CategoryRecord[] {
@@ -554,12 +567,25 @@ export async function getAllCategories(): Promise<CategoryRecord[]> {
   return [...list].sort((a, b) => a.sortIndex - b.sortIndex || a.name.localeCompare(b.name, 'ru'));
 }
 
-export async function addCategory(name: string, colorHex: string): Promise<CategoryRecord> {
+export type CategoryStats = {
+  tagCount: number;
+  cardsWithTags: number;
+  usageSum: number;
+  createdAt: string;
+};
+
+export async function addCategory(
+  name: string,
+  colorHex: string,
+  extras?: { weight?: CategoryWeight; description?: string }
+): Promise<CategoryRecord> {
   const trimmed = name.trim();
   if (!trimmed) {
     throw new Error('Название категории не может быть пустым');
   }
   const hex = normalizeHex(colorHex) ?? '#EAB308';
+  const weight = extras?.weight ?? 'neutral';
+  const desc = extras?.description?.trim();
   const list = await readCategoriesUnified();
   if (list.some((c) => normalizeNameForCompare(c.name) === normalizeNameForCompare(trimmed))) {
     throw new Error('Категория с таким названием уже есть');
@@ -569,9 +595,10 @@ export async function addCategory(name: string, colorHex: string): Promise<Categ
     id: newId(),
     name: trimmed,
     colorHex: hex,
-    weight: 'neutral',
+    weight,
     sortIndex: maxSort + 1,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    ...(desc ? { description: desc } : {})
   };
   await persistCategories([...list, created]);
   return created;
@@ -606,6 +633,96 @@ export async function updateCategoryWeight(id: string, weight: CategoryWeight): 
   notifyCategoriesChanged();
 }
 
+export async function updateCategoryDescription(id: string, description: string): Promise<void> {
+  const desc = description.trim();
+  const list = await readCategoriesUnified();
+  await persistCategories(
+    list.map((c) => {
+      if (c.id !== id) return c;
+      if (desc) return { ...c, description: desc };
+      const next = { ...c };
+      delete next.description;
+      return next;
+    })
+  );
+  notifyCategoriesChanged();
+}
+
+export async function updateCategory(
+  id: string,
+  patch: {
+    name?: string;
+    colorHex?: string;
+    weight?: CategoryWeight;
+    description?: string;
+  }
+): Promise<void> {
+  const list = await readCategoriesUnified();
+  const current = list.find((c) => c.id === id);
+  if (!current) return;
+
+  let name = current.name;
+  if (patch.name !== undefined) {
+    const trimmed = patch.name.trim();
+    if (!trimmed) {
+      throw new Error('Название не может быть пустым');
+    }
+    if (list.some((c) => c.id !== id && normalizeNameForCompare(c.name) === normalizeNameForCompare(trimmed))) {
+      throw new Error('Категория с таким названием уже есть');
+    }
+    name = trimmed;
+  }
+
+  let colorHex = current.colorHex;
+  if (patch.colorHex !== undefined) {
+    const hex = normalizeHex(patch.colorHex);
+    if (!hex) {
+      throw new Error('Некорректный цвет');
+    }
+    colorHex = hex;
+  }
+
+  const weight = patch.weight ?? current.weight;
+
+  await persistCategories(
+    list.map((c) => {
+      if (c.id !== id) return c;
+      const next: CategoryRecord = { ...c, name, colorHex, weight };
+      if (patch.description !== undefined) {
+        const desc = patch.description.trim();
+        if (desc) next.description = desc;
+        else delete next.description;
+      }
+      return next;
+    })
+  );
+}
+
+export async function getCategoryStats(categoryId: string): Promise<CategoryStats> {
+  const categories = await readCategoriesUnified();
+  const category = categories.find((c) => c.id === categoryId);
+  if (!category) {
+    return { tagCount: 0, cardsWithTags: 0, usageSum: 0, createdAt: new Date().toISOString() };
+  }
+
+  const tags = await getTagsByCategory(categoryId);
+  const tagIds = new Set(tags.map((t) => t.id));
+  const usageSum = tags.reduce((sum, t) => sum + t.usageCount, 0);
+
+  let cardsWithTags = 0;
+  if (tagIds.size > 0) {
+    const cards = await listCardsSorted('all');
+    cardsWithTags = cards.filter((c) => c.tagIds.some((tid) => tagIds.has(tid))).length;
+  }
+
+  return {
+    tagCount: tags.length,
+    cardsWithTags,
+    usageSum,
+    createdAt: category.createdAt
+  };
+}
+
 export async function moveCategory(id: string, direction: -1 | 1): Promise<void> {
   const sorted = [...(await getAllCategories())];
   const index = sorted.findIndex((c) => c.id === id);
@@ -620,6 +737,29 @@ export async function moveCategory(id: string, direction: -1 | 1): Promise<void>
     if (c.id === b.id) return { ...c, sortIndex: a.sortIndex };
     return c;
   });
+  await persistCategories(list);
+  notifyCategoriesChanged();
+}
+
+/** Перестановка категории на позицию insertIndex в отсортированном списке (для DnD в sidebar). */
+export async function reorderCategoryToIndex(id: string, insertIndex: number): Promise<void> {
+  const sorted = await getAllCategories();
+  const fromIndex = sorted.findIndex((c) => c.id === id);
+  if (fromIndex < 0) return;
+
+  const clamped = Math.max(0, Math.min(insertIndex, sorted.length));
+  if (clamped === fromIndex || clamped === fromIndex + 1) return;
+
+  const next = [...sorted];
+  const [item] = next.splice(fromIndex, 1);
+  const targetIndex = clamped > fromIndex ? clamped - 1 : clamped;
+  next.splice(targetIndex, 0, item);
+
+  const idToSort = new Map(next.map((c, i) => [c.id, i]));
+  const list = (await readCategoriesUnified()).map((c) => ({
+    ...c,
+    sortIndex: idToSort.get(c.id) ?? c.sortIndex
+  }));
   await persistCategories(list);
   notifyCategoriesChanged();
 }

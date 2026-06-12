@@ -48,6 +48,7 @@ export type CategoryRow = {
   weight: 'neutral' | 'low' | 'medium' | 'high';
   sortIndex: number;
   createdAt: string;
+  description?: string;
 };
 
 export type TagRow = {

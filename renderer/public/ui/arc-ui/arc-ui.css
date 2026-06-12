@@ -1832,6 +1832,13 @@ button.input {
   display: none !important;
 }
 
+/* Картинки в модалках не перетаскиваются — иначе срабатывает глобальный импорт файлов */
+.arc-modal-host img,
+.arc-modal-host video {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 .arc-modal {
   width: 400px;
   max-width: calc(100vw - var(--s-4) * 2);
@@ -1972,9 +1979,9 @@ button.input {
 
 .arc-modal__slot-text {
   margin: 0;
-  font-size: var(--typo-p-s-size);
-  line-height: var(--typo-p-s-line);
-  font-weight: var(--typo-p-s-weight);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
   color: var(--text-elev-primary);
 }
 

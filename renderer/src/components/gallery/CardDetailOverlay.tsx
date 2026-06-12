@@ -713,7 +713,12 @@ export default function CardDetailOverlay({
               </div>
             ) : src || thumbSrc ? (
               <div className="arc-card-detail-media-fit">
-                <img className="arc-card-detail-media" src={src ?? thumbSrc ?? ''} alt="" />
+                <img
+                  className="arc-card-detail-media"
+                  src={src ?? thumbSrc ?? ''}
+                  alt=""
+                  draggable={false}
+                />
               </div>
             ) : (
               <div

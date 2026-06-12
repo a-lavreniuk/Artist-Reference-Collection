@@ -106,6 +106,9 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'cards', 'duration_ms')) {
     db.exec('ALTER TABLE cards ADD COLUMN duration_ms INTEGER');
   }
+  if (!tableHasColumn(db, 'categories', 'description')) {
+    db.exec('ALTER TABLE categories ADD COLUMN description TEXT');
+  }
   db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
 
   ensureCardsFtsSchema(db);

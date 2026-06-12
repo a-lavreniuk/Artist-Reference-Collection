@@ -24,6 +24,21 @@ function isDragLeavingWindow(e: DragEvent): boolean {
   );
 }
 
+const SUPPRESSED_NATIVE_MEDIA_DRAG_ROOTS = ['.arc-modal-host', '.arc-card-detail-overlay'] as const;
+
+function isSuppressedNativeMediaDragTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  const inSuppressedRoot = SUPPRESSED_NATIVE_MEDIA_DRAG_ROOTS.some((selector) =>
+    target.closest(selector)
+  );
+  if (!inSuppressedRoot) return false;
+  return (
+    target instanceof HTMLImageElement ||
+    target instanceof HTMLVideoElement ||
+    !!target.closest('img, video')
+  );
+}
+
 type ImportPhase = 'idle' | 'overlay' | 'importing' | 'source-modal';
 
 export default function ImportHost({ children }: { children: ReactNode }) {
@@ -37,6 +52,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const [importBusy, setImportBusy] = useState(false);
   const overlayOpenedManuallyRef = useRef(false);
   const isDraggingFilesRef = useRef(false);
+  const suppressFileDragRef = useRef(false);
   const ctaWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -123,7 +139,14 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   }, [clearFileDrag, runImport]);
 
   useEffect(() => {
+    const onDragStart = (e: DragEvent) => {
+      if (!isSuppressedNativeMediaDragTarget(e.target)) return;
+      suppressFileDragRef.current = true;
+      e.preventDefault();
+    };
+
     const onDragOver = (e: DragEvent) => {
+      if (suppressFileDragRef.current) return;
       if (!isFileDragEvent(e)) return;
       e.preventDefault();
       const dt = e.dataTransfer;
@@ -145,13 +168,16 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     };
 
     const onDragEnd = () => {
+      suppressFileDragRef.current = false;
       clearFileDrag();
     };
 
+    document.addEventListener('dragstart', onDragStart, true);
     document.addEventListener('dragover', onDragOver, true);
     document.addEventListener('dragleave', onDragLeave, true);
     document.addEventListener('dragend', onDragEnd, true);
     return () => {
+      document.removeEventListener('dragstart', onDragStart, true);
       document.removeEventListener('dragover', onDragOver, true);
       document.removeEventListener('dragleave', onDragLeave, true);
       document.removeEventListener('dragend', onDragEnd, true);
