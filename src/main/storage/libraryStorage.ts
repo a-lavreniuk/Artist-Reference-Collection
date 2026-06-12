@@ -669,7 +669,8 @@ export function listCategories(libraryRoot: string): CategoryRow[] {
         colorHex: String(row.color_hex),
         weight: row.weight as CategoryRow['weight'],
         sortIndex: Number(row.sort_index),
-        createdAt: String(row.created_at)
+        createdAt: String(row.created_at),
+        ...(row.description ? { description: String(row.description) } : {})
       };
     });
 }
@@ -677,11 +678,19 @@ export function listCategories(libraryRoot: string): CategoryRow[] {
 export function upsertCategory(libraryRoot: string, cat: CategoryRow): void {
   const db = openLibraryDb(libraryRoot);
   db.prepare(
-    `INSERT INTO categories (id, name, color_hex, weight, sort_index, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO categories (id, name, color_hex, weight, sort_index, created_at, description)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET name=excluded.name, color_hex=excluded.color_hex,
-       weight=excluded.weight, sort_index=excluded.sort_index`
-  ).run(cat.id, cat.name, cat.colorHex, cat.weight, cat.sortIndex, cat.createdAt);
+       weight=excluded.weight, sort_index=excluded.sort_index, description=excluded.description`
+  ).run(
+    cat.id,
+    cat.name,
+    cat.colorHex,
+    cat.weight,
+    cat.sortIndex,
+    cat.createdAt,
+    cat.description ?? null
+  );
 }
 
 export async function deleteCategoryFromDb(libraryRoot: string, id: string): Promise<void> {

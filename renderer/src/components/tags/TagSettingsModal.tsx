@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { processTagTooltipImageFile } from './tagTooltipImage';
 
 const MAX_IMAGE_BYTES = 1_200_000;
 
@@ -149,17 +150,6 @@ export default function TagSettingsModal({
 
   const selectedCategory = categories.find((c) => c.id === categoryId) ?? categories[0];
 
-  const readFileAsDataUrl = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onload = () => {
-        if (typeof fr.result === 'string') resolve(fr.result);
-        else reject(new Error('Не удалось прочитать файл'));
-      };
-      fr.onerror = () => reject(new Error('Не удалось прочитать файл'));
-      fr.readAsDataURL(file);
-    });
-
   const onPickFile = async (fileList: FileList | null) => {
     const file = fileList?.[0];
     if (!file) return;
@@ -173,7 +163,7 @@ export default function TagSettingsModal({
     }
     setError(null);
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await processTagTooltipImageFile(file);
       setTooltipImageDataUrl(dataUrl);
       setImageFileName(file.name);
     } catch {
@@ -309,7 +299,7 @@ export default function TagSettingsModal({
                   >
                     <input
                       className="input"
-                      placeholder="Название метки"
+                      placeholder="Введите название…"
                       value={name}
                       autoFocus
                       onChange={(e) => {
@@ -368,7 +358,7 @@ export default function TagSettingsModal({
                       onClick={() => setCategoryMenuOpen((o) => !o)}
                     >
                       <span className="selector-value slot-value">
-                        {selectedCategory ? selectedCategory.name : 'Категория'}
+                        {selectedCategory ? selectedCategory.name : 'Выберите категорию…'}
                       </span>
                       <span className="selector-actions slot-trailing">
                         <span className="selector-clear" aria-hidden="true" />
@@ -404,7 +394,7 @@ export default function TagSettingsModal({
                   <label className="field">
                     <textarea
                       className="input textarea"
-                      placeholder="Описание (необязательно)"
+                      placeholder="Введите описание…"
                       value={description}
                       rows={4}
                       onChange={(e) => setDescription(e.target.value)}
@@ -420,7 +410,8 @@ export default function TagSettingsModal({
               >
                 <div className="arc-modal__slot">
                   <p className="arc-modal__slot-text">
-                    По желанию добавьте изображение для подсказки при наведении на метку.
+                    Загрузите опциональное поясняющее изображение. Оно будет отображаться при наведении
+                    курсора на метку. Максимальное разрешение изображения 368×207 пикселей.
                   </p>
                 </div>
                 <div className="arc-modal__slot">
@@ -460,13 +451,18 @@ export default function TagSettingsModal({
                   </div>
                 </div>
                 <div className="arc-modal__slot">
-                  {tooltipImageDataUrl ? (
-                    <div className="arc-tag-modal-preview-wrap">
-                      <img src={tooltipImageDataUrl} alt="Предпросмотр изображения метки" />
-                    </div>
-                  ) : (
-                    <div className="arc-modal__image-placeholder" aria-hidden="true" />
-                  )}
+                  <div
+                    className="arc-tag-preview-frame"
+                    aria-hidden={!tooltipImageDataUrl}
+                  >
+                    {tooltipImageDataUrl ? (
+                      <img
+                        src={tooltipImageDataUrl}
+                        alt="Предпросмотр изображения метки"
+                        draggable={false}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               </div>
             )}
@@ -476,7 +472,7 @@ export default function TagSettingsModal({
           <footer className="arc-modal__footer arc-modal__footer--actions-3">
             <button
               type="button"
-              className={`btn btn-ds btn-s${isEdit ? ' btn-danger' : ' btn-outline'}`}
+              className="btn btn-ds btn-s btn-danger"
               disabled={deleteDisabled}
               aria-disabled={deleteDisabled}
               onClick={() => {

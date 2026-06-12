@@ -11,16 +11,6 @@
   align-items: flex-start;
 }
 
-.arc-tag-tooltip__image {
-  width: 64px;
-  height: 64px;
-  flex-shrink: 0;
-  object-fit: contain;
-  border-radius: 4px;
-  background: var(--gray-900);
-  display: block;
-}
-
 .arc-tag-tooltip__text {
   flex: 1 1 auto;
   min-width: 0;

@@ -47,7 +47,9 @@ function PickerCategoryItem({
     >
       <span className="context-menu__item-inner">
         <span className="context-menu__item-label-cluster">
-          <span className="context-menu__item-label">{label}</span>
+          <span className="context-menu__item-label" title={label}>
+            {label}
+          </span>
         </span>
       </span>
     </button>

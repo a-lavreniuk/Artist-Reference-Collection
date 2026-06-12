@@ -94,6 +94,8 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
   for (const rawCat of legacy.categories ?? []) {
     const c = rawCat as Record<string, unknown>;
     if (typeof c.id !== 'string') continue;
+    const desc =
+      typeof c.description === 'string' && c.description.trim() ? c.description.trim() : undefined;
     const cat: CategoryRow = {
       id: c.id,
       name: typeof c.name === 'string' ? c.name : '',
@@ -102,12 +104,13 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
         ? c.weight
         : 'neutral') as CategoryRow['weight'],
       sortIndex: typeof c.sortIndex === 'number' ? c.sortIndex : 0,
-      createdAt: typeof c.createdAt === 'string' ? c.createdAt : new Date().toISOString()
+      createdAt: typeof c.createdAt === 'string' ? c.createdAt : new Date().toISOString(),
+      ...(desc ? { description: desc } : {})
     };
     db.prepare(
-      `INSERT OR IGNORE INTO categories (id, name, color_hex, weight, sort_index, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).run(cat.id, cat.name, cat.colorHex, cat.weight, cat.sortIndex, cat.createdAt);
+      `INSERT OR IGNORE INTO categories (id, name, color_hex, weight, sort_index, created_at, description)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(cat.id, cat.name, cat.colorHex, cat.weight, cat.sortIndex, cat.createdAt, cat.description ?? null);
   }
 
   // Tags

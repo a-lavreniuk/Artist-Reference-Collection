@@ -15,16 +15,15 @@ export function TagTooltipBody({ description, imageDataUrl }: TagTooltipBodyProp
 
   return (
     <div className={`arc-tag-tooltip${row ? ' arc-tag-tooltip--row' : ''}`}>
-      {hasImage && (
-        <img
-          className="arc-tag-tooltip__image"
-          src={imageDataUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-      )}
-      {hasText && <div className="arc-tag-tooltip__text">{description}</div>}
+      {hasImage ? (
+        <div
+          className={`arc-tag-preview-frame${row ? ' arc-tag-preview-frame--thumb' : ''}`}
+          aria-hidden={!hasText}
+        >
+          <img src={imageDataUrl} alt="" loading="lazy" decoding="async" />
+        </div>
+      ) : null}
+      {hasText ? <div className="arc-tag-tooltip__text">{description}</div> : null}
     </div>
   );
 }
