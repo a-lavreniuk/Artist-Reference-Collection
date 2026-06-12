@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -7,11 +8,13 @@ import {
   type MouseEvent,
   type RefObject
 } from 'react';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { ContextMenu, ContextMenuInput, type ContextMenuRow } from '../../context-menu';
-import ContextMenuItem from '../../context-menu/ContextMenuItem';
+import type { ContextMenuSlot } from '../../context-menu/types';
 import ContextMenuHeader from '../../context-menu/ContextMenuHeader';
+import ContextMenuItem from '../../context-menu/ContextMenuItem';
 import ContextMenuSeparator from '../../context-menu/ContextMenuSeparator';
-import RangeSlider from '../../range-slider/RangeSlider';
+import { Datepicker } from '../../datepicker';
 import { Tooltip } from '../../tooltip/Tooltip';
 import { useGalleryFilters } from '../../gallery/GalleryFilterContext';
 import {
@@ -28,23 +31,50 @@ import {
   type FileWeightFilterValue,
   type GalleryFilterId,
   type GallerySortField,
-  type ResolutionFilterValue
+  type ResolutionFilterValue,
+  type SavedFilterPreset
 } from '../../gallery/galleryFilterTypes';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
+import FilterCustomRangeSection from './FilterCustomRangeSection';
+import FilterResolutionCustomSection from './FilterResolutionCustomSection';
+import FilterOptionsMenu from './FilterOptionsMenu';
 import FilterPresetModal from './FilterPresetModal';
+import FilterPresetsMenu from './FilterPresetsMenu';
+
+type PresetModalState = null | { mode: 'create' } | { mode: 'edit'; preset: SavedFilterPreset };
 
 function toggleInList<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
-function formatMb(v: number): string {
-  return `${Math.round(v * 10) / 10} Мб`;
+/** Слоты пункта фильтра: название + чек слева, счётчик справа */
+const FILTER_COUNTER_ITEM_SLOTS: ContextMenuSlot[] = ['label', 'counter'];
+
+const FILTER_KEYWORDS_DEBOUNCE_MS = 400;
+const FILTER_RANGE_DEBOUNCE_MS = 400;
+const FILTER_KEYWORDS_PLACEHOLDER = 'Ключевые слова — через пробел, все обязательны';
+const RESOLUTION_MAX_W = 3840;
+const RESOLUTION_MAX_H = 2160;
+
+function isFullRange(min: number, max: number, libraryMax: number): boolean {
+  return min <= 0 && max >= libraryMax;
 }
 
-function formatMinutes(ms: number): string {
-  const m = Math.round(ms / 60_000);
-  return `${m} мин`;
+function isFullResolution(res: { minW: number; maxW: number; minH: number; maxH: number }): boolean {
+  return (
+    res.minW <= 0 &&
+    res.maxW >= RESOLUTION_MAX_W &&
+    res.minH <= 0 &&
+    res.maxH >= RESOLUTION_MAX_H
+  );
 }
+
+const DEFAULT_RESOLUTION_RANGE = {
+  minW: 0,
+  maxW: RESOLUTION_MAX_W,
+  minH: 0,
+  maxH: RESOLUTION_MAX_H
+};
 
 export default function GalleryNavbarFilters() {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -56,30 +86,239 @@ export default function GalleryNavbarFilters() {
     sort,
     setSort,
     layout,
-    moveFilter,
+    reorderFilter,
     toggleFilterVisibility,
     stats,
     presets,
     savePreset,
     applyPreset,
     deletePreset,
+    renamePreset,
     activeCategoryCount
   } = useGalleryFilters();
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [presetModalOpen, setPresetModalOpen] = useState(false);
+  const [presetModal, setPresetModal] = useState<PresetModalState>(null);
   const [descKeywords, setDescKeywords] = useState('');
   const [linkKeywords, setLinkKeywords] = useState('');
+  const descKeywordsDebounced = useDebouncedValue(descKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
+  const linkKeywordsDebounced = useDebouncedValue(linkKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
   const [customWeight, setCustomWeight] = useState({ min: 0, max: 10 });
-  const [customRes, setCustomRes] = useState({ minW: 0, maxW: 3840, minH: 0, maxH: 2160 });
+  const customWeightDebounced = useDebouncedValue(customWeight, FILTER_RANGE_DEBOUNCE_MS);
+  const [customRes, setCustomRes] = useState(DEFAULT_RESOLUTION_RANGE);
+  const customResDebounced = useDebouncedValue(customRes, FILTER_RANGE_DEBOUNCE_MS);
   const [customDuration, setCustomDuration] = useState({ min: 0, max: 60 });
-  const [customDateFrom, setCustomDateFrom] = useState('');
-  const [customDateTo, setCustomDateTo] = useState('');
+  const customDurationDebounced = useDebouncedValue(customDuration, FILTER_RANGE_DEBOUNCE_MS);
+
+  useEffect(() => {
+    if (openMenu !== 'description') return;
+    setDescKeywords(filters.description?.keywords ?? '');
+  }, [openMenu, filters.description?.keywords]);
+
+  useEffect(() => {
+    if (openMenu !== 'link') return;
+    setLinkKeywords(filters.link?.keywords ?? '');
+  }, [openMenu, filters.link?.keywords]);
+
+  useEffect(() => {
+    if (filters.description === null) setDescKeywords('');
+  }, [filters.description]);
+
+  useEffect(() => {
+    if (filters.link === null) setLinkKeywords('');
+  }, [filters.link]);
+
+  useEffect(() => {
+    if (filters.description?.mode !== 'has') return;
+    const applied = filters.description.keywords ?? '';
+    if (descKeywordsDebounced === applied) return;
+    patchFilters({ description: { mode: 'has', keywords: descKeywordsDebounced } });
+  }, [descKeywordsDebounced, filters.description?.keywords, filters.description?.mode, patchFilters]);
+
+  useEffect(() => {
+    if (filters.link?.mode !== 'has') return;
+    const applied = filters.link.keywords ?? '';
+    if (linkKeywordsDebounced === applied) return;
+    patchFilters({ link: { mode: 'has', keywords: linkKeywordsDebounced } });
+  }, [linkKeywordsDebounced, filters.link?.keywords, filters.link?.mode, patchFilters]);
+
+  useEffect(() => {
+    if (!stats?.fileWeightMeta.maxMb) return;
+    const maxMb = Math.round(stats.fileWeightMeta.maxMb);
+    if (!filters.fileWeight.some((w) => w.preset === 'custom')) {
+      setCustomWeight({ min: 0, max: maxMb });
+      return;
+    }
+    setCustomWeight((prev) => ({
+      min: Math.min(prev.min, maxMb),
+      max: Math.min(Math.max(prev.max, prev.min), maxMb)
+    }));
+  }, [stats?.fileWeightMeta.maxMb, filters.fileWeight]);
+
+  useEffect(() => {
+    if (!stats?.durationMeta.maxSec) return;
+    const maxSec = Math.max(1, Math.round(stats.durationMeta.maxSec));
+    if (!filters.duration.some((d) => d.preset === 'custom')) {
+      setCustomDuration({ min: 0, max: maxSec });
+      return;
+    }
+    setCustomDuration((prev) => ({
+      min: Math.min(prev.min, maxSec),
+      max: Math.min(Math.max(prev.max, prev.min), maxSec)
+    }));
+  }, [stats?.durationMeta.maxSec, filters.duration]);
+
+  useEffect(() => {
+    if (openMenu !== 'fileWeight' || !stats?.fileWeightMeta.maxMb) return;
+    const maxMb = Math.round(stats.fileWeightMeta.maxMb);
+    const custom = filters.fileWeight.find((w) => w.preset === 'custom');
+    if (custom && custom.preset === 'custom') {
+      setCustomWeight({
+        min: Math.round(custom.minMb),
+        max: Math.round(custom.maxMb)
+      });
+      return;
+    }
+    setCustomWeight({ min: 0, max: maxMb });
+  }, [openMenu, filters.fileWeight, stats?.fileWeightMeta.maxMb]);
+
+  useEffect(() => {
+    if (openMenu !== 'duration' || !stats?.durationMeta.maxSec) return;
+    const maxSec = Math.max(1, Math.round(stats.durationMeta.maxSec));
+    const custom = filters.duration.find((d) => d.preset === 'custom');
+    if (custom && custom.preset === 'custom') {
+      setCustomDuration({
+        min: Math.round(custom.minSeconds),
+        max: Math.round(custom.maxSeconds)
+      });
+      return;
+    }
+    setCustomDuration({ min: 0, max: maxSec });
+  }, [openMenu, filters.duration, stats?.durationMeta.maxSec]);
+
+  useEffect(() => {
+    if (!stats?.fileWeightMeta.maxMb) return;
+    const maxMb = Math.round(stats.fileWeightMeta.maxMb);
+    const { min, max } = customWeightDebounced;
+    const isFull = isFullRange(min, max, maxMb);
+    const hasCustom = filters.fileWeight.some((w) => w.preset === 'custom');
+
+    if (isFull) {
+      weightRangeUserChangeRef.current = false;
+      if (hasCustom) {
+        patchFilters({ fileWeight: filters.fileWeight.filter((w) => w.preset !== 'custom') });
+      }
+      return;
+    }
+
+    if (!weightRangeUserChangeRef.current && !hasCustom) return;
+
+    const currentCustom = filters.fileWeight.find((w) => w.preset === 'custom');
+    const hasPresets = filters.fileWeight.some((w) => w.preset !== 'custom');
+    if (
+      hasPresets ||
+      !currentCustom ||
+      currentCustom.minMb !== min ||
+      currentCustom.maxMb !== max
+    ) {
+      patchFilters({ fileWeight: [{ preset: 'custom', minMb: min, maxMb: max }] });
+    }
+  }, [customWeightDebounced, filters.fileWeight, patchFilters, stats?.fileWeightMeta.maxMb]);
+
+  useEffect(() => {
+    if (!filters.resolution.length || !filters.resolution.some((r) => r.preset === 'custom')) {
+      setCustomRes(DEFAULT_RESOLUTION_RANGE);
+      resolutionRangeUserChangeRef.current = false;
+    }
+  }, [filters.resolution]);
+
+  useEffect(() => {
+    if (openMenu !== 'resolution') return;
+    const custom = filters.resolution.find((r) => r.preset === 'custom');
+    if (custom && custom.preset === 'custom') {
+      setCustomRes({
+        minW: custom.minWidth ?? 0,
+        maxW: custom.maxWidth ?? RESOLUTION_MAX_W,
+        minH: custom.minHeight ?? 0,
+        maxH: custom.maxHeight ?? RESOLUTION_MAX_H
+      });
+      return;
+    }
+    setCustomRes(DEFAULT_RESOLUTION_RANGE);
+  }, [openMenu, filters.resolution]);
+
+  useEffect(() => {
+    const res = customResDebounced;
+    const isFull = isFullResolution(res);
+    const hasCustom = filters.resolution.some((r) => r.preset === 'custom');
+
+    if (isFull) {
+      resolutionRangeUserChangeRef.current = false;
+      if (hasCustom) {
+        patchFilters({ resolution: filters.resolution.filter((r) => r.preset !== 'custom') });
+      }
+      return;
+    }
+
+    if (!resolutionRangeUserChangeRef.current && !hasCustom) return;
+
+    const currentCustom = filters.resolution.find((r) => r.preset === 'custom');
+    const hasPresets = filters.resolution.some((r) => r.preset !== 'custom');
+    const nextCustom = {
+      preset: 'custom' as const,
+      minWidth: res.minW,
+      maxWidth: res.maxW,
+      minHeight: res.minH,
+      maxHeight: res.maxH
+    };
+    if (
+      hasPresets ||
+      !currentCustom ||
+      currentCustom.minWidth !== res.minW ||
+      currentCustom.maxWidth !== res.maxW ||
+      currentCustom.minHeight !== res.minH ||
+      currentCustom.maxHeight !== res.maxH
+    ) {
+      patchFilters({ resolution: [nextCustom] });
+    }
+  }, [customResDebounced, filters.resolution, patchFilters]);
+
+  useEffect(() => {
+    if (!stats?.durationMeta.maxSec) return;
+    const maxSec = Math.max(1, Math.round(stats.durationMeta.maxSec));
+    const { min, max } = customDurationDebounced;
+    const isFull = isFullRange(min, max, maxSec);
+    const hasCustom = filters.duration.some((d) => d.preset === 'custom');
+
+    if (isFull) {
+      durationRangeUserChangeRef.current = false;
+      if (hasCustom) {
+        patchFilters({ duration: filters.duration.filter((d) => d.preset !== 'custom') });
+      }
+      return;
+    }
+
+    if (!durationRangeUserChangeRef.current && !hasCustom) return;
+
+    const currentCustom = filters.duration.find((d) => d.preset === 'custom');
+    const hasPresets = filters.duration.some((d) => d.preset !== 'custom');
+    if (
+      hasPresets ||
+      !currentCustom ||
+      currentCustom.minSeconds !== min ||
+      currentCustom.maxSeconds !== max
+    ) {
+      patchFilters({ duration: [{ preset: 'custom', minSeconds: min, maxSeconds: max }] });
+    }
+  }, [customDurationDebounced, filters.duration, patchFilters, stats?.durationMeta.maxSec]);
 
   const sortRef = useRef<HTMLButtonElement>(null);
   const chipAnchorRefs = useRef<Record<string, RefObject<HTMLElement | null>>>({});
   const optionsRef = useRef<HTMLButtonElement>(null);
   const presetsRef = useRef<HTMLButtonElement>(null);
+  const weightRangeUserChangeRef = useRef(false);
+  const resolutionRangeUserChangeRef = useRef(false);
+  const durationRangeUserChangeRef = useRef(false);
 
   const getChipAnchorRef = (id: GalleryFilterId): RefObject<HTMLElement | null> => {
     if (!chipAnchorRefs.current[id]) {
@@ -132,11 +371,11 @@ export default function GalleryNavbarFilters() {
   }, [setSort, sort]);
 
   const buildAspectRows = (): ContextMenuRow[] => {
-    const opts: { key: AspectRatioFilterValue; label: string }[] = [
-      { key: 'horizontal', label: 'Горизонтальное' },
-      { key: 'vertical', label: 'Вертикальное' },
-      { key: 'square', label: 'Квадрат' },
-      { key: 'panoramic', label: 'Панорамное' }
+    const opts: { key: AspectRatioFilterValue; label: string; iconClass: string }[] = [
+      { key: 'horizontal', label: 'Горизонтальное', iconClass: 'arc-icon-aspect-ratio-horizontal' },
+      { key: 'vertical', label: 'Вертикальное', iconClass: 'arc-icon-aspect-ratio-vertical' },
+      { key: 'square', label: 'Квадратное', iconClass: 'arc-icon-aspect-ratio-square' },
+      { key: 'panoramic', label: 'Панорамное', iconClass: 'arc-icon-aspect-ratio-panoramic' }
     ];
     return opts
       .filter((o) => (stats?.aspectRatio[o.key] ?? 0) > 0)
@@ -144,7 +383,9 @@ export default function GalleryNavbarFilters() {
         type: 'item' as const,
         key: o.key,
         label: o.label,
+        iconClass: o.iconClass,
         counter: stats?.aspectRatio[o.key],
+        slotOrder: ['label', 'counter', 'icon'] as const,
         selected: filters.aspectRatios.includes(o.key),
         closeOnSelect: false,
         onSelect: () =>
@@ -162,6 +403,7 @@ export default function GalleryNavbarFilters() {
         key: `ext-${ext}`,
         label: ext,
         counter: n,
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
         selected: filters.fileExtensions.includes(ext),
         closeOnSelect: false,
         onSelect: () =>
@@ -178,6 +420,7 @@ export default function GalleryNavbarFilters() {
         key: `ext-${ext}`,
         label: ext,
         counter: n,
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
         selected: filters.fileExtensions.includes(ext),
         closeOnSelect: false,
         onSelect: () =>
@@ -187,70 +430,125 @@ export default function GalleryNavbarFilters() {
     return rows;
   };
 
-  const buildDescriptionMenu = () => (
-    <>
-      <ContextMenuHeader>Описание</ContextMenuHeader>
-      <ContextMenuItem
-        label="Есть"
-        counter={stats?.description.has}
-        selected={filters.description?.mode === 'has'}
-        onSelect={() =>
-          patchFilters({
-            description: { mode: 'has', keywords: descKeywords || filters.description?.keywords }
-          })
-        }
-      />
-      <ContextMenuItem
-        label="Нет"
-        counter={stats?.description.missing}
-        selected={filters.description?.mode === 'missing'}
-        onSelect={() => patchFilters({ description: { mode: 'missing' } })}
-      />
-      {filters.description?.mode === 'has' ? (
+  const buildDescriptionMenu = () => {
+    const keywordsEnabled = filters.description?.mode === 'has';
+    return (
+      <>
+        <ContextMenuItem
+          label="Есть"
+          counter={stats?.description.has}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={keywordsEnabled}
+          onSelect={() => {
+            if (filters.description?.mode === 'has') {
+              patchFilters({ description: null });
+              return;
+            }
+            patchFilters({
+              description: {
+                mode: 'has',
+                keywords: descKeywords || filters.description?.keywords || ''
+              }
+            });
+          }}
+        />
+        <ContextMenuItem
+          label="Нет"
+          counter={stats?.description.missing}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={filters.description?.mode === 'missing'}
+          onSelect={() => {
+            if (filters.description?.mode === 'missing') {
+              patchFilters({ description: null });
+              return;
+            }
+            patchFilters({ description: { mode: 'missing' } });
+          }}
+        />
+        <ContextMenuSeparator />
         <ContextMenuInput
-          variant="live"
-          label="Ключевые слова"
-          placeholder="Ключевые слова"
-          value={descKeywords || filters.description.keywords || ''}
+          variant="textarea"
+          placeholder={FILTER_KEYWORDS_PLACEHOLDER}
+          value={descKeywords}
+          disabled={!keywordsEnabled}
           onChange={(v) => {
+            if (!keywordsEnabled) return;
             setDescKeywords(v);
-            patchFilters({ description: { mode: 'has', keywords: v } });
           }}
         />
-      ) : null}
-    </>
-  );
+      </>
+    );
+  };
 
-  const buildLinkMenu = () => (
-    <>
-      <ContextMenuHeader>Ссылка</ContextMenuHeader>
-      <ContextMenuItem
-        label="Есть"
-        counter={stats?.link.has}
-        selected={filters.link?.mode === 'has'}
-        onSelect={() =>
-          patchFilters({ link: { mode: 'has', keywords: linkKeywords || filters.link?.keywords } })
-        }
-      />
-      <ContextMenuItem
-        label="Нет"
-        counter={stats?.link.missing}
-        selected={filters.link?.mode === 'missing'}
-        onSelect={() => patchFilters({ link: { mode: 'missing' } })}
-      />
-      {filters.link?.mode === 'has' ? (
-        <ContextMenuInput
-          variant="live"
-          label="Ключевые слова"
-          placeholder="Ключевые слова"
-          value={linkKeywords || filters.link.keywords || ''}
-          onChange={(v) => {
-            setLinkKeywords(v);
-            patchFilters({ link: { mode: 'has', keywords: v } });
+  const buildLinkMenu = () => {
+    const keywordsEnabled = filters.link?.mode === 'has';
+    return (
+      <>
+        <ContextMenuItem
+          label="Есть"
+          counter={stats?.link.has}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={keywordsEnabled}
+          onSelect={() => {
+            if (filters.link?.mode === 'has') {
+              patchFilters({ link: null });
+              return;
+            }
+            patchFilters({
+              link: { mode: 'has', keywords: linkKeywords || filters.link?.keywords || '' }
+            });
           }}
         />
-      ) : null}
-    </>
+        <ContextMenuItem
+          label="Нет"
+          counter={stats?.link.missing}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={filters.link?.mode === 'missing'}
+          onSelect={() => {
+            if (filters.link?.mode === 'missing') {
+              patchFilters({ link: null });
+              return;
+            }
+            patchFilters({ link: { mode: 'missing' } });
+          }}
+        />
+        <ContextMenuSeparator />
+        <ContextMenuInput
+          variant="textarea"
+          placeholder={FILTER_KEYWORDS_PLACEHOLDER}
+          value={linkKeywords}
+          disabled={!keywordsEnabled}
+          onChange={(v) => {
+            if (!keywordsEnabled) return;
+            setLinkKeywords(v);
+          }}
+        />
+      </>
+    );
+  };
+
+  const customDateValue = useMemo(() => {
+    const custom = filters.dateAdded.find((d) => d.preset === 'custom');
+    if (!custom) return null;
+    return { from: custom.from, to: custom.to };
+  }, [filters.dateAdded]);
+
+  const handleCustomDateChange = useCallback(
+    (value: { from: string; to: string } | null) => {
+      if (!value) {
+        patchFilters({
+          dateAdded: filters.dateAdded.filter((d) => d.preset !== 'custom')
+        });
+        return;
+      }
+      patchFilters({
+        dateAdded: [
+          ...filters.dateAdded.filter((d) => d.preset !== 'custom'),
+          { preset: 'custom', from: value.from, to: value.to ?? value.from }
+        ]
+      });
+    },
+    [filters.dateAdded, patchFilters]
   );
 
   const buildDateRows = (): ContextMenuRow[] => {
@@ -259,16 +557,17 @@ export default function GalleryNavbarFilters() {
       { key: 'yesterday', label: 'Вчера' },
       { key: 'week', label: 'Неделя' },
       { key: 'month', label: 'Месяц' },
-      { key: 'threeMonths', label: '3 месяца' },
+      { key: 'threeMonths', label: 'Три месяца' },
       { key: 'year', label: 'Год' }
     ];
-    const rows: ContextMenuRow[] = [{ type: 'header', key: 'date-h', label: 'Дата добавления' }];
+    const rows: ContextMenuRow[] = [];
     for (const p of presets) {
       rows.push({
         type: 'item',
         key: p.key,
         label: p.label,
         counter: stats?.dateAdded[p.key],
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
         selected: filters.dateAdded.some((d) => d.preset === p.key),
         closeOnSelect: false,
         onSelect: () => {
@@ -280,47 +579,45 @@ export default function GalleryNavbarFilters() {
         }
       });
     }
-    rows.push({
-      type: 'item',
-      key: 'custom-date',
-      label: 'Другой период',
-      selected: filters.dateAdded.some((d) => d.preset === 'custom'),
-      closeOnSelect: false,
-      onSelect: () => {
-        if (!customDateFrom) return;
-        const entry: DateAddedFilterValue = {
-          preset: 'custom',
-          from: customDateFrom,
-          to: customDateTo || customDateFrom
-        };
-        patchFilters({ dateAdded: [entry] });
-      }
-    });
     return rows;
   };
 
+  const buildDateMenu = () => (
+    <>
+      <ContextMenuSeparator />
+      <ContextMenuHeader>Другой период</ContextMenuHeader>
+      <div className="context-menu__slot arc-filter-menu-slot arc-ui-kit-scope arc-navbar-no-drag" data-input-size="s">
+        <Datepicker
+          size="s"
+          mode="optional_range"
+          value={customDateValue}
+          aria-label="Другой период"
+          onChange={handleCustomDateChange}
+        />
+      </div>
+    </>
+  );
+
   const buildWeightRows = (): ContextMenuRow[] => {
-    const b = stats?.weightBuckets;
-    if (!b) return [];
-    const rows: ContextMenuRow[] = [{ type: 'header', key: 'w-h', label: 'Вес файла' }];
-    const buckets: { key: FileWeightFilterValue['preset']; label: string; counterKey: string }[] = [
-      { key: 'bucket1', label: `До ${b.b1} Мб`, counterKey: 'bucket1' },
-      { key: 'bucket2', label: `${b.b1}–${b.b2} Мб`, counterKey: 'bucket2' },
-      { key: 'bucket3', label: `${b.b2}–${b.b3} Мб`, counterKey: 'bucket3' },
-      { key: 'bucket4', label: `Более ${b.b3} Мб`, counterKey: 'bucket4' }
-    ];
-    for (const bucket of buckets) {
-      const n = stats?.fileWeight[bucket.counterKey] ?? 0;
+    const meta = stats?.fileWeightMeta;
+    if (!meta) return [];
+    const maxMb = Math.round(meta.maxMb);
+    const rows: ContextMenuRow[] = [];
+    for (const segment of meta.segments) {
+      const n = stats?.fileWeight[segment.key] ?? 0;
       if (n <= 0) continue;
       rows.push({
         type: 'item',
-        key: bucket.key,
-        label: bucket.label,
+        key: segment.key,
+        label: segment.label,
         counter: n,
-        selected: filters.fileWeight.some((w) => w.preset === bucket.key),
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
+        selected: filters.fileWeight.some((w) => w.preset === segment.key),
         closeOnSelect: false,
         onSelect: () => {
-          const preset = bucket.key as Exclude<FileWeightFilterValue['preset'], 'custom'>;
+          weightRangeUserChangeRef.current = false;
+          setCustomWeight({ min: 0, max: maxMb });
+          const preset = segment.key as Exclude<FileWeightFilterValue['preset'], 'custom'>;
           const has = filters.fileWeight.some((w) => w.preset === preset);
           const next = has
             ? filters.fileWeight.filter((w) => w.preset !== preset)
@@ -329,33 +626,28 @@ export default function GalleryNavbarFilters() {
         }
       });
     }
-    rows.push({
-      type: 'item',
-      key: 'custom-weight',
-      label: 'Другой вес',
-      selected: filters.fileWeight.some((w) => w.preset === 'custom'),
-      closeOnSelect: false,
-      onSelect: () =>
-        patchFilters({
-          fileWeight: [{ preset: 'custom', minMb: customWeight.min, maxMb: customWeight.max }]
-        })
-    });
     return rows;
   };
 
   const buildResolutionRows = (): ContextMenuRow[] => {
-    const rows: ContextMenuRow[] = [{ type: 'header', key: 'res-h', label: 'Разрешение' }];
-    for (const preset of ['720p', '1080p', '4k'] as const) {
-      const n = stats?.resolution[preset] ?? 0;
+    const meta = stats?.resolutionMeta;
+    if (!meta) return [];
+    const rows: ContextMenuRow[] = [];
+    for (const segment of meta.segments) {
+      const n = stats?.resolution[segment.key] ?? 0;
       if (n <= 0) continue;
       rows.push({
         type: 'item',
-        key: preset,
-        label: preset.toUpperCase(),
+        key: segment.key,
+        label: segment.label,
         counter: n,
-        selected: filters.resolution.some((r) => r.preset === preset),
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
+        selected: filters.resolution.some((r) => r.preset === segment.key),
         closeOnSelect: false,
         onSelect: () => {
+          resolutionRangeUserChangeRef.current = false;
+          setCustomRes(DEFAULT_RESOLUTION_RANGE);
+          const preset = segment.key as Exclude<ResolutionFilterValue['preset'], 'custom'>;
           const has = filters.resolution.some((r) => r.preset === preset);
           const next = has
             ? filters.resolution.filter((r) => r.preset !== preset)
@@ -364,136 +656,38 @@ export default function GalleryNavbarFilters() {
         }
       });
     }
-    rows.push({
-      type: 'item',
-      key: 'custom-res',
-      label: 'Другое',
-      selected: filters.resolution.some((r) => r.preset === 'custom'),
-      closeOnSelect: false,
-      onSelect: () =>
-        patchFilters({
-          resolution: [
-            {
-              preset: 'custom',
-              minWidth: customRes.minW,
-              maxWidth: customRes.maxW,
-              minHeight: customRes.minH,
-              maxHeight: customRes.maxH
-            }
-          ]
-        })
-    });
     return rows;
   };
 
   const buildDurationRows = (): ContextMenuRow[] => {
-    const defs: { key: DurationFilterValue['preset']; label: string }[] = [
-      { key: 'up5', label: 'До 5 мин' },
-      { key: '5to15', label: '5–15 мин' },
-      { key: '15to30', label: '15–30 мин' },
-      { key: '30to60', label: '30–60 мин' },
-      { key: 'over60', label: 'Более 1 ч' }
-    ];
-    const rows: ContextMenuRow[] = [{ type: 'header', key: 'dur-h', label: 'Длительность' }];
-    for (const d of defs) {
-      const n = stats?.duration[d.key] ?? 0;
+    const meta = stats?.durationMeta;
+    if (!meta) return [];
+    const maxSec = Math.max(1, Math.round(meta.maxSec));
+    const rows: ContextMenuRow[] = [];
+    for (const segment of meta.segments) {
+      const n = stats?.duration[segment.key] ?? 0;
       if (n <= 0) continue;
       rows.push({
         type: 'item',
-        key: d.key,
-        label: d.label,
+        key: segment.key,
+        label: segment.label,
         counter: n,
-        selected: filters.duration.some((x) => x.preset === d.key),
+        slotOrder: FILTER_COUNTER_ITEM_SLOTS,
+        selected: filters.duration.some((x) => x.preset === segment.key),
         closeOnSelect: false,
         onSelect: () => {
-          const has = filters.duration.some((x) => x.preset === d.key);
+          durationRangeUserChangeRef.current = false;
+          setCustomDuration({ min: 0, max: maxSec });
+          const has = filters.duration.some((x) => x.preset === segment.key);
           const next = has
-            ? filters.duration.filter((x) => x.preset !== d.key)
-            : [...filters.duration.filter((x) => x.preset !== 'custom'), { preset: d.key }];
+            ? filters.duration.filter((x) => x.preset !== segment.key)
+            : [...filters.duration.filter((x) => x.preset !== 'custom'), { preset: segment.key }];
           patchFilters({ duration: next as DurationFilterValue[] });
         }
       });
     }
-    rows.push({
-      type: 'item',
-      key: 'custom-dur',
-      label: 'Свой диапазон',
-      selected: filters.duration.some((x) => x.preset === 'custom'),
-      closeOnSelect: false,
-      onSelect: () =>
-        patchFilters({
-          duration: [
-            { preset: 'custom', minMinutes: customDuration.min, maxMinutes: customDuration.max }
-          ]
-        })
-    });
     return rows;
   };
-
-  const optionsRows = useMemo<ContextMenuRow[]>(() => {
-    const rows: ContextMenuRow[] = [{ type: 'header', key: 'opt-h', label: 'Список фильтров' }];
-    for (const id of layout.order) {
-      const meta = FILTER_CHIP_META[id];
-      rows.push({
-        type: 'item',
-        key: `vis-${id}`,
-        label: meta.label,
-        iconClass: 'arc-icon-eye',
-        selected: layout.visible[id],
-        closeOnSelect: false,
-        onSelect: () => toggleFilterVisibility(id)
-      });
-      rows.push({
-        type: 'item',
-        key: `up-${id}`,
-        label: 'Вверх',
-        iconClass: 'arc-icon-arrow-up',
-        closeOnSelect: false,
-        onSelect: () => moveFilter(id, 'up')
-      });
-      rows.push({
-        type: 'item',
-        key: `down-${id}`,
-        label: 'Вниз',
-        iconClass: 'arc-icon-arrow-down',
-        closeOnSelect: false,
-        onSelect: () => moveFilter(id, 'down')
-      });
-      rows.push({ type: 'separator', key: `sep-${id}` });
-    }
-    return rows;
-  }, [layout, moveFilter, toggleFilterVisibility]);
-
-  const presetRows = useMemo<ContextMenuRow[]>(() => {
-    const rows: ContextMenuRow[] = [
-      { type: 'header', key: 'pre-h', label: 'Пресеты' },
-      {
-        type: 'item',
-        key: 'save-preset',
-        label: 'Сохранить текущий',
-        iconClass: 'arc-icon-save',
-        onSelect: () => setPresetModalOpen(true)
-      }
-    ];
-    if (presets.length) rows.push({ type: 'separator', key: 'pre-sep' });
-    for (const p of presets) {
-      rows.push({
-        type: 'item',
-        key: p.id,
-        label: p.name,
-        closeOnSelect: false,
-        onSelect: () => applyPreset(p)
-      });
-      rows.push({
-        type: 'item',
-        key: `del-${p.id}`,
-        label: 'Удалить',
-        iconClass: 'arc-icon-trash',
-        onSelect: () => void deletePreset(p.id)
-      });
-    }
-    return rows;
-  }, [applyPreset, deletePreset, presets]);
 
   const visibleChips = layout.order.filter((id) => {
     if (!layout.visible[id]) return false;
@@ -526,92 +720,59 @@ export default function GalleryNavbarFilters() {
         break;
       case 'dateAdded':
         rows = buildDateRows();
-        children =
-          openMenu === 'dateAdded' ? (
-            <div className="context-menu__slot arc-navbar-no-drag">
-              <label className="field input-live">
-                <input
-                  className="input"
-                  type="date"
-                  value={customDateFrom}
-                  onChange={(e) => setCustomDateFrom(e.target.value)}
-                />
-              </label>
-              <label className="field input-live">
-                <input
-                  className="input"
-                  type="date"
-                  value={customDateTo}
-                  onChange={(e) => setCustomDateTo(e.target.value)}
-                />
-              </label>
-            </div>
-          ) : null;
+        children = openMenu === 'dateAdded' ? buildDateMenu() : null;
         break;
       case 'fileWeight':
         rows = buildWeightRows();
         children =
           openMenu === 'fileWeight' && stats ? (
-            <div className="context-menu__slot arc-navbar-no-drag">
-              <RangeSlider
-                min={0}
-                max={stats.weightBuckets.maxMb}
-                step={0.1}
-                valueMin={customWeight.min}
-                valueMax={customWeight.max}
-                formatValue={formatMb}
-                onChange={(min, max) => setCustomWeight({ min, max })}
-              />
-            </div>
+            <FilterCustomRangeSection
+              header="Другой Вес, Мб"
+              headerClassName="arc-filter-custom-range__header"
+              min={0}
+              max={Math.round(stats.fileWeightMeta.maxMb)}
+              valueMin={customWeight.min}
+              valueMax={customWeight.max}
+              onChange={(min, max) => {
+                weightRangeUserChangeRef.current = true;
+                setCustomWeight({ min, max });
+              }}
+              ariaLabel="Другой Вес"
+            />
           ) : null;
         break;
       case 'resolution':
         rows = buildResolutionRows();
         children =
           openMenu === 'resolution' ? (
-            <div className="context-menu__slot arc-navbar-no-drag">
-              <ContextMenuInput
-                variant="live"
-                label="Мин. ширина"
-                value={String(customRes.minW)}
-                onChange={(v) => setCustomRes((s) => ({ ...s, minW: Number(v) || 0 }))}
-              />
-              <ContextMenuInput
-                variant="live"
-                label="Макс. ширина"
-                value={String(customRes.maxW)}
-                onChange={(v) => setCustomRes((s) => ({ ...s, maxW: Number(v) || 0 }))}
-              />
-              <ContextMenuInput
-                variant="live"
-                label="Мин. высота"
-                value={String(customRes.minH)}
-                onChange={(v) => setCustomRes((s) => ({ ...s, minH: Number(v) || 0 }))}
-              />
-              <ContextMenuInput
-                variant="live"
-                label="Макс. высота"
-                value={String(customRes.maxH)}
-                onChange={(v) => setCustomRes((s) => ({ ...s, maxH: Number(v) || 0 }))}
-              />
-            </div>
+            <FilterResolutionCustomSection
+              value={customRes}
+              maxBoundW={RESOLUTION_MAX_W}
+              maxBoundH={RESOLUTION_MAX_H}
+              onChange={(next) => {
+                resolutionRangeUserChangeRef.current = true;
+                setCustomRes(next);
+              }}
+            />
           ) : null;
         break;
       case 'duration':
         rows = buildDurationRows();
         children =
           openMenu === 'duration' && stats ? (
-            <div className="context-menu__slot arc-navbar-no-drag">
-              <RangeSlider
-                min={0}
-                max={Math.max(1, Math.ceil(stats.maxDurationMs / 60_000))}
-                step={1}
-                valueMin={customDuration.min}
-                valueMax={customDuration.max}
-                formatValue={(v) => formatMinutes(v * 60_000)}
-                onChange={(min, max) => setCustomDuration({ min, max })}
-              />
-            </div>
+            <FilterCustomRangeSection
+              header="Другая Длительность, сек"
+              headerClassName="arc-filter-custom-range__header"
+              min={0}
+              max={Math.max(1, Math.round(stats.durationMeta.maxSec))}
+              valueMin={customDuration.min}
+              valueMax={customDuration.max}
+              onChange={(min, max) => {
+                durationRangeUserChangeRef.current = true;
+                setCustomDuration({ min, max });
+              }}
+              ariaLabel="Другая Длительность"
+            />
           ) : null;
         break;
       default:
@@ -694,6 +855,28 @@ export default function GalleryNavbarFilters() {
     [presets]
   );
 
+  const editPresetNames = useMemo(() => {
+    if (presetModal?.mode !== 'edit') return presetNames;
+    const names = new Set(presetNames);
+    names.delete(presetModal.preset.name.trim().toLowerCase());
+    return names;
+  }, [presetNames, presetModal]);
+
+  const openCreatePresetModal = () => {
+    setOpenMenu(null);
+    setPresetModal({ mode: 'create' });
+  };
+
+  const openEditPresetModal = (preset: SavedFilterPreset) => {
+    setOpenMenu(null);
+    setPresetModal({ mode: 'edit', preset });
+  };
+
+  const handleApplyPreset = (preset: SavedFilterPreset) => {
+    applyPreset(preset);
+    setOpenMenu(null);
+  };
+
   return (
     <>
       <div
@@ -744,10 +927,16 @@ export default function GalleryNavbarFilters() {
             open={openMenu === 'options'}
             anchorRef={optionsRef}
             onClose={closeMenu}
-            rows={optionsRows}
             ariaLabel="Список фильтров"
             noDragClassName="arc-navbar-no-drag"
-          />
+          >
+            <FilterOptionsMenu
+              layout={layout}
+              hasVideo={stats?.hasVideo ?? true}
+              onReorder={reorderFilter}
+              onToggleVisibility={toggleFilterVisibility}
+            />
+          </ContextMenu>
 
           <button
             ref={presetsRef}
@@ -764,22 +953,29 @@ export default function GalleryNavbarFilters() {
             open={openMenu === 'presets'}
             anchorRef={presetsRef}
             onClose={closeMenu}
-            rows={presetRows}
             ariaLabel="Пресеты"
             noDragClassName="arc-navbar-no-drag"
-          />
+          >
+            <FilterPresetsMenu
+              presets={presets}
+              canSave={activeCategoryCount > 0}
+              onApply={handleApplyPreset}
+              onEdit={openEditPresetModal}
+              onSave={openCreatePresetModal}
+            />
+          </ContextMenu>
 
           <Tooltip content="Очистить фильтры" delay={500} position="top">
             <button
               type="button"
-              className="btn btn-ds btn-m btn-icon-only"
+              className="btn btn-ds btn-m"
               aria-label={`Очистить фильтры${activeCategoryCount ? ` (${activeCategoryCount})` : ''}`}
               disabled={activeCategoryCount === 0}
               onClick={clearFilters}
             >
-              <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
+              <span className="btn-ds__icon arc-icon-trash" aria-hidden="true" />
               {activeCategoryCount > 0 ? (
-                <span className="btn-icon-only__badge" aria-hidden="true">
+                <span className="btn-ds__counter" aria-hidden="true">
                   {activeCategoryCount}
                 </span>
               ) : null}
@@ -788,13 +984,22 @@ export default function GalleryNavbarFilters() {
         </div>
       </div>
 
-      {presetModalOpen ? (
+      {presetModal?.mode === 'create' ? (
         <FilterPresetModal
-          title="Сохранить пресет"
-          submitLabel="Сохранить"
+          mode="create"
           existingLowerNames={presetNames}
-          onClose={() => setPresetModalOpen(false)}
+          onClose={() => setPresetModal(null)}
           onSubmit={savePreset}
+        />
+      ) : null}
+      {presetModal?.mode === 'edit' ? (
+        <FilterPresetModal
+          mode="edit"
+          initialName={presetModal.preset.name}
+          existingLowerNames={editPresetNames}
+          onClose={() => setPresetModal(null)}
+          onSubmit={(name) => renamePreset(presetModal.preset.id, name)}
+          onDelete={() => deletePreset(presetModal.preset.id)}
         />
       ) : null}
     </>

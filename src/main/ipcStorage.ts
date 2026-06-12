@@ -39,6 +39,8 @@ import {
   renameFilterPreset,
   getGalleryFilterStats,
   backfillVideoDurationMs,
+  ensureDimensionsBackfill,
+  ensureVideoDurationBackfill,
   upsertTag
 } from './storage/libraryStorage';
 import { readCardJson } from './storage/cardFolder';
@@ -268,6 +270,8 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root) return null;
     await ensureLibraryReady(root);
+    await ensureVideoDurationBackfill(root);
+    await ensureDimensionsBackfill(root);
     const p = (payload ?? {}) as {
       libraryScope?: string;
       selectedTagIds?: string[];

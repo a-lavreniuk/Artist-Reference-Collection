@@ -11,7 +11,7 @@ import {
 import { useLocation } from 'react-router-dom';
 import { resolveMainTab } from '../layout/navbarLayout';
 import {
-  moveFilterInLayout,
+  reorderFilterInLayout,
   readGalleryFilterLayout,
   setFilterVisibility,
   writeGalleryFilterLayout
@@ -21,6 +21,7 @@ import {
   DEFAULT_GALLERY_SORT,
   emptyGalleryAdvancedFilters,
   layoutToPresetItems,
+  migrateGalleryAdvancedFilters,
   presetItemsToLayout,
   type GalleryAdvancedFilters,
   type GalleryFeedScope,
@@ -43,7 +44,7 @@ type GalleryFilterContextValue = {
   setSort: (next: GallerySortState) => void;
   layout: GalleryFilterLayoutState;
   setLayout: (next: GalleryFilterLayoutState) => void;
-  moveFilter: (id: GalleryFilterId, direction: 'up' | 'down') => void;
+  reorderFilter: (id: GalleryFilterId, toIndex: number) => void;
   toggleFilterVisibility: (id: GalleryFilterId) => void;
   feedScope: GalleryFeedScope;
   setFeedScope: (scope: GalleryFeedScope) => void;
@@ -118,9 +119,9 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     [patchFilters]
   );
 
-  const moveFilter = useCallback(
-    (id: GalleryFilterId, direction: 'up' | 'down') => {
-      setLayout(moveFilterInLayout(layout, id, direction));
+  const reorderFilter = useCallback(
+    (id: GalleryFilterId, toIndex: number) => {
+      setLayout(reorderFilterInLayout(layout, id, toIndex));
     },
     [layout, setLayout]
   );
@@ -169,6 +170,11 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   }, [refreshStats]);
 
   useEffect(() => {
+    if (!stats || stats.hasVideo || filters.duration.length === 0) return;
+    patchFilters({ duration: [] });
+  }, [stats, filters.duration.length, patchFilters]);
+
+  useEffect(() => {
     void refreshPresets();
   }, [refreshPresets]);
 
@@ -202,7 +208,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
 
   const applyPreset = useCallback(
     (preset: SavedFilterPreset) => {
-      setFilters(preset.payload.filters);
+      setFilters(migrateGalleryAdvancedFilters(preset.payload.filters));
       setSort(preset.payload.sort);
       const nextLayout = presetItemsToLayout(preset.payload.layout);
       setLayout(nextLayout);
@@ -239,7 +245,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       setSort,
       layout,
       setLayout,
-      moveFilter,
+      reorderFilter,
       toggleFilterVisibility,
       feedScope,
       setFeedScope,
@@ -261,7 +267,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       sort,
       layout,
       setLayout,
-      moveFilter,
+      reorderFilter,
       toggleFilterVisibility,
       feedScope,
       stats,

@@ -39,10 +39,9 @@ import { generateImageThumbnails, generateVideoThumbnailsFromFrame } from './thu
 import {
   buildGalleryFilterWhere,
   buildGallerySortSql,
-  computeFileWeightBuckets,
+  computeGalleryFilterBoundaries,
   DEFAULT_GALLERY_SORT,
-  emptyGalleryAdvancedFilters,
-  getMaxFileSizeBytes
+  emptyGalleryAdvancedFilters
 } from './galleryFilters';
 import type {
   ArcMoodboardV1,
@@ -59,7 +58,12 @@ import type {
   TagRow
 } from './types';
 
-export { backfillVideoDurationMs } from './galleryFilterBackfill';
+export {
+  backfillCardDimensions,
+  backfillVideoDurationMs,
+  ensureDimensionsBackfill,
+  ensureVideoDurationBackfill
+} from './galleryFilterBackfill';
 export { getGalleryFilterStats } from './galleryFilterStats';
 export {
   deleteFilterPreset,
@@ -446,8 +450,7 @@ export async function importMediaFile(
 
 export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): CardIndexRow[] {
   const db = openLibraryDb(libraryRoot);
-  const maxBytes = getMaxFileSizeBytes(db);
-  const weightBuckets = computeFileWeightBuckets(maxBytes);
+  const boundaries = computeGalleryFilterBoundaries(db);
   const sort = params.sort ?? DEFAULT_GALLERY_SORT;
   const filters = params.advancedFilters ?? emptyGalleryAdvancedFilters();
   const { wh, binds } = buildGalleryFilterWhere(
@@ -461,7 +464,7 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
       sort
     },
     'c',
-    weightBuckets
+    boundaries
   );
 
   let sql = 'SELECT c.* FROM cards c';

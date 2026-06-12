@@ -1,8 +1,69 @@
 import path from 'path';
+import type Database from 'better-sqlite3';
 import { openLibraryDb } from './db';
-import { cardDirAbs } from './cardFolder';
 import { probeVideoDurationMs } from '../ffmpeg';
 import { readCardJson, writeCardJson } from './cardFolder';
+
+export function countVideosMissingDuration(db: Database.Database): number {
+  const row = db
+    .prepare(
+      "SELECT COUNT(*) AS n FROM cards WHERE type = 'video' AND COALESCE(is_deleted,0)=0 AND (duration_ms IS NULL OR duration_ms = 0)"
+    )
+    .get() as { n: number };
+  return row?.n ?? 0;
+}
+
+export async function ensureVideoDurationBackfill(libraryRoot: string): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const db = openLibraryDb(root);
+  if (countVideosMissingDuration(db) > 0) {
+    await backfillVideoDurationMs(root);
+  }
+}
+
+export function countCardsMissingDimensions(db: Database.Database): number {
+  const row = db
+    .prepare(
+      'SELECT COUNT(*) AS n FROM cards WHERE COALESCE(is_deleted,0)=0 AND (COALESCE(width,0)=0 OR COALESCE(height,0)=0)'
+    )
+    .get() as { n: number };
+  return row?.n ?? 0;
+}
+
+export async function ensureDimensionsBackfill(libraryRoot: string): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const db = openLibraryDb(root);
+  if (countCardsMissingDimensions(db) > 0) {
+    await backfillCardDimensions(root);
+  }
+}
+
+export async function backfillCardDimensions(
+  libraryRoot: string
+): Promise<{ updated: number; failed: number }> {
+  const root = path.resolve(libraryRoot);
+  const db = openLibraryDb(root);
+  const rows = db
+    .prepare(
+      'SELECT id FROM cards WHERE COALESCE(is_deleted,0)=0 AND (COALESCE(width,0)=0 OR COALESCE(height,0)=0)'
+    )
+    .all() as Array<{ id: string }>;
+
+  let updated = 0;
+  let failed = 0;
+  for (const row of rows) {
+    const cardJson = await readCardJson(root, row.id);
+    const width = cardJson?.width;
+    const height = cardJson?.height;
+    if (!width || !height || width <= 0 || height <= 0) {
+      failed++;
+      continue;
+    }
+    db.prepare('UPDATE cards SET width = ?, height = ? WHERE id = ?').run(width, height, row.id);
+    updated++;
+  }
+  return { updated, failed };
+}
 
 export async function backfillVideoDurationMs(libraryRoot: string): Promise<{ updated: number; failed: number }> {
   const root = path.resolve(libraryRoot);
@@ -17,16 +78,20 @@ export async function backfillVideoDurationMs(libraryRoot: string): Promise<{ up
   let failed = 0;
   for (const row of rows) {
     const abs = path.join(root, row.original_rel.replace(/\//g, path.sep));
-    const ms = await probeVideoDurationMs(abs);
+    const cardJson = await readCardJson(root, row.id);
+    let ms = cardJson?.durationMs && cardJson.durationMs > 0 ? cardJson.durationMs : null;
+    if (ms == null) {
+      ms = (await probeVideoDurationMs(abs)) ?? null;
+    }
     if (ms == null || ms <= 0) {
       failed++;
       continue;
     }
     db.prepare('UPDATE cards SET duration_ms = ? WHERE id = ?').run(ms, row.id);
-    const cardJson = await readCardJson(root, row.id);
-    if (cardJson) {
-      cardJson.durationMs = ms;
-      await writeCardJson(root, cardJson);
+    const cardJsonAfter = cardJson ?? (await readCardJson(root, row.id));
+    if (cardJsonAfter) {
+      cardJsonAfter.durationMs = ms;
+      await writeCardJson(root, cardJsonAfter);
     }
     updated++;
   }
