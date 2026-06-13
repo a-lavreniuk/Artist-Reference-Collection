@@ -15,7 +15,7 @@ export default function SettingsGeneralPanel() {
 
   return (
     <div className="arc-settings-main__scroll">
-      <div className="arc-settings-main__content">
+      <div className={`arc-settings-main__content${ready ? ' is-prefs-ready' : ''}`}>
         <SettingsSection title="Элементы запуска">
           <SettingsToggleRow
             label={LABEL_LAUNCH_AT_LOGIN}

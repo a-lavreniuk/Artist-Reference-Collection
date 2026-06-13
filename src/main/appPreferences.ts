@@ -24,6 +24,9 @@ export type AppPreferencesV1 = {
   notifyAutoImport: boolean;
   notifyFilesAdded: boolean;
   notifySoundEnabled: boolean;
+  autoImportEnabled: boolean;
+  autoImportFolderPath: string | null;
+  autoImportSourceFilesAction: ImportSourceFilesAction;
 };
 
 const FILENAME = 'arc-app-preferences.json';
@@ -47,7 +50,10 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     notifyDuplicatesFound: true,
     notifyAutoImport: true,
     notifyFilesAdded: true,
-    notifySoundEnabled: true
+    notifySoundEnabled: true,
+    autoImportEnabled: false,
+    autoImportFolderPath: null,
+    autoImportSourceFilesAction: 'ask'
   };
 }
 
@@ -88,7 +94,13 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.notifyDuplicatesFound === 'boolean' ? raw.notifyDuplicatesFound : d.notifyDuplicatesFound,
     notifyAutoImport: typeof raw.notifyAutoImport === 'boolean' ? raw.notifyAutoImport : d.notifyAutoImport,
     notifyFilesAdded: typeof raw.notifyFilesAdded === 'boolean' ? raw.notifyFilesAdded : d.notifyFilesAdded,
-    notifySoundEnabled: typeof raw.notifySoundEnabled === 'boolean' ? raw.notifySoundEnabled : d.notifySoundEnabled
+    notifySoundEnabled: typeof raw.notifySoundEnabled === 'boolean' ? raw.notifySoundEnabled : d.notifySoundEnabled,
+    autoImportEnabled: typeof raw.autoImportEnabled === 'boolean' ? raw.autoImportEnabled : d.autoImportEnabled,
+    autoImportFolderPath:
+      typeof raw.autoImportFolderPath === 'string' && raw.autoImportFolderPath.trim()
+        ? path.resolve(raw.autoImportFolderPath.trim())
+        : d.autoImportFolderPath,
+    autoImportSourceFilesAction: sanitizeImportAction(raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction)
   };
 }
 
@@ -136,6 +148,19 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('notifySoundEnabled' in patch && typeof patch.notifySoundEnabled === 'boolean') {
     next.notifySoundEnabled = patch.notifySoundEnabled;
+  }
+  if ('autoImportEnabled' in patch && typeof patch.autoImportEnabled === 'boolean') {
+    next.autoImportEnabled = patch.autoImportEnabled;
+  }
+  if ('autoImportFolderPath' in patch) {
+    if (typeof patch.autoImportFolderPath === 'string' && patch.autoImportFolderPath.trim()) {
+      next.autoImportFolderPath = path.resolve(patch.autoImportFolderPath.trim());
+    } else {
+      next.autoImportFolderPath = null;
+    }
+  }
+  if ('autoImportSourceFilesAction' in patch) {
+    next.autoImportSourceFilesAction = sanitizeImportAction(patch.autoImportSourceFilesAction);
   }
 
   return next;
@@ -193,6 +218,10 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
     'screenshotRetina2x' in patch
   ) {
     registerScreenshotShortcut();
+  }
+  if ('autoImportEnabled' in patch || 'autoImportFolderPath' in patch) {
+    const { restartAutoImportWatcher } = await import('./autoImportWatcher');
+    restartAutoImportWatcher();
   }
   return next;
 }

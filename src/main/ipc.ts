@@ -257,6 +257,8 @@ export function registerArcIpc(): void {
       await mkdir(resolved, { recursive: true });
       await writeLibraryRootToDisk(resolved);
       resetLibraryStorageCache();
+      const { restartAutoImportWatcher } = await import('./autoImportWatcher');
+      restartAutoImportWatcher();
       return { ok: true as const };
     } catch (err) {
       return {
@@ -521,6 +523,8 @@ export function registerArcIpc(): void {
         const res = await migrateLibraryToFolder(oldRoot, newRoot);
         if (!res.ok) return res;
         await writeLibraryRootToDisk(newRoot);
+        const { restartAutoImportWatcher } = await import('./autoImportWatcher');
+        restartAutoImportWatcher();
         try {
           await appendHistory(newRoot, 'Перенос хранилища завершён');
         } catch {
@@ -631,6 +635,8 @@ export function registerArcIpc(): void {
         const res = await restoreFromParts(parts, dest);
         if (!res.ok) return res;
         await writeLibraryRootToDisk(dest);
+        const { restartAutoImportWatcher } = await import('./autoImportWatcher');
+        restartAutoImportWatcher();
         await writeFile(
           pendingRestorePath(),
           JSON.stringify({ message: 'Библиотека восстановлена из резервной копии.' }, null, 2),

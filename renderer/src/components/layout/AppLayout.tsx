@@ -6,6 +6,7 @@ import MaintenanceBanner from './MaintenanceBanner';
 import AppUpdateHost from './AppUpdateHost';
 import PendingRestoreModal from './PendingRestoreModal';
 import ImportHost from '../import/ImportHost';
+import AutoImportHost from '../import/AutoImportHost';
 import NotificationHost from '../notifications/NotificationHost';
 import ScreenshotHost from '../screenshot/ScreenshotHost';
 import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
@@ -67,6 +68,7 @@ export default function AppLayout() {
     <NotificationHost>
     <ScreenshotHost>
     <ImportHost>
+      <AutoImportHost>
       <main className="arc-navbar-shell">
         <MaintenanceBanner />
         <ArcTopBar />
@@ -77,6 +79,7 @@ export default function AppLayout() {
         <PendingRestoreModal />
         <AppUpdateHost />
       </main>
+      </AutoImportHost>
     </ImportHost>
     </ScreenshotHost>
     </NotificationHost>

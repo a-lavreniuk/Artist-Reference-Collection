@@ -3,9 +3,8 @@ import { globalShortcut } from 'electron';
 import { readAppPreferencesSync } from './appPreferences';
 import { importScreenshotFromRegion } from './screenshotCapture';
 import { openScreenshotAreaPicker } from './screenshotOverlay';
+import { SCREENSHOT_ACCELERATOR } from './shared/shortcutAccelerators';
 import { getMainWindow, showMainWindow } from './windowChrome';
-
-const SCREENSHOT_ACCELERATOR = 'CommandOrControl+Alt+E';
 
 let registered = false;
 let captureInFlight = false;

@@ -305,7 +305,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       ) : null}
 
       {progressMessage ? (
-        <DemoAlert message={progressMessage} variant="info" autoDismissMs={0} onClose={() => {}} />
+        <DemoAlert message={progressMessage} variant="info" autoDismissMs={0} withSound={false} onClose={() => {}} />
       ) : null}
 
       {sourceModalPaths && sourceModalPaths.length > 0 ? (

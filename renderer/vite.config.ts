@@ -7,6 +7,11 @@ export default defineConfig({
   publicDir: path.resolve(__dirname, 'public'),
   base: './',
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@arc-main-shared': path.resolve(__dirname, '../src/main/shared')
+    }
+  },
   server: {
     port: 5173,
     strictPort: true

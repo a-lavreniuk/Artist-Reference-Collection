@@ -27,6 +27,12 @@ import {
   saveMoodboardBoard
 } from '../../services/db';
 import { normalizeHex } from '../../utils/colorPicker';
+import {
+  matchesMoodboardRedo,
+  matchesMoodboardUndo,
+  matchesShortcut
+} from '../../shortcuts/matchShortcutEvent';
+import { shortcutMenuLabel } from '../../shortcuts/shortcutLabels';
 
 const MIME_CARD = 'application/x-arc-card-id';
 
@@ -445,30 +451,28 @@ export default function MoodboardBoardView() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key.toLowerCase() === 'z') {
+      if (matchesMoodboardUndo(e)) {
         e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
+        undo();
         return;
       }
-      if (mod && e.key.toLowerCase() === 'y') {
+      if (matchesMoodboardRedo(e)) {
         e.preventDefault();
         redo();
         return;
       }
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (matchesShortcut(e, 'moodboard.deleteSelection')) {
         e.preventDefault();
         deleteSelected();
         return;
       }
-      if (e.key === 'Escape') {
+      if (matchesShortcut(e, 'moodboard.clearSelection')) {
         if (editingTextId) return;
         setSelected(null);
         setMainTool('select');
         return;
       }
-      if (e.code === 'Space') {
+      if (matchesShortcut(e, 'moodboard.pan')) {
         e.preventDefault();
         setSpaceHeld(true);
       }
@@ -746,7 +750,7 @@ export default function MoodboardBoardView() {
       {
         type: 'action',
         label: 'Отменить',
-        shortcut: 'Ctrl+Z',
+        shortcut: shortcutMenuLabel('moodboard.undo'),
         disabled: undoStack.length === 0,
         onClick: () => {
           undo();
@@ -756,7 +760,7 @@ export default function MoodboardBoardView() {
       {
         type: 'action',
         label: 'Вернуть',
-        shortcut: 'Ctrl+Y',
+        shortcut: shortcutMenuLabel('moodboard.redo'),
         disabled: redoStack.length === 0,
         onClick: () => {
           redo();

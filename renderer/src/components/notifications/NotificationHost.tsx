@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import DemoAlert, { type DemoAlertVariant } from '../layout/DemoAlert';
-import { playNotificationSound } from '../../services/audioNotification';
-import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
 import type { NotificationPrefKey } from '../../services/appPreferences';
+import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
 import { APP_NOTIFICATION_EVENT, type AppNotificationPayload } from '../../services/notificationService';
 
 type ActiveAlert = {
@@ -29,11 +28,6 @@ export default function NotificationHost({ children }: { children: React.ReactNo
       if (!isPrefEnabled(detail.prefKey, detail.skipPrefCheck)) return;
 
       setActive({ message: detail.message, variant: detail.variant ?? 'info' });
-
-      const prefs = getAppPreferencesSync();
-      if (prefs.notifySoundEnabled) {
-        playNotificationSound(detail.variant ?? 'info');
-      }
     };
 
     window.addEventListener(APP_NOTIFICATION_EVENT, onNotify);

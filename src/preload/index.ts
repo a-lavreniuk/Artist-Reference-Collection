@@ -189,6 +189,9 @@ contextBridge.exposeInMainWorld('arc', {
       notifyAutoImport: boolean;
       notifyFilesAdded: boolean;
       notifySoundEnabled: boolean;
+      autoImportEnabled: boolean;
+      autoImportFolderPath: string | null;
+      autoImportSourceFilesAction: 'ask' | 'trash';
     }>,
   setAppPreferences: (patch: Record<string, unknown>) =>
     ipcRenderer.invoke('arc:app-preferences-set', patch) as Promise<{
@@ -207,7 +210,28 @@ contextBridge.exposeInMainWorld('arc', {
       notifyAutoImport: boolean;
       notifyFilesAdded: boolean;
       notifySoundEnabled: boolean;
+      autoImportEnabled: boolean;
+      autoImportFolderPath: string | null;
+      autoImportSourceFilesAction: 'ask' | 'trash';
     }>,
+  autoImportRescan: () => ipcRenderer.invoke('arc:auto-import-rescan') as Promise<{ ok: true }>,
+  onAutoImportProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => {
+    const fn = (_: unknown, payload: { current: number; total: number; message?: string }) => cb(payload);
+    ipcRenderer.on('arc:auto-import-progress', fn);
+    return () => ipcRenderer.removeListener('arc:auto-import-progress', fn);
+  },
+  onAutoImportBatchDone: (
+    cb: (p: { imported: number; total: number; sourcePaths: string[] }) => void
+  ) => {
+    const fn = (_: unknown, payload: { imported: number; total: number; sourcePaths: string[] }) => cb(payload);
+    ipcRenderer.on('arc:auto-import-batch-done', fn);
+    return () => ipcRenderer.removeListener('arc:auto-import-batch-done', fn);
+  },
+  onAutoImportFinished: (cb: (p: { imported: number; attempted: number; sourcePaths: string[] }) => void) => {
+    const fn = (_: unknown, payload: { imported: number; attempted: number; sourcePaths: string[] }) => cb(payload);
+    ipcRenderer.on('arc:auto-import-finished', fn);
+    return () => ipcRenderer.removeListener('arc:auto-import-finished', fn);
+  },
   onScreenshotSaved: (cb: (detail: { cardId: string }) => void) => {
     const fn = (_: unknown, payload: { cardId: string }) => cb(payload);
     ipcRenderer.on('arc:screenshot-saved', fn);

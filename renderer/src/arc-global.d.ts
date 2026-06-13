@@ -207,6 +207,14 @@ declare global {
       screenshotPickerCancel?: () => Promise<{ ok: boolean }>;
       startDuplicateFileScan?: () => Promise<{ ok: true }>;
       onDuplicatesFound?: (cb: () => void) => () => void;
+      autoImportRescan?: () => Promise<{ ok: true }>;
+      onAutoImportProgress?: (cb: (p: { current: number; total: number; message?: string }) => void) => () => void;
+      onAutoImportBatchDone?: (
+        cb: (p: { imported: number; total: number; sourcePaths: string[] }) => void
+      ) => () => void;
+      onAutoImportFinished?: (
+        cb: (p: { imported: number; attempted: number; sourcePaths: string[] }) => void
+      ) => () => void;
       onUpdateAvailable: (cb: (detail: { version: string; releaseDate: string | null }) => void) => () => void;
       onUpdateNotAvailable?: (cb: () => void) => () => void;
       onUpdateDownloadProgress?: (cb: (detail: { percent: number }) => void) => () => void;

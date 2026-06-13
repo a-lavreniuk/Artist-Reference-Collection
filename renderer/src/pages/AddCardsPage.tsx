@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import { extractDroppedFilePaths } from '../media/droppedFilePaths';
 import { Tooltip } from '../components/tooltip/Tooltip';
+import DemoAlert from '../components/layout/DemoAlert';
 import TagChipToggleWithTooltip from '../components/tags/TagChipToggleWithTooltip';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
 import {
@@ -260,7 +261,7 @@ export default function AddCardsPage() {
   const handleSubmitAll = useCallback(async () => {
     setError(null);
     if (!(await isLibraryConfigured())) {
-      setError('Сначала укажите папку библиотеки в «Настройках».');
+      setError('Сначала укажите папку библиотеки в разделе «Настройки → Библиотека».');
       return;
     }
     if (!queue.length) {
@@ -579,7 +580,7 @@ export default function AddCardsPage() {
   if (!ready) {
     return (
       <div className="arc-page-empty panel elevation-default">
-        <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Хранилище» (меню навбара).</p>
+        <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Настройки → Библиотека».</p>
       </div>
     );
   }
@@ -988,30 +989,17 @@ export default function AddCardsPage() {
       {busy ? <p className="hint arc-add-busy">Импортирование…</p> : null}
 
       {tagsSettingsToast ? (
-        <div className="demo-alert-host" aria-live="polite" aria-atomic="true">
-          <div className="alert alert-success" role="status">
-            <p className="demo-alert__message">
-              {tagsSettingsToast === 'copy' ? 'Настройки скопированы.' : 'Настройки применены.'}
-            </p>
-            <button
-              type="button"
-              className="demo-alert__close"
-              aria-label="Закрыть уведомление"
-              onClick={() => {
-                setTagsSettingsToast(null);
-                if (tagsSettingsToastTimerRef.current) {
-                  window.clearTimeout(tagsSettingsToastTimerRef.current);
-                  tagsSettingsToastTimerRef.current = null;
-                }
-              }}
-            >
-              <svg className="demo-alert__close-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 6L18 18" strokeWidth="2" strokeLinecap="round" />
-                <path d="M18 6L6 18" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <DemoAlert
+          message={tagsSettingsToast === 'copy' ? 'Настройки скопированы.' : 'Настройки применены.'}
+          variant="success"
+          onClose={() => {
+            setTagsSettingsToast(null);
+            if (tagsSettingsToastTimerRef.current) {
+              window.clearTimeout(tagsSettingsToastTimerRef.current);
+              tagsSettingsToastTimerRef.current = null;
+            }
+          }}
+        />
       ) : null}
     </div>
   );

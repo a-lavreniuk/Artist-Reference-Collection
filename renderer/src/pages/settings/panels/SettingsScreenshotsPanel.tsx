@@ -5,8 +5,9 @@ import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
 import SettingsToggleShortcutRow from '../../../components/settings/SettingsToggleShortcutRow';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { ScreenshotFormat } from '../../../services/appPreferences';
+import { shortcutMenuLabel } from '../../../shortcuts/shortcutLabels';
 
-const SCREENSHOT_SHORTCUT = 'Ctrl+Alt+E';
+const SCREENSHOT_SHORTCUT = shortcutMenuLabel('global.screenshot');
 
 const FORMAT_OPTIONS: Array<{ value: ScreenshotFormat; label: string }> = [
   { value: 'png', label: 'PNG' },
@@ -26,7 +27,7 @@ export default function SettingsScreenshotsPanel() {
 
   return (
     <div className="arc-settings-main__scroll">
-      <div className="arc-settings-main__content">
+      <div className={`arc-settings-main__content${ready ? ' is-prefs-ready' : ''}`}>
         <SettingsToggleShortcutRow
           label={LABEL_ENABLE}
           shortcut={SCREENSHOT_SHORTCUT}

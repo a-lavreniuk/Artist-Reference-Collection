@@ -13,7 +13,7 @@ export default function SettingsNotificationsPanel() {
 
   return (
     <div className="arc-settings-main__scroll">
-      <div className="arc-settings-main__content arc-settings-notifications-list">
+      <div className={`arc-settings-main__content arc-settings-notifications-list${ready ? ' is-prefs-ready' : ''}`}>
         <SettingsToggleRow
           label={LABEL_SCREENSHOT}
           pressed={prefs?.notifyScreenshotSaved === true}

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import arcUiKitMainHtml from './arcUiKitMain.html?raw';
 import { mountArcUiKitDemo, refreshArcUiKitGlyphs } from './arcUiKitBoot';
 import UiKitRangeSliderDemo from './UiKitRangeSliderDemo';
+import UiKitControlsDemo from './UiKitControlsDemo';
 import {
   applyUiKitScopeDataset,
   parseUiKitElevation,
@@ -14,6 +15,7 @@ import {
 export default function UiKitPage() {
   const scopeRef = useRef<HTMLDivElement>(null);
   const rangeSliderRootRef = useRef<Root | null>(null);
+  const controlsRootRef = useRef<Root | null>(null);
   const [searchParams] = useSearchParams();
 
   /** Один и тот же объект — иначе при каждом ререндере React снова ставит innerHTML и стирает SVG из injectButtonIcons. */
@@ -34,10 +36,18 @@ export default function UiKitPage() {
       rangeSliderRootRef.current.render(<UiKitRangeSliderDemo />);
     }
 
+    const controlsEl = scope.querySelector('#uikit-controls-live');
+    if (controlsEl) {
+      controlsRootRef.current = createRoot(controlsEl);
+      controlsRootRef.current.render(<UiKitControlsDemo />);
+    }
+
     return () => {
       ac.abort();
       rangeSliderRootRef.current?.unmount();
       rangeSliderRootRef.current = null;
+      controlsRootRef.current?.unmount();
+      controlsRootRef.current = null;
     };
   }, []);
 

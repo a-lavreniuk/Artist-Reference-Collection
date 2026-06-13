@@ -6,6 +6,8 @@ import SettingsRadioRow from '../../../components/settings/SettingsRadioRow';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
+import SettingsShortcutRow from '../../../components/settings/SettingsShortcutRow';
+import SettingsShortcutsSearch from '../../../components/settings/SettingsShortcutsSearch';
 
 const CARD_DESCRIPTION = 'Consectetur adipiscing elit, sed do eiusmod tempor';
 
@@ -19,6 +21,7 @@ export default function SettingsUiKitPanel() {
   const [cardCheckbox, setCardCheckbox] = useState(true);
   const [cardRadio, setCardRadio] = useState('x');
   const [longToggle, setLongToggle] = useState(false);
+  const [shortcutsSearch, setShortcutsSearch] = useState('');
 
   return (
     <div className="arc-settings-main__scroll">
@@ -205,6 +208,19 @@ export default function SettingsUiKitPanel() {
                 onCheckedChange={() => setCardRadio('y')}
               />
             </div>
+          </SettingsSection>
+        </section>
+
+        <SettingsSeparator />
+
+        <section className="arc-settings-ui-kit-block">
+          <h2 className="h2 arc-settings-ui-kit-block__title">Горячие клавиши</h2>
+          <SettingsSection title="Поиск и строка">
+            <div className="arc-ui-kit-scope" data-input-size="m">
+              <SettingsShortcutsSearch value={shortcutsSearch} onChange={setShortcutsSearch} />
+            </div>
+            <SettingsShortcutRow label="Отменить" shortcut="Ctrl+Z" />
+            <SettingsShortcutRow label="Вернуть" shortcut="Ctrl+Y" />
           </SettingsSection>
         </section>
       </div>

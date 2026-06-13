@@ -1,4 +1,5 @@
 import {
+  coerceAppPreferences,
   defaultAppPreferences,
   getAppPreferences,
   setAppPreferences,
@@ -65,6 +66,19 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   if ('notifySoundEnabled' in patch && typeof patch.notifySoundEnabled === 'boolean') {
     next.notifySoundEnabled = patch.notifySoundEnabled;
   }
+  if ('autoImportEnabled' in patch && typeof patch.autoImportEnabled === 'boolean') {
+    next.autoImportEnabled = patch.autoImportEnabled;
+  }
+  if ('autoImportFolderPath' in patch) {
+    if (typeof patch.autoImportFolderPath === 'string' && patch.autoImportFolderPath.trim()) {
+      next.autoImportFolderPath = patch.autoImportFolderPath.trim();
+    } else {
+      next.autoImportFolderPath = null;
+    }
+  }
+  if ('autoImportSourceFilesAction' in patch) {
+    next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
+  }
 
   return next;
 }
@@ -114,8 +128,28 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   if ('notifySoundEnabled' in patch && typeof patch.notifySoundEnabled === 'boolean') {
     next.notifySoundEnabled = patch.notifySoundEnabled;
   }
+  if ('autoImportEnabled' in patch && typeof patch.autoImportEnabled === 'boolean') {
+    next.autoImportEnabled = patch.autoImportEnabled;
+  }
+  if ('autoImportFolderPath' in patch) {
+    if (typeof patch.autoImportFolderPath === 'string' && patch.autoImportFolderPath.trim()) {
+      next.autoImportFolderPath = patch.autoImportFolderPath.trim();
+    } else {
+      next.autoImportFolderPath = null;
+    }
+  }
+  if ('autoImportSourceFilesAction' in patch) {
+    next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
+  }
 
   return next;
+}
+
+export function applyAppPreferencesPatch(
+  current: AppPreferencesV1,
+  patch: Partial<AppPreferencesV1>
+): AppPreferencesV1 {
+  return applyPatchLocal(current, patch);
 }
 
 export async function initAppPreferencesRuntime(): Promise<AppPreferencesV1> {
@@ -123,9 +157,9 @@ export async function initAppPreferencesRuntime(): Promise<AppPreferencesV1> {
   if (!initPromise) {
     initPromise = getAppPreferences()
       .then((loaded) => {
-        cache = loaded;
+        cache = coerceAppPreferences(loaded);
         notify();
-        return loaded;
+        return cache;
       })
       .catch(() => {
         cache = defaultAppPreferences();
@@ -136,8 +170,12 @@ export async function initAppPreferencesRuntime(): Promise<AppPreferencesV1> {
   return initPromise;
 }
 
+export function isAppPreferencesCacheReady(): boolean {
+  return cache !== null;
+}
+
 export function getAppPreferencesSync(): AppPreferencesV1 {
-  return cache ?? defaultAppPreferences();
+  return cache ? coerceAppPreferences(cache) : defaultAppPreferences();
 }
 
 export async function patchAppPreferences(patch: Partial<AppPreferencesV1>): Promise<AppPreferencesV1> {
@@ -148,7 +186,7 @@ export async function patchAppPreferences(patch: Partial<AppPreferencesV1>): Pro
 
   const run = async (): Promise<AppPreferencesV1> => {
     try {
-      const next = await setAppPreferences(normalized);
+      const next = coerceAppPreferences(await setAppPreferences(normalized));
       cache = next;
       notify();
       return next;

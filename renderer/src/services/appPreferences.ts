@@ -4,6 +4,7 @@ export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type NotificationPrefKey =
   | 'notifyScreenshotSaved'
   | 'notifyDuplicatesFound'
+  | 'notifyAutoImport'
   | 'notifyFilesAdded';
 
 export type AppPreferencesV1 = {
@@ -22,6 +23,9 @@ export type AppPreferencesV1 = {
   notifyAutoImport: boolean;
   notifyFilesAdded: boolean;
   notifySoundEnabled: boolean;
+  autoImportEnabled: boolean;
+  autoImportFolderPath: string | null;
+  autoImportSourceFilesAction: ImportSourceFilesAction;
 };
 
 export function defaultAppPreferences(): AppPreferencesV1 {
@@ -40,7 +44,40 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     notifyDuplicatesFound: true,
     notifyAutoImport: true,
     notifyFilesAdded: true,
-    notifySoundEnabled: true
+    notifySoundEnabled: true,
+    autoImportEnabled: false,
+    autoImportFolderPath: null,
+    autoImportSourceFilesAction: 'ask'
+  };
+}
+
+function sanitizeImportAction(raw: unknown): ImportSourceFilesAction {
+  return raw === 'trash' ? 'trash' : 'ask';
+}
+
+function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
+  if (raw === 'png' || raw === 'jpg' || raw === 'webp') return raw;
+  return 'webp';
+}
+
+/** Дополняет ответ IPC дефолтами — важно для новых полей prefs после обновления. */
+export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | undefined): AppPreferencesV1 {
+  const d = defaultAppPreferences();
+  if (!raw) return d;
+
+  return {
+    ...d,
+    ...raw,
+    version: 1,
+    importSourceFilesAction: sanitizeImportAction(raw.importSourceFilesAction ?? d.importSourceFilesAction),
+    autoImportSourceFilesAction: sanitizeImportAction(
+      raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction
+    ),
+    screenshotFormat: sanitizeScreenshotFormat(raw.screenshotFormat ?? d.screenshotFormat),
+    autoImportFolderPath:
+      typeof raw.autoImportFolderPath === 'string' && raw.autoImportFolderPath.trim()
+        ? raw.autoImportFolderPath.trim()
+        : null
   };
 }
 

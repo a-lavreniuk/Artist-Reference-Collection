@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { playNotificationSound } from '../../services/audioNotification';
 
 /** Как в `initDemoAlerts` / `showAlert` в arc-ui.html (`setTimeout(..., 3200)`). */
 const ARC_UI_KIT_ALERT_AUTO_DISMISS_MS = 3200;
@@ -17,6 +18,8 @@ type Props = {
   autoDismissMs?: number;
   /** Доп. класс на хост (например, z-index поверх вложенных модалок). */
   hostClassName?: string;
+  /** Звук при показе (по умолчанию true; для progress-alert — false). */
+  withSound?: boolean;
 };
 
 /**
@@ -27,10 +30,20 @@ export default function DemoAlert({
   variant = 'info',
   onClose,
   autoDismissMs = ARC_UI_KIT_ALERT_AUTO_DISMISS_MS,
-  hostClassName
+  hostClassName,
+  withSound = true
 }: Props) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const lastSoundKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!withSound) return;
+    const key = `${variant}:${message}`;
+    if (lastSoundKeyRef.current === key) return;
+    lastSoundKeyRef.current = key;
+    playNotificationSound(variant);
+  }, [message, variant, withSound]);
 
   useEffect(() => {
     if (autoDismissMs <= 0) return;

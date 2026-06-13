@@ -5,6 +5,10 @@ export function getImportSourceFilesAction(): ImportSourceFilesAction {
   return getAppPreferencesSync().importSourceFilesAction;
 }
 
+export function getAutoImportSourceFilesAction(): ImportSourceFilesAction {
+  return getAppPreferencesSync().autoImportSourceFilesAction;
+}
+
 export function getDeleteCardsUseTrash(): boolean {
   return getAppPreferencesSync().deleteCardsUseTrash;
 }

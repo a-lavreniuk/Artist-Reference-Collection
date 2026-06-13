@@ -18,6 +18,7 @@ export function releaseMaintenanceLock(): void {
   depth -= 1;
   if (depth === 0) {
     broadcastMaintenance(false);
+    void import('./autoImportWatcher').then(({ resumeAutoImportIfNeeded }) => resumeAutoImportIfNeeded());
   }
 }
 

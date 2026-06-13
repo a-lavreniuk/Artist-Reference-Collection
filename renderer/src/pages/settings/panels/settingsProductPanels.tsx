@@ -2,6 +2,7 @@ import SettingsPanelStub from '../../../components/settings/SettingsPanelStub';
 import SettingsGeneralPanel from './SettingsGeneralPanel';
 import SettingsNotificationsPanel from './SettingsNotificationsPanel';
 import SettingsScreenshotsPanel from './SettingsScreenshotsPanel';
+import SettingsShortcutsPanel from './SettingsShortcutsPanel';
 
 export { SettingsGeneralPanel };
 
@@ -13,25 +14,16 @@ export function SettingsNotificationsPanelRoute() {
   return <SettingsNotificationsPanel />;
 }
 
-export function SettingsShortcutsPanel() {
-  return <SettingsPanelStub title="Горячие клавиши" />;
+export function SettingsShortcutsPanelRoute() {
+  return <SettingsShortcutsPanel />;
 }
 
-export function SettingsLibraryPanel() {
-  return <SettingsPanelStub title="Библиотека" />;
-}
+export { SettingsShortcutsPanelRoute as SettingsShortcutsPanel };
 
-export function SettingsBackupPanel() {
-  return <SettingsPanelStub title="Резервная копия" />;
-}
-
-export function SettingsIntegrityPanel() {
-  return <SettingsPanelStub title="Проверка целостности" />;
-}
-
-export function SettingsAutoImportPanel() {
-  return <SettingsPanelStub title="Автоимпорт" />;
-}
+export { default as SettingsLibraryPanel } from './SettingsLibraryPanel';
+export { default as SettingsBackupPanel } from './SettingsBackupPanel';
+export { default as SettingsIntegrityPanel } from './SettingsIntegrityPanel';
+export { default as SettingsAutoImportPanel } from './SettingsAutoImportPanel';
 
 export function SettingsAiSearchPanel() {
   return <SettingsPanelStub title="AI Поиск" />;

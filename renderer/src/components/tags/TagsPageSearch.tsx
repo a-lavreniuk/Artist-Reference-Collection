@@ -6,10 +6,10 @@ type Props = {
 export default function TagsPageSearch({ value, onChange }: Props) {
   return (
     <label
-      className={`field input-live search-live arc-tags-page-search${value.length > 0 ? ' has-value' : ''}`}
+      className={`field search-live arc-tags-page-search${value.length > 0 ? ' has-value' : ''}`}
       data-live-search
     >
-      <div className="input input--size-m input-slots search-live">
+      <div className="input search-field input-slots">
         <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
         <input
           className="search-inner slot-value"

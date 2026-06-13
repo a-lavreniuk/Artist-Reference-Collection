@@ -6,7 +6,8 @@ import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts 
 import { registerArcIpc, registerArcMediaProtocol } from './ipc';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
-import { applyStoredLaunchAtLogin, registerAppPreferencesIpc } from './appPreferences';
+import { applyStoredLaunchAtLogin, readAppPreferences, registerAppPreferencesIpc } from './appPreferences';
+import { registerAutoImportIpc, restartAutoImportWatcher } from './autoImportWatcher';
 import { applyStoredScreenshotShortcut, unregisterScreenshotShortcut } from './screenshotShortcut';
 import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
@@ -89,7 +90,6 @@ function createWindow(): BrowserWindow {
 
   if (dev) {
     void win.loadURL('http://localhost:5173');
-    win.webContents.openDevTools({ mode: 'detach' });
   } else {
     const indexHtml = path.join(__dirname, '..', 'renderer', 'dist', 'index.html');
     void win.loadFile(indexHtml);
@@ -115,8 +115,10 @@ app.whenReady().then(() => {
   registerScreenshotIpc();
   registerScreenshotPickerIpc();
   registerDuplicateScanIpc();
+  registerAutoImportIpc();
   void applyStoredLaunchAtLogin();
   void applyStoredScreenshotShortcut();
+  void readAppPreferences().then(() => restartAutoImportWatcher());
   registerArcUpdaterIpc();
   registerDevToolsShortcuts();
   createWindow();
@@ -141,4 +143,5 @@ app.on('will-quit', () => {
   unregisterDevToolsShortcuts();
   unregisterScreenshotShortcut();
   destroyScreenshotOverlay();
+  void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());
 });

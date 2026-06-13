@@ -3450,6 +3450,12 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-shrink: 0;
 }
 
+/* Без анимации toggle до загрузки prefs — иначе «выкл» → «вкл» при входе в раздел. */
+.arc-settings-main__content:not(.is-prefs-ready) .arc-toggle__track,
+.arc-settings-main__content:not(.is-prefs-ready) .arc-toggle__thumb {
+  transition: none;
+}
+
 .arc-settings-section {
   display: flex;
   flex-direction: column;
@@ -3553,6 +3559,86 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-direction: column;
   gap: var(--s-2);
   min-width: 0;
+}
+
+.arc-settings-shortcuts-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.arc-settings-shortcuts-panel__sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 100%;
+  background: var(--app-bg);
+}
+
+.arc-settings-shortcuts-panel__sticky-inner {
+  width: 100%;
+  max-width: 650px;
+  margin-inline: auto;
+  padding: var(--s-4) var(--s-4) 0;
+  box-sizing: border-box;
+}
+
+/** Full-bleed separator under search (Figma 1036:33946, node 1380:4092). */
+.arc-settings-shortcuts-panel__sticky-separator {
+  display: block;
+  width: 100%;
+  height: 1px;
+  border: 0;
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  background: var(--panel-border);
+  flex-shrink: 0;
+}
+
+.arc-settings-shortcuts-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 650px;
+  margin-inline: auto;
+  padding: var(--s-4) var(--s-4) var(--s-4);
+  box-sizing: border-box;
+}
+
+.arc-settings-shortcuts-panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.arc-settings-shortcuts-search {
+  width: 100%;
+  max-width: 100%;
+}
+
+.arc-settings-shortcut-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.arc-settings-shortcut-row__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-elev-primary);
+}
+
+.arc-settings-shortcut-row__keys {
+  flex: 0 0 auto;
+  color: var(--text-elev-secondary);
+  white-space: nowrap;
 }
 
 .arc-settings-option-card {
@@ -3747,125 +3833,54 @@ body.arc-card-detail-open .arc-app-outlet {
   gap: var(--s-3);
 }
 
-.arc-settings-storage-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--s-3);
-  align-items: stretch;
-}
-
-.arc-settings-block--tile {
+/** Figma 1036:34315 / 35873 / 36251 — описание + действие в колонке 650px. */
+.arc-settings-desc-block {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
+  width: 100%;
   min-width: 0;
 }
 
-.arc-settings-block--tile .arc-settings-row {
-  flex-wrap: wrap;
+.arc-settings-desc-block__text {
+  margin: 0;
 }
 
-.arc-settings-storage-layout {
+.arc-settings-action-row {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-}
-
-.arc-settings-storage-head {
-  display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--s-2);
+  width: 100%;
+  min-width: 0;
 }
 
-.arc-settings-storage-icon {
-  width: 32px;
-  height: 32px;
-  display: block;
-  color: var(--icons-white-default);
+.arc-settings-action-row__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--ui-text-secondary);
 }
 
-.arc-settings-storage-icon--hard-drive {
-  background-color: var(--icons-white-default);
-  -webkit-mask-image: url("/ui/icons/hard-drive_xl.svg");
-  mask-image: url("/ui/icons/hard-drive_xl.svg");
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
+/** Figma 1036:36990 — gap 32px между toggle и строкой папки. */
+.arc-settings-auto-import__folder {
+  margin-top: var(--s-4);
 }
 
-.arc-settings-storage-icon--copy {
-  background-color: var(--icons-white-default);
-  -webkit-mask-image: url("/ui/icons/copy_xl.svg");
-  mask-image: url("/ui/icons/copy_xl.svg");
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
+.arc-settings-auto-import__sources {
+  margin-top: var(--s-3);
 }
 
-.arc-settings-storage-icon--file-search {
-  background-color: var(--icons-white-default);
-  -webkit-mask-image: url("/ui/icons/file-search_xl.svg");
-  mask-image: url("/ui/icons/file-search_xl.svg");
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-.arc-settings-storage-title {
-  margin: 0;
-}
-
-.arc-settings-storage-subtitle {
-  margin: 0;
-  color: var(--text-elev-secondary);
-}
-
-.arc-settings-storage-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--s-3);
-  align-items: end;
-}
-
-.arc-settings-backup-controls {
+.arc-settings-backup-parts {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-}
-
-.arc-settings-backup-controls .btn-group {
-  flex-wrap: wrap;
-}
-
-@media (max-width: 1100px) {
-  .arc-settings-storage-row {
-    grid-template-columns: 1fr;
-  }
-
-  .arc-settings-storage-controls {
-    grid-template-columns: 1fr;
-  }
-
-  .arc-settings-backup-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .arc-settings-backup-controls .btn-group {
-    align-self: flex-start;
-  }
+  gap: var(--s-2);
 }
 
 .arc-settings-block__title {
