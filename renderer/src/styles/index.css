@@ -190,8 +190,11 @@ a {
 }
 
 .arc-tags-page-sidebar .context-menu__item.is-active .context-menu__item-label,
-.arc-tags-page-sidebar .context-menu__item.is-active .context-menu__item-counter,
-.arc-tags-page-sidebar .context-menu__item.is-active .context-menu__item-icon {
+.arc-tags-page-sidebar .context-menu__item.is-active .context-menu__item-counter {
+  color: var(--brand-50);
+}
+
+.arc-tags-page-sidebar .context-menu__item.is-active .arc-tags-sidebar-row-handle .context-menu__item-icon {
   color: var(--brand-50);
 }
 
@@ -349,21 +352,25 @@ a {
   cursor: pointer;
 }
 
-/* Icons/Black Bg/Default → default; row hover → Icons/Brand/Default; edit hover → Icons/Brand/Hover */
-.arc-tags-sidebar-row-edit .btn-ds__icon {
+/* icons/black_bg/default → default; row hover → icons/brand/default; edit hover → icons/brand/hover */
+.arc-tags-sidebar-row-edit .context-menu__item-icon {
   color: var(--input-icon-default);
+}
+
+.arc-tags-sidebar-row.is-active .arc-tags-sidebar-row-edit .context-menu__item-icon {
+  color: var(--brand-50);
 }
 
 .arc-tags-sidebar-row:hover:not(:has(.arc-tags-sidebar-row-edit:hover)):not(
     :has(.arc-tags-sidebar-row-edit:focus-visible)
   )
   .arc-tags-sidebar-row-edit
-  .btn-ds__icon {
+  .context-menu__item-icon {
   color: var(--btn-brand-icon-default);
 }
 
-.arc-tags-sidebar-row-edit:hover .btn-ds__icon,
-.arc-tags-sidebar-row-edit:focus-visible .btn-ds__icon {
+.arc-tags-sidebar-row .arc-tags-sidebar-row-edit:hover .context-menu__item-icon,
+.arc-tags-sidebar-row .arc-tags-sidebar-row-edit:focus-visible .context-menu__item-icon {
   color: var(--btn-brand-icon-hover);
 }
 
@@ -1101,8 +1108,11 @@ button.color-swatch-inline:disabled {
 }
 
 .arc-collections-page-sidebar .context-menu__item.is-active .context-menu__item-label,
-.arc-collections-page-sidebar .context-menu__item.is-active .context-menu__item-counter,
-.arc-collections-page-sidebar .context-menu__item.is-active .context-menu__item-icon {
+.arc-collections-page-sidebar .context-menu__item.is-active .context-menu__item-counter {
+  color: var(--brand-50);
+}
+
+.arc-collections-page-sidebar .context-menu__item.is-active .arc-tags-sidebar-row-handle .context-menu__item-icon {
   color: var(--brand-50);
 }
 

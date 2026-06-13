@@ -172,7 +172,7 @@ export default function CategorySettingsModal({
     }
   };
 
-  const deleteDisabled = !isEdit || isSaving;
+  const deleteDisabled = isSaving;
   const primarySaveDisabled = isSaving;
 
   const infoRows = stats
@@ -379,20 +379,41 @@ export default function CategorySettingsModal({
             ) : null}
           </div>
 
-          <footer className="arc-modal__footer arc-modal__footer--actions-3">
-            <button
-              type="button"
-              className="btn btn-ds btn-s btn-danger"
-              disabled={deleteDisabled}
-              aria-disabled={deleteDisabled}
-              onClick={() => {
-                if (deleteDisabled) return;
-                setDeleteConfirmOpen(true);
-              }}
-            >
-              <span className="btn-ds__value">Удалить</span>
-            </button>
-            <div className="arc-modal__footer-right">
+          {isEdit ? (
+            <footer className="arc-modal__footer arc-modal__footer--actions-3">
+              <button
+                type="button"
+                className="btn btn-ds btn-s btn-danger"
+                disabled={deleteDisabled}
+                onClick={() => {
+                  if (deleteDisabled) return;
+                  setDeleteConfirmOpen(true);
+                }}
+              >
+                <span className="btn-ds__value">Удалить</span>
+              </button>
+              <div className="arc-modal__footer-right">
+                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={isSaving}>
+                  <span className="btn-ds__value">Отмена</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-brand btn-ds btn-s"
+                  disabled={primarySaveDisabled}
+                  onClick={() => void submit()}
+                >
+                  <span className="btn-ds__value">{isSaving ? 'Сохранение…' : 'Сохранить'}</span>
+                  <span
+                    className="arc-save-dot"
+                    data-arc-save-dot
+                    aria-hidden="true"
+                    hidden={!isDirty || primarySaveDisabled}
+                  />
+                </button>
+              </div>
+            </footer>
+          ) : (
+            <footer className="arc-modal__footer arc-modal__footer--actions-2">
               <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={isSaving}>
                 <span className="btn-ds__value">Отмена</span>
               </button>
@@ -402,20 +423,10 @@ export default function CategorySettingsModal({
                 disabled={primarySaveDisabled}
                 onClick={() => void submit()}
               >
-                <span className="btn-ds__value">
-                  {isSaving ? 'Сохранение…' : isEdit ? 'Сохранить' : 'Добавить'}
-                </span>
-                {isEdit ? (
-                  <span
-                    className="arc-save-dot"
-                    data-arc-save-dot
-                    aria-hidden="true"
-                    hidden={!isDirty || primarySaveDisabled}
-                  />
-                ) : null}
+                <span className="btn-ds__value">{isSaving ? 'Сохранение…' : 'Добавить'}</span>
               </button>
-            </div>
-          </footer>
+            </footer>
+          )}
         </section>
       </div>
 

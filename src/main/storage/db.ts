@@ -81,7 +81,6 @@ CREATE INDEX IF NOT EXISTS idx_cards_type_added ON cards(type, added_at DESC);
 CREATE INDEX IF NOT EXISTS idx_card_tags_tag ON card_tags(tag_id);
 CREATE INDEX IF NOT EXISTS idx_card_collections_col ON card_collections(collection_id);
 CREATE INDEX IF NOT EXISTS idx_tags_category ON tags(category_id);
-CREATE INDEX IF NOT EXISTS idx_collections_sort ON collections(sort_index);
 `;
 
 let activeDb: Database.Database | null = null;
@@ -112,16 +111,15 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'categories', 'description')) {
     db.exec('ALTER TABLE categories ADD COLUMN description TEXT');
   }
+  let addedCollectionSortIndex = false;
   if (!tableHasColumn(db, 'collections', 'sort_index')) {
     db.exec('ALTER TABLE collections ADD COLUMN sort_index INTEGER NOT NULL DEFAULT 0');
+    addedCollectionSortIndex = true;
   }
   if (!tableHasColumn(db, 'collections', 'description')) {
     db.exec('ALTER TABLE collections ADD COLUMN description TEXT');
   }
-  const needsCollectionSortBackfill = db
-    .prepare('SELECT COUNT(*) AS n FROM collections WHERE sort_index = 0')
-    .get() as { n: number };
-  if (needsCollectionSortBackfill.n > 0) {
+  if (addedCollectionSortIndex) {
     const rows = db.prepare('SELECT id FROM collections ORDER BY created_at ASC, name ASC').all() as Array<{
       id: string;
     }>;

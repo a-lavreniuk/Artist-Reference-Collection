@@ -170,7 +170,11 @@ export default function TagsPageSidebar({
                         onEditCategory(category.id);
                       }}
                     >
-                      <span className="btn-ds__icon arc-icon-edit" aria-hidden="true" />
+                      <span
+                        className="context-menu__item-icon tab-icon arc-icon-edit"
+                        data-arc-icon-size="m"
+                        aria-hidden="true"
+                      />
                     </button>
                   </div>
                 </div>
