@@ -9,6 +9,7 @@ export default function NavbarMenu() {
 
   const rows = useMemo<ContextMenuRow[]>(
     () => [
+      { type: 'item', key: 'board', label: 'Доска', iconClass: 'arc-icon-whiteboard', onSelect: () => navigate('/board') },
       { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigate('/tags') },
       { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
       { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },

@@ -18,11 +18,8 @@ export function resolveMainTab(pathname: string): MainTabKey {
 export function resolveNavbarVariant(pathname: string, search = ''): NavbarVariant {
   if (pathname === '/gallery') return 'full';
   if (pathname.startsWith('/collections')) return 'full';
-  if (pathname.startsWith('/moodboard')) {
-    const params = new URLSearchParams(search);
-    if (params.get('mf') === 'board') return 'compact';
-    return 'full';
-  }
+  if (pathname.startsWith('/moodboard')) return 'full';
+  if (pathname.startsWith('/board')) return 'compact';
   return 'compact';
 }
 

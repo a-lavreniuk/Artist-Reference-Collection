@@ -3,6 +3,7 @@ import AppLayout from './components/layout/AppLayout';
 import CollectionsPage from './pages/CollectionsPage';
 import GalleryCardEditRedirect from './pages/GalleryCardEditRedirect';
 import GalleryPage from './pages/GalleryPage';
+import BoardPage from './pages/BoardPage';
 import MoodboardPage from './pages/MoodboardPage';
 import OnboardingStubPage from './pages/OnboardingStubPage';
 import SettingsLegacyRedirect from './pages/SettingsLegacyRedirect';
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="collections" element={<CollectionsPage />} />
         <Route path="collections/:collectionId" element={<CollectionsPage />} />
         <Route path="moodboard" element={<MoodboardPage />} />
+        <Route path="board" element={<BoardPage />} />
         <Route path="storage" element={<SettingsSectionPage panel="storage" />} />
         <Route path="statistics" element={<SettingsSectionPage panel="statistics" />} />
         <Route path="history" element={<SettingsSectionPage panel="history" />} />
