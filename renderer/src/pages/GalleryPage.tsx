@@ -49,6 +49,7 @@ import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import ConfirmModal from './settings/ConfirmModal';
 
 import { emptyTrash } from '../services/db';
+import { showAppNotification } from '../services/notificationService';
 
 
 
@@ -542,6 +543,12 @@ export default function GalleryPage() {
               try {
 
                 await emptyTrash();
+
+                showAppNotification({
+                  message: 'Корзина очищена',
+                  variant: 'success',
+                  skipPrefCheck: true
+                });
 
                 setEmptyTrashConfirm(false);
 

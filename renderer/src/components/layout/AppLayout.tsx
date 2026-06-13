@@ -6,7 +6,10 @@ import MaintenanceBanner from './MaintenanceBanner';
 import AppUpdateHost from './AppUpdateHost';
 import PendingRestoreModal from './PendingRestoreModal';
 import ImportHost from '../import/ImportHost';
+import NotificationHost from '../notifications/NotificationHost';
+import ScreenshotHost from '../screenshot/ScreenshotHost';
 import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
+import { initAppPreferencesRuntime } from '../../services/appPreferencesRuntime';
 import { ensureGalleryBootstrap, scheduleGalleryWarmup } from '../gallery/galleryBootstrap';
 import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
 import { applyTopbarCssVars } from './navbarLayout';
@@ -14,11 +17,24 @@ import { isLibraryConfigured } from '../../services/db';
 
 export default function AppLayout() {
   useEffect(() => {
+    void initAppPreferencesRuntime();
+  }, []);
+
+  useEffect(() => {
     void (async () => {
       const ok = await isLibraryConfigured();
       if (!ok) return;
       await ensureGalleryBootstrap();
       scheduleGalleryWarmup();
+
+      const startDuplicateScan = () => {
+        void window.arc?.startDuplicateFileScan?.();
+      };
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(startDuplicateScan, { timeout: 5000 });
+      } else {
+        window.setTimeout(startDuplicateScan, 2000);
+      }
     })();
   }, []);
 
@@ -48,6 +64,8 @@ export default function AppLayout() {
 
   return (
     <GalleryFilterProvider>
+    <NotificationHost>
+    <ScreenshotHost>
     <ImportHost>
       <main className="arc-navbar-shell">
         <MaintenanceBanner />
@@ -60,6 +78,8 @@ export default function AppLayout() {
         <AppUpdateHost />
       </main>
     </ImportHost>
+    </ScreenshotHost>
+    </NotificationHost>
     </GalleryFilterProvider>
   );
 }

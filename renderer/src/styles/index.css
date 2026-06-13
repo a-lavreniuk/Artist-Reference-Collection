@@ -3460,6 +3460,9 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-settings-section__title {
   margin: 0;
   color: var(--text-elev-secondary);
+  font-size: var(--typo-p-s-size);
+  line-height: var(--typo-p-s-line);
+  font-weight: var(--typo-p-s-weight);
 }
 
 .arc-settings-section__body {
@@ -3513,6 +3516,43 @@ body.arc-card-detail-open .arc-app-outlet {
   min-width: 0;
   color: var(--text-elev-primary);
   text-align: left;
+}
+
+.arc-settings-toggle-shortcut-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.arc-settings-toggle-shortcut-row .arc-settings-check-row {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-settings-toggle-shortcut-row__hint {
+  flex: 0 0 auto;
+  color: var(--text-elev-secondary);
+  white-space: nowrap;
+}
+
+.arc-settings-radio-inline-group {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.arc-settings-notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
 }
 
 .arc-settings-option-card {

@@ -4,6 +4,7 @@ import * as path from 'path';
 
 export default defineConfig({
   root: path.resolve(__dirname),
+  publicDir: path.resolve(__dirname, 'public'),
   base: './',
   plugins: [react()],
   server: {
@@ -12,6 +13,12 @@ export default defineConfig({
   },
   build: {
     outDir: path.resolve(__dirname, 'dist'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        screenshotPicker: path.resolve(__dirname, 'screenshot-picker.html')
+      }
+    }
   }
 });

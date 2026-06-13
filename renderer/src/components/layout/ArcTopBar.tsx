@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { useArcHistoryNav } from './useArcHistoryNav';
+import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
 export default function ArcTopBar() {
   const ref = useRef<HTMLElement>(null);
   const { canGoBack, canGoForward, goBack, goForward } = useArcHistoryNav();
@@ -16,6 +17,8 @@ export default function ArcTopBar() {
   const toggleMaximize = () => {
     void window.arc?.windowToggleMaximize?.();
   };
+
+  const closeToTray = getAppPreferencesSync().closeToTrayOnWindowClose;
 
   const close = () => {
     void window.arc?.windowCloseToTray?.();
@@ -62,7 +65,7 @@ export default function ArcTopBar() {
         <button
           type="button"
           className="arc-topbar-btn arc-topbar-btn--close"
-          aria-label="Закрыть в трей"
+          aria-label={closeToTray ? 'Закрыть в трей' : 'Закрыть приложение'}
           onClick={close}
         >
           <span className="arc-topbar-btn__glyph arc-icon-close" data-arc-icon-size="s" aria-hidden="true" />

@@ -1,6 +1,7 @@
 import type { ArcMetadataV1, CardRecord, CollectionRecord, MoodboardBoardV1 } from './arcSchema';
 import { createEmptyMoodboardBoard, normalizeMoodboardBoard } from './arcSchema';
 import { normalizeHex } from '../utils/colorPicker';
+import { getDeleteCardsUseTrash } from '../import/importDefaults';
 import * as storage from './storageClient';
 
 export type NavbarMetrics = {
@@ -1653,9 +1654,12 @@ export async function emptyTrash(): Promise<number> {
   return n;
 }
 
-/** Мягкое удаление в корзину. */
+/** Мягкое удаление в корзину или навсегда — по настройке «Общие». */
 export async function deleteCard(cardId: string): Promise<void> {
-  return softDeleteCard(cardId);
+  if (getDeleteCardsUseTrash()) {
+    return softDeleteCard(cardId);
+  }
+  return permanentDeleteCard(cardId);
 }
 
 /** Снимок метаданных для проверки целостности (новый формат хранения). */

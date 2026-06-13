@@ -172,6 +172,58 @@ contextBridge.exposeInMainWorld('arc', {
   windowToggleMaximize: () =>
     ipcRenderer.invoke('arc:window-toggle-maximize') as Promise<{ ok: boolean; maximized?: boolean }>,
   windowCloseToTray: () => ipcRenderer.invoke('arc:window-close-to-tray') as Promise<{ ok: boolean }>,
+  getAppPreferences: () =>
+    ipcRenderer.invoke('arc:app-preferences-get') as Promise<{
+      version: 1;
+      launchAtLogin: boolean;
+      closeToTrayOnWindowClose: boolean;
+      importSourceFilesAction: 'ask' | 'trash';
+      deleteCardsUseTrash: boolean;
+      screenshotsEnabled: boolean;
+      screenshotFormat: 'png' | 'jpg' | 'webp';
+      screenshotAskSaveLocation: boolean;
+      screenshotPrefixName: boolean;
+      screenshotRetina2x: boolean;
+      notifyScreenshotSaved: boolean;
+      notifyDuplicatesFound: boolean;
+      notifyAutoImport: boolean;
+      notifyFilesAdded: boolean;
+      notifySoundEnabled: boolean;
+    }>,
+  setAppPreferences: (patch: Record<string, unknown>) =>
+    ipcRenderer.invoke('arc:app-preferences-set', patch) as Promise<{
+      version: 1;
+      launchAtLogin: boolean;
+      closeToTrayOnWindowClose: boolean;
+      importSourceFilesAction: 'ask' | 'trash';
+      deleteCardsUseTrash: boolean;
+      screenshotsEnabled: boolean;
+      screenshotFormat: 'png' | 'jpg' | 'webp';
+      screenshotAskSaveLocation: boolean;
+      screenshotPrefixName: boolean;
+      screenshotRetina2x: boolean;
+      notifyScreenshotSaved: boolean;
+      notifyDuplicatesFound: boolean;
+      notifyAutoImport: boolean;
+      notifyFilesAdded: boolean;
+      notifySoundEnabled: boolean;
+    }>,
+  onScreenshotSaved: (cb: (detail: { cardId: string }) => void) => {
+    const fn = (_: unknown, payload: { cardId: string }) => cb(payload);
+    ipcRenderer.on('arc:screenshot-saved', fn);
+    return () => ipcRenderer.removeListener('arc:screenshot-saved', fn);
+  },
+  screenshotPickerConfirm: (region: { x: number; y: number; width: number; height: number }) =>
+    ipcRenderer.invoke('arc:screenshot-picker-confirm', region) as Promise<{ ok: boolean }>,
+  screenshotPickerCancel: () =>
+    ipcRenderer.invoke('arc:screenshot-picker-cancel') as Promise<{ ok: boolean }>,
+  startDuplicateFileScan: () =>
+    ipcRenderer.invoke('arc:duplicate-scan-start') as Promise<{ ok: true }>,
+  onDuplicatesFound: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('arc:duplicates-found', fn);
+    return () => ipcRenderer.removeListener('arc:duplicates-found', fn);
+  },
   onUpdateAvailable: (cb: (detail: { version: string; releaseDate: string | null }) => void) => {
     const fn = (_: unknown, payload: { version: string; releaseDate: string | null }) => cb(payload);
     ipcRenderer.on('arc:update-available', fn);

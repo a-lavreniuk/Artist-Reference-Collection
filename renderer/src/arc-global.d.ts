@@ -195,6 +195,18 @@ declare global {
       windowMinimizeToTray: () => Promise<{ ok: boolean }>;
       windowToggleMaximize: () => Promise<{ ok: boolean; maximized?: boolean }>;
       windowCloseToTray: () => Promise<{ ok: boolean }>;
+      getAppPreferences: () => Promise<import('./services/appPreferences').AppPreferencesV1>;
+      setAppPreferences: (patch: Partial<import('./services/appPreferences').AppPreferencesV1>) => Promise<import('./services/appPreferences').AppPreferencesV1>;
+      onScreenshotSaved: (cb: (detail: { cardId: string }) => void) => () => void;
+      screenshotPickerConfirm?: (region: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }) => Promise<{ ok: boolean }>;
+      screenshotPickerCancel?: () => Promise<{ ok: boolean }>;
+      startDuplicateFileScan?: () => Promise<{ ok: true }>;
+      onDuplicatesFound?: (cb: () => void) => () => void;
       onUpdateAvailable: (cb: (detail: { version: string; releaseDate: string | null }) => void) => () => void;
       onUpdateNotAvailable?: (cb: () => void) => () => void;
       onUpdateDownloadProgress?: (cb: (detail: { percent: number }) => void) => () => void;

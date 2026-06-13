@@ -1,5 +1,10 @@
-// TODO(settings-overlay): importSourceFilesAction: 'ask' | 'keep' | 'trash'
-export const IMPORT_SOURCE_FILES_DEFAULT = 'ask' as const;
+import type { ImportSourceFilesAction } from '../services/appPreferences';
+import { getAppPreferencesSync } from '../services/appPreferencesRuntime';
 
-// TODO(settings-overlay): deleteCardsSkipTrash — при true deleteCard вызывает permanentDelete сразу
-export const DELETE_CARDS_SKIP_TRASH_DEFAULT = false;
+export function getImportSourceFilesAction(): ImportSourceFilesAction {
+  return getAppPreferencesSync().importSourceFilesAction;
+}
+
+export function getDeleteCardsUseTrash(): boolean {
+  return getAppPreferencesSync().deleteCardsUseTrash;
+}

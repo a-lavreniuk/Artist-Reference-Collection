@@ -13,8 +13,8 @@ import UiKitPage from './ui-kit/UiKitPage';
 import SettingsUiKitPanel from './pages/settings/panels/SettingsUiKitPanel';
 import {
   SettingsGeneralPanel,
-  SettingsScreenshotsPanel,
-  SettingsNotificationsPanel,
+  SettingsScreenshotsPanelRoute as SettingsScreenshotsPanel,
+  SettingsNotificationsPanelRoute as SettingsNotificationsPanel,
   SettingsShortcutsPanel,
   SettingsLibraryPanel,
   SettingsBackupPanel,
@@ -41,7 +41,7 @@ export default function App() {
         <Route path="history" element={<SettingsNavbarPanelPage panel="history" />} />
         <Route path="duplicates" element={<SettingsNavbarPanelPage panel="duplicates" />} />
         <Route path="settings" element={<SettingsPage />}>
-          <Route index element={<Navigate to="ui-kit" replace />} />
+          <Route index element={<Navigate to="general" replace />} />
           <Route path="ui-kit" element={<SettingsUiKitPanel />} />
           <Route path="general" element={<SettingsGeneralPanel />} />
           <Route path="screenshots" element={<SettingsScreenshotsPanel />} />

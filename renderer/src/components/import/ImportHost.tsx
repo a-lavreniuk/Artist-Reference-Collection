@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ARC_CARDS_CHANGED_EVENT, isLibraryConfigured } from '../../services/db';
 import { isImportableMediaPath } from '../../media/allowedImportExtensions';
-import { IMPORT_SOURCE_FILES_DEFAULT } from '../../import/importDefaults';
+import { getImportSourceFilesAction } from '../../import/importDefaults';
+import { showAppNotification } from '../../services/notificationService';
 import DemoAlert from '../layout/DemoAlert';
 import SourceFilesModal from './SourceFilesModal';
 import { ImportContext } from './ImportContext';
@@ -47,7 +48,6 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const [libraryReady, setLibraryReady] = useState(false);
   const [maintenanceLocked, setMaintenanceLocked] = useState(false);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [sourceModalPaths, setSourceModalPaths] = useState<string[] | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const overlayOpenedManuallyRef = useRef(false);
@@ -81,7 +81,6 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     setImportBusy(true);
     setPhase('importing');
     setProgressMessage(`Добавлено 0 из ${paths.length}`);
-    setSuccessMessage(null);
     overlayOpenedManuallyRef.current = false;
 
     const unsub =
@@ -100,16 +99,28 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         const word = n === 1 ? 'файл' : n < 5 ? 'файла' : 'файлов';
         void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
         window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
-        setSuccessMessage(
-          n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`
-        );
+        showAppNotification({
+          message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`,
+          variant: 'success',
+          prefKey: 'notifyFilesAdded'
+        });
       }
 
       setProgressMessage(null);
 
-      if (successes.length > 0 && IMPORT_SOURCE_FILES_DEFAULT === 'ask' && sourcePaths.length > 0) {
-        setSourceModalPaths(sourcePaths);
-        setPhase('source-modal');
+      const sourceAction = getImportSourceFilesAction();
+      if (successes.length > 0 && sourcePaths.length > 0) {
+        if (sourceAction === 'ask') {
+          setSourceModalPaths(sourcePaths);
+          setPhase('source-modal');
+        } else if (sourceAction === 'trash') {
+          for (const abs of sourcePaths) {
+            await window.arc.trashPath(abs);
+          }
+          setPhase('idle');
+        } else {
+          setPhase('idle');
+        }
       } else {
         setPhase('idle');
       }
@@ -295,10 +306,6 @@ export default function ImportHost({ children }: { children: ReactNode }) {
 
       {progressMessage ? (
         <DemoAlert message={progressMessage} variant="info" autoDismissMs={0} onClose={() => {}} />
-      ) : null}
-
-      {successMessage ? (
-        <DemoAlert message={successMessage} variant="success" onClose={() => setSuccessMessage(null)} />
       ) : null}
 
       {sourceModalPaths && sourceModalPaths.length > 0 ? (

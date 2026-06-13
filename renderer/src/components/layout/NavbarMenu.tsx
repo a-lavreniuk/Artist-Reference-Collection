@@ -13,7 +13,7 @@ export default function NavbarMenu() {
       { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigate('/tags') },
       { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
       { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
-      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/ui-kit') },
+      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/general') },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
       { type: 'separator', key: 'sep2' },

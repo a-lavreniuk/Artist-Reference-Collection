@@ -6,7 +6,12 @@ import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts 
 import { registerArcIpc, registerArcMediaProtocol } from './ipc';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
-import { bindMainWindow, isAppQuitting, registerWindowChromeIpc } from './windowChrome';
+import { applyStoredLaunchAtLogin, registerAppPreferencesIpc } from './appPreferences';
+import { applyStoredScreenshotShortcut, unregisterScreenshotShortcut } from './screenshotShortcut';
+import { registerScreenshotIpc } from './screenshotCapture';
+import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
+import { registerDuplicateScanIpc } from './duplicateFileScan';
+import { bindMainWindow, registerWindowChromeIpc } from './windowChrome';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
 import {
   clearSessionWindowSize,
@@ -105,7 +110,13 @@ app.whenReady().then(() => {
 
   registerArcMediaProtocol();
   registerArcIpc();
+  registerAppPreferencesIpc();
   registerWindowChromeIpc();
+  registerScreenshotIpc();
+  registerScreenshotPickerIpc();
+  registerDuplicateScanIpc();
+  void applyStoredLaunchAtLogin();
+  void applyStoredScreenshotShortcut();
   registerArcUpdaterIpc();
   registerDevToolsShortcuts();
   createWindow();
@@ -120,7 +131,6 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (isAppQuitting()) return;
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -129,4 +139,6 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   destroyAppTray();
   unregisterDevToolsShortcuts();
+  unregisterScreenshotShortcut();
+  destroyScreenshotOverlay();
 });

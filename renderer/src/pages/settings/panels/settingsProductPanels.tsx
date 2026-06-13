@@ -1,15 +1,16 @@
 import SettingsPanelStub from '../../../components/settings/SettingsPanelStub';
+import SettingsGeneralPanel from './SettingsGeneralPanel';
+import SettingsNotificationsPanel from './SettingsNotificationsPanel';
+import SettingsScreenshotsPanel from './SettingsScreenshotsPanel';
 
-export function SettingsGeneralPanel() {
-  return <SettingsPanelStub title="Общие" />;
+export { SettingsGeneralPanel };
+
+export function SettingsScreenshotsPanelRoute() {
+  return <SettingsScreenshotsPanel />;
 }
 
-export function SettingsScreenshotsPanel() {
-  return <SettingsPanelStub title="Скриншоты" />;
-}
-
-export function SettingsNotificationsPanel() {
-  return <SettingsPanelStub title="Уведомления" />;
+export function SettingsNotificationsPanelRoute() {
+  return <SettingsNotificationsPanel />;
 }
 
 export function SettingsShortcutsPanel() {

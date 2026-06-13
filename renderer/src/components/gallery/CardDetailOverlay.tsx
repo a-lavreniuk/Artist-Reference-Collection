@@ -42,6 +42,7 @@ import {
   removeCardFromMoodboard,
   updateCardPayload
 } from '../../services/db';
+import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
@@ -775,7 +776,13 @@ export default function CardDetailOverlay({
                       className="btn btn-outline btn-icon-only btn-ds"
                       aria-label="Удалить карточку"
                       disabled={!card}
-                      onClick={() => setConfirmDelete(true)}
+                      onClick={() => {
+                        if (getDeleteCardsUseTrash()) {
+                          setConfirmDelete(true);
+                          return;
+                        }
+                        setConfirmPermanentDelete(true);
+                      }}
                     >
                       <span className="btn-icon-only__glyph arc-icon-trash" aria-hidden="true" />
                     </button>
