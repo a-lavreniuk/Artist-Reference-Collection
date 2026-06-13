@@ -54,9 +54,7 @@ a {
   overflow-x: hidden;
   overflow-y: auto;
   padding: var(--s-4);
-  padding-top: calc(
-    var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px)) + var(--s-4)
-  );
+  padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px));
   border-radius: var(--radius-l);
   background: var(--gray-1000);
   scrollbar-width: none;
@@ -3230,7 +3228,7 @@ body.arc-card-detail-open .arc-app-outlet {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--s-4);
+  padding: 0 var(--s-4) var(--s-4);
 }
 
 .arc-onboarding-welcome {
