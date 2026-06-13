@@ -1,0 +1,9 @@
+{"sessionId":"e203dc","hypothesisId":"A","location":"ipcStorage.ts:gallery-filter-stats","message":"backfill start","data":{"startedAt":1781272198998},"timestamp":1781272199014}
+{"sessionId":"e203dc","hypothesisId":"A","location":"ipcStorage.ts:gallery-filter-stats","message":"backfill done","data":{"elapsedMs":17},"timestamp":1781272199015}
+{"sessionId":"e203dc","hypothesisId":"E","location":"ipcStorage.ts:gallery-filter-stats","message":"stats computed","data":{"elapsedMs":20,"weightSegments":4,"durationSegments":4,"maxMb":49,"maxSec":20,"hasVideo":true},"timestamp":1781272199018}
+{"sessionId":"e203dc","hypothesisId":"A","location":"ipcStorage.ts:gallery-filter-stats","message":"backfill start","data":{"startedAt":1781272200975},"timestamp":1781272200991}
+{"sessionId":"e203dc","hypothesisId":"E","location":"ipcStorage.ts:gallery-filter-stats","message":"stats computed","data":{"elapsedMs":19,"weightSegments":4,"durationSegments":4,"maxMb":49,"maxSec":20,"hasVideo":true},"timestamp":1781272200994}
+{"sessionId":"e203dc","hypothesisId":"A","location":"ipcStorage.ts:gallery-filter-stats","message":"backfill done","data":{"elapsedMs":17},"timestamp":1781272200992}
+{"sessionId":"e203dc","hypothesisId":"A","location":"ipcStorage.ts:gallery-filter-stats","message":"backfill start","data":{"startedAt":1781272205984},"timestamp":1781272206000}
+{"sessionId":"e203dc","hypothesisId":"A","location":"ipcStorage.ts:gallery-filter-stats","message":"backfill done","data":{"elapsedMs":17},"timestamp":1781272206001}
+{"sessionId":"e203dc","hypothesisId":"E","location":"ipcStorage.ts:gallery-filter-stats","message":"stats computed","data":{"elapsedMs":19,"weightSegments":4,"durationSegments":4,"maxMb":49,"maxSec":20,"hasVideo":true},"timestamp":1781272206003}
