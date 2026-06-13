@@ -1,19 +1,23 @@
 import { app, nativeImage } from 'electron';
 import path from 'path';
 
-export function iconLightPath(): string {
+function iconsDir(): string {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'icons', 'icon-light.png');
+    return path.join(process.resourcesPath, 'icons');
   }
-  return path.join(app.getAppPath(), 'build', 'icons', 'icon-light.png');
+  return path.join(app.getAppPath(), 'build', 'icons');
 }
 
-/** Иконка для окна и трея (на Windows трей — 16×16). */
+export function appIconPath(): string {
+  return path.join(iconsDir(), 'icon.png');
+}
+
+export function appIconTrayPath(): string {
+  return path.join(iconsDir(), 'icon-16.png');
+}
+
+/** Иконка для окна и трея. Каждый размер — отдельный подготовленный PNG. */
 export function loadAppIconImage(size = 256) {
-  const image = nativeImage.createFromPath(iconLightPath());
-  if (image.isEmpty()) return image;
-  if (size > 0 && (image.getSize().width !== size || image.getSize().height !== size)) {
-    return image.resize({ width: size, height: size });
-  }
-  return image;
+  const sourcePath = size === 16 ? appIconTrayPath() : appIconPath();
+  return nativeImage.createFromPath(sourcePath);
 }

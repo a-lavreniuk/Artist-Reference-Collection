@@ -19,8 +19,10 @@ asarUnpack:
 extraResources:
   - from: release-notes.json
     to: release-notes.json
-  - from: build/icons/icon-light.png
-    to: icons/icon-light.png
+  - from: build/icons/icon.png
+    to: icons/icon.png
+  - from: build/icons/icon-16.png
+    to: icons/icon-16.png
 win:
   target:
     - target: nsis

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, nativeTheme, protocol } from 'electron';
 import path from 'path';
 
-import { iconLightPath } from './appIcon';
+import { appIconPath } from './appIcon';
 import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts } from './devTools';
 import { registerArcIpc, registerArcMediaProtocol } from './ipc';
 import { createAppTray, destroyAppTray } from './tray';
@@ -29,7 +29,7 @@ protocol.registerSchemesAsPrivileged([
 
 function createWindow(): BrowserWindow {
   const preloadPath = path.resolve(__dirname, '..', 'preload', 'index.js');
-  const iconPath = iconLightPath();
+  const iconPath = appIconPath();
 
   const win = new BrowserWindow({
     width: WINDOW_MIN_WIDTH,
