@@ -13,7 +13,7 @@ export default function NavbarMenu() {
       { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigate('/tags') },
       { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
       { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
-      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings') },
+      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/ui-kit') },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
       { type: 'separator', key: 'sep2' },
@@ -23,9 +23,7 @@ export default function NavbarMenu() {
       { type: 'item', key: 'theme-auto', label: 'Автоматическая', disabled: true },
       { type: 'separator', key: 'sep3' },
       { type: 'item', key: 'onboarding', label: 'Онбординг', onSelect: () => navigate('/onboarding') },
-      { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigate('/ui-kit') },
-      { type: 'separator', key: 'sep4' },
-      { type: 'item', key: 'storage', label: 'Хранилище', iconClass: 'arc-icon-hard-drive', onSelect: () => navigate('/storage') }
+      { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigate('/ui-kit') }
     ],
     [navigate]
   );

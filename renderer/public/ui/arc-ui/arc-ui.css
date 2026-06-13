@@ -4351,6 +4351,210 @@ body[data-elevation="raised"],
   background: var(--brand-100);
 }
 
+/* Checkbox (Figma 774:2185) */
+.arc-checkbox {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.arc-checkbox__box {
+  width: 14px;
+  height: 14px;
+  display: block;
+  box-sizing: border-box;
+  border: 1px solid var(--icons-white-default);
+  border-radius: 2px;
+  background: transparent;
+}
+
+.arc-checkbox--checked .arc-checkbox__box {
+  border-color: transparent;
+  background: var(--brand-550);
+}
+
+.arc-checkbox__check {
+  position: absolute;
+  top: 34.38%;
+  right: 28.13%;
+  bottom: 34.37%;
+  left: 28.13%;
+  color: var(--brand-50);
+  pointer-events: none;
+}
+
+.arc-checkbox__check svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Radio (Figma 808:3922) */
+.arc-radio {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.arc-radio__ring {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--icons-white-default);
+  box-sizing: border-box;
+  background: transparent;
+}
+
+.arc-radio--checked .arc-radio__ring {
+  border-color: transparent;
+  background: var(--brand-550);
+}
+
+.arc-radio__dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gray-50);
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.arc-radio--checked .arc-radio__dot {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Lock (disabled card, Figma 809:11713) */
+.arc-check-lock {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: block;
+  box-sizing: border-box;
+}
+
+.arc-check-lock__body {
+  position: absolute;
+  left: 6.25%;
+  right: 6.25%;
+  top: 37.5%;
+  bottom: 0;
+  border: 1px solid var(--icons-white-disabled);
+  border-radius: 1px;
+  box-sizing: border-box;
+}
+
+.arc-check-lock__shackle {
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  top: 0;
+  bottom: 56.25%;
+  border: 1px solid var(--icons-white-disabled);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
+  box-sizing: border-box;
+}
+
+/* Toggle (Figma 808:3941 / 808:3951) */
+.arc-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.arc-toggle__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18.75%;
+  bottom: 18.75%;
+  border-radius: 10px;
+  border: 1px solid var(--icons-white-default);
+  background: transparent;
+  box-sizing: border-box;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.arc-toggle__thumb {
+  position: absolute;
+  top: 31.25%;
+  bottom: 31.25%;
+  left: 12.5%;
+  right: 50%;
+  border-radius: 10px;
+  border: 1px solid var(--icons-white-default);
+  background: transparent;
+  box-sizing: border-box;
+  transition:
+    left var(--transition-fast),
+    right var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.arc-toggle--on .arc-toggle__track {
+  border-color: transparent;
+  background: var(--brand-550);
+}
+
+.arc-toggle--on .arc-toggle__thumb {
+  left: 50%;
+  right: 12.5%;
+  border-color: transparent;
+  background: var(--brand-50);
+}
+
+.arc-toggle:hover:not(:disabled):not(.arc-toggle--disabled) .arc-toggle__track {
+  border-color: var(--icons-white-hover);
+}
+
+.arc-toggle:hover:not(:disabled):not(.arc-toggle--disabled).arc-toggle--on .arc-toggle__track {
+  background: var(--brand-600);
+  border-color: transparent;
+}
+
+.arc-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.arc-toggle--disabled,
+.arc-toggle:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled, 0.4);
+}
+
+.arc-toggle--decorative {
+  cursor: inherit;
+  pointer-events: none;
+}
+
 @media (max-width: 1200px) {
   .grid-3 {
     grid-template-columns: 1fr;
