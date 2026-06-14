@@ -154,6 +154,10 @@ contextBridge.exposeInMainWorld('arc', {
       buildDate: string;
       changes: string[];
     } | null>,
+  listReleaseNotes: () =>
+    ipcRenderer.invoke('arc:list-release-notes') as Promise<{
+      versions: { version: string; buildDate: string; changes: string[] }[];
+    }>,
   getLastSeenReleaseVersion: () =>
     ipcRenderer.invoke('arc:get-last-seen-release-version') as Promise<string | null>,
   setLastSeenReleaseVersion: (version: string) =>

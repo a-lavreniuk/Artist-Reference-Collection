@@ -3402,6 +3402,8 @@ body.arc-card-detail-open .arc-app-outlet {
   border: 1px solid var(--panel-border);
   overflow: hidden;
   box-sizing: border-box;
+  container-type: inline-size;
+  container-name: arc-settings-main;
 }
 
 .arc-settings-page-main.panel {
@@ -3421,6 +3423,14 @@ body.arc-card-detail-open .arc-app-outlet {
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  padding-inline: var(--s-4);
+  box-sizing: border-box;
+}
+
+@container arc-settings-main (min-width: 650px) {
+  .arc-settings-main__scroll {
+    padding-inline: 0;
+  }
 }
 
 .arc-settings-main__scroll::-webkit-scrollbar {
@@ -3435,7 +3445,8 @@ body.arc-card-detail-open .arc-app-outlet {
   width: 100%;
   max-width: 650px;
   margin-inline: auto;
-  padding: var(--s-4) var(--s-4) var(--s-4);
+  padding-block: var(--s-4);
+  padding-inline: 0;
   box-sizing: border-box;
 }
 
@@ -3580,7 +3591,8 @@ body.arc-card-detail-open .arc-app-outlet {
   width: 100%;
   max-width: 650px;
   margin-inline: auto;
-  padding: var(--s-4) var(--s-4) 0;
+  padding-block: var(--s-4) 0;
+  padding-inline: 0;
   box-sizing: border-box;
 }
 
@@ -3603,7 +3615,8 @@ body.arc-card-detail-open .arc-app-outlet {
   width: 100%;
   max-width: 650px;
   margin-inline: auto;
-  padding: var(--s-4) var(--s-4) var(--s-4);
+  padding-block: var(--s-4);
+  padding-inline: 0;
   box-sizing: border-box;
 }
 
@@ -3777,30 +3790,6 @@ body.arc-card-detail-open .arc-app-outlet {
   font-weight: var(--typo-p-s-weight);
 }
 
-.arc-settings-version {
-  position: absolute;
-  right: var(--s-3);
-  bottom: var(--s-3);
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--text-elev-secondary);
-  font: inherit;
-  cursor: pointer;
-  transition: color var(--transition-fast);
-}
-
-.arc-settings-version:hover {
-  color: var(--text-elev-primary);
-}
-
-.arc-settings-version:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--radius-xs);
-}
-
 .arc-release-notes-list {
   margin: 0;
   padding-left: var(--s-4);
@@ -3810,6 +3799,99 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-release-notes-list__item {
+  color: var(--text-elev-primary);
+}
+
+/* Settings → Обновления (Figma 1037:39869) */
+/* Вертикальный ритм: только margin у SettingsSeparator (--s-4), без gap на корне панели. */
+.arc-settings-updates-panel {
+  gap: 0;
+}
+
+.arc-settings-updates-panel__empty {
+  color: var(--text-elev-secondary);
+}
+
+.arc-settings-updates-panel__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.arc-settings-updates-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.arc-settings-updates-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.arc-settings-updates-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 var(--s-1);
+  border: none;
+  border-radius: var(--s-1);
+  background: var(--gray-900);
+  color: var(--text-elev-primary);
+  font: inherit;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.arc-settings-updates-tab:hover:not(.is-active) {
+  background: var(--gray-850);
+}
+
+.arc-settings-updates-tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.arc-settings-updates-tab.is-active {
+  background: var(--brand-550);
+  color: var(--brand-100);
+}
+
+.arc-settings-updates-changelog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.arc-settings-updates-changelog__date,
+.arc-settings-updates-changelog__line {
+  margin: 0;
+  color: var(--text-elev-primary);
+}
+
+.arc-settings-updates-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+
+.arc-settings-updates-actions__update-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  width: 100%;
+}
+
+.arc-settings-updates-actions__status {
+  margin: 0;
   color: var(--text-elev-primary);
 }
 

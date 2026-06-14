@@ -3,7 +3,7 @@ import { autoUpdater } from 'electron-updater';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
-import { getReleaseNotesForVersion } from './releaseNotes';
+import { getReleaseNotesForVersion, listReleaseNotes } from './releaseNotes';
 
 const DISMISSED_FILENAME = 'update-dismissed-version.json';
 const LAST_SEEN_FILENAME = 'last-seen-release-version.json';
@@ -68,6 +68,11 @@ export function registerArcUpdaterIpc(): void {
   ipcMain.handle('arc:get-release-notes', async (_e, version: unknown) => {
     const v = typeof version === 'string' && version.trim() ? version.trim() : app.getVersion();
     return getReleaseNotesForVersion(v);
+  });
+
+  ipcMain.handle('arc:list-release-notes', async () => {
+    const versions = await listReleaseNotes();
+    return { versions };
   });
 
   ipcMain.handle('arc:get-last-seen-release-version', async () => readLastSeenVersion());

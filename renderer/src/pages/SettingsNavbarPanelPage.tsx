@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import SettingsStatisticsPanel from './settings/SettingsStatisticsPanel';
 import SettingsHistoryPanel from './settings/SettingsHistoryPanel';
 import SettingsDuplicatesPanel from './settings/SettingsDuplicatesPanel';
-import SettingsVersionLabel from './SettingsVersionLabel';
 
 type PanelKey = 'statistics' | 'history' | 'duplicates';
 
@@ -28,7 +27,6 @@ export default function SettingsNavbarPanelPage({ panel }: Props) {
       {panel === 'statistics' ? <SettingsStatisticsPanel /> : null}
       {panel === 'history' ? <SettingsHistoryPanel /> : null}
       {panel === 'duplicates' ? <SettingsDuplicatesPanel /> : null}
-      <SettingsVersionLabel />
     </div>
   );
 }

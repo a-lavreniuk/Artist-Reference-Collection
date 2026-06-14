@@ -183,6 +183,9 @@ declare global {
 
       getAppVersion: () => Promise<string>;
       getReleaseNotes: (version?: string) => Promise<{ buildDate: string; changes: string[] } | null>;
+      listReleaseNotes: () => Promise<{
+        versions: { version: string; buildDate: string; changes: string[] }[];
+      }>;
       getLastSeenReleaseVersion: () => Promise<string | null>;
       setLastSeenReleaseVersion: (version: string) => Promise<{ ok: boolean }>;
       dismissUpdateVersion: (version: string) => Promise<{ ok: boolean }>;
