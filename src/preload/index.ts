@@ -196,6 +196,11 @@ contextBridge.exposeInMainWorld('arc', {
       autoImportEnabled: boolean;
       autoImportFolderPath: string | null;
       autoImportSourceFilesAction: 'ask' | 'trash';
+      aiSemanticSearchEnabled: boolean;
+      aiModelTier: 'light' | 'heavy';
+      aiThreads: number;
+      aiGpuLayers: number;
+      aiMaxRamMb: number;
     }>,
   setAppPreferences: (patch: Record<string, unknown>) =>
     ipcRenderer.invoke('arc:app-preferences-set', patch) as Promise<{
@@ -217,6 +222,11 @@ contextBridge.exposeInMainWorld('arc', {
       autoImportEnabled: boolean;
       autoImportFolderPath: string | null;
       autoImportSourceFilesAction: 'ask' | 'trash';
+      aiSemanticSearchEnabled: boolean;
+      aiModelTier: 'light' | 'heavy';
+      aiThreads: number;
+      aiGpuLayers: number;
+      aiMaxRamMb: number;
     }>,
   autoImportRescan: () => ipcRenderer.invoke('arc:auto-import-rescan') as Promise<{ ok: true }>,
   onAutoImportProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => {
@@ -276,5 +286,88 @@ contextBridge.exposeInMainWorld('arc', {
     const fn = (_: unknown, payload: { message: string }) => cb(payload);
     ipcRenderer.on('arc:update-error', fn);
     return () => ipcRenderer.removeListener('arc:update-error', fn);
+  },
+
+  aiGetStatus: () => ipcRenderer.invoke('arc:ai-get-status'),
+  aiDetectHardware: () => ipcRenderer.invoke('arc:ai-detect-hardware'),
+  aiDownloadModel: (tier: 'light' | 'heavy') =>
+    ipcRenderer.invoke('arc:ai-download-model', tier) as Promise<
+      { ok: true; modelId: string; tier: string } | { ok: false; error: string }
+    >,
+  aiDownloadLlamaRuntime: (payload: { variant: 'cpu' | 'cuda'; tier: 'light' | 'heavy' }) =>
+    ipcRenderer.invoke('arc:ai-download-llama-runtime', payload) as Promise<
+      { ok: true; variant: string } | { ok: false; error: string }
+    >,
+  aiCancelDownload: () => ipcRenderer.invoke('arc:ai-cancel-download') as Promise<{ ok: true }>,
+  aiPauseDownload: () => ipcRenderer.invoke('arc:ai-pause-download') as Promise<{ ok: true }>,
+  aiResumeDownload: () => ipcRenderer.invoke('arc:ai-resume-download') as Promise<{ ok: true }>,
+  aiSearch: (query: string) => ipcRenderer.invoke('arc:ai-search', query) as Promise<Array<{ cardId: string; score: number }>>,
+  aiSearchCards: (query: string) =>
+    ipcRenderer.invoke('arc:ai-search-cards', query) as Promise<
+      Array<Record<string, unknown> & { id: string; aiScore?: number }>
+    >,
+  aiDeleteModel: (tier: 'light' | 'heavy') => ipcRenderer.invoke('arc:ai-delete-model', tier),
+  aiUpdateModel: (tier: 'light' | 'heavy') =>
+    ipcRenderer.invoke('arc:ai-update-model', tier) as Promise<
+      { ok: true; modelId: string; tier: string } | { ok: false; error: string }
+    >,
+  aiTestModel: (tier: 'light' | 'heavy') =>
+    ipcRenderer.invoke('arc:ai-test-model', tier) as Promise<{ ok: boolean; message: string; vectorDim?: number }>,
+  aiSetActiveModel: (tier: 'light' | 'heavy') => ipcRenderer.invoke('arc:ai-set-active-model', tier),
+  aiReindex: () => ipcRenderer.invoke('arc:ai-reindex') as Promise<{ ok: true }>,
+  aiPauseIndex: () => ipcRenderer.invoke('arc:ai-pause-index') as Promise<{ ok: true }>,
+  aiResumeIndex: () => ipcRenderer.invoke('arc:ai-resume-index') as Promise<{ ok: true }>,
+  aiSetEnabled: (payload: Record<string, unknown>) => ipcRenderer.invoke('arc:ai-set-enabled', payload),
+  onAiDownloadProgress: (cb: (detail: {
+    tier: string;
+    percent: number;
+    bytesReceived?: number;
+    bytesTotal?: number;
+    phase?: 'runtime' | 'model' | 'finalize';
+  }) => void) => {
+    const fn = (
+      _: unknown,
+      payload: {
+        tier: string;
+        percent: number;
+        bytesReceived?: number;
+        bytesTotal?: number;
+        phase?: 'runtime' | 'model' | 'finalize';
+      }
+    ) => cb(payload);
+    ipcRenderer.on('arc:ai-download-progress', fn);
+    return () => ipcRenderer.removeListener('arc:ai-download-progress', fn);
+  },
+  onAiDownloadComplete: (cb: (detail: { tier: string }) => void) => {
+    const fn = (_: unknown, payload: { tier: string }) => cb(payload);
+    ipcRenderer.on('arc:ai-download-complete', fn);
+    return () => ipcRenderer.removeListener('arc:ai-download-complete', fn);
+  },
+  onAiIndexProgress: (cb: (detail: {
+    done: number;
+    total: number;
+    running?: boolean;
+    currentCardId?: string | null;
+    currentCardProgress?: number | null;
+  }) => void) => {
+    const fn = (_: unknown, payload: {
+      done: number;
+      total: number;
+      running?: boolean;
+      currentCardId?: string | null;
+      currentCardProgress?: number | null;
+    }) => cb(payload);
+    ipcRenderer.on('arc:ai-index-progress', fn);
+    return () => ipcRenderer.removeListener('arc:ai-index-progress', fn);
+  },
+  onAiIndexComplete: (cb: (detail: { indexed: number; total: number }) => void) => {
+    const fn = (_: unknown, payload: { indexed: number; total: number }) => cb(payload);
+    ipcRenderer.on('arc:ai-index-complete', fn);
+    return () => ipcRenderer.removeListener('arc:ai-index-complete', fn);
+  },
+  onAiError: (cb: (detail: { message: string; fallback?: boolean }) => void) => {
+    const fn = (_: unknown, payload: { message: string; fallback?: boolean }) => cb(payload);
+    ipcRenderer.on('arc:ai-error', fn);
+    return () => ipcRenderer.removeListener('arc:ai-error', fn);
   }
 });

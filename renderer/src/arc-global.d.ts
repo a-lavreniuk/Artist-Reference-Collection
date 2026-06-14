@@ -223,6 +223,50 @@ declare global {
       onUpdateDownloadProgress?: (cb: (detail: { percent: number }) => void) => () => void;
       onUpdateDownloaded?: (cb: () => void) => () => void;
       onUpdateError?: (cb: (detail: { message: string }) => void) => () => void;
+
+      aiGetStatus?: () => Promise<import('./services/aiTypes').AiStatus>;
+      aiDetectHardware?: () => Promise<import('./services/aiTypes').AiHardwareInfo>;
+      aiDownloadModel?: (
+        tier: 'light' | 'heavy'
+      ) => Promise<{ ok: true; modelId: string; tier: string } | { ok: false; error: string }>;
+      aiDownloadLlamaRuntime?: (payload: {
+        variant: 'cpu' | 'cuda';
+        tier: 'light' | 'heavy';
+      }) => Promise<{ ok: true; variant: string } | { ok: false; error: string }>;
+      aiCancelDownload?: () => Promise<{ ok: true }>;
+      aiPauseDownload?: () => Promise<{ ok: true }>;
+      aiResumeDownload?: () => Promise<{ ok: true }>;
+      aiSearch?: (query: string) => Promise<Array<{ cardId: string; score: number }>>;
+      aiSearchCards?: (query: string) => Promise<Array<import('./services/arcSchema').CardRecord & { aiScore?: number }>>;
+      aiReindex?: () => Promise<{ ok: true }>;
+      aiPauseIndex?: () => Promise<{ ok: true }>;
+      aiResumeIndex?: () => Promise<{ ok: true }>;
+      aiSetEnabled?: (payload: Record<string, unknown>) => Promise<import('./services/aiTypes').AiStatus>;
+      aiDeleteModel?: (tier: 'light' | 'heavy') => Promise<import('./services/aiTypes').AiStatus>;
+      aiUpdateModel?: (
+        tier: 'light' | 'heavy'
+      ) => Promise<{ ok: true; modelId: string; tier: string } | { ok: false; error: string }>;
+      aiTestModel?: (
+        tier: 'light' | 'heavy'
+      ) => Promise<{ ok: boolean; message: string; vectorDim?: number }>;
+      aiSetActiveModel?: (tier: 'light' | 'heavy') => Promise<import('./services/aiTypes').AiStatus>;
+      onAiDownloadProgress?: (cb: (detail: {
+        tier: string;
+        percent: number;
+        bytesReceived?: number;
+        bytesTotal?: number;
+        phase?: 'runtime' | 'model' | 'finalize';
+      }) => void) => () => void;
+      onAiDownloadComplete?: (cb: (detail: { tier: string }) => void) => () => void;
+      onAiIndexProgress?: (cb: (detail: {
+        done: number;
+        total: number;
+        running?: boolean;
+        currentCardId?: string | null;
+        currentCardProgress?: number | null;
+      }) => void) => () => void;
+      onAiIndexComplete?: (cb: (detail: { indexed: number; total: number }) => void) => () => void;
+      onAiError?: (cb: (detail: { message: string; fallback?: boolean }) => void) => () => void;
     };
   }
 }

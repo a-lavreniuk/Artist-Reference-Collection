@@ -5,28 +5,28 @@ import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import SettingsSidebarNavItem from './SettingsSidebarNavItem';
 
 const PRODUCT_SECTIONS = [
-  { key: 'general', to: '/settings/general', label: 'Общие', iconClass: 'arc-icon-edit' },
-  { key: 'screenshots', to: '/settings/screenshots', label: 'Скриншоты', iconClass: 'arc-icon-images' },
-  { key: 'notifications', to: '/settings/notifications', label: 'Уведомления', iconClass: 'arc-icon-eye' },
-  { key: 'shortcuts', to: '/settings/shortcuts', label: 'Горячие клавиши', iconClass: 'arc-icon-cursor' }
+  { key: 'general', to: '/settings/general', label: 'Общие', iconClass: 'arc-icon-settings' },
+  { key: 'screenshots', to: '/settings/screenshots', label: 'Скриншоты', iconClass: 'arc-icon-screenshot' },
+  { key: 'notifications', to: '/settings/notifications', label: 'Уведомления', iconClass: 'arc-icon-notifications' },
+  { key: 'shortcuts', to: '/settings/shortcuts', label: 'Горячие клавиши', iconClass: 'arc-icon-shortcut' }
 ] as const;
 
 const LIBRARY_SECTIONS = [
-  { key: 'library', to: '/settings/library', label: 'Библиотека', iconClass: 'arc-icon-hard-drive' },
-  { key: 'backup', to: '/settings/backup', label: 'Резервная копия', iconClass: 'arc-icon-copy' },
-  { key: 'integrity', to: '/settings/integrity', label: 'Проверка целостности', iconClass: 'arc-icon-description' }
+  { key: 'library', to: '/settings/library', label: 'Библиотека', iconClass: 'arc-icon-library' },
+  { key: 'backup', to: '/settings/backup', label: 'Резервная копия', iconClass: 'arc-icon-copy-s' },
+  { key: 'integrity', to: '/settings/integrity', label: 'Проверка целостности', iconClass: 'arc-icon-integrity-check' }
 ] as const;
 
 const ADVANCED_SECTIONS = [
-  { key: 'auto-import', to: '/settings/auto-import', label: 'Автоимпорт', iconClass: 'arc-icon-download' },
-  { key: 'ai-search', to: '/settings/ai-search', label: 'AI Поиск', iconClass: 'arc-icon-predictable' }
+  { key: 'auto-import', to: '/settings/auto-import', label: 'Автоимпорт', iconClass: 'arc-icon-autoimport' },
+  { key: 'ai-search', to: '/settings/ai-search', label: 'AI Поиск', iconClass: 'arc-icon-ai' }
 ] as const;
 
 const UPDATES_SECTION = {
   key: 'updates',
   to: '/settings/updates',
   label: 'Обновления',
-  iconClass: 'arc-icon-arrow-up'
+  iconClass: 'arc-icon-update'
 } as const;
 
 export default function SettingsPageSidebar() {

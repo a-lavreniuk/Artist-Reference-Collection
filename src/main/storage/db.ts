@@ -3,6 +3,7 @@ import { mkdirSync } from 'fs';
 import path from 'path';
 import { INDEX_DB_FILENAME, libraryMetaFileAbs } from '../libraryFilenames';
 import { ensureCardsFtsSchema } from './cardFts';
+import { ensureCardEmbeddingsSchema } from './cardEmbeddings';
 import { STORAGE_SCHEMA_VERSION } from './types';
 
 const SCHEMA_SQL = `
@@ -108,6 +109,12 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'cards', 'duration_ms')) {
     db.exec('ALTER TABLE cards ADD COLUMN duration_ms INTEGER');
   }
+  if (!tableHasColumn(db, 'cards', 'ai_caption')) {
+    db.exec('ALTER TABLE cards ADD COLUMN ai_caption TEXT');
+  }
+  if (!tableHasColumn(db, 'cards', 'ai_caption_at')) {
+    db.exec('ALTER TABLE cards ADD COLUMN ai_caption_at TEXT');
+  }
   if (!tableHasColumn(db, 'categories', 'description')) {
     db.exec('ALTER TABLE categories ADD COLUMN description TEXT');
   }
@@ -130,6 +137,7 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   db.exec('CREATE INDEX IF NOT EXISTS idx_collections_sort ON collections(sort_index)');
 
   ensureCardsFtsSchema(db);
+  ensureCardEmbeddingsSchema(db);
 
   // .gif classified as video per product spec
   db.prepare("UPDATE cards SET type = 'video' WHERE LOWER(COALESCE(format, '')) = 'gif' AND type = 'image'").run();

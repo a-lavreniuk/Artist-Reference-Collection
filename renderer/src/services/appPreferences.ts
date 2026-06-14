@@ -1,5 +1,6 @@
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
+export type AiModelTier = 'light' | 'heavy';
 
 export type NotificationPrefKey =
   | 'notifyScreenshotSaved'
@@ -26,6 +27,13 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  aiSemanticSearchEnabled: boolean;
+  aiModelTier: AiModelTier;
+  aiThreads: number;
+  aiGpuLayers: number;
+  aiMaxRamMb: number;
+  aiResourcePreset: number;
+  aiSearchStrictness: number;
 };
 
 export function defaultAppPreferences(): AppPreferencesV1 {
@@ -47,7 +55,14 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     notifySoundEnabled: true,
     autoImportEnabled: false,
     autoImportFolderPath: null,
-    autoImportSourceFilesAction: 'ask'
+    autoImportSourceFilesAction: 'ask',
+    aiSemanticSearchEnabled: false,
+    aiModelTier: 'light',
+    aiThreads: 4,
+    aiGpuLayers: 0,
+    aiMaxRamMb: 4096,
+    aiResourcePreset: 50,
+    aiSearchStrictness: 50
   };
 }
 

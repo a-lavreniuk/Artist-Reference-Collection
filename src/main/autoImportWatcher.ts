@@ -192,6 +192,7 @@ async function processQueue(): Promise<void> {
 
       const total = batch.length;
       const batchSuccessPaths: string[] = [];
+      const batchImportedIds: string[] = [];
 
       for (let i = 0; i < batch.length; i++) {
         sessionAttempted += 1;
@@ -203,6 +204,7 @@ async function processQueue(): Promise<void> {
         const result = await importMediaFile(libraryRoot, batch[i]);
         if (result.ok) {
           batchSuccessPaths.push(batch[i]);
+          batchImportedIds.push(result.row.id);
           sessionSuccessPaths.push(batch[i]);
           sessionImported += 1;
         }
@@ -218,6 +220,11 @@ async function processQueue(): Promise<void> {
         total,
         sourcePaths: batchSuccessPaths
       });
+
+      if (batchImportedIds.length > 0) {
+        const { queueCardsForIndexing } = await import('./ipcAi');
+        void queueCardsForIndexing(batchImportedIds);
+      }
     }
   } finally {
     processing = false;

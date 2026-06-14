@@ -7,6 +7,7 @@ import { registerScreenshotShortcut } from './screenshotShortcut';
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
+export type AiModelTier = 'light' | 'heavy';
 
 export type AppPreferencesV1 = {
   version: 1;
@@ -27,6 +28,13 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  aiSemanticSearchEnabled: boolean;
+  aiModelTier: AiModelTier;
+  aiThreads: number;
+  aiGpuLayers: number;
+  aiMaxRamMb: number;
+  aiResourcePreset: number;
+  aiSearchStrictness: number;
 };
 
 const FILENAME = 'arc-app-preferences.json';
@@ -53,7 +61,14 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     notifySoundEnabled: true,
     autoImportEnabled: false,
     autoImportFolderPath: null,
-    autoImportSourceFilesAction: 'ask'
+    autoImportSourceFilesAction: 'ask',
+    aiSemanticSearchEnabled: false,
+    aiModelTier: 'light',
+    aiThreads: 4,
+    aiGpuLayers: 0,
+    aiMaxRamMb: 4096,
+    aiResourcePreset: 50,
+    aiSearchStrictness: 50
   };
 }
 
@@ -69,6 +84,11 @@ function sanitizeImportAction(raw: unknown): ImportSourceFilesAction {
 function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
   if (raw === 'png' || raw === 'jpg' || raw === 'webp') return raw;
   return 'webp';
+}
+
+function sanitizeAiModelTier(raw: unknown): AiModelTier {
+  if (raw === 'medium' || raw === 'heavy') return 'heavy';
+  return 'light';
 }
 
 function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknown>): AppPreferencesV1 {
@@ -100,7 +120,23 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.autoImportFolderPath === 'string' && raw.autoImportFolderPath.trim()
         ? path.resolve(raw.autoImportFolderPath.trim())
         : d.autoImportFolderPath,
-    autoImportSourceFilesAction: sanitizeImportAction(raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction)
+    autoImportSourceFilesAction: sanitizeImportAction(raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction),
+    aiSemanticSearchEnabled:
+      typeof raw.aiSemanticSearchEnabled === 'boolean' ? raw.aiSemanticSearchEnabled : d.aiSemanticSearchEnabled,
+    aiModelTier: sanitizeAiModelTier(raw.aiModelTier ?? d.aiModelTier),
+    aiThreads: typeof raw.aiThreads === 'number' ? Math.max(1, Math.min(32, Math.round(raw.aiThreads))) : d.aiThreads,
+    aiGpuLayers:
+      typeof raw.aiGpuLayers === 'number' ? Math.max(0, Math.min(128, Math.round(raw.aiGpuLayers))) : d.aiGpuLayers,
+    aiMaxRamMb:
+      typeof raw.aiMaxRamMb === 'number' ? Math.max(512, Math.min(65536, Math.round(raw.aiMaxRamMb))) : d.aiMaxRamMb,
+    aiResourcePreset:
+      typeof raw.aiResourcePreset === 'number'
+        ? Math.max(10, Math.min(100, Math.round(raw.aiResourcePreset)))
+        : d.aiResourcePreset,
+    aiSearchStrictness:
+      typeof raw.aiSearchStrictness === 'number'
+        ? Math.max(0, Math.min(100, Math.round(raw.aiSearchStrictness / 5) * 5))
+        : d.aiSearchStrictness
   };
 }
 
@@ -161,6 +197,27 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = sanitizeImportAction(patch.autoImportSourceFilesAction);
+  }
+  if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
+    next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
+  }
+  if ('aiModelTier' in patch) {
+    next.aiModelTier = sanitizeAiModelTier(patch.aiModelTier);
+  }
+  if ('aiThreads' in patch && typeof patch.aiThreads === 'number') {
+    next.aiThreads = Math.max(1, Math.min(32, Math.round(patch.aiThreads)));
+  }
+  if ('aiGpuLayers' in patch && typeof patch.aiGpuLayers === 'number') {
+    next.aiGpuLayers = Math.max(0, Math.min(128, Math.round(patch.aiGpuLayers)));
+  }
+  if ('aiMaxRamMb' in patch && typeof patch.aiMaxRamMb === 'number') {
+    next.aiMaxRamMb = Math.max(512, Math.min(65536, Math.round(patch.aiMaxRamMb)));
+  }
+  if ('aiResourcePreset' in patch && typeof patch.aiResourcePreset === 'number') {
+    next.aiResourcePreset = Math.max(10, Math.min(100, Math.round(patch.aiResourcePreset)));
+  }
+  if ('aiSearchStrictness' in patch && typeof patch.aiSearchStrictness === 'number') {
+    next.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(patch.aiSearchStrictness / 5) * 5));
   }
 
   return next;

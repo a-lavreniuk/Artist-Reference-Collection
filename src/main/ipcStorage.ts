@@ -183,6 +183,14 @@ export function registerStorageIpc(
       results.push(await importMediaFile(root, paths[i]));
       broadcastImportProgress({ current: i + 1, total, message: `Добавлено ${i + 1} из ${total}` });
     }
+    const importedIds: string[] = [];
+    for (const result of results) {
+      if (result.ok) importedIds.push(result.row.id);
+    }
+    if (importedIds.length > 0) {
+      const { queueCardsForIndexing } = await import('./ipcAi');
+      void queueCardsForIndexing(importedIds);
+    }
     return results;
   });
 

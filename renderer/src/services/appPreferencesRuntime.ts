@@ -79,6 +79,28 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
   }
+  if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
+    next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
+  }
+  if ('aiModelTier' in patch) {
+    if (patch.aiModelTier === 'heavy' || patch.aiModelTier === 'light') {
+      next.aiModelTier = patch.aiModelTier;
+    } else if (patch.aiModelTier === 'medium') {
+      next.aiModelTier = 'heavy';
+    }
+  }
+  if ('aiThreads' in patch && typeof patch.aiThreads === 'number') {
+    next.aiThreads = Math.max(1, Math.min(32, Math.round(patch.aiThreads)));
+  }
+  if ('aiGpuLayers' in patch && typeof patch.aiGpuLayers === 'number') {
+    next.aiGpuLayers = Math.max(0, Math.min(128, Math.round(patch.aiGpuLayers)));
+  }
+  if ('aiMaxRamMb' in patch && typeof patch.aiMaxRamMb === 'number') {
+    next.aiMaxRamMb = Math.max(512, Math.min(65536, Math.round(patch.aiMaxRamMb)));
+  }
+  if ('aiResourcePreset' in patch && typeof patch.aiResourcePreset === 'number') {
+    next.aiResourcePreset = Math.max(10, Math.min(100, Math.round(patch.aiResourcePreset)));
+  }
 
   return next;
 }
@@ -140,6 +162,28 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
+  }
+  if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
+    next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
+  }
+  if ('aiModelTier' in patch) {
+    if (patch.aiModelTier === 'heavy' || patch.aiModelTier === 'light') {
+      next.aiModelTier = patch.aiModelTier;
+    } else if (patch.aiModelTier === 'medium') {
+      next.aiModelTier = 'heavy';
+    }
+  }
+  if ('aiThreads' in patch && typeof patch.aiThreads === 'number') {
+    next.aiThreads = Math.max(1, Math.min(32, Math.round(patch.aiThreads)));
+  }
+  if ('aiGpuLayers' in patch && typeof patch.aiGpuLayers === 'number') {
+    next.aiGpuLayers = Math.max(0, Math.min(128, Math.round(patch.aiGpuLayers)));
+  }
+  if ('aiMaxRamMb' in patch && typeof patch.aiMaxRamMb === 'number') {
+    next.aiMaxRamMb = Math.max(512, Math.min(65536, Math.round(patch.aiMaxRamMb)));
+  }
+  if ('aiResourcePreset' in patch && typeof patch.aiResourcePreset === 'number') {
+    next.aiResourcePreset = Math.max(10, Math.min(100, Math.round(patch.aiResourcePreset)));
   }
 
   return next;

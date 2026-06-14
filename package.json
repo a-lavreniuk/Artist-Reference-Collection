@@ -13,10 +13,11 @@
     "dist:win": "npm run build && electron-builder --win",
     "publish:win": "npm run build && electron-builder --win --publish always",
     "renderer:dev": "vite --config renderer/vite.config.ts",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3,sharp",
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3,sharp,node-llama-cpp",
     "electron:dev": "npm run build:main && npm run build:preload && npm run rebuild:native && wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
     "dev": "concurrently -k \"npm run renderer:dev\" \"npm run electron:dev\"",
-    "postinstall": "electron-rebuild -f -w better-sqlite3,sharp"
+    "verify:ai-models": "node scripts/verify-ai-models.mjs",
+    "postinstall": "electron-rebuild -f -w better-sqlite3,sharp,node-llama-cpp"
   },
   "keywords": [],
   "author": "",
@@ -43,6 +44,8 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
+    "@xenova/transformers": "^2.17.2",
+    "node-llama-cpp": "^3.14.0",
     "electron-updater": "^6.6.2",
     "ffmpeg-static": "^5.3.0",
     "ffprobe-static": "^3.1.0",

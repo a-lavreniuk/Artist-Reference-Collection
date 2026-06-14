@@ -32,7 +32,6 @@ body.arc-search-panel-open .arc-gallery-card-wrap {
   flex-direction: column;
   width: 100%;
   gap: var(--s-1);
-  /* Выше backdrop (25): клик по чипам/полю не уходит в «пустой» слой и не закрывает панель */
   position: relative;
   z-index: 26;
 }

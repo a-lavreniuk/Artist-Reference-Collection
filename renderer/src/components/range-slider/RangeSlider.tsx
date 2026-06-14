@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { valueFromClientX } from './rangeSliderMath';
+
 export type RangeSliderSize = 's' | 'm' | 'l';
 
 type Props = {
@@ -41,22 +43,10 @@ export default function RangeSlider({
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeThumb, setActiveThumb] = useState<'min' | 'max' | null>(null);
 
-  const snapToStep = useCallback(
-    (value: number) => {
-      const steps = Math.round((value - min) / step);
-      return Math.max(min, Math.min(max, min + steps * step));
-    },
+  const readValueFromClientX = useCallback(
+    (clientX: number) =>
+      valueFromClientX(clientX, trackRef.current?.getBoundingClientRect(), min, max, step),
     [max, min, step]
-  );
-
-  const valueFromClientX = useCallback(
-    (clientX: number) => {
-      const rect = trackRef.current?.getBoundingClientRect();
-      if (!rect || rect.width <= 0) return min;
-      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      return snapToStep(min + ratio * span);
-    },
-    [min, snapToStep, span]
   );
 
   useEffect(() => {
@@ -75,7 +65,8 @@ export default function RangeSlider({
     const target = e.target as HTMLElement;
     if (target.classList.contains('arc-range-slider__thumb')) return;
 
-    const clickValue = valueFromClientX(e.clientX);
+    const clickValue = readValueFromClientX(e.clientX);
+
     const distMin = Math.abs(clickValue - lo);
     const distMax = Math.abs(clickValue - hi);
 

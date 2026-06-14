@@ -14,6 +14,7 @@ import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screens
 import { registerDuplicateScanIpc } from './duplicateFileScan';
 import { bindMainWindow, registerWindowChromeIpc } from './windowChrome';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
+import { registerAiIpc, scheduleIdleIndexing, shutdownAiWorker } from './ipcAi';
 import {
   clearSessionWindowSize,
   setSessionWindowSize,
@@ -118,8 +119,12 @@ app.whenReady().then(() => {
   registerAutoImportIpc();
   void applyStoredLaunchAtLogin();
   void applyStoredScreenshotShortcut();
-  void readAppPreferences().then(() => restartAutoImportWatcher());
+  void readAppPreferences().then((prefs) => {
+    restartAutoImportWatcher();
+    if (prefs.aiSemanticSearchEnabled) scheduleIdleIndexing();
+  });
   registerArcUpdaterIpc();
+  registerAiIpc();
   registerDevToolsShortcuts();
   createWindow();
   createAppTray();
@@ -143,5 +148,6 @@ app.on('will-quit', () => {
   unregisterDevToolsShortcuts();
   unregisterScreenshotShortcut();
   destroyScreenshotOverlay();
+  shutdownAiWorker();
   void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());
 });

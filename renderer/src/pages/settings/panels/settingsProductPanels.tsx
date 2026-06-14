@@ -1,4 +1,4 @@
-import SettingsPanelStub from '../../../components/settings/SettingsPanelStub';
+import SettingsAiSearchPanel from './SettingsAiSearchPanel';
 import SettingsGeneralPanel from './SettingsGeneralPanel';
 import SettingsNotificationsPanel from './SettingsNotificationsPanel';
 import SettingsScreenshotsPanel from './SettingsScreenshotsPanel';
@@ -26,6 +26,8 @@ export { default as SettingsIntegrityPanel } from './SettingsIntegrityPanel';
 export { default as SettingsAutoImportPanel } from './SettingsAutoImportPanel';
 export { default as SettingsUpdatesPanel } from './SettingsUpdatesPanel';
 
-export function SettingsAiSearchPanel() {
-  return <SettingsPanelStub title="AI Поиск" />;
+export function SettingsAiSearchPanelRoute() {
+  return <SettingsAiSearchPanel />;
 }
+
+export { SettingsAiSearchPanelRoute as SettingsAiSearchPanel };

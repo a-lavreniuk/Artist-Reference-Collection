@@ -28,7 +28,20 @@ import {
   removeRecentTagId
 } from '../../search/recentSearchTags';
 import SearchPanelTagChip from './SearchPanelTagChip';
+import NavbarSearchModes from './NavbarSearchModes';
 import { formatNavbarTabCount } from '../../search/formatNavbarTabCount';
+import {
+  readNavbarSearchMode,
+  SEARCH_MODE_META,
+  type NavbarSearchMode,
+  writeNavbarSearchMode
+} from '../../search/navbarSearchMode';
+import { useAppPreferences } from '../../hooks/useAppPreferences';
+import {
+  ARC_SEARCH_QUERY_AI,
+  parseSearchAiQuery,
+  setSearchAiInParams
+} from '../../search/searchUrl';
 
 export { formatNavbarTabCount } from '../../search/formatNavbarTabCount';
 
@@ -50,6 +63,11 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
 
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdFilter = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
+  const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
+
+  const [searchMode, setSearchMode] = useState<NavbarSearchMode>(() => readNavbarSearchMode());
+  const { prefs, ready: prefsReady } = useAppPreferences();
+  const aiSearchEnabled = prefsReady && prefs?.aiSemanticSearchEnabled === true;
 
   const [draft, setDraft] = useState('');
   const [panelOpen, setPanelOpen] = useState(false);
@@ -72,6 +90,13 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   }, [tagsVersion]);
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+
+  useEffect(() => {
+    if (!aiSearchEnabled && searchMode === 'ai') {
+      setSearchMode('tags');
+      writeNavbarSearchMode('tags');
+    }
+  }, [aiSearchEnabled, searchMode]);
 
   const loadIndex = useCallback(async () => {
     const cats = await getAllCategories();
@@ -221,10 +246,38 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     const n = new URLSearchParams(searchParams);
     n.delete(ARC_SEARCH_QUERY_TAG);
     n.delete(ARC_SEARCH_QUERY_CARD);
+    n.delete(ARC_SEARCH_QUERY_AI);
     n.delete(ARC_DETAIL_QUERY_CARD);
     setSearchParams(n, { replace: true });
     setDraft('');
     setFieldError(false);
+  };
+
+  const applyAiQuery = (raw: string) => {
+    const query = raw.trim();
+    if (!query) return;
+    panelHadInteraction.current = true;
+    setSearchParams(setSearchAiInParams(searchParams, query), { replace: true });
+    setDraft('');
+    setFieldError(false);
+    closePanel();
+    navigateToSearchHost();
+  };
+
+  const handleModeChange = (mode: NavbarSearchMode) => {
+    setSearchMode(mode);
+    writeNavbarSearchMode(mode);
+    if (mode === 'ai') {
+      setPanelOpen(false);
+      const n = new URLSearchParams(searchParams);
+      n.delete(ARC_SEARCH_QUERY_TAG);
+      n.delete(ARC_SEARCH_QUERY_CARD);
+      setSearchParams(n, { replace: true });
+      return;
+    }
+    const n = new URLSearchParams(searchParams);
+    n.delete(ARC_SEARCH_QUERY_AI);
+    setSearchParams(n, { replace: true });
   };
 
   const applyCardIdFilter = (raw: string) => {
@@ -269,6 +322,14 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (searchMode === 'ai') {
+        if (draft.trim().length > 0) {
+          applyAiQuery(draft);
+        } else if (fieldError) {
+          setFieldError(true);
+        }
+        return;
+      }
       if (UUID_LIKE.test(draft.trim())) {
         applyCardIdFilter(draft.trim());
         closePanel();
@@ -281,8 +342,15 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     }
   };
 
+  const placeholder = SEARCH_MODE_META[searchMode].placeholder;
+  const isTagsMode = searchMode === 'tags';
+  const isAiMode = searchMode === 'ai';
+
   const hasValue =
-    draft.trim().length > 0 || selectedTagIds.length > 0 || Boolean(cardIdFilter);
+    draft.trim().length > 0 ||
+    selectedTagIds.length > 0 ||
+    Boolean(cardIdFilter) ||
+    Boolean(aiQuery);
 
   const recentIds = useMemo(() => getRecentTagIds(), [panelOpen, tagsVersion, recentTick]);
 
@@ -291,14 +359,17 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   return (
     <>
       <div className="arc-navbar-search-anchor" ref={searchAnchorRef}>
-      <div className="arc-navbar-search-stack">
+      <div className="arc-navbar-search-row">
+        <NavbarSearchModes mode={searchMode} aiSearchEnabled={aiSearchEnabled} onModeChange={handleModeChange} />
+        <div className="arc-navbar-search-stack">
         <div
           className={`field field-full search-multiselect-live arc-navbar-search-live${hasValue ? ' has-value' : ''}${fieldError ? ' field-error' : ''}`}
           data-live-search-multi
         >
           <div className="input search-multiselect input--size-l input-slots arc-navbar-search">
             <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
-            {selectedTagIds.map((id) => {
+            {isTagsMode
+              ? selectedTagIds.map((id) => {
               const t = tagsIndex.get(id);
               const cat = t ? categoryById.get(t.categoryId) : undefined;
               const color = cat?.colorHex ?? 'var(--gray-500)';
@@ -328,8 +399,9 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
                   </span>
                 </span>
               );
-            })}
-            {cardIdFilter ? (
+            })
+              : null}
+            {isTagsMode && cardIdFilter ? (
               <span
                 role="button"
                 tabIndex={0}
@@ -354,10 +426,16 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
                 </span>
               </span>
             ) : null}
+            {isAiMode && aiQuery ? (
+              <span className="chip chip-active" aria-label="AI запрос">
+                <span className="chip-color" style={{ background: 'var(--brand-500)' }} aria-hidden="true" />
+                <span>{aiQuery.length > 48 ? `${aiQuery.slice(0, 48)}…` : aiQuery}</span>
+              </span>
+            ) : null}
             <input
               className="search-inner slot-value"
               type="text"
-              placeholder="Поиск по названиям меток или ID карточки…"
+              placeholder={placeholder}
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
@@ -365,10 +443,10 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
               }}
               onKeyDown={onInputKeyDown}
               onFocus={() => {
-                openPanel();
+                if (isTagsMode) openPanel();
               }}
               onClick={() => {
-                openPanel();
+                if (isTagsMode) openPanel();
               }}
             />
             <button
@@ -379,9 +457,10 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
             />
           </div>
         </div>
+        </div>
       </div>
 
-      {panelOpen && dropdownLayout ? (
+      {isTagsMode && panelOpen && dropdownLayout ? (
         <>
           <button
             type="button"

@@ -2572,6 +2572,23 @@ button.input {
   z-index: 3;
 }
 
+.arc-range-slider[data-range-slider-variant="single"] .arc-range-slider__fill {
+  left: 0;
+  min-width: calc(var(--range-slider-thumb-w) + var(--range-slider-pin-inset) * 2);
+}
+
+.arc-range-slider__thumb--value {
+  z-index: 2;
+}
+
+.arc-range-slider[data-active-thumb="value"] .arc-range-slider__thumb--value {
+  z-index: 3;
+}
+
+.arc-range-slider__values--single {
+  justify-content: flex-end;
+}
+
 .arc-range-slider__values {
   display: flex;
   justify-content: space-between;

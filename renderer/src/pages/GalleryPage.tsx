@@ -44,7 +44,8 @@ import { parseLibraryScope } from '../search/libraryScopeUrl';
 
 import { useOpenCardUrl } from '../search/openCardUrl';
 
-import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
+import { parseSearchCardId, parseSearchTagIds, parseSearchAiQuery } from '../search/searchUrl';
+import { useAiGalleryFeed } from '../components/gallery/useAiGalleryFeed';
 
 import ConfirmModal from './settings/ConfirmModal';
 
@@ -62,6 +63,9 @@ export default function GalleryPage() {
   const navigate = useNavigate();
 
   const { filters, sort } = useGalleryFilters();
+
+  const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
+  const isAiSearch = Boolean(aiQuery);
 
   const feedQuery = useMemo<GalleryFeedQuery>(
 
@@ -93,7 +97,8 @@ export default function GalleryPage() {
 
   });
 
-  const hasSearchFilters = feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact);
+  const hasSearchFilters =
+    feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact) || isAiSearch;
 
   const [ready, setReady] = useState(false);
 
@@ -117,13 +122,10 @@ export default function GalleryPage() {
 
 
 
-  const { cards, srcMap, hasMore, loading, booting, loadMore, reloadFromStart } = useGalleryFeed(
-
-    feedQuery,
-
-    ready
-
-  );
+  const galleryFeed = useGalleryFeed(feedQuery, ready && !isAiSearch);
+  const aiFeed = useAiGalleryFeed(aiQuery, ready && isAiSearch);
+  const { cards, srcMap, hasMore, loading, booting, loadMore, reloadFromStart } = isAiSearch ? aiFeed : galleryFeed;
+  const aiSearchError = isAiSearch ? aiFeed.error : null;
 
 
 
@@ -272,7 +274,12 @@ export default function GalleryPage() {
 
           <div className="arc-page-empty panel elevation-default">
 
-            <p className="typo-p-m">Карточки не найдены. Измените фильтры поиска или сбросьте метки.</p>
+            <p className="typo-p-m">
+              {isAiSearch
+                ? aiSearchError ||
+                  'Карточки не найдены. Измените описание или дождитесь завершения индексации в «Настройки → AI Поиск».'
+                : 'Карточки не найдены. Измените фильтры поиска или сбросьте метки.'}
+            </p>
 
           </div>
 
@@ -322,7 +329,7 @@ export default function GalleryPage() {
 
     return null;
 
-  }, [ready, booting, cards.length, loading, hasSearchFilters, feedQuery.libraryScope]);
+  }, [ready, booting, cards.length, loading, hasSearchFilters, feedQuery.libraryScope, isAiSearch, aiSearchError]);
 
 
 
