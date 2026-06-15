@@ -817,7 +817,7 @@ button.color-swatch-inline:disabled {
   transform: rotate(90deg);
 }
 
-/* Галерея: masonry, column-count по data-grid-size (L/M/S) */
+/* Галерея: JS-masonry (раскладка в MasonryGrid) */
 .arc-gallery-page {
   display: flex;
   flex-direction: column;
@@ -827,83 +827,38 @@ button.color-swatch-inline:disabled {
 }
 
 .arc-gallery-masonry {
-  column-gap: var(--s-4);
+  width: 100%;
 }
 
-[data-grid-size='l'] .arc-gallery-masonry {
-  column-count: 4;
+.arc-masonry-grid {
+  width: 100%;
+  transition: opacity var(--transition-base);
 }
 
-[data-grid-size='m'] .arc-gallery-masonry {
-  column-count: 6;
+.arc-masonry-grid--resizing {
+  opacity: 0.72;
 }
 
-[data-grid-size='s'] .arc-gallery-masonry {
-  column-count: 8;
+.arc-masonry-item {
+  box-sizing: border-box;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-@media (max-width: 1440px) {
-  [data-grid-size='l'] .arc-gallery-masonry {
-    column-count: 4;
-  }
-
-  [data-grid-size='m'] .arc-gallery-masonry {
-    column-count: 5;
-  }
-
-  [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 6;
-  }
+.arc-masonry-item--entering {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
-@media (max-width: 1400px) {
-  [data-grid-size='l'] .arc-gallery-masonry {
-    column-count: 4;
-  }
-
-  [data-grid-size='m'] .arc-gallery-masonry {
-    column-count: 5;
-  }
-
-  [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 5;
-  }
+.arc-masonry-grid .arc-gallery-card-wrap {
+  margin-bottom: 0;
+  width: 100%;
+  break-inside: auto;
 }
 
-@media (max-width: 1200px) {
-  [data-grid-size='l'] .arc-gallery-masonry {
-    column-count: 3;
-  }
-
-  [data-grid-size='m'] .arc-gallery-masonry {
-    column-count: 4;
-  }
-
-  [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 4;
-  }
-}
-
-@media (max-width: 900px) {
-  [data-grid-size='l'] .arc-gallery-masonry {
-    column-count: 2;
-  }
-
-  [data-grid-size='m'] .arc-gallery-masonry {
-    column-count: 3;
-  }
-
-  [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 3;
-  }
-}
-
-@media (max-width: 600px) {
-  [data-grid-size='l'] .arc-gallery-masonry,
-  [data-grid-size='m'] .arc-gallery-masonry,
-  [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 2;
-  }
+.arc-masonry-item--skeleton .arc-gallery-skeleton {
+  border-radius: var(--radius-m);
 }
 
 .arc-gallery-card-wrap {
@@ -988,10 +943,51 @@ button.color-swatch-inline:disabled {
   transition: opacity var(--transition-fast), visibility var(--transition-fast);
 }
 
+.arc-scroll-to-top--center-outlet {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .arc-scroll-to-top.is-visible {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+/* Нижний shade галереи — аналог навбарного, слабее (64px) */
+.arc-gallery-bottom-shade {
+  --arc-gallery-bottom-shade-h: 64px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--arc-gallery-bottom-shade-h);
+  z-index: 8;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.arc-gallery-bottom-shade__blur {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.arc-gallery-bottom-shade__blur-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.arc-gallery-bottom-shade__tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(0deg, #000 0%, transparent 100%);
+  opacity: 0.6;
 }
 
 .arc-app-outlet:has(> .arc-collections-outlet.arc-collections-page) {
@@ -1176,47 +1172,6 @@ button.color-swatch-inline:disabled {
   min-height: 0;
 }
 
-/* Сетка коллекций: Grid M = 4 колонки в content area (Figma 1012:12142) */
-.arc-collections-page-main [data-grid-size='l'] .arc-gallery-masonry {
-  column-count: 3;
-}
-
-.arc-collections-page-main [data-grid-size='m'] .arc-gallery-masonry {
-  column-count: 4;
-}
-
-.arc-collections-page-main [data-grid-size='s'] .arc-gallery-masonry {
-  column-count: 5;
-}
-
-@media (max-width: 1440px) {
-  .arc-collections-page-main [data-grid-size='l'] .arc-gallery-masonry {
-    column-count: 3;
-  }
-
-  .arc-collections-page-main [data-grid-size='m'] .arc-gallery-masonry {
-    column-count: 4;
-  }
-
-  .arc-collections-page-main [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 4;
-  }
-}
-
-@media (max-width: 1200px) {
-  .arc-collections-page-main [data-grid-size='l'] .arc-gallery-masonry {
-    column-count: 2;
-  }
-
-  .arc-collections-page-main [data-grid-size='m'] .arc-gallery-masonry {
-    column-count: 3;
-  }
-
-  .arc-collections-page-main [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 3;
-  }
-}
-
 @media (max-width: 900px) {
   .arc-collections-page-main-row {
     flex-direction: column;
@@ -1231,12 +1186,6 @@ button.color-swatch-inline:disabled {
 
   .arc-layout-splitter {
     display: none;
-  }
-
-  .arc-collections-page-main [data-grid-size='l'] .arc-gallery-masonry,
-  .arc-collections-page-main [data-grid-size='m'] .arc-gallery-masonry,
-  .arc-collections-page-main [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 2;
   }
 }
 
@@ -1254,14 +1203,6 @@ button.color-swatch-inline:disabled {
 
 .arc-page-empty {
   padding: var(--s-4);
-}
-
-@media (max-width: 600px) {
-  [data-grid-size='l'] .arc-gallery-masonry,
-  [data-grid-size='m'] .arc-gallery-masonry,
-  [data-grid-size='s'] .arc-gallery-masonry {
-    column-count: 2;
-  }
 }
 
 /* Доступность: заголовок только для скринридеров */
@@ -2423,47 +2364,6 @@ body.arc-card-detail-open .arc-app-outlet {
 
 .arc-card-similar-masonry {
   width: 100%;
-  column-gap: var(--s-4);
-}
-
-[data-grid-size='l'] .arc-card-similar-masonry {
-  column-count: 3;
-}
-
-[data-grid-size='m'] .arc-card-similar-masonry {
-  column-count: 5;
-}
-
-[data-grid-size='s'] .arc-card-similar-masonry {
-  column-count: 7;
-}
-
-@media (max-width: 1440px) {
-  [data-grid-size='l'] .arc-card-similar-masonry {
-    column-count: 3;
-  }
-
-  [data-grid-size='m'] .arc-card-similar-masonry {
-    column-count: 4;
-  }
-
-  [data-grid-size='s'] .arc-card-similar-masonry {
-    column-count: 5;
-  }
-}
-
-@media (max-width: 1400px) {
-  [data-grid-size='l'] .arc-card-similar-masonry {
-    column-count: 3;
-  }
-
-  [data-grid-size='m'] .arc-card-similar-masonry {
-    column-count: 4;
-  }
-
-  [data-grid-size='s'] .arc-card-similar-masonry {
-    column-count: 4;
-  }
 }
 
 @media (max-width: 1200px) {
@@ -2477,18 +2377,6 @@ body.arc-card-detail-open .arc-app-outlet {
       min(var(--arc-card-detail-settings-w, 600px), 38vw)
     );
     min-width: var(--arc-card-detail-settings-min-w, 588px);
-  }
-
-  [data-grid-size='l'] .arc-card-similar-masonry {
-    column-count: 2;
-  }
-
-  [data-grid-size='m'] .arc-card-similar-masonry {
-    column-count: 3;
-  }
-
-  [data-grid-size='s'] .arc-card-similar-masonry {
-    column-count: 3;
   }
 }
 
@@ -2516,16 +2404,10 @@ body.arc-card-detail-open .arc-app-outlet {
   .arc-card-detail-splitter {
     display: none;
   }
-
-  [data-grid-size='l'] .arc-card-similar-masonry,
-  [data-grid-size='m'] .arc-card-similar-masonry,
-  [data-grid-size='s'] .arc-card-similar-masonry {
-    column-count: 2;
-  }
 }
 
 .arc-card-similar-tile.arc-gallery-card-wrap {
-  margin-bottom: var(--s-4);
+  margin-bottom: 0;
   border-radius: var(--radius-s);
 }
 

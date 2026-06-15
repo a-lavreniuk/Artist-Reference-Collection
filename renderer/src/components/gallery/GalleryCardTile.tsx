@@ -1,33 +1,37 @@
-import { useLayoutEffect, useRef, useState } from 'react';
-import type { CardRecord } from '../../services/arcSchema';
+import { useState } from 'react';
+import type { CardRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 import GalleryThumb from './GalleryThumb';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import { cardFileFormatLabel } from '../../utils/cardFileFormatLabel';
+import { useLayoutEffect, useRef } from 'react';
 
 type Props = {
   card: CardRecord;
-  src: string | null | undefined;
-  onPick: () => void;
-  onFindSimilar?: (cardId: string) => void;
+  thumbSrc?: string;
   inMoodboard?: boolean;
+  onOpenCard: (id: string) => void;
+  onFindSimilar?: (cardId: string) => void;
   onToggleMoodboard?: (cardId: string) => void | Promise<void>;
+  moodboardEnabled?: boolean;
+  tileClassName?: string;
 };
 
-export default function CardDetailSimilarThumb({
+export default function GalleryCardTile({
   card,
-  src,
-  onPick,
-  onFindSimilar,
+  thumbSrc,
   inMoodboard = false,
-  onToggleMoodboard
+  onOpenCard,
+  onFindSimilar,
+  onToggleMoodboard,
+  moodboardEnabled = false,
+  tileClassName = ''
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
-  const moodboardEnabled = Boolean(onToggleMoodboard);
+  const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState(false);
 
-  const bookmarkIconClass = isBookmarkHovered
+  const iconClass = hoveredBookmarkCardId
     ? inMoodboard
       ? 'arc-icon-bookmark-minus'
       : 'arc-icon-bookmark-plus'
@@ -36,20 +40,22 @@ export default function CardDetailSimilarThumb({
   const formatLabel = cardFileFormatLabel(card);
 
   useLayoutEffect(() => {
-    if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [card.id, inMoodboard, isBookmarkHovered, src]);
+    if (rootRef.current) {
+      void hydrateArcNavbarIcons(rootRef.current);
+    }
+  }, [card.id, inMoodboard, hoveredBookmarkCardId, thumbSrc]);
 
   return (
     <div
       ref={rootRef}
       role="button"
       tabIndex={0}
-      className={`arc-gallery-card-wrap arc-card-similar-tile panel elevation-sunken${inMoodboard ? ' is-in-moodboard' : ''}`}
-      onClick={onPick}
+      className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}${tileClassName ? ` ${tileClassName}` : ''}`}
+      onClick={() => onOpenCard(card.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onPick();
+          onOpenCard(card.id);
         }
       }}
     >
@@ -61,10 +67,10 @@ export default function CardDetailSimilarThumb({
           <span className={`tab-icon ${mediaTypeIconClass}`} data-arc-icon-size="s" aria-hidden="true" />
           {formatLabel ? <span className="arc-gallery-card-badge-label">{formatLabel}</span> : null}
         </span>
-        {src ? (
-          <GalleryThumb card={card} src={src} />
+        {thumbSrc ? (
+          <GalleryThumb card={card} src={thumbSrc} />
         ) : (
-          <div className="arc-gallery-skeleton arc-card-similar-skeleton" style={gallerySkeletonStyle(card)} aria-hidden />
+          <div className="arc-gallery-skeleton" style={gallerySkeletonStyle(card)} aria-hidden />
         )}
         <span className="arc-gallery-card-overlay">
           <span className="arc-gallery-card-overlay-inner" data-btn-size="s">
@@ -83,22 +89,25 @@ export default function CardDetailSimilarThumb({
                 <span className="btn-ds__value">Найти похожее</span>
               </button>
             ) : null}
-            {moodboardEnabled ? (
-              <Tooltip content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'} position="top">
+            {moodboardEnabled && onToggleMoodboard ? (
+              <Tooltip
+                content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
+                position="top"
+              >
                 <button
                   type="button"
                   tabIndex={-1}
                   className="btn btn-outline btn-icon-only btn-ds arc-gallery-overlay-bookmark arc-card-slot-blur-btn"
                   aria-label={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
-                  onMouseEnter={() => setIsBookmarkHovered(true)}
-                  onMouseLeave={() => setIsBookmarkHovered(false)}
+                  onMouseEnter={() => setHoveredBookmarkCardId(true)}
+                  onMouseLeave={() => setHoveredBookmarkCardId(false)}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    void onToggleMoodboard!(card.id);
+                    void onToggleMoodboard(card.id);
                   }}
                 >
-                  <span className={`btn-icon-only__glyph ${bookmarkIconClass}`} aria-hidden="true" />
+                  <span className={`btn-icon-only__glyph ${iconClass}`} aria-hidden="true" />
                 </button>
               </Tooltip>
             ) : null}

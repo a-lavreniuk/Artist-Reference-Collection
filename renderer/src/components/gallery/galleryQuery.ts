@@ -31,7 +31,7 @@ export function buildGalleryQueryKey(query: GalleryFeedQuery): string {
 }
 
 export const GALLERY_PAGE_INITIAL = 50;
-export const GALLERY_PAGE_MORE = 25;
+export const GALLERY_PAGE_MORE = 35;
 
 export const GALLERY_WARMUP_SCOPES: readonly LibraryScope[] = ['all', 'untagged', 'trash'];
 

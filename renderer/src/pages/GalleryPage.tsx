@@ -12,6 +12,7 @@ import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/ga
 import CardInspectModal from '../components/gallery/CardInspectModal';
 
 import DemoAlert from '../components/layout/DemoAlert';
+import GalleryBottomShade from '../components/gallery/GalleryBottomShade';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 
 import MessageModal from '../components/layout/MessageModal';
@@ -105,6 +106,7 @@ export default function GalleryPage() {
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const scrollRootRef = useRef<HTMLElement | null>(null);
 
   const [tagsIndex, setTagsIndex] = useState<Map<string, TagRecord>>(new Map());
 
@@ -220,9 +222,14 @@ export default function GalleryPage() {
 
 
   useEffect(() => {
+    const outlet = document.querySelector('.arc-app-outlet');
+    if (outlet instanceof HTMLElement) scrollRootRef.current = outlet;
+  }, [ready]);
+
+  useEffect(() => {
 
     const el = sentinelRef.current;
-    const root = el?.closest('.arc-app-outlet');
+    const root = scrollRootRef.current ?? el?.closest('.arc-app-outlet');
 
     if (!el || !(root instanceof HTMLElement) || !ready || !hasMore || loading || booting) return;
 
@@ -236,7 +243,7 @@ export default function GalleryPage() {
 
       },
 
-      { root, rootMargin: '200px', threshold: 0 }
+      { root, rootMargin: '400px', threshold: 0 }
 
     );
 
@@ -383,6 +390,12 @@ export default function GalleryPage() {
 
             srcMap={srcMap}
 
+            scrollRootRef={scrollRootRef}
+
+            loadingMore={loading && hasMore}
+
+            busy={booting || loading}
+
             onOpenCard={openCard}
 
             moodboardCardIds={moodboardCardIds}
@@ -444,8 +457,6 @@ export default function GalleryPage() {
           />
 
           <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
-
-          {loading ? <p className="hint arc-gallery-loading">Загрузка…</p> : null}
 
         </>
 
@@ -575,7 +586,9 @@ export default function GalleryPage() {
 
       ) : null}
 
-      <ScrollToTopButton enabled={ready && cards.length > 0} />
+      {ready && cards.length > 0 ? <GalleryBottomShade /> : null}
+
+      <ScrollToTopButton enabled={ready && cards.length > 0} align="center-outlet" />
 
     </div>
 

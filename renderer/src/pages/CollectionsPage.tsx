@@ -51,7 +51,7 @@ import {
 } from '../services/db';
 
 const PAGE_INITIAL = 50;
-const PAGE_MORE = 25;
+const PAGE_MORE = 35;
 
 export default function CollectionsPage() {
   const { collectionId: routeCollectionId } = useParams<{ collectionId?: string }>();
@@ -84,6 +84,7 @@ export default function CollectionsPage() {
   const sidebarWidthRef = useRef(sidebarWidth);
   const pageRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const scrollRootRef = useRef<HTMLElement | null>(null);
   sidebarWidthRef.current = sidebarWidth;
 
   const activeCollectionId = routeCollectionId ?? null;
@@ -206,14 +207,20 @@ export default function CollectionsPage() {
   }, [activeCollectionId, loadPage, loadTagsIndex, loadMoodboard, loadMeta]);
 
   useEffect(() => {
+    const scrollEl = pageRef.current?.querySelector('.arc-collections-page-main__scroll');
+    if (scrollEl instanceof HTMLElement) scrollRootRef.current = scrollEl;
+  }, [activeCollectionId]);
+
+  useEffect(() => {
     const el = sentinelRef.current;
     if (!el || !activeCollectionId || !hasMore || loading) return;
+    const root = scrollRootRef.current;
     const io = new IntersectionObserver(
       (entries) => {
         const hit = entries.some((e) => e.isIntersecting);
         if (hit) void loadPage(activeCollectionId, offset, true);
       },
-      { root: null, rootMargin: '200px', threshold: 0 }
+      { root: root ?? null, rootMargin: '400px', threshold: 0 }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -358,6 +365,10 @@ export default function CollectionsPage() {
               <div className="arc-gallery-page arc-collections-gallery">
                 <GalleryBoard
                   cards={cards}
+                  variant="collections"
+                  scrollRootRef={scrollRootRef}
+                  loadingMore={loading && hasMore}
+                  busy={loading}
                   onOpenCard={openCard}
                   moodboardCardIds={moodboardCardIds}
                   onToggleMoodboard={async (id) => {
@@ -389,7 +400,6 @@ export default function CollectionsPage() {
                   }}
                 />
                 <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
-                {loading ? <p className="hint arc-gallery-loading">Загрузка…</p> : null}
               </div>
             )}
           </div>

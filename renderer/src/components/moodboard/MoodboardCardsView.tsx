@@ -24,7 +24,7 @@ import {
 } from '../../services/db';
 
 const PAGE_INITIAL = 50;
-const PAGE_MORE = 25;
+const PAGE_MORE = 35;
 
 export default function MoodboardCardsView() {
   const [searchParams] = useSearchParams();
@@ -44,6 +44,7 @@ export default function MoodboardCardsView() {
   const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
   const [removeConfirm, setRemoveConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const scrollRootRef = useRef<HTMLElement | null>(null);
 
   const loadMoodboard = useCallback(async () => {
     const ids = await getMoodboardCardIds();
@@ -117,14 +118,20 @@ export default function MoodboardCardsView() {
   }, [loadPage, loadTagsIndex, loadMoodboard]);
 
   useEffect(() => {
+    const outlet = document.querySelector('.arc-app-outlet');
+    if (outlet instanceof HTMLElement) scrollRootRef.current = outlet;
+  }, []);
+
+  useEffect(() => {
     const el = sentinelRef.current;
     if (!el || !hasMore || loading) return;
+    const root = scrollRootRef.current ?? el.closest('.arc-app-outlet');
     const io = new IntersectionObserver(
       (entries) => {
         const hit = entries.some((e) => e.isIntersecting);
         if (hit) void loadPage(offset, true);
       },
-      { root: null, rootMargin: '200px', threshold: 0 }
+      { root: root instanceof HTMLElement ? root : null, rootMargin: '400px', threshold: 0 }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -163,6 +170,9 @@ export default function MoodboardCardsView() {
         <>
           <GalleryBoard
             cards={cards}
+            scrollRootRef={scrollRootRef}
+            loadingMore={loading && hasMore}
+            busy={loading}
             onOpenCard={openCard}
             moodboardCardIds={moodboardCardIds}
             onToggleMoodboard={handleToggleMoodboard}
@@ -176,7 +186,6 @@ export default function MoodboardCardsView() {
             }}
           />
           <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
-          {loading ? <p className="hint arc-gallery-loading">Загрузка…</p> : null}
         </>
       )}
 

@@ -5,6 +5,7 @@ const SCROLL_VIEWPORT_MULTIPLIER = 2;
 
 type Props = {
   enabled?: boolean;
+  align?: 'end' | 'center-outlet';
 };
 
 function getScrollRoot(): HTMLElement | null {
@@ -15,7 +16,7 @@ function isReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-export default function ScrollToTopButton({ enabled = true }: Props) {
+export default function ScrollToTopButton({ enabled = true, align = 'end' }: Props) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -57,7 +58,7 @@ export default function ScrollToTopButton({ enabled = true }: Props) {
     <button
       ref={buttonRef}
       type="button"
-      className={`arc-scroll-to-top arc-ui-kit-scope btn btn-primary btn-ds btn-m${visible ? ' is-visible' : ''}`}
+      className={`arc-scroll-to-top arc-ui-kit-scope btn btn-primary btn-ds btn-m${align === 'center-outlet' ? ' arc-scroll-to-top--center-outlet' : ''}${visible ? ' is-visible' : ''}`}
       data-btn-size="m"
       aria-label="Вернуться наверх"
       aria-hidden={!visible}

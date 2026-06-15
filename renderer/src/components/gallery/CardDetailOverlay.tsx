@@ -18,7 +18,7 @@ import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
 import CardInfoModal from './CardInfoModal';
-import CardDetailSimilarThumb from './CardDetailSimilarThumb';
+import SimilarCardsMasonry from './SimilarCardsMasonry';
 import CardDetailTagsModal from './CardDetailTagsModal';
 import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import CardDetailCollectionStrip from './CardDetailCollectionStrip';
@@ -1115,19 +1115,15 @@ export default function CardDetailOverlay({
               <p className="text-l">Похожие изображения</p>
               <span className="text-s arc-card-detail-section-count">{similar.length}</span>
             </div>
-            <div className="arc-card-similar-masonry">
-              {similar.map((sc) => (
-                <CardDetailSimilarThumb
-                  key={sc.id}
-                  card={sc}
-                  src={similarSrcMap[sc.id]}
-                  onPick={() => onOpenCard(sc.id)}
-                  onFindSimilar={(id) => void handleSimilarFind(id)}
-                  inMoodboard={moodboardCardIds.has(sc.id)}
-                  onToggleMoodboard={inTrash ? undefined : (id) => void handleSimilarToggleMoodboard(id)}
-                />
-              ))}
-            </div>
+            <SimilarCardsMasonry
+              cards={similar}
+              srcMap={similarSrcMap}
+              moodboardCardIds={moodboardCardIds}
+              inTrash={inTrash}
+              onOpenCard={onOpenCard}
+              onFindSimilar={(id) => void handleSimilarFind(id)}
+              onToggleMoodboard={inTrash ? undefined : (id) => void handleSimilarToggleMoodboard(id)}
+            />
           </section>
         ) : null}
         </div>
