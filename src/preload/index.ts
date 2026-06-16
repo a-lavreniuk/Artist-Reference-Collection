@@ -289,6 +289,7 @@ contextBridge.exposeInMainWorld('arc', {
   },
 
   aiGetStatus: () => ipcRenderer.invoke('arc:ai-get-status'),
+  aiGetIndexStatus: () => ipcRenderer.invoke('arc:ai-get-index-status'),
   aiDetectHardware: () => ipcRenderer.invoke('arc:ai-detect-hardware'),
   aiDownloadModel: (tier: 'light' | 'heavy') =>
     ipcRenderer.invoke('arc:ai-download-model', tier) as Promise<

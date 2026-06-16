@@ -1,7 +1,7 @@
 import type { DemoAlertVariant } from '../../components/layout/DemoAlert';
 import type { AiModelTier } from '../../services/appPreferences';
 import { patchAppPreferences } from '../../services/appPreferencesRuntime';
-import type { AiStatus } from '../../services/aiTypes';
+import type { AiIndexStatus, AiStatus } from '../../services/aiTypes';
 
 type AlertState = { message: string; variant: DemoAlertVariant } | null;
 export type DownloadPhase = 'runtime' | 'model' | 'finalize' | null;
@@ -9,6 +9,16 @@ export type AiSetupPhase = 'off' | 'analyzing' | 'models' | 'ready';
 export type AiDownloadOperation = 'install' | 'update' | null;
 
 const RUNTIME_PROGRESS_WEIGHT = 40;
+const INDEX_PROGRESS_THROTTLE_MS = 300;
+const INDEX_FALLBACK_POLL_MS = 12_000;
+
+type IndexProgressPayload = {
+  done: number;
+  total: number;
+  running?: boolean;
+  currentCardId?: string | null;
+  currentCardProgress?: number | null;
+};
 
 export type CudaPromptState = {
   tier: AiModelTier;
@@ -31,9 +41,11 @@ type SessionState = {
   busy: boolean;
   testingTier: AiModelTier | null;
   downloadOperation: AiDownloadOperation;
+  indexEtaHint: string | null;
 };
 
 const listeners = new Set<() => void>();
+let subscriberCount = 0;
 let sessionInitialized = false;
 let downloadPollTimer: ReturnType<typeof setInterval> | null = null;
 let indexPollTimer: ReturnType<typeof setInterval> | null = null;
@@ -41,6 +53,9 @@ let cudaPromptResolver: ((install: boolean) => void) | null = null;
 let indexEtaSamples: Array<{ at: number; indexed: number }> = [];
 let lastDownloadSpeedSample: { at: number; bytes: number } | null = null;
 let smoothedDownloadSpeedMbps: number | null = null;
+let pendingIndexProgress: IndexProgressPayload | null = null;
+let indexProgressFlushTimer: ReturnType<typeof setTimeout> | null = null;
+let lastIndexProgressFlushAt = 0;
 
 let state: SessionState = {
   status: null,
@@ -56,7 +71,8 @@ let state: SessionState = {
   alert: null,
   busy: false,
   testingTier: null,
-  downloadOperation: null
+  downloadOperation: null,
+  indexEtaHint: null
 };
 
 function isVisionTier(tier: AiModelTier): tier is 'heavy' {
@@ -83,6 +99,7 @@ let cachedSnapshot: AiSettingsSnapshot = buildSnapshot();
 
 function notify(): void {
   cachedSnapshot = buildSnapshot();
+  if (subscriberCount === 0) return;
   listeners.forEach((listener) => listener());
 }
 
@@ -92,8 +109,17 @@ function patchState(partial: Partial<SessionState>): void {
 }
 
 export function subscribeAiSettings(listener: () => void): () => void {
+  subscriberCount += 1;
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+    subscriberCount = Math.max(0, subscriberCount - 1);
+    if (subscriberCount === 0) {
+      stopIndexPoll();
+      stopDownloadPoll();
+      clearIndexProgressFlush();
+    }
+  };
 }
 
 export function getAiSettingsSnapshot(): AiSettingsSnapshot {
@@ -215,7 +241,7 @@ export function resolveInstallStatus(snapshot: ReturnType<typeof getAiSettingsSn
   return { visible: true, percent: resolveDownloadPercent(snapshot) };
 }
 
-export function formatIndexEta(indexed: number, total: number): string | null {
+function recordIndexEtaHint(indexed: number, total: number): string | null {
   if (total <= 0 || indexed <= 0 || indexed >= total) return null;
   const now = Date.now();
   indexEtaSamples.push({ at: now, indexed });
@@ -232,14 +258,96 @@ export function formatIndexEta(indexed: number, total: number): string | null {
   return `${Math.max(1, Math.round(etaSec / 60))} мин`;
 }
 
+function clearIndexProgressFlush(): void {
+  if (indexProgressFlushTimer) {
+    clearTimeout(indexProgressFlushTimer);
+    indexProgressFlushTimer = null;
+  }
+  pendingIndexProgress = null;
+}
+
+function applyIndexProgress(payload: IndexProgressPayload): void {
+  const running = payload.running ?? payload.done < payload.total;
+  let nextEtaHint = state.indexEtaHint;
+  if (running) {
+    if (!state.status?.index.paused) {
+      const computed = recordIndexEtaHint(payload.done, payload.total);
+      if (computed) nextEtaHint = computed;
+    }
+  } else {
+    nextEtaHint = null;
+  }
+
+  patchState({
+    indexEtaHint: nextEtaHint,
+    status: state.status
+      ? {
+          ...state.status,
+          index: {
+            ...state.status.index,
+            indexed: payload.done,
+            total: payload.total,
+            running,
+            currentCardId: payload.currentCardId ?? state.status.index.currentCardId,
+            currentCardProgress:
+              payload.currentCardProgress == null
+                ? state.status.index.currentCardProgress
+                : payload.currentCardProgress
+          },
+          lastError: running ? null : state.status.lastError
+        }
+      : state.status
+  });
+
+  if (!running) {
+    indexEtaSamples = [];
+    clearIndexProgressFlush();
+  }
+
+  syncIndexPoll(state.status);
+}
+
+function flushIndexProgress(force = false): void {
+  if (!pendingIndexProgress) return;
+
+  const now = Date.now();
+  if (!force && now - lastIndexProgressFlushAt < INDEX_PROGRESS_THROTTLE_MS) {
+    if (!indexProgressFlushTimer) {
+      indexProgressFlushTimer = setTimeout(() => {
+        indexProgressFlushTimer = null;
+        flushIndexProgress(true);
+      }, INDEX_PROGRESS_THROTTLE_MS - (now - lastIndexProgressFlushAt));
+    }
+    return;
+  }
+
+  const payload = pendingIndexProgress;
+  pendingIndexProgress = null;
+  lastIndexProgressFlushAt = now;
+  if (indexProgressFlushTimer) {
+    clearTimeout(indexProgressFlushTimer);
+    indexProgressFlushTimer = null;
+  }
+  applyIndexProgress(payload);
+}
+
+function queueIndexProgress(payload: IndexProgressPayload): void {
+  pendingIndexProgress = payload;
+  const running = payload.running ?? payload.done < payload.total;
+  if (!running) {
+    flushIndexProgress(true);
+    return;
+  }
+  flushIndexProgress(false);
+}
+
 export function resolveIndexStatusLine(snapshot: ReturnType<typeof getAiSettingsSnapshot>): string | null {
   const index = snapshot.status?.index;
   if (!index) return null;
   if (index.running) {
     if (index.paused) return 'Индексация на паузе…';
     const pct = index.total > 0 ? Math.round((index.indexed / index.total) * 100) : 0;
-    const eta = formatIndexEta(index.indexed, index.total);
-    const etaPart = eta ? ` Осталось примерно ${eta}.` : '';
+    const etaPart = snapshot.indexEtaHint ? ` Осталось примерно ${snapshot.indexEtaHint}.` : '';
     return `Индексируется ${index.indexed.toLocaleString('ru-RU')} из ${index.total.toLocaleString('ru-RU')} карточек. ${pct}%.${etaPart}`;
   }
   if (index.total > 0 && index.indexed >= index.total && !index.running) {
@@ -454,17 +562,38 @@ function stopDownloadPoll(): void {
   downloadPollTimer = null;
 }
 
+function stopIndexPoll(): void {
+  if (!indexPollTimer) return;
+  clearInterval(indexPollTimer);
+  indexPollTimer = null;
+}
+
 function syncIndexPoll(status: AiStatus | null): void {
   if (status?.index.running) {
     if (indexPollTimer) return;
     indexPollTimer = setInterval(() => {
-      void refreshAiSettings();
-    }, 2000);
+      void refreshIndexStatusLightweight();
+    }, INDEX_FALLBACK_POLL_MS);
     return;
   }
-  if (indexPollTimer) {
-    clearInterval(indexPollTimer);
-    indexPollTimer = null;
+  stopIndexPoll();
+}
+
+async function refreshIndexStatusLightweight(): Promise<void> {
+  const arc = window.arc;
+  if (!arc?.aiGetIndexStatus || !state.status) return;
+
+  const index = (await arc.aiGetIndexStatus()) as AiIndexStatus;
+  patchState({
+    status: {
+      ...state.status,
+      index
+    },
+    indexEtaHint: index.running && !index.paused ? state.indexEtaHint : null
+  });
+  if (!index.running) {
+    indexEtaSamples = [];
+    stopIndexPoll();
   }
 }
 
@@ -614,30 +743,15 @@ export function initAiSettingsSession(): void {
   });
 
   arc.onAiIndexProgress?.(({ done, total, running, currentCardId, currentCardProgress }) => {
-    patchState({
-      status: state.status
-        ? {
-            ...state.status,
-            index: {
-              ...state.status.index,
-              indexed: done,
-              total,
-              running: running ?? done < total,
-              currentCardId: currentCardId ?? state.status.index.currentCardId,
-              currentCardProgress:
-                currentCardProgress == null ? state.status.index.currentCardProgress : currentCardProgress
-            },
-            lastError: running ? null : state.status.lastError
-          }
-        : state.status
-    });
-    syncIndexPoll(state.status);
+    queueIndexProgress({ done, total, running, currentCardId, currentCardProgress });
   });
 
   arc.onAiIndexComplete?.((payload) => {
     const indexed = typeof payload?.indexed === 'number' ? payload.indexed : state.status?.index.indexed ?? 0;
     const total = typeof payload?.total === 'number' ? payload.total : state.status?.index.total ?? 0;
+    indexEtaSamples = [];
     patchState({
+      indexEtaHint: null,
       alert: {
         message: `Индексация завершена: ${indexed} из ${total} карточек.`,
         variant: 'success'
@@ -796,6 +910,7 @@ export async function reindexAiLibrary(): Promise<void> {
 
   patchState({
     busy: true,
+    indexEtaHint: null,
     status: state.status
       ? {
           ...state.status,
@@ -803,6 +918,7 @@ export async function reindexAiLibrary(): Promise<void> {
         }
       : state.status
   });
+  indexEtaSamples = [];
   syncIndexPoll(state.status);
 
   try {

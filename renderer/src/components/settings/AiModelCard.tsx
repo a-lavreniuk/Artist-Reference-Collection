@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import ArcCheckbox from '../ui/ArcCheckbox';
 import ArcRadio from '../ui/ArcRadio';
 import type { SettingsControlVariant } from './SettingsControlRow';
@@ -14,7 +14,7 @@ type Props = {
 };
 
 /** Карточка модели AI: выбор + кнопки управления внутри одной рамки (Figma 1396:12789). */
-export default function AiModelCard({
+function AiModelCard({
   variant,
   label,
   description,
@@ -68,3 +68,5 @@ export default function AiModelCard({
     </div>
   );
 }
+
+export default memo(AiModelCard);

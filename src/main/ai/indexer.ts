@@ -43,6 +43,10 @@ let lastBroadcastTotal = 0;
 const IDLE_DELAY_MS = 15_000;
 const BATCH_SIZE = 8;
 const HEAVY_BATCH_SIZE = 1;
+const INTRA_CARD_BROADCAST_MIN_MS = 300;
+
+let lastIntraCardBroadcastAt = 0;
+let intraCardBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
 
 function broadcast(channel: string, payload: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -64,15 +68,38 @@ function broadcastProgress(done: number, total: number, running?: boolean): void
   });
 }
 
+function flushIntraCardBroadcast(): void {
+  intraCardBroadcastTimer = null;
+  lastIntraCardBroadcastAt = Date.now();
+  broadcastProgress(lastBroadcastDone, lastBroadcastTotal, true);
+}
+
 function setCurrentCardProgress(percent: number | null): void {
   if (percent == null || !Number.isFinite(percent)) {
     currentCardProgress = null;
   } else {
     currentCardProgress = Math.max(0, Math.min(100, Math.round(percent)));
   }
-  if (indexRunning) {
-    broadcastProgress(lastBroadcastDone, lastBroadcastTotal, true);
+  if (!indexRunning) return;
+
+  const force = percent === 0 || percent === 100;
+  const now = Date.now();
+  if (!force && now - lastIntraCardBroadcastAt < INTRA_CARD_BROADCAST_MIN_MS) {
+    if (!intraCardBroadcastTimer) {
+      intraCardBroadcastTimer = setTimeout(
+        flushIntraCardBroadcast,
+        INTRA_CARD_BROADCAST_MIN_MS - (now - lastIntraCardBroadcastAt)
+      );
+    }
+    return;
   }
+
+  if (intraCardBroadcastTimer) {
+    clearTimeout(intraCardBroadcastTimer);
+    intraCardBroadcastTimer = null;
+  }
+  lastIntraCardBroadcastAt = now;
+  broadcastProgress(lastBroadcastDone, lastBroadcastTotal, true);
 }
 
 function broadcastComplete(indexed: number, total: number): void {

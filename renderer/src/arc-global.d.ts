@@ -225,6 +225,7 @@ declare global {
       onUpdateError?: (cb: (detail: { message: string }) => void) => () => void;
 
       aiGetStatus?: () => Promise<import('./services/aiTypes').AiStatus>;
+      aiGetIndexStatus?: () => Promise<import('./services/aiTypes').AiIndexStatus>;
       aiDetectHardware?: () => Promise<import('./services/aiTypes').AiHardwareInfo>;
       aiDownloadModel?: (
         tier: 'light' | 'heavy'

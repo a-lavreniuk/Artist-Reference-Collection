@@ -49,6 +49,7 @@ export function useSettingsAi() {
   }, []);
 
   return {
+    snapshot,
     loading: snapshot.loading,
     status: snapshot.status,
     phase: snapshot.phase,
@@ -57,6 +58,8 @@ export function useSettingsAi() {
     downloadPercent: snapshot.downloadPercent,
     downloadPhase: snapshot.downloadPhase,
     downloadPaused: snapshot.downloadPaused,
+    downloadOperation: snapshot.downloadOperation,
+    indexEtaHint: snapshot.indexEtaHint,
     cudaPrompt: snapshot.cudaPrompt,
     alert: snapshot.alert,
     dismissAlert: dismissAiAlert,

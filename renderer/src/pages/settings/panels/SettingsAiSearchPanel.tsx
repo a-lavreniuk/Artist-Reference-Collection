@@ -17,7 +17,6 @@ import {
   tierShortLabel
 } from '../aiSettingsFormatters';
 import {
-  getAiSettingsSnapshot,
   isActiveModelInstalled,
   isAiDownloading,
   resolveDownloadStatus,
@@ -36,6 +35,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 export default function SettingsAiSearchPanel() {
   const arcHint = useSettingsArcHint();
   const {
+    snapshot,
     loading,
     status,
     phase,
@@ -60,7 +60,6 @@ export default function SettingsAiSearchPanel() {
     resumeDownload
   } = useSettingsAi();
 
-  const snapshot = getAiSettingsSnapshot();
   const isDownloading = isAiDownloading(snapshot);
   const downloadStatus = resolveDownloadStatus(snapshot);
   const installStatus = resolveInstallStatus(snapshot);
@@ -306,7 +305,9 @@ export default function SettingsAiSearchPanel() {
                     {indexRunning ? (
                       <>
                         <div className="arc-settings-ai-index-line">
-                          <span className="loader arc-settings-ai-index-line__loader" aria-hidden="true" />
+                          {!index?.paused ? (
+                            <span className="loader arc-settings-ai-index-line__loader" aria-hidden="true" />
+                          ) : null}
                           <p className="typo-p-m arc-settings-ai-index-line__text">{indexStatusLine}</p>
                         </div>
                         <div className="arc-settings-ai-panel__action-row">

@@ -378,6 +378,7 @@ export function registerAiIpc(): void {
   ipcRegistered = true;
 
   ipcMain.handle('arc:ai-get-status', async () => buildAiStatus());
+  ipcMain.handle('arc:ai-get-index-status', async () => getIndexStatus());
   ipcMain.handle('arc:ai-detect-hardware', async () => detectHardware());
 
   ipcMain.handle('arc:ai-download-llama-runtime', async (_e, payloadRaw: unknown) => {
@@ -699,13 +700,11 @@ export function registerAiIpc(): void {
   });
 
   ipcMain.handle('arc:ai-reindex', async () => {
-    try {
-      await runFullReindex();
-      return { ok: true as const };
-    } catch (err) {
+    void runFullReindex().catch((err) => {
       const message = err instanceof Error ? err.message : String(err);
-      throw new Error(message);
-    }
+      broadcast('arc:ai-error', { message, fallback: false });
+    });
+    return { ok: true as const };
   });
 
   ipcMain.handle('arc:ai-pause-index', async () => {
