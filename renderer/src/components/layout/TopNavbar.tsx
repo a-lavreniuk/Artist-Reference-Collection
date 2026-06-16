@@ -51,7 +51,7 @@ export default function TopNavbar() {
     if (headerRef.current) {
       void hydrateArcNavbarIcons(headerRef.current);
     }
-  }, [variant, filtersOpen, activeMainTab, maintenanceLocked, location.pathname]);
+  }, [variant, filtersOpen, activeMainTab, maintenanceLocked, location.pathname, location.search]);
 
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -165,7 +165,7 @@ export default function TopNavbar() {
               data-btn-size="l"
               data-elevation="default"
             >
-              <NavbarLibrarySwitcher />
+              <NavbarLibrarySwitcher disabled={maintenanceLocked} />
               <NavbarMenu />
             </div>
           </div>

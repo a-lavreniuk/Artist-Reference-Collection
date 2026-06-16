@@ -249,6 +249,31 @@ body::-webkit-scrollbar {
   white-space: nowrap;
 }
 
+/* Group: переключатель библиотеки + очистка корзины (Figma 1422:10542) */
+.arc-navbar-library-group.btn-group .btn {
+  border-radius: 0;
+}
+
+.arc-navbar-library-group > .btn:first-child {
+  border-top-left-radius: var(--btn-radius);
+  border-bottom-left-radius: var(--btn-radius);
+}
+
+.arc-navbar-library-group > .arc-tooltip-wrapper:last-child {
+  display: flex;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.arc-navbar-library-group > .btn + .arc-tooltip-wrapper {
+  margin-left: -1px;
+}
+
+.arc-navbar-library-group > .arc-tooltip-wrapper:last-child .btn {
+  border-top-right-radius: var(--btn-radius);
+  border-bottom-right-radius: var(--btn-radius);
+}
+
 .arc-navbar-separator {
   display: block;
   width: auto;

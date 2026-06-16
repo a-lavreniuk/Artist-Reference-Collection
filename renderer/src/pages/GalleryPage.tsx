@@ -48,10 +48,6 @@ import { useOpenCardUrl } from '../search/openCardUrl';
 import { parseSearchCardId, parseSearchTagIds, parseSearchAiQuery } from '../search/searchUrl';
 import { useAiGalleryFeed } from '../components/gallery/useAiGalleryFeed';
 
-import ConfirmModal from './settings/ConfirmModal';
-
-import { emptyTrash } from '../services/db';
-import { showAppNotification } from '../services/notificationService';
 import { EmptyState } from '../components/empty-state';
 import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import { useImportContext } from '../components/import/ImportContext';
@@ -126,10 +122,6 @@ export default function GalleryPage() {
   const [noSimilarAlertOpen, setNoSimilarAlertOpen] = useState(false);
 
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
-
-  const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
-
-  const [emptyTrashBusy, setEmptyTrashBusy] = useState(false);
 
 
 
@@ -332,30 +324,6 @@ export default function GalleryPage() {
 
     <div className="arc-gallery-page">
 
-      {feedQuery.libraryScope === 'trash' && ready ? (
-
-        <div className="arc-gallery-trash-actions">
-
-          <button
-
-            type="button"
-
-            className="btn btn-danger btn-ds btn-s"
-
-            disabled={cards.length === 0}
-
-            onClick={() => setEmptyTrashConfirm(true)}
-
-          >
-
-            <span className="btn-ds__value">Очистить корзину</span>
-
-          </button>
-
-        </div>
-
-      ) : null}
-
       {booting ? (
 
         <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
@@ -519,60 +487,6 @@ export default function GalleryPage() {
       ) : null}
 
 
-
-      {emptyTrashConfirm ? (
-
-        <ConfirmModal
-
-          title="Очистить корзину?"
-
-          message="Все карточки в корзине будут удалены навсегда вместе с файлами."
-
-          confirmLabel={emptyTrashBusy ? 'Удаление…' : 'Очистить'}
-
-          confirmVariant="danger"
-
-          onCancel={() => {
-
-            if (!emptyTrashBusy) setEmptyTrashConfirm(false);
-
-          }}
-
-          onConfirm={() => {
-
-            if (emptyTrashBusy) return;
-
-            setEmptyTrashBusy(true);
-
-            void (async () => {
-
-              try {
-
-                await emptyTrash();
-
-                showAppNotification({
-                  message: 'Корзина очищена',
-                  variant: 'success',
-                  skipPrefCheck: true
-                });
-
-                setEmptyTrashConfirm(false);
-
-                await reloadFromStart();
-
-              } finally {
-
-                setEmptyTrashBusy(false);
-
-              }
-
-            })();
-
-          }}
-
-        />
-
-      ) : null}
 
       {ready && cards.length > 0 ? <GalleryBottomShade /> : null}
 

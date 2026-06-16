@@ -2695,12 +2695,6 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-shrink: 0;
 }
 
-.arc-gallery-trash-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 0 var(--s-3);
-}
-
 /* Navbar /add: «Добавить» + counter + plus (иконка через маску — те же токены, что у btn-success) */
 .arc-navbar-add-submit {
   --btn-icon-size: 24px;
