@@ -9,13 +9,13 @@ export default function NavbarMenu() {
 
   const rows = useMemo<ContextMenuRow[]>(
     () => [
-      { type: 'item', key: 'board', label: 'Доска', iconClass: 'arc-icon-whiteboard', onSelect: () => navigate('/board') },
+      { type: 'item', key: 'board', label: 'Доска — в разработке', iconClass: 'arc-icon-whiteboard', onSelect: () => navigate('/board') },
       { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigate('/tags') },
-      { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
-      { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
+      { type: 'item', key: 'stats', label: 'Статистика — в разработке', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
+      { type: 'item', key: 'history', label: 'История — в разработке', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
       { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/general') },
       { type: 'separator', key: 'sep1' },
-      { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
+      { type: 'item', key: 'dup', label: 'Поиск дублей — в разработке', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
       { type: 'separator', key: 'sep2' },
       { type: 'header', key: 'theme-label', label: 'Оформление' },
       { type: 'item', key: 'theme-light', label: 'Светлая', disabled: true },

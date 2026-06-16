@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOpenCardUrl } from '../../search/openCardUrl';
 import { parseSearchCardId, parseSearchTagIds } from '../../search/searchUrl';
 import GalleryBoard from '../gallery/GalleryBoard';
@@ -7,6 +7,9 @@ import CardInspectModal from '../gallery/CardInspectModal';
 import DemoAlert from '../layout/DemoAlert';
 import ScrollToTopButton from '../layout/ScrollToTopButton';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
+import { EmptyState } from '../empty-state';
+import { EMPTY_STATE_COPY } from '../../content/emptyStates';
+import { useResetGallerySearch } from '../../hooks/useResetGallerySearch';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../gallery/GalleryFilterContext';
 import {
   ARC_CARDS_CHANGED_EVENT,
@@ -27,11 +30,13 @@ const PAGE_INITIAL = 50;
 const PAGE_MORE = 35;
 
 export default function MoodboardCardsView() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { filters, sort } = useGalleryFilters();
+  const { filters, sort, activeCategoryCount } = useGalleryFilters();
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
-  const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact);
+  const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0;
+  const { resetGallerySearch } = useResetGallerySearch();
   const [mbIdsForScope, setMbIdsForScope] = useState<string[]>([]);
 
   const [cards, setCards] = useState<CardRecord[]>([]);
@@ -159,13 +164,13 @@ export default function MoodboardCardsView() {
   return (
     <div className="arc-collection-detail arc-moodboard-cards">
       {cards.length === 0 && !loading ? (
-        <div className="arc-page-empty panel elevation-default">
-          <p className="typo-p-m">
-            {hasSearchFilters
-              ? 'Карточки не найдены. Измените фильтры поиска или сбросьте метки.'
-              : 'В мудборде пока нет карточек.'}
-          </p>
-        </div>
+        <EmptyState
+          {...(hasSearchFilters ? EMPTY_STATE_COPY.searchNoResults : EMPTY_STATE_COPY.moodboardEmpty)}
+          fill
+          onPrimaryAction={
+            hasSearchFilters ? () => resetGallerySearch() : () => navigate('/gallery')
+          }
+        />
       ) : (
         <>
           <GalleryBoard

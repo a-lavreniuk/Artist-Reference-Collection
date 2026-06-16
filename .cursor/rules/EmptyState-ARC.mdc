@@ -1,0 +1,77 @@
+---
+description: Empty State ARC — единый паттерн пустых экранов и заглушек «в разработке»
+alwaysApply: true
+---
+
+# Empty State (ARC)
+
+Макет: [ARC-2 / Empty State, node 1414:13470](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1414-13470) — библиотека; [1414:14572](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1414-14572) — метки.
+
+Тексты: `renderer/src/content/emptyStates.ts`. Компонент: `renderer/src/components/empty-state/EmptyState.tsx`. Стили: `renderer/src/styles/index.css` (`.arc-empty-state*`).
+
+## Когда использовать
+
+- В разделе **нет данных** (пустая библиотека, корзина, коллекция, мудборд, метки).
+- **Ничего не найдено** по поиску или фильтрам.
+- Раздел **в разработке** (заглушка на странице; в меню — суффикс «— в разработке» в `label`, без новых UI-элементов).
+
+## Как реализовать
+
+- Импорт: `import { EmptyState } from '../components/empty-state'` (путь относительно файла).
+- Copy только из `EMPTY_STATE_COPY` в `emptyStates.ts` — не хардкодить строки в страницах. Новый раздел → сначала добавить ключ в `emptyStates.ts`, затем использовать spread.
+- Пропсы: `title` / `subtitle` через spread `{...EMPTY_STATE_COPY.xxx}`; действия — `onPrimaryAction` / `onSecondaryAction`.
+- Brand CTA — главное действие; Outline — вторичное («Перейти в библиотеку», «Сбросить фильтры», «Настройки»).
+- Сброс поиска/фильтров галереи: `useResetGallerySearch()` из `renderer/src/hooks/useResetGallerySearch.ts`.
+- Эталоны: `GalleryPage.tsx`, `TagsPage.tsx`, `CollectionsPage.tsx`, `SettingsNavbarPanelPage.tsx`.
+
+```tsx
+// ✅ Хорошо
+<EmptyState
+  {...EMPTY_STATE_COPY.libraryEmpty}
+  fill
+  onPrimaryAction={openImportPicker}
+/>
+
+// ❌ Плохо — локальная заглушка
+<div className="arc-page-empty"><p className="hint">Пусто</p></div>
+```
+
+## Визуал и стили
+
+- Классы: `.arc-empty-state`, `.arc-empty-state--fill`, `h1`, `typo-p-m`, `panel`, `elevation-default` / `elevation-sunken`.
+- Отступы (Figma 1414:13470 / 1414:14572): внутренний padding панели `--s-4` (32px); заголовок → подзаголовок `--s-2` (8px); подзаголовок → кнопка `margin-top: --s-4` (32px). Не использовать несуществующий `--s-5`.
+- Кнопки: `btn-brand` / `btn-outline`, `btn-ds`, `data-btn-size="l"` на контейнере actions; у Brand — иконка плюса справа через `arc-add-dropzone-plus-icon` (mask + `currentColor`).
+- Без иллюстраций и иконок над заголовком.
+- Empty state в **основной контентной области**; sidebar страницы сохраняется (метки, коллекции).
+- Заглушки «в разработке» — без внешнего padding на обёртке страницы; `EmptyState` с `fill` на всю контентную область.
+- Вложенный empty state (scroll внутри panel меток/коллекций): без border/фона panel, padding `--s-4`.
+- Только токены из `arc-ui.css` / `index.css` — не копировать стили локально.
+
+## Copy
+
+- Тон: дружелюбный, человечный; структура **заголовок H1 + подзаголовок + опциональная кнопка**.
+- Заголовки и подзаголовки **без точки в конце**.
+- Раздел в разработке: тексты `inDevelopment*` в `emptyStates.ts`; в `NavbarMenu.tsx` — суффикс «— в разработке» в `label`, без badge/counter.
+
+## Особые случаи
+
+- **Метки** (`TagsPage`): при пустом main без активного поиска (`mainSections.length === 0 && !searchQ`) скрывать `TagsPageSearch` и separator; при «Ничего не найдено» поиск оставлять.
+- **Раздел в разработке**: UI страницы оставить в коде за флагом (`IN_DEVELOPMENT_PANELS` и т.п.), на экране — только `EmptyState`.
+
+## Новый раздел — чеклист
+
+1. Добавить тексты в `renderer/src/content/emptyStates.ts`.
+2. Определить состояния: нет данных / не найдено / в разработке.
+3. Подключить `EmptyState` с `fill` в контентной области (sidebar не убирать).
+4. Brand — главное действие раздела; Outline — навигация или сброс фильтров.
+5. Сверка с Figma 1414:13470 или 1414:14572 (отступы, типографика, кнопки).
+6. Не дублировать `.arc-page-empty` и локальные hint-блоки.
+
+## Антипаттерны
+
+- Локальные `.arc-page-empty` с одним `<p className="hint">`.
+- Дубли CSS для empty state.
+- Хардкод текстов в страницах вместо `emptyStates.ts`.
+- Точки в конце заголовка/подзаголовка.
+- Внешний padding вокруг `EmptyState` на полноэкранных заглушках.
+- Технический/сухой язык («данные отсутствуют», «0 результатов»).

@@ -24,6 +24,9 @@ import DemoAlert from '../components/layout/DemoAlert';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
+import { EmptyState } from '../components/empty-state';
+import { EMPTY_STATE_COPY } from '../content/emptyStates';
+import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 import { useOpenCardUrl } from '../search/openCardUrl';
 import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import {
@@ -57,10 +60,11 @@ export default function CollectionsPage() {
   const { collectionId: routeCollectionId } = useParams<{ collectionId?: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { filters, sort } = useGalleryFilters();
+  const { filters, sort, activeCategoryCount } = useGalleryFilters();
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
-  const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact);
+  const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0;
+  const { resetGallerySearch } = useResetGallerySearch();
 
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -293,18 +297,13 @@ export default function CollectionsPage() {
 
   if (collections.length === 0) {
     return (
-      <div ref={pageRef} className="arc-collections-outlet arc-collections-page">
-        <div className="arc-collections-page-empty panel elevation-sunken">
-          <p className="hint">Коллекций пока нет. Нажмите «Добавить коллекцию», чтобы создать первую.</p>
-          <button
-            type="button"
-            className="btn btn-outline btn-ds arc-tags-sidebar-add"
-            onClick={() => setCollectionModal({ mode: 'create' })}
-          >
-            <span className="btn-ds__value">Добавить коллекцию</span>
-            <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
-          </button>
-        </div>
+      <div ref={pageRef} className="arc-collections-outlet arc-collections-page arc-collections-page--solo-empty">
+        <EmptyState
+          {...EMPTY_STATE_COPY.collectionsNone}
+          elevation="sunken"
+          fill
+          onPrimaryAction={() => setCollectionModal({ mode: 'create' })}
+        />
         {collectionModalNode}
       </div>
     );
@@ -345,22 +344,13 @@ export default function CollectionsPage() {
         >
           <div className="arc-collections-page-main__scroll">
             {cards.length === 0 && !loading ? (
-              <div className="arc-collections-page-empty-gallery panel elevation-default">
-                <p className="typo-p-m">
-                  {hasSearchFilters
-                    ? 'Карточки не найдены. Измените фильтры поиска или сбросьте метки.'
-                    : 'В коллекции пока нет карточек.'}
-                </p>
-                {!hasSearchFilters ? (
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-ds"
-                    onClick={() => navigate('/gallery')}
-                  >
-                    <span className="btn-ds__value">Перейти в библиотеку</span>
-                  </button>
-                ) : null}
-              </div>
+              <EmptyState
+                {...(hasSearchFilters ? EMPTY_STATE_COPY.searchNoResults : EMPTY_STATE_COPY.collectionEmpty)}
+                fill
+                onPrimaryAction={
+                  hasSearchFilters ? () => resetGallerySearch() : () => navigate('/gallery')
+                }
+              />
             ) : (
               <div className="arc-gallery-page arc-collections-gallery">
                 <GalleryBoard

@@ -826,6 +826,13 @@ button.color-swatch-inline:disabled {
   min-height: 0;
 }
 
+.arc-gallery-empty-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .arc-gallery-masonry {
   width: 100%;
 }
@@ -1201,8 +1208,98 @@ button.color-swatch-inline:disabled {
   min-height: 0;
 }
 
+.arc-moodboard-cards {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .arc-page-empty {
   padding: var(--s-4);
+}
+
+/* Empty state (Figma 1414:13470, 1414:14572) */
+.arc-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: var(--s-4);
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.arc-empty-state--fill {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+}
+
+.arc-empty-state__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: 100%;
+}
+
+.arc-empty-state__title {
+  margin: 0;
+  color: var(--text-elev-primary);
+  text-wrap: balance;
+}
+
+.arc-empty-state__subtitle {
+  margin: 0;
+  color: var(--text-elev-secondary);
+  text-wrap: balance;
+}
+
+.arc-empty-state__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+
+.arc-category-panel-empty {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: var(--s-4) 0;
+}
+
+.arc-tags-page-main__scroll > .arc-empty-state,
+.arc-collections-page-main__scroll > .arc-empty-state {
+  margin: 0 auto;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: var(--s-4);
+}
+
+.arc-collections-page--solo-empty {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.arc-settings-page--empty-stub {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.arc-board-page--empty-stub {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 /* Доступность: заголовок только для скринридеров */

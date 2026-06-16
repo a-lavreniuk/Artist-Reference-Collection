@@ -52,6 +52,10 @@ import ConfirmModal from './settings/ConfirmModal';
 
 import { emptyTrash } from '../services/db';
 import { showAppNotification } from '../services/notificationService';
+import { EmptyState } from '../components/empty-state';
+import { EMPTY_STATE_COPY } from '../content/emptyStates';
+import { useImportContext } from '../components/import/ImportContext';
+import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 
 
 
@@ -63,7 +67,7 @@ export default function GalleryPage() {
 
   const navigate = useNavigate();
 
-  const { filters, sort } = useGalleryFilters();
+  const { filters, sort, activeCategoryCount } = useGalleryFilters();
 
   const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
   const isAiSearch = Boolean(aiQuery);
@@ -98,8 +102,13 @@ export default function GalleryPage() {
 
   });
 
-  const hasSearchFilters =
+  const hasUrlSearch =
     feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact) || isAiSearch;
+
+  const hasSearchFilters = hasUrlSearch || activeCategoryCount > 0;
+
+  const { resetGallerySearch } = useResetGallerySearch();
+  const { openImportPicker } = useImportContext();
 
   const [ready, setReady] = useState(false);
 
@@ -127,7 +136,6 @@ export default function GalleryPage() {
   const galleryFeed = useGalleryFeed(feedQuery, ready && !isAiSearch);
   const aiFeed = useAiGalleryFeed(aiQuery, ready && isAiSearch);
   const { cards, srcMap, hasMore, loading, booting, loadMore, reloadFromStart } = isAiSearch ? aiFeed : galleryFeed;
-  const aiSearchError = isAiSearch ? aiFeed.error : null;
 
 
 
@@ -258,17 +266,13 @@ export default function GalleryPage() {
   const overlay = useMemo(() => {
 
     if (!ready) {
-
       return (
-
-        <div className="arc-page-empty panel elevation-default">
-
-          <p className="typo-p-m">Сначала укажите папку библиотеки в разделе «Настройки → Библиотека».</p>
-
-        </div>
-
+        <EmptyState
+          {...EMPTY_STATE_COPY.libraryUnconfigured}
+          fill
+          onPrimaryAction={() => navigate('/settings/library')}
+        />
       );
-
     }
 
     if (booting) return null;
@@ -276,67 +280,51 @@ export default function GalleryPage() {
     if (cards.length === 0 && !loading) {
 
       if (hasSearchFilters) {
-
+        const copy = isAiSearch ? EMPTY_STATE_COPY.aiSearchNoResults : EMPTY_STATE_COPY.searchNoResults;
         return (
-
-          <div className="arc-page-empty panel elevation-default">
-
-            <p className="typo-p-m">
-              {isAiSearch
-                ? aiSearchError ||
-                  'Карточки не найдены. Измените описание или дождитесь завершения индексации в «Настройки → AI Поиск».'
-                : 'Карточки не найдены. Измените фильтры поиска или сбросьте метки.'}
-            </p>
-
-          </div>
-
+          <EmptyState
+            {...copy}
+            fill
+            onPrimaryAction={
+              isAiSearch
+                ? () => navigate('/settings/ai-search')
+                : () => resetGallerySearch()
+            }
+          />
         );
-
       }
 
       if (feedQuery.libraryScope === 'untagged') {
-
-        return (
-
-          <div className="arc-page-empty panel elevation-default">
-
-            <p className="typo-p-m">Нет карточек без меток.</p>
-
-          </div>
-
-        );
-
+        return <EmptyState {...EMPTY_STATE_COPY.libraryUntagged} fill />;
       }
 
       if (feedQuery.libraryScope === 'trash') {
-
-        return (
-
-          <div className="arc-page-empty panel elevation-default">
-
-            <p className="typo-p-m">Корзина пуста.</p>
-
-          </div>
-
-        );
-
+        return <EmptyState {...EMPTY_STATE_COPY.libraryTrashEmpty} fill />;
       }
 
       return (
-
-        <div className="arc-page-empty panel elevation-default">
-
-          <p className="typo-p-m">Карточек пока нет. Добавьте изображения кнопкой «Добавить» или перетащите файлы в окно.</p>
-
-        </div>
-
+        <EmptyState
+          {...EMPTY_STATE_COPY.libraryEmpty}
+          fill
+          onPrimaryAction={openImportPicker}
+        />
       );
-
     }
 
     return null;
 
-  }, [ready, booting, cards.length, loading, hasSearchFilters, feedQuery.libraryScope, isAiSearch, aiSearchError]);
+  }, [
+    ready,
+    booting,
+    cards.length,
+    loading,
+    hasSearchFilters,
+    feedQuery.libraryScope,
+    isAiSearch,
+    navigate,
+    openImportPicker,
+    resetGallerySearch
+  ]);
 
 
 
@@ -378,7 +366,7 @@ export default function GalleryPage() {
 
       ) : null}
 
-      {overlay}
+      {overlay ? <div className="arc-gallery-empty-host">{overlay}</div> : null}
 
       {ready && cards.length > 0 ? (
 

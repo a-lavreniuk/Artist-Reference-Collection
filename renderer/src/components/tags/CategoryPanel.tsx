@@ -6,6 +6,8 @@ import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import TagCategoryDropSurface from './TagCategoryDropSurface';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
+import { EmptyState } from '../empty-state';
+import { EMPTY_STATE_COPY } from '../../content/emptyStates';
 import { normalizeHex } from '../../utils/colorPicker';
 
 const WEIGHT_OPTIONS: Array<{ key: CategoryWeight; label: string }> = [
@@ -55,6 +57,7 @@ export default function CategoryPanel({
   onTagDrop
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const tagInputRef = useRef<HTMLInputElement>(null);
   const lastNonEmptyTagDraftRef = useRef('');
   const [nameDraft, setNameDraft] = useState(category.name);
   const [hexDraft, setHexDraft] = useState(category.colorHex.replace(/^#/, ''));
@@ -280,6 +283,7 @@ export default function CategoryPanel({
               data-live-input
             >
               <input
+                ref={tagInputRef}
                 className="input arc-category-add-tag-input"
                 placeholder="Название новой метки…"
                 value={tagDraft}
@@ -333,7 +337,12 @@ export default function CategoryPanel({
           </div>
           <div className="arc-category-tag-cloud">
             {tags.length === 0 ? (
-              <p className="hint">В этой категории пока нет меток.</p>
+              <EmptyState
+                {...EMPTY_STATE_COPY.categoryTagsEmpty}
+                className="arc-category-panel-empty"
+                elevation="sunken"
+                onPrimaryAction={() => tagInputRef.current?.focus()}
+              />
             ) : (
               tags.map((tag) => {
                 const hasTipText = Boolean(tag.description?.trim());

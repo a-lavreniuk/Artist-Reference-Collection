@@ -15,6 +15,8 @@ import CategorySettingsModal, {
   type CategorySettingsModalState
 } from '../components/tags/CategorySettingsModal';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
+import { EmptyState } from '../components/empty-state';
+import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import {
   buildTagPickerGroups,
   filterSidebarCategories,
@@ -194,6 +196,8 @@ export default function TagsPage() {
     [tagsByCategory]
   );
 
+  const hideMainPanelSearch = mainSections.length === 0 && !searchQ;
+
   useLayoutEffect(() => {
     if (pageRef.current) {
       void hydrateArcNavbarIcons(pageRef.current);
@@ -307,25 +311,6 @@ export default function TagsPage() {
     />
   ) : null;
 
-  if (categories.length === 0) {
-    return (
-      <div ref={pageRef} className="arc-tags-outlet arc-tags-page">
-        <div className="arc-tags-page-empty panel elevation-sunken">
-          <p className="hint">Категорий пока нет. Нажмите «Добавить категорию», чтобы создать первую.</p>
-          <button
-            type="button"
-            className="btn btn-outline btn-ds arc-tags-sidebar-add"
-            onClick={() => setCategoryModal({ mode: 'create' })}
-          >
-            <span className="btn-ds__value">Добавить категорию</span>
-            <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
-          </button>
-        </div>
-        {categoryModalNode}
-      </div>
-    );
-  }
-
   return (
     <div
       ref={pageRef}
@@ -371,15 +356,27 @@ export default function TagsPage() {
         />
 
         <main className="arc-tags-page-main panel elevation-sunken arc-ui-kit-scope" data-elevation="sunken" data-typo-tone="white" data-input-size="m">
-          <div className="arc-tags-page-main__fixed">
-            <div className="arc-tags-page-main__inset">
-              <TagsPageSearch value={searchQuery} onChange={setSearchQuery} />
+          {hideMainPanelSearch ? null : (
+            <div className="arc-tags-page-main__fixed">
+              <div className="arc-tags-page-main__inset">
+                <TagsPageSearch value={searchQuery} onChange={setSearchQuery} />
+              </div>
+              <div className="context-menu__sep" role="separator" aria-hidden="true" />
             </div>
-            <div className="context-menu__sep" role="separator" aria-hidden="true" />
-          </div>
+          )}
           <div className="arc-tags-page-main__scroll">
             {mainSections.length === 0 ? (
-              <p className="hint arc-tags-page-no-results">Ничего не найдено.</p>
+              searchQ ? (
+                <EmptyState {...EMPTY_STATE_COPY.tagsSearchNoResults} fill />
+              ) : totalTagCount === 0 ? (
+                <EmptyState
+                  {...EMPTY_STATE_COPY.tagsNone}
+                  fill
+                  onPrimaryAction={() => setCategoryModal({ mode: 'create' })}
+                />
+              ) : (
+                <EmptyState {...EMPTY_STATE_COPY.tagsSearchNoResults} fill />
+              )
             ) : (
               mainSections.map(({ cat, tags }, index) => (
                 <div key={cat.id} className="arc-tags-page-section-block">
