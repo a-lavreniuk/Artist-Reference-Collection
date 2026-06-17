@@ -1,5 +1,6 @@
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import { formatNavbarTabCount } from '../../search/formatNavbarTabCount';
+import { splitTagNameForHighlight } from '../../search/rankSearchTags';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 
@@ -9,6 +10,8 @@ type Props = {
   selected: boolean;
   onToggle: () => void;
   showCount?: boolean;
+  /** Подсветка совпадения в имени при вводе запроса (Search Menu, Figma 890-9941). */
+  highlightQuery?: string;
   /**
    * Режим «Недавних»: клик по ✕ убирает метку только из localStorage.
    * Клик по остальной области чипа — onToggle (как у категорий).
@@ -26,6 +29,7 @@ export default function SearchPanelTagChip({
   selected,
   onToggle,
   showCount = true,
+  highlightQuery,
   onRemoveFromRecent
 }: Props) {
   const hasTipText = Boolean(tag.description?.trim());
@@ -48,6 +52,24 @@ export default function SearchPanelTagChip({
     onToggle();
   };
 
+  const nameLabel =
+    highlightQuery && highlightQuery.trim().length > 0 ? (
+      <span className="arc-search-tag-pill__name">
+        {splitTagNameForHighlight(tag.name, highlightQuery).map((seg, i) => (
+          <span
+            key={i}
+            className={
+              seg.match ? 'arc-search-tag-pill__name-match' : 'arc-search-tag-pill__name-rest'
+            }
+          >
+            {seg.text}
+          </span>
+        ))}
+      </span>
+    ) : (
+      <span>{tag.name}</span>
+    );
+
   const chip = (
     <button
       type="button"
@@ -63,7 +85,7 @@ export default function SearchPanelTagChip({
       onClick={handleChipClick}
     >
       <span className="chip-color" style={{ background: category.colorHex }} aria-hidden="true" />
-      <span>{tag.name}</span>
+      {nameLabel}
       {showCount && countLabel ? <span className="chip-count">{countLabel}</span> : null}
       {selected ? (
         <span className="chip-remove" aria-hidden="true">

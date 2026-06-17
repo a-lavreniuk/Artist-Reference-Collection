@@ -11,6 +11,7 @@ import {
 } from '../../services/db';
 import {
   ARC_DETAIL_QUERY_CARD,
+  parseDetailCardId,
   removeCardFilterFromParams,
   setSearchAndDetailCardInParams
 } from '../../search/openCardUrl';
@@ -25,8 +26,19 @@ import {
   hasCompletedSearchSession,
   markSearchSessionCompleted,
   pushRecentTagId,
-  removeRecentTagId
+  removeRecentTagId,
+  clearAllRecentTagIds
 } from '../../search/recentSearchTags';
+import {
+  ARC_RECENT_VIEWS_CHANGED_EVENT,
+  clearAllRecentViewedCardIds,
+  getRecentViewedCardIds
+} from '../../search/recentViewedCards';
+import { rankTagsForQuery } from '../../search/rankSearchTags';
+import SearchPanelSection from './SearchPanelSection';
+import SearchPanelRecentCards from './SearchPanelRecentCards';
+import SearchPanelModeHeader from './SearchPanelModeHeader';
+import SearchPanelFullBleedSep from './SearchPanelFullBleedSep';
 import SearchPanelTagChip from './SearchPanelTagChip';
 import NavbarSearchModes from './NavbarSearchModes';
 import { formatNavbarTabCount } from '../../search/formatNavbarTabCount';
@@ -64,6 +76,7 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdFilter = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
   const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
+  const detailCardId = useMemo(() => parseDetailCardId(searchParams), [searchParams]);
 
   const [searchMode, setSearchMode] = useState<NavbarSearchMode>(() => readNavbarSearchMode());
   const { prefs, ready: prefsReady } = useAppPreferences();
@@ -75,6 +88,9 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   const tagsByCategoryRef = useRef<Map<string, TagRecord[]>>(new Map());
   const [tagsVersion, setTagsVersion] = useState(0);
   const searchAnchorRef = useRef<HTMLDivElement>(null);
+  const scrollTrackRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [scrollFade, setScrollFade] = useState({ start: false, end: false });
   const [dropdownLayout, setDropdownLayout] = useState<{ top: number; left: number; width: number } | null>(
     null
   );
@@ -116,6 +132,12 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   useEffect(() => {
     void loadIndex();
   }, [loadIndex]);
+
+  useEffect(() => {
+    const onRecentViews = () => setRecentTick((x) => x + 1);
+    window.addEventListener(ARC_RECENT_VIEWS_CHANGED_EVENT, onRecentViews);
+    return () => window.removeEventListener(ARC_RECENT_VIEWS_CHANGED_EVENT, onRecentViews);
+  }, []);
 
   useEffect(() => {
     const onCats = () => void loadIndex();
@@ -162,6 +184,68 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     setDropdownLayout({ top: r.bottom + gapBelowInput, left: r.left, width: r.width });
   }, [panelOpen]);
 
+  const syncScrollFade = useCallback(() => {
+    const track = scrollTrackRef.current;
+    if (!track) return;
+    const { scrollLeft, scrollWidth, clientWidth } = track;
+    const overflow = scrollWidth > clientWidth + 1;
+    setScrollFade({
+      start: overflow && scrollLeft > 1,
+      end: overflow && scrollLeft + clientWidth < scrollWidth - 1
+    });
+  }, []);
+
+  const scrollChipsToEnd = useCallback(() => {
+    const viewport = scrollTrackRef.current;
+    if (!viewport) return;
+    viewport.scrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    syncScrollFade();
+  }, [syncScrollFade]);
+
+  const ensureInputVisible = useCallback(() => {
+    const viewport = scrollTrackRef.current;
+    const input = searchInputRef.current;
+    if (!viewport || !input) return;
+    const pad = 8;
+    const vRect = viewport.getBoundingClientRect();
+    const iRect = input.getBoundingClientRect();
+    if (iRect.right > vRect.right - pad) {
+      viewport.scrollLeft += iRect.right - vRect.right + pad;
+    }
+    if (iRect.left < vRect.left + pad) {
+      viewport.scrollLeft -= vRect.left - iRect.left + pad;
+    }
+    syncScrollFade();
+  }, [syncScrollFade]);
+
+  useLayoutEffect(() => {
+    scrollChipsToEnd();
+  }, [selectedTagIds.length, cardIdFilter, aiQuery, scrollChipsToEnd, draft]);
+
+  useLayoutEffect(() => {
+    const viewport = scrollTrackRef.current;
+    if (!viewport) return;
+    syncScrollFade();
+    const ro = new ResizeObserver(() => syncScrollFade());
+    ro.observe(viewport);
+    if (viewport.firstElementChild) {
+      ro.observe(viewport.firstElementChild);
+    }
+    viewport.addEventListener('scroll', syncScrollFade, { passive: true });
+    return () => {
+      ro.disconnect();
+      viewport.removeEventListener('scroll', syncScrollFade);
+    };
+  }, [syncScrollFade, selectedTagIds.length, cardIdFilter, aiQuery]);
+
+  const onScrollTrackWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const track = scrollTrackRef.current;
+    if (!track || track.scrollWidth <= track.clientWidth + 1) return;
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    track.scrollLeft += e.deltaY;
+    e.preventDefault();
+  };
+
   useLayoutEffect(() => {
     updateDropdownLayout();
   }, [panelOpen, draft, selectedTagIds.length, cardIdFilter, updateDropdownLayout]);
@@ -197,6 +281,13 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
       document.body.classList.remove('arc-search-panel-open');
     };
   }, [panelOpen]);
+
+  /** Панель поиска не должна перекрывать detail-карточку (z-index выше overlay). */
+  useEffect(() => {
+    if (!detailCardId) return;
+    setPanelOpen(false);
+    setFieldError(false);
+  }, [detailCardId]);
 
   const toggleTag = (tagId: string) => {
     panelHadInteraction.current = true;
@@ -292,32 +383,12 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
 
   const q = normalizePrefix(draft);
 
-  const filteredTree = useMemo(() => {
-    const rows: { cat: CategoryRecord; tags: TagRecord[] }[] = [];
-    if (!q) {
-      for (const cat of categories) {
-        const tags = tagsByCategoryRef.current.get(cat.id) ?? [];
-        rows.push({ cat, tags });
-      }
-      return rows;
-    }
-    for (const cat of categories) {
-      const tags = tagsByCategoryRef.current.get(cat.id) ?? [];
-      const catHit = cat.name.toLowerCase().startsWith(q);
-      const tagHits = tags.filter(
-        (t) =>
-          catHit ||
-          t.name.toLowerCase().startsWith(q) ||
-          (t.description?.trim() && t.description.toLowerCase().startsWith(q))
-      );
-      if (tagHits.length > 0) {
-        rows.push({ cat, tags: catHit ? tags : tagHits });
-      }
-    }
-    return rows;
-  }, [categories, q, tagsVersion]);
+  const rankedTags = useMemo(
+    () => rankTagsForQuery(q, categories, tagsByCategoryRef.current),
+    [categories, q, tagsVersion]
+  );
 
-  const suggestionMatchesDraft = q.length > 0 && filteredTree.some((r) => r.tags.length > 0);
+  const suggestionMatchesDraft = q.length > 0 && rankedTags.length > 0;
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -353,8 +424,20 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     Boolean(aiQuery);
 
   const recentIds = useMemo(() => getRecentTagIds(), [panelOpen, tagsVersion, recentTick]);
+  const recentViewedIds = useMemo(() => getRecentViewedCardIds(), [panelOpen, recentTick]);
 
-  const showRecent = hasCompletedSearchSession() && recentIds.length > 0 && !q;
+  const showRecentTags = recentIds.length > 0;
+  const showRecentViews = recentViewedIds.length > 0;
+  const hasRecentSections = showRecentTags || showRecentViews;
+
+  const selectRecentCard = (id: string) => {
+    panelHadInteraction.current = true;
+    setSearchParams(setSearchAndDetailCardInParams(searchParams, id), { replace: true });
+    setDraft('');
+    setFieldError(false);
+    markSearchSessionCompleted();
+    closePanel();
+  };
 
   return (
     <>
@@ -368,87 +451,105 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
         >
           <div className="input search-multiselect input--size-l input-slots arc-navbar-search">
             <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
-            {isTagsMode
-              ? selectedTagIds.map((id) => {
-              const t = tagsIndex.get(id);
-              const cat = t ? categoryById.get(t.categoryId) : undefined;
-              const color = cat?.colorHex ?? 'var(--gray-500)';
-              const count = t?.usageCount ?? 0;
-              const countLabel = count > 0 ? formatNavbarTabCount(count) : null;
-              const remove = () => removeTag(id);
-              return (
-                <span
-                  key={id}
-                  role="button"
-                  tabIndex={0}
-                  className="chip chip-active"
-                  aria-label={`Снять метку ${t?.name ?? ''}`}
-                  onClick={remove}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      remove();
-                    }
-                  }}
-                >
-                  <span className="chip-color" style={{ background: color }} aria-hidden="true" />
-                  <span>{t?.name ?? id.slice(0, 8)}</span>
-                  {countLabel ? <span className="chip-count">{countLabel}</span> : null}
-                  <span className="chip-remove" aria-hidden="true">
-                    ✕
-                  </span>
-                </span>
-              );
-            })
-              : null}
-            {isTagsMode && cardIdFilter ? (
-              <span
-                role="button"
-                tabIndex={0}
-                className="chip chip-active"
-                aria-label="Сбросить фильтр по ID"
-                onClick={() => {
-                  panelHadInteraction.current = true;
-                  setSearchParams(removeCardFilterFromParams(searchParams), { replace: true });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    panelHadInteraction.current = true;
-                    setSearchParams(removeCardFilterFromParams(searchParams), { replace: true });
-                  }
-                }}
+            <div
+              className="arc-navbar-search-scroll-clip"
+              data-fade-start={scrollFade.start ? 'true' : undefined}
+              data-fade-end={scrollFade.end ? 'true' : undefined}
+            >
+              <div
+                ref={scrollTrackRef}
+                className="arc-navbar-search-scroll"
+                onWheel={onScrollTrackWheel}
               >
-                <span className="chip-color" style={{ background: 'var(--gray-300)' }} aria-hidden="true" />
-                <span>ID: {cardIdFilter.slice(0, 8)}…</span>
-                <span className="chip-remove" aria-hidden="true">
-                  ✕
-                </span>
-              </span>
-            ) : null}
-            {isAiMode && aiQuery ? (
-              <span className="chip chip-active" aria-label="AI запрос">
-                <span className="chip-color" style={{ background: 'var(--brand-500)' }} aria-hidden="true" />
-                <span>{aiQuery.length > 48 ? `${aiQuery.slice(0, 48)}…` : aiQuery}</span>
-              </span>
-            ) : null}
-            <input
-              className="search-inner slot-value"
-              type="text"
-              placeholder={placeholder}
-              value={draft}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                setFieldError(false);
-              }}
-              onKeyDown={onInputKeyDown}
-              onFocus={() => {
-                if (isTagsMode) openPanel();
-              }}
-              onClick={() => {
-                if (isTagsMode) openPanel();
-              }}
-            />
+                <div className="arc-navbar-search-scroll__track">
+                {isTagsMode
+                  ? selectedTagIds.map((id) => {
+                      const t = tagsIndex.get(id);
+                      const cat = t ? categoryById.get(t.categoryId) : undefined;
+                      const color = cat?.colorHex ?? 'var(--gray-500)';
+                      const count = t?.usageCount ?? 0;
+                      const countLabel = count > 0 ? formatNavbarTabCount(count) : null;
+                      const remove = () => removeTag(id);
+                      return (
+                        <span
+                          key={id}
+                          role="button"
+                          tabIndex={0}
+                          className="chip chip-active"
+                          aria-label={`Снять метку ${t?.name ?? ''}`}
+                          onClick={remove}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              remove();
+                            }
+                          }}
+                        >
+                          <span className="chip-color" style={{ background: color }} aria-hidden="true" />
+                          <span>{t?.name ?? id.slice(0, 8)}</span>
+                          {countLabel ? <span className="chip-count">{countLabel}</span> : null}
+                          <span className="chip-remove" aria-hidden="true">
+                            ✕
+                          </span>
+                        </span>
+                      );
+                    })
+                  : null}
+                {isTagsMode && cardIdFilter ? (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="chip chip-active"
+                    aria-label="Сбросить фильтр по ID"
+                    onClick={() => {
+                      panelHadInteraction.current = true;
+                      setSearchParams(removeCardFilterFromParams(searchParams), { replace: true });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        panelHadInteraction.current = true;
+                        setSearchParams(removeCardFilterFromParams(searchParams), { replace: true });
+                      }
+                    }}
+                  >
+                    <span className="chip-color" style={{ background: 'var(--gray-300)' }} aria-hidden="true" />
+                    <span>ID: {cardIdFilter.slice(0, 8)}…</span>
+                    <span className="chip-remove" aria-hidden="true">
+                      ✕
+                    </span>
+                  </span>
+                ) : null}
+                {isAiMode && aiQuery ? (
+                  <span className="chip chip-active" aria-label="AI запрос">
+                    <span className="chip-color" style={{ background: 'var(--brand-500)' }} aria-hidden="true" />
+                    <span>{aiQuery.length > 48 ? `${aiQuery.slice(0, 48)}…` : aiQuery}</span>
+                  </span>
+                ) : null}
+                <input
+                  ref={searchInputRef}
+                  className="search-inner arc-navbar-search-inner"
+                  type="text"
+                  placeholder={placeholder}
+                  value={draft}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    setFieldError(false);
+                    if (isTagsMode && e.target.value.trim().length > 0) openPanel();
+                  }}
+                  onKeyDown={onInputKeyDown}
+                  onFocus={() => {
+                    if (isTagsMode) openPanel();
+                    ensureInputVisible();
+                  }}
+                  onClick={() => {
+                    if (isTagsMode) openPanel();
+                    ensureInputVisible();
+                  }}
+                />
+              </div>
+            </div>
+            </div>
             <button
               className="input-inline-icon search-multiselect-clear-btn input-inline-icon--close slot-trailing arc-icon-close"
               type="button"
@@ -479,70 +580,86 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
             }}
           >
             <div className="arc-add-tags-scroll arc-search-panel-scroll">
-              <div className="arc-add-tags-categories arc-search-tag-picker-grid">
-                {showRecent ? (
-                  <div className="arc-add-tag-category-row">
-                    <p className="text-m arc-add-tag-category-title">Недавние запросы</p>
-                    <div className="arc-add-tag-chips-column">
-                      <div className="tags-row arc-search-tags-row">
-                        {recentIds.map((rid) => {
-                          const t = tagsIndex.get(rid);
-                          if (!t) return null;
-                          const cat = categoryById.get(t.categoryId);
-                          if (!cat) return null;
-                          return (
-                            <SearchPanelTagChip
-                              key={rid}
-                              tag={t}
-                              category={cat}
-                              selected={selectedTagIds.includes(rid)}
-                              onToggle={() => toggleTag(rid)}
-                              onRemoveFromRecent={() => {
-                                removeRecentTagId(rid);
-                                setRecentTick((x) => x + 1);
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
+              <div className="arc-search-panel-stack">
+                {!q ? (
+                  <div className="arc-search-panel-intro">
+                    <SearchPanelModeHeader mode={searchMode} />
+                    <p className="text-m arc-search-panel-hint">
+                      Начните вводить название метки или ID карточки
+                    </p>
                   </div>
-                ) : null}
-
-                {showRecent && (filteredTree.length > 0 || (filteredTree.length === 0 && Boolean(q))) ? (
-                  <div
-                    className="arc-card-inspect-sep arc-card-inspect-sep--full-bleed arc-search-panel-fullbleed-sep arc-search-panel-sep-span"
-                    role="separator"
-                  />
-                ) : null}
-
-                {filteredTree.length === 0 && q ? (
-                  <p className="typo-p-m arc-search-empty-hint arc-search-panel-empty-span">
-                    Нет совпадений по запросу.
-                  </p>
                 ) : (
-                  filteredTree.map(({ cat, tags }, index) => (
-                    <div key={cat.id} className="arc-add-tag-category-row">
-                      <p className="text-m arc-add-tag-category-title">{cat.name}</p>
-                      <div className="arc-add-tag-chips-column">
-                        {index > 0 ? (
-                          <div className="arc-add-tag-sep" role="separator" aria-hidden="true" />
-                        ) : null}
-                        <div className="tags-row arc-search-tags-row">
-                          {tags.map((t) => (
-                            <SearchPanelTagChip
-                              key={t.id}
-                              tag={t}
-                              category={cat}
-                              selected={selectedTagIds.includes(t.id)}
-                              onToggle={() => toggleTag(t.id)}
-                            />
-                          ))}
-                        </div>
+                  <>
+                    <SearchPanelModeHeader mode={searchMode} />
+                    {rankedTags.length === 0 ? (
+                      <p className="text-m arc-search-panel-hint arc-search-panel-suggest">
+                        Нет совпадений по запросу.
+                      </p>
+                    ) : (
+                      <div className="tags-row arc-search-tags-row arc-search-panel-suggest">
+                        {rankedTags.map(({ tag, category }) => (
+                          <SearchPanelTagChip
+                            key={tag.id}
+                            tag={tag}
+                            category={category}
+                            selected={selectedTagIds.includes(tag.id)}
+                            highlightQuery={q}
+                            onToggle={() => toggleTag(tag.id)}
+                          />
+                        ))}
                       </div>
-                    </div>
-                  ))
+                    )}
+                  </>
                 )}
+
+                {hasRecentSections ? <SearchPanelFullBleedSep /> : null}
+
+                {showRecentTags ? (
+                  <SearchPanelSection
+                    title="Недавние запросы"
+                    onClear={() => {
+                      clearAllRecentTagIds();
+                      setRecentTick((x) => x + 1);
+                    }}
+                  >
+                    <div className="tags-row arc-search-tags-row">
+                      {recentIds.map((rid) => {
+                        const t = tagsIndex.get(rid);
+                        if (!t) return null;
+                        const cat = categoryById.get(t.categoryId);
+                        if (!cat) return null;
+                        return (
+                          <SearchPanelTagChip
+                            key={rid}
+                            tag={t}
+                            category={cat}
+                            selected={selectedTagIds.includes(rid)}
+                            onToggle={() => toggleTag(rid)}
+                            onRemoveFromRecent={() => {
+                              removeRecentTagId(rid);
+                              setRecentTick((x) => x + 1);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </SearchPanelSection>
+                ) : null}
+
+                {showRecentViews ? (
+                  <>
+                    {showRecentTags ? <SearchPanelFullBleedSep /> : null}
+                    <SearchPanelSection
+                      title="Недавние просмотры"
+                      onClear={() => {
+                        clearAllRecentViewedCardIds();
+                        setRecentTick((x) => x + 1);
+                      }}
+                    >
+                      <SearchPanelRecentCards cardIds={recentViewedIds} onSelect={selectRecentCard} />
+                    </SearchPanelSection>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'arc.search.recentTagIds';
 const HAS_SEARCHED_KEY = 'arc.search.hasCompletedSearchSession';
-const MAX_RECENT = 15;
+const MAX_RECENT = 20;
 
 function readIds(): string[] {
   if (typeof window === 'undefined') return [];
@@ -34,7 +34,7 @@ export function getRecentTagIds(): string[] {
   return readIds();
 }
 
-/** Добавить метку в начало списка недавних (лимит 15). */
+/** Добавить метку в начало списка недавних (лимит 20). */
 export function pushRecentTagId(tagId: string): void {
   if (!tagId.trim()) return;
   const prev = readIds().filter((id) => id !== tagId);
@@ -43,4 +43,8 @@ export function pushRecentTagId(tagId: string): void {
 
 export function removeRecentTagId(tagId: string): void {
   writeIds(readIds().filter((id) => id !== tagId));
+}
+
+export function clearAllRecentTagIds(): void {
+  writeIds([]);
 }

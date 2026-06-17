@@ -20,6 +20,16 @@ body.arc-search-panel-open .arc-gallery-card-wrap {
   contain: paint;
 }
 
+/* Detail-карточка (z-index 15) — не перекрывать backdrop/панелью поиска */
+body.arc-card-detail-open .arc-search-backdrop,
+body.arc-card-detail-open .arc-search-panel {
+  display: none;
+}
+
+body.arc-card-detail-open.arc-search-panel-open::after {
+  display: none;
+}
+
 /* Якорь для выпадающего меню: измеряем getBoundingClientRect поля поиска. */
 .arc-navbar-search-anchor {
   position: relative;
@@ -34,6 +44,115 @@ body.arc-search-panel-open .arc-gallery-card-wrap {
   gap: var(--s-1);
   position: relative;
   z-index: 26;
+}
+
+/* Navbar search multiselect: одна строка, горизонтальный скролл чипов (вариант A). */
+.input.search-multiselect.input--size-l.input-slots.arc-navbar-search {
+  flex-wrap: nowrap;
+  align-content: center;
+  height: var(--input-h);
+  min-height: var(--input-h);
+  max-height: var(--input-h);
+  overflow: hidden;
+  align-items: center;
+}
+
+/* Обёртка fade: псевдоэлементы на scroll-контейнере в Chromium скроллятся вместе с контентом. */
+.arc-navbar-search-scroll-clip {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
+  overflow: hidden;
+}
+
+/* Viewport: фиксированная ширина, скролл здесь (не на track с max-content). */
+.arc-navbar-search-scroll {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.arc-navbar-search-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Контент шире viewport → появляется scrollWidth > clientWidth */
+.arc-navbar-search-scroll__track {
+  display: flex;
+  align-items: center;
+  gap: var(--input-gap, var(--s-2));
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.arc-navbar-search-scroll__track .chip {
+  flex-shrink: 0;
+}
+
+.arc-navbar-search-inner {
+  flex: 1 0 72px;
+  min-width: 72px;
+  width: auto;
+  max-width: none;
+  overflow: visible;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+/* Fade-маски на clip-обёртке — фиксированы относительно видимой области инпута */
+.arc-navbar-search-scroll-clip::before,
+.arc-navbar-search-scroll-clip::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--s-3);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.arc-navbar-search-scroll-clip::before {
+  left: 0;
+  background: linear-gradient(to right, var(--input-fill-default), transparent);
+}
+
+.arc-navbar-search-scroll-clip::after {
+  right: 0;
+  background: linear-gradient(to left, var(--input-fill-default), transparent);
+}
+
+.arc-navbar-search:hover .arc-navbar-search-scroll-clip::before {
+  background: linear-gradient(to right, var(--input-fill-hover), transparent);
+}
+
+.arc-navbar-search:hover .arc-navbar-search-scroll-clip::after {
+  background: linear-gradient(to left, var(--input-fill-hover), transparent);
+}
+
+.arc-navbar-search:focus-within .arc-navbar-search-scroll-clip::before {
+  background: linear-gradient(to right, var(--input-fill-default), transparent);
+}
+
+.arc-navbar-search:focus-within .arc-navbar-search-scroll-clip::after {
+  background: linear-gradient(to left, var(--input-fill-default), transparent);
+}
+
+.arc-navbar-search-scroll-clip[data-fade-start='true']::before {
+  opacity: 1;
+}
+
+.arc-navbar-search-scroll-clip[data-fade-end='true']::after {
+  opacity: 1;
 }
 
 /* Панель поиска: dropdown под полем, ширина = якорь (см. инлайн left/top/width). */
@@ -60,7 +179,7 @@ body.arc-search-panel-open .arc-gallery-card-wrap {
   box-shadow: var(--arc-modal-shadow);
 }
 
-/* M (16px) со всех сторон; без горизонтального скролла; full-bleed сеп — отриц. margin × padding */
+/* Figma 889-9667: padding M (16px); raised elevation на .arc-ui-kit-scope */
 .arc-add-tags-scroll.arc-search-panel-scroll {
   flex: 1;
   min-height: 0;
@@ -70,33 +189,113 @@ body.arc-search-panel-open .arc-gallery-card-wrap {
   padding: var(--s-3);
 }
 
-.arc-search-panel-fullbleed-sep {
-  flex-shrink: 0;
+.arc-search-panel-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
-.arc-search-panel-sep-span,
-.arc-search-panel-empty-span {
-  grid-column: 1 / -1;
+/* Заголовок → подсказка: 8px */
+.arc-search-panel-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
 }
 
-/* В raised-панели линии разделения = surface-border-raised (gray/700 через токен ui-kit) */
-.arc-search-panel .arc-add-tag-sep,
-.arc-search-panel .arc-card-inspect-sep {
-  border-top-color: var(--surface-border-raised);
-}
-
-/* Полная ширина без вертикальных margin у arc-card-inspect-sep */
-.arc-search-panel .arc-card-inspect-sep.arc-card-inspect-sep--full-bleed.arc-search-panel-fullbleed-sep.arc-search-panel-sep-span {
+.arc-search-panel-mode-header__title {
   margin: 0;
 }
 
-/* Первая категория после блока «Недавние» + сеп: без наследуемого padding-top как у первого ряда на Add */
-.arc-search-panel-sep-span + .arc-add-tag-category-row .arc-add-tag-category-title {
-  padding-top: 0;
+/* Подсказка → сепаратор: 16px (margin-top на сепараторе) */
+.arc-search-panel-hint {
+  margin: 0;
+  color: var(--text-elev-secondary);
 }
 
-.arc-search-tag-picker-grid {
-  margin-bottom: 0;
+/* Figma 890-9941: заголовок → подсказки меток при вводе — 16px */
+.arc-search-panel-suggest {
+  margin-top: var(--s-3);
+}
+
+/* Подсветка совпадения в имени чипа (Figma 890-9941) */
+.arc-search-tag-pill__name-match {
+  color: var(--text-elev-primary);
+}
+
+.arc-search-tag-pill__name-rest {
+  color: var(--tag-counter-default);
+}
+
+.chip:hover .arc-search-tag-pill__name-match,
+.chip.state-hover .arc-search-tag-pill__name-match {
+  color: var(--tag-text-hover);
+}
+
+.chip:hover .arc-search-tag-pill__name-rest,
+.chip.state-hover .arc-search-tag-pill__name-rest {
+  color: var(--tag-counter-hover);
+}
+
+.chip-active .arc-search-tag-pill__name-match,
+.chip-active .arc-search-tag-pill__name-rest {
+  color: inherit;
+}
+
+/* Full-bleed сепаратор: border/default = --panel-border на raised */
+.arc-search-panel .arc-search-panel-fullbleed-sep {
+  flex-shrink: 0;
+  height: 0;
+  margin: var(--s-3) calc(var(--s-3) * -1);
+  border: 0;
+  border-top: 1px solid var(--panel-border);
+}
+
+/* Секция: заголовок → контент 8px */
+.arc-search-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-search-panel-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-search-panel-section__title {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-search-panel-section__clear {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-elev-secondary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.arc-search-panel-section__clear:hover {
+  color: var(--text-elev-primary);
+}
+
+.arc-search-panel-section__clear:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.arc-search-panel-section__body {
+  min-width: 0;
 }
 
 .arc-search-tags-row {
@@ -107,12 +306,51 @@ body.arc-search-panel-open .arc-gallery-card-wrap {
   align-content: flex-start;
 }
 
-.arc-search-empty-hint {
-  margin: var(--s-2) 0 0;
-}
-
 .arc-search-tag-pill {
   border: 0;
   cursor: pointer;
   font: inherit;
+}
+
+.arc-search-panel-results {
+  min-width: 0;
+}
+
+/* 6 превью в ряд: (content − 5×gap) / 6; Figma 889-9667 ≈ 128px при ширине 840px */
+.arc-search-recent-cards {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--s-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.arc-search-recent-card {
+  aspect-ratio: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--tag-fill-default);
+  transition: opacity var(--transition-fast);
+}
+
+.arc-search-recent-card:hover {
+  opacity: 0.88;
+}
+
+.arc-search-recent-card:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.arc-search-recent-card__img,
+.arc-search-recent-card__ph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }

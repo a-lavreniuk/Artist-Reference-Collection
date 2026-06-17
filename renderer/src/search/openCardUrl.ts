@@ -59,9 +59,10 @@ export function useOpenCardUrl(): OpenCardUrlApi {
   const openCard = useCallback(
     (cardId: string) => {
       const next = setDetailCardInParams(searchParams, cardId);
+      const replacing = Boolean(parseDetailCardId(searchParams));
       navigate(
         { pathname: location.pathname, search: formatSearchQuery(next) },
-        { state: null }
+        { replace: replacing, state: null }
       );
     },
     [location.pathname, navigate, searchParams]
@@ -75,9 +76,10 @@ export function useOpenCardUrl(): OpenCardUrlApi {
     );
   }, [location.pathname, navigate, searchParams]);
 
+  /** Закрыть detail сразу в раздел, без пошагового POP по истории карточек. */
   const closeCard = useCallback(() => {
-    navigate(-1);
-  }, [navigate]);
+    closeCardReplace();
+  }, [closeCardReplace]);
 
   useEffect(() => {
     const onCloseRequest = () => closeCardReplace();

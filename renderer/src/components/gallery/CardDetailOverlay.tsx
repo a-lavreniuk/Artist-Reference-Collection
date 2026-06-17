@@ -44,6 +44,7 @@ import {
 } from '../../services/db';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
+import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDetailPreviewUrls } from './galleryMediaCache';
@@ -248,6 +249,13 @@ export default function CardDetailOverlay({
       cancelled = true;
     };
   }, [cardId, reloadCard]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      pushRecentViewedCardId(cardId);
+    }, RECENT_VIEWED_MIN_MS);
+    return () => window.clearTimeout(timer);
+  }, [cardId]);
 
   useEffect(() => {
     if (similar.length === 0) {
