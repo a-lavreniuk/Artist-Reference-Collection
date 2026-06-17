@@ -11,12 +11,22 @@ export const GALLERY_FILTER_IDS = [
 
 export type GalleryFilterId = (typeof GALLERY_FILTER_IDS)[number];
 
-export type GallerySortField = 'addedAt' | 'fileType' | 'fileWeight' | 'resolution' | 'duration';
+export const GALLERY_ORDERABLE_SORT_FIELDS = [
+  'addedAt',
+  'fileType',
+  'fileWeight',
+  'resolution',
+  'duration'
+] as const;
+
+export type GalleryOrderableSortField = (typeof GALLERY_ORDERABLE_SORT_FIELDS)[number];
+export type GallerySortField = GalleryOrderableSortField | 'shuffle';
 export type GallerySortDirection = 'asc' | 'desc';
 
 export type GallerySortState = {
   field: GallerySortField;
   direction: GallerySortDirection;
+  shuffleSeed?: number;
 };
 
 export type AspectRatioFilterValue = 'horizontal' | 'vertical' | 'square' | 'panoramic';
@@ -239,7 +249,7 @@ export const FILTER_CHIP_META: Record<
   duration: { label: 'Длительность', iconClass: 'arc-icon-duration' }
 };
 
-export const SORT_FIELD_LABELS: Record<GallerySortField, string> = {
+export const SORT_FIELD_LABELS: Record<GalleryOrderableSortField, string> = {
   addedAt: 'Дата добавления',
   fileType: 'Тип файлов',
   fileWeight: 'Вес',
@@ -249,7 +259,7 @@ export const SORT_FIELD_LABELS: Record<GallerySortField, string> = {
 
 /** Подписи направления сортировки для каждого критерия (вариант A). */
 export const SORT_DIRECTION_OPTIONS: Record<
-  GallerySortField,
+  GalleryOrderableSortField,
   { primary: GallerySortDirection; primaryLabel: string; secondary: GallerySortDirection; secondaryLabel: string }
 > = {
   addedAt: {
@@ -284,8 +294,16 @@ export const SORT_DIRECTION_OPTIONS: Record<
   }
 };
 
-export function defaultSortDirectionForField(field: GallerySortField): GallerySortDirection {
+export function defaultSortDirectionForField(field: GalleryOrderableSortField): GallerySortDirection {
   return SORT_DIRECTION_OPTIONS[field].primary;
+}
+
+export function isGalleryShuffleSort(sort: GallerySortState): boolean {
+  return sort.field === 'shuffle';
+}
+
+export function createGalleryShuffleSort(seed?: number): GallerySortState {
+  return { field: 'shuffle', direction: 'desc', shuffleSeed: seed };
 }
 
 export function emptyGalleryAdvancedFilters(): GalleryAdvancedFilters {

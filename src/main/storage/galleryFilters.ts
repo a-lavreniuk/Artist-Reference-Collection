@@ -23,12 +23,19 @@ export const GALLERY_FILTER_IDS = [
 
 export type GalleryFilterId = (typeof GALLERY_FILTER_IDS)[number];
 
-export type GallerySortField = 'addedAt' | 'fileType' | 'fileWeight' | 'resolution' | 'duration';
+export type GalleryOrderableSortField =
+  | 'addedAt'
+  | 'fileType'
+  | 'fileWeight'
+  | 'resolution'
+  | 'duration';
+export type GallerySortField = GalleryOrderableSortField | 'shuffle';
 export type GallerySortDirection = 'asc' | 'desc';
 
 export type GallerySortState = {
   field: GallerySortField;
   direction: GallerySortDirection;
+  shuffleSeed?: number;
 };
 
 export type AspectRatioFilterValue = 'horizontal' | 'vertical' | 'square' | 'panoramic';
@@ -591,6 +598,8 @@ export function buildGallerySortSql(sort: GallerySortState, alias = 'c'): string
       return `ORDER BY CASE WHEN COALESCE(${alias}.width,0) >= COALESCE(${alias}.height,0) THEN COALESCE(${alias}.width,0) ELSE COALESCE(${alias}.height,0) END ${dir}, ${alias}.added_at DESC`;
     case 'duration':
       return `ORDER BY COALESCE(${alias}.duration_ms, 0) ${dir}, ${alias}.added_at DESC`;
+    case 'shuffle':
+      return `ORDER BY ${alias}.added_at DESC`;
     case 'addedAt':
     default:
       return `ORDER BY ${alias}.added_at ${dir}`;

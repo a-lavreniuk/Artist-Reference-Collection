@@ -2,13 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CardRecord } from '../../services/db';
 import { readGridSize } from '../../layout/gridSizePreference';
+import type { GallerySortState } from './galleryFilterTypes';
+import { isGalleryShuffleSort } from './galleryFilterTypes';
 import {
   mergeCardsSrcMap,
   peekCardsSrcMap,
   preloadDecodedImages
-} from '../gallery/galleryMediaCache';
+} from './galleryMediaCache';
+import { orderRecordsByIds, shuffleCardIds } from './shuffleCardIds';
 
-export function useAiGalleryFeed(aiQuery: string | null, libraryReady: boolean) {
+export function useAiGalleryFeed(
+  aiQuery: string | null,
+  libraryReady: boolean,
+  sort: GallerySortState
+) {
   const [cards, setCards] = useState<CardRecord[]>([]);
   const [srcMap, setSrcMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -17,6 +24,18 @@ export function useAiGalleryFeed(aiQuery: string | null, libraryReady: boolean) 
   const seqRef = useRef(0);
 
   const query = useMemo(() => aiQuery?.trim() ?? '', [aiQuery]);
+
+  const applySortOrder = useCallback(
+    (rows: CardRecord[]) => {
+      if (!isGalleryShuffleSort(sort)) return rows;
+      const shuffledIds = shuffleCardIds(
+        rows.map((r) => r.id),
+        sort.shuffleSeed ?? 0
+      );
+      return orderRecordsByIds(rows, shuffledIds);
+    },
+    [sort]
+  );
 
   const reloadFromStart = useCallback(async () => {
     const arc = window.arc;
@@ -46,9 +65,10 @@ export function useAiGalleryFeed(aiQuery: string | null, libraryReady: boolean) 
         setError('Ничего не найдено. Попробуйте другой запрос или дождитесь индексации.');
       }
 
-      setCards(rows);
+      const ordered = applySortOrder(rows);
+      setCards(ordered);
       const gridSize = readGridSize();
-      const map = await mergeCardsSrcMap(rows, peekCardsSrcMap(rows, gridSize), gridSize);
+      const map = await mergeCardsSrcMap(ordered, peekCardsSrcMap(ordered, gridSize), gridSize);
       if (seq !== seqRef.current) return;
       setSrcMap(map);
       void preloadDecodedImages(Object.values(map));
@@ -63,7 +83,7 @@ export function useAiGalleryFeed(aiQuery: string | null, libraryReady: boolean) 
         setBooting(false);
       }
     }
-  }, [libraryReady, query]);
+  }, [applySortOrder, libraryReady, query]);
 
   useEffect(() => {
     void reloadFromStart();

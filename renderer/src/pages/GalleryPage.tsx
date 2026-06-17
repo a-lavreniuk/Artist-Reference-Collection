@@ -126,7 +126,7 @@ export default function GalleryPage() {
 
 
   const galleryFeed = useGalleryFeed(feedQuery, ready && !isAiSearch);
-  const aiFeed = useAiGalleryFeed(aiQuery, ready && isAiSearch);
+  const aiFeed = useAiGalleryFeed(aiQuery, ready && isAiSearch, sort);
   const { cards, srcMap, hasMore, loading, booting, loadMore, reloadFromStart } = isAiSearch ? aiFeed : galleryFeed;
 
 
@@ -225,6 +225,19 @@ export default function GalleryPage() {
     const outlet = document.querySelector('.arc-app-outlet');
     if (outlet instanceof HTMLElement) scrollRootRef.current = outlet;
   }, [ready]);
+
+  const shuffleSeedRef = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (sort.field !== 'shuffle') {
+      shuffleSeedRef.current = undefined;
+      return;
+    }
+    const seed = sort.shuffleSeed ?? 0;
+    if (shuffleSeedRef.current !== seed) {
+      scrollRootRef.current?.scrollTo({ top: 0 });
+      shuffleSeedRef.current = seed;
+    }
+  }, [sort.field, sort.shuffleSeed]);
 
   useEffect(() => {
 

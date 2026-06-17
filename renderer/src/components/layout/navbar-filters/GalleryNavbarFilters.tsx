@@ -8,6 +8,7 @@ import {
   type MouseEvent,
   type RefObject
 } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { ContextMenu, ContextMenuInput, type ContextMenuRow } from '../../context-menu';
 import type { ContextMenuSlot } from '../../context-menu/types';
@@ -19,10 +20,13 @@ import { Tooltip } from '../../tooltip/Tooltip';
 import { useGalleryFilters } from '../../gallery/GalleryFilterContext';
 import {
   FILTER_CHIP_META,
+  GALLERY_ORDERABLE_SORT_FIELDS,
   IMAGE_FILE_EXTENSIONS,
   SORT_DIRECTION_OPTIONS,
   SORT_FIELD_LABELS,
+  createGalleryShuffleSort,
   defaultSortDirectionForField,
+  isGalleryShuffleSort,
   VIDEO_FILE_EXTENSIONS,
   countFilterCategorySelections,
   type AspectRatioFilterValue,
@@ -30,10 +34,11 @@ import {
   type DurationFilterValue,
   type FileWeightFilterValue,
   type GalleryFilterId,
-  type GallerySortField,
+  type GalleryOrderableSortField,
   type ResolutionFilterValue,
   type SavedFilterPreset
 } from '../../gallery/galleryFilterTypes';
+import { newShuffleSeed } from '../../gallery/shuffleCardIds';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
 import FilterCustomRangeSection from './FilterCustomRangeSection';
 import FilterResolutionCustomSection from './FilterResolutionCustomSection';
@@ -77,6 +82,8 @@ const DEFAULT_RESOLUTION_RANGE = {
 };
 
 export default function GalleryNavbarFilters() {
+  const location = useLocation();
+  const showShuffleSort = location.pathname === '/gallery';
   const rowRef = useRef<HTMLDivElement>(null);
   const {
     filters,
@@ -334,7 +341,7 @@ export default function GalleryNavbarFilters() {
   const closeMenu = useCallback(() => setOpenMenu(null), []);
 
   const sortRows = useMemo<ContextMenuRow[]>(() => {
-    const fields: GallerySortField[] = ['addedAt', 'fileType', 'fileWeight', 'resolution', 'duration'];
+    const fields: GalleryOrderableSortField[] = [...GALLERY_ORDERABLE_SORT_FIELDS];
     const items: ContextMenuRow[] = [{ type: 'header', key: 'sort-h', label: 'Сортировка' }];
     for (const field of fields) {
       items.push({
@@ -351,24 +358,36 @@ export default function GalleryNavbarFilters() {
           })
       });
     }
-    const dirOpts = SORT_DIRECTION_OPTIONS[sort.field];
-    items.push({ type: 'separator', key: 'sort-sep' });
-    items.push({
-      type: 'item',
-      key: 'sort-primary',
-      label: dirOpts.primaryLabel,
-      selected: sort.direction === dirOpts.primary,
-      onSelect: () => setSort({ ...sort, direction: dirOpts.primary })
-    });
-    items.push({
-      type: 'item',
-      key: 'sort-secondary',
-      label: dirOpts.secondaryLabel,
-      selected: sort.direction === dirOpts.secondary,
-      onSelect: () => setSort({ ...sort, direction: dirOpts.secondary })
-    });
+    if (showShuffleSort) {
+      items.push({
+        type: 'item',
+        key: 'sort-shuffle',
+        label: 'Перемешать',
+        closeOnSelect: false,
+        onSelect: () =>
+          setSort(createGalleryShuffleSort(newShuffleSeed()))
+      });
+    }
+    if (!isGalleryShuffleSort(sort)) {
+      const dirOpts = SORT_DIRECTION_OPTIONS[sort.field];
+      items.push({ type: 'separator', key: 'sort-sep' });
+      items.push({
+        type: 'item',
+        key: 'sort-primary',
+        label: dirOpts.primaryLabel,
+        selected: sort.direction === dirOpts.primary,
+        onSelect: () => setSort({ ...sort, direction: dirOpts.primary })
+      });
+      items.push({
+        type: 'item',
+        key: 'sort-secondary',
+        label: dirOpts.secondaryLabel,
+        selected: sort.direction === dirOpts.secondary,
+        onSelect: () => setSort({ ...sort, direction: dirOpts.secondary })
+      });
+    }
     return items;
-  }, [setSort, sort]);
+  }, [setSort, showShuffleSort, sort]);
 
   const buildAspectRows = (): ContextMenuRow[] => {
     const opts: { key: AspectRatioFilterValue; label: string; iconClass: string }[] = [

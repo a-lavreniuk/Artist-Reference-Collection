@@ -36,6 +36,7 @@ import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
 import { defaultMoodboard, defaultSystem, readMoodboard, readSystem, writeMoodboard, writeSystem } from './systemFiles';
 import { generateImageThumbnails, generateVideoThumbnailsFromFrame } from './thumbnails';
+import { shuffleCardIds } from '../shared/shuffleCardIds';
 import {
   buildGalleryFilterWhere,
   buildGallerySortSql,
@@ -470,6 +471,31 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
 
   let sql = 'SELECT c.* FROM cards c';
   if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
+
+  if (sort.field === 'shuffle') {
+    const idSql = `SELECT c.id FROM cards c${wh.length ? ` WHERE ${wh.join(' AND ')}` : ''}`;
+    const idRows = db.prepare(idSql).all(...binds) as { id: string }[];
+    const shuffled = shuffleCardIds(
+      idRows.map((r) => String(r.id)),
+      sort.shuffleSeed ?? 0
+    );
+    const pageIds = shuffled.slice(params.offset, params.offset + params.limit);
+    if (pageIds.length === 0) return [];
+
+    const placeholders = pageIds.map(() => '?').join(',');
+    const rows = db
+      .prepare(`SELECT c.* FROM cards c WHERE c.id IN (${placeholders})`)
+      .all(...pageIds) as Record<string, unknown>[];
+    const byId = new Map(rows.map((r) => [String(r.id), r]));
+    return pageIds
+      .map((id) => byId.get(id))
+      .filter((r): r is Record<string, unknown> => r != null)
+      .map((r) => {
+        const id = String(r.id);
+        return dbRowToIndex(r, getCardTags(db, id), getCardCollections(db, id));
+      });
+  }
+
   sql += ` ${buildGallerySortSql(sort, 'c')} LIMIT ? OFFSET ?`;
   binds.push(params.limit, params.offset);
 
