@@ -19,6 +19,11 @@ import MessageModal from '../components/layout/MessageModal';
 
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
 
+import LibraryCollectionsStrip from '../components/collections/LibraryCollectionsStrip';
+
+import { useAppPreferences } from '../hooks/useAppPreferences';
+import { useGalleryCollectionsStrip } from '../hooks/useGalleryCollectionsStrip';
+
 import {
 
   getAllCategories,
@@ -105,6 +110,7 @@ export default function GalleryPage() {
 
   const { resetGallerySearch } = useResetGallerySearch();
   const { openImportPicker } = useImportContext();
+  const { prefs } = useAppPreferences();
 
   const [ready, setReady] = useState(false);
 
@@ -122,6 +128,19 @@ export default function GalleryPage() {
   const [noSimilarAlertOpen, setNoSimilarAlertOpen] = useState(false);
 
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
+
+  const stripDataEnabled =
+    ready &&
+    prefs?.galleryCollectionsStripEnabled !== false &&
+    feedQuery.libraryScope === 'all' &&
+    !hasSearchFilters;
+
+  const { items: collectionStripItems } = useGalleryCollectionsStrip(
+    stripDataEnabled,
+    prefs?.galleryCollectionsSortMode ?? 'chrono'
+  );
+
+  const showCollectionsStrip = stripDataEnabled && collectionStripItems.length > 0;
 
 
 
@@ -345,6 +364,15 @@ export default function GalleryPage() {
 
         </div>
 
+      ) : null}
+
+      {showCollectionsStrip ? (
+        <div className="arc-gallery-collections-block">
+          <LibraryCollectionsStrip items={collectionStripItems} />
+          <div className="arc-gallery-collections-separator" role="separator" aria-hidden="true">
+            <hr className="arc-gallery-collections-separator__rule" />
+          </div>
+        </div>
       ) : null}
 
       {overlay ? <div className="arc-gallery-empty-host">{overlay}</div> : null}

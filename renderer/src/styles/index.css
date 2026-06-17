@@ -826,6 +826,177 @@ button.color-swatch-inline:disabled {
   min-height: 0;
 }
 
+/* Коллекции на экране библиотеки (Figma 838-7582, карточка 715-1990) */
+.arc-gallery-collections-block {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.arc-gallery-collections-strip {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.arc-gallery-collections-separator {
+  flex: 0 0 auto;
+  width: calc(100% + var(--s-4) * 2);
+  margin-inline: calc(var(--s-4) * -1);
+  padding-block: var(--s-4);
+  box-sizing: border-box;
+}
+
+.arc-gallery-collections-separator__rule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--panel-border);
+}
+
+.arc-gallery-collections-strip__arrow {
+  flex: 0 0 auto;
+}
+
+.arc-gallery-collections-strip__chevron--left {
+  transform: rotate(90deg);
+}
+
+.arc-gallery-collections-strip__chevron--right {
+  transform: rotate(-90deg);
+}
+
+.arc-gallery-collections-strip__scroll {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.arc-gallery-collections-strip__scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.arc-gallery-collections-strip__scroll.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.arc-gallery-collections-strip__track {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--s-4);
+  padding: 0;
+}
+
+.arc-gallery-collection-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s-2);
+  flex: 0 0 auto;
+  width: 389px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.arc-gallery-collection-card:focus {
+  outline: none;
+}
+
+.arc-gallery-collection-card:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
+}
+
+.arc-gallery-collection-card__pics {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 1px;
+  width: 100%;
+  height: 96px;
+  border-radius: var(--radius-l);
+  overflow: hidden;
+}
+
+.arc-gallery-collection-card__pic {
+  position: relative;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  background: var(--gray-900);
+}
+
+.arc-gallery-collection-card__pic--grow {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+.arc-gallery-collection-card__pic--empty {
+  background: var(--gray-900);
+}
+
+.arc-gallery-collection-card__img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.arc-gallery-collection-card__label {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--s-2);
+  min-width: 0;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.arc-gallery-collection-card__title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--typo-tone-primary);
+  transition: color var(--transition-fast);
+}
+
+.arc-gallery-collection-card:hover .arc-gallery-collection-card__title,
+.arc-gallery-collection-card:focus-visible .arc-gallery-collection-card__title {
+  color: var(--typo-tone-primary-hover);
+}
+
+.arc-gallery-collection-card__count {
+  flex: 0 0 auto;
+  color: var(--typo-tone-secondary);
+}
+
 .arc-gallery-empty-host {
   flex: 1 1 auto;
   min-height: 0;
@@ -3535,6 +3706,13 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--s-3);
+  min-width: 0;
+}
+
+.arc-settings-radio-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
   min-width: 0;
 }
 

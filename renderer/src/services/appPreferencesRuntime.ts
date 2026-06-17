@@ -4,6 +4,7 @@ import {
   getAppPreferences,
   setAppPreferences,
   type AppPreferencesV1,
+  type GalleryCollectionsSortMode,
   type ScreenshotFormat
 } from './appPreferences';
 
@@ -19,6 +20,11 @@ function notify(): void {
 function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
   if (raw === 'png' || raw === 'jpg' || raw === 'webp') return raw;
   return 'webp';
+}
+
+function sanitizeGalleryCollectionsSortMode(raw: unknown): GalleryCollectionsSortMode {
+  if (raw === 'count' || raw === 'random') return raw;
+  return 'chrono';
 }
 
 function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreferencesV1> {
@@ -100,6 +106,15 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   }
   if ('aiResourcePreset' in patch && typeof patch.aiResourcePreset === 'number') {
     next.aiResourcePreset = Math.max(10, Math.min(100, Math.round(patch.aiResourcePreset)));
+  }
+  if ('aiSearchStrictness' in patch && typeof patch.aiSearchStrictness === 'number') {
+    next.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(patch.aiSearchStrictness / 5) * 5));
+  }
+  if ('galleryCollectionsStripEnabled' in patch && typeof patch.galleryCollectionsStripEnabled === 'boolean') {
+    next.galleryCollectionsStripEnabled = patch.galleryCollectionsStripEnabled;
+  }
+  if ('galleryCollectionsSortMode' in patch) {
+    next.galleryCollectionsSortMode = sanitizeGalleryCollectionsSortMode(patch.galleryCollectionsSortMode);
   }
 
   return next;
@@ -184,6 +199,15 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('aiResourcePreset' in patch && typeof patch.aiResourcePreset === 'number') {
     next.aiResourcePreset = Math.max(10, Math.min(100, Math.round(patch.aiResourcePreset)));
+  }
+  if ('aiSearchStrictness' in patch && typeof patch.aiSearchStrictness === 'number') {
+    next.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(patch.aiSearchStrictness / 5) * 5));
+  }
+  if ('galleryCollectionsStripEnabled' in patch && typeof patch.galleryCollectionsStripEnabled === 'boolean') {
+    next.galleryCollectionsStripEnabled = patch.galleryCollectionsStripEnabled;
+  }
+  if ('galleryCollectionsSortMode' in patch) {
+    next.galleryCollectionsSortMode = sanitizeGalleryCollectionsSortMode(patch.galleryCollectionsSortMode);
   }
 
   return next;

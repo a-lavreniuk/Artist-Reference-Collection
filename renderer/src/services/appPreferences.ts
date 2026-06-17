@@ -1,6 +1,7 @@
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
+export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 
 export type NotificationPrefKey =
   | 'notifyScreenshotSaved'
@@ -34,6 +35,8 @@ export type AppPreferencesV1 = {
   aiMaxRamMb: number;
   aiResourcePreset: number;
   aiSearchStrictness: number;
+  galleryCollectionsStripEnabled: boolean;
+  galleryCollectionsSortMode: GalleryCollectionsSortMode;
 };
 
 export function defaultAppPreferences(): AppPreferencesV1 {
@@ -62,8 +65,15 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiGpuLayers: 0,
     aiMaxRamMb: 4096,
     aiResourcePreset: 50,
-    aiSearchStrictness: 50
+    aiSearchStrictness: 50,
+    galleryCollectionsStripEnabled: true,
+    galleryCollectionsSortMode: 'chrono'
   };
+}
+
+function sanitizeGalleryCollectionsSortMode(raw: unknown): GalleryCollectionsSortMode {
+  if (raw === 'count' || raw === 'random') return raw;
+  return 'chrono';
 }
 
 function sanitizeImportAction(raw: unknown): ImportSourceFilesAction {
@@ -92,7 +102,14 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     autoImportFolderPath:
       typeof raw.autoImportFolderPath === 'string' && raw.autoImportFolderPath.trim()
         ? raw.autoImportFolderPath.trim()
-        : null
+        : null,
+    galleryCollectionsStripEnabled:
+      typeof raw.galleryCollectionsStripEnabled === 'boolean'
+        ? raw.galleryCollectionsStripEnabled
+        : d.galleryCollectionsStripEnabled,
+    galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
+      raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
+    )
   };
 }
 

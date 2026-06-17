@@ -1,13 +1,22 @@
+import SettingsRadioRow from '../../../components/settings/SettingsRadioRow';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
+import type { GalleryCollectionsSortMode } from '../../../services/appPreferences';
 
 const LABEL_LAUNCH_AT_LOGIN = 'Запускать ARC при входе в систему.';
 const LABEL_CLOSE_TO_TRAY = 'При закрытии окна сворачивать приложение, а не закрывать.';
 const LABEL_TRASH_SOURCES =
   'Удалять исходные файлы после добавления их в систему и формирования карточки. Эти файлы будут перенесены в системную корзину.';
 const LABEL_DELETE_TO_TRASH = 'Удаление карточек переносит их в корзину, а не удаляет из системы.';
+const LABEL_GALLERY_COLLECTIONS_STRIP = 'Показывать коллекции на экране библиотеки';
+
+const COLLECTIONS_SORT_OPTIONS: Array<{ value: GalleryCollectionsSortMode; label: string }> = [
+  { value: 'chrono', label: 'По хронологии' },
+  { value: 'count', label: 'По количеству карточек' },
+  { value: 'random', label: 'Случайный порядок' }
+];
 
 export default function SettingsGeneralPanel() {
   const { prefs, ready, update } = useAppPreferences();
@@ -46,6 +55,30 @@ export default function SettingsGeneralPanel() {
             disabled={disabled}
             onPressedChange={(deleteCardsUseTrash) => void update({ deleteCardsUseTrash })}
           />
+        </SettingsSection>
+
+        <SettingsSeparator />
+
+        <SettingsSection title="Библиотека">
+          <SettingsToggleRow
+            label={LABEL_GALLERY_COLLECTIONS_STRIP}
+            pressed={prefs?.galleryCollectionsStripEnabled !== false}
+            disabled={disabled}
+            onPressedChange={(galleryCollectionsStripEnabled) => void update({ galleryCollectionsStripEnabled })}
+          />
+          {prefs?.galleryCollectionsStripEnabled !== false ? (
+            <div className="arc-settings-radio-stack" role="radiogroup" aria-label="Порядок коллекций на экране библиотеки">
+              {COLLECTIONS_SORT_OPTIONS.map((option) => (
+                <SettingsRadioRow
+                  key={option.value}
+                  label={option.label}
+                  checked={(prefs.galleryCollectionsSortMode ?? 'chrono') === option.value}
+                  disabled={disabled}
+                  onCheckedChange={() => void update({ galleryCollectionsSortMode: option.value })}
+                />
+              ))}
+            </div>
+          ) : null}
         </SettingsSection>
       </div>
     </div>

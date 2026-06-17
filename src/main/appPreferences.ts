@@ -8,6 +8,7 @@ import { registerScreenshotShortcut } from './screenshotShortcut';
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
+export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 
 export type AppPreferencesV1 = {
   version: 1;
@@ -35,6 +36,8 @@ export type AppPreferencesV1 = {
   aiMaxRamMb: number;
   aiResourcePreset: number;
   aiSearchStrictness: number;
+  galleryCollectionsStripEnabled: boolean;
+  galleryCollectionsSortMode: GalleryCollectionsSortMode;
 };
 
 const FILENAME = 'arc-app-preferences.json';
@@ -68,8 +71,15 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiGpuLayers: 0,
     aiMaxRamMb: 4096,
     aiResourcePreset: 50,
-    aiSearchStrictness: 50
+    aiSearchStrictness: 50,
+    galleryCollectionsStripEnabled: true,
+    galleryCollectionsSortMode: 'chrono'
   };
+}
+
+function sanitizeGalleryCollectionsSortMode(raw: unknown): GalleryCollectionsSortMode {
+  if (raw === 'count' || raw === 'random') return raw;
+  return 'chrono';
 }
 
 function prefsPath(): string {
@@ -136,7 +146,14 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     aiSearchStrictness:
       typeof raw.aiSearchStrictness === 'number'
         ? Math.max(0, Math.min(100, Math.round(raw.aiSearchStrictness / 5) * 5))
-        : d.aiSearchStrictness
+        : d.aiSearchStrictness,
+    galleryCollectionsStripEnabled:
+      typeof raw.galleryCollectionsStripEnabled === 'boolean'
+        ? raw.galleryCollectionsStripEnabled
+        : d.galleryCollectionsStripEnabled,
+    galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
+      raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
+    )
   };
 }
 
@@ -218,6 +235,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('aiSearchStrictness' in patch && typeof patch.aiSearchStrictness === 'number') {
     next.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(patch.aiSearchStrictness / 5) * 5));
+  }
+  if ('galleryCollectionsStripEnabled' in patch && typeof patch.galleryCollectionsStripEnabled === 'boolean') {
+    next.galleryCollectionsStripEnabled = patch.galleryCollectionsStripEnabled;
+  }
+  if ('galleryCollectionsSortMode' in patch) {
+    next.galleryCollectionsSortMode = sanitizeGalleryCollectionsSortMode(patch.galleryCollectionsSortMode);
   }
 
   return next;
