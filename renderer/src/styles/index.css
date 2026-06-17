@@ -836,12 +836,16 @@ button.color-swatch-inline:disabled {
 }
 
 .arc-gallery-collections-strip {
+  --arc-gallery-collection-card-pics-h: 96px;
+  --arc-gallery-collections-strip-fade-w: 128px;
   position: relative;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--s-2);
   flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.arc-gallery-collections-strip__viewport {
+  position: relative;
   width: 100%;
   min-width: 0;
 }
@@ -864,21 +868,43 @@ button.color-swatch-inline:disabled {
   background: var(--panel-border);
 }
 
+.arc-gallery-collections-strip__fade {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  width: var(--arc-gallery-collections-strip-fade-w);
+  height: var(--arc-gallery-collection-card-pics-h);
+  pointer-events: none;
+}
+
+.arc-gallery-collections-strip__fade--start {
+  left: 0;
+  background: linear-gradient(to right, var(--app-bg) 0%, transparent 100%);
+}
+
+.arc-gallery-collections-strip__fade--end {
+  right: 0;
+  background: linear-gradient(to left, var(--app-bg) 0%, transparent 100%);
+}
+
 .arc-gallery-collections-strip__arrow {
-  flex: 0 0 auto;
+  position: absolute;
+  top: calc(var(--arc-gallery-collection-card-pics-h) / 2);
+  z-index: 2;
+  transform: translateY(-50%);
 }
 
-.arc-gallery-collections-strip__chevron--left {
-  transform: rotate(90deg);
+.arc-gallery-collections-strip__arrow--back {
+  left: var(--s-2);
 }
 
-.arc-gallery-collections-strip__chevron--right {
-  transform: rotate(-90deg);
+.arc-gallery-collections-strip__arrow--forward {
+  right: var(--s-2);
 }
 
 .arc-gallery-collections-strip__scroll {
   display: flex;
-  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -937,16 +963,16 @@ button.color-swatch-inline:disabled {
   align-items: stretch;
   gap: 1px;
   width: 100%;
-  height: 96px;
+  height: var(--arc-gallery-collection-card-pics-h, 96px);
   border-radius: var(--radius-l);
   overflow: hidden;
 }
 
 .arc-gallery-collection-card__pic {
   position: relative;
-  flex: 0 0 96px;
-  width: 96px;
-  height: 96px;
+  flex: 0 0 var(--arc-gallery-collection-card-pics-h, 96px);
+  width: var(--arc-gallery-collection-card-pics-h, 96px);
+  height: var(--arc-gallery-collection-card-pics-h, 96px);
   overflow: hidden;
   background: var(--gray-900);
 }
