@@ -109,6 +109,7 @@ function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collection
     height: typeof row.height === 'number' ? row.height : undefined,
     fileSize: typeof row.file_size === 'number' ? row.file_size : undefined,
     dominantColor: row.dominant_color ? String(row.dominant_color) : undefined,
+    paletteJson: row.palette_json ? String(row.palette_json) : undefined,
     phashJson: row.phash_json ? String(row.phash_json) : undefined,
     originalRel: String(row.original_rel),
     thumbSRel: String(row.thumb_s_rel),
@@ -141,6 +142,13 @@ function loadCardRow(db: Database.Database, cardId: string): CardIndexRow | null
   const row = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId) as Record<string, unknown> | undefined;
   if (!row) return null;
   return dbRowToIndex(row, getCardTags(db, cardId), getCardCollections(db, cardId));
+}
+
+export function indexCardRowsFromDb(db: Database.Database, rows: Record<string, unknown>[]): CardIndexRow[] {
+  return rows.map((r) => {
+    const id = String(r.id);
+    return dbRowToIndex(r, getCardTags(db, id), getCardCollections(db, id));
+  });
 }
 
 function syncCardRelations(db: Database.Database, cardId: string, tagIds: string[], collectionIds: string[]): void {
@@ -346,6 +354,7 @@ export async function importMediaFile(
   try {
     const { originalAbs, originalRel } = await copyOriginalToCard(root, cardId, resolved, ext);
     let dominantColorHex = '#2a2a2a';
+    let paletteJson: string | null = null;
     let width: number | undefined;
     let height: number | undefined;
     let phash: ImageDupFingerprint | undefined;
@@ -354,6 +363,7 @@ export async function importMediaFile(
     if (type === 'image') {
       const thumbRes = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
       dominantColorHex = thumbRes.dominantColorHex;
+      paletteJson = JSON.stringify(thumbRes.palette);
       width = thumbRes.width || undefined;
       height = thumbRes.height || undefined;
       phash = thumbRes.phash;
@@ -363,6 +373,7 @@ export async function importMediaFile(
         await extractVideoFrameToJpeg(originalAbs, frameTmp);
         const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
         dominantColorHex = thumbRes.dominantColorHex;
+        paletteJson = JSON.stringify(thumbRes.palette);
         width = thumbRes.width || undefined;
         height = thumbRes.height || undefined;
         const dims = await probeVideoDimensions(originalAbs);
@@ -405,9 +416,9 @@ export async function importMediaFile(
 
     db.prepare(
       `INSERT INTO cards (
-        id, type, added_at, format, width, height, file_size, duration_ms, dominant_color, phash_json,
+        id, type, added_at, format, width, height, file_size, duration_ms, dominant_color, palette_json, phash_json,
         original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardId,
       type,
@@ -418,6 +429,7 @@ export async function importMediaFile(
       st.size,
       durationMs ?? null,
       dominantColorHex,
+      paletteJson,
       phash ? JSON.stringify(phash) : null,
       originalRel,
       thumbSRel,

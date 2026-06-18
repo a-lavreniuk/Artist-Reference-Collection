@@ -38,6 +38,9 @@ contextBridge.exposeInMainWorld('arc', {
   storageEnsureReady: () =>
     ipcRenderer.invoke('arc:storage-ensure-ready') as Promise<{ ok: true } | { ok: false; error: string }>,
   storageListCards: (params: unknown) => ipcRenderer.invoke('arc:storage-list-cards', params),
+  colorSearchCards: (params: unknown) => ipcRenderer.invoke('arc:color-search-cards', params),
+  aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
+  aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),
   storageGetCard: (cardId: string) => ipcRenderer.invoke('arc:storage-get-card', cardId),
   storageUpdateCard: (cardId: string, patch: unknown) =>
     ipcRenderer.invoke('arc:storage-update-card', { cardId, patch }),

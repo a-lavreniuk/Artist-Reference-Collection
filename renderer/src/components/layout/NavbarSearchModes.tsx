@@ -15,7 +15,10 @@ const MODES: NavbarSearchMode[] = ['tags', 'ai', 'color', 'similar'];
 
 /** Figma 60:5582 — переключатель режимов поиска */
 export default function NavbarSearchModes({ mode, aiSearchEnabled, onModeChange }: NavbarSearchModesProps) {
-  const visibleModes = MODES.filter((item) => item !== 'ai' || aiSearchEnabled);
+  const visibleModes = MODES.filter((item) => {
+    if (item === 'ai' || item === 'similar') return aiSearchEnabled;
+    return true;
+  });
 
   return (
     <div className="arc-navbar-search-modes" role="tablist" aria-label="Режим поиска">

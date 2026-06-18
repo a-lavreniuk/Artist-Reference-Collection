@@ -2,7 +2,7 @@
 
 import type { GalleryAdvancedFilters, GallerySortState } from './galleryFilters';
 
-export const STORAGE_SCHEMA_VERSION = 8;
+export const STORAGE_SCHEMA_VERSION = 9;
 
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';
@@ -84,6 +84,7 @@ export type CardIndexRow = {
   height?: number;
   fileSize?: number;
   dominantColor?: string;
+  paletteJson?: string;
   phashJson?: string;
   originalRel: string;
   thumbSRel: string;

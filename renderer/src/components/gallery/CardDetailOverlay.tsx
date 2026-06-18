@@ -11,7 +11,7 @@ import {
   type PointerEvent
 } from 'react';
 import { createPortal } from 'react-dom';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import DemoAlert, { type DemoAlertVariant } from '../layout/DemoAlert';
 import { Tooltip } from '../tooltip/Tooltip';
@@ -44,6 +44,7 @@ import {
 } from '../../services/db';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
+import { startVisualSimilarSearch } from '../../search/startVisualSimilarSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
@@ -98,6 +99,7 @@ export default function CardDetailOverlay({
   moodboardRemoveConfirm = 'gallery'
 }: Props) {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const hostRef = useRef<HTMLDivElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
   const inspectVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -637,13 +639,8 @@ export default function CardDetailOverlay({
     ['--arc-card-detail-settings-w']: `${settingsWidth}px`
   } as CSSProperties;
 
-  const handleSimilarFind = async (targetId: string) => {
-    const matches = await listSimilarCards(targetId, 1);
-    if (matches.length === 0) {
-      setActionAlert({ message: 'Нет похожих изображений', variant: 'info' });
-      return;
-    }
-    onOpenCard(matches[0].id);
+  const handleSimilarFind = (targetId: string) => {
+    startVisualSimilarSearch(navigate, searchParams, targetId);
   };
 
   const handleSimilarToggleMoodboard = async (targetId: string) => {

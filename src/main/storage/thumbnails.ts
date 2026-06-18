@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import type { ImageDupFingerprint } from './types';
+import { computeImagePalette, type PaletteSwatch } from './palette';
 import { THUMB_L_MAX, THUMB_M_MAX, THUMB_S_MAX } from './types';
 
 const SAMPLE = 32;
@@ -89,6 +90,7 @@ async function writeThumbWebp(input: Buffer | string, outputAbs: string, maxSide
 
 export type ThumbnailResult = {
   dominantColorHex: string;
+  palette: PaletteSwatch[];
   width: number;
   height: number;
   phash?: ImageDupFingerprint;
@@ -115,7 +117,8 @@ export async function generateImageThumbnails(
   ]);
 
   const phash = computePhash ? await computeImagePhash(sourceAbs) : undefined;
-  return { dominantColorHex, width, height, ...(phash ? { phash } : {}) };
+  const palette = await computeImagePalette(sourceAbs);
+  return { dominantColorHex, palette, width, height, ...(phash ? { phash } : {}) };
 }
 
 export async function generateVideoThumbnailsFromFrame(
@@ -135,5 +138,6 @@ export async function generateVideoThumbnailsFromFrame(
     writeThumbWebp(inputBuf, thumbMAbs, THUMB_M_MAX),
     writeThumbWebp(inputBuf, thumbLAbs, THUMB_L_MAX)
   ]);
-  return { dominantColorHex, width, height };
+  const palette = await computeImagePalette(frameJpegAbs);
+  return { dominantColorHex, palette, width, height };
 }

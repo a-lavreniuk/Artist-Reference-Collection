@@ -56,6 +56,12 @@ import {
 } from './ai/modelManifest';
 import { clearAiSearchCache, searchByEmbedding, vectorFromNumbers } from './ai/semanticSearch';
 import { searchHybridHeavy } from './ai/hybridSearch';
+import {
+  searchCardsBySimilarImage,
+  stageSimilarQueryFile,
+  type NormalizedCropRect
+} from './ai/similarImageSearch';
+import type { ListCardsParams } from './storage/types';
 import type { AiSearchResult, AiStatus, ModelTier } from './ai/types';
 import { MODEL_CATALOG } from './ai/types';
 import { readLibraryRootFromDisk } from './libraryRootConfig';
@@ -761,6 +767,78 @@ export function registerAiIpc(): void {
     }
 
     return buildAiStatus();
+  });
+
+  ipcMain.handle('arc:ai-similar-stage-file', async (_e, sourcePath: unknown) => {
+    const source = typeof sourcePath === 'string' ? sourcePath.trim() : '';
+    if (!source) return { ok: false as const, error: 'Путь к файлу не указан.' };
+    try {
+      const stagedPath = await stageSimilarQueryFile(source);
+      return { ok: true as const, stagedPath };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { ok: false as const, error: message };
+    }
+  });
+
+  ipcMain.handle('arc:ai-similar-search-cards', async (_e, payload: unknown) => {
+    const prefs = await readAppPreferences();
+    if (!prefs.aiSemanticSearchEnabled) {
+      throw new Error('AI Semantic Search выключен в настройках');
+    }
+    const userData = app.getPath('userData');
+    const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
+    if (!(await isModelInstalled(userData, tier))) {
+      throw new Error('Модель не установлена. Скачайте модель в настройках AI Поиска.');
+    }
+
+    const root = await readLibraryRootFromDisk();
+    if (!root) return [];
+    await ensureLibraryReady(root);
+    const db = openLibraryDb(root);
+    const indexed =
+      tier === 'heavy'
+        ? Math.max(countHybridEmbeddingsForModel(db, MODEL_CATALOG.heavy.id), countEmbeddingsForModel(db, MODEL_CATALOG.light.id))
+        : countEmbeddingsForModel(db, MODEL_CATALOG.light.id);
+    if (indexed === 0) {
+      throw new Error('Библиотека ещё не проиндексирована. Дождитесь завершения индексации.');
+    }
+
+    const p = payload as Partial<ListCardsParams> & {
+      cardId?: string | null;
+      imagePath?: string | null;
+      crop?: NormalizedCropRect | null;
+      scopeCardIds?: string[];
+    };
+
+    const scope =
+      Array.isArray(p.scopeCardIds) && p.scopeCardIds.length > 0 ? new Set(p.scopeCardIds) : null;
+
+    const modelId = tier === 'heavy' ? MODEL_CATALOG.heavy.id : MODEL_CATALOG.light.id;
+
+    try {
+      const rows = await searchCardsBySimilarImage(root, {
+        cardId: p.cardId ?? null,
+        imagePath: p.imagePath ?? null,
+        crop: p.crop ?? null,
+        libraryScope: p.libraryScope,
+        selectedTagIds: p.selectedTagIds,
+        cardIdExact: p.cardIdExact,
+        collectionId: p.collectionId,
+        moodboardCardIds: p.moodboardCardIds,
+        advancedFilters: p.advancedFilters,
+        sort: p.sort,
+        scopeCardIds: scope,
+        tier,
+        modelId,
+        strictness: prefs.aiSearchStrictness
+      });
+      return rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      broadcast('arc:ai-error', { message, fallback: true });
+      throw err;
+    }
   });
 }
 

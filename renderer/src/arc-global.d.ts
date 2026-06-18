@@ -239,6 +239,34 @@ declare global {
       aiResumeDownload?: () => Promise<{ ok: true }>;
       aiSearch?: (query: string) => Promise<Array<{ cardId: string; score: number }>>;
       aiSearchCards?: (query: string) => Promise<Array<import('./services/arcSchema').CardRecord & { aiScore?: number }>>;
+      colorSearchCards?: (params: {
+        hex: string;
+        accuracy?: number;
+        libraryScope?: 'all' | 'untagged' | 'trash';
+        selectedTagIds?: string[];
+        cardIdExact?: string | null;
+        collectionId?: string | null;
+        moodboardCardIds?: string[] | null;
+        advancedFilters?: GalleryAdvancedFilters;
+        sort?: GallerySortState;
+        scopeCardIds?: string[];
+      }) => Promise<import('./services/arcSchema').CardRecord[]>;
+      aiSimilarStageFile?: (
+        sourcePath: string
+      ) => Promise<{ ok: true; stagedPath: string } | { ok: false; error: string }>;
+      aiSimilarSearchCards?: (params: {
+        cardId?: string | null;
+        imagePath?: string | null;
+        crop?: { x: number; y: number; w: number; h: number };
+        libraryScope?: 'all' | 'untagged' | 'trash';
+        selectedTagIds?: string[];
+        cardIdExact?: string | null;
+        collectionId?: string | null;
+        moodboardCardIds?: string[] | null;
+        advancedFilters?: GalleryAdvancedFilters;
+        sort?: GallerySortState;
+        scopeCardIds?: string[];
+      }) => Promise<import('./services/arcSchema').CardRecord[]>;
       aiReindex?: () => Promise<{ ok: true }>;
       aiPauseIndex?: () => Promise<{ ok: true }>;
       aiResumeIndex?: () => Promise<{ ok: true }>;

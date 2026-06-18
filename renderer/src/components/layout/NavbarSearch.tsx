@@ -16,10 +16,21 @@ import {
   setSearchAndDetailCardInParams
 } from '../../search/openCardUrl';
 import {
+  ARC_SEARCH_QUERY_AI,
   ARC_SEARCH_QUERY_CARD,
+  ARC_SEARCH_QUERY_COLOR,
+  ARC_SEARCH_QUERY_COLOR_TOL,
+  ARC_SEARCH_QUERY_SIMILAR,
+  ARC_SEARCH_QUERY_SIMILAR_CROP,
   ARC_SEARCH_QUERY_TAG,
+  parseSearchAiQuery,
+  parseSearchColorHex,
+  parseSearchColorTolerance,
   parseSearchCardId,
-  parseSearchTagIds
+  parseSearchTagIds,
+  setSearchAiInParams,
+  setSearchColorInParams,
+  parseSearchSimilarRef
 } from '../../search/searchUrl';
 import {
   getRecentTagIds,
@@ -34,13 +45,28 @@ import {
   clearAllRecentViewedCardIds,
   getRecentViewedCardIds
 } from '../../search/recentViewedCards';
+import {
+  ARC_RECENT_AI_QUERIES_CHANGED_EVENT,
+  clearAllRecentAiQueries,
+  getRecentAiQueries,
+  pushRecentAiQuery
+} from '../../search/recentSearchAi';
+import { ARC_AI_SEARCH_LOADING_EVENT } from '../../search/aiSearchEvents';
+import { clearGallerySearchParams } from '../../search/clearGallerySearch';
+import { clearSimilarUploadPath } from '../../search/similarSearchSession';
+import { useGalleryFilters } from '../gallery/GalleryFilterContext';
 import { rankTagsForQuery } from '../../search/rankSearchTags';
 import SearchPanelSection from './SearchPanelSection';
 import SearchPanelRecentCards from './SearchPanelRecentCards';
 import SearchPanelModeHeader from './SearchPanelModeHeader';
 import SearchPanelFullBleedSep from './SearchPanelFullBleedSep';
 import SearchPanelTagChip from './SearchPanelTagChip';
+import SearchPanelRecentQueries from './SearchPanelRecentQueries';
+import SearchPanelColorControls from './SearchPanelColorControls';
+import SearchPanelSimilarControls from './SearchPanelSimilarControls';
+import { useNavbarSimilarSearch } from './useNavbarSimilarSearch';
 import NavbarSearchModes from './NavbarSearchModes';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { formatNavbarTabCount } from '../../search/formatNavbarTabCount';
 import {
   readNavbarSearchMode,
@@ -48,15 +74,15 @@ import {
   type NavbarSearchMode,
   writeNavbarSearchMode
 } from '../../search/navbarSearchMode';
-import { useAppPreferences } from '../../hooks/useAppPreferences';
+import { useAiNavbarModesVisible } from '../../hooks/useAiNavbarModesVisible';
 import {
-  ARC_SEARCH_QUERY_AI,
-  parseSearchAiQuery,
-  setSearchAiInParams
-} from '../../search/searchUrl';
+  COLOR_SEARCH_PRESETS,
+  DEFAULT_COLOR_SEARCH_TOLERANCE
+} from '../../search/colorPresets';
 
 export { formatNavbarTabCount } from '../../search/formatNavbarTabCount';
 
+const COLOR_SEARCH_DEBOUNCE_MS = 280;
 const UUID_LIKE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -76,11 +102,12 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdFilter = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
   const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
+  const colorHex = useMemo(() => parseSearchColorHex(searchParams), [searchParams]);
+  const colorTolerance = useMemo(() => parseSearchColorTolerance(searchParams), [searchParams]);
   const detailCardId = useMemo(() => parseDetailCardId(searchParams), [searchParams]);
 
   const [searchMode, setSearchMode] = useState<NavbarSearchMode>(() => readNavbarSearchMode());
-  const { prefs, ready: prefsReady } = useAppPreferences();
-  const aiSearchEnabled = prefsReady && prefs?.aiSemanticSearchEnabled === true;
+  const aiNavbarModesVisible = useAiNavbarModesVisible();
 
   const [draft, setDraft] = useState('');
   const [panelOpen, setPanelOpen] = useState(false);
@@ -96,6 +123,14 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   );
   const [fieldError, setFieldError] = useState(false);
   const [recentTick, setRecentTick] = useState(0);
+  const [aiSearching, setAiSearching] = useState(false);
+  const [panelColorHex, setPanelColorHex] = useState(COLOR_SEARCH_PRESETS[1].hex);
+  const [panelColorTolerance, setPanelColorTolerance] = useState(DEFAULT_COLOR_SEARCH_TOLERANCE);
+  const colorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { clearFilters } = useGalleryFilters();
+
+  const similarRefFromUrl = useMemo(() => parseSearchSimilarRef(searchParams), [searchParams]);
+  const similarSearch = useNavbarSimilarSearch(searchParams, setSearchParams, searchMode, panelOpen);
 
   const tagsIndex = useMemo(() => {
     const m = new Map<string, TagRecord>();
@@ -108,11 +143,26 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
   useEffect(() => {
-    if (!aiSearchEnabled && searchMode === 'ai') {
-      setSearchMode('tags');
-      writeNavbarSearchMode('tags');
+    if (aiNavbarModesVisible) return;
+    const hasAiOrSimilar =
+      searchMode === 'ai' ||
+      searchMode === 'similar' ||
+      Boolean(parseSearchAiQuery(searchParams)) ||
+      Boolean(parseSearchSimilarRef(searchParams));
+    if (!hasAiOrSimilar) return;
+    setSearchMode('tags');
+    writeNavbarSearchMode('tags');
+    clearSimilarUploadPath();
+    setSearchParams(clearGallerySearchParams(searchParams), { replace: true });
+  }, [aiNavbarModesVisible, searchMode, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!aiNavbarModesVisible) return;
+    if (similarRefFromUrl && searchMode !== 'similar') {
+      setSearchMode('similar');
+      writeNavbarSearchMode('similar');
     }
-  }, [aiSearchEnabled, searchMode]);
+  }, [similarRefFromUrl, searchMode, aiNavbarModesVisible]);
 
   const loadIndex = useCallback(async () => {
     const cats = await getAllCategories();
@@ -136,7 +186,11 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   useEffect(() => {
     const onRecentViews = () => setRecentTick((x) => x + 1);
     window.addEventListener(ARC_RECENT_VIEWS_CHANGED_EVENT, onRecentViews);
-    return () => window.removeEventListener(ARC_RECENT_VIEWS_CHANGED_EVENT, onRecentViews);
+    window.addEventListener(ARC_RECENT_AI_QUERIES_CHANGED_EVENT, onRecentViews);
+    return () => {
+      window.removeEventListener(ARC_RECENT_VIEWS_CHANGED_EVENT, onRecentViews);
+      window.removeEventListener(ARC_RECENT_AI_QUERIES_CHANGED_EVENT, onRecentViews);
+    };
   }, []);
 
   useEffect(() => {
@@ -161,9 +215,11 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
 
   const openPanel = useCallback(() => {
     setPanelOpen(true);
-    navigateToSearchHost();
-    void loadIndex();
-  }, [loadIndex, navigateToSearchHost]);
+    if (searchMode === 'tags') {
+      navigateToSearchHost();
+      void loadIndex();
+    }
+  }, [loadIndex, navigateToSearchHost, searchMode]);
 
   const panelHadInteraction = useRef(false);
 
@@ -220,7 +276,7 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
 
   useLayoutEffect(() => {
     scrollChipsToEnd();
-  }, [selectedTagIds.length, cardIdFilter, aiQuery, scrollChipsToEnd, draft]);
+  }, [selectedTagIds.length, cardIdFilter, scrollChipsToEnd, draft]);
 
   useLayoutEffect(() => {
     const viewport = scrollTrackRef.current;
@@ -331,13 +387,53 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     );
   };
 
+  const applyColorSearch = useCallback(
+    (hex: string, tolerance: number) => {
+      panelHadInteraction.current = true;
+      const base = clearGallerySearchParams(searchParams);
+      setSearchParams(setSearchColorInParams(base, hex, tolerance), { replace: true });
+      setFieldError(false);
+    },
+    [searchParams, setSearchParams]
+  );
+
+  const applyColorSearchDebounced = useCallback(
+    (hex: string, tolerance: number) => {
+      if (colorDebounceRef.current) clearTimeout(colorDebounceRef.current);
+      colorDebounceRef.current = setTimeout(() => {
+        applyColorSearch(hex, tolerance);
+      }, COLOR_SEARCH_DEBOUNCE_MS);
+    },
+    [applyColorSearch]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (colorDebounceRef.current) clearTimeout(colorDebounceRef.current);
+    };
+  }, []);
+
+  const handlePanelColorChange = useCallback(
+    (hex: string) => {
+      setPanelColorHex(hex);
+      applyColorSearchDebounced(hex, panelColorTolerance);
+    },
+    [applyColorSearchDebounced, panelColorTolerance]
+  );
+
+  const handlePanelToleranceChange = useCallback(
+    (value: number) => {
+      setPanelColorTolerance(value);
+      applyColorSearchDebounced(panelColorHex, value);
+    },
+    [applyColorSearchDebounced, panelColorHex]
+  );
+
   /** Полный сброс: текст, все метки, фильтр по ID; панель поиска не закрываем. */
   const resetSearchField = () => {
     panelHadInteraction.current = true;
-    const n = new URLSearchParams(searchParams);
-    n.delete(ARC_SEARCH_QUERY_TAG);
-    n.delete(ARC_SEARCH_QUERY_CARD);
-    n.delete(ARC_SEARCH_QUERY_AI);
+    clearSimilarUploadPath();
+    const n = clearGallerySearchParams(searchParams);
     n.delete(ARC_DETAIL_QUERY_CARD);
     setSearchParams(n, { replace: true });
     setDraft('');
@@ -346,29 +442,49 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
 
   const applyAiQuery = (raw: string) => {
     const query = raw.trim();
-    if (!query) return;
+    if (!query) {
+      setFieldError(true);
+      return;
+    }
     panelHadInteraction.current = true;
-    setSearchParams(setSearchAiInParams(searchParams, query), { replace: true });
-    setDraft('');
+    pushRecentAiQuery(query);
+    setRecentTick((x) => x + 1);
+    const base = clearGallerySearchParams(searchParams);
+    setSearchParams(setSearchAiInParams(base, query), { replace: true });
+    setDraft(query);
     setFieldError(false);
     closePanel();
-    navigateToSearchHost();
   };
 
   const handleModeChange = (mode: NavbarSearchMode) => {
+    if (mode === searchMode) return;
     setSearchMode(mode);
     writeNavbarSearchMode(mode);
-    if (mode === 'ai') {
-      setPanelOpen(false);
-      const n = new URLSearchParams(searchParams);
-      n.delete(ARC_SEARCH_QUERY_TAG);
-      n.delete(ARC_SEARCH_QUERY_CARD);
-      setSearchParams(n, { replace: true });
-      return;
-    }
+    clearFilters();
     const n = new URLSearchParams(searchParams);
+    n.delete(ARC_SEARCH_QUERY_TAG);
+    n.delete(ARC_SEARCH_QUERY_CARD);
     n.delete(ARC_SEARCH_QUERY_AI);
-    setSearchParams(n, { replace: true });
+    n.delete(ARC_SEARCH_QUERY_COLOR);
+    n.delete(ARC_SEARCH_QUERY_COLOR_TOL);
+    n.delete(ARC_SEARCH_QUERY_SIMILAR);
+    n.delete(ARC_SEARCH_QUERY_SIMILAR_CROP);
+    n.delete(ARC_DETAIL_QUERY_CARD);
+    clearSimilarUploadPath();
+    if (mode === 'color') {
+      const defaultHex = COLOR_SEARCH_PRESETS[1].hex;
+      setPanelColorHex(defaultHex);
+      setPanelColorTolerance(DEFAULT_COLOR_SEARCH_TOLERANCE);
+      setSearchParams(
+        setSearchColorInParams(n, defaultHex, DEFAULT_COLOR_SEARCH_TOLERANCE),
+        { replace: true }
+      );
+    } else {
+      setSearchParams(n, { replace: true });
+    }
+    setDraft('');
+    setFieldError(false);
+    setPanelOpen(false);
   };
 
   const applyCardIdFilter = (raw: string) => {
@@ -396,7 +512,7 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
       if (searchMode === 'ai') {
         if (draft.trim().length > 0) {
           applyAiQuery(draft);
-        } else if (fieldError) {
+        } else {
           setFieldError(true);
         }
         return;
@@ -416,19 +532,60 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
   const placeholder = SEARCH_MODE_META[searchMode].placeholder;
   const isTagsMode = searchMode === 'tags';
   const isAiMode = searchMode === 'ai';
+  const isColorMode = searchMode === 'color';
+  const isSimilarMode = searchMode === 'similar';
+  const displayColorHex = colorHex ?? COLOR_SEARCH_PRESETS[1].hex.replace('#', '');
 
-  const hasValue =
-    draft.trim().length > 0 ||
-    selectedTagIds.length > 0 ||
-    Boolean(cardIdFilter) ||
-    Boolean(aiQuery);
+  const hasValue = isAiMode
+    ? draft.trim().length > 0 || Boolean(aiQuery)
+    : isColorMode
+      ? Boolean(colorHex)
+      : isSimilarMode
+        ? similarSearch.hasSimilarQuery
+        : draft.trim().length > 0 || selectedTagIds.length > 0 || Boolean(cardIdFilter);
+
+  const showAiSend = isAiMode && draft.trim().length > 0 && !aiSearching;
+  const showAiClear = isAiMode && hasValue && !aiSearching;
+
+  useEffect(() => {
+    if (!isAiMode) return;
+    setDraft(aiQuery ?? '');
+  }, [aiQuery, isAiMode]);
+
+  useEffect(() => {
+    if (!isColorMode) return;
+    if (colorHex) {
+      setPanelColorHex(`#${colorHex}`);
+      setPanelColorTolerance(colorTolerance);
+      return;
+    }
+    applyColorSearch(COLOR_SEARCH_PRESETS[1].hex, DEFAULT_COLOR_SEARCH_TOLERANCE);
+  }, [applyColorSearch, colorHex, colorTolerance, isColorMode]);
+
+  useEffect(() => {
+    const onLoading = (e: Event) => {
+      const detail = (e as CustomEvent<{ loading: boolean }>).detail;
+      setAiSearching(Boolean(detail?.loading));
+    };
+    window.addEventListener(ARC_AI_SEARCH_LOADING_EVENT, onLoading);
+    return () => window.removeEventListener(ARC_AI_SEARCH_LOADING_EVENT, onLoading);
+  }, []);
 
   const recentIds = useMemo(() => getRecentTagIds(), [panelOpen, tagsVersion, recentTick]);
+  const recentAiIds = useMemo(() => getRecentAiQueries(), [panelOpen, recentTick]);
   const recentViewedIds = useMemo(() => getRecentViewedCardIds(), [panelOpen, recentTick]);
 
   const showRecentTags = recentIds.length > 0;
+  const showRecentAi = recentAiIds.length > 0;
   const showRecentViews = recentViewedIds.length > 0;
-  const hasRecentSections = showRecentTags || showRecentViews;
+  const hasRecentSectionsTags = showRecentTags || showRecentViews;
+  const hasRecentSectionsAi = showRecentAi || showRecentViews;
+
+  const hasRecentSectionsColor = showRecentViews;
+
+  useLayoutEffect(() => {
+    if (searchAnchorRef.current) void hydrateArcNavbarIcons(searchAnchorRef.current);
+  }, [showAiSend, aiSearching, panelOpen, searchMode, displayColorHex]);
 
   const selectRecentCard = (id: string) => {
     panelHadInteraction.current = true;
@@ -439,18 +596,133 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
     closePanel();
   };
 
+  const selectRecentAiQuery = (query: string) => {
+    panelHadInteraction.current = true;
+    setDraft(query);
+    setFieldError(false);
+  };
+
   return (
     <>
       <div className="arc-navbar-search-anchor" ref={searchAnchorRef}>
       <div className="arc-navbar-search-row">
-        <NavbarSearchModes mode={searchMode} aiSearchEnabled={aiSearchEnabled} onModeChange={handleModeChange} />
+        <NavbarSearchModes mode={searchMode} aiSearchEnabled={aiNavbarModesVisible} onModeChange={handleModeChange} />
         <div className="arc-navbar-search-stack">
         <div
-          className={`field field-full search-multiselect-live arc-navbar-search-live${hasValue ? ' has-value' : ''}${fieldError ? ' field-error' : ''}`}
-          data-live-search-multi
+          className={`field field-full arc-navbar-search-live${isTagsMode ? ' search-multiselect-live' : ''}${hasValue ? ' has-value' : ''}${fieldError ? ' field-error' : ''}`}
+          data-live-search-multi={isTagsMode ? '' : undefined}
         >
-          <div className="input search-multiselect input--size-l input-slots arc-navbar-search">
+          <div
+            className={`input input--size-l input-slots arc-navbar-search${
+              isTagsMode
+                ? ' search-multiselect'
+                : isColorMode
+                  ? ' arc-navbar-search--color'
+                  : isSimilarMode
+                    ? ' arc-navbar-search--similar'
+                    : ' arc-navbar-search--ai'
+            }`}
+          >
             <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
+            {isAiMode ? (
+              <>
+                <input
+                  ref={searchInputRef}
+                  className="search-inner slot-value arc-navbar-search-inner-ai"
+                  type="text"
+                  placeholder={placeholder}
+                  value={draft}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    setFieldError(false);
+                  }}
+                  onKeyDown={onInputKeyDown}
+                  onFocus={() => openPanel()}
+                  onClick={() => openPanel()}
+                />
+                <div className="arc-navbar-search-actions slot-trailing">
+                  {aiSearching ? (
+                    <span className="loader arc-navbar-search-loader" role="status" aria-label="Поиск" />
+                  ) : (
+                    <>
+                      {showAiClear ? (
+                        <button
+                          type="button"
+                          className="input-inline-icon arc-navbar-search-clear-btn arc-icon-close"
+                          aria-label="Сбросить поиск"
+                          onClick={resetSearchField}
+                        />
+                      ) : null}
+                      {showAiSend ? (
+                        <button
+                          type="button"
+                          className="input-inline-icon arc-navbar-search-send-btn arc-icon-send"
+                          aria-label="Запустить поиск"
+                          onClick={() => applyAiQuery(draft)}
+                        />
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </>
+            ) : isColorMode ? (
+              <button
+                type="button"
+                className="arc-navbar-search-color-trigger slot-value"
+                aria-label="Открыть поиск по цвету"
+                onClick={() => openPanel()}
+              >
+                <span className="arc-navbar-search-color-hex-prefix">HEX</span>
+                <span className="arc-navbar-search-color-hex-value">{displayColorHex}</span>
+                <span
+                  className="arc-navbar-search-color-swatch"
+                  style={{ background: `#${displayColorHex}` }}
+                  aria-hidden="true"
+                />
+              </button>
+            ) : isSimilarMode ? (
+              <>
+                <button
+                  type="button"
+                  className="arc-navbar-search-similar-trigger slot-value"
+                  aria-label="Открыть поиск по совпадениям"
+                  onClick={() => openPanel()}
+                >
+                  {similarSearch.previewSrc ? (
+                    <img
+                      src={similarSearch.previewSrc}
+                      alt=""
+                      className="arc-navbar-search-similar-thumb"
+                    />
+                  ) : (
+                    <span className="typo-p-m arc-navbar-search-similar-placeholder">{placeholder}</span>
+                  )}
+                </button>
+                <div className="arc-navbar-search-actions slot-trailing">
+                  {similarSearch.similarSearching ? (
+                    <span className="loader arc-navbar-search-loader" role="status" aria-label="Поиск" />
+                  ) : (
+                    <>
+                      {similarSearch.hasSimilarQuery ? (
+                        <button
+                          type="button"
+                          className="input-inline-icon arc-navbar-search-clear-btn arc-icon-close"
+                          aria-label="Сбросить поиск"
+                          onClick={resetSearchField}
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        className="input-inline-icon arc-navbar-search-send-btn arc-icon-search"
+                        aria-label="Открыть поиск по совпадениям"
+                        onClick={() => openPanel()}
+                      />
+                    </>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
             <div
               className="arc-navbar-search-scroll-clip"
               data-fade-start={scrollFade.start ? 'true' : undefined}
@@ -462,8 +734,7 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
                 onWheel={onScrollTrackWheel}
               >
                 <div className="arc-navbar-search-scroll__track">
-                {isTagsMode
-                  ? selectedTagIds.map((id) => {
+                {selectedTagIds.map((id) => {
                       const t = tagsIndex.get(id);
                       const cat = t ? categoryById.get(t.categoryId) : undefined;
                       const color = cat?.colorHex ?? 'var(--gray-500)';
@@ -493,9 +764,8 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
                           </span>
                         </span>
                       );
-                    })
-                  : null}
-                {isTagsMode && cardIdFilter ? (
+                    })}
+                {cardIdFilter ? (
                   <span
                     role="button"
                     tabIndex={0}
@@ -520,12 +790,6 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
                     </span>
                   </span>
                 ) : null}
-                {isAiMode && aiQuery ? (
-                  <span className="chip chip-active" aria-label="AI запрос">
-                    <span className="chip-color" style={{ background: 'var(--brand-500)' }} aria-hidden="true" />
-                    <span>{aiQuery.length > 48 ? `${aiQuery.slice(0, 48)}…` : aiQuery}</span>
-                  </span>
-                ) : null}
                 <input
                   ref={searchInputRef}
                   className="search-inner arc-navbar-search-inner"
@@ -535,15 +799,15 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
                   onChange={(e) => {
                     setDraft(e.target.value);
                     setFieldError(false);
-                    if (isTagsMode && e.target.value.trim().length > 0) openPanel();
+                    if (e.target.value.trim().length > 0) openPanel();
                   }}
                   onKeyDown={onInputKeyDown}
                   onFocus={() => {
-                    if (isTagsMode) openPanel();
+                    openPanel();
                     ensureInputVisible();
                   }}
                   onClick={() => {
-                    if (isTagsMode) openPanel();
+                    openPanel();
                     ensureInputVisible();
                   }}
                 />
@@ -556,12 +820,14 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
               aria-label="Сбросить поиск"
               onClick={resetSearchField}
             />
+              </>
+            )}
           </div>
         </div>
         </div>
       </div>
 
-      {isTagsMode && panelOpen && dropdownLayout ? (
+      {(isTagsMode || isAiMode || isColorMode || isSimilarMode) && panelOpen && dropdownLayout ? (
         <>
           <button
             type="button"
@@ -581,74 +847,129 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
           >
             <div className="arc-add-tags-scroll arc-search-panel-scroll">
               <div className="arc-search-panel-stack">
-                {!q ? (
-                  <div className="arc-search-panel-intro">
-                    <SearchPanelModeHeader mode={searchMode} />
-                    <p className="text-m arc-search-panel-hint">
-                      Начните вводить название метки или ID карточки
-                    </p>
-                  </div>
-                ) : (
+                {isTagsMode ? (
                   <>
-                    <SearchPanelModeHeader mode={searchMode} />
-                    {rankedTags.length === 0 ? (
-                      <p className="text-m arc-search-panel-hint arc-search-panel-suggest">
-                        Нет совпадений по запросу.
-                      </p>
-                    ) : (
-                      <div className="tags-row arc-search-tags-row arc-search-panel-suggest">
-                        {rankedTags.map(({ tag, category }) => (
-                          <SearchPanelTagChip
-                            key={tag.id}
-                            tag={tag}
-                            category={category}
-                            selected={selectedTagIds.includes(tag.id)}
-                            highlightQuery={q}
-                            onToggle={() => toggleTag(tag.id)}
-                          />
-                        ))}
+                    {!q ? (
+                      <div className="arc-search-panel-intro">
+                        <SearchPanelModeHeader mode={searchMode} />
+                        <p className="text-m arc-search-panel-hint">{SEARCH_MODE_META.tags.panelHint}</p>
                       </div>
+                    ) : (
+                      <>
+                        <SearchPanelModeHeader mode={searchMode} />
+                        {rankedTags.length === 0 ? (
+                          <p className="text-m arc-search-panel-hint arc-search-panel-suggest">
+                            Нет совпадений по запросу.
+                          </p>
+                        ) : (
+                          <div className="tags-row arc-search-tags-row arc-search-panel-suggest">
+                            {rankedTags.map(({ tag, category }) => (
+                              <SearchPanelTagChip
+                                key={tag.id}
+                                tag={tag}
+                                category={category}
+                                selected={selectedTagIds.includes(tag.id)}
+                                highlightQuery={q}
+                                onToggle={() => toggleTag(tag.id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
+
+                    {hasRecentSectionsTags ? <SearchPanelFullBleedSep /> : null}
+
+                    {showRecentTags ? (
+                      <SearchPanelSection
+                        title="Недавние запросы"
+                        onClear={() => {
+                          clearAllRecentTagIds();
+                          setRecentTick((x) => x + 1);
+                        }}
+                      >
+                        <div className="tags-row arc-search-tags-row">
+                          {recentIds.map((rid) => {
+                            const t = tagsIndex.get(rid);
+                            if (!t) return null;
+                            const cat = categoryById.get(t.categoryId);
+                            if (!cat) return null;
+                            return (
+                              <SearchPanelTagChip
+                                key={rid}
+                                tag={t}
+                                category={cat}
+                                selected={selectedTagIds.includes(rid)}
+                                onToggle={() => toggleTag(rid)}
+                                onRemoveFromRecent={() => {
+                                  removeRecentTagId(rid);
+                                  setRecentTick((x) => x + 1);
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </SearchPanelSection>
+                    ) : null}
                   </>
-                )}
+                ) : isAiMode ? (
+                  <>
+                    <div className="arc-search-panel-intro arc-search-panel-intro--ai">
+                      <SearchPanelModeHeader mode="ai" />
+                      <p className="text-m arc-search-panel-hint">{SEARCH_MODE_META.ai.panelHint}</p>
+                    </div>
 
-                {hasRecentSections ? <SearchPanelFullBleedSep /> : null}
+                    {hasRecentSectionsAi ? <SearchPanelFullBleedSep /> : null}
 
-                {showRecentTags ? (
-                  <SearchPanelSection
-                    title="Недавние запросы"
-                    onClear={() => {
-                      clearAllRecentTagIds();
+                    {showRecentAi ? (
+                      <SearchPanelSection
+                        title="Недавние запросы"
+                        onClear={() => {
+                          clearAllRecentAiQueries();
+                          setRecentTick((x) => x + 1);
+                        }}
+                      >
+                        <SearchPanelRecentQueries queries={recentAiIds} onSelect={selectRecentAiQuery} />
+                      </SearchPanelSection>
+                    ) : null}
+                  </>
+                ) : isColorMode ? (
+                  <>
+                    <SearchPanelColorControls
+                      colorHex={panelColorHex}
+                      tolerance={panelColorTolerance}
+                      onColorChange={handlePanelColorChange}
+                      onToleranceChange={handlePanelToleranceChange}
+                    />
+
+                    {hasRecentSectionsColor ? <SearchPanelFullBleedSep /> : null}
+                  </>
+                ) : (
+                  <SearchPanelSimilarControls
+                    crop={similarSearch.panelCrop}
+                    hasQuery={similarSearch.hasSimilarQuery}
+                    previewSrc={similarSearch.previewSrc}
+                    onCropChange={similarSearch.onPanelCropChange}
+                    onUploadStaged={similarSearch.setSimilarUploadQuery}
+                    onClearQuery={similarSearch.clearSimilarQuery}
+                    onConfirmSearch={closePanel}
+                    onRecentClear={() => {
+                      clearAllRecentViewedCardIds();
                       setRecentTick((x) => x + 1);
                     }}
-                  >
-                    <div className="tags-row arc-search-tags-row">
-                      {recentIds.map((rid) => {
-                        const t = tagsIndex.get(rid);
-                        if (!t) return null;
-                        const cat = categoryById.get(t.categoryId);
-                        if (!cat) return null;
-                        return (
-                          <SearchPanelTagChip
-                            key={rid}
-                            tag={t}
-                            category={cat}
-                            selected={selectedTagIds.includes(rid)}
-                            onToggle={() => toggleTag(rid)}
-                            onRemoveFromRecent={() => {
-                              removeRecentTagId(rid);
-                              setRecentTick((x) => x + 1);
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  </SearchPanelSection>
-                ) : null}
+                    recentViewedIds={recentViewedIds}
+                    onSelectRecentCard={(id) => {
+                      panelHadInteraction.current = true;
+                      similarSearch.setSimilarCardQuery(id);
+                    }}
+                  />
+                )}
 
-                {showRecentViews ? (
+                {showRecentViews && !isSimilarMode ? (
                   <>
-                    {showRecentTags ? <SearchPanelFullBleedSep /> : null}
+                    {(isTagsMode ? showRecentTags : isAiMode ? showRecentAi : false) ? (
+                      <SearchPanelFullBleedSep />
+                    ) : null}
                     <SearchPanelSection
                       title="Недавние просмотры"
                       onClear={() => {

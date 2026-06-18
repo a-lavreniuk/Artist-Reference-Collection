@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOpenCardUrl } from '../../search/openCardUrl';
-import { parseSearchCardId, parseSearchTagIds } from '../../search/searchUrl';
+import { parseSearchCardId, parseSearchTagIds, parseSearchAiQuery, parseSearchColorHex, parseSearchColorTolerance, parseSearchSimilarRef, parseSearchSimilarCrop } from '../../search/searchUrl';
+import { useAiGalleryFeed } from '../gallery/useAiGalleryFeed';
+import { useColorGalleryFeed } from '../gallery/useColorGalleryFeed';
+import { useSimilarGalleryFeed } from '../gallery/useSimilarGalleryFeed';
+import { startVisualSimilarSearch } from '../../search/startVisualSimilarSearch';
 import GalleryBoard from '../gallery/GalleryBoard';
 import CardInspectModal from '../gallery/CardInspectModal';
-import DemoAlert from '../layout/DemoAlert';
 import ScrollToTopButton from '../layout/ScrollToTopButton';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
 import { EmptyState } from '../empty-state';
@@ -18,7 +21,6 @@ import {
   getTagsByCategory,
   isCardOnBoard,
   listMoodboardCards,
-  listSimilarCards,
   removeCardFromMoodboard,
   toggleCardInMoodboard,
   addCardToMoodboard,
@@ -35,7 +37,17 @@ export default function MoodboardCardsView() {
   const { filters, sort, activeCategoryCount } = useGalleryFilters();
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
-  const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0;
+  const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
+  const isAiSearch = Boolean(aiQuery);
+  const colorHex = useMemo(() => parseSearchColorHex(searchParams), [searchParams]);
+  const colorTolerance = useMemo(() => parseSearchColorTolerance(searchParams), [searchParams]);
+  const isColorSearch = Boolean(colorHex);
+  const similarRef = useMemo(() => parseSearchSimilarRef(searchParams), [searchParams]);
+  const similarCrop = useMemo(() => parseSearchSimilarCrop(searchParams), [searchParams]);
+  const isSimilarSearch = Boolean(similarRef);
+  const isRemoteSearchFeed = isAiSearch || isColorSearch || isSimilarSearch;
+  const hasSearchFilters =
+    selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0 || isRemoteSearchFeed;
   const { resetGallerySearch } = useResetGallerySearch();
   const [mbIdsForScope, setMbIdsForScope] = useState<string[]>([]);
 
@@ -45,11 +57,34 @@ export default function MoodboardCardsView() {
   const [loading, setLoading] = useState(false);
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
   const [tagsIndex, setTagsIndex] = useState<Map<string, TagRecord>>(new Map());
-  const [noSimilarAlertOpen, setNoSimilarAlertOpen] = useState(false);
   const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
   const [removeConfirm, setRemoveConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLElement | null>(null);
+
+  const aiFeed = useAiGalleryFeed(aiQuery, isAiSearch, sort, { scopeCardIds: moodboardCardIds });
+  const colorFeedQuery = useMemo(
+    () => ({
+      libraryScope: 'all' as const,
+      selectedTagIds,
+      cardIdExact,
+      moodboardCardIds: mbIdsForScope,
+      advancedFilters: filters,
+      sort
+    }),
+    [cardIdExact, filters, mbIdsForScope, selectedTagIds, sort]
+  );
+  const colorFeed = useColorGalleryFeed(colorHex, colorTolerance, colorFeedQuery, isColorSearch, {
+    scopeCardIds: moodboardCardIds
+  });
+  const similarFeed = useSimilarGalleryFeed(similarRef, similarCrop, colorFeedQuery, isSimilarSearch, {
+    scopeCardIds: moodboardCardIds
+  });
+  const remoteFeed = isSimilarSearch ? similarFeed : isColorSearch ? colorFeed : aiFeed;
+  const displayCards = isRemoteSearchFeed ? remoteFeed.cards : cards;
+  const displaySrcMap = isRemoteSearchFeed ? remoteFeed.srcMap : undefined;
+  const displayLoading = isRemoteSearchFeed ? remoteFeed.loading : loading;
+  const displayHasMore = isRemoteSearchFeed ? false : hasMore;
 
   const loadMoodboard = useCallback(async () => {
     const ids = await getMoodboardCardIds();
@@ -102,11 +137,12 @@ export default function MoodboardCardsView() {
   }, [loadTagsIndex, loadMoodboard]);
 
   useEffect(() => {
+    if (isRemoteSearchFeed) return;
     setCards([]);
     setOffset(0);
     setHasMore(true);
     void loadPage(0, false);
-  }, [filters, sort, selectedTagIds, cardIdExact, loadPage]);
+  }, [filters, sort, selectedTagIds, cardIdExact, isRemoteSearchFeed, loadPage]);
 
   useEffect(() => {
     const onCards = () => {
@@ -129,7 +165,7 @@ export default function MoodboardCardsView() {
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !hasMore || loading) return;
+    if (!el || !displayHasMore || displayLoading || isRemoteSearchFeed) return;
     const root = scrollRootRef.current ?? el.closest('.arc-app-outlet');
     const io = new IntersectionObserver(
       (entries) => {
@@ -140,7 +176,7 @@ export default function MoodboardCardsView() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [hasMore, loading, offset, loadPage]);
+  }, [displayHasMore, displayLoading, isRemoteSearchFeed, offset, loadPage]);
 
   const handleToggleMoodboard = async (cardId: string) => {
     const ids = await getMoodboardCardIds();
@@ -163,7 +199,7 @@ export default function MoodboardCardsView() {
 
   return (
     <div className="arc-collection-detail arc-moodboard-cards">
-      {cards.length === 0 && !loading ? (
+      {displayCards.length === 0 && !displayLoading ? (
         <EmptyState
           {...(hasSearchFilters ? EMPTY_STATE_COPY.searchNoResults : EMPTY_STATE_COPY.moodboardEmpty)}
           fill
@@ -174,20 +210,16 @@ export default function MoodboardCardsView() {
       ) : (
         <>
           <GalleryBoard
-            cards={cards}
+            cards={displayCards}
+            srcMap={displaySrcMap}
             scrollRootRef={scrollRootRef}
-            loadingMore={loading && hasMore}
-            busy={loading}
+            loadingMore={displayLoading && displayHasMore}
+            busy={displayLoading}
             onOpenCard={openCard}
             moodboardCardIds={moodboardCardIds}
             onToggleMoodboard={handleToggleMoodboard}
-            onFindSimilar={async (id) => {
-              const sim = await listSimilarCards(id, 1);
-              if (sim.length === 0) {
-                setNoSimilarAlertOpen(true);
-                return;
-              }
-              openCard(sim[0].id);
+            onFindSimilar={(id) => {
+              startVisualSimilarSearch(navigate, searchParams, id);
             }}
           />
           <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
@@ -211,10 +243,6 @@ export default function MoodboardCardsView() {
           onClose={() => setRemoveConfirm(null)}
           onConfirm={confirmRemoveAction}
         />
-      ) : null}
-
-      {noSimilarAlertOpen ? (
-        <DemoAlert message="Нет похожих изображений" variant="info" onClose={() => setNoSimilarAlertOpen(false)} />
       ) : null}
 
       <ScrollToTopButton enabled={cards.length > 0} />

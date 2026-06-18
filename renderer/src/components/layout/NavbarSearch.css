@@ -354,3 +354,375 @@ body.arc-card-detail-open.arc-search-panel-open::after {
   height: 100%;
   object-fit: cover;
 }
+
+/* AI-поиск: однострочный инпут с Send / Clear / Loader (Figma 891-16997, 891-17536). */
+.input.arc-navbar-search--ai {
+  flex-wrap: nowrap;
+  height: var(--input-h);
+  min-height: var(--input-h);
+  max-height: var(--input-h);
+}
+
+.arc-navbar-search-inner-ai {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+  padding: 0;
+}
+
+.arc-navbar-search-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-shrink: 0;
+}
+
+.arc-navbar-search-loader {
+  width: var(--input-icon-size);
+  height: var(--input-icon-size);
+  border-width: 2px;
+  flex-shrink: 0;
+}
+
+.arc-search-panel-intro--ai .arc-search-panel-hint {
+  margin: 0;
+}
+
+/* Недавние AI-запросы (Figma 891-16381). */
+.arc-search-panel-recent-queries {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.arc-search-panel-recent-query {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--text-elev-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--transition-fast);
+}
+
+.arc-search-panel-recent-query:hover {
+  background: var(--brand-600);
+}
+
+.arc-search-panel-recent-query:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.arc-search-panel-recent-query__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arc-search-panel-recent-query__reuse {
+  flex-shrink: 0;
+  color: var(--text-elev-secondary);
+}
+
+/* Поиск по цвету: navbar HEX + swatch (Figma 891-18501). */
+.input.arc-navbar-search--color {
+  flex-wrap: nowrap;
+  height: var(--input-h);
+  min-height: var(--input-h);
+  max-height: var(--input-h);
+}
+
+.arc-navbar-search-color-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.arc-navbar-search-color-trigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.arc-navbar-search-color-hex-prefix {
+  flex-shrink: 0;
+  color: var(--text-elev-secondary);
+}
+
+.arc-navbar-search-color-hex-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-elev-primary);
+  letter-spacing: 0.04em;
+}
+
+.arc-navbar-search-color-swatch {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: calc(var(--radius-s) / 2);
+  border: 1px solid color-mix(in srgb, var(--gray-1000) 60%, transparent);
+}
+
+/* Панель цветового поиска (Figma 891-18501). */
+.arc-search-panel-color {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.arc-search-panel-color-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-search-panel-color-header .arc-search-panel-mode-header__title {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.arc-search-panel-color-presets {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.arc-search-panel-color-preset {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-s) / 2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: box-shadow var(--transition-fast);
+}
+
+.arc-search-panel-color-preset:hover {
+  box-shadow: 0 0 0 1px var(--brand-400);
+}
+
+.arc-search-panel-color-preset.is-active {
+  box-shadow: 0 0 0 2px var(--brand-400);
+}
+
+.arc-search-panel-color-preset:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.arc-search-panel-color-picker .arc-modal__slot {
+  margin: 0;
+}
+
+.arc-search-panel-color-tolerance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.arc-search-panel-color-tolerance__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.arc-search-panel-color-tolerance__label,
+.arc-search-panel-color-tolerance__value {
+  color: var(--text-elev-primary);
+}
+
+/* Поиск по совпадениям: navbar preview (Figma 892-12477). */
+.input.arc-navbar-search--similar {
+  flex-wrap: nowrap;
+  height: var(--input-h);
+  min-height: var(--input-h);
+  max-height: var(--input-h);
+}
+
+.arc-navbar-search-similar-trigger {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.arc-navbar-search-similar-trigger:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+.arc-navbar-search-similar-placeholder {
+  color: var(--text-elev-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arc-navbar-search-similar-thumb {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: calc(var(--radius-s) / 2);
+  flex-shrink: 0;
+}
+
+/* Панель поиска по совпадениям (Figma 892-11454, 892-12002). */
+.arc-search-panel-similar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.arc-search-panel-similar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-search-panel-similar-header .h3 {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-search-panel-similar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-shrink: 0;
+}
+
+.arc-search-panel-similar-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  min-height: 160px;
+  text-align: center;
+}
+
+.arc-search-panel-similar-dropzone--dropping {
+  outline: 2px dashed var(--brand-400);
+  outline-offset: calc(-1 * var(--s-1));
+}
+
+.arc-search-panel-similar-dropzone__hint {
+  margin: 0;
+  color: var(--text-elev-secondary);
+  max-width: 360px;
+}
+
+.arc-similar-cropper {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  max-height: 320px;
+  overflow: hidden;
+  border-radius: var(--radius-s);
+  background: var(--gray-900);
+}
+
+.arc-similar-cropper__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.arc-similar-cropper__shade {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--gray-1000) 45%, transparent);
+  pointer-events: none;
+}
+
+.arc-similar-cropper__frame {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--brand-400);
+  cursor: move;
+  touch-action: none;
+}
+
+.arc-similar-cropper__handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--brand-400);
+  border-radius: 2px;
+  touch-action: none;
+}
+
+.arc-similar-cropper__handle--nw {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+
+.arc-similar-cropper__handle--ne {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+
+.arc-similar-cropper__handle--sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+
+.arc-similar-cropper__handle--se {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+}

@@ -44,6 +44,8 @@ import {
   ensureVideoDurationBackfill,
   upsertTag
 } from './storage/libraryStorage';
+import { backfillPalettesBatch, searchCardsByColor } from './storage/colorSearch';
+import { normalizeHex } from './storage/palette';
 import { readCardJson } from './storage/cardFolder';
 import {
   CARDS_DIR,
@@ -528,6 +530,32 @@ export function registerStorageIpc(
     if (!root || typeof cardId !== 'string') return;
     const { deleteCardFolder } = await import('./storage/cardFolder');
     await deleteCardFolder(root, cardId);
+  });
+
+  ipcMain.handle('arc:color-search-cards', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) return [];
+    await ensureLibraryReady(root);
+    const p = payload as Partial<ListCardsParams> & { hex?: string; accuracy?: number; scopeCardIds?: string[] };
+    const hex = typeof p.hex === 'string' ? normalizeHex(p.hex) : '';
+    if (!hex) return [];
+    await backfillPalettesBatch(root, 64);
+    const scope =
+      Array.isArray(p.scopeCardIds) && p.scopeCardIds.length > 0 ? new Set(p.scopeCardIds) : null;
+    const rows = searchCardsByColor(root, {
+      hex,
+      accuracy: typeof p.accuracy === 'number' ? p.accuracy : 85,
+      libraryScope: p.libraryScope,
+      selectedTagIds: p.selectedTagIds,
+      cardIdExact: p.cardIdExact,
+      collectionId: p.collectionId,
+      moodboardCardIds: p.moodboardCardIds,
+      advancedFilters: p.advancedFilters,
+      sort: p.sort,
+      scopeCardIds: scope
+    });
+    return rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
   });
 }
 

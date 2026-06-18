@@ -144,6 +144,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!window.arc?.onFileDrop) return undefined;
     return window.arc.onFileDrop((paths) => {
+      if (document.body.classList.contains('arc-similar-search-panel-open')) return;
       clearFileDrag();
       if (paths.length) void runImport(paths);
     });
@@ -157,6 +158,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     };
 
     const onDragOver = (e: DragEvent) => {
+      if (document.body.classList.contains('arc-similar-search-panel-open')) return;
+      if (e.target instanceof Element && e.target.closest('.arc-search-panel-similar-dropzone')) return;
       if (suppressFileDragRef.current) return;
       if (!isFileDragEvent(e)) return;
       e.preventDefault();

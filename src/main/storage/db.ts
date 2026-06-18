@@ -115,6 +115,9 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'cards', 'ai_caption_at')) {
     db.exec('ALTER TABLE cards ADD COLUMN ai_caption_at TEXT');
   }
+  if (!tableHasColumn(db, 'cards', 'palette_json')) {
+    db.exec('ALTER TABLE cards ADD COLUMN palette_json TEXT');
+  }
   if (!tableHasColumn(db, 'categories', 'description')) {
     db.exec('ALTER TABLE categories ADD COLUMN description TEXT');
   }

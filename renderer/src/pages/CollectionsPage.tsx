@@ -28,7 +28,11 @@ import { EmptyState } from '../components/empty-state';
 import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 import { useOpenCardUrl } from '../search/openCardUrl';
-import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
+import { parseSearchCardId, parseSearchTagIds, parseSearchAiQuery, parseSearchColorHex, parseSearchColorTolerance, parseSearchSimilarRef, parseSearchSimilarCrop } from '../search/searchUrl';
+import { useAiGalleryFeed } from '../components/gallery/useAiGalleryFeed';
+import { useColorGalleryFeed } from '../components/gallery/useColorGalleryFeed';
+import { useSimilarGalleryFeed } from '../components/gallery/useSimilarGalleryFeed';
+import { startVisualSimilarSearch } from '../search/startVisualSimilarSearch';
 import {
   ARC_CARDS_CHANGED_EVENT,
   ARC_COLLECTIONS_CHANGED_EVENT,
@@ -43,7 +47,6 @@ import {
   getTagsByCategory,
   isCardOnBoard,
   listCardsInCollection,
-  listSimilarCards,
   removeCardFromMoodboard,
   reorderCollectionToIndex,
   updateCollection,
@@ -63,7 +66,17 @@ export default function CollectionsPage() {
   const { filters, sort, activeCategoryCount } = useGalleryFilters();
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
-  const hasSearchFilters = selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0;
+  const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
+  const isAiSearch = Boolean(aiQuery);
+  const colorHex = useMemo(() => parseSearchColorHex(searchParams), [searchParams]);
+  const colorTolerance = useMemo(() => parseSearchColorTolerance(searchParams), [searchParams]);
+  const isColorSearch = Boolean(colorHex);
+  const similarRef = useMemo(() => parseSearchSimilarRef(searchParams), [searchParams]);
+  const similarCrop = useMemo(() => parseSearchSimilarCrop(searchParams), [searchParams]);
+  const isSimilarSearch = Boolean(similarRef);
+  const isRemoteSearchFeed = isAiSearch || isColorSearch || isSimilarSearch;
+  const hasSearchFilters =
+    selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0 || isRemoteSearchFeed;
   const { resetGallerySearch } = useResetGallerySearch();
 
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
@@ -73,12 +86,12 @@ export default function CollectionsPage() {
   const [collectionModalStats, setCollectionModalStats] = useState<CollectionStats | null>(null);
 
   const [cards, setCards] = useState<CardRecord[]>([]);
+  const [collectionScopeIds, setCollectionScopeIds] = useState<ReadonlySet<string>>(new Set());
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
   const [tagsIndex, setTagsIndex] = useState<Map<string, TagRecord>>(new Map());
-  const [noSimilarAlertOpen, setNoSimilarAlertOpen] = useState(false);
   const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(
     null
@@ -96,6 +109,51 @@ export default function CollectionsPage() {
     () => collections.find((c) => c.id === activeCollectionId) ?? null,
     [collections, activeCollectionId]
   );
+
+  const aiFeed = useAiGalleryFeed(aiQuery, Boolean(activeCollectionId) && isAiSearch, sort, {
+    scopeCardIds: collectionScopeIds
+  });
+  const colorFeedQuery = useMemo(
+    () => ({
+      libraryScope: 'all' as const,
+      selectedTagIds,
+      cardIdExact,
+      collectionId: activeCollectionId,
+      advancedFilters: filters,
+      sort
+    }),
+    [activeCollectionId, cardIdExact, filters, selectedTagIds, sort]
+  );
+  const colorFeed = useColorGalleryFeed(
+    colorHex,
+    colorTolerance,
+    colorFeedQuery,
+    Boolean(activeCollectionId) && isColorSearch,
+    { scopeCardIds: collectionScopeIds }
+  );
+  const similarFeedQuery = useMemo(
+    () => ({
+      libraryScope: 'all' as const,
+      selectedTagIds,
+      cardIdExact,
+      collectionId: activeCollectionId,
+      advancedFilters: filters,
+      sort
+    }),
+    [activeCollectionId, cardIdExact, filters, selectedTagIds, sort]
+  );
+  const similarFeed = useSimilarGalleryFeed(
+    similarRef,
+    similarCrop,
+    similarFeedQuery,
+    Boolean(activeCollectionId) && isSimilarSearch,
+    { scopeCardIds: collectionScopeIds }
+  );
+  const remoteFeed = isSimilarSearch ? similarFeed : isColorSearch ? colorFeed : aiFeed;
+  const displayCards = isRemoteSearchFeed ? remoteFeed.cards : cards;
+  const displaySrcMap = isRemoteSearchFeed ? remoteFeed.srcMap : undefined;
+  const displayLoading = isRemoteSearchFeed ? remoteFeed.loading : loading;
+  const displayHasMore = isRemoteSearchFeed ? false : hasMore;
 
   useRegisterGalleryFeedScope({
     libraryScope: 'all',
@@ -153,7 +211,7 @@ export default function CollectionsPage() {
     if (pageRef.current) {
       void hydrateArcNavbarIcons(pageRef.current);
     }
-  }, [collections, activeCollectionId, cards.length, collectionModal, sidebarWidth]);
+  }, [collections, activeCollectionId, displayCards.length, collectionModal, sidebarWidth]);
 
   const loadPage = useCallback(
     async (collectionId: string, start: number, append: boolean) => {
@@ -185,14 +243,28 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     if (!activeCollectionId) {
-      setCards([]);
+      setCollectionScopeIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    void listCardsInCollection(activeCollectionId, { offset: 0, limit: 100_000 }).then((chunk) => {
+      if (!cancelled) setCollectionScopeIds(new Set(chunk.map((c) => c.id)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeCollectionId]);
+
+  useEffect(() => {
+    if (!activeCollectionId || isRemoteSearchFeed) {
+      if (!activeCollectionId) setCards([]);
       return;
     }
     setCards([]);
     setOffset(0);
     setHasMore(true);
     void loadPage(activeCollectionId, 0, false);
-  }, [activeCollectionId, filters, sort, selectedTagIds, cardIdExact, loadPage]);
+  }, [activeCollectionId, filters, sort, selectedTagIds, cardIdExact, isRemoteSearchFeed, loadPage]);
 
   useEffect(() => {
     const onCards = () => {
@@ -217,7 +289,7 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || !activeCollectionId || !hasMore || loading) return;
+    if (!el || !activeCollectionId || !displayHasMore || displayLoading || isRemoteSearchFeed) return;
     const root = scrollRootRef.current;
     const io = new IntersectionObserver(
       (entries) => {
@@ -228,7 +300,7 @@ export default function CollectionsPage() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [activeCollectionId, hasMore, loading, offset, loadPage]);
+  }, [activeCollectionId, displayHasMore, displayLoading, isRemoteSearchFeed, offset, loadPage]);
 
   useEffect(() => {
     if (collectionModal?.mode !== 'edit') {
@@ -343,7 +415,7 @@ export default function CollectionsPage() {
           data-typo-tone="white"
         >
           <div className="arc-collections-page-main__scroll">
-            {cards.length === 0 && !loading ? (
+            {displayCards.length === 0 && !displayLoading ? (
               <EmptyState
                 {...(hasSearchFilters ? EMPTY_STATE_COPY.searchNoResults : EMPTY_STATE_COPY.collectionEmpty)}
                 fill
@@ -354,11 +426,12 @@ export default function CollectionsPage() {
             ) : (
               <div className="arc-gallery-page arc-collections-gallery">
                 <GalleryBoard
-                  cards={cards}
+                  cards={displayCards}
+                  srcMap={displaySrcMap}
                   variant="collections"
                   scrollRootRef={scrollRootRef}
-                  loadingMore={loading && hasMore}
-                  busy={loading}
+                  loadingMore={displayLoading && displayHasMore}
+                  busy={displayLoading}
                   onOpenCard={openCard}
                   moodboardCardIds={moodboardCardIds}
                   onToggleMoodboard={async (id) => {
@@ -380,13 +453,8 @@ export default function CollectionsPage() {
                       return copy;
                     });
                   }}
-                  onFindSimilar={async (id) => {
-                    const sim = await listSimilarCards(id, 1);
-                    if (sim.length === 0) {
-                      setNoSimilarAlertOpen(true);
-                      return;
-                    }
-                    openCard(sim[0].id);
+                  onFindSimilar={(id) => {
+                    startVisualSimilarSearch(navigate, searchParams, id);
                   }}
                 />
                 <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
@@ -422,10 +490,6 @@ export default function CollectionsPage() {
             });
           }}
         />
-      ) : null}
-
-      {noSimilarAlertOpen ? (
-        <DemoAlert message="Нет похожих изображений" variant="info" onClose={() => setNoSimilarAlertOpen(false)} />
       ) : null}
 
       <ScrollToTopButton enabled={cards.length > 0} />

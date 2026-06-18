@@ -1,4 +1,5 @@
 import type { DemoAlertVariant } from '../../components/layout/DemoAlert';
+import { dispatchAiSetupChanged } from '../../search/aiSearchEvents';
 import type { AiModelTier } from '../../services/appPreferences';
 import { patchAppPreferences } from '../../services/appPreferencesRuntime';
 import type { AiIndexStatus, AiStatus } from '../../services/aiTypes';
@@ -787,6 +788,7 @@ export async function setAiEnabled(enabled: boolean): Promise<void> {
     const next = (await arc.aiSetEnabled({ enabled })) as AiStatus;
     patchState({ ...applyAiStatusFromServer(next) });
     await patchAppPreferences({ aiSemanticSearchEnabled: enabled });
+    dispatchAiSetupChanged();
     if (enabled) {
       await new Promise((resolve) => setTimeout(resolve, 600));
       await refreshAiSettings();
@@ -854,6 +856,7 @@ export async function deleteAiModel(tier: AiModelTier): Promise<void> {
   try {
     const next = (await arc.aiDeleteModel(tier)) as AiStatus;
     patchState({ status: next, alert: { message: 'Модель удалена.', variant: 'info' } });
+    dispatchAiSetupChanged();
   } finally {
     patchState({ busy: false });
   }

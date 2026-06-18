@@ -11,7 +11,6 @@ import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/ga
 
 import CardInspectModal from '../components/gallery/CardInspectModal';
 
-import DemoAlert from '../components/layout/DemoAlert';
 import GalleryBottomShade from '../components/gallery/GalleryBottomShade';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 
@@ -36,8 +35,6 @@ import {
 
   isLibraryConfigured,
 
-  listSimilarCards,
-
   removeCardFromMoodboard,
 
   addCardToMoodboard,
@@ -50,8 +47,11 @@ import { parseLibraryScope } from '../search/libraryScopeUrl';
 
 import { useOpenCardUrl } from '../search/openCardUrl';
 
-import { parseSearchCardId, parseSearchTagIds, parseSearchAiQuery } from '../search/searchUrl';
+import { parseSearchCardId, parseSearchTagIds, parseSearchAiQuery, parseSearchColorHex, parseSearchColorTolerance, parseSearchSimilarRef, parseSearchSimilarCrop } from '../search/searchUrl';
 import { useAiGalleryFeed } from '../components/gallery/useAiGalleryFeed';
+import { useColorGalleryFeed } from '../components/gallery/useColorGalleryFeed';
+import { useSimilarGalleryFeed } from '../components/gallery/useSimilarGalleryFeed';
+import { startVisualSimilarSearch } from '../search/startVisualSimilarSearch';
 
 import { EmptyState } from '../components/empty-state';
 import { EMPTY_STATE_COPY } from '../content/emptyStates';
@@ -72,6 +72,12 @@ export default function GalleryPage() {
 
   const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
   const isAiSearch = Boolean(aiQuery);
+  const colorHex = useMemo(() => parseSearchColorHex(searchParams), [searchParams]);
+  const colorTolerance = useMemo(() => parseSearchColorTolerance(searchParams), [searchParams]);
+  const isColorSearch = Boolean(colorHex);
+  const similarRef = useMemo(() => parseSearchSimilarRef(searchParams), [searchParams]);
+  const similarCrop = useMemo(() => parseSearchSimilarCrop(searchParams), [searchParams]);
+  const isSimilarSearch = Boolean(similarRef);
 
   const feedQuery = useMemo<GalleryFeedQuery>(
 
@@ -104,7 +110,7 @@ export default function GalleryPage() {
   });
 
   const hasUrlSearch =
-    feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact) || isAiSearch;
+    feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact) || isAiSearch || isColorSearch || isSimilarSearch;
 
   const hasSearchFilters = hasUrlSearch || activeCategoryCount > 0;
 
@@ -125,8 +131,6 @@ export default function GalleryPage() {
 
   const [importModalMessage, setImportModalMessage] = useState<string | null>(null);
 
-  const [noSimilarAlertOpen, setNoSimilarAlertOpen] = useState(false);
-
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
 
   const stripDataEnabled =
@@ -144,9 +148,18 @@ export default function GalleryPage() {
 
 
 
-  const galleryFeed = useGalleryFeed(feedQuery, ready && !isAiSearch);
+  const galleryFeed = useGalleryFeed(feedQuery, ready && !isAiSearch && !isColorSearch && !isSimilarSearch);
   const aiFeed = useAiGalleryFeed(aiQuery, ready && isAiSearch, sort);
-  const { cards, srcMap, hasMore, loading, booting, loadMore, reloadFromStart } = isAiSearch ? aiFeed : galleryFeed;
+  const colorFeed = useColorGalleryFeed(colorHex, colorTolerance, feedQuery, ready && isColorSearch);
+  const similarFeed = useSimilarGalleryFeed(similarRef, similarCrop, feedQuery, ready && isSimilarSearch);
+  const activeFeed = isSimilarSearch
+    ? similarFeed
+    : isColorSearch
+      ? colorFeed
+      : isAiSearch
+        ? aiFeed
+        : galleryFeed;
+  const { cards, srcMap, hasMore, loading, booting, loadMore, reloadFromStart } = activeFeed;
 
 
 
@@ -299,21 +312,16 @@ export default function GalleryPage() {
       );
     }
 
-    if (booting) return null;
+    if (booting && !isAiSearch && !isColorSearch && !isSimilarSearch) return null;
 
     if (cards.length === 0 && !loading) {
 
       if (hasSearchFilters) {
-        const copy = isAiSearch ? EMPTY_STATE_COPY.aiSearchNoResults : EMPTY_STATE_COPY.searchNoResults;
         return (
           <EmptyState
-            {...copy}
+            {...EMPTY_STATE_COPY.searchNoResults}
             fill
-            onPrimaryAction={
-              isAiSearch
-                ? () => navigate('/settings/ai-search')
-                : () => resetGallerySearch()
-            }
+            onPrimaryAction={() => resetGallerySearch()}
           />
         );
       }
@@ -345,6 +353,8 @@ export default function GalleryPage() {
     hasSearchFilters,
     feedQuery.libraryScope,
     isAiSearch,
+    isColorSearch,
+    isSimilarSearch,
     navigate,
     openImportPicker,
     resetGallerySearch
@@ -356,7 +366,7 @@ export default function GalleryPage() {
 
     <div className="arc-gallery-page">
 
-      {booting ? (
+      {booting && !isAiSearch && !isColorSearch && !isSimilarSearch ? (
 
         <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
 
@@ -391,7 +401,7 @@ export default function GalleryPage() {
 
             loadingMore={loading && hasMore}
 
-            busy={booting || loading}
+            busy={(booting && !isAiSearch && !isColorSearch && !isSimilarSearch) || loading}
 
             onOpenCard={openCard}
 
@@ -435,20 +445,8 @@ export default function GalleryPage() {
 
             }}
 
-            onFindSimilar={async (id) => {
-
-              const sim = await listSimilarCards(id, 1);
-
-              if (sim.length === 0) {
-
-                setNoSimilarAlertOpen(true);
-
-                return;
-
-              }
-
-              openCard(sim[0].id);
-
+            onFindSimilar={(id) => {
+              startVisualSimilarSearch(navigate, searchParams, id);
             }}
 
           />
@@ -516,14 +514,6 @@ export default function GalleryPage() {
       {importModalMessage ? (
 
         <MessageModal message={importModalMessage} onClose={() => setImportModalMessage(null)} />
-
-      ) : null}
-
-
-
-      {noSimilarAlertOpen ? (
-
-        <DemoAlert message="Нет похожих изображений" variant="info" onClose={() => setNoSimilarAlertOpen(false)} />
 
       ) : null}
 
