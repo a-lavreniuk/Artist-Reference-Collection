@@ -11,7 +11,7 @@ export default function NavbarMenu() {
     () => [
       { type: 'item', key: 'board', label: 'Доска — в разработке', iconClass: 'arc-icon-whiteboard', onSelect: () => navigate('/board') },
       { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigate('/tags') },
-      { type: 'item', key: 'stats', label: 'Статистика — в разработке', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
+      { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
       { type: 'item', key: 'history', label: 'История — в разработке', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
       { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/general') },
       { type: 'separator', key: 'sep1' },

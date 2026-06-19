@@ -7,7 +7,11 @@ import SettingsDuplicatesPanel from './settings/SettingsDuplicatesPanel';
 
 type PanelKey = 'statistics' | 'history' | 'duplicates';
 
-const IN_DEVELOPMENT_PANELS = true;
+const PANEL_IN_DEVELOPMENT: Record<PanelKey, boolean> = {
+  statistics: false,
+  history: true,
+  duplicates: true
+};
 
 const PANEL_COPY: Record<PanelKey, typeof EMPTY_STATE_COPY.inDevelopmentStatistics> = {
   statistics: EMPTY_STATE_COPY.inDevelopmentStatistics,
@@ -19,29 +23,19 @@ type Props = {
   panel: PanelKey;
 };
 
+function panelContent(panel: PanelKey) {
+  if (panel === 'statistics') return <SettingsStatisticsPanel />;
+  if (panel === 'history') return <SettingsHistoryPanel />;
+  return <SettingsDuplicatesPanel />;
+}
+
 /** Standalone navbar pages (Статистика, История, Поиск дублей) — вне layout настроек. */
 export default function SettingsNavbarPanelPage({ panel }: Props) {
-  if (!IN_DEVELOPMENT_PANELS) {
-    return (
-      <div
-        className={`arc-settings-page arc-settings-page--legacy arc-ui-kit-scope${panel === 'duplicates' ? ' arc-settings-page--duplicates' : ''}`}
-        data-elevation="sunken"
-        data-typo-role="primary"
-        data-typo-tone="white"
-        data-typo-state="default"
-        data-btn-size="l"
-        data-input-size="l"
-      >
-        {panel === 'statistics' ? <SettingsStatisticsPanel /> : null}
-        {panel === 'history' ? <SettingsHistoryPanel /> : null}
-        {panel === 'duplicates' ? <SettingsDuplicatesPanel /> : null}
-      </div>
-    );
-  }
+  const inDevelopment = PANEL_IN_DEVELOPMENT[panel];
 
   return (
     <div
-      className={`arc-settings-page arc-settings-page--legacy arc-settings-page--empty-stub arc-ui-kit-scope${panel === 'duplicates' ? ' arc-settings-page--duplicates' : ''}`}
+      className={`arc-settings-page arc-settings-page--legacy${inDevelopment ? ' arc-settings-page--empty-stub' : ''} arc-ui-kit-scope${panel === 'duplicates' ? ' arc-settings-page--duplicates' : ''}`}
       data-elevation="sunken"
       data-typo-role="primary"
       data-typo-tone="white"
@@ -49,7 +43,7 @@ export default function SettingsNavbarPanelPage({ panel }: Props) {
       data-btn-size="l"
       data-input-size="l"
     >
-      <EmptyState {...PANEL_COPY[panel]} fill />
+      {inDevelopment ? <EmptyState {...PANEL_COPY[panel]} fill /> : panelContent(panel)}
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
 } from './libraryFilenames';
 import { registerStorageIpc } from './ipcStorage';
 import { resetLibraryStorageCache } from './storage/libraryStorage';
+import { readLibraryDiskStats } from './libraryDiskStats';
 const LIBRARY_CONFIG_FILENAME = 'library-root.json';
 
 function libraryConfigPath(): string {
@@ -693,5 +694,17 @@ export function registerArcIpc(): void {
       }
     }
     return { ok: true as const, totalBytes };
+  });
+
+  ipcMain.handle('arc:get-library-disk-stats', async () => {
+    const root = await readLibraryRootFromDisk();
+    if (!root) return { ok: false as const, error: 'Библиотека не выбрана' };
+    try {
+      const stats = await readLibraryDiskStats(root);
+      return { ok: true as const, ...stats };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Не удалось прочитать данные диска';
+      return { ok: false as const, error: message };
+    }
   });
 }

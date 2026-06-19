@@ -142,6 +142,17 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:sum-library-files-bytes', relativePaths) as Promise<
       { ok: true; totalBytes: number } | { ok: false; error: string }
     >,
+  getLibraryDiskStats: () =>
+    ipcRenderer.invoke('arc:get-library-disk-stats') as Promise<
+      | {
+          ok: true;
+          driveLabel: string;
+          diskTotalBytes: number;
+          diskFreeBytes: number;
+          libraryFolderBytes: number;
+        }
+      | { ok: false; error: string }
+    >,
   maintenanceBegin: () => ipcRenderer.invoke('arc:maintenance-begin') as Promise<{ ok: true }>,
   maintenanceEnd: () => ipcRenderer.invoke('arc:maintenance-end') as Promise<{ ok: true }>,
   onMaintenance: (cb: (locked: boolean) => void) => {

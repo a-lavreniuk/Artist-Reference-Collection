@@ -27,3 +27,13 @@ export function formatBytesRoundedToMb(bytes: number): string {
   const mb = bytes / BYTES_PER_MB;
   return `${Math.round(mb)} МБ`;
 }
+
+/**
+ * Формат для раздела «Статистика» (Figma): целые Мб, суффикс «Мб», пробел в тысячах.
+ */
+export function formatBytesRoundedMbFigma(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 Мб';
+  const mb = Math.round(bytes / BYTES_PER_MB);
+  const grouped = mb.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${grouped} Мб`;
+}

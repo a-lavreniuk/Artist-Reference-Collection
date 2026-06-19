@@ -177,6 +177,16 @@ declare global {
       sumLibraryFilesBytes: (
         relativePaths: string[]
       ) => Promise<{ ok: true; totalBytes: number } | { ok: false; error: string }>;
+      getLibraryDiskStats: () => Promise<
+        | {
+            ok: true;
+            driveLabel: string;
+            diskTotalBytes: number;
+            diskFreeBytes: number;
+            libraryFolderBytes: number;
+          }
+        | { ok: false; error: string }
+      >;
       maintenanceBegin: () => Promise<{ ok: true }>;
       maintenanceEnd: () => Promise<{ ok: true }>;
       onMaintenance: (cb: (locked: boolean) => void) => () => void;
