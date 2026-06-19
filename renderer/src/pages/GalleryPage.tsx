@@ -4,7 +4,8 @@ import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 
 import GalleryBoard from '../components/gallery/GalleryBoard';
 
-import { useGalleryFeed } from '../components/gallery/useGalleryFeed';
+import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
+import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
 
 import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
@@ -24,37 +25,23 @@ import { useAppPreferences } from '../hooks/useAppPreferences';
 import { useGalleryCollectionsStrip } from '../hooks/useGalleryCollectionsStrip';
 
 import {
-
-  getAllCategories,
-
   getMoodboardCardIds,
-
-  getTagsByCategory,
-
   isCardOnBoard,
-
   isLibraryConfigured,
-
   removeCardFromMoodboard,
-
-  addCardToMoodboard,
-
-  type TagRecord
-
+  addCardToMoodboard
 } from '../services/db';
+import { useGalleryMeta } from '../context/GalleryMetaContext';
 
 import { parseLibraryScope } from '../search/libraryScopeUrl';
 
 import { useOpenCardUrl } from '../search/openCardUrl';
 
-import { parseSearchCardId, parseSearchTagIds, parseSearchAiQuery, parseSearchColorHex, parseSearchColorTolerance, parseSearchSimilarRef, parseSearchSimilarCrop } from '../search/searchUrl';
-import { useAiGalleryFeed } from '../components/gallery/useAiGalleryFeed';
-import { useColorGalleryFeed } from '../components/gallery/useColorGalleryFeed';
-import { useSimilarGalleryFeed } from '../components/gallery/useSimilarGalleryFeed';
+import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
+import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedEmptyState';
 import { startVisualSimilarSearch } from '../search/startVisualSimilarSearch';
 
 import { EmptyState } from '../components/empty-state';
-import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import { useImportContext } from '../components/import/ImportContext';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 
@@ -70,49 +57,16 @@ export default function GalleryPage() {
 
   const { filters, sort, activeCategoryCount } = useGalleryFilters();
 
-  const aiQuery = useMemo(() => parseSearchAiQuery(searchParams), [searchParams]);
-  const isAiSearch = Boolean(aiQuery);
-  const colorHex = useMemo(() => parseSearchColorHex(searchParams), [searchParams]);
-  const colorTolerance = useMemo(() => parseSearchColorTolerance(searchParams), [searchParams]);
-  const isColorSearch = Boolean(colorHex);
-  const similarRef = useMemo(() => parseSearchSimilarRef(searchParams), [searchParams]);
-  const similarCrop = useMemo(() => parseSearchSimilarCrop(searchParams), [searchParams]);
-  const isSimilarSearch = Boolean(similarRef);
-
   const feedQuery = useMemo<GalleryFeedQuery>(
-
     () => ({
-
       libraryScope: parseLibraryScope(searchParams),
-
       selectedTagIds: parseSearchTagIds(searchParams),
-
       cardIdExact: parseSearchCardId(searchParams),
-
       advancedFilters: filters,
-
       sort
-
     }),
-
     [searchParams, filters, sort]
-
   );
-
-  useRegisterGalleryFeedScope({
-
-    libraryScope: feedQuery.libraryScope,
-
-    selectedTagIds: feedQuery.selectedTagIds,
-
-    cardIdExact: feedQuery.cardIdExact
-
-  });
-
-  const hasUrlSearch =
-    feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact) || isAiSearch || isColorSearch || isSimilarSearch;
-
-  const hasSearchFilters = hasUrlSearch || activeCategoryCount > 0;
 
   const { resetGallerySearch } = useResetGallerySearch();
   const { openImportPicker } = useImportContext();
@@ -120,14 +74,37 @@ export default function GalleryPage() {
 
   const [ready, setReady] = useState(false);
 
+  const {
+    isRemoteSearchFeed,
+    isAiSearch,
+    feedError,
+    cards,
+    srcMap,
+    hasMore,
+    loading,
+    booting,
+    shuffleReloading,
+    loadMore,
+    reloadFromStart
+  } = useScopedGalleryFeed({ feedQuery, searchParams, sort, libraryReady: ready });
+
+  const { tagsIndex, moodboardCardIds, refreshMoodboard } = useGalleryMeta();
+
+  useRegisterGalleryFeedScope({
+    libraryScope: feedQuery.libraryScope,
+    selectedTagIds: feedQuery.selectedTagIds,
+    cardIdExact: feedQuery.cardIdExact
+  });
+
+  const hasUrlSearch =
+    feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact) || isRemoteSearchFeed;
+
+  const hasSearchFilters = hasUrlSearch || activeCategoryCount > 0;
+
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLElement | null>(null);
-
-  const [tagsIndex, setTagsIndex] = useState<Map<string, TagRecord>>(new Map());
-
-  const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
 
   const [importModalMessage, setImportModalMessage] = useState<string | null>(null);
 
@@ -146,23 +123,6 @@ export default function GalleryPage() {
 
   const showCollectionsStrip = stripDataEnabled && collectionStripItems.length > 0;
 
-
-
-  const galleryFeed = useGalleryFeed(feedQuery, ready && !isAiSearch && !isColorSearch && !isSimilarSearch);
-  const aiFeed = useAiGalleryFeed(aiQuery, ready && isAiSearch, sort);
-  const colorFeed = useColorGalleryFeed(colorHex, colorTolerance, feedQuery, ready && isColorSearch);
-  const similarFeed = useSimilarGalleryFeed(similarRef, similarCrop, feedQuery, ready && isSimilarSearch);
-  const activeFeed = isSimilarSearch
-    ? similarFeed
-    : isColorSearch
-      ? colorFeed
-      : isAiSearch
-        ? aiFeed
-        : galleryFeed;
-  const { cards, srcMap, hasMore, loading, booting, loadMore, reloadFromStart } = activeFeed;
-
-
-
   useEffect(() => {
 
     const w = (location.state as { importWarnings?: string[] } | undefined)?.importWarnings;
@@ -177,81 +137,12 @@ export default function GalleryPage() {
 
   }, [location.pathname, location.search, location.state, navigate]);
 
-  const loadMoodboard = useCallback(async () => {
-
-    const ids = await getMoodboardCardIds();
-
-    setMoodboardCardIds(new Set(ids));
-
-  }, []);
-
-
-
-  const loadTagsIndex = useCallback(async () => {
-
-    const cats = await getAllCategories();
-
-    const lists = await Promise.all(cats.map((c) => getTagsByCategory(c.id)));
-
-    const m = new Map<string, TagRecord>();
-
-    for (const list of lists) {
-
-      for (const t of list) m.set(t.id, t);
-
-    }
-
-    setTagsIndex(m);
-
-  }, []);
-
-
-
   useEffect(() => {
-
     void (async () => {
-
       const ok = await isLibraryConfigured();
-
       setReady(ok);
-
-      if (ok) {
-
-        await Promise.all([loadTagsIndex(), loadMoodboard()]);
-
-      }
-
     })();
-
-  }, [loadTagsIndex, loadMoodboard]);
-
-
-
-  useEffect(() => {
-
-    const onCards = () => {
-
-      void loadTagsIndex();
-
-      void loadMoodboard();
-
-    };
-
-    window.addEventListener('arc:cards-changed', onCards);
-
-    window.addEventListener('arc:library-changed', onCards);
-
-    return () => {
-
-      window.removeEventListener('arc:cards-changed', onCards);
-
-      window.removeEventListener('arc:library-changed', onCards);
-
-    };
-
-  }, [loadTagsIndex, loadMoodboard]);
-
-
+  }, []);
 
   useEffect(() => {
     const outlet = document.querySelector('.arc-app-outlet');
@@ -271,90 +162,53 @@ export default function GalleryPage() {
     }
   }, [sort.field, sort.shuffleSeed]);
 
-  useEffect(() => {
-
-    const el = sentinelRef.current;
-    const root = scrollRootRef.current ?? el?.closest('.arc-app-outlet');
-
-    if (!el || !(root instanceof HTMLElement) || !ready || !hasMore || loading || booting) return;
-
-    const io = new IntersectionObserver(
-
-      (entries) => {
-
-        const hit = entries.some((e) => e.isIntersecting);
-
-        if (hit) void loadMore();
-
-      },
-
-      { root, rootMargin: '400px', threshold: 0 }
-
-    );
-
-    io.observe(el);
-
-    return () => io.disconnect();
-
-  }, [ready, hasMore, loading, booting, loadMore]);
-
-
+  useGalleryFeedSentinel({
+    sentinelRef,
+    scrollRootRef,
+    enabled: ready,
+    hasMore,
+    loading,
+    booting,
+    loadMore
+  });
 
   const overlay = useMemo(() => {
-
-    if (!ready) {
-      return (
-        <EmptyState
-          {...EMPTY_STATE_COPY.libraryUnconfigured}
-          fill
-          onPrimaryAction={() => navigate('/settings/library')}
-        />
-      );
-    }
-
-    if (booting && !isAiSearch && !isColorSearch && !isSimilarSearch) return null;
-
-    if (cards.length === 0 && !loading) {
-
-      if (hasSearchFilters) {
-        return (
-          <EmptyState
-            {...EMPTY_STATE_COPY.searchNoResults}
-            fill
-            onPrimaryAction={() => resetGallerySearch()}
-          />
-        );
-      }
-
-      if (feedQuery.libraryScope === 'untagged') {
-        return <EmptyState {...EMPTY_STATE_COPY.libraryUntagged} fill />;
-      }
-
-      if (feedQuery.libraryScope === 'trash') {
-        return <EmptyState {...EMPTY_STATE_COPY.libraryTrashEmpty} fill />;
-      }
-
-      return (
-        <EmptyState
-          {...EMPTY_STATE_COPY.libraryEmpty}
-          fill
-          onPrimaryAction={openImportPicker}
-        />
-      );
-    }
-
-    return null;
-
+    const resolved = resolveGalleryFeedEmptyState({
+      ready,
+      loading,
+      booting,
+      cardCount: cards.length,
+      feedError,
+      hasSearchFilters,
+      libraryScope: feedQuery.libraryScope,
+      context: 'gallery',
+      isRemoteSearch: isRemoteSearchFeed,
+      isAiSearch,
+      onResetSearch: resetGallerySearch,
+      onOpenImport: openImportPicker,
+      onNavigateSettingsLibrary: () => navigate('/settings/library'),
+      onNavigateAiSettings: () => navigate('/settings/ai-search')
+    });
+    if (!resolved) return null;
+    const { copy, onPrimaryAction, onSecondaryAction } = resolved;
+    return (
+      <EmptyState
+        {...copy}
+        fill
+        onPrimaryAction={onPrimaryAction}
+        onSecondaryAction={onSecondaryAction}
+      />
+    );
   }, [
     ready,
     booting,
     cards.length,
     loading,
+    feedError,
     hasSearchFilters,
     feedQuery.libraryScope,
+    isRemoteSearchFeed,
     isAiSearch,
-    isColorSearch,
-    isSimilarSearch,
     navigate,
     openImportPicker,
     resetGallerySearch
@@ -366,7 +220,7 @@ export default function GalleryPage() {
 
     <div className="arc-gallery-page">
 
-      {booting && !isAiSearch && !isColorSearch && !isSimilarSearch ? (
+      {booting && !isRemoteSearchFeed && !shuffleReloading ? (
 
         <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
 
@@ -401,7 +255,7 @@ export default function GalleryPage() {
 
             loadingMore={loading && hasMore}
 
-            busy={(booting && !isAiSearch && !isColorSearch && !isSimilarSearch) || loading}
+            busy={(booting && !isRemoteSearchFeed && !shuffleReloading) || loading || shuffleReloading}
 
             onOpenCard={openCard}
 
@@ -414,9 +268,7 @@ export default function GalleryPage() {
               if (!ids.includes(id)) {
 
                 await addCardToMoodboard(id);
-
-                setMoodboardCardIds((prev) => new Set(prev).add(id));
-
+                await refreshMoodboard();
                 return;
 
               }
@@ -432,17 +284,7 @@ export default function GalleryPage() {
               }
 
               await removeCardFromMoodboard(id);
-
-              setMoodboardCardIds((prev) => {
-
-                const copy = new Set(prev);
-
-                copy.delete(id);
-
-                return copy;
-
-              });
-
+              await refreshMoodboard();
             }}
 
             onFindSimilar={(id) => {
@@ -490,19 +332,8 @@ export default function GalleryPage() {
           onClose={() => setRemoveMoodboardConfirm(null)}
 
           onConfirm={async () => {
-
             await removeCardFromMoodboard(removeMoodboardConfirm.cardId);
-
-            setMoodboardCardIds((prev) => {
-
-              const copy = new Set(prev);
-
-              copy.delete(removeMoodboardConfirm.cardId);
-
-              return copy;
-
-            });
-
+            await refreshMoodboard();
           }}
 
         />

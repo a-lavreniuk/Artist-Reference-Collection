@@ -343,43 +343,17 @@ export function registerArcIpc(): void {
 
   ipcMain.handle('arc:to-file-url', async (_e, relativePath: unknown) => {
     if (typeof relativePath !== 'string') return null;
-
-    const raw = relativePath.trim();
-    if (!raw) return null;
-
-    const looksAbsolute =
-      path.isAbsolute(raw) ||
-      /^[a-zA-Z]:[\\/]/.test(raw) ||
-      raw.startsWith('\\\\');
-
-    if (looksAbsolute) {
-      const abs = path.resolve(raw);
-      try {
-        const st = await stat(abs);
-        if (!st.isFile()) return null;
-        const ext = path.extname(abs);
-        if (!isAllowedLibraryMediaExt(ext)) return null;
-        return `arc-media://localhost/?abs=${encodeURIComponent(abs)}`;
-      } catch {
-        return null;
-      }
-    }
-
     const root = await readLibraryRootFromDisk();
-    if (!root) return null;
-    const relNorm = raw.replace(/\//g, path.sep);
-    const abs = path.resolve(root, relNorm);
-    if (!isInsideLibrary(root, abs)) return null;
-    try {
-      const st = await stat(abs);
-      if (!st.isFile()) return null;
-      const ext = path.extname(abs);
-      if (!isAllowedLibraryMediaExt(ext)) return null;
-      const relStable = raw.replace(/\\/g, '/');
-      return `arc-media://localhost/?rel=${encodeURIComponent(relStable)}`;
-    } catch {
-      return null;
-    }
+    const { resolvePathToMediaUrl } = await import('./toFileUrlHelper');
+    return resolvePathToMediaUrl(relativePath, root, isVideoExt);
+  });
+
+  ipcMain.handle('arc:to-file-urls', async (_e, relativePaths: unknown) => {
+    if (!Array.isArray(relativePaths)) return {};
+    const paths = relativePaths.filter((p): p is string => typeof p === 'string');
+    const root = await readLibraryRootFromDisk();
+    const { resolvePathsToMediaUrls } = await import('./toFileUrlHelper');
+    return resolvePathsToMediaUrls(paths, root, isVideoExt);
   });
 
   ipcMain.handle('arc:delete-file-if-inside-library', async (_e, relativePath: unknown) => {

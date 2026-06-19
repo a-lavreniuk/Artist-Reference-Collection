@@ -13,6 +13,7 @@ export type ContextMenuRow =
       slotOrder?: ContextMenuSlot[];
       selected?: boolean;
       disabled?: boolean;
+      loading?: boolean;
       /** По умолчанию меню закрывается после выбора; false — для мультивыбора в фильтрах */
       closeOnSelect?: boolean;
       onSelect?: () => void;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { CardRecord } from '../../services/db';
 import { MasonryGrid, MASONRY_GAP_PX, resolveMasonryColumnCount, type MasonryVariant } from '../masonry';
 import { galleryMasonryItemHeight } from '../masonry/masonryItemHeight';
@@ -7,7 +7,6 @@ import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSize
 import { mergeCardsSrcMap, peekCardsSrcMap } from './galleryMediaCache';
 import GalleryCardTile from './GalleryCardTile';
 import { gallerySkeletonStyle } from './gallerySkeleton';
-import { useState } from 'react';
 
 type Props = {
   cards: CardRecord[];
@@ -81,6 +80,40 @@ export default function GalleryBoard({
 
   const moodboardEnabled = Boolean(moodboardCardIds && onToggleMoodboard);
 
+  const renderItem = useCallback(
+    (id: string) => {
+      const card = cardById.get(id);
+      if (!card) return null;
+      return (
+        <GalleryCardTile
+          card={card}
+          thumbSrc={srcMap[card.id]}
+          inMoodboard={moodboardCardIds?.has(card.id) ?? false}
+          onOpenCard={onOpenCard}
+          onFindSimilar={onFindSimilar}
+          onToggleMoodboard={onToggleMoodboard}
+          moodboardEnabled={moodboardEnabled}
+        />
+      );
+    },
+    [cardById, moodboardCardIds, moodboardEnabled, onFindSimilar, onOpenCard, onToggleMoodboard, srcMap]
+  );
+
+  const renderSkeleton = useCallback(
+    (_: string, layout: { height: number }) => {
+      const card = cards[cards.length - 1];
+      const style = card ? gallerySkeletonStyle(card) : undefined;
+      return (
+        <div
+          className="arc-gallery-skeleton"
+          style={{ ...style, width: '100%', height: layout.height }}
+          aria-hidden
+        />
+      );
+    },
+    [cards]
+  );
+
   return (
     <div ref={measureRef} className="arc-gallery-masonry">
       <MasonryGrid
@@ -92,32 +125,8 @@ export default function GalleryBoard({
         loadingMore={loadingMore}
         busy={busy}
         className="arc-gallery-masonry-grid"
-        renderSkeleton={(_, layout) => {
-          const card = cards[cards.length - 1];
-          const style = card ? gallerySkeletonStyle(card) : undefined;
-          return (
-            <div
-              className="arc-gallery-skeleton"
-              style={{ ...style, width: '100%', height: layout.height }}
-              aria-hidden
-            />
-          );
-        }}
-        renderItem={(id) => {
-          const card = cardById.get(id);
-          if (!card) return null;
-          return (
-            <GalleryCardTile
-              card={card}
-              thumbSrc={srcMap[card.id]}
-              inMoodboard={moodboardCardIds?.has(card.id) ?? false}
-              onOpenCard={onOpenCard}
-              onFindSimilar={onFindSimilar}
-              onToggleMoodboard={onToggleMoodboard}
-              moodboardEnabled={moodboardEnabled}
-            />
-          );
-        }}
+        renderSkeleton={renderSkeleton}
+        renderItem={renderItem}
       />
     </div>
   );

@@ -1,18 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { dispatchSimilarSearchLoading } from '../../search/similarSearchEvents';
 import { getSimilarUploadPath } from '../../search/similarSearchSession';
 import type { SimilarCropRect } from '../../search/searchUrl';
 import type { CardRecord } from '../../services/db';
-import { readGridSize } from '../../layout/gridSizePreference';
 import type { GalleryFeedQuery } from './galleryQuery';
-import { isGalleryShuffleSort } from './galleryFilterTypes';
-import {
-  mergeCardsSrcMap,
-  peekCardsSrcMap,
-  preloadDecodedImages
-} from './galleryMediaCache';
-import { orderRecordsByIds, shuffleCardIds } from './shuffleCardIds';
+import { usePaginatedRemoteFeed } from './usePaginatedRemoteFeed';
 
 export type SimilarGalleryFeedOptions = {
   scopeCardIds?: ReadonlySet<string> | null;
@@ -30,14 +23,9 @@ export function useSimilarGalleryFeed(
   libraryReady: boolean,
   options?: SimilarGalleryFeedOptions
 ) {
-  const [cards, setCards] = useState<CardRecord[]>([]);
-  const [srcMap, setSrcMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const seqRef = useRef(0);
   const scopeCardIds = options?.scopeCardIds ?? null;
 
-  const requestPayload = useMemo(() => {
+  const requestBase = useMemo(() => {
     if (!similarRef) return null;
     const uploadPath = similarRef.kind === 'upload' ? getSimilarUploadPath() : null;
     if (similarRef.kind === 'upload' && !uploadPath) return null;
@@ -56,73 +44,31 @@ export function useSimilarGalleryFeed(
     };
   }, [crop, feedQuery, scopeCardIds, similarRef]);
 
-  const applySortOrder = useCallback(
-    (rows: CardRecord[]) => {
-      const sort = feedQuery.sort;
-      if (!isGalleryShuffleSort(sort)) return rows;
-      const shuffledIds = shuffleCardIds(
-        rows.map((r) => r.id),
-        sort.shuffleSeed ?? 0
-      );
-      return orderRecordsByIds(rows, shuffledIds);
-    },
-    [feedQuery.sort]
-  );
+  const resetKey = useMemo(() => JSON.stringify(requestBase), [requestBase]);
 
-  useEffect(() => {
-    dispatchSimilarSearchLoading(loading);
-  }, [loading]);
-
-  const reload = useCallback(async () => {
-    const arc = window.arc;
-    if (!arc?.aiSimilarSearchCards || !requestPayload || !libraryReady) {
-      setCards([]);
-      setSrcMap({});
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    const seq = ++seqRef.current;
-    setLoading(true);
-    setError(null);
-    try {
+  const fetchPage = useCallback(
+    async (offset: number, limit: number) => {
+      const arc = window.arc;
+      if (!arc?.aiSimilarSearchCards || !requestBase) return [];
       const status = arc.aiGetStatus ? await arc.aiGetStatus() : null;
       if (status && !status.setupReady) {
         throw new Error('Сначала установите модель в «Настройки → AI Поиск».');
       }
-      const raw = await arc.aiSimilarSearchCards(requestPayload);
-      const rows = Array.isArray(raw) ? (raw as CardRecord[]) : [];
-      if (seq !== seqRef.current) return;
-      const ordered = applySortOrder(rows);
-      setCards(ordered);
-      const gridSize = readGridSize();
-      const map = await mergeCardsSrcMap(ordered, peekCardsSrcMap(ordered, gridSize), gridSize);
-      if (seq !== seqRef.current) return;
-      setSrcMap(map);
-      void preloadDecodedImages(Object.values(map));
-    } catch (err) {
-      if (seq !== seqRef.current) return;
-      setCards([]);
-      setSrcMap({});
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      if (seq === seqRef.current) setLoading(false);
-    }
-  }, [applySortOrder, libraryReady, requestPayload]);
+      const raw = await arc.aiSimilarSearchCards({ ...requestBase, offset, limit });
+      return Array.isArray(raw) ? (raw as CardRecord[]) : [];
+    },
+    [requestBase]
+  );
+
+  const feed = usePaginatedRemoteFeed({
+    enabled: libraryReady && Boolean(requestBase),
+    fetchPage,
+    resetKey
+  });
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    dispatchSimilarSearchLoading(feed.loading);
+  }, [feed.loading]);
 
-  return {
-    cards,
-    srcMap,
-    hasMore: false,
-    loading,
-    booting: false,
-    loadMore: () => {},
-    reloadFromStart: reload,
-    error
-  };
+  return feed;
 }

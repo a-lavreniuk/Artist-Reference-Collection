@@ -36,14 +36,23 @@ import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
 import { defaultMoodboard, defaultSystem, readMoodboard, readSystem, writeMoodboard, writeSystem } from './systemFiles';
 import { generateImageThumbnails, generateVideoThumbnailsFromFrame } from './thumbnails';
-import { shuffleCardIds } from '../shared/shuffleCardIds';
 import {
   buildGalleryFilterWhere,
   buildGallerySortSql,
-  computeGalleryFilterBoundaries,
   DEFAULT_GALLERY_SORT,
   emptyGalleryAdvancedFilters
 } from './galleryFilters';
+import {
+  getGalleryFilterBoundaries,
+  invalidateGalleryFilterBoundariesCache
+} from './galleryFilterBoundariesCache';
+import {
+  buildShuffleCacheKey,
+  getShuffledPageIds,
+  invalidateShuffleIdCache
+} from './shuffleIdCache';
+import { invalidateScoredSearchCache } from './scoredSearchCache';
+import { clearAiResultsCache } from '../ai/aiResultsCache';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
@@ -73,9 +82,6 @@ export {
   renameFilterPreset,
   upsertFilterPreset
 } from './filterPresets';
-
-// TODO(settings-overlay): deleteCardsSkipTrash — при true deleteCard вызывает permanentDelete сразу
-export const DELETE_CARDS_SKIP_TRASH_DEFAULT = false;
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp']);
 
@@ -138,6 +144,52 @@ function getCardCollections(db: Database.Database, cardId: string): string[] {
     .map((r) => String((r as { collection_id: string }).collection_id));
 }
 
+function loadCardRelationsBatch(
+  db: Database.Database,
+  cardIds: readonly string[]
+): { tagsByCard: Map<string, string[]>; collectionsByCard: Map<string, string[]> } {
+  const tagsByCard = new Map<string, string[]>();
+  const collectionsByCard = new Map<string, string[]>();
+  if (cardIds.length === 0) return { tagsByCard, collectionsByCard };
+
+  for (const id of cardIds) {
+    tagsByCard.set(id, []);
+    collectionsByCard.set(id, []);
+  }
+
+  const placeholders = cardIds.map(() => '?').join(',');
+  const tagRows = db
+    .prepare(`SELECT card_id, tag_id FROM card_tags WHERE card_id IN (${placeholders})`)
+    .all(...cardIds) as { card_id: string; tag_id: string }[];
+  for (const row of tagRows) {
+    const id = String(row.card_id);
+    tagsByCard.get(id)?.push(String(row.tag_id));
+  }
+
+  const colRows = db
+    .prepare(`SELECT card_id, collection_id FROM card_collections WHERE card_id IN (${placeholders})`)
+    .all(...cardIds) as { card_id: string; collection_id: string }[];
+  for (const row of colRows) {
+    const id = String(row.card_id);
+    collectionsByCard.get(id)?.push(String(row.collection_id));
+  }
+
+  return { tagsByCard, collectionsByCard };
+}
+
+function indexCardRowsWithRelations(
+  db: Database.Database,
+  rows: Record<string, unknown>[]
+): CardIndexRow[] {
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => String(r.id));
+  const { tagsByCard, collectionsByCard } = loadCardRelationsBatch(db, ids);
+  return rows.map((r) => {
+    const id = String(r.id);
+    return dbRowToIndex(r, tagsByCard.get(id) ?? [], collectionsByCard.get(id) ?? []);
+  });
+}
+
 function loadCardRow(db: Database.Database, cardId: string): CardIndexRow | null {
   const row = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId) as Record<string, unknown> | undefined;
   if (!row) return null;
@@ -145,10 +197,7 @@ function loadCardRow(db: Database.Database, cardId: string): CardIndexRow | null
 }
 
 export function indexCardRowsFromDb(db: Database.Database, rows: Record<string, unknown>[]): CardIndexRow[] {
-  return rows.map((r) => {
-    const id = String(r.id);
-    return dbRowToIndex(r, getCardTags(db, id), getCardCollections(db, id));
-  });
+  return indexCardRowsWithRelations(db, rows);
 }
 
 function syncCardRelations(db: Database.Database, cardId: string, tagIds: string[], collectionIds: string[]): void {
@@ -204,6 +253,10 @@ export function resetLibraryStorageCache(): void {
   readyPromises.clear();
   migrationPromise = null;
   currentRoot = null;
+  invalidateGalleryFilterBoundariesCache();
+  invalidateShuffleIdCache();
+  invalidateScoredSearchCache();
+  clearAiResultsCache();
   closeLibraryDb();
 }
 
@@ -464,9 +517,9 @@ export async function importMediaFile(
 
 export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): CardIndexRow[] {
   const db = openLibraryDb(libraryRoot);
-  const boundaries = computeGalleryFilterBoundaries(db);
   const sort = params.sort ?? DEFAULT_GALLERY_SORT;
   const filters = params.advancedFilters ?? emptyGalleryAdvancedFilters();
+  const boundaries = getGalleryFilterBoundaries(db, filters);
   const { wh, binds } = buildGalleryFilterWhere(
     {
       libraryScope: params.libraryScope,
@@ -485,13 +538,16 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
   if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
 
   if (sort.field === 'shuffle') {
-    const idSql = `SELECT c.id FROM cards c${wh.length ? ` WHERE ${wh.join(' AND ')}` : ''}`;
-    const idRows = db.prepare(idSql).all(...binds) as { id: string }[];
-    const shuffled = shuffleCardIds(
-      idRows.map((r) => String(r.id)),
-      sort.shuffleSeed ?? 0
+    const whereClause = wh.length ? ` WHERE ${wh.join(' AND ')}` : '';
+    const idSql = `SELECT c.id FROM cards c${whereClause}`;
+    const shuffleKey = buildShuffleCacheKey(whereClause, binds, sort.shuffleSeed ?? 0);
+    const pageIds = getShuffledPageIds(
+      shuffleKey,
+      () =>
+        (db.prepare(idSql).all(...binds) as { id: string }[]).map((r) => String(r.id)),
+      params.offset,
+      params.limit
     );
-    const pageIds = shuffled.slice(params.offset, params.offset + params.limit);
     if (pageIds.length === 0) return [];
 
     const placeholders = pageIds.map(() => '?').join(',');
@@ -499,23 +555,17 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
       .prepare(`SELECT c.* FROM cards c WHERE c.id IN (${placeholders})`)
       .all(...pageIds) as Record<string, unknown>[];
     const byId = new Map(rows.map((r) => [String(r.id), r]));
-    return pageIds
+    const ordered = pageIds
       .map((id) => byId.get(id))
-      .filter((r): r is Record<string, unknown> => r != null)
-      .map((r) => {
-        const id = String(r.id);
-        return dbRowToIndex(r, getCardTags(db, id), getCardCollections(db, id));
-      });
+      .filter((r): r is Record<string, unknown> => r != null);
+    return indexCardRowsWithRelations(db, ordered);
   }
 
   sql += ` ${buildGallerySortSql(sort, 'c')} LIMIT ? OFFSET ?`;
   binds.push(params.limit, params.offset);
 
   const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
-  return rows.map((r) => {
-    const id = String(r.id);
-    return dbRowToIndex(r, getCardTags(db, id), getCardCollections(db, id));
-  });
+  return indexCardRowsWithRelations(db, rows);
 }
 
 export function getCardByIdFromDb(libraryRoot: string, cardId: string): CardIndexRow | null {

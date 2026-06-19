@@ -688,21 +688,64 @@ export function registerAiIpc(): void {
     }
   });
 
-  ipcMain.handle('arc:ai-search-cards', async (_e, queryRaw: unknown) => {
-    const query = typeof queryRaw === 'string' ? queryRaw.trim() : '';
+  ipcMain.handle('arc:ai-search-cards', async (_e, payloadRaw: unknown) => {
+    let query = '';
+    let collectionId: string | null = null;
+    let moodboardCardIds: string[] | null = null;
+    let scopeCardIds: string[] | undefined;
+    let offset = 0;
+    let limit = 50;
+
+    if (typeof payloadRaw === 'string') {
+      query = payloadRaw.trim();
+    } else if (payloadRaw && typeof payloadRaw === 'object') {
+      const p = payloadRaw as {
+        query?: string;
+        collectionId?: string | null;
+        moodboardCardIds?: string[] | null;
+        scopeCardIds?: string[];
+        offset?: number;
+        limit?: number;
+      };
+      query = typeof p.query === 'string' ? p.query.trim() : '';
+      collectionId = typeof p.collectionId === 'string' ? p.collectionId : null;
+      moodboardCardIds = Array.isArray(p.moodboardCardIds) ? p.moodboardCardIds : null;
+      scopeCardIds = Array.isArray(p.scopeCardIds) ? p.scopeCardIds : undefined;
+      offset = typeof p.offset === 'number' ? Math.max(0, p.offset) : 0;
+      limit = typeof p.limit === 'number' ? Math.max(1, p.limit) : 50;
+    }
+
     if (!query) return [];
 
-    const searchResults = await runAiSearch(query);
     const root = await readLibraryRootFromDisk();
     if (!root) return [];
 
-    const cards = [];
-    for (const hit of searchResults) {
-      const row = getCardByIdFromDb(root, hit.cardId);
-      if (!row) continue;
-      cards.push({ ...cardIndexToRenderer(rowToCardRecord(row)), aiScore: hit.score });
-    }
-    return cards;
+    const cacheKey = JSON.stringify({
+      query,
+      collectionId,
+      moodboardCardIds,
+      scopeCardIds: scopeCardIds ? [...scopeCardIds].sort() : null
+    });
+
+    const { getOrBuildAiResultsPage } = await import('./ai/aiResultsCache');
+    return getOrBuildAiResultsPage(cacheKey, offset, limit, async () => {
+      const searchResults = await runAiSearch(query);
+      const scope =
+        scopeCardIds && scopeCardIds.length > 0 ? new Set(scopeCardIds) : null;
+      const moodboardSet =
+        moodboardCardIds && moodboardCardIds.length > 0 ? new Set(moodboardCardIds) : null;
+
+      const cards = [];
+      for (const hit of searchResults) {
+        const row = getCardByIdFromDb(root, hit.cardId);
+        if (!row) continue;
+        if (collectionId && !row.collectionIds.includes(collectionId)) continue;
+        if (moodboardSet && !moodboardSet.has(hit.cardId)) continue;
+        if (scope && !scope.has(hit.cardId)) continue;
+        cards.push({ ...cardIndexToRenderer(rowToCardRecord(row)), aiScore: hit.score });
+      }
+      return cards;
+    });
   });
 
   ipcMain.handle('arc:ai-reindex', async () => {
@@ -831,7 +874,9 @@ export function registerAiIpc(): void {
         scopeCardIds: scope,
         tier,
         modelId,
-        strictness: prefs.aiSearchStrictness
+        strictness: prefs.aiSearchStrictness,
+        offset: typeof p.offset === 'number' ? p.offset : 0,
+        limit: typeof p.limit === 'number' ? p.limit : 50
       });
       return rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
     } catch (err) {

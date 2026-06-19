@@ -4,10 +4,13 @@ import { ensureGalleryBootstrap, scheduleGalleryWarmup } from './galleryBootstra
 import {
   buildGalleryQueryKey,
   defaultGalleryFeedQuery,
+  GALLERY_MAX_CARDS_IN_MEMORY,
   GALLERY_PAGE_INITIAL,
   GALLERY_PAGE_MORE,
+  isShuffleOnlyQueryChange,
   type GalleryFeedQuery
 } from './galleryQuery';
+import { useGalleryFilters } from './GalleryFilterContext';
 import {
   clearGalleryMediaUrlCache,
   mergeCardsSrcMap,
@@ -48,7 +51,36 @@ function chunkSrcUrls(cards: readonly CardRecord[], srcMap: Record<string, strin
   return urls;
 }
 
+function trimCardsWindow(
+  cards: CardRecord[],
+  srcMap: Record<string, string>
+): { cards: CardRecord[]; srcMap: Record<string, string>; removedCount: number } {
+  if (cards.length <= GALLERY_MAX_CARDS_IN_MEMORY) {
+    return { cards, srcMap, removedCount: 0 };
+  }
+  const removedCount = cards.length - GALLERY_MAX_CARDS_IN_MEMORY;
+  const trimmed = cards.slice(removedCount);
+  const keepIds = new Set(trimmed.map((c) => c.id));
+  const nextSrc: Record<string, string> = {};
+  for (const id of keepIds) {
+    if (srcMap[id]) nextSrc[id] = srcMap[id];
+  }
+  return { cards: trimmed, srcMap: nextSrc, removedCount };
+}
+
+function compensateScrollForTrim(removedCount: number): void {
+  if (removedCount <= 0) return;
+  const scrollAdjust = removedCount * 200;
+  for (const selector of ['.arc-app-outlet', '.arc-collections-page-main__scroll']) {
+    const el = document.querySelector(selector);
+    if (el instanceof HTMLElement && el.scrollTop > 0) {
+      el.scrollTop = Math.max(0, el.scrollTop - scrollAdjust);
+    }
+  }
+}
+
 export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
+  const { setShuffleReloading } = useGalleryFilters();
   const queryKey = useMemo(() => buildGalleryQueryKey(query), [query]);
   const initialSnapshot = useMemo(() => getGallerySnapshot(queryKey), [queryKey]);
 
@@ -58,8 +90,10 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
   const [hasMore, setHasMore] = useState(() => initialSnapshot?.hasMore ?? true);
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(() => libraryReady && !initialSnapshot);
+  const [shuffleReloading, setShuffleReloadingLocal] = useState(false);
 
   const loadSeqRef = useRef(0);
+  const prevQueryRef = useRef(query);
   const cardsRef = useRef(cards);
   const srcMapRef = useRef(srcMap);
   const offsetRef = useRef(offset);
@@ -97,10 +131,15 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
 
   const persistSnapshot = useCallback(
     (snapshot: GalleryScopeSnapshot) => {
-      setGallerySnapshot(queryKey, snapshot);
-      applySnapshot(snapshot);
-      offsetRef.current = snapshot.offset;
-      hasMoreRef.current = snapshot.hasMore;
+      const trimmed = trimCardsWindow(snapshot.cards, snapshot.srcMap);
+      if (trimmed.removedCount > 0) {
+        compensateScrollForTrim(trimmed.removedCount);
+      }
+      const next = { ...snapshot, cards: trimmed.cards, srcMap: trimmed.srcMap };
+      setGallerySnapshot(queryKey, next);
+      applySnapshot(next);
+      offsetRef.current = next.offset;
+      hasMoreRef.current = next.hasMore;
     },
     [applySnapshot, queryKey]
   );
@@ -263,6 +302,30 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
       return;
     }
 
+    const prevQuery = prevQueryRef.current;
+    prevQueryRef.current = query;
+    const shuffleOnly =
+      cardsRef.current.length > 0 && isShuffleOnlyQueryChange(prevQuery, query);
+
+    if (shuffleOnly) {
+      setShuffleReloadingLocal(true);
+      setShuffleReloading(true);
+      const seq = ++loadSeqRef.current;
+      setLoading(true);
+      void (async () => {
+        try {
+          await fetchPage(0, false, seq);
+        } finally {
+          if (seq === loadSeqRef.current) {
+            setLoading(false);
+            setShuffleReloadingLocal(false);
+            setShuffleReloading(false);
+          }
+        }
+      })();
+      return;
+    }
+
     const cached = getGallerySnapshot(queryKey);
     if (cached) {
       applySnapshot(cached);
@@ -291,7 +354,7 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
         }
       }
     })();
-  }, [applySnapshot, fetchPage, libraryReady, queryKey]);
+  }, [applySnapshot, fetchPage, libraryReady, query, queryKey, setShuffleReloading]);
 
   useEffect(() => {
     const onCardsChanged = () => {
@@ -384,6 +447,7 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
     hasMore,
     loading,
     booting,
+    shuffleReloading,
     loadMore,
     reloadFromStart
   };

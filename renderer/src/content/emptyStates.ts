@@ -35,6 +35,12 @@ export const EMPTY_STATE_COPY = {
     primaryActionLabel: 'Сбросить фильтры',
     primaryActionVariant: 'outline'
   },
+  searchFeedError: {
+    title: 'Не удалось выполнить поиск',
+    subtitle: 'Попробуйте снова или сбросьте фильтры',
+    primaryActionLabel: 'Сбросить фильтры',
+    primaryActionVariant: 'outline'
+  },
   aiSearchNoResults: {
     title: 'Ничего не найдено',
     subtitle: 'Попробуйте другое описание или настройте точность поиска',

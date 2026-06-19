@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 
 type FeatureItem = {
@@ -31,6 +32,7 @@ const FEATURES: FeatureItem[] = [
 ];
 
 export default function OnboardingStubPage() {
+  const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,8 +51,6 @@ export default function OnboardingStubPage() {
     }
   }, []);
 
-  const noop = () => {};
-
   return (
     <div
       ref={rootRef}
@@ -67,7 +67,11 @@ export default function OnboardingStubPage() {
               дизайнеров с большими коллекциями референсов.
             </p>
           </div>
-          <button type="button" className="btn btn-brand btn-ds" onClick={noop}>
+          <button
+            type="button"
+            className="btn btn-brand btn-ds"
+            onClick={() => navigate('/settings/library')}
+          >
             <span className="btn-ds__value">Начать проект</span>
             <span className="btn-ds__icon arc-icon-folder-open" aria-hidden="true"></span>
           </button>
@@ -88,7 +92,11 @@ export default function OnboardingStubPage() {
           ))}
         </div>
 
-        <button type="button" className="btn btn-ghost btn-ds" onClick={noop}>
+        <button
+          type="button"
+          className="btn btn-ghost btn-ds"
+          onClick={() => navigate('/settings/backup')}
+        >
           <span className="btn-ds__value">Восстановить резервную копию</span>
         </button>
       </div>

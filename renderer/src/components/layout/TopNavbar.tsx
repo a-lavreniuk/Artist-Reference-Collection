@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import NavbarFiltersRow from './NavbarFiltersRow';
 import NavbarLibrarySwitcher from './NavbarLibrarySwitcher';
 import { useImportContext } from '../import/ImportContext';
@@ -18,11 +18,13 @@ import {
   resolveMainTab,
   resolveNavbarVariant
 } from './navbarLayout';
+import { parseLibraryScope, setLibraryScopeInParams } from '../../search/libraryScopeUrl';
 
 export default function TopNavbar() {
   const { openImportPicker } = useImportContext();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const hostRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -88,6 +90,13 @@ export default function TopNavbar() {
     const nextTab = resolveMainTab(path);
     if (nextTab !== activeMainTab) {
       requestCloseCardDetail();
+    }
+    const leavingGallery = activeMainTab === 'gallery' && !path.startsWith('/gallery');
+    if (leavingGallery && parseLibraryScope(searchParams) !== 'all') {
+      const nextParams = setLibraryScopeInParams(searchParams, 'all');
+      const search = nextParams.toString();
+      navigate({ pathname: path, search: search ? `?${search}` : '' });
+      return;
     }
     navigate(path);
   };

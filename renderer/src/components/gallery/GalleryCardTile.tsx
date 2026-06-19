@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { memo, useLayoutEffect, useRef, useState } from 'react';
 import type { CardRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 import GalleryThumb from './GalleryThumb';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import { cardFileFormatLabel } from '../../utils/cardFileFormatLabel';
-import { useLayoutEffect, useRef } from 'react';
 
 type Props = {
   card: CardRecord;
@@ -18,7 +17,7 @@ type Props = {
   tileClassName?: string;
 };
 
-export default function GalleryCardTile({
+function GalleryCardTile({
   card,
   thumbSrc,
   inMoodboard = false,
@@ -117,3 +116,19 @@ export default function GalleryCardTile({
     </div>
   );
 }
+
+function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
+  return (
+    prev.card.id === next.card.id &&
+    prev.card.type === next.card.type &&
+    prev.thumbSrc === next.thumbSrc &&
+    prev.inMoodboard === next.inMoodboard &&
+    prev.moodboardEnabled === next.moodboardEnabled &&
+    prev.tileClassName === next.tileClassName &&
+    prev.onOpenCard === next.onOpenCard &&
+    prev.onFindSimilar === next.onFindSimilar &&
+    prev.onToggleMoodboard === next.onToggleMoodboard
+  );
+}
+
+export default memo(GalleryCardTile, galleryCardTilePropsEqual);

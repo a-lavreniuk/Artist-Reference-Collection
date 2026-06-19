@@ -1,15 +1,17 @@
-import path from 'path';import {
+import path from 'path';
+import {
   buildGalleryFilterWhere,
-  computeGalleryFilterBoundaries,
   DEFAULT_GALLERY_SORT,
   emptyGalleryAdvancedFilters,
   type GalleryAdvancedFilters,
   type GallerySortState
 } from './galleryFilters';
+import { getGalleryFilterBoundaries } from './galleryFilterBoundariesCache';
 import { shuffleCardIds } from '../shared/shuffleCardIds';
 import { cardDirAbs } from './cardFolder';
 import { openLibraryDb } from './db';
 import { indexCardRowsFromDb } from './libraryStorage';
+import { getOrBuildScoredSearchPage, stableSearchCacheKey } from './scoredSearchCache';
 import { computeImagePalette, normalizeHex, parsePaletteJson, type PaletteSwatch } from './palette';
 import type { CardIndexRow, LibraryScope } from './types';
 
@@ -25,6 +27,8 @@ export type ColorSearchParams = {
   advancedFilters?: GalleryAdvancedFilters;
   sort?: GallerySortState;
   scopeCardIds?: ReadonlySet<string> | null;
+  offset?: number;
+  limit?: number;
 };
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -121,73 +125,85 @@ export function searchCardsByColor(libraryRoot: string, params: ColorSearchParam
   const queryHex = normalizeHex(params.hex);
   if (!queryHex) return [];
 
-  const db = openLibraryDb(libraryRoot);
+  const offset = Math.max(0, params.offset ?? 0);
+  const limit = Math.max(1, params.limit ?? 50);
   const sort = params.sort ?? DEFAULT_GALLERY_SORT;
   const filters = params.advancedFilters ?? emptyGalleryAdvancedFilters();
-  const boundaries = computeGalleryFilterBoundaries(db);
-  const { wh, binds } = buildGalleryFilterWhere(
-    {
-      libraryScope: params.libraryScope,
-      selectedTagIds: params.selectedTagIds,
-      cardIdExact: params.cardIdExact,
-      collectionId: params.collectionId,
-      moodboardCardIds: params.moodboardCardIds,
-      filters,
-      sort
-    },
-    'c',
-    boundaries
-  );
+  const cacheKey = stableSearchCacheKey({
+    kind: 'color',
+    hex: queryHex,
+    accuracy: params.accuracy,
+    libraryScope: params.libraryScope,
+    selectedTagIds: params.selectedTagIds,
+    cardIdExact: params.cardIdExact,
+    collectionId: params.collectionId,
+    moodboardCardIds: params.moodboardCardIds,
+    filters,
+    sort,
+    scopeCardIds: params.scopeCardIds ? [...params.scopeCardIds].sort() : null
+  });
 
-  wh.push("c.type = 'image'");
-  const sql = `SELECT c.* FROM cards c WHERE ${wh.join(' AND ')}`;
-  const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
-
-  const qRgb = hexToRgb(queryHex);
-  const queryLab = rgbToLab(qRgb.r, qRgb.g, qRgb.b);
-  const maxDeltaE = accuracyToMaxDeltaE(params.accuracy);
-  const scope = params.scopeCardIds;
-
-  const scored: Array<{ row: Record<string, unknown>; score: number }> = [];
-  for (const row of rows) {
-    const id = String(row.id);
-    if (scope && scope.size > 0 && !scope.has(id)) continue;
-    const palette = parsePaletteJson(
-      row.palette_json ? String(row.palette_json) : null,
-      row.dominant_color ? String(row.dominant_color) : undefined
+  return getOrBuildScoredSearchPage(cacheKey, offset, limit, () => {
+    const db = openLibraryDb(libraryRoot);
+    const boundaries = getGalleryFilterBoundaries(db, filters);
+    const { wh, binds } = buildGalleryFilterWhere(
+      {
+        libraryScope: params.libraryScope,
+        selectedTagIds: params.selectedTagIds,
+        cardIdExact: params.cardIdExact,
+        collectionId: params.collectionId,
+        moodboardCardIds: params.moodboardCardIds,
+        filters,
+        sort
+      },
+      'c',
+      boundaries
     );
-    const score = scorePalette(queryLab, palette);
-    if (score == null || score > maxDeltaE) continue;
-    scored.push({ row, score });
-  }
 
-  scored.sort((a, b) => a.score - b.score);
+    wh.push("c.type = 'image'");
+    const sql = `SELECT c.* FROM cards c WHERE ${wh.join(' AND ')}`;
+    const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
 
-  if (sort.field === 'shuffle') {
-    const shuffledIds = shuffleCardIds(
-      scored.map((s) => String(s.row.id)),
-      sort.shuffleSeed ?? 0
-    );
-    const byId = new Map(scored.map((s) => [String(s.row.id), s.row]));
-    const ordered = shuffledIds.map((id) => byId.get(id)).filter((r): r is Record<string, unknown> => Boolean(r));
-    return indexCardRowsFromDb(db, ordered);
-  }
+    const qRgb = hexToRgb(queryHex);
+    const queryLab = rgbToLab(qRgb.r, qRgb.g, qRgb.b);
+    const maxDeltaE = accuracyToMaxDeltaE(params.accuracy);
+    const scope = params.scopeCardIds;
 
-  const sorted = [...scored];
-  if (sort.field === 'addedAt') {
-    const dir = sort.direction === 'asc' ? 1 : -1;
-    sorted.sort((a, b) => {
-      const ta = String(a.row.added_at ?? '');
-      const tb = String(b.row.added_at ?? '');
-      return ta.localeCompare(tb) * dir;
-    });
-  } else if (sort.field === 'fileWeight') {
-    const dir = sort.direction === 'asc' ? 1 : -1;
-    sorted.sort((a, b) => ((Number(a.row.file_size) || 0) - (Number(b.row.file_size) || 0)) * dir);
-  }
+    const scored: Array<{ row: Record<string, unknown>; score: number }> = [];
+    for (const row of rows) {
+      const id = String(row.id);
+      if (scope && scope.size > 0 && !scope.has(id)) continue;
+      const palette = parsePaletteJson(
+        row.palette_json ? String(row.palette_json) : null,
+        row.dominant_color ? String(row.dominant_color) : undefined
+      );
+      const score = scorePalette(queryLab, palette);
+      if (score == null || score > maxDeltaE) continue;
+      scored.push({ row, score });
+    }
 
-  return indexCardRowsFromDb(
-    db,
-    sorted.map((s) => s.row)
-  );
+    scored.sort((a, b) => a.score - b.score);
+
+    let orderedRows: Record<string, unknown>[];
+    if (sort.field === 'shuffle') {
+      const shuffledIds = shuffleCardIds(
+        scored.map((s) => String(s.row.id)),
+        sort.shuffleSeed ?? 0
+      );
+      const byId = new Map(scored.map((s) => [String(s.row.id), s.row]));
+      orderedRows = shuffledIds.map((id) => byId.get(id)).filter((r): r is Record<string, unknown> => Boolean(r));
+    } else {
+      const sorted = [...scored];
+      if (sort.field === 'addedAt') {
+        const dir = sort.direction === 'asc' ? 1 : -1;
+        sorted.sort((a, b) => String(a.row.added_at ?? '').localeCompare(String(b.row.added_at ?? '')) * dir);
+      } else if (sort.field === 'fileWeight') {
+        const dir = sort.direction === 'asc' ? 1 : -1;
+        sorted.sort((a, b) => ((Number(a.row.file_size) || 0) - (Number(b.row.file_size) || 0)) * dir);
+      }
+      orderedRows = sorted.map((s) => s.row);
+    }
+
+    return indexCardRowsFromDb(db, orderedRows);
+  });
 }

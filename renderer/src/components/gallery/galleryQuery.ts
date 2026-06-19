@@ -36,6 +36,16 @@ export function buildGalleryQueryKey(query: GalleryFeedQuery): string {
 
 export const GALLERY_PAGE_INITIAL = 50;
 export const GALLERY_PAGE_MORE = 35;
+export const GALLERY_MAX_CARDS_IN_MEMORY = 500;
+
+export function buildGalleryQueryKeyWithoutSort(query: GalleryFeedQuery): string {
+  return buildGalleryQueryKey({ ...query, sort: DEFAULT_GALLERY_SORT });
+}
+
+export function isShuffleOnlyQueryChange(prev: GalleryFeedQuery, next: GalleryFeedQuery): boolean {
+  if (buildGalleryQueryKeyWithoutSort(prev) !== buildGalleryQueryKeyWithoutSort(next)) return false;
+  return next.sort.field === 'shuffle';
+}
 
 export const GALLERY_WARMUP_SCOPES: readonly LibraryScope[] = ['all', 'untagged', 'trash'];
 

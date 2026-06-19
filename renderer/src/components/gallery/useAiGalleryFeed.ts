@@ -1,20 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { dispatchAiSearchLoading } from '../../search/aiSearchEvents';
 import type { CardRecord } from '../../services/db';
-import { readGridSize } from '../../layout/gridSizePreference';
 import type { GallerySortState } from './galleryFilterTypes';
-import { isGalleryShuffleSort } from './galleryFilterTypes';
-import {
-  mergeCardsSrcMap,
-  peekCardsSrcMap,
-  preloadDecodedImages
-} from './galleryMediaCache';
-import { orderRecordsByIds, shuffleCardIds } from './shuffleCardIds';
+import { usePaginatedRemoteFeed } from './usePaginatedRemoteFeed';
 
 export type AiGalleryFeedOptions = {
-  /** Ограничить результаты карточками из набора (коллекция, мудборд). */
   scopeCardIds?: ReadonlySet<string> | null;
+  collectionId?: string | null;
+  moodboardCardIds?: string[] | null;
 };
 
 export function useAiGalleryFeed(
@@ -23,113 +17,66 @@ export function useAiGalleryFeed(
   sort: GallerySortState,
   options?: AiGalleryFeedOptions
 ) {
-  const [cards, setCards] = useState<CardRecord[]>([]);
-  const [srcMap, setSrcMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [booting, setBooting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const seqRef = useRef(0);
-  const hadQueryRef = useRef(false);
-
   const query = useMemo(() => aiQuery?.trim() ?? '', [aiQuery]);
-
   const scopeCardIds = options?.scopeCardIds ?? null;
+  const collectionId = options?.collectionId ?? null;
+  const moodboardCardIds = options?.moodboardCardIds ?? null;
+  const serverScoped = Boolean(collectionId) || Boolean(moodboardCardIds?.length);
+  const [aiErrorOverride, setAiErrorOverride] = useState<string | null>(null);
 
-  const applySortOrder = useCallback(
-    (rows: CardRecord[]) => {
-      if (!isGalleryShuffleSort(sort)) return rows;
-      const shuffledIds = shuffleCardIds(
-        rows.map((r) => r.id),
-        sort.shuffleSeed ?? 0
-      );
-      return orderRecordsByIds(rows, shuffledIds);
-    },
-    [sort]
+  const requestBase = useMemo(
+    () => ({
+      query,
+      collectionId,
+      moodboardCardIds,
+      sort,
+      scopeCardIds: serverScoped ? undefined : scopeCardIds ? [...scopeCardIds] : undefined
+    }),
+    [collectionId, moodboardCardIds, query, scopeCardIds, serverScoped, sort]
   );
 
-  useEffect(() => {
-    dispatchAiSearchLoading(loading);
-  }, [loading]);
+  const resetKey = useMemo(() => JSON.stringify(requestBase), [requestBase]);
 
-  const reloadFromStart = useCallback(async () => {
-    const arc = window.arc;
-    if (!arc?.aiSearchCards || !query || !libraryReady) {
-      setCards([]);
-      setSrcMap({});
-      setError(null);
-      setLoading(false);
-      setBooting(false);
-      hadQueryRef.current = false;
-      return;
-    }
-
-    const seq = ++seqRef.current;
-    const isFirst = !hadQueryRef.current;
-    hadQueryRef.current = true;
-    setLoading(true);
-    setBooting(isFirst);
-    setError(null);
-
-    try {
+  const fetchPage = useCallback(
+    async (offset: number, limit: number) => {
+      const arc = window.arc;
+      if (!arc?.aiSearchCards || !query) return [];
       const status = arc.aiGetStatus ? await arc.aiGetStatus() : null;
       if (status && !status.setupReady) {
         throw new Error('Сначала установите модель в «Настройки → AI Поиск».');
       }
-
-      const raw = await arc.aiSearchCards(query);
+      setAiErrorOverride(null);
+      const raw = await arc.aiSearchCards({ ...requestBase, offset, limit });
       let rows = Array.isArray(raw) ? (raw as Array<CardRecord & { aiScore?: number }>) : [];
-      if (scopeCardIds && scopeCardIds.size > 0) {
+      if (!serverScoped && scopeCardIds && scopeCardIds.size > 0) {
         rows = rows.filter((row) => scopeCardIds.has(row.id));
       }
-      if (seq !== seqRef.current) return;
+      return rows;
+    },
+    [query, requestBase, scopeCardIds, serverScoped]
+  );
 
-      if (rows.length === 0) {
-        setError('Ничего не найдено. Попробуйте другой запрос или дождитесь индексации.');
-      } else {
-        setError(null);
-      }
-
-      const ordered = applySortOrder(rows);
-      setCards(ordered);
-      const gridSize = readGridSize();
-      const map = await mergeCardsSrcMap(ordered, peekCardsSrcMap(ordered, gridSize), gridSize);
-      if (seq !== seqRef.current) return;
-      setSrcMap(map);
-      void preloadDecodedImages(Object.values(map));
-    } catch (err) {
-      if (seq !== seqRef.current) return;
-      setCards([]);
-      setSrcMap({});
-      setError(err instanceof Error ? err.message : 'Не удалось выполнить AI-поиск');
-    } finally {
-      if (seq === seqRef.current) {
-        setLoading(false);
-        setBooting(false);
-      }
-    }
-  }, [applySortOrder, libraryReady, query, scopeCardIds]);
+  const feed = usePaginatedRemoteFeed({
+    enabled: libraryReady && Boolean(query),
+    fetchPage,
+    resetKey
+  });
 
   useEffect(() => {
-    void reloadFromStart();
-  }, [reloadFromStart]);
+    dispatchAiSearchLoading(feed.loading);
+  }, [feed.loading]);
 
   useEffect(() => {
     const arc = window.arc;
     if (!arc?.onAiError) return;
     const unsub = arc.onAiError(({ message }) => {
-      if (query) setError(message);
+      if (query) setAiErrorOverride(message);
     });
     return () => unsub?.();
   }, [query]);
 
   return {
-    cards,
-    srcMap,
-    hasMore: false,
-    loading,
-    booting,
-    loadMore: () => {},
-    reloadFromStart,
-    error
+    ...feed,
+    error: aiErrorOverride ?? feed.error
   };
 }

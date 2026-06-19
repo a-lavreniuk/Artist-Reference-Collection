@@ -101,7 +101,8 @@ export default function GalleryNavbarFilters() {
     applyPreset,
     deletePreset,
     renamePreset,
-    activeCategoryCount
+    activeCategoryCount,
+    shuffleReloading
   } = useGalleryFilters();
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -364,8 +365,12 @@ export default function GalleryNavbarFilters() {
         key: 'sort-shuffle',
         label: 'Перемешать',
         closeOnSelect: false,
-        onSelect: () =>
-          setSort(createGalleryShuffleSort(newShuffleSeed()))
+        loading: shuffleReloading,
+        disabled: shuffleReloading,
+        onSelect: () => {
+          if (shuffleReloading) return;
+          setSort(createGalleryShuffleSort(newShuffleSeed()));
+        }
       });
     }
     if (!isGalleryShuffleSort(sort)) {
@@ -387,7 +392,7 @@ export default function GalleryNavbarFilters() {
       });
     }
     return items;
-  }, [setSort, showShuffleSort, sort]);
+  }, [setSort, showShuffleSort, shuffleReloading, sort]);
 
   const buildAspectRows = (): ContextMenuRow[] => {
     const opts: { key: AspectRatioFilterValue; label: string; iconClass: string }[] = [

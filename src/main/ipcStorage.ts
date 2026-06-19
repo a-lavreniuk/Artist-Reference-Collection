@@ -269,14 +269,6 @@ export function registerStorageIpc(
     return emptyTrashFromStorage(root);
   });
 
-  /** @deprecated Используйте arc:storage-soft-delete-card или arc:storage-permanent-delete-card */
-  ipcMain.handle('arc:storage-delete-card', async (_e, cardId: unknown) => {
-    assertNotMaintenance();
-    const root = await readLibraryRoot();
-    if (!root || typeof cardId !== 'string') return;
-    await softDeleteCardFromStorage(root, cardId);
-  });
-
   ipcMain.handle('arc:storage-gallery-filter-stats', async (_e, payload: unknown) => {
     const root = await readLibraryRoot();
     if (!root) return null;
@@ -553,7 +545,9 @@ export function registerStorageIpc(
       moodboardCardIds: p.moodboardCardIds,
       advancedFilters: p.advancedFilters,
       sort: p.sort,
-      scopeCardIds: scope
+      scopeCardIds: scope,
+      offset: typeof p.offset === 'number' ? p.offset : 0,
+      limit: typeof p.limit === 'number' ? p.limit : 50
     });
     return rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
   });

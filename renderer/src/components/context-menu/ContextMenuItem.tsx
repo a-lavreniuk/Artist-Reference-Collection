@@ -8,12 +8,16 @@ export type ContextMenuItemProps = {
   slotOrder?: ContextMenuSlot[];
   selected?: boolean;
   disabled?: boolean;
+  loading?: boolean;
   onSelect?: () => void;
 };
 
 function renderSlot(slot: ContextMenuSlot, props: ContextMenuItemProps) {
   switch (slot) {
     case 'icon':
+      if (props.loading) {
+        return <span className="loader" aria-hidden="true" key="icon" />;
+      }
       return props.iconClass ? (
         <span
           className={`context-menu__item-icon tab-icon ${props.iconClass}`}
@@ -60,6 +64,7 @@ export default function ContextMenuItem({
   slotOrder = DEFAULT_CONTEXT_MENU_SLOT_ORDER,
   selected,
   disabled,
+  loading,
   onSelect
 }: ContextMenuItemProps) {
   const order = slotOrder ?? DEFAULT_CONTEXT_MENU_SLOT_ORDER;
@@ -69,15 +74,15 @@ export default function ContextMenuItem({
       type="button"
       role="menuitem"
       className={`context-menu__item${disabled ? ' is-disabled' : ''}`}
-      disabled={disabled}
+      disabled={disabled || loading}
       onClick={() => {
-        if (disabled) return;
+        if (disabled || loading) return;
         onSelect?.();
       }}
     >
       <span className="context-menu__item-inner">
         {order.map((slot) =>
-          renderSlot(slot, { label, iconClass, shortcut, counter, slotOrder, selected, disabled, onSelect })
+          renderSlot(slot, { label, iconClass, shortcut, counter, slotOrder, selected, disabled, loading, onSelect })
         )}
       </span>
     </button>

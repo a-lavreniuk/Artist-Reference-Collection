@@ -86,7 +86,6 @@ declare global {
       storageRestoreCard: (cardId: string) => Promise<void>;
       storagePermanentDeleteCard: (cardId: string) => Promise<void>;
       storageEmptyTrash: () => Promise<number>;
-      storageDeleteCard: (cardId: string) => Promise<void>;
       storageCountCards: (
         filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
       ) => Promise<number>;
@@ -150,6 +149,7 @@ declare global {
       >;
       onMigrationProgress: (cb: (p: { phase: string; current: number; total: number; message?: string }) => void) => () => void;
       toFileUrl: (path: string) => Promise<string | null>;
+      toFileUrls: (paths: string[]) => Promise<Record<string, string>>;
       deleteFileIfInsideLibrary: (relativePath: string) => Promise<void>;
       showItemInFolder: (relativePath: string) => Promise<void>;
       openExternalUrl: (url: string) => Promise<{ ok: true } | { ok: false; error?: string }>;
@@ -238,7 +238,14 @@ declare global {
       aiPauseDownload?: () => Promise<{ ok: true }>;
       aiResumeDownload?: () => Promise<{ ok: true }>;
       aiSearch?: (query: string) => Promise<Array<{ cardId: string; score: number }>>;
-      aiSearchCards?: (query: string) => Promise<Array<import('./services/arcSchema').CardRecord & { aiScore?: number }>>;
+      aiSearchCards?: (params:
+        | string
+        | {
+            query: string;
+            collectionId?: string | null;
+            moodboardCardIds?: string[] | null;
+            scopeCardIds?: string[];
+          }) => Promise<Array<import('./services/arcSchema').CardRecord & { aiScore?: number }>>;
       colorSearchCards?: (params: {
         hex: string;
         accuracy?: number;

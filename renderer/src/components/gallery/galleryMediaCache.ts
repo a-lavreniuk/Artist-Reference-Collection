@@ -79,6 +79,30 @@ export async function resolveCardsSrcMap(
   cards: readonly CardRecord[],
   gridSize: GridSize = 'm'
 ): Promise<Record<string, string>> {
+  const relByCard = new Map<string, string>();
+  for (const card of cards) {
+    const rel = cardThumbRel(card, gridSize);
+    if (rel) relByCard.set(card.id, rel);
+  }
+  const uniqueRels = [...new Set(relByCard.values())];
+  const batch =
+    uniqueRels.length > 0 && window.arc?.toFileUrls
+      ? await window.arc.toFileUrls(uniqueRels)
+      : null;
+
+  const next: Record<string, string> = {};
+  if (batch) {
+    for (const [rel, href] of Object.entries(batch)) {
+      urlByRel.set(rel, href);
+    }
+    for (const [cardId, rel] of relByCard) {
+      const stable = rel.replace(/\\/g, '/');
+      const href = batch[stable] ?? batch[rel];
+      if (href) next[cardId] = href;
+    }
+    return next;
+  }
+
   const entries = await Promise.all(
     cards.map(async (card) => {
       const rel = cardThumbRel(card, gridSize);
@@ -87,7 +111,6 @@ export async function resolveCardsSrcMap(
       return href ? ([card.id, href] as const) : null;
     })
   );
-  const next: Record<string, string> = {};
   for (const row of entries) {
     if (row) next[row[0]] = row[1];
   }

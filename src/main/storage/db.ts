@@ -79,7 +79,9 @@ CREATE TABLE IF NOT EXISTS skipped_duplicate_pairs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cards_type_added ON cards(type, added_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC);
 CREATE INDEX IF NOT EXISTS idx_card_tags_tag ON card_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_card_tags_card ON card_tags(card_id);
 CREATE INDEX IF NOT EXISTS idx_card_collections_col ON card_collections(collection_id);
 CREATE INDEX IF NOT EXISTS idx_tags_category ON tags(category_id);
 `;

@@ -10,6 +10,7 @@ import AutoImportHost from '../import/AutoImportHost';
 import NotificationHost from '../notifications/NotificationHost';
 import ScreenshotHost from '../screenshot/ScreenshotHost';
 import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
+import { GalleryMetaProvider } from '../../context/GalleryMetaContext';
 import { initAppPreferencesRuntime } from '../../services/appPreferencesRuntime';
 import { ensureGalleryBootstrap, scheduleGalleryWarmup } from '../gallery/galleryBootstrap';
 import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
@@ -65,6 +66,7 @@ export default function AppLayout() {
 
   return (
     <GalleryFilterProvider>
+    <GalleryMetaProvider>
     <NotificationHost>
     <ScreenshotHost>
     <ImportHost>
@@ -83,6 +85,7 @@ export default function AppLayout() {
     </ImportHost>
     </ScreenshotHost>
     </NotificationHost>
+    </GalleryMetaProvider>
     </GalleryFilterProvider>
   );
 }

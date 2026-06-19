@@ -51,7 +51,6 @@ contextBridge.exposeInMainWorld('arc', {
   storagePermanentDeleteCard: (cardId: string) =>
     ipcRenderer.invoke('arc:storage-permanent-delete-card', cardId),
   storageEmptyTrash: () => ipcRenderer.invoke('arc:storage-empty-trash') as Promise<number>,
-  storageDeleteCard: (cardId: string) => ipcRenderer.invoke('arc:storage-delete-card', cardId),
   storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
     ipcRenderer.invoke('arc:storage-count-cards', payload),
   storageGalleryFilterStats: (payload: unknown) =>
@@ -98,6 +97,8 @@ contextBridge.exposeInMainWorld('arc', {
   },
   toFileUrl: (relativePath: string) =>
     ipcRenderer.invoke('arc:to-file-url', relativePath) as Promise<string | null>,
+  toFileUrls: (relativePaths: string[]) =>
+    ipcRenderer.invoke('arc:to-file-urls', relativePaths) as Promise<Record<string, string>>,
   deleteFileIfInsideLibrary: (relativePath: string) =>
     ipcRenderer.invoke('arc:delete-file-if-inside-library', relativePath),
   showItemInFolder: (relativePath: string) => ipcRenderer.invoke('arc:show-item-in-folder', relativePath),
@@ -306,8 +307,15 @@ contextBridge.exposeInMainWorld('arc', {
   aiPauseDownload: () => ipcRenderer.invoke('arc:ai-pause-download') as Promise<{ ok: true }>,
   aiResumeDownload: () => ipcRenderer.invoke('arc:ai-resume-download') as Promise<{ ok: true }>,
   aiSearch: (query: string) => ipcRenderer.invoke('arc:ai-search', query) as Promise<Array<{ cardId: string; score: number }>>,
-  aiSearchCards: (query: string) =>
-    ipcRenderer.invoke('arc:ai-search-cards', query) as Promise<
+  aiSearchCards: (params:
+    | string
+    | {
+        query: string;
+        collectionId?: string | null;
+        moodboardCardIds?: string[] | null;
+        scopeCardIds?: string[];
+      }) =>
+    ipcRenderer.invoke('arc:ai-search-cards', params) as Promise<
       Array<Record<string, unknown> & { id: string; aiScore?: number }>
     >,
   aiDeleteModel: (tier: 'light' | 'heavy') => ipcRenderer.invoke('arc:ai-delete-model', tier),

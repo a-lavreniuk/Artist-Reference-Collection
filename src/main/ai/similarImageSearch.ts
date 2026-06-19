@@ -10,12 +10,13 @@ import { searchByVisualEmbedding } from './visualSearch';
 import type { ModelTier } from './types';
 import {
   buildGalleryFilterWhere,
-  computeGalleryFilterBoundaries,
   DEFAULT_GALLERY_SORT,
   emptyGalleryAdvancedFilters,
   type GalleryAdvancedFilters,
   type GallerySortState
 } from '../storage/galleryFilters';
+import { getGalleryFilterBoundaries } from '../storage/galleryFilterBoundariesCache';
+import { getOrBuildScoredSearchPageAsync, stableSearchCacheKey } from '../storage/scoredSearchCache';
 import { shuffleCardIds } from '../shared/shuffleCardIds';
 import { openLibraryDb } from '../storage/db';
 import { indexCardRowsFromDb } from '../storage/libraryStorage';
@@ -43,6 +44,8 @@ export type SimilarImageSearchParams = {
   tier: ModelTier;
   modelId: string;
   strictness: number;
+  offset?: number;
+  limit?: number;
 };
 
 function clamp01(n: number): number {
@@ -131,6 +134,34 @@ export async function searchCardsBySimilarImage(
   libraryRoot: string,
   params: SimilarImageSearchParams
 ): Promise<CardIndexRow[]> {
+  const offset = Math.max(0, params.offset ?? 0);
+  const limit = Math.max(1, params.limit ?? 50);
+  const cacheKey = stableSearchCacheKey({
+    kind: 'similar',
+    cardId: params.cardId ?? null,
+    imagePath: params.imagePath ?? null,
+    crop: params.crop ?? null,
+    libraryScope: params.libraryScope,
+    selectedTagIds: params.selectedTagIds,
+    cardIdExact: params.cardIdExact,
+    collectionId: params.collectionId,
+    moodboardCardIds: params.moodboardCardIds,
+    filters: params.advancedFilters ?? emptyGalleryAdvancedFilters(),
+    sort: params.sort ?? DEFAULT_GALLERY_SORT,
+    scopeCardIds: params.scopeCardIds ? [...params.scopeCardIds].sort() : null,
+    tier: params.tier,
+    modelId: params.modelId,
+    strictness: params.strictness
+  });
+  return getOrBuildScoredSearchPageAsync(cacheKey, offset, limit, () =>
+    searchCardsBySimilarImageAll(libraryRoot, params)
+  );
+}
+
+async function searchCardsBySimilarImageAll(
+  libraryRoot: string,
+  params: SimilarImageSearchParams
+): Promise<CardIndexRow[]> {
   const sourceAbs = resolveSourceImagePath(libraryRoot, params);
   if (!sourceAbs) return [];
 
@@ -158,7 +189,7 @@ export async function searchCardsBySimilarImage(
     const db = openLibraryDb(libraryRoot);
     const sort = params.sort ?? DEFAULT_GALLERY_SORT;
     const filters = params.advancedFilters ?? emptyGalleryAdvancedFilters();
-    const boundaries = computeGalleryFilterBoundaries(db);
+    const boundaries = getGalleryFilterBoundaries(db, filters);
     const { wh, binds } = buildGalleryFilterWhere(
       {
         libraryScope: params.libraryScope,

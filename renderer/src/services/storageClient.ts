@@ -79,11 +79,6 @@ export async function storageEmptyTrash(): Promise<number> {
   return arc().storageEmptyTrash();
 }
 
-/** @deprecated Используйте storageSoftDeleteCard */
-export async function storageDeleteCard(cardId: string): Promise<void> {
-  return arc().storageDeleteCard(cardId);
-}
-
 export async function storageCountCards(
   filter: 'all' | 'images' | 'videos',
   libraryScope: LibraryScope = 'all'

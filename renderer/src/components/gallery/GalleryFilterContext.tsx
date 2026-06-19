@@ -57,6 +57,8 @@ type GalleryFilterContextValue = {
   deletePreset: (id: string) => Promise<void>;
   renamePreset: (id: string, name: string) => Promise<void>;
   activeCategoryCount: number;
+  shuffleReloading: boolean;
+  setShuffleReloading: (value: boolean) => void;
 };
 
 const GalleryFilterContext = createContext<GalleryFilterContextValue | null>(null);
@@ -71,6 +73,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   const [feedScope, setFeedScope] = useState<GalleryFeedScope>({ libraryScope: 'all' });
   const [stats, setStats] = useState<GalleryFilterStats | null>(null);
   const [presets, setPresets] = useState<SavedFilterPreset[]>([]);
+  const [shuffleReloading, setShuffleReloading] = useState(false);
 
   const setLayout = useCallback((next: GalleryFilterLayoutState) => {
     setLayoutState(next);
@@ -138,6 +141,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     if (tab !== mainTabRef.current) {
       mainTabRef.current = tab;
       setSort(DEFAULT_GALLERY_SORT);
+      setFilters(emptyGalleryAdvancedFilters());
     }
   }, [location.pathname]);
 
@@ -257,7 +261,9 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       applyPreset,
       deletePreset,
       renamePreset,
-      activeCategoryCount
+      activeCategoryCount,
+      shuffleReloading,
+      setShuffleReloading
     }),
     [
       filters,
@@ -278,7 +284,8 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       applyPreset,
       deletePreset,
       renamePreset,
-      activeCategoryCount
+      activeCategoryCount,
+      shuffleReloading
     ]
   );
 
