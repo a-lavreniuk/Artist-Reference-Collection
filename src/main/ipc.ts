@@ -1,9 +1,14 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import type { OpenDialogOptions } from 'electron';
 import fs from 'fs';
 import { copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import { isVideoExt, VIDEO_EXT } from './ffmpeg';
+import {
+  getArcMediaServerOrigin,
+  setActiveMediaTabAndSync,
+  syncArcMediaServerLibraryRoot
+} from './media/mediaServerHost';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
 import { migrateLibraryToFolder } from './libraryMigrate';
 import { appendHistory, readHistory } from './libraryHistory';
@@ -21,37 +26,24 @@ import {
 import { registerStorageIpc } from './ipcStorage';
 import { resetLibraryStorageCache } from './storage/libraryStorage';
 import { readLibraryDiskStats } from './libraryDiskStats';
+import {
+  invalidateLibraryRootCache,
+  readLibraryRootFromDisk,
+  readLibraryRootSync
+} from './libraryRootConfig';
+import { resolvePathToMediaUrl, resolvePathsToMediaUrls } from './toFileUrlHelper';
+import { beginNavigationEpoch, endNavigationEpoch } from './ipcNavigationPriority';
 const LIBRARY_CONFIG_FILENAME = 'library-root.json';
 
 function libraryConfigPath(): string {
   return path.join(app.getPath('userData'), LIBRARY_CONFIG_FILENAME);
 }
 
-async function readLibraryRootFromDisk(): Promise<string | null> {
-  try {
-    const raw = await readFile(libraryConfigPath(), 'utf8');
-    const j = JSON.parse(raw) as { path?: string };
-    if (typeof j.path !== 'string' || !j.path.trim()) return null;
-    return path.resolve(j.path.trim());
-  } catch {
-    return null;
-  }
-}
-
-function readLibraryRootSync(): string | null {
-  try {
-    const raw = fs.readFileSync(libraryConfigPath(), 'utf8');
-    const j = JSON.parse(raw) as { path?: string };
-    if (typeof j.path !== 'string' || !j.path.trim()) return null;
-    return path.resolve(j.path.trim());
-  } catch {
-    return null;
-  }
-}
-
 async function writeLibraryRootToDisk(abs: string): Promise<void> {
   await mkdir(path.dirname(libraryConfigPath()), { recursive: true });
   await writeFile(libraryConfigPath(), JSON.stringify({ path: abs }, null, 2), 'utf8');
+  invalidateLibraryRootCache();
+  syncArcMediaServerLibraryRoot(readLibraryRootSync());
 }
 
 async function metadataPath(root: string): Promise<string | null> {
@@ -167,72 +159,33 @@ export type ImportFileResult =
   | { ok: false; error: string };
 
 let ipcRegistered = false;
-let arcMediaProtocolRegistered = false;
-
-/**
- * Превью с http://localhost:5173 не могут грузить file:// — регистрируем безопасную схему `arc-media`.
- *
- * - `?rel=` — относительный путь внутри библиотеки (как раньше).
- * - `?abs=` — абсолютный путь к произвольному файлу на диске (для импорта «снаружи» библиотеки).
- */
-export function registerArcMediaProtocol(): void {
-  if (arcMediaProtocolRegistered) return;
-  arcMediaProtocolRegistered = true;
-
-  protocol.registerFileProtocol('arc-media', (request, callback) => {
-    try {
-      const u = new URL(request.url);
-      const relEncoded = u.searchParams.get('rel');
-      const absEncoded = u.searchParams.get('abs');
-
-      let abs: string | null = null;
-
-      if (absEncoded) {
-        abs = path.resolve(decodeURIComponent(absEncoded));
-      } else if (relEncoded) {
-        const relativePath = relEncoded.replace(/\\/g, '/');
-        const root = readLibraryRootSync();
-        if (!root) {
-          callback({ error: -6 });
-          return;
-        }
-        const resolved = path.resolve(root, relativePath.replace(/\//g, path.sep));
-        if (!isInsideLibrary(root, resolved)) {
-          callback({ error: -2 });
-          return;
-        }
-        abs = resolved;
-      } else {
-        callback({ error: -2 });
-        return;
-      }
-
-      if (!abs) {
-        callback({ error: -2 });
-        return;
-      }
-
-      if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
-        callback({ error: -6 });
-        return;
-      }
-
-      const ext = path.extname(abs);
-      if (!isAllowedLibraryMediaExt(ext)) {
-        callback({ error: -2 });
-        return;
-      }
-
-      callback({ path: abs });
-    } catch {
-      callback({ error: -2 });
-    }
-  });
-}
 
 export function registerArcIpc(): void {
   if (ipcRegistered) return;
   ipcRegistered = true;
+
+  ipcMain.on('arc:set-active-media-tab', (event, tab: unknown) => {
+    if (tab === 'gallery' || tab === 'collections' || tab === 'moodboard') {
+      setActiveMediaTabAndSync(tab);
+    } else {
+      setActiveMediaTabAndSync(null);
+    }
+    event.returnValue = null;
+  });
+
+  ipcMain.on('arc:get-media-server-origin', (event) => {
+    event.returnValue = getArcMediaServerOrigin();
+  });
+
+  ipcMain.on('arc:navigation-begin', (event) => {
+    beginNavigationEpoch();
+    event.returnValue = null;
+  });
+
+  ipcMain.on('arc:navigation-end', (event) => {
+    endNavigationEpoch();
+    event.returnValue = null;
+  });
 
   registerStorageIpc(readLibraryRootFromDisk, assertNotMaintenance);
 
@@ -344,17 +297,15 @@ export function registerArcIpc(): void {
 
   ipcMain.handle('arc:to-file-url', async (_e, relativePath: unknown) => {
     if (typeof relativePath !== 'string') return null;
-    const root = await readLibraryRootFromDisk();
-    const { resolvePathToMediaUrl } = await import('./toFileUrlHelper');
-    return resolvePathToMediaUrl(relativePath, root, isVideoExt);
+    const root = readLibraryRootSync();
+    return resolvePathToMediaUrl(relativePath, root, isVideoExt, getArcMediaServerOrigin());
   });
 
   ipcMain.handle('arc:to-file-urls', async (_e, relativePaths: unknown) => {
     if (!Array.isArray(relativePaths)) return {};
     const paths = relativePaths.filter((p): p is string => typeof p === 'string');
-    const root = await readLibraryRootFromDisk();
-    const { resolvePathsToMediaUrls } = await import('./toFileUrlHelper');
-    return resolvePathsToMediaUrls(paths, root, isVideoExt);
+    const root = readLibraryRootSync();
+    return resolvePathsToMediaUrls(paths, root, isVideoExt, getArcMediaServerOrigin());
   });
 
   ipcMain.handle('arc:delete-file-if-inside-library', async (_e, relativePath: unknown) => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useOpenCardUrl } from '../../search/openCardUrl';
 import { parseSearchCardId, parseSearchTagIds } from '../../search/searchUrl';
 import { resolveGalleryFeedEmptyState } from '../gallery/galleryFeedEmptyState';
@@ -15,6 +15,7 @@ import { EmptyState } from '../empty-state';
 import { useResetGallerySearch } from '../../hooks/useResetGallerySearch';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../gallery/GalleryFilterContext';
 import { useGalleryMeta } from '../../context/GalleryMetaContext';
+import { useLibraryConfigured } from '../../hooks/useLibraryConfigured';
 import {
   getMoodboardCardIds,
   isCardOnBoard,
@@ -23,13 +24,17 @@ import {
 } from '../../services/db';
 
 export default function MoodboardCardsView() {
+  const { pathname } = useLocation();
+  const isMoodboardRoute = pathname.startsWith('/moodboard');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { filters, sort, activeCategoryCount } = useGalleryFilters();
   const selectedTagIds = useMemo(() => parseSearchTagIds(searchParams), [searchParams]);
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
   const { resetGallerySearch } = useResetGallerySearch();
-  const { tagsIndex, moodboardCardIds, metaReady, refreshMoodboard } = useGalleryMeta();
+  const libraryConfigured = useLibraryConfigured();
+  const libraryStorageReady = libraryConfigured;
+  const { tagsIndex, moodboardCardIds, moodboardIdsReady, refreshMoodboard } = useGalleryMeta();
   const mbIdsForScope = useMemo(() => Array.from(moodboardCardIds), [moodboardCardIds]);
 
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
@@ -53,23 +58,28 @@ export default function MoodboardCardsView() {
     feedQuery,
     searchParams,
     sort,
-    libraryReady: metaReady
+    libraryReady: libraryStorageReady && moodboardIdsReady,
+    mediaSection: 'moodboard',
+    feedActive: isMoodboardRoute
   });
 
   const { isRemoteSearchFeed, feedError } = feed;
   const hasSearchFilters =
     selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0 || isRemoteSearchFeed;
 
-  useRegisterGalleryFeedScope({
-    selectedTagIds,
-    cardIdExact,
-    moodboardCardIds: mbIdsForScope
-  });
+  useRegisterGalleryFeedScope(
+    {
+      selectedTagIds,
+      cardIdExact,
+      moodboardCardIds: mbIdsForScope
+    },
+    isMoodboardRoute
+  );
 
   useGalleryFeedSentinel({
     sentinelRef,
     scrollRootRef,
-    enabled: metaReady,
+    enabled: moodboardIdsReady,
     hasMore: feed.hasMore,
     loading: feed.loading,
     booting: feed.booting,
@@ -102,11 +112,13 @@ export default function MoodboardCardsView() {
   }, [refreshMoodboard, removeConfirm]);
 
   const emptyState = useMemo(() => {
+    if (!moodboardIdsReady || !feed.feedSettled) return null;
     if (feed.cards.length > 0 || feed.loading || feed.booting) return null;
     return resolveGalleryFeedEmptyState({
-      ready: metaReady,
+      ready: libraryConfigured,
       loading: feed.loading,
       booting: feed.booting,
+      feedSettled: feed.feedSettled,
       cardCount: feed.cards.length,
       feedError,
       hasSearchFilters,
@@ -118,15 +130,21 @@ export default function MoodboardCardsView() {
     });
   }, [
     feed.booting,
+    feed.feedSettled,
     feed.cards.length,
     feed.loading,
     feedError,
     hasSearchFilters,
     isRemoteSearchFeed,
-    metaReady,
+    libraryConfigured,
+    moodboardIdsReady,
     navigate,
     resetGallerySearch
   ]);
+
+  if (!isMoodboardRoute) {
+    return null;
+  }
 
   return (
     <div className="arc-collection-detail arc-moodboard-cards">
@@ -148,6 +166,7 @@ export default function MoodboardCardsView() {
           <GalleryBoard
             cards={feed.cards}
             srcMap={feed.srcMap}
+            mediaTab="moodboard"
             scrollRootRef={scrollRootRef}
             loadingMore={feed.loading && feed.hasMore}
             busy={feed.booting || feed.loading || feed.shuffleReloading}

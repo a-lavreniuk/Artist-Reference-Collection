@@ -12,15 +12,20 @@ export function needsGalleryFilterBoundaries(filters: GalleryAdvancedFilters): b
   );
 }
 
+/** Кэш границ фильтров на сессию — один полный пересчёт на открытую БД. */
+export function getOrComputeGalleryFilterBoundaries(db: Database.Database): GalleryFilterBoundaries {
+  if (cachedDb === db && cachedBoundaries) return cachedBoundaries;
+  cachedDb = db;
+  cachedBoundaries = computeGalleryFilterBoundaries(db);
+  return cachedBoundaries;
+}
+
 export function getGalleryFilterBoundaries(
   db: Database.Database,
   filters: GalleryAdvancedFilters
 ): GalleryFilterBoundaries | undefined {
   if (!needsGalleryFilterBoundaries(filters)) return undefined;
-  if (cachedDb === db && cachedBoundaries) return cachedBoundaries;
-  cachedDb = db;
-  cachedBoundaries = computeGalleryFilterBoundaries(db);
-  return cachedBoundaries;
+  return getOrComputeGalleryFilterBoundaries(db);
 }
 
 export function invalidateGalleryFilterBoundariesCache(): void {

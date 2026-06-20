@@ -15,6 +15,7 @@ type Props = {
   onToggleMoodboard?: (cardId: string) => void | Promise<void>;
   moodboardEnabled?: boolean;
   tileClassName?: string;
+  mediaTab?: 'gallery' | 'collections' | 'moodboard';
 };
 
 function GalleryCardTile({
@@ -25,7 +26,8 @@ function GalleryCardTile({
   onFindSimilar,
   onToggleMoodboard,
   moodboardEnabled = false,
-  tileClassName = ''
+  tileClassName = '',
+  mediaTab
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState(false);
@@ -67,7 +69,7 @@ function GalleryCardTile({
           {formatLabel ? <span className="arc-gallery-card-badge-label">{formatLabel}</span> : null}
         </span>
         {thumbSrc ? (
-          <GalleryThumb card={card} src={thumbSrc} />
+          <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} />
         ) : (
           <div className="arc-gallery-skeleton" style={gallerySkeletonStyle(card)} aria-hidden />
         )}
@@ -127,7 +129,8 @@ function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
     prev.tileClassName === next.tileClassName &&
     prev.onOpenCard === next.onOpenCard &&
     prev.onFindSimilar === next.onFindSimilar &&
-    prev.onToggleMoodboard === next.onToggleMoodboard
+    prev.onToggleMoodboard === next.onToggleMoodboard &&
+    prev.mediaTab === next.mediaTab
   );
 }
 

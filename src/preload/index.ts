@@ -3,6 +3,11 @@ import { pathsFromFileList, registerFileDropListener } from './fileDropBridge';
 
 contextBridge.exposeInMainWorld('arc', {
   getLibraryPath: () => ipcRenderer.invoke('arc:get-library-path') as Promise<string | null>,
+  setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => {
+    ipcRenderer.sendSync('arc:set-active-media-tab', tab);
+  },
+  getMediaServerOrigin: () =>
+    ipcRenderer.sendSync('arc:get-media-server-origin') as string | null,
   setLibraryPath: (absPath: string) =>
     ipcRenderer.invoke('arc:set-library-path', absPath) as Promise<{ ok: boolean; error?: string }>,
   pickLibraryFolder: () => ipcRenderer.invoke('arc:pick-library-folder') as Promise<string | null>,
@@ -37,7 +42,14 @@ contextBridge.exposeInMainWorld('arc', {
     >,
   storageEnsureReady: () =>
     ipcRenderer.invoke('arc:storage-ensure-ready') as Promise<{ ok: true } | { ok: false; error: string }>,
-  storageListCards: (params: unknown) => ipcRenderer.invoke('arc:storage-list-cards', params),
+  storageListCards: (params: unknown) => {
+    ipcRenderer.sendSync('arc:navigation-begin');
+    try {
+      return ipcRenderer.sendSync('arc:storage-list-cards-sync', params);
+    } finally {
+      ipcRenderer.sendSync('arc:navigation-end');
+    }
+  },
   colorSearchCards: (params: unknown) => ipcRenderer.invoke('arc:color-search-cards', params),
   aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
   aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),
@@ -80,6 +92,10 @@ contextBridge.exposeInMainWorld('arc', {
   storageUpsertCollection: (col: unknown) => ipcRenderer.invoke('arc:storage-upsert-collection', col),
   storageDeleteCollection: (id: string) => ipcRenderer.invoke('arc:storage-delete-collection', id),
   storageCollectionCounts: () => ipcRenderer.invoke('arc:storage-collection-counts'),
+  storageCollectionPreviewSlices: (limit: number) =>
+    ipcRenderer.invoke('arc:storage-collection-preview-slices', limit),
+  storageCollectionsSidebar: (payload: { previewLimit?: number }) =>
+    ipcRenderer.invoke('arc:storage-collections-sidebar', payload),
   storageCollectionStats: (collectionId: string) =>
     ipcRenderer.invoke('arc:storage-collection-stats', collectionId),
   storageGetMoodboard: () => ipcRenderer.invoke('arc:storage-get-moodboard'),

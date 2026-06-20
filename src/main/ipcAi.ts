@@ -385,7 +385,7 @@ export function registerAiIpc(): void {
 
   ipcMain.handle('arc:ai-get-status', async () => buildAiStatus());
   ipcMain.handle('arc:ai-get-index-status', async () => getIndexStatus());
-  ipcMain.handle('arc:ai-detect-hardware', async () => detectHardware());
+  ipcMain.handle('arc:ai-detect-hardware', async () => detectHardware({ force: true }));
 
   ipcMain.handle('arc:ai-download-llama-runtime', async (_e, payloadRaw: unknown) => {
     const payload = payloadRaw as { variant?: string; tier?: string };

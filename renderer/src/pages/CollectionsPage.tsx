@@ -7,11 +7,12 @@ import {
   useState,
   type PointerEvent
 } from 'react';
-import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import GalleryBoard from '../components/gallery/GalleryBoard';
 import CardInspectModal from '../components/gallery/CardInspectModal';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
 import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
+import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
 import CollectionSettingsModal, {
@@ -35,14 +36,13 @@ import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedEmptyState';
 import { startVisualSimilarSearch } from '../search/startVisualSimilarSearch';
 import {
-  ARC_CARDS_CHANGED_EVENT,
   ARC_COLLECTIONS_CHANGED_EVENT,
   addCollection,
   addCardToMoodboard,
   deleteCollection,
   getAllCollections,
-  getCollectionCardCounts,
   getCollectionStats,
+  getCollectionsSidebarMeta,
   getMoodboardCardIds,
   isCardOnBoard,
   removeCardFromMoodboard,
@@ -51,8 +51,11 @@ import {
   type CollectionRecord,
   type CollectionStats
 } from '../services/db';
+import { useLibraryConfigured } from '../hooks/useLibraryConfigured';
 
 export default function CollectionsPage() {
+  const { pathname } = useLocation();
+  const isCollectionsRoute = pathname.startsWith('/collections');
   const { collectionId: routeCollectionId } = useParams<{ collectionId?: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -63,6 +66,7 @@ export default function CollectionsPage() {
 
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [collectionsMetaLoaded, setCollectionsMetaLoaded] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => readCollectionsSidebarWidth());
   const [collectionModal, setCollectionModal] = useState<CollectionSettingsModalState | null>(null);
   const [collectionModalStats, setCollectionModalStats] = useState<CollectionStats | null>(null);
@@ -98,23 +102,30 @@ export default function CollectionsPage() {
     [activeCollectionId, cardIdExact, filters, selectedTagIds, sort]
   );
 
+  const libraryStorageReady = useLibraryConfigured();
+
   const feed = useScopedGalleryFeed({
     feedQuery: scopedFeedQuery,
     searchParams,
     sort,
-    libraryReady: Boolean(activeCollectionId)
+    libraryReady: libraryStorageReady && Boolean(activeCollectionId),
+    mediaSection: 'collections',
+    feedActive: isCollectionsRoute && Boolean(activeCollectionId)
   });
 
   const { isRemoteSearchFeed, feedError } = feed;
   const hasSearchFilters =
     selectedTagIds.length > 0 || Boolean(cardIdExact) || activeCategoryCount > 0 || isRemoteSearchFeed;
 
-  useRegisterGalleryFeedScope({
-    libraryScope: 'all',
-    selectedTagIds,
-    cardIdExact,
-    collectionId: activeCollectionId
-  });
+  useRegisterGalleryFeedScope(
+    {
+      libraryScope: 'all',
+      selectedTagIds,
+      cardIdExact,
+      collectionId: activeCollectionId
+    },
+    isCollectionsRoute
+  );
 
   useGalleryFeedSentinel({
     sentinelRef,
@@ -127,26 +138,46 @@ export default function CollectionsPage() {
   });
 
   const loadMeta = useCallback(async () => {
-    const cols = await getAllCollections();
-    setCollections(cols);
-    setCounts(await getCollectionCardCounts());
-    return cols;
+    const meta = await getCollectionsSidebarMeta(0);
+    setCollections(meta.collections);
+    setCounts(meta.counts);
+    setCollectionsMetaLoaded(true);
+    return meta.collections;
   }, []);
 
   useEffect(() => {
-    void loadMeta();
+    if (!isCollectionsRoute || !feed.feedSettled) return;
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      void loadMeta();
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      timeoutId = window.setTimeout(run, 800);
+    }
     const onRefresh = () => void loadMeta();
+    const unsubCards = subscribeGalleryCardsChanged(onRefresh);
     window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onRefresh);
-    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onRefresh);
     window.addEventListener('arc:library-changed', onRefresh);
     window.addEventListener('storage', onRefresh);
     return () => {
+      cancelled = true;
+      if (idleId !== undefined && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+      unsubCards();
       window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onRefresh);
-      window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onRefresh);
       window.removeEventListener('arc:library-changed', onRefresh);
       window.removeEventListener('storage', onRefresh);
     };
-  }, [loadMeta]);
+  }, [feed.feedSettled, isCollectionsRoute, loadMeta]);
 
   useEffect(() => {
     const onResize = () => {
@@ -224,15 +255,23 @@ export default function CollectionsPage() {
     />
   ) : null;
 
-  if (collections.length > 0 && !routeCollectionId) {
+  if (!isCollectionsRoute) {
+    return null;
+  }
+
+  if (!collectionsMetaLoaded && !routeCollectionId) {
+    return <div ref={pageRef} className="arc-collections-outlet arc-collections-page" aria-busy="true" />;
+  }
+
+  if (collectionsMetaLoaded && collections.length > 0 && !routeCollectionId) {
     return <Navigate to={`/collections/${collections[0].id}`} replace />;
   }
 
-  if (collections.length > 0 && routeCollectionId && !activeCollection) {
+  if (collectionsMetaLoaded && collections.length > 0 && routeCollectionId && !activeCollection) {
     return <Navigate to={`/collections/${collections[0].id}`} replace />;
   }
 
-  if (collections.length === 0) {
+  if (collectionsMetaLoaded && collections.length === 0) {
     return (
       <div ref={pageRef} className="arc-collections-outlet arc-collections-page arc-collections-page--solo-empty">
         <EmptyState
@@ -246,22 +285,20 @@ export default function CollectionsPage() {
     );
   }
 
-  const emptyState =
-    feed.cards.length === 0 && !feed.loading && !feed.booting
-      ? resolveGalleryFeedEmptyState({
-          ready: Boolean(activeCollectionId),
-          loading: feed.loading,
-          booting: feed.booting,
-          cardCount: feed.cards.length,
-          feedError,
-          hasSearchFilters,
-          context: 'collection',
-          isRemoteSearch: isRemoteSearchFeed,
-          onResetSearch: resetGallerySearch,
-          onNavigateLibrary: () => navigate('/gallery'),
-          onNavigateAiSettings: () => navigate('/settings/ai-search')
-        })
-      : null;
+  const emptyState = resolveGalleryFeedEmptyState({
+    ready: Boolean(activeCollectionId),
+    loading: feed.loading,
+    booting: feed.booting,
+    feedSettled: feed.feedSettled,
+    cardCount: feed.cards.length,
+    feedError,
+    hasSearchFilters,
+    context: 'collection',
+    isRemoteSearch: isRemoteSearchFeed,
+    onResetSearch: resetGallerySearch,
+    onNavigateLibrary: () => navigate('/gallery'),
+    onNavigateAiSettings: () => navigate('/settings/ai-search')
+  });
 
   return (
     <div
@@ -271,8 +308,8 @@ export default function CollectionsPage() {
     >
       <div className="arc-collections-page-main-row">
         <CollectionsPageSidebar
-          collections={collections}
-          counts={counts}
+          collections={collectionsMetaLoaded ? collections : []}
+          counts={collectionsMetaLoaded ? counts : {}}
           selectedCollectionId={activeCollectionId}
           onSelectCollection={(id) => navigate(`/collections/${id}`)}
           onReorderCollection={(id, insertIndex) => reorderCollectionToIndex(id, insertIndex)}
@@ -315,6 +352,7 @@ export default function CollectionsPage() {
                 <GalleryBoard
                   cards={feed.cards}
                   srcMap={feed.srcMap}
+                  mediaTab="collections"
                   variant="collections"
                   scrollRootRef={scrollRootRef}
                   loadingMore={feed.loading && feed.hasMore}

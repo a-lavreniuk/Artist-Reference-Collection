@@ -7,14 +7,16 @@ import {
   type GalleryFeedQuery
 } from './galleryQuery';
 import { readGridSize } from '../../layout/gridSizePreference';
-import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages } from './galleryMediaCache';
+import { mergeCardsSrcMap, peekCardsSrcMap, type MediaSectionTab } from './galleryMediaCache';
 import { getGallerySnapshot, setGallerySnapshot } from './galleryScopeCache';
 
-let bootPromise: Promise<void> | null = null;
+const bootPromises = new Map<string, Promise<void>>();
 
-async function loadFirstPageIntoCache(query: GalleryFeedQuery, preloadDecode: boolean): Promise<void> {
+async function loadFirstPageIntoCache(query: GalleryFeedQuery, mediaSection?: MediaSectionTab): Promise<void> {
   const key = buildGalleryQueryKey(query);
-  if (getGallerySnapshot(key)) return;
+  if (getGallerySnapshot(key)) {
+    return;
+  }
 
   const chunk = await listCardsPage({
     offset: 0,
@@ -29,8 +31,8 @@ async function loadFirstPageIntoCache(query: GalleryFeedQuery, preloadDecode: bo
   });
 
   const gridSize = readGridSize();
-  const peek = peekCardsSrcMap(chunk, gridSize);
-  const srcMap = await mergeCardsSrcMap(chunk, peek, gridSize);
+  const peek = peekCardsSrcMap(chunk, gridSize, mediaSection);
+  const srcMap = await mergeCardsSrcMap(chunk, peek, gridSize, mediaSection);
   const snapshot = {
     cards: chunk,
     srcMap,
@@ -38,22 +40,38 @@ async function loadFirstPageIntoCache(query: GalleryFeedQuery, preloadDecode: bo
     hasMore: chunk.length === GALLERY_PAGE_INITIAL
   };
   setGallerySnapshot(key, snapshot);
-
-  if (preloadDecode && chunk.length > 0) {
-    await preloadDecodedImages(Object.values(srcMap));
-  }
 }
 
-export function ensureGalleryBootstrap(query: GalleryFeedQuery = defaultGalleryFeedQuery()): Promise<void> {
-  if (getGallerySnapshot(buildGalleryQueryKey(query))) {
+export function ensureGalleryBootstrap(
+  query: GalleryFeedQuery = defaultGalleryFeedQuery(),
+  mediaSection?: MediaSectionTab
+): Promise<void> {
+  const key = buildGalleryQueryKey(query);
+  if (getGallerySnapshot(key)) {
     return Promise.resolve();
   }
-  if (!bootPromise) {
-    bootPromise = loadFirstPageIntoCache(query, true).finally(() => {
-      bootPromise = null;
-    });
-  }
-  return bootPromise;
+  const existing = bootPromises.get(key);
+  if (existing) return existing;
+
+  const promise = loadFirstPageIntoCache(query, mediaSection).finally(() => {
+    bootPromises.delete(key);
+  });
+  bootPromises.set(key, promise);
+  return promise;
+}
+
+export function warmGalleryQuery(query: GalleryFeedQuery): void {
+  void ensureGalleryBootstrap(query).catch(() => {
+    // Фоновый прогрев не блокирует UI.
+  });
+}
+
+export function warmMoodboardGallery(moodboardCardIds: readonly string[]): void {
+  if (moodboardCardIds.length === 0) return;
+  warmGalleryQuery({
+    ...defaultGalleryFeedQuery('all'),
+    moodboardCardIds: [...moodboardCardIds]
+  });
 }
 
 let warmupIdleId: number | null = null;
@@ -76,19 +94,19 @@ export function scheduleGalleryWarmup(): void {
   }
 
   if (typeof window.requestIdleCallback === 'function') {
-    warmupIdleId = window.requestIdleCallback(run, { timeout: 5000 });
+    warmupIdleId = window.requestIdleCallback(run, { timeout: 8000 });
   } else {
-    warmupTimeoutId = setTimeout(run, 2000);
+    warmupTimeoutId = setTimeout(run, 5000);
   }
 }
 
 async function warmGalleryScopes(): Promise<void> {
   for (const scope of GALLERY_WARMUP_SCOPES) {
-    const query = defaultGalleryFeedQuery(scope);
     try {
-      await loadFirstPageIntoCache(query, false);
+      await ensureGalleryBootstrap(defaultGalleryFeedQuery(scope));
     } catch {
       // Фоновый прогрев не блокирует UI.
     }
+    await new Promise<void>((resolve) => setTimeout(resolve, 250));
   }
 }

@@ -7,6 +7,7 @@ import {
   persistTags,
   readCategoriesLocal,
   resolveBackend,
+  resolveLibraryRoot,
   STORAGE_KEYS
 } from './backend';
 import {
@@ -26,8 +27,7 @@ import { listCardsSorted } from './cards';
 
 export async function isLibraryConfigured(): Promise<boolean> {
   if (!hasArcApi()) return false;
-  const root = await window.arc!.getLibraryPath();
-  return Boolean(root);
+  return Boolean(await resolveLibraryRoot());
 }
 
 export async function getNavbarMetrics(): Promise<NavbarMetrics> {

@@ -3,6 +3,19 @@ import { execFileSync } from 'child_process';
 
 import type { HardwareInfo, ModelTier } from './types';
 
+export type DetectHardwareOptions = {
+  /** Полное определение через PowerShell/system_profiler — только по явному запросу (настройки). */
+  force?: boolean;
+};
+
+let cachedHardware: HardwareInfo | null = null;
+let cachedDeepHardware: HardwareInfo | null = null;
+
+export function clearHardwareCache(): void {
+  cachedHardware = null;
+  cachedDeepHardware = null;
+}
+
 function detectNvidiaVramMbWindows(): number | null {
   try {
     const out = execFileSync(
@@ -141,7 +154,7 @@ function detectCpuFallback(): { model: string | null; frequencyGhz: number | nul
   return { model, frequencyGhz };
 }
 
-function detectCpu(): { model: string | null; frequencyGhz: number | null } {
+function detectCpuDeep(): { model: string | null; frequencyGhz: number | null } {
   if (process.platform === 'win32') {
     const win = detectCpuWindows();
     if (win.model) return win;
@@ -170,11 +183,12 @@ export function isTierSupported(info: HardwareInfo, tier: ModelTier): boolean {
   return getSupportedTiers(info).includes(tier);
 }
 
-export function detectHardware(): HardwareInfo {
+function buildHardwareInfo(
+  cpu: { model: string | null; frequencyGhz: number | null },
+  gpu: { name: string | null; vramMb: number | null; hasNvidia: boolean }
+): HardwareInfo {
   const cpuCores = os.cpus().length;
-  const cpu = detectCpu();
   const totalMemoryMb = Math.round(os.totalmem() / (1024 * 1024));
-  const gpu = detectGpu();
   const hasGpu = Boolean(gpu.name && !/microsoft basic/i.test(gpu.name));
 
   return {
@@ -189,4 +203,39 @@ export function detectHardware(): HardwareInfo {
     estimatedVramMb: gpu.vramMb,
     recommendedTier: recommendTier(totalMemoryMb, gpu.vramMb, cpuCores)
   };
+}
+
+/** Быстрый путь: os.cpus()/totalmem без subprocess — достаточно для navbar и tier checks. */
+function detectHardwareFast(): HardwareInfo {
+  return buildHardwareInfo(detectCpuFallback(), { name: null, vramMb: null, hasNvidia: false });
+}
+
+/** Полное определение GPU/CPU — может занимать несколько секунд на Windows. */
+function detectHardwareDeep(): HardwareInfo {
+  return buildHardwareInfo(detectCpuDeep(), detectGpu());
+}
+
+/**
+ * Определение железа для AI-статуса.
+ *
+ * По умолчанию — быстрый путь (os.cpus + кэш сессии), без PowerShell/subprocess.
+ * detectHardware({ force: true }) / arc:ai-detect-hardware — только по явному запросу
+ * (настройки AI). Не вызывать force на hot path навигации: execFileSync блокирует main
+ * и задерживает sendSync list-cards.
+ */
+export function detectHardware(options?: DetectHardwareOptions): HardwareInfo {
+  const force = options?.force === true;
+
+  if (force) {
+    if (cachedDeepHardware) return cachedDeepHardware;
+    const result = detectHardwareDeep();
+    cachedDeepHardware = result;
+    cachedHardware = result;
+    return result;
+  }
+
+  if (cachedHardware) return cachedHardware;
+  const result = detectHardwareFast();
+  cachedHardware = result;
+  return result;
 }

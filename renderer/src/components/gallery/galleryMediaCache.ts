@@ -1,7 +1,60 @@
-import type { GridSize } from '../../layout/gridSizePreference';
+import type { MainTabKey } from '../layout/navbarLayout';
 import type { CardRecord } from '../../services/db';
+import type { GridSize } from '../../layout/gridSizePreference';
+
+export type MediaSectionTab = MainTabKey;
+
+/** Совпадает с main/toFileUrlHelper — URL для индексных путей без IPC. */
+const LIBRARY_CARD_MEDIA_REL = /^cards\/[^/]+\/(?:thumb_[sml]|original)\.[a-z0-9]+$/i;
 
 const urlByRel = new Map<string, string>();
+
+let cachedMediaServerOrigin: string | null | undefined;
+
+function mediaCacheKey(rel: string, sect?: MediaSectionTab): string {
+  return sect ? `${sect}\0${rel}` : rel;
+}
+
+function mediaServerOrigin(): string {
+  if (cachedMediaServerOrigin !== undefined) {
+    return cachedMediaServerOrigin ?? 'arc-media://localhost';
+  }
+  if (typeof window !== 'undefined' && window.arc?.getMediaServerOrigin) {
+    const origin = window.arc.getMediaServerOrigin();
+    cachedMediaServerOrigin = origin ?? null;
+    if (origin) return origin.replace(/\/$/, '');
+  }
+  cachedMediaServerOrigin = null;
+  return 'arc-media://localhost';
+}
+
+export function buildLibraryMediaUrl(rel: string, sect?: MediaSectionTab): string | null {
+  if (!rel || rel === 'legacy') return null;
+  const relStable = rel.replace(/\\/g, '/');
+  if (!LIBRARY_CARD_MEDIA_REL.test(relStable)) return null;
+  const origin = mediaServerOrigin();
+  const base = `${origin}/?rel=${encodeURIComponent(relStable)}`;
+  return sect ? `${base}&sect=${sect}` : base;
+}
+
+function rememberMediaUrl(rel: string, href: string, sect?: MediaSectionTab): void {
+  const key = mediaCacheKey(rel, sect);
+  urlByRel.set(key, href);
+  const stable = rel.replace(/\\/g, '/');
+  if (stable !== rel) urlByRel.set(mediaCacheKey(stable, sect), href);
+  if (!sect) {
+    urlByRel.set(rel, href);
+    if (stable !== rel) urlByRel.set(stable, href);
+  }
+}
+
+function peekCachedMediaUrl(rel: string, sect?: MediaSectionTab): string | null {
+  const stable = rel.replace(/\\/g, '/');
+  if (sect) {
+    return urlByRel.get(mediaCacheKey(rel, sect)) ?? urlByRel.get(mediaCacheKey(stable, sect));
+  }
+  return urlByRel.get(rel) ?? urlByRel.get(stable) ?? null;
+}
 
 export function cardThumbRel(card: CardRecord, gridSize: GridSize = 'm'): string | null {
   const thumbS = card.thumbSRelativePath ?? card.thumbRelativePath;
@@ -56,20 +109,32 @@ export async function resolveCardDetailPreviewUrls(
 
 export async function resolveMediaUrl(rel: string): Promise<string | null> {
   if (!rel || rel === 'legacy') return null;
-  const cached = urlByRel.get(rel);
+  const stable = rel.replace(/\\/g, '/');
+  const cached = urlByRel.get(rel) ?? urlByRel.get(stable);
   if (cached) return cached;
+
+  const local = buildLibraryMediaUrl(rel);
+  if (local) {
+    rememberMediaUrl(rel, local);
+    return local;
+  }
+
   if (!window.arc) return null;
   const href = await window.arc.toFileUrl(rel);
-  if (href) urlByRel.set(rel, href);
+  if (href) rememberMediaUrl(rel, href);
   return href;
 }
 
-export function peekCardsSrcMap(cards: readonly CardRecord[], gridSize: GridSize = 'm'): Record<string, string> {
+export function peekCardsSrcMap(
+  cards: readonly CardRecord[],
+  gridSize: GridSize = 'm',
+  sect?: MediaSectionTab
+): Record<string, string> {
   const next: Record<string, string> = {};
   for (const card of cards) {
     const rel = cardThumbRel(card, gridSize);
     if (!rel) continue;
-    const href = urlByRel.get(rel);
+    const href = peekCachedMediaUrl(rel, sect) ?? buildLibraryMediaUrl(rel, sect);
     if (href) next[card.id] = href;
   }
   return next;
@@ -77,70 +142,86 @@ export function peekCardsSrcMap(cards: readonly CardRecord[], gridSize: GridSize
 
 export async function resolveCardsSrcMap(
   cards: readonly CardRecord[],
-  gridSize: GridSize = 'm'
+  gridSize: GridSize = 'm',
+  sect?: MediaSectionTab
 ): Promise<Record<string, string>> {
   const relByCard = new Map<string, string>();
   for (const card of cards) {
     const rel = cardThumbRel(card, gridSize);
     if (rel) relByCard.set(card.id, rel);
   }
-  const uniqueRels = [...new Set(relByCard.values())];
-  const batch =
-    uniqueRels.length > 0 && window.arc?.toFileUrls
-      ? await window.arc.toFileUrls(uniqueRels)
-      : null;
 
   const next: Record<string, string> = {};
-  if (batch) {
+  const needIpc: string[] = [];
+
+  for (const [cardId, rel] of relByCard) {
+    const cached = peekCachedMediaUrl(rel, sect);
+    if (cached) {
+      next[cardId] = cached;
+      continue;
+    }
+    const local = buildLibraryMediaUrl(rel, sect);
+    if (local) {
+      rememberMediaUrl(rel, local, sect);
+      next[cardId] = local;
+    } else {
+      needIpc.push(rel);
+    }
+  }
+
+  if (needIpc.length > 0 && window.arc?.toFileUrls) {
+    const batch = await window.arc.toFileUrls(needIpc);
     for (const [rel, href] of Object.entries(batch)) {
-      urlByRel.set(rel, href);
+      rememberMediaUrl(rel, href, sect);
     }
     for (const [cardId, rel] of relByCard) {
+      if (next[cardId]) continue;
       const stable = rel.replace(/\\/g, '/');
       const href = batch[stable] ?? batch[rel];
       if (href) next[cardId] = href;
     }
-    return next;
+  } else if (needIpc.length > 0) {
+    const entries = await Promise.all(
+      needIpc.map(async (rel) => {
+        const href = await resolveMediaUrl(rel);
+        return href ? ([rel, href] as const) : null;
+      })
+    );
+    const hrefByRel = new Map<string, string>();
+    for (const row of entries) {
+      if (row) hrefByRel.set(row[0], row[1]);
+    }
+    for (const [cardId, rel] of relByCard) {
+      if (next[cardId]) continue;
+      const href = hrefByRel.get(rel);
+      if (href) next[cardId] = href;
+    }
   }
 
-  const entries = await Promise.all(
-    cards.map(async (card) => {
-      const rel = cardThumbRel(card, gridSize);
-      if (!rel) return null;
-      const href = await resolveMediaUrl(rel);
-      return href ? ([card.id, href] as const) : null;
-    })
-  );
-  for (const row of entries) {
-    if (row) next[row[0]] = row[1];
-  }
   return next;
 }
 
 export async function mergeCardsSrcMap(
   cards: readonly CardRecord[],
   base: Record<string, string>,
-  gridSize: GridSize = 'm'
+  gridSize: GridSize = 'm',
+  sect?: MediaSectionTab
 ): Promise<Record<string, string>> {
-  const resolved = await resolveCardsSrcMap(cards, gridSize);
+  const resolved = await resolveCardsSrcMap(cards, gridSize, sect);
   return { ...base, ...resolved };
 }
 
-export async function preloadDecodedImages(urls: readonly string[], limit = 24): Promise<void> {
-  const unique = [...new Set(urls)].slice(0, limit);
-  await Promise.all(
-    unique.map(
-      (url) =>
-        new Promise<void>((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          img.src = url;
-        })
-    )
-  );
-}
+/** No-op — preload decode отключён. */
+export function cancelGalleryMediaPreloads(): void {}
+
+/** Отключено: decode через <img loading="lazy"> в GalleryThumb. */
+export async function preloadDecodedImages(
+  _urls: readonly string[],
+  _limit = 24,
+  _mediaTab?: MainTabKey
+): Promise<void> {}
 
 export function clearGalleryMediaUrlCache(): void {
   urlByRel.clear();
+  cachedMediaServerOrigin = undefined;
 }

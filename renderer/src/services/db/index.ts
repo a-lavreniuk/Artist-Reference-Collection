@@ -21,7 +21,7 @@ export {
   notifyTagsChanged
 } from './events';
 
-export { invalidateLibraryCache } from './backend';
+export { invalidateLibraryCache, readTagsUnified } from './backend';
 
 export {
   getAllCategories,
@@ -47,6 +47,7 @@ export {
 
 export {
   getAllCollections,
+  getCollectionsSidebarMeta,
   getCollectionById,
   addCollection,
   updateCollection,

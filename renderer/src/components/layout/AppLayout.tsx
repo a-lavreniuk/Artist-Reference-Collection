@@ -12,10 +12,11 @@ import ScreenshotHost from '../screenshot/ScreenshotHost';
 import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
 import { GalleryMetaProvider } from '../../context/GalleryMetaContext';
 import { initAppPreferencesRuntime } from '../../services/appPreferencesRuntime';
-import { ensureGalleryBootstrap, scheduleGalleryWarmup } from '../gallery/galleryBootstrap';
 import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
 import { applyTopbarCssVars } from './navbarLayout';
 import { isLibraryConfigured } from '../../services/db';
+import { GALLERY_FEED_SETTLED_EVENT } from '../gallery/galleryFeedSettled';
+import CardSectionsShell from './CardSectionsShell';
 
 export default function AppLayout() {
   useEffect(() => {
@@ -26,17 +27,28 @@ export default function AppLayout() {
     void (async () => {
       const ok = await isLibraryConfigured();
       if (!ok) return;
-      await ensureGalleryBootstrap();
-      scheduleGalleryWarmup();
 
+      let started = false;
       const startDuplicateScan = () => {
+        if (started) return;
+        started = true;
         void window.arc?.startDuplicateFileScan?.();
       };
-      if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(startDuplicateScan, { timeout: 5000 });
-      } else {
-        window.setTimeout(startDuplicateScan, 2000);
-      }
+
+      const onFeedSettled = () => {
+        window.removeEventListener(GALLERY_FEED_SETTLED_EVENT, onFeedSettled);
+        if (typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(startDuplicateScan, { timeout: 30000 });
+        } else {
+          window.setTimeout(startDuplicateScan, 30000);
+        }
+      };
+
+      window.addEventListener(GALLERY_FEED_SETTLED_EVENT, onFeedSettled, { once: true });
+      window.setTimeout(() => {
+        window.removeEventListener(GALLERY_FEED_SETTLED_EVENT, onFeedSettled);
+        startDuplicateScan();
+      }, 120_000);
     })();
   }, []);
 
@@ -76,6 +88,7 @@ export default function AppLayout() {
         <ArcTopBar />
         <TopNavbar />
         <div className="arc-app-outlet">
+          <CardSectionsShell />
           <Outlet />
         </div>
         <PendingRestoreModal />

@@ -613,6 +613,10 @@ export async function refreshAiSettings(): Promise<void> {
     return;
   }
 
+  if (arc.aiDetectHardware) {
+    await arc.aiDetectHardware();
+  }
+
   const next = (await arc.aiGetStatus()) as AiStatus;
   patchState({
     loading: false,

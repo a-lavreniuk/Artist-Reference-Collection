@@ -1,10 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
-import CollectionsPage from './pages/CollectionsPage';
+import CardSectionRoute from './components/layout/CardSectionRoute';
 import GalleryCardEditRedirect from './pages/GalleryCardEditRedirect';
-import GalleryPage from './pages/GalleryPage';
-import MoodboardPage from './pages/MoodboardPage';
 import OnboardingStubPage from './pages/OnboardingStubPage';
 import SettingsPage from './pages/SettingsPage';
 import SettingsNavbarPanelPage from './pages/SettingsNavbarPanelPage';
@@ -62,13 +60,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Navigate to="/gallery" replace />} />
-          <Route path="gallery" element={<GalleryPage />} />
+          <Route path="gallery" element={<CardSectionRoute />} />
           <Route path="gallery/:cardId/edit" element={<GalleryCardEditRedirect />} />
           <Route path="onboarding" element={<OnboardingStubPage />} />
           <Route path="tags" element={<TagsPage />} />
-          <Route path="collections" element={<CollectionsPage />} />
-          <Route path="collections/:collectionId" element={<CollectionsPage />} />
-          <Route path="moodboard" element={<MoodboardPage />} />
+          <Route path="collections" element={<CardSectionRoute />} />
+          <Route path="collections/:collectionId" element={<CardSectionRoute />} />
+          <Route path="moodboard" element={<CardSectionRoute />} />
           <Route path="board" element={<BoardPage />} />
           <Route path="statistics" element={<SettingsNavbarPanelPage panel="statistics" />} />
           <Route path="history" element={<SettingsNavbarPanelPage panel="history" />} />

@@ -352,13 +352,6 @@ async function ensureSvgMarkup(file: string): Promise<string | null> {
   }
 }
 
-function preloadAllIcons(): Promise<void> {
-  if (preloadPromise) return preloadPromise;
-  const files = [...new Set(Object.values(ICON_FILES))];
-  preloadPromise = Promise.all(files.map((f) => ensureSvgMarkup(f))).then(() => undefined);
-  return preloadPromise;
-}
-
 function classToIconKey(element: HTMLElement): IconKey | null {
   for (const className of element.classList) {
     if (!className.startsWith('arc-icon-')) continue;
@@ -384,25 +377,44 @@ function injectSvgMarkup(host: HTMLElement, normalizedMarkup: string, file: stri
   host.dataset.arcIconFile = file;
 }
 
-/** Асинхронно: дожидается кэша файлов, затем вставляет SVG с currentColor. */
+function preloadAllIcons(): Promise<void> {
+  if (preloadPromise) return preloadPromise;
+  const files = [...new Set(Object.values(ICON_FILES))];
+  preloadPromise = Promise.all(files.map((f) => ensureSvgMarkup(f))).then(() => undefined);
+  return preloadPromise;
+}
+
+/** Фоновый прогрев всего набора иконок — не блокирует hydrate. */
+export function preloadArcNavbarIcons(): void {
+  void preloadAllIcons();
+}
+
+async function hydrateIconNode(node: HTMLElement): Promise<void> {
+  const iconKey = classToIconKey(node);
+  if (!iconKey) return;
+  const { preferred, fallback } = resolveIconFile(iconKey, node);
+  if (node.dataset.arcIconFile === preferred && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
+    return;
+  }
+  const normalized =
+    (await ensureSvgMarkup(preferred)) ?? (preferred !== fallback ? await ensureSvgMarkup(fallback) : null);
+  if (!normalized) return;
+  const usedFile = svgMarkupCache.get(preferred) ? preferred : fallback;
+  if (node.dataset.arcIconFile === usedFile && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
+    return;
+  }
+  injectSvgMarkup(node, normalized, usedFile);
+}
+
+/** Асинхронно: подставляет SVG только для иконок в scope; полный preload — в фоне. */
 export async function hydrateArcNavbarIcons(scope: ParentNode = document): Promise<void> {
-  await preloadAllIcons();
+  void preloadAllIcons();
 
   const nodes = scope.querySelectorAll(ICON_SELECTOR);
-  for (const node of nodes) {
-    if (!(node instanceof HTMLElement)) continue;
-    const iconKey = classToIconKey(node);
-    if (!iconKey) continue;
-    const { preferred, fallback } = resolveIconFile(iconKey, node);
-    if (node.dataset.arcIconFile === preferred && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
-      continue;
-    }
-    const normalized = (await ensureSvgMarkup(preferred)) ?? (preferred !== fallback ? await ensureSvgMarkup(fallback) : null);
-    if (!normalized) continue;
-    const usedFile = svgMarkupCache.get(preferred) ? preferred : fallback;
-    if (node.dataset.arcIconFile === usedFile && node.querySelector(':scope > svg.arc-navbar-icon-svg')) {
-      continue;
-    }
-    injectSvgMarkup(node, normalized, usedFile);
-  }
+  await Promise.all(
+    Array.from(nodes).map((node) => {
+      if (!(node instanceof HTMLElement)) return Promise.resolve();
+      return hydrateIconNode(node);
+    })
+  );
 }

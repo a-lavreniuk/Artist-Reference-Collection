@@ -6,6 +6,11 @@ import path from 'path';
 import { readAppPreferencesSync } from './appPreferences';
 import { readLibraryRootSync } from './libraryRootConfig';
 import { openLibraryDb } from './storage/db';
+import {
+  captureNavigationEpoch,
+  isNavigationEpochStale,
+  waitForNavigationIpc
+} from './ipcNavigationPriority';
 
 let duplicatesNotifiedThisSession = false;
 let scanInFlight = false;
@@ -39,6 +44,7 @@ export async function scanForDuplicateFiles(): Promise<boolean> {
   if (!libraryRoot) return false;
 
   scanInFlight = true;
+  const navSnap = captureNavigationEpoch();
 
   try {
     const db = openLibraryDb(libraryRoot);
@@ -49,6 +55,8 @@ export async function scanForDuplicateFiles(): Promise<boolean> {
     const hashCounts = new Map<string, number>();
 
     for (const row of rows) {
+      if (isNavigationEpochStale(navSnap)) return false;
+      await waitForNavigationIpc();
       const rel = row.originalRel.replace(/\//g, path.sep);
       const abs = path.join(libraryRoot, rel);
       const digest = await sha256File(abs);

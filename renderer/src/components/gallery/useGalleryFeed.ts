@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ARC_CARDS_CHANGED_EVENT, listCardsPage, type CardRecord } from '../../services/db';
-import { ensureGalleryBootstrap, scheduleGalleryWarmup } from './galleryBootstrap';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { listCardsPage, type CardRecord } from '../../services/db';
+import { ensureGalleryBootstrap } from './galleryBootstrap';
+import { subscribeGalleryCardsChanged } from './galleryFeedCardsChanged';
+import { notifyGalleryFeedSettledOnce } from './galleryFeedSettled';
 import {
   buildGalleryQueryKey,
-  defaultGalleryFeedQuery,
   GALLERY_MAX_CARDS_IN_MEMORY,
   GALLERY_PAGE_INITIAL,
   GALLERY_PAGE_MORE,
@@ -13,10 +14,12 @@ import {
 import { useGalleryFilters } from './GalleryFilterContext';
 import {
   clearGalleryMediaUrlCache,
+  cancelGalleryMediaPreloads,
   mergeCardsSrcMap,
   peekCardsSrcMap,
   preloadDecodedImages
 } from './galleryMediaCache';
+import { isCardSectionMediaActive } from '../layout/cardSectionMedia';
 import { clearMeasuredMasonryHeights } from '../masonry/masonryItemHeight';
 import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
 import {
@@ -51,6 +54,8 @@ function chunkSrcUrls(cards: readonly CardRecord[], srcMap: Record<string, strin
   return urls;
 }
 
+type FeedMediaTab = 'gallery' | 'collections' | 'moodboard';
+
 function trimCardsWindow(
   cards: CardRecord[],
   srcMap: Record<string, string>
@@ -79,9 +84,18 @@ function compensateScrollForTrim(removedCount: number): void {
   }
 }
 
-export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
+export function useGalleryFeed(
+  query: GalleryFeedQuery,
+  libraryReady: boolean,
+  options?: { mediaSection?: FeedMediaTab; feedActive?: boolean }
+) {
+  const mediaTab = options?.mediaSection;
+  const feedActive = options?.feedActive ?? true;
   const { setShuffleReloading } = useGalleryFilters();
   const queryKey = useMemo(() => buildGalleryQueryKey(query), [query]);
+  const queryRef = useRef(query);
+  queryRef.current = query;
+
   const initialSnapshot = useMemo(() => getGallerySnapshot(queryKey), [queryKey]);
 
   const [cards, setCards] = useState<CardRecord[]>(() => initialSnapshot?.cards ?? []);
@@ -89,7 +103,8 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
   const [offset, setOffset] = useState(() => initialSnapshot?.offset ?? 0);
   const [hasMore, setHasMore] = useState(() => initialSnapshot?.hasMore ?? true);
   const [loading, setLoading] = useState(false);
-  const [booting, setBooting] = useState(() => libraryReady && !initialSnapshot);
+  const [booting, setBooting] = useState(() => !initialSnapshot);
+  const [feedSettled, setFeedSettled] = useState(() => Boolean(initialSnapshot));
   const [shuffleReloading, setShuffleReloadingLocal] = useState(false);
 
   const loadSeqRef = useRef(0);
@@ -100,6 +115,26 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
   const hasMoreRef = useRef(hasMore);
   const prefetchRef = useRef<PrefetchedPage | null>(null);
   const prefetchInFlightRef = useRef(false);
+  const staleAfterCardsChangedRef = useRef(false);
+  const prevFeedActiveRef = useRef(feedActive);
+  const feedActiveRef = useRef(feedActive);
+  feedActiveRef.current = feedActive;
+  const mediaTabRef = useRef(mediaTab);
+  mediaTabRef.current = mediaTab;
+
+  const preloadImages = useCallback((urls: readonly string[], limit: number) => {
+    const tab = mediaTabRef.current;
+    if (tab && !isCardSectionMediaActive(tab)) return;
+    void preloadDecodedImages(urls, Math.min(limit, 12), tab);
+  }, []);
+
+  useEffect(() => {
+    const becameActive = feedActive && !prevFeedActiveRef.current;
+    prevFeedActiveRef.current = feedActive;
+    if (becameActive && libraryReady) {
+      staleAfterCardsChangedRef.current = false;
+    }
+  }, [feedActive, libraryReady]);
 
   useEffect(() => {
     cardsRef.current = cards;
@@ -122,11 +157,22 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
     prefetchInFlightRef.current = false;
   }, []);
 
+  useEffect(() => {
+    if (feedActive) return;
+    cancelGalleryMediaPreloads();
+    invalidatePrefetch();
+    loadSeqRef.current += 1;
+  }, [feedActive, invalidatePrefetch, queryKey]);
+
   const applySnapshot = useCallback((snapshot: GalleryScopeSnapshot) => {
     setCards(snapshot.cards);
     setSrcMap(snapshot.srcMap);
     setOffset(snapshot.offset);
     setHasMore(snapshot.hasMore);
+    cardsRef.current = snapshot.cards;
+    srcMapRef.current = snapshot.srcMap;
+    offsetRef.current = snapshot.offset;
+    hasMoreRef.current = snapshot.hasMore;
   }, []);
 
   const persistSnapshot = useCallback(
@@ -138,72 +184,92 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
       const next = { ...snapshot, cards: trimmed.cards, srcMap: trimmed.srcMap };
       setGallerySnapshot(queryKey, next);
       applySnapshot(next);
-      offsetRef.current = next.offset;
-      hasMoreRef.current = next.hasMore;
     },
     [applySnapshot, queryKey]
   );
 
-  const prefetchNextPage = useCallback(
-    async (startOffset: number, seq: number) => {
-      if (!hasMoreRef.current || prefetchInFlightRef.current) return;
-      if (prefetchRef.current?.forOffset === startOffset) return;
+  useLayoutEffect(() => {
+    if (!libraryReady) {
+      setFeedSettled(false);
+      return;
+    }
+    const cached = getGallerySnapshot(queryKey);
+    if (cached) {
+      applySnapshot(cached);
+      setBooting(false);
+      setFeedSettled(true);
+      return;
+    }
+    setFeedSettled(false);
+  }, [applySnapshot, libraryReady, queryKey]);
 
-      prefetchInFlightRef.current = true;
-      try {
-        const take = GALLERY_PAGE_MORE;
-        const chunk = await listCardsPage({
-          offset: startOffset,
-          limit: take,
-          libraryScope: query.libraryScope,
-          selectedTagIds: query.selectedTagIds,
-          cardIdExact: query.cardIdExact,
-          collectionId: query.collectionId,
-          moodboardCardIds: query.moodboardCardIds,
-          advancedFilters: query.advancedFilters,
-          sort: query.sort
-        });
+  const prefetchNextPage = useCallback(async (startOffset: number, seq: number) => {
+    if (!feedActiveRef.current) return;
+    if (seq !== loadSeqRef.current) return;
+    const q = queryRef.current;
+    if (!hasMoreRef.current || prefetchInFlightRef.current) return;
+    if (prefetchRef.current?.forOffset === startOffset) return;
 
-        if (seq !== loadSeqRef.current || chunk.length === 0) return;
+    prefetchInFlightRef.current = true;
+    try {
+      const take = GALLERY_PAGE_MORE;
+      if (!feedActiveRef.current || seq !== loadSeqRef.current) return;
+      const chunk = await listCardsPage({
+        offset: startOffset,
+        limit: take,
+        libraryScope: q.libraryScope,
+        selectedTagIds: q.selectedTagIds,
+        cardIdExact: q.cardIdExact,
+        collectionId: q.collectionId,
+        moodboardCardIds: q.moodboardCardIds,
+        advancedFilters: q.advancedFilters,
+        sort: q.sort
+      });
 
-        const gridSize = readGridSize();
-        const peek = peekCardsSrcMap(chunk, gridSize);
-        const resolved = await mergeCardsSrcMap(chunk, peek, gridSize);
-        if (seq !== loadSeqRef.current) return;
+      if (!feedActiveRef.current || seq !== loadSeqRef.current || chunk.length === 0) return;
 
-        const hasMoreNext = chunk.length === take;
-        prefetchRef.current = {
-          forOffset: startOffset,
-          cards: chunk,
-          srcMapPartial: resolved,
-          hasMore: hasMoreNext,
-          nextOffset: startOffset + chunk.length
-        };
+      const gridSize = readGridSize();
+      const peek = peekCardsSrcMap(chunk, gridSize, mediaTabRef.current);
+      const resolved = await mergeCardsSrcMap(chunk, peek, gridSize, mediaTabRef.current);
+      if (!feedActiveRef.current || seq !== loadSeqRef.current) return;
 
-        void preloadDecodedImages(chunkSrcUrls(chunk, resolved), take);
-      } finally {
-        prefetchInFlightRef.current = false;
-      }
-    },
-    [query]
-  );
+      const hasMoreNext = chunk.length === take;
+      prefetchRef.current = {
+        forOffset: startOffset,
+        cards: chunk,
+        srcMapPartial: resolved,
+        hasMore: hasMoreNext,
+        nextOffset: startOffset + chunk.length
+      };
+
+      void preloadImages(chunkSrcUrls(chunk, resolved), take);
+    } finally {
+      prefetchInFlightRef.current = false;
+    }
+  }, [preloadImages]);
 
   const fetchPage = useCallback(
-    async (start: number, append: boolean, seq: number, options?: { preloadDecode?: boolean }) => {
+    async (start: number, append: boolean, seq: number) => {
+      if (!feedActiveRef.current) {
+        return;
+      }
+      const q = queryRef.current;
       const take = start === 0 ? GALLERY_PAGE_INITIAL : GALLERY_PAGE_MORE;
       const chunk = await listCardsPage({
         offset: start,
         limit: take,
-        libraryScope: query.libraryScope,
-        selectedTagIds: query.selectedTagIds,
-        cardIdExact: query.cardIdExact,
-        collectionId: query.collectionId,
-        moodboardCardIds: query.moodboardCardIds,
-        advancedFilters: query.advancedFilters,
-        sort: query.sort
+        libraryScope: q.libraryScope,
+        selectedTagIds: q.selectedTagIds,
+        cardIdExact: q.cardIdExact,
+        collectionId: q.collectionId,
+        moodboardCardIds: q.moodboardCardIds,
+        advancedFilters: q.advancedFilters,
+        sort: q.sort
       });
 
-      if (seq !== loadSeqRef.current) return;
+      if (!feedActiveRef.current || seq !== loadSeqRef.current) {
+        return;
+      }
 
       const gridSize = readGridSize();
       const hasMoreNext = chunk.length === take;
@@ -217,33 +283,35 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
         if (cached && sameCardOrder(cached.cards, chunk)) {
           const mergedSrc = await mergeCardsSrcMap(
             chunk,
-            { ...cached.srcMap, ...peekCardsSrcMap(chunk, gridSize) },
-            gridSize
+            { ...cached.srcMap, ...peekCardsSrcMap(chunk, gridSize, mediaTabRef.current) },
+            gridSize,
+            mediaTabRef.current
           );
-          if (seq !== loadSeqRef.current) return;
+          if (seq !== loadSeqRef.current) {
+            return;
+          }
           persistSnapshot({
             cards: chunk,
             srcMap: mergedSrc,
             offset: nextOffset,
             hasMore: hasMoreNext
           });
-          void preloadDecodedImages(chunkSrcUrls(chunk, mergedSrc), chunk.length);
+          preloadImages(chunkSrcUrls(chunk, mergedSrc), chunk.length);
           if (hasMoreNext) {
             void prefetchNextPage(nextOffset, seq);
           } else {
             invalidatePrefetch();
           }
-          if (options?.preloadDecode) {
-            await preloadDecodedImages(Object.values(mergedSrc));
-          }
           return;
         }
       }
 
-      const peek = peekCardsSrcMap(nextCards, gridSize);
+      const peek = peekCardsSrcMap(nextCards, gridSize, mediaTabRef.current);
       const baseSrc = append ? { ...prevSrcMap, ...peek } : peek;
-      const resolved = await mergeCardsSrcMap(append ? chunk : nextCards, baseSrc, gridSize);
-      if (seq !== loadSeqRef.current) return;
+      const resolved = await mergeCardsSrcMap(append ? chunk : nextCards, baseSrc, gridSize, mediaTabRef.current);
+      if (seq !== loadSeqRef.current) {
+        return;
+      }
 
       persistSnapshot({
         cards: nextCards,
@@ -253,35 +321,35 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
       });
 
       const decodeChunk = append ? chunk : nextCards;
-      void preloadDecodedImages(chunkSrcUrls(decodeChunk, resolved), decodeChunk.length);
+      preloadImages(chunkSrcUrls(decodeChunk, resolved), decodeChunk.length);
 
-      if (hasMoreNext) {
+      if (hasMoreNext && feedActiveRef.current) {
         void prefetchNextPage(nextOffset, seq);
       } else {
         invalidatePrefetch();
       }
-
-      if (options?.preloadDecode) {
-        await preloadDecodedImages(Object.values(resolved));
-      }
     },
-    [invalidatePrefetch, persistSnapshot, prefetchNextPage, query, queryKey]
+    [invalidatePrefetch, persistSnapshot, prefetchNextPage, preloadImages, queryKey]
   );
 
   const reloadFromStart = useCallback(
-    async (options?: { preloadDecode?: boolean; showBoot?: boolean; clearDisplay?: boolean }) => {
+    async (options?: { showBoot?: boolean; clearDisplay?: boolean }) => {
       const seq = ++loadSeqRef.current;
       if (options?.clearDisplay) {
         setCards([]);
         setSrcMap({});
         setOffset(0);
         setHasMore(true);
+        cardsRef.current = [];
+        srcMapRef.current = {};
+        offsetRef.current = 0;
+        hasMoreRef.current = true;
         invalidatePrefetch();
       }
       if (options?.showBoot) setBooting(true);
       setLoading(true);
       try {
-        await fetchPage(0, false, seq, options);
+        await fetchPage(0, false, seq);
       } finally {
         if (seq === loadSeqRef.current) {
           setLoading(false);
@@ -296,16 +364,29 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
     invalidatePrefetch();
   }, [invalidatePrefetch, queryKey]);
 
-  useEffect(() => {
-    if (!libraryReady) {
+  useLayoutEffect(() => {
+    const cached = getGallerySnapshot(queryKey);
+    if (cached) {
+      applySnapshot(cached);
       setBooting(false);
+      setFeedSettled(true);
+      return;
+    }
+
+    if (!libraryReady) {
+      setBooting(true);
+      return;
+    }
+
+    if (!feedActive) {
+      setBooting(true);
       return;
     }
 
     const prevQuery = prevQueryRef.current;
-    prevQueryRef.current = query;
+    prevQueryRef.current = queryRef.current;
     const shuffleOnly =
-      cardsRef.current.length > 0 && isShuffleOnlyQueryChange(prevQuery, query);
+      cardsRef.current.length > 0 && isShuffleOnlyQueryChange(prevQuery, queryRef.current);
 
     if (shuffleOnly) {
       setShuffleReloadingLocal(true);
@@ -326,68 +407,86 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
       return;
     }
 
-    const cached = getGallerySnapshot(queryKey);
-    if (cached) {
-      applySnapshot(cached);
-      setBooting(false);
-      const seq = ++loadSeqRef.current;
-      void fetchPage(0, false, seq);
-      return;
-    }
-
     const seq = ++loadSeqRef.current;
     setBooting(true);
     setLoading(true);
     void (async () => {
       try {
-        await ensureGalleryBootstrap(defaultGalleryFeedQuery());
+        await ensureGalleryBootstrap(queryRef.current, mediaTab);
+        if (seq !== loadSeqRef.current) return;
         const warmed = getGallerySnapshot(queryKey);
-        if (warmed && seq === loadSeqRef.current) {
+        if (warmed) {
           applySnapshot(warmed);
-          setBooting(false);
+          setFeedSettled(true);
+          if (feedActive && mediaTab === 'gallery') notifyGalleryFeedSettledOnce();
+          return;
         }
-        await fetchPage(0, false, seq, { preloadDecode: !warmed });
+        await fetchPage(0, false, seq);
       } finally {
         if (seq === loadSeqRef.current) {
           setLoading(false);
           setBooting(false);
+          setFeedSettled(true);
+          if (feedActive && mediaTab === 'gallery') notifyGalleryFeedSettledOnce();
         }
       }
     })();
-  }, [applySnapshot, fetchPage, libraryReady, query, queryKey, setShuffleReloading]);
+  }, [applySnapshot, feedActive, fetchPage, libraryReady, mediaTab, queryKey, setShuffleReloading]);
 
   useEffect(() => {
-    const onCardsChanged = () => {
+    if (!feedActive || !libraryReady || !staleAfterCardsChangedRef.current) return;
+    if (loading || booting) {
+      staleAfterCardsChangedRef.current = false;
+      return;
+    }
+    staleAfterCardsChangedRef.current = false;
+    const seq = ++loadSeqRef.current;
+    setLoading(true);
+    void (async () => {
+      try {
+        await fetchPage(0, false, seq);
+      } finally {
+        if (seq === loadSeqRef.current) setLoading(false);
+      }
+    })();
+  }, [booting, feedActive, fetchPage, libraryReady, loading, queryKey]);
+
+  useEffect(() => {
+    const onCardsChangedFlush = () => {
       invalidatePrefetch();
-      invalidateAllGallerySnapshots();
+      if (!feedActive || !libraryReady) {
+        staleAfterCardsChangedRef.current = true;
+        return;
+      }
       const seq = ++loadSeqRef.current;
       setLoading(true);
       void (async () => {
         try {
           await fetchPage(0, false, seq);
-          scheduleGalleryWarmup();
         } finally {
           if (seq === loadSeqRef.current) setLoading(false);
         }
       })();
     };
     const onLibraryChanged = () => {
+      if (!feedActive) return;
       clearGalleryMediaUrlCache();
       clearMeasuredMasonryHeights();
       invalidatePrefetch();
       invalidateAllGallerySnapshots();
-      void reloadFromStart({ preloadDecode: true, showBoot: true, clearDisplay: true });
+      void reloadFromStart({ showBoot: true, clearDisplay: true });
     };
-    window.addEventListener(ARC_CARDS_CHANGED_EVENT, onCardsChanged);
+    const unsubCards = subscribeGalleryCardsChanged(onCardsChangedFlush);
     window.addEventListener('arc:library-changed', onLibraryChanged);
     return () => {
-      window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onCardsChanged);
+      unsubCards();
       window.removeEventListener('arc:library-changed', onLibraryChanged);
     };
-  }, [fetchPage, invalidatePrefetch, reloadFromStart]);
+  }, [feedActive, fetchPage, invalidatePrefetch, libraryReady, queryKey, reloadFromStart]);
 
   useEffect(() => {
     const onGridSizeChanged = () => {
+      if (!feedActive || !libraryReady) return;
       clearGalleryMediaUrlCache();
       clearMeasuredMasonryHeights();
       invalidatePrefetch();
@@ -404,7 +503,7 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
     };
     window.addEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
     return () => window.removeEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
-  }, [fetchPage, invalidatePrefetch]);
+  }, [feedActive, fetchPage, invalidatePrefetch, libraryReady]);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
@@ -424,7 +523,7 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
           offset: prefetched.nextOffset,
           hasMore: prefetched.hasMore
         });
-        void preloadDecodedImages(
+        preloadImages(
           chunkSrcUrls(prefetched.cards, prefetched.srcMapPartial),
           prefetched.cards.length
         );
@@ -438,7 +537,7 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
     } finally {
       if (seq === loadSeqRef.current) setLoading(false);
     }
-  }, [fetchPage, hasMore, loading, persistSnapshot, prefetchNextPage]);
+  }, [fetchPage, hasMore, loading, persistSnapshot, prefetchNextPage, preloadImages]);
 
   return {
     cards,
@@ -447,6 +546,7 @@ export function useGalleryFeed(query: GalleryFeedQuery, libraryReady: boolean) {
     hasMore,
     loading,
     booting,
+    feedSettled,
     shuffleReloading,
     loadMore,
     reloadFromStart

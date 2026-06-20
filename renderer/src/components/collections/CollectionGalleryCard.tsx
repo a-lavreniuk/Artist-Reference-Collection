@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CardRecord, CollectionRecord } from '../../services/db';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
+import { useCardSectionMediaActive } from '../layout/cardSectionMedia';
 import { peekCardsSrcMap, resolveCardsSrcMap } from '../gallery/galleryMediaCache';
 
 const PREVIEW_SLOTS = 4;
@@ -14,6 +15,7 @@ type Props = {
 
 export default function CollectionGalleryCard({ collection, previews, count, onOpen }: Props) {
   const [srcMap, setSrcMap] = useState<Record<string, string>>({});
+  const stripMediaActive = useCardSectionMediaActive('gallery');
 
   useEffect(() => {
     const cards = previews.slice(0, PREVIEW_SLOTS);
@@ -21,16 +23,17 @@ export default function CollectionGalleryCard({ collection, previews, count, onO
       setSrcMap({});
       return;
     }
-    const peek = peekCardsSrcMap(cards, 's');
+    const peek = peekCardsSrcMap(cards, 's', 'gallery');
     setSrcMap(peek);
+    if (!stripMediaActive) return;
     let cancelled = false;
-    void resolveCardsSrcMap(cards, 's').then((next) => {
+    void resolveCardsSrcMap(cards, 's', 'gallery').then((next) => {
       if (!cancelled) setSrcMap((prev) => ({ ...prev, ...next }));
     });
     return () => {
       cancelled = true;
     };
-  }, [previews, collection.id]);
+  }, [previews, collection.id, stripMediaActive]);
 
   return (
     <button
@@ -43,7 +46,7 @@ export default function CollectionGalleryCard({ collection, previews, count, onO
         {Array.from({ length: PREVIEW_SLOTS }, (_, index) => {
           const card = previews[index];
           const href = card ? srcMap[card.id] : undefined;
-          const hasPhoto = Boolean(card && href);
+          const hasPhoto = Boolean(stripMediaActive && card && href);
           const isLast = index === PREVIEW_SLOTS - 1;
 
           return (

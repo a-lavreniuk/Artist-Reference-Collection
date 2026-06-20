@@ -46,6 +46,7 @@ import {
   getGalleryFilterBoundaries,
   invalidateGalleryFilterBoundariesCache
 } from './galleryFilterBoundariesCache';
+import { invalidateGalleryFilterStatsCache } from './galleryFilterStatsCache';
 import {
   buildShuffleCacheKey,
   getShuffledPageIds,
@@ -53,6 +54,7 @@ import {
 } from './shuffleIdCache';
 import { invalidateScoredSearchCache } from './scoredSearchCache';
 import { clearAiResultsCache } from '../ai/aiResultsCache';
+import { ensureDimensionsBackfill, ensureVideoDurationBackfill } from './galleryFilterBackfill';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
@@ -75,7 +77,7 @@ export {
   ensureDimensionsBackfill,
   ensureVideoDurationBackfill
 } from './galleryFilterBackfill';
-export { getGalleryFilterStats } from './galleryFilterStats';
+export { FilterStatsAborted, getGalleryFilterStats, getGalleryFilterStatsAsync } from './galleryFilterStats';
 export {
   deleteFilterPreset,
   listFilterPresets,
@@ -248,12 +250,20 @@ async function removeCardFromMoodboard(root: string, cardId: string): Promise<vo
 let currentRoot: string | null = null;
 let migrationPromise: Promise<void> | null = null;
 const readyPromises = new Map<string, Promise<Database.Database>>();
+/** Корни, для которых полный ensureLibraryReadyInner уже выполнен в этой сессии. */
+const readyRoots = new Set<string>();
+
+export function isLibraryRootReady(libraryRoot: string): boolean {
+  return readyRoots.has(path.resolve(libraryRoot));
+}
 
 export function resetLibraryStorageCache(): void {
   readyPromises.clear();
+  readyRoots.clear();
   migrationPromise = null;
   currentRoot = null;
   invalidateGalleryFilterBoundariesCache();
+  invalidateGalleryFilterStatsCache();
   invalidateShuffleIdCache();
   invalidateScoredSearchCache();
   clearAiResultsCache();
@@ -307,6 +317,11 @@ async function emptyIndexWithLegacyCards(root: string, legacyMetaPath: string): 
 }
 
 async function ensureLibraryReadyInner(root: string): Promise<Database.Database> {
+  if (readyRoots.has(root)) {
+    currentRoot = root;
+    return openLibraryDb(root);
+  }
+
   await mkdir(root, { recursive: true });
   await mkdir(path.join(root, CARDS_DIR), { recursive: true });
   await mkdir(libraryMetaDirAbs(root), { recursive: true });
@@ -341,7 +356,18 @@ async function ensureLibraryReadyInner(root: string): Promise<Database.Database>
 
   await ensureLibraryMetaDirLayout(root);
 
+  readyRoots.add(root);
   currentRoot = root;
+  // Backfill не на горячем пути: ffmpeg/SQLite на main ломают IPC list-cards (~1.5s/видео).
+  setTimeout(() => {
+    void (async () => {
+      try {
+        await ensureDimensionsBackfill(root);
+      } catch {
+        /* фоновое обслуживание метаданных */
+      }
+    })();
+  }, 120_000);
   return openLibraryDb(root);
 }
 
@@ -909,6 +935,32 @@ export function getCollectionCardCounts(libraryRoot: string): Record<string, num
   const m: Record<string, number> = {};
   for (const r of rows) m[r.collection_id] = r.n;
   return m;
+}
+
+/** До N последних карточек на коллекцию — без загрузки всей библиотеки в renderer. */
+export function getCollectionPreviewSlicesFromDb(
+  libraryRoot: string,
+  limitPerCollection: number
+): Record<string, CardIndexRow[]> {
+  const db = openLibraryDb(libraryRoot);
+  const collections = db.prepare('SELECT id FROM collections').all() as Array<{ id: string }>;
+  const limit = Math.max(1, Math.min(limitPerCollection, 20));
+  const out: Record<string, CardIndexRow[]> = {};
+  for (const col of collections) {
+    out[col.id] = [];
+  }
+  const stmt = db.prepare(
+    `SELECT c.* FROM cards c
+     INNER JOIN card_collections cc ON cc.card_id = c.id
+     WHERE cc.collection_id = ? AND COALESCE(c.is_deleted, 0) = 0
+     ORDER BY c.added_at DESC
+     LIMIT ?`
+  );
+  for (const col of collections) {
+    const rows = stmt.all(col.id, limit) as Record<string, unknown>[];
+    out[col.id] = indexCardRowsWithRelations(db, rows);
+  }
+  return out;
 }
 
 export function getCollectionStats(libraryRoot: string, collectionId: string): CollectionStatsRow | null {

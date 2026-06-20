@@ -16,6 +16,30 @@ export async function getAllCollections(): Promise<CollectionRecord[]> {
   return sortCollections(await readCollectionsUnified());
 }
 
+export type CollectionsSidebarMeta = {
+  collections: CollectionRecord[];
+  counts: Record<string, number>;
+  previews: Record<string, CardRecord[]>;
+};
+
+/** Один IPC: коллекции + счётчики + опционально превью для strip. */
+export async function getCollectionsSidebarMeta(previewLimit = 0): Promise<CollectionsSidebarMeta> {
+  const b = await resolveBackend();
+  if (b !== 'file') {
+    const collections = await getAllCollections();
+    const { getCollectionCardCounts, getCollectionPreviewSlices } = await import('./cards');
+    const counts = await getCollectionCardCounts();
+    const previews = previewLimit > 0 ? await getCollectionPreviewSlices(previewLimit) : {};
+    return { collections, counts, previews };
+  }
+  const raw = await storage.storageCollectionsSidebar({ previewLimit });
+  return {
+    collections: sortCollections(raw.collections ?? []),
+    counts: raw.counts ?? {},
+    previews: raw.previews ?? {}
+  };
+}
+
 export async function getCollectionById(id: string): Promise<CollectionRecord | null> {
   const all = await getAllCollections();
   return all.find((c) => c.id === id) ?? null;

@@ -60,34 +60,68 @@ export async function tryAppendLibraryHistory(message: string): Promise<void> {
 }
 
 /** После смены пути библиотеки в настройках */
+let cachedLibraryRoot: string | null | undefined;
+
 export function invalidateLibraryCache(): void {
   fileBackendResolved = false;
+  cachedLibraryRoot = undefined;
+  tagsLoadPromise = null;
 }
 
 export let fileBackendResolved = false;
+
+let backendInitPromise: Promise<'file' | 'local'> | null = null;
+let tagsLoadPromise: Promise<TagRecord[]> | null = null;
+
+export async function resolveLibraryRoot(): Promise<string | null> {
+  if (!hasArcApi()) return null;
+  if (cachedLibraryRoot === undefined) {
+    cachedLibraryRoot = (await window.arc!.getLibraryPath()) ?? null;
+  }
+  return cachedLibraryRoot;
+}
+
+async function initFileBackendOnce(): Promise<'file' | 'local'> {
+  const root = await resolveLibraryRoot();
+  if (!root) {
+    fileBackendResolved = true;
+    return 'local';
+  }
+  await storage.storageEnsureReady();
+  await migrateLocalIntoStorageIfNeeded();
+  fileBackendResolved = true;
+  return 'file';
+}
 
 export async function resolveBackend(): Promise<'file' | 'local'> {
   if (!hasArcApi()) {
     fileBackendResolved = true;
     return 'local';
   }
-  const root = await window.arc!.getLibraryPath();
-  if (!root) {
-    fileBackendResolved = true;
-    return 'local';
+  if (fileBackendResolved) {
+    const root = await resolveLibraryRoot();
+    return root ? 'file' : 'local';
   }
-  if (!fileBackendResolved) {
-    await storage.storageEnsureReady();
-    await migrateLocalIntoStorageIfNeeded();
-    fileBackendResolved = true;
+  if (!backendInitPromise) {
+    backendInitPromise = initFileBackendOnce().finally(() => {
+      backendInitPromise = null;
+    });
   }
-  return 'file';
+  return backendInitPromise;
 }
 
 async function migrateLocalIntoStorageIfNeeded(): Promise<void> {
+  if (typeof window !== 'undefined' && window.localStorage?.getItem('arc.storage.localHydrated') === '1') {
+    return;
+  }
   const cats = await storage.storageListCategories();
   const tags = await storage.storageListAllTags();
-  if (cats.length > 0 || tags.length > 0) return;
+  if (cats.length > 0 || tags.length > 0) {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem('arc.storage.localHydrated', '1');
+    }
+    return;
+  }
 
   const lsCats = safeReadArray<unknown>(STORAGE_KEYS.categories);
   const lsTags = safeReadArray<unknown>(STORAGE_KEYS.tags);
@@ -106,6 +140,9 @@ async function migrateLocalIntoStorageIfNeeded(): Promise<void> {
   for (const item of lsCols) {
     const col = normalizeCollectionRecord(item);
     if (col) await storage.storageUpsertCollection(col);
+  }
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.setItem('arc.storage.localHydrated', '1');
   }
 }
 
@@ -189,6 +226,7 @@ export async function persistTags(list: TagRecord[]): Promise<void> {
     for (const id of prevIds) {
       if (!nextIds.has(id)) await storage.storageDeleteTag(id);
     }
+    tagsLoadPromise = null;
     notifyTagsChanged();
     return;
   }
@@ -199,8 +237,10 @@ export async function persistTags(list: TagRecord[]): Promise<void> {
 export async function readTagsUnified(): Promise<TagRecord[]> {
   const b = await resolveBackend();
   if (b === 'file') {
-    const raw = await storage.storageListAllTags();
-    return raw.map(mapStorageTag);
+    if (!tagsLoadPromise) {
+      tagsLoadPromise = storage.storageListAllTags().then((raw) => raw.map(mapStorageTag));
+    }
+    return tagsLoadPromise;
   }
   return readTagsLocal();
 }

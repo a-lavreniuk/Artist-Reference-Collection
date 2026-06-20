@@ -3,16 +3,20 @@ import type { GalleryFeedQuery } from './galleryQuery';
 import { useGalleryFeed } from './useGalleryFeed';
 import { useGalleryRemoteSearchFeed } from './useGalleryRemoteSearchFeed';
 
+type FeedMediaTab = 'gallery' | 'collections' | 'moodboard';
+
 type Params = {
   feedQuery: GalleryFeedQuery;
   searchParams: URLSearchParams;
   sort: GallerySortState;
   libraryReady: boolean;
+  mediaSection?: FeedMediaTab;
+  feedActive?: boolean;
 };
 
 /** Локальная лента (useGalleryFeed) + remote search feeds в одном контракте. */
 export function useScopedGalleryFeed(params: Params) {
-  const { feedQuery, searchParams, sort, libraryReady } = params;
+  const { feedQuery, searchParams, sort, libraryReady, mediaSection, feedActive } = params;
 
   const remote = useGalleryRemoteSearchFeed({
     searchParams,
@@ -21,7 +25,10 @@ export function useScopedGalleryFeed(params: Params) {
     sort
   });
 
-  const local = useGalleryFeed(feedQuery, libraryReady && !remote.isRemoteSearchFeed);
+  const local = useGalleryFeed(feedQuery, libraryReady && !remote.isRemoteSearchFeed, {
+    mediaSection,
+    feedActive
+  });
 
   if (remote.isRemoteSearchFeed) {
     return {
@@ -33,6 +40,7 @@ export function useScopedGalleryFeed(params: Params) {
       hasMore: remote.displayHasMore,
       loading: remote.displayLoading,
       booting: remote.displayBooting,
+      feedSettled: true,
       shuffleReloading: false,
       loadMore: remote.displayLoadMore,
       reloadFromStart: remote.reloadRemoteFeed
@@ -48,6 +56,7 @@ export function useScopedGalleryFeed(params: Params) {
     hasMore: local.hasMore,
     loading: local.loading,
     booting: local.booting,
+    feedSettled: local.feedSettled,
     shuffleReloading: local.shuffleReloading,
     loadMore: local.loadMore,
     reloadFromStart: local.reloadFromStart

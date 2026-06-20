@@ -3,6 +3,11 @@ import type Database from 'better-sqlite3';
 import { openLibraryDb } from './db';
 import { probeVideoDurationMs } from '../ffmpeg';
 import { readCardJson, writeCardJson } from './cardFolder';
+import { waitForNavigationIpc, captureNavigationEpoch, isNavigationEpochStale } from '../ipcNavigationPriority';
+
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
 
 export function countVideosMissingDuration(db: Database.Database): number {
   const row = db
@@ -51,16 +56,21 @@ export async function backfillCardDimensions(
 
   let updated = 0;
   let failed = 0;
+  const navSnap = captureNavigationEpoch();
   for (const row of rows) {
+    if (isNavigationEpochStale(navSnap)) break;
+    await waitForNavigationIpc();
     const cardJson = await readCardJson(root, row.id);
     const width = cardJson?.width;
     const height = cardJson?.height;
     if (!width || !height || width <= 0 || height <= 0) {
       failed++;
+      await yieldToEventLoop();
       continue;
     }
     db.prepare('UPDATE cards SET width = ?, height = ? WHERE id = ?').run(width, height, row.id);
     updated++;
+    await yieldToEventLoop();
   }
   return { updated, failed };
 }
@@ -76,7 +86,10 @@ export async function backfillVideoDurationMs(libraryRoot: string): Promise<{ up
 
   let updated = 0;
   let failed = 0;
+  const navSnap = captureNavigationEpoch();
   for (const row of rows) {
+    if (isNavigationEpochStale(navSnap)) break;
+    await waitForNavigationIpc();
     const abs = path.join(root, row.original_rel.replace(/\//g, path.sep));
     const cardJson = await readCardJson(root, row.id);
     let ms = cardJson?.durationMs && cardJson.durationMs > 0 ? cardJson.durationMs : null;
@@ -85,6 +98,7 @@ export async function backfillVideoDurationMs(libraryRoot: string): Promise<{ up
     }
     if (ms == null || ms <= 0) {
       failed++;
+      await yieldToEventLoop();
       continue;
     }
     db.prepare('UPDATE cards SET duration_ms = ? WHERE id = ?').run(ms, row.id);
@@ -94,6 +108,7 @@ export async function backfillVideoDurationMs(libraryRoot: string): Promise<{ up
       await writeCardJson(root, cardJsonAfter);
     }
     updated++;
+    await yieldToEventLoop();
   }
   return { updated, failed };
 }

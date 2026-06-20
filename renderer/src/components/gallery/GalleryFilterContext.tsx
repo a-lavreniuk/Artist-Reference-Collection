@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -136,7 +137,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     [layout, setLayout]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const tab = resolveMainTab(location.pathname);
     if (tab !== mainTabRef.current) {
       mainTabRef.current = tab;
@@ -170,8 +171,8 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refreshStats();
-  }, [refreshStats]);
+    void refreshPresets();
+  }, [refreshPresets]);
 
   useEffect(() => {
     if (!stats || stats.hasVideo || filters.duration.length === 0) return;
@@ -179,8 +180,12 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   }, [stats, filters.duration.length, patchFilters]);
 
   useEffect(() => {
-    void refreshPresets();
-  }, [refreshPresets]);
+    if (!stats || filters.fileExtensions.length === 0) return;
+    const anyExtStillPresent = filters.fileExtensions.some(
+      (ext) => (stats.fileExtensions[ext] ?? 0) > 0
+    );
+    if (!anyExtStillPresent) patchFilters({ fileExtensions: [] });
+  }, [stats, filters.fileExtensions, patchFilters]);
 
   useEffect(() => {
     const onLibrary = () => {
@@ -318,7 +323,7 @@ function normalizeFeedScope(scope: GalleryFeedScope): GalleryFeedScope {
   };
 }
 
-export function useRegisterGalleryFeedScope(scope: GalleryFeedScope): void {
+export function useRegisterGalleryFeedScope(scope: GalleryFeedScope, enabled = true): void {
   const { setFeedScope } = useGalleryFilters();
   const key = useMemo(
     () => feedScopeKey(scope),
@@ -331,8 +336,9 @@ export function useRegisterGalleryFeedScope(scope: GalleryFeedScope): void {
     ]
   );
   useEffect(() => {
+    if (!enabled) return;
     const next = normalizeFeedScope(scope);
     setFeedScope((prev) => (feedScopeKey(prev) === key ? prev : next));
     // key уже сериализует scope; scope берём из замыкания текущего рендера при смене key
-  }, [key, setFeedScope]);
+  }, [enabled, key, scope, setFeedScope]);
 }

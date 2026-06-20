@@ -24,7 +24,8 @@ type SearchPanelSimilarControlsProps = {
 };
 
 function mediaAbsUrl(absPath: string): string {
-  return `arc-media://localhost/?abs=${encodeURIComponent(absPath)}`;
+  const origin = window.arc?.getMediaServerOrigin?.()?.replace(/\/$/, '') ?? 'arc-media://localhost';
+  return `${origin}/?abs=${encodeURIComponent(absPath)}`;
 }
 
 async function stageDroppedPaths(paths: string[]): Promise<string | null> {

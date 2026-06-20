@@ -2,6 +2,13 @@ import { BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { readdir, stat, unlink } from 'fs/promises';
 import {
+  captureNavigationEpoch,
+  enterListCardsHandler,
+  exitListCardsHandler,
+  isNavigationEpochStale,
+  yieldForNavigationIpc
+} from './ipcNavigationPriority';
+import {
   addSkippedDuplicatePair,
   countCards,
   deleteCardFromStorage,
@@ -12,9 +19,11 @@ import {
   deleteCollectionFromDb,
   deleteTagFromDb,
   ensureLibraryReady,
+  isLibraryRootReady,
   getCardByIdFromDb,
   getCardsWithPhash,
   getCollectionCardCounts,
+  getCollectionPreviewSlicesFromDb,
   getCollectionStats,
   getMoodboardData,
   getSystemData,
@@ -38,12 +47,16 @@ import {
   upsertFilterPreset,
   deleteFilterPreset,
   renameFilterPreset,
-  getGalleryFilterStats,
+  FilterStatsAborted,
+  getGalleryFilterStatsAsync,
   backfillVideoDurationMs,
-  ensureDimensionsBackfill,
-  ensureVideoDurationBackfill,
   upsertTag
 } from './storage/libraryStorage';
+import {
+  buildGalleryFilterStatsCacheKey,
+  getCachedGalleryFilterStats,
+  setCachedGalleryFilterStats
+} from './storage/galleryFilterStatsCache';
 import { backfillPalettesBatch, searchCardsByColor } from './storage/colorSearch';
 import { normalizeHex } from './storage/palette';
 import { readCardJson } from './storage/cardFolder';
@@ -51,9 +64,14 @@ import {
   CARDS_DIR,
   LIBRARY_META_DIR
 } from './libraryFilenames';
-import type { ArcMoodboardV1, ArcSystemV1, CategoryRow, CollectionRow, ListCardsParams, TagRow } from './storage/types';
+import type { ArcMoodboardV1, ArcSystemV1, CategoryRow, CollectionRow, ListCardsParams, LibraryScope, TagRow } from './storage/types';
+import { readLibraryRootSync } from './libraryRootConfig';
 
 let storageIpcRegistered = false;
+
+function queryListCards(root: string, p: ListCardsParams): ReturnType<typeof cardIndexToRenderer>[] {
+  return listCardsFromDb(root, p).map((r) => cardIndexToRenderer(rowToCardRecord(r)));
+}
 
 function broadcastImportProgress(payload: { current: number; total: number; message?: string }): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -166,6 +184,13 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root) return { ok: false as const, error: 'Библиотека не выбрана' };
     await ensureLibraryReady(root);
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        listCardsFromDb(root, { offset: 0, limit: 1, libraryScope: 'all' });
+      } catch {
+        /* прогрев SQLite на main */
+      }
+    }
     return { ok: true as const };
   });
 
@@ -196,12 +221,19 @@ export function registerStorageIpc(
     return results;
   });
 
-  ipcMain.handle('arc:storage-list-cards', async (_e, params: unknown) => {
-    const root = await readLibraryRoot();
-    if (!root) return [];
-    await ensureLibraryReady(root);
-    const p = params as ListCardsParams;
-    return listCardsFromDb(root, p).map((r) => cardIndexToRenderer(rowToCardRecord(r)));
+  ipcMain.on('arc:storage-list-cards-sync', (event, params: unknown) => {
+    enterListCardsHandler();
+    try {
+      const p = params as ListCardsParams;
+      const root = readLibraryRootSync();
+      if (!root || !isLibraryRootReady(root)) {
+        event.returnValue = [];
+        return;
+      }
+      event.returnValue = queryListCards(root, p);
+    } finally {
+      exitListCardsHandler();
+    }
   });
 
   ipcMain.handle('arc:storage-get-card', async (_e, cardId: unknown) => {
@@ -270,11 +302,9 @@ export function registerStorageIpc(
   });
 
   ipcMain.handle('arc:storage-gallery-filter-stats', async (_e, payload: unknown) => {
+    await yieldForNavigationIpc();
     const root = await readLibraryRoot();
     if (!root) return null;
-    await ensureLibraryReady(root);
-    await ensureVideoDurationBackfill(root);
-    await ensureDimensionsBackfill(root);
     const p = (payload ?? {}) as {
       libraryScope?: string;
       selectedTagIds?: string[];
@@ -282,15 +312,31 @@ export function registerStorageIpc(
       collectionId?: string | null;
       moodboardCardIds?: string[] | null;
     };
-    const scope =
+    const scope: LibraryScope =
       p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
-    return getGalleryFilterStats(root, {
+    const opts = {
       libraryScope: scope,
       selectedTagIds: Array.isArray(p.selectedTagIds) ? p.selectedTagIds : [],
       cardIdExact: typeof p.cardIdExact === 'string' ? p.cardIdExact : null,
       collectionId: typeof p.collectionId === 'string' ? p.collectionId : null,
       moodboardCardIds: Array.isArray(p.moodboardCardIds) ? p.moodboardCardIds : null
-    });
+    };
+    const cacheKey = buildGalleryFilterStatsCacheKey(opts);
+    const cached = getCachedGalleryFilterStats(root, cacheKey);
+    if (cached) return cached;
+
+    await ensureLibraryReady(root);
+    const navSnap = captureNavigationEpoch();
+    try {
+      const stats = await getGalleryFilterStatsAsync(root, opts, () => isNavigationEpochStale(navSnap));
+      setCachedGalleryFilterStats(root, cacheKey, stats);
+      return stats;
+    } catch (err) {
+      if (err instanceof FilterStatsAborted) {
+        return getCachedGalleryFilterStats(root, cacheKey);
+      }
+      throw err;
+    }
   });
 
   ipcMain.handle('arc:storage-list-filter-presets', async () => {
@@ -375,6 +421,7 @@ export function registerStorageIpc(
   });
 
   ipcMain.handle('arc:storage-list-all-tags', async () => {
+    await yieldForNavigationIpc();
     const root = await readLibraryRoot();
     if (!root) return [];
     await ensureLibraryReady(root);
@@ -396,6 +443,7 @@ export function registerStorageIpc(
   });
 
   ipcMain.handle('arc:storage-list-collections', async () => {
+    await yieldForNavigationIpc();
     const root = await readLibraryRoot();
     if (!root) return [];
     await ensureLibraryReady(root);
@@ -417,10 +465,47 @@ export function registerStorageIpc(
   });
 
   ipcMain.handle('arc:storage-collection-counts', async () => {
+    await yieldForNavigationIpc();
     const root = await readLibraryRoot();
     if (!root) return {};
     await ensureLibraryReady(root);
     return getCollectionCardCounts(root);
+  });
+
+  ipcMain.handle('arc:storage-collection-preview-slices', async (_e, limit: unknown) => {
+    await yieldForNavigationIpc();
+    const root = await readLibraryRoot();
+    if (!root) return {};
+    await ensureLibraryReady(root);
+    const n = typeof limit === 'number' && limit > 0 ? limit : 3;
+    const slices = getCollectionPreviewSlicesFromDb(root, n);
+    const out: Record<string, ReturnType<typeof cardIndexToRenderer>[]> = {};
+    for (const [colId, rows] of Object.entries(slices)) {
+      out[colId] = rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
+    }
+    return out;
+  });
+
+  ipcMain.handle('arc:storage-collections-sidebar', async (_e, payload: unknown) => {
+    await yieldForNavigationIpc();
+    const root = await readLibraryRoot();
+    if (!root) return { collections: [], counts: {}, previews: {} };
+    await ensureLibraryReady(root);
+    const previewLimitRaw =
+      payload && typeof payload === 'object' && 'previewLimit' in payload
+        ? (payload as { previewLimit?: unknown }).previewLimit
+        : 0;
+    const previewLimit = typeof previewLimitRaw === 'number' && previewLimitRaw > 0 ? previewLimitRaw : 0;
+    const collections = listCollections(root);
+    const counts = getCollectionCardCounts(root);
+    let previews: Record<string, ReturnType<typeof cardIndexToRenderer>[]> = {};
+    if (previewLimit > 0) {
+      const slices = getCollectionPreviewSlicesFromDb(root, previewLimit);
+      for (const [colId, rows] of Object.entries(slices)) {
+        previews[colId] = rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
+      }
+    }
+    return { collections, counts, previews };
   });
 
   ipcMain.handle('arc:storage-collection-stats', async (_e, collectionId: unknown) => {
@@ -431,6 +516,7 @@ export function registerStorageIpc(
   });
 
   ipcMain.handle('arc:storage-get-moodboard', async () => {
+    await yieldForNavigationIpc();
     const root = await readLibraryRoot();
     if (!root) return { version: 1, moodboardCardIds: [] };
     return getMoodboardData(root);

@@ -42,6 +42,8 @@ declare global {
   interface Window {
     arc?: {
       getLibraryPath: () => Promise<string | null>;
+      setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => void;
+      getMediaServerOrigin: () => string | null;
       setLibraryPath: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
       pickLibraryFolder: () => Promise<string | null>;
       readMetadata: () => Promise<ArcMetadataV1 | null>;
@@ -117,6 +119,14 @@ declare global {
       storageUpsertCollection: (col: CollectionRecord) => Promise<void>;
       storageDeleteCollection: (id: string) => Promise<void>;
       storageCollectionCounts: () => Promise<Record<string, number>>;
+      storageCollectionPreviewSlices: (limit: number) => Promise<Record<string, CardRecord[]>>;
+      storageCollectionsSidebar: (payload: {
+        previewLimit?: number;
+      }) => Promise<{
+        collections: CollectionRecord[];
+        counts: Record<string, number>;
+        previews: Record<string, CardRecord[]>;
+      }>;
       storageCollectionStats: (collectionId: string) => Promise<{
         cardCount: number;
         totalSizeMb: number;

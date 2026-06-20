@@ -1,9 +1,11 @@
-import { app, BrowserWindow, Menu, nativeTheme, protocol } from 'electron';
+import { app, BrowserWindow, Menu, nativeTheme } from 'electron';
 import path from 'path';
 
 import { appIconPath } from './appIcon';
 import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts } from './devTools';
-import { registerArcIpc, registerArcMediaProtocol } from './ipc';
+import { registerArcIpc } from './ipc';
+import { readLibraryRootSync } from './libraryRootConfig';
+import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
 import { applyStoredLaunchAtLogin, readAppPreferences, registerAppPreferencesIpc } from './appPreferences';
@@ -21,18 +23,6 @@ import {
   WINDOW_MIN_HEIGHT,
   WINDOW_MIN_WIDTH
 } from './windowSize';
-
-protocol.registerSchemesAsPrivileged([
-  {
-    scheme: 'arc-media',
-    privileges: {
-      standard: true,
-      secure: true,
-      supportFetchAPI: true,
-      corsEnabled: true
-    }
-  }
-]);
 
 function createWindow(): BrowserWindow {
   const preloadPath = path.resolve(__dirname, '..', 'preload', 'index.js');
@@ -52,7 +42,8 @@ function createWindow(): BrowserWindow {
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      backgroundThrottling: false
     }
   });
 
@@ -103,13 +94,13 @@ app.on('web-contents-created', (_event, contents) => {
   bindFileDropGuards(contents);
 });
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   nativeTheme.themeSource = 'system';
 
   clearSessionWindowSize();
 
-  registerArcMediaProtocol();
+  await startArcMediaServer(readLibraryRootSync());
   registerArcIpc();
   registerAppPreferencesIpc();
   registerWindowChromeIpc();
@@ -144,6 +135,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  shutdownArcMediaServer();
   destroyAppTray();
   unregisterDevToolsShortcuts();
   unregisterScreenshotShortcut();

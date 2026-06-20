@@ -26,9 +26,18 @@ function arc() {
   return window.arc;
 }
 
+let ensureReadyPromise: Promise<void> | null = null;
+
 export async function storageEnsureReady(): Promise<void> {
-  const res = await arc().storageEnsureReady();
-  if (!res.ok) throw new Error(res.error ?? 'Библиотека не готова');
+  if (!ensureReadyPromise) {
+    ensureReadyPromise = (async () => {
+      const res = await arc().storageEnsureReady();
+      if (!res.ok) throw new Error(res.error ?? 'Библиотека не готова');
+    })().finally(() => {
+      ensureReadyPromise = null;
+    });
+  }
+  return ensureReadyPromise;
 }
 
 export async function storageListCards(params: StorageListCardsParams): Promise<CardRecord[]> {
@@ -128,6 +137,22 @@ export async function storageDeleteCollection(id: string): Promise<void> {
 
 export async function storageCollectionCounts(): Promise<Record<string, number>> {
   return arc().storageCollectionCounts();
+}
+
+export async function storageCollectionPreviewSlices(
+  limitPerCollection: number
+): Promise<Record<string, CardRecord[]>> {
+  return arc().storageCollectionPreviewSlices(limitPerCollection);
+}
+
+export async function storageCollectionsSidebar(payload: {
+  previewLimit?: number;
+}): Promise<{
+  collections: CollectionRecord[];
+  counts: Record<string, number>;
+  previews: Record<string, CardRecord[]>;
+}> {
+  return arc().storageCollectionsSidebar(payload);
 }
 
 export async function storageCollectionStats(

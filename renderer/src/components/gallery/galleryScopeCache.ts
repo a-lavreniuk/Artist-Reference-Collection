@@ -42,3 +42,12 @@ export function invalidateGallerySnapshotsForScopes(scopes: readonly LibraryScop
     }
   }
 }
+
+/** Dev-диагностика: ключи и размеры snapshot-кэша. */
+export function listGallerySnapshotStats(): Record<string, { cardCount: number; offset: number; hasMore: boolean }> {
+  const out: Record<string, { cardCount: number; offset: number; hasMore: boolean }> = {};
+  for (const [key, snap] of snapshots.entries()) {
+    out[key] = { cardCount: snap.cards.length, offset: snap.offset, hasMore: snap.hasMore };
+  }
+  return out;
+}

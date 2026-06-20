@@ -1,10 +1,10 @@
 import type Database from 'better-sqlite3';
+import { waitForNavigationIpc } from '../ipcNavigationPriority';
 import { openLibraryDb } from './db';
 import type { DurationMeta, FileWeightMeta, ResolutionMeta } from './filterBucketLabels';
 import {
   aspectRatioSql,
   buildGalleryFilterWhere,
-  computeGalleryFilterBoundaries,
   dateRangeForPreset,
   emptyGalleryAdvancedFilters,
   hasAnyVideo,
@@ -14,6 +14,7 @@ import {
   type GalleryFilterQueryContext,
   type GallerySortState
 } from './galleryFilters';
+import { getOrComputeGalleryFilterBoundaries } from './galleryFilterBoundariesCache';
 import type { LibraryScope } from './types';
 
 export type GalleryFilterStats = {
@@ -160,7 +161,7 @@ export function getGalleryFilterStats(
     opts.collectionId ?? null,
     opts.moodboardCardIds ?? null
   );
-  const boundaries = computeGalleryFilterBoundaries(db);
+  const boundaries = getOrComputeGalleryFilterBoundaries(db);
   const hasVideo = hasAnyVideo(db);
 
   const aspectMap = aspectRatioSql('c');
@@ -238,3 +239,117 @@ export function getGalleryFilterStats(
     duration
   };
 }
+
+class FilterStatsAborted extends Error {
+  override readonly name = 'FilterStatsAborted';
+}
+
+async function cooperativeYield(shouldAbort: () => boolean): Promise<void> {
+  await waitForNavigationIpc();
+  if (shouldAbort()) throw new FilterStatsAborted();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  if (shouldAbort()) throw new FilterStatsAborted();
+}
+
+/** Не блокирует sendSync list-cards — уступает event loop между пачками COUNT. */
+export async function getGalleryFilterStatsAsync(
+  libraryRoot: string,
+  opts: {
+    libraryScope?: LibraryScope;
+    selectedTagIds?: string[];
+    cardIdExact?: string | null;
+    collectionId?: string | null;
+    moodboardCardIds?: string[] | null;
+  },
+  shouldAbort: () => boolean
+): Promise<GalleryFilterStats> {
+  const db = openLibraryDb(libraryRoot);
+  const ctx = baseContext(
+    opts.libraryScope ?? 'all',
+    opts.selectedTagIds ?? [],
+    opts.cardIdExact ?? null,
+    opts.collectionId ?? null,
+    opts.moodboardCardIds ?? null
+  );
+
+  await cooperativeYield(shouldAbort);
+  const boundaries = getOrComputeGalleryFilterBoundaries(db);
+  const hasVideo = hasAnyVideo(db);
+
+  await cooperativeYield(shouldAbort);
+  const aspectMap = aspectRatioSql('c');
+  const aspectRatio = {} as Record<AspectRatioFilterValue, number>;
+  for (const key of Object.keys(aspectMap) as AspectRatioFilterValue[]) {
+    aspectRatio[key] = countWithExtra(db, ctx, [`(${aspectMap[key]})`], [], boundaries);
+  }
+  await cooperativeYield(shouldAbort);
+  const extRows = db
+    .prepare(
+      `SELECT DISTINCT LOWER(COALESCE(format, '')) AS fmt FROM cards c WHERE COALESCE(c.is_deleted, 0) = 0 AND COALESCE(format, '') != ''`
+    )
+    .all() as Array<{ fmt: string }>;
+  const fileExtensions: Record<string, number> = {};
+  for (const r of extRows) {
+    if (!r.fmt) continue;
+    fileExtensions[r.fmt.toUpperCase()] = countWithExtra(
+      db,
+      ctx,
+      [`LOWER(COALESCE(c.format, '')) = ?`],
+      [r.fmt],
+      boundaries
+    );
+  }
+  await cooperativeYield(shouldAbort);
+  const description = {
+    has: countWithExtra(db, ctx, [`(COALESCE(c.description,'') != '')`], [], boundaries),
+    missing: countWithExtra(db, ctx, [`(COALESCE(c.description,'') = '')`], [], boundaries)
+  };
+  const link = {
+    has: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') != '')`], [], boundaries),
+    missing: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') = '')`], [], boundaries)
+  };
+  await cooperativeYield(shouldAbort);
+  const dateKeys = ['today', 'yesterday', 'week', 'month', 'threeMonths', 'year'] as const;
+  const dateAdded: Record<string, number> = {};
+  for (const preset of dateKeys) {
+    const { from, to } = dateRangeForPreset(preset);
+    dateAdded[preset] = countWithExtra(
+      db,
+      ctx,
+      ['(c.added_at >= ? AND c.added_at <= ?)'],
+      [from.toISOString(), to.toISOString()],
+      boundaries
+    );
+  }
+  await cooperativeYield(shouldAbort);
+  const fileWeight: Record<string, number> = {};
+  for (const seg of boundaries.fileWeight.segments) {
+    fileWeight[seg.key] = countWeightSegment(db, ctx, boundaries, seg.key);
+  }
+
+  const resolution: Record<string, number> = {};
+  for (const seg of boundaries.resolution.segments) {
+    resolution[seg.key] = countResolutionSegment(db, ctx, boundaries, seg.key);
+  }
+
+  const duration: Record<string, number> = {};
+  for (const seg of boundaries.duration.segments) {
+    duration[seg.key] = countDurationSegment(db, ctx, boundaries, seg.key);
+  }
+  return {
+    fileWeightMeta: boundaries.fileWeight,
+    durationMeta: boundaries.duration,
+    resolutionMeta: boundaries.resolution,
+    hasVideo,
+    aspectRatio,
+    fileExtensions,
+    description,
+    link,
+    dateAdded,
+    fileWeight,
+    resolution,
+    duration
+  };
+}
+
+export { FilterStatsAborted };

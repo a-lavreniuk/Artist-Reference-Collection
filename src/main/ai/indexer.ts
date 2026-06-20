@@ -24,6 +24,7 @@ import { MODEL_CATALOG } from './types';
 import { clearAiSearchCache, vectorFromNumbers } from './semanticSearch';
 import { upsertCardAiCaption } from '../storage/cardAiCaption';
 import { upsertCardAiCaptionFts } from '../storage/cardFts';
+import { waitForNavigationIpc } from '../ipcNavigationPriority';
 
 let indexRunning = false;
 let indexPaused = false;
@@ -360,6 +361,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
 
         for (const cardId of targets) {
           if (indexPaused) break;
+          await waitForNavigationIpc();
           currentCardId = cardId;
           currentCardProgress = 0;
           lastError = null;

@@ -97,6 +97,7 @@ export default function GalleryNavbarFilters() {
     toggleFilterVisibility,
     stats,
     presets,
+    refreshStats,
     savePreset,
     applyPreset,
     deletePreset,
@@ -106,6 +107,12 @@ export default function GalleryNavbarFilters() {
   } = useGalleryFilters();
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openMenu === null) return;
+    void refreshStats();
+  }, [openMenu, refreshStats]);
+
   const [presetModal, setPresetModal] = useState<PresetModalState>(null);
   const [descKeywords, setDescKeywords] = useState('');
   const [linkKeywords, setLinkKeywords] = useState('');

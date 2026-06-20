@@ -42,7 +42,21 @@ export async function ensureLibraryMetaDirLayout(libraryRoot: string): Promise<v
   const metaDir = libraryMetaDirAbs(root);
   await mkdir(metaDir, { recursive: true });
 
-  closeLibraryDb();
+  let mustCloseDb = false;
+  for (const name of LIBRARY_META_BASENAMES) {
+    const atRoot = path.join(root, name);
+    const atMeta = path.join(metaDir, name);
+    const hasRoot = await fileExists(atRoot);
+    const hasMeta = await fileExists(atMeta);
+    if ((hasRoot && !hasMeta) || (hasRoot && hasMeta)) {
+      mustCloseDb = true;
+      break;
+    }
+  }
+
+  if (mustCloseDb) {
+    closeLibraryDb();
+  }
 
   for (const name of LIBRARY_META_BASENAMES) {
     const atRoot = path.join(root, name);

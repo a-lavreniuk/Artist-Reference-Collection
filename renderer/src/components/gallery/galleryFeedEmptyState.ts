@@ -19,6 +19,7 @@ export function resolveGalleryFeedEmptyState(input: {
   ready: boolean;
   loading: boolean;
   booting?: boolean;
+  feedSettled?: boolean;
   cardCount: number;
   feedError: string | null;
   hasSearchFilters: boolean;
@@ -36,6 +37,7 @@ export function resolveGalleryFeedEmptyState(input: {
     ready,
     loading,
     booting,
+    feedSettled = true,
     cardCount,
     feedError,
     hasSearchFilters,
@@ -58,7 +60,7 @@ export function resolveGalleryFeedEmptyState(input: {
   }
 
   if (booting && !isRemoteSearch) return null;
-  if (cardCount > 0 || loading) return null;
+  if (!feedSettled || cardCount > 0 || loading) return null;
 
   if (feedError) {
     const copy: EmptyStateCopy = {

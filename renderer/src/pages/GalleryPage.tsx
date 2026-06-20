@@ -27,11 +27,11 @@ import { useGalleryCollectionsStrip } from '../hooks/useGalleryCollectionsStrip'
 import {
   getMoodboardCardIds,
   isCardOnBoard,
-  isLibraryConfigured,
   removeCardFromMoodboard,
   addCardToMoodboard
 } from '../services/db';
 import { useGalleryMeta } from '../context/GalleryMetaContext';
+import { useLibraryConfigured } from '../hooks/useLibraryConfigured';
 
 import { parseLibraryScope } from '../search/libraryScopeUrl';
 
@@ -44,6 +44,7 @@ import { startVisualSimilarSearch } from '../search/startVisualSimilarSearch';
 import { EmptyState } from '../components/empty-state';
 import { useImportContext } from '../components/import/ImportContext';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
+import { resolveMainTab } from '../components/layout/navbarLayout';
 
 
 
@@ -54,6 +55,8 @@ export default function GalleryPage() {
   const location = useLocation();
 
   const navigate = useNavigate();
+
+  const isGalleryRoute = resolveMainTab(location.pathname) === 'gallery';
 
   const { filters, sort, activeCategoryCount } = useGalleryFilters();
 
@@ -72,7 +75,7 @@ export default function GalleryPage() {
   const { openImportPicker } = useImportContext();
   const { prefs } = useAppPreferences();
 
-  const [ready, setReady] = useState(false);
+  const ready = useLibraryConfigured();
 
   const {
     isRemoteSearchFeed,
@@ -83,18 +86,29 @@ export default function GalleryPage() {
     hasMore,
     loading,
     booting,
+    feedSettled,
     shuffleReloading,
     loadMore,
     reloadFromStart
-  } = useScopedGalleryFeed({ feedQuery, searchParams, sort, libraryReady: ready });
+  } = useScopedGalleryFeed({
+    feedQuery,
+    searchParams,
+    sort,
+    libraryReady: ready,
+    mediaSection: 'gallery',
+    feedActive: isGalleryRoute
+  });
 
   const { tagsIndex, moodboardCardIds, refreshMoodboard } = useGalleryMeta();
 
-  useRegisterGalleryFeedScope({
-    libraryScope: feedQuery.libraryScope,
-    selectedTagIds: feedQuery.selectedTagIds,
-    cardIdExact: feedQuery.cardIdExact
-  });
+  useRegisterGalleryFeedScope(
+    {
+      libraryScope: feedQuery.libraryScope,
+      selectedTagIds: feedQuery.selectedTagIds,
+      cardIdExact: feedQuery.cardIdExact
+    },
+    isGalleryRoute
+  );
 
   const hasUrlSearch =
     feedQuery.selectedTagIds.length > 0 || Boolean(feedQuery.cardIdExact) || isRemoteSearchFeed;
@@ -138,13 +152,6 @@ export default function GalleryPage() {
   }, [location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
-    void (async () => {
-      const ok = await isLibraryConfigured();
-      setReady(ok);
-    })();
-  }, []);
-
-  useEffect(() => {
     const outlet = document.querySelector('.arc-app-outlet');
     if (outlet instanceof HTMLElement) scrollRootRef.current = outlet;
   }, [ready]);
@@ -177,6 +184,7 @@ export default function GalleryPage() {
       ready,
       loading,
       booting,
+      feedSettled,
       cardCount: cards.length,
       feedError,
       hasSearchFilters,
@@ -202,6 +210,7 @@ export default function GalleryPage() {
   }, [
     ready,
     booting,
+    feedSettled,
     cards.length,
     loading,
     feedError,
@@ -214,7 +223,9 @@ export default function GalleryPage() {
     resetGallerySearch
   ]);
 
-
+  if (!isGalleryRoute) {
+    return null;
+  }
 
   return (
 
@@ -250,6 +261,8 @@ export default function GalleryPage() {
             cards={cards}
 
             srcMap={srcMap}
+
+            mediaTab="gallery"
 
             scrollRootRef={scrollRootRef}
 
