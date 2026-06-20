@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { pathsFromFileList, registerFileDropListener } from './fileDropBridge';
 
+type HistoryEntityType = 'card' | 'collection' | 'category' | 'tag';
+type HistorySegmentPayload =
+  | { kind: 'text'; text: string }
+  | { kind: 'entity'; entityType: HistoryEntityType; id: string; label: string };
+
 contextBridge.exposeInMainWorld('arc', {
   getLibraryPath: () => ipcRenderer.invoke('arc:get-library-path') as Promise<string | null>,
   setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => {
@@ -133,8 +138,13 @@ contextBridge.exposeInMainWorld('arc', {
     >,
   trashPath: (absPath: string) =>
     ipcRenderer.invoke('arc:trash-path', absPath) as Promise<{ ok: true } | { ok: false; error?: string }>,
-  readHistory: () => ipcRenderer.invoke('arc:read-history') as Promise<Array<{ time: string; message: string }>>,
-  appendHistoryLine: (message: string) => ipcRenderer.invoke('arc:append-history-line', message) as Promise<void>,
+  readHistory: () =>
+    ipcRenderer.invoke('arc:read-history') as Promise<
+      Array<{ time: string; message: string; segments?: HistorySegmentPayload[] }>
+    >,
+  appendHistoryLine: (message: string, segments?: HistorySegmentPayload[]) =>
+    ipcRenderer.invoke('arc:append-history-line', message, segments) as Promise<void>,
+  clearHistory: () => ipcRenderer.invoke('arc:clear-history') as Promise<void>,
   pickBackupArchive: () => ipcRenderer.invoke('arc:pick-backup-archive') as Promise<string | null>,
   backupStart: (opts: { destDir: string; partCount: 1 | 2 | 4 | 8 }) =>
     ipcRenderer.invoke('arc:backup-start', opts) as Promise<{ ok: true } | { ok: false; error: string }>,

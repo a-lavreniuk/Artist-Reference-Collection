@@ -1,12 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type PointerEvent
-} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import TagsCategorySection from '../components/tags/TagsCategorySection';
 import TagsPageSearch from '../components/tags/TagsPageSearch';
@@ -48,6 +41,7 @@ import {
 } from '../services/db';
 
 export default function TagsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tagsByCategory, setTagsByCategory] = useState<Record<string, TagRecord[]>>({});
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -93,6 +87,30 @@ export default function TagsPage() {
       window.removeEventListener('storage', onRefresh);
     };
   }, [load]);
+
+  useEffect(() => {
+    const tagId = searchParams.get('tag')?.trim();
+    const categoryId = searchParams.get('category')?.trim();
+    if (!tagId && !categoryId) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('tag');
+    nextParams.delete('category');
+    setSearchParams(nextParams, { replace: true });
+
+    if (tagId) {
+      const tag = allTags.find((t) => t.id === tagId);
+      if (tag) {
+        setSelectedCategoryId(tag.categoryId);
+        setTagModal({ mode: 'edit', tag });
+      }
+      return;
+    }
+
+    if (categoryId && categories.some((c) => c.id === categoryId)) {
+      setSelectedCategoryId(categoryId);
+    }
+  }, [allTags, categories, searchParams, setSearchParams]);
 
   useEffect(() => {
     const onResize = () => {

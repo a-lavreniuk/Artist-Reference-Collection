@@ -50,10 +50,12 @@ export function hasArcApi(): boolean {
   return typeof window !== 'undefined' && typeof window.arc !== 'undefined';
 }
 
-export async function tryAppendLibraryHistory(message: string): Promise<void> {
+import type { HistorySegment } from '../historyTypes';
+
+export async function tryAppendLibraryHistory(message: string, segments?: HistorySegment[]): Promise<void> {
   if (!hasArcApi() || !window.arc?.appendHistoryLine) return;
   try {
-    await window.arc.appendHistoryLine(message);
+    await window.arc.appendHistoryLine(message, segments);
   } catch {
     /* ignore */
   }

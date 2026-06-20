@@ -3,6 +3,7 @@ import { createEmptyMoodboardBoard } from '../arcSchema';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import * as storage from '../storageClient';
 import { resolveBackend, STORAGE_KEYS, tryAppendLibraryHistory } from './backend';
+import { historyCardAction, historyQuotedEntity } from '../historySegments';
 import {
   cardHasAllTagIds,
   normalizeCardRecord,
@@ -352,7 +353,8 @@ export async function softDeleteCard(cardId: string): Promise<void> {
     notifyMoodboardBoardChanged();
   }
 
-  void tryAppendLibraryHistory('Удалена карточка');
+  const deleted = historyCardAction('Удалена ', cardId);
+  void tryAppendLibraryHistory(deleted.message, deleted.segments);
   notifyCardsChanged();
   notifyTagsChanged();
 }
@@ -362,7 +364,8 @@ export async function restoreCard(cardId: string): Promise<void> {
   if (b === 'file') {
     await storage.storageRestoreCard(cardId);
   }
-  void tryAppendLibraryHistory('Восстановлена карточка');
+  const restored = historyCardAction('Восстановлена ', cardId);
+  void tryAppendLibraryHistory(restored.message, restored.segments);
   notifyCardsChanged();
   notifyTagsChanged();
 }
@@ -386,7 +389,11 @@ export async function permanentDeleteCard(cardId: string): Promise<void> {
     notifyMoodboardBoardChanged();
   }
 
-  void tryAppendLibraryHistory('Удалена карточка навсегда');
+  void tryAppendLibraryHistory('Удалена карточка навсегда', [
+    { kind: 'text', text: 'Удалена ' },
+    { kind: 'entity', entityType: 'card', id: cardId, label: 'карточка' },
+    { kind: 'text', text: ' навсегда' }
+  ]);
   notifyCardsChanged();
   notifyTagsChanged();
 }

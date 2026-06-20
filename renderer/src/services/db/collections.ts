@@ -7,6 +7,7 @@ import {
   STORAGE_KEYS,
   tryAppendLibraryHistory
 } from './backend';
+import { historyQuotedEntity } from '../historySegments';
 import { newId, normalizeCardRecord, safeReadArray, safeWriteArray, sortCollections } from './internal';
 import { notifyCardsChanged, notifyCollectionsChanged } from './events';
 import type { CollectionStats } from './types';
@@ -174,6 +175,11 @@ export async function deleteCollection(collectionId: string): Promise<void> {
   notifyCollectionsChanged();
   notifyCardsChanged();
   if (removed?.name) {
-    void tryAppendLibraryHistory(`Удалена коллекция «${removed.name}»`);
+    const entry = historyQuotedEntity('Удалена коллекция «', {
+      entityType: 'collection',
+      id: collectionId,
+      label: removed.name
+    });
+    void tryAppendLibraryHistory(entry.message, entry.segments);
   }
 }

@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-
-type Entry = { time: string; message: string };
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { EmptyState } from '../../components/empty-state';
+import { EMPTY_STATE_COPY } from '../../content/emptyStates';
+import type { HistoryEntry } from '../../services/historyTypes';
+import ConfirmClearHistoryModal from './ConfirmClearHistoryModal';
+import { formatHistoryDisplayTime } from './formatHistoryDisplayTime';
+import HistoryMessage from './HistoryMessage';
 
 type FilterKey = 'today' | 'week' | 'month' | 'all';
 
@@ -38,19 +42,29 @@ function startOfMonth(): Date {
   return d;
 }
 
+const FILTER_TABS: { key: FilterKey; label: string }[] = [
+  { key: 'today', label: 'Сегодня' },
+  { key: 'week', label: 'За неделю' },
+  { key: 'month', label: 'За месяц' },
+  { key: 'all', label: 'Вся история' }
+];
+
 export default function SettingsHistoryPanel() {
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [filter, setFilter] = useState<FilterKey>('today');
+  const [clearOpen, setClearOpen] = useState(false);
+
+  const loadHistory = useCallback(async () => {
+    if (!window.arc?.readHistory) {
+      setEntries([]);
+      return;
+    }
+    setEntries(await window.arc.readHistory());
+  }, []);
 
   useEffect(() => {
-    void (async () => {
-      if (!window.arc?.readHistory) {
-        setEntries([]);
-        return;
-      }
-      setEntries(await window.arc.readHistory());
-    })();
-  }, []);
+    void loadHistory();
+  }, [loadHistory]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -71,44 +85,72 @@ export default function SettingsHistoryPanel() {
     });
   }, [entries, filter]);
 
-  const tabs: { key: FilterKey; label: string }[] = [
-    { key: 'today', label: 'Сегодня' },
-    { key: 'week', label: 'За неделю' },
-    { key: 'month', label: 'За месяц' },
-    { key: 'all', label: 'Вся история' }
-  ];
+  const handleClear = async () => {
+    await window.arc?.clearHistory?.();
+    setEntries([]);
+  };
+
+  const isJournalEmpty = entries.length === 0;
+  const isFilterEmpty = !isJournalEmpty && filtered.length === 0;
+  const showEmptySection = isJournalEmpty || isFilterEmpty;
+
+  const emptyCopy = isJournalEmpty ? EMPTY_STATE_COPY.historyEmpty : EMPTY_STATE_COPY.historyFilterEmpty;
 
   return (
-    <div className="arc-settings-stack arc-history-screen">
-      <div className="tabs arc-history-tabs" role="tablist" aria-label="Период истории">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`tab-button${filter === t.key ? ' is-active' : ''}`}
-            role="tab"
-            aria-selected={filter === t.key}
-            onClick={() => setFilter(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
+    <>
+      <div className="arc-settings-stack arc-history-screen">
+        {showEmptySection ? (
+          <div className="arc-history-empty-host">
+            <EmptyState
+              {...emptyCopy}
+              fill
+              onPrimaryAction={isFilterEmpty ? () => setFilter('all') : undefined}
+            />
+          </div>
+        ) : (
+          <section className="panel elevation-sunken arc-history-container" aria-label="История действий">
+            <div className="arc-history-toolbar">
+              <div className="tabs arc-history-tabs" role="tablist" aria-label="Период истории">
+                {FILTER_TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    className={`tab-button${filter === t.key ? ' is-active' : ''}`}
+                    role="tab"
+                    aria-selected={filter === t.key}
+                    onClick={() => setFilter(t.key)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn btn-danger btn-ds" onClick={() => setClearOpen(true)}>
+                <span className="btn-ds__value">Очистить</span>
+              </button>
+            </div>
+
+            <div className="arc-history-fullbleed-sep" role="separator" />
+
+            <div className="arc-history-scroll">
+              <ul className="arc-history-list" aria-live="polite">
+                {filtered.map((e, i) => (
+                  <li key={`${e.time}-${i}`} className="arc-history-list__item">
+                    {i > 0 ? <div className="arc-history-row-sep" role="separator" /> : null}
+                    <div className="arc-history-item">
+                      <span className="typo-p-m arc-history-time">{formatHistoryDisplayTime(e.time)}</span>
+                      <HistoryMessage entry={e} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
       </div>
 
-      <section className="panel elevation-sunken arc-history-container" aria-label="История действий">
-        {filtered.length === 0 ? (
-          <p className="typo-p-m arc-history-empty">Нет записей за выбранный период.</p>
-        ) : (
-          <ul className="arc-history-list" aria-live="polite">
-            {filtered.map((e, i) => (
-              <li key={`${e.time}-${i}`} className="arc-history-item">
-                <span className="typo-p-m arc-history-time">{e.time}</span>
-                <p className="typo-p-m arc-history-message">{e.message}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
+      {clearOpen ? (
+        <ConfirmClearHistoryModal onClose={() => setClearOpen(false)} onConfirm={handleClear} />
+      ) : null}
+    </>
   );
 }

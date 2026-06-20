@@ -4496,16 +4496,40 @@ body.arc-card-detail-open .arc-app-outlet {
   gap: var(--s-3);
 }
 
+.arc-app-outlet:has(> .arc-settings-page--history) {
+  overflow: hidden;
+}
+
+.arc-settings-page--history {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+.arc-settings-page--history.arc-settings-page--legacy:not(.arc-settings-page--empty-stub) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.arc-settings-page--history > .arc-history-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .arc-history-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: min(640px, 64vh);
-  overflow-y: auto;
 }
 
 .arc-history-screen {
-  gap: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0;
 }
 
 .arc-history-tabs.tabs {
@@ -4514,26 +4538,73 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-history-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-l);
-  padding: var(--s-3);
+  padding: var(--s-4);
+  box-sizing: border-box;
+}
+
+.arc-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+
+.arc-history-fullbleed-sep {
+  flex-shrink: 0;
+  height: 0;
+  margin: var(--s-4) calc(var(--s-4) * -1) 0;
+  border: 0;
+  border-top: 1px solid var(--panel-border);
+}
+
+.arc-history-scroll {
+  flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
+  margin-top: var(--s-4);
+  scrollbar-width: thin;
+}
+
+.arc-history-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.arc-history-empty-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.arc-history-list__item {
+  list-style: none;
+}
+
+.arc-history-row-sep {
+  height: 0;
+  margin: var(--s-3) 0;
+  border: 0;
+  border-top: 1px solid var(--panel-border);
 }
 
 .arc-history-item {
   display: flex;
   align-items: center;
   gap: var(--s-4);
-  padding: var(--s-3) 0;
-}
-
-.arc-history-item + .arc-history-item {
-  border-top: 1px solid var(--panel-border);
+  padding: 0;
 }
 
 .arc-history-time {
   color: var(--text-elev-secondary);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .arc-history-message {
@@ -4544,9 +4615,12 @@ body.arc-card-detail-open .arc-app-outlet {
   overflow-wrap: anywhere;
 }
 
-.arc-history-empty {
-  margin: 0;
-  color: var(--text-elev-secondary);
+.arc-history-message .inline-link {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .arc-dup-pair {

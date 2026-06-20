@@ -9,6 +9,7 @@ import {
   resolveBackend,
   tryAppendLibraryHistory
 } from './backend';
+import { historyQuotedEntity } from '../historySegments';
 import { newId, normalizeNameForCompare } from './internal';
 import {
   notifyCardsChanged,
@@ -316,7 +317,12 @@ export async function deleteTag(tagId: string): Promise<void> {
   await persistTags(tags.filter((t) => t.id !== tagId));
   notifyTagsChanged();
   notifyCardsChanged();
-  void tryAppendLibraryHistory(`Удалена метка «${removed.name}»`);
+  const entry = historyQuotedEntity('Удалена метка «', {
+    entityType: 'tag',
+    id: tagId,
+    label: removed.name
+  });
+  void tryAppendLibraryHistory(entry.message, entry.segments);
 }
 
 export async function getDuplicateSimilarityThresholdPct(): Promise<number> {

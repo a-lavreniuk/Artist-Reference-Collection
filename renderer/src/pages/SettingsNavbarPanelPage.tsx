@@ -9,7 +9,7 @@ type PanelKey = 'statistics' | 'history' | 'duplicates';
 
 const PANEL_IN_DEVELOPMENT: Record<PanelKey, boolean> = {
   statistics: false,
-  history: true,
+  history: false,
   duplicates: true
 };
 
@@ -35,7 +35,7 @@ export default function SettingsNavbarPanelPage({ panel }: Props) {
 
   return (
     <div
-      className={`arc-settings-page arc-settings-page--legacy${inDevelopment ? ' arc-settings-page--empty-stub' : ''} arc-ui-kit-scope${panel === 'duplicates' ? ' arc-settings-page--duplicates' : ''}`}
+      className={`arc-settings-page arc-settings-page--legacy${inDevelopment ? ' arc-settings-page--empty-stub' : ''} arc-ui-kit-scope${panel === 'duplicates' ? ' arc-settings-page--duplicates' : ''}${panel === 'history' ? ' arc-settings-page--history' : ''}`}
       data-elevation="sunken"
       data-typo-role="primary"
       data-typo-tone="white"

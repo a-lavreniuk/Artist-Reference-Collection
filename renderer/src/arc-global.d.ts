@@ -6,7 +6,7 @@ import type {
   SavedFilterPreset
 } from './components/gallery/galleryFilterTypes';
 import type { ArcMetadataV1, CardRecord, CollectionRecord, MoodboardBoardV1 } from './services/arcSchema';
-import type { CategoryRecord, TagRecord } from './services/db';
+import type { HistoryEntry, HistorySegment } from './services/historyTypes';
 
 export {};
 
@@ -171,8 +171,9 @@ declare global {
       dirIsEmpty: (absPath: string) => Promise<boolean>;
       migrateLibrary: (targetPath: string) => Promise<{ ok: true; oldLibraryPath: string } | { ok: false; error: string }>;
       trashPath: (absPath: string) => Promise<{ ok: true } | { ok: false; error?: string }>;
-      readHistory: () => Promise<Array<{ time: string; message: string }>>;
-      appendHistoryLine: (message: string) => Promise<void>;
+      readHistory: () => Promise<HistoryEntry[]>;
+      appendHistoryLine: (message: string, segments?: HistorySegment[]) => Promise<void>;
+      clearHistory: () => Promise<void>;
       pickBackupArchive: () => Promise<string | null>;
       backupStart: (opts: { destDir: string; partCount: 1 | 2 | 4 | 8 }) => Promise<{ ok: true } | { ok: false; error: string }>;
       backupCancel: () => Promise<{ ok: true }>;

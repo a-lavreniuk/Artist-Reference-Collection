@@ -11,7 +11,7 @@ import {
 } from './media/mediaServerHost';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
 import { migrateLibraryToFolder } from './libraryMigrate';
-import { appendHistory, readHistory } from './libraryHistory';
+import { appendHistory, clearHistory, readHistory, type HistorySegment } from './libraryHistory';
 import { runBackup } from './backupLibrary';
 import { discoverBackupParts, restoreFromParts } from './restoreLibrary';
 import {
@@ -482,12 +482,20 @@ export function registerArcIpc(): void {
     return readHistory(root);
   });
 
-  ipcMain.handle('arc:append-history-line', async (_e, message: unknown) => {
+  ipcMain.handle('arc:append-history-line', async (_e, message: unknown, segments: unknown) => {
     assertNotMaintenance();
     if (typeof message !== 'string' || !message.trim()) return;
     const root = await readLibraryRootFromDisk();
     if (!root) return;
-    await appendHistory(root, message.trim());
+    const safeSegments = Array.isArray(segments) ? (segments as HistorySegment[]) : undefined;
+    await appendHistory(root, message.trim(), safeSegments);
+  });
+
+  ipcMain.handle('arc:clear-history', async () => {
+    assertNotMaintenance();
+    const root = await readLibraryRootFromDisk();
+    if (!root) return;
+    await clearHistory(root);
   });
 
   ipcMain.handle('arc:pick-backup-archive', async () => {

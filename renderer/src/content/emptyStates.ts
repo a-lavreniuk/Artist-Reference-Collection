@@ -96,5 +96,15 @@ export const EMPTY_STATE_COPY = {
   inDevelopmentBoard: {
     title: 'Доска пока в разработке',
     subtitle: 'Здесь будет артборд для работы с изображениями'
+  },
+  historyEmpty: {
+    title: 'История пока пуста',
+    subtitle: 'Здесь появятся записи о действиях с библиотекой — импорт, коллекции, метки и другое'
+  },
+  historyFilterEmpty: {
+    title: 'Нет записей за этот период',
+    subtitle: 'Выберите другой период или откройте всю историю',
+    primaryActionLabel: 'Вся история',
+    primaryActionVariant: 'outline'
   }
 } as const satisfies Record<string, EmptyStateCopy>;
