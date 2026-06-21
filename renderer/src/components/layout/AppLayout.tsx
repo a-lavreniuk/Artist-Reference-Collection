@@ -9,6 +9,7 @@ import ImportHost from '../import/ImportHost';
 import AutoImportHost from '../import/AutoImportHost';
 import NotificationHost from '../notifications/NotificationHost';
 import ScreenshotHost from '../screenshot/ScreenshotHost';
+import BugReportWidget from '../bug-report/BugReportWidget';
 import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
 import { GalleryMetaProvider } from '../../context/GalleryMetaContext';
 import { initAppPreferencesRuntime } from '../../services/appPreferencesRuntime';
@@ -94,6 +95,7 @@ export default function AppLayout() {
         </div>
         <PendingRestoreModal />
         <AppUpdateHost />
+        <BugReportWidget />
       </main>
       </AutoImportHost>
     </ImportHost>

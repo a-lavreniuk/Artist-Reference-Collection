@@ -5193,3 +5193,21 @@ body.arc-card-detail-open .arc-app-outlet {
     grid-template-columns: 1fr;
   }
 }
+
+/* Bug report widget — поверх модалок и оверлеев */
+.arc-bug-report-widget {
+  position: fixed;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: 10100;
+  pointer-events: none;
+}
+
+.arc-bug-report-widget .btn {
+  pointer-events: auto;
+}
+
+.arc-bug-report-widget .arc-tooltip {
+  z-index: 10101;
+}
+

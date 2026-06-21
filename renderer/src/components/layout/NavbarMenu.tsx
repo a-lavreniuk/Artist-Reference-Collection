@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
+import { openBugReportForm } from '../../services/bugReportService';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
 import type { UiThemePreference } from '../../services/appPreferences';
 
@@ -53,6 +54,7 @@ export default function NavbarMenu() {
         onSelect: () => setTheme('system')
       },
       { type: 'separator', key: 'sep3' },
+      { type: 'item', key: 'feedback', label: 'Сообщить о проблеме', iconClass: 'arc-icon-bug-s', onSelect: () => { setOpen(false); void openBugReportForm(); } },
       { type: 'item', key: 'onboarding', label: 'Онбординг', onSelect: () => navigate('/onboarding') },
       { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigate('/ui-kit') }
     ],

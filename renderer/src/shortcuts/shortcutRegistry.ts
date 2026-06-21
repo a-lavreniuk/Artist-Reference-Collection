@@ -1,10 +1,12 @@
 import {
   DEVTOOLS_ACCELERATORS,
+  FEEDBACK_ACCELERATOR,
   SCREENSHOT_ACCELERATOR
 } from '@arc-main-shared/shortcutAccelerators';
 
 export type ShortcutId =
   | 'global.screenshot'
+  | 'global.feedback'
   | 'devtools.f12'
   | 'devtools.toggle'
   | 'moodboard.undo'
@@ -45,6 +47,14 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'global',
     label: 'Сделать скриншот',
     defaultAccelerator: SCREENSHOT_ACCELERATOR,
+    scope: 'global',
+    settingsVisible: true
+  },
+  {
+    id: 'global.feedback',
+    groupId: 'global',
+    label: 'Сообщить о проблеме',
+    defaultAccelerator: FEEDBACK_ACCELERATOR,
     scope: 'global',
     settingsVisible: true
   },

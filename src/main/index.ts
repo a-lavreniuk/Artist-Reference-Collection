@@ -11,6 +11,7 @@ import { bindFileDropGuards } from './fileDropGuards';
 import { applyStoredLaunchAtLogin, readAppPreferences, registerAppPreferencesIpc } from './appPreferences';
 import { registerAutoImportIpc, restartAutoImportWatcher } from './autoImportWatcher';
 import { applyStoredScreenshotShortcut, unregisterScreenshotShortcut } from './screenshotShortcut';
+import { applyStoredFeedbackShortcut, registerFeedbackIpc, unregisterFeedbackShortcut } from './feedbackShortcut';
 import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
 import { registerDuplicateScanIpc } from './duplicateFileScan';
@@ -106,10 +107,12 @@ app.whenReady().then(async () => {
   registerWindowChromeIpc();
   registerScreenshotIpc();
   registerScreenshotPickerIpc();
+  registerFeedbackIpc();
   registerDuplicateScanIpc();
   registerAutoImportIpc();
   void applyStoredLaunchAtLogin();
   void applyStoredScreenshotShortcut();
+  applyStoredFeedbackShortcut();
   void readAppPreferences().then((prefs) => {
     restartAutoImportWatcher();
     if (prefs.aiSemanticSearchEnabled) scheduleIdleIndexing();
@@ -139,6 +142,7 @@ app.on('will-quit', () => {
   destroyAppTray();
   unregisterDevToolsShortcuts();
   unregisterScreenshotShortcut();
+  unregisterFeedbackShortcut();
   destroyScreenshotOverlay();
   shutdownAiWorker();
   void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());

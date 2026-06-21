@@ -292,6 +292,13 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:screenshot-saved', fn);
     return () => ipcRenderer.removeListener('arc:screenshot-saved', fn);
   },
+  openBugReportForm: () =>
+    ipcRenderer.invoke('arc:bug-report-open') as Promise<
+      | { ok: true; formUrl: string }
+      | { ok: false; error: string; code?: string }
+    >,
+  getBugReportFormUrl: () =>
+    ipcRenderer.invoke('arc:bug-report-get-url') as Promise<string | null>,
   screenshotPickerConfirm: (region: { x: number; y: number; width: number; height: number }) =>
     ipcRenderer.invoke('arc:screenshot-picker-confirm', region) as Promise<{ ok: boolean }>,
   screenshotPickerCancel: () =>
