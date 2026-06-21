@@ -1,11 +1,21 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
+import { useAppPreferences } from '../../hooks/useAppPreferences';
+import type { UiThemePreference } from '../../services/appPreferences';
 
 export default function NavbarMenu() {
   const navigate = useNavigate();
+  const { prefs, ready, update } = useAppPreferences();
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+
+  const currentTheme = prefs?.uiTheme ?? 'dark';
+
+  const setTheme = (uiTheme: UiThemePreference) => {
+    void update({ uiTheme });
+    setOpen(false);
+  };
 
   const rows = useMemo<ContextMenuRow[]>(
     () => [
@@ -18,14 +28,35 @@ export default function NavbarMenu() {
       { type: 'item', key: 'dup', label: 'Поиск дублей — в разработке', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
       { type: 'separator', key: 'sep2' },
       { type: 'header', key: 'theme-label', label: 'Оформление' },
-      { type: 'item', key: 'theme-light', label: 'Светлая', disabled: true },
-      { type: 'item', key: 'theme-dark', label: 'Тёмная', disabled: true },
-      { type: 'item', key: 'theme-auto', label: 'Автоматическая', disabled: true },
+      {
+        type: 'item',
+        key: 'theme-light',
+        label: 'Светлая',
+        disabled: !ready,
+        selected: currentTheme === 'light',
+        onSelect: () => setTheme('light')
+      },
+      {
+        type: 'item',
+        key: 'theme-dark',
+        label: 'Тёмная',
+        disabled: !ready,
+        selected: currentTheme === 'dark',
+        onSelect: () => setTheme('dark')
+      },
+      {
+        type: 'item',
+        key: 'theme-auto',
+        label: 'Автоматическая',
+        disabled: !ready,
+        selected: currentTheme === 'system',
+        onSelect: () => setTheme('system')
+      },
       { type: 'separator', key: 'sep3' },
       { type: 'item', key: 'onboarding', label: 'Онбординг', onSelect: () => navigate('/onboarding') },
       { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigate('/ui-kit') }
     ],
-    [navigate]
+    [navigate, ready, currentTheme]
   );
 
   return (

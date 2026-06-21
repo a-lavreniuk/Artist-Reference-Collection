@@ -62,7 +62,8 @@
   font-display: swap;
 }
 
-:root {
+:root,
+html[data-theme="dark"] {
   color-scheme: dark;
 
   /* Gray (ARC-2 Tokens, step 50) */
@@ -2195,35 +2196,43 @@ button.input {
 }
 
 .demo-alert-host .alert-success .demo-alert__close {
-  color: var(--green-500);
+  color: var(--alert-success-close);
 }
 
 .demo-alert-host .alert-success .demo-alert__close:hover {
-  color: var(--green-500);
+  color: var(--alert-success-close);
 }
 
 .demo-alert-host .alert-danger .demo-alert__close {
-  color: var(--red-500);
+  color: var(--alert-danger-close);
 }
 
 .demo-alert-host .alert-danger .demo-alert__close:hover {
-  color: var(--red-500);
+  color: var(--alert-danger-close);
 }
 
 .demo-alert-host .alert-warning .demo-alert__close {
-  color: var(--yellow-500);
+  color: var(--alert-warning-close);
 }
 
 .demo-alert-host .alert-warning .demo-alert__close:hover {
-  color: var(--yellow-500);
+  color: var(--alert-warning-close);
 }
 
 .demo-alert-host .alert-info .demo-alert__close {
-  color: var(--blue-500);
+  color: var(--alert-info-close);
 }
 
 .demo-alert-host .alert-info .demo-alert__close:hover {
-  color: var(--blue-500);
+  color: var(--alert-info-close);
+}
+
+.demo-alert-host .alert-brand .demo-alert__close {
+  color: var(--alert-brand-close);
+}
+
+.demo-alert-host .alert-brand .demo-alert__close:hover {
+  color: var(--alert-brand-close);
 }
 
 .demo-alert__close:focus-visible {
@@ -2830,32 +2839,36 @@ button.input {
 .alert {
   border-radius: var(--radius-m);
   border: 1px solid transparent;
-  padding: 12px;
+  padding: var(--s-2) var(--s-3) var(--s-2) var(--s-3);
   min-width: 240px;
-  color: var(--ui-text-primary);
-  font-size: var(--typo-p-s-size);
-  line-height: var(--typo-p-s-line);
-  font-weight: var(--typo-p-s-weight);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 .alert-info {
-  background: var(--blue-800);
-  border-color: var(--blue-700);
-  color: var(--blue-500);
+  background: var(--alert-info-bg);
+  border-color: var(--alert-info-border);
+  color: var(--alert-info-text);
+}
+.alert-brand {
+  background: var(--alert-brand-bg);
+  border-color: transparent;
+  color: var(--alert-brand-text);
 }
 .alert-success {
-  background: var(--green-800);
-  border-color: var(--green-700);
-  color: var(--green-500);
+  background: var(--alert-success-bg);
+  border-color: var(--alert-success-border);
+  color: var(--alert-success-text);
 }
 .alert-warning {
-  background: var(--yellow-800);
-  border-color: var(--yellow-700);
-  color: var(--yellow-500);
+  background: var(--alert-warning-bg);
+  border-color: var(--alert-warning-border);
+  color: var(--alert-warning-text);
 }
 .alert-danger {
-  background: var(--red-800);
-  border-color: var(--red-700);
-  color: var(--red-500);
+  background: var(--alert-danger-bg);
+  border-color: var(--alert-danger-border);
+  color: var(--alert-danger-text);
 }
 
 .skeleton-card {

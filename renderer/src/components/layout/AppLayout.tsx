@@ -12,6 +12,7 @@ import ScreenshotHost from '../screenshot/ScreenshotHost';
 import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
 import { GalleryMetaProvider } from '../../context/GalleryMetaContext';
 import { initAppPreferencesRuntime } from '../../services/appPreferencesRuntime';
+import { useUiThemeSync } from '../../hooks/useUiThemeSync';
 import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
 import { applyTopbarCssVars } from './navbarLayout';
 import { isLibraryConfigured } from '../../services/db';
@@ -19,6 +20,8 @@ import { GALLERY_FEED_SETTLED_EVENT } from '../gallery/galleryFeedSettled';
 import CardSectionsShell from './CardSectionsShell';
 
 export default function AppLayout() {
+  useUiThemeSync();
+
   useEffect(() => {
     void initAppPreferencesRuntime();
   }, []);
@@ -57,7 +60,6 @@ export default function AppLayout() {
     body.classList.add('arc-navbar-page');
     body.setAttribute('data-elevation', 'default');
     body.setAttribute('data-typo-role', 'primary');
-    body.setAttribute('data-typo-tone', 'white');
     body.setAttribute('data-typo-state', 'default');
     body.setAttribute('data-btn-size', 'l');
     body.setAttribute('data-input-size', 'l');
@@ -69,7 +71,6 @@ export default function AppLayout() {
       body.classList.remove('arc-navbar-page');
       body.removeAttribute('data-elevation');
       body.removeAttribute('data-typo-role');
-      body.removeAttribute('data-typo-tone');
       body.removeAttribute('data-typo-state');
       body.removeAttribute('data-btn-size');
       body.removeAttribute('data-input-size');

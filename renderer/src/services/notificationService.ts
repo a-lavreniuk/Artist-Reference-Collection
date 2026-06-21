@@ -1,11 +1,11 @@
-import type { DemoAlertVariant } from '../components/layout/DemoAlert';
+import type { AlertVariant } from '../components/alert/types';
 import type { NotificationPrefKey } from './appPreferences';
 
 export const APP_NOTIFICATION_EVENT = 'arc:app-notification';
 
 export type AppNotificationPayload = {
   message: string;
-  variant: DemoAlertVariant;
+  variant: AlertVariant;
   prefKey?: NotificationPrefKey;
   skipPrefCheck?: boolean;
 };

@@ -2,6 +2,7 @@ export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
+export type UiThemePreference = 'dark' | 'light' | 'system';
 
 export type NotificationPrefKey =
   | 'notifyScreenshotSaved'
@@ -37,6 +38,7 @@ export type AppPreferencesV1 = {
   aiSearchStrictness: number;
   galleryCollectionsStripEnabled: boolean;
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
+  uiTheme: UiThemePreference;
 };
 
 export function defaultAppPreferences(): AppPreferencesV1 {
@@ -67,7 +69,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiResourcePreset: 50,
     aiSearchStrictness: 50,
     galleryCollectionsStripEnabled: true,
-    galleryCollectionsSortMode: 'chrono'
+    galleryCollectionsSortMode: 'chrono',
+    uiTheme: 'dark'
   };
 }
 
@@ -83,6 +86,11 @@ function sanitizeImportAction(raw: unknown): ImportSourceFilesAction {
 function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
   if (raw === 'png' || raw === 'jpg' || raw === 'webp') return raw;
   return 'webp';
+}
+
+function sanitizeUiTheme(raw: unknown): UiThemePreference {
+  if (raw === 'light' || raw === 'system') return raw;
+  return 'dark';
 }
 
 /** Дополняет ответ IPC дефолтами — важно для новых полей prefs после обновления. */
@@ -109,7 +117,8 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
         : d.galleryCollectionsStripEnabled,
     galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
       raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
-    )
+    ),
+    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme)
   };
 }
 

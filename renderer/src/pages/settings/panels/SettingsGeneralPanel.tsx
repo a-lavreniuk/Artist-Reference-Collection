@@ -3,7 +3,7 @@ import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
-import type { GalleryCollectionsSortMode } from '../../../services/appPreferences';
+import type { GalleryCollectionsSortMode, UiThemePreference } from '../../../services/appPreferences';
 
 const LABEL_LAUNCH_AT_LOGIN = 'Запускать ARC при входе в систему.';
 const LABEL_CLOSE_TO_TRAY = 'При закрытии окна сворачивать приложение, а не закрывать.';
@@ -18,6 +18,12 @@ const COLLECTIONS_SORT_OPTIONS: Array<{ value: GalleryCollectionsSortMode; label
   { value: 'random', label: 'Случайный порядок' }
 ];
 
+const THEME_OPTIONS: Array<{ value: UiThemePreference; label: string }> = [
+  { value: 'light', label: 'Светлая' },
+  { value: 'dark', label: 'Тёмная' },
+  { value: 'system', label: 'Автоматическая' }
+];
+
 export default function SettingsGeneralPanel() {
   const { prefs, ready, update } = useAppPreferences();
   const disabled = !ready;
@@ -25,6 +31,22 @@ export default function SettingsGeneralPanel() {
   return (
     <div className="arc-settings-main__scroll">
       <div className={`arc-settings-main__content${ready ? ' is-prefs-ready' : ''}`}>
+        <SettingsSection title="Оформление">
+          <div className="arc-settings-radio-stack" role="radiogroup" aria-label="Тема оформления">
+            {THEME_OPTIONS.map((option) => (
+              <SettingsRadioRow
+                key={option.value}
+                label={option.label}
+                checked={(prefs?.uiTheme ?? 'dark') === option.value}
+                disabled={disabled}
+                onCheckedChange={() => void update({ uiTheme: option.value })}
+              />
+            ))}
+          </div>
+        </SettingsSection>
+
+        <SettingsSeparator />
+
         <SettingsSection title="Элементы запуска">
           <SettingsToggleRow
             label={LABEL_LAUNCH_AT_LOGIN}

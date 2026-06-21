@@ -13,7 +13,7 @@ import {
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import DemoAlert, { type DemoAlertVariant } from '../layout/DemoAlert';
+import DemoAlert, { type ToastAlertVariant } from '../layout/DemoAlert';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
@@ -135,7 +135,7 @@ export default function CardDetailOverlay({
   const [infoOpen, setInfoOpen] = useState(false);
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
   const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
-  const [actionAlert, setActionAlert] = useState<{ message: string; variant: DemoAlertVariant } | null>(null);
+  const [actionAlert, setActionAlert] = useState<{ message: string; variant: ToastAlertVariant } | null>(null);
   const [busy, setBusy] = useState(false);
   const [copyAlertMessage, setCopyAlertMessage] = useState<string | null>(null);
   const [copySettingsMenuOpen, setCopySettingsMenuOpen] = useState(false);
@@ -841,7 +841,7 @@ export default function CardDetailOverlay({
                             if (added) {
                               setMoodboardCardIds((prev) => new Set(prev).add(card.id));
                             }
-                            setActionAlert({ message: 'Карточка добавлена в мудборд', variant: 'success' });
+                            setActionAlert({ message: 'Карточка добавлена в мудборд', variant: 'brand' });
                             return;
                           }
                           const onBoard = await isCardOnBoard(card.id);

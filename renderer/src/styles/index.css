@@ -64,13 +64,18 @@ a {
   padding: var(--s-4);
   padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px));
   border-radius: var(--radius-l);
-  background: var(--gray-1000);
+  background: var(--sunken-bg);
   scrollbar-width: none;
   -ms-overflow-style: none;
-  --panel-bg: var(--gray-1000);
-  --panel-border: var(--gray-900);
+  --panel-bg: var(--sunken-bg);
+  --panel-border: var(--surface-border-sunken);
   --text-elev-primary: var(--gray-300);
   --text-elev-secondary: var(--gray-600);
+}
+
+html[data-theme="light"] .arc-app-outlet {
+  --text-elev-primary: var(--gray-950);
+  --text-elev-secondary: var(--gray-450);
 }
 
 .arc-app-outlet::-webkit-scrollbar {
@@ -1709,7 +1714,7 @@ body.arc-card-detail-open .arc-app-outlet {
   min-height: 0;
   border-radius: 0;
   overflow: hidden;
-  background: transparent;
+  background: var(--panel-bg);
   --arc-card-detail-viewport-h: calc(
     100vh - var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px)) - var(--s-4)
   );
@@ -1723,6 +1728,7 @@ body.arc-card-detail-open .arc-app-outlet {
   overflow-x: hidden;
   overflow-y: auto;
   padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px));
+  background: var(--panel-bg);
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -4885,6 +4891,7 @@ body.arc-card-detail-open .arc-app-outlet {
   width: 100%;
 }
 
+.arc-inline-notice,
 .arc-stats-disk-notice {
   display: flex;
   flex-direction: column;
@@ -4894,6 +4901,7 @@ body.arc-card-detail-open .arc-app-outlet {
   box-sizing: border-box;
 }
 
+.arc-inline-notice__copy,
 .arc-stats-disk-notice__copy {
   display: flex;
   flex-direction: column;
@@ -4901,11 +4909,14 @@ body.arc-card-detail-open .arc-app-outlet {
   min-width: 0;
 }
 
+.arc-inline-notice__title,
+.arc-inline-notice__body,
 .arc-stats-disk-notice__title,
 .arc-stats-disk-notice__body {
   margin: 0;
 }
 
+.arc-inline-notice__actions,
 .arc-stats-disk-notice__actions {
   display: flex;
   flex-wrap: wrap;

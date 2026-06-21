@@ -726,6 +726,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         const alertCopy = {
           success: "Операция успешно завершена",
           info: "Изменения применяются, это может занять несколько секунд",
+          brand: "Карточка добавлена в мудборд",
           warning: "Не все данные заполнены, проверьте обязательные поля",
           danger: "Не удалось завершить операцию, попробуйте снова"
         };

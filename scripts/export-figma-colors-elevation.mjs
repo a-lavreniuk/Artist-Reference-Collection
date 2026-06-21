@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Экспорт коллекции Figma Colors (Dark / Sunken | Default | Raised).
+ * Экспорт коллекции Figma Colors (Dark или Light × Sunken | Default | Raised).
  *
  * Запуск через Figma MCP (use_figma) в файле ARC-2:
- *   node scripts/export-figma-colors-elevation.mjs --write
+ *   node scripts/export-figma-colors-elevation.mjs --theme dark
+ *   node scripts/export-figma-colors-elevation.mjs --theme light
  *
  * С флагом --write ожидает JSON на stdin (результат use_figma) и пишет:
- *   docs/design-tokens/figma-colors-dark.json
+ *   docs/design-tokens/figma-colors-dark.json  (--theme dark, по умолчанию)
+ *   docs/design-tokens/figma-colors-light.json (--theme light)
  *
  * Без stdin — печатает Plugin API код для вставки в use_figma.
  */
@@ -16,10 +18,40 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const OUT_JSON = join(ROOT, 'docs/design-tokens/figma-colors-dark.json');
 
-const FIGMA_PLUGIN_CODE = `const COLLECTION_ID = 'VariableCollectionId:40:1343';
-const MODES = { sunken: '40:0', default: '102:0', raised: '102:1' };
+const THEMES = {
+  dark: {
+    outJson: join(ROOT, 'docs/design-tokens/figma-colors-dark.json'),
+    modeIds: { sunken: '40:0', default: '102:0', raised: '102:1' },
+    modeLabels: { sunken: 'Dark / Sunken', default: 'Dark / Default', raised: 'Dark / Raised' },
+  },
+  light: {
+    outJson: join(ROOT, 'docs/design-tokens/figma-colors-light.json'),
+    modeIds: { sunken: '1035:0', default: '1035:1', raised: '1035:2' },
+    modeLabels: { sunken: 'Light / Sunken', default: 'Light / Default', raised: 'Light / Raised' },
+  },
+};
+
+function parseThemeArg() {
+  const idx = process.argv.indexOf('--theme');
+  const theme = idx >= 0 ? process.argv[idx + 1] : 'dark';
+  if (!THEMES[theme]) {
+    console.error(`Unknown --theme "${theme}". Use: dark | light`);
+    process.exit(1);
+  }
+  return theme;
+}
+
+function buildPluginCode(themeConfig) {
+  const modeEntries = Object.entries(themeConfig.modeIds)
+    .map(([k, v]) => `${k}: '${v}'`)
+    .join(', ');
+  const labelEntries = Object.entries(themeConfig.modeLabels)
+    .map(([k, v]) => `${k}: '${v}'`)
+    .join(', ');
+
+  return `const COLLECTION_ID = 'VariableCollectionId:40:1343';
+const MODES = { ${modeEntries} };
 const coll = await figma.variables.getVariableCollectionByIdAsync(COLLECTION_ID);
 const vars = await Promise.all(coll.variableIds.map(id => figma.variables.getVariableByIdAsync(id)));
 const variables = {};
@@ -43,10 +75,13 @@ return {
   exportedAt: new Date().toISOString(),
   collection: 'Colors',
   fileKey: 'JD3pZdlV4Sz62creRMQsJV',
-  modes: { sunken: 'Dark / Sunken', default: 'Dark / Default', raised: 'Dark / Raised' },
+  modes: { ${labelEntries} },
   variables,
 };`;
+}
 
+const theme = parseThemeArg();
+const themeConfig = THEMES[theme];
 const write = process.argv.includes('--write');
 
 if (write) {
@@ -59,18 +94,25 @@ if (write) {
     process.exit(1);
   }
   const data = JSON.parse(raw);
-  mkdirSync(dirname(OUT_JSON), { recursive: true });
-  writeFileSync(OUT_JSON, JSON.stringify(data, null, 2) + '\n', 'utf8');
-  console.log('Written:', OUT_JSON);
+  delete data.variableCount;
+  data._note = `Полный экспорт ${Object.keys(data.variables || {}).length} переменных Colors (${theme === 'light' ? 'Light' : 'Dark'}). Перегенерация: node scripts/export-figma-colors-elevation.mjs --theme ${theme} + use_figma.`;
+  mkdirSync(dirname(themeConfig.outJson), { recursive: true });
+  writeFileSync(themeConfig.outJson, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  console.log('Written:', themeConfig.outJson);
   console.log('Variables:', Object.keys(data.variables || {}).length);
 } else {
   console.log('Figma file: ARC-2 (JD3pZdlV4Sz62creRMQsJV)');
-  console.log('Collection: Colors — Dark / Sunken, Default, Raised');
+  console.log(`Collection: Colors — ${themeConfig.modeLabels.sunken}, ${themeConfig.modeLabels.default.split(' / ')[1]}, ${themeConfig.modeLabels.raised.split(' / ')[1]} (${theme})`);
   console.log('');
   console.log('Выполните код ниже через use_figma, затем:');
-  console.log('  node scripts/export-figma-colors-elevation.mjs --write < export.json');
-  console.log('  node scripts/generate-elevation-audit.mjs');
+  console.log(`  node scripts/export-figma-colors-elevation.mjs --theme ${theme} --write < export.json`);
+  if (theme === 'light') {
+    console.log('  node scripts/generate-light-theme-css.mjs');
+    console.log('  node scripts/generate-elevation-audit.mjs --theme light');
+  } else {
+    console.log('  node scripts/generate-elevation-audit.mjs');
+  }
   console.log('');
   console.log('--- use_figma code ---');
-  console.log(FIGMA_PLUGIN_CODE);
+  console.log(buildPluginCode(themeConfig));
 }

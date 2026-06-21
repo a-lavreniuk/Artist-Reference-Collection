@@ -5,7 +5,8 @@ import {
   setAppPreferences,
   type AppPreferencesV1,
   type GalleryCollectionsSortMode,
-  type ScreenshotFormat
+  type ScreenshotFormat,
+  type UiThemePreference
 } from './appPreferences';
 
 let cache: AppPreferencesV1 | null = null;
@@ -25,6 +26,11 @@ function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
 function sanitizeGalleryCollectionsSortMode(raw: unknown): GalleryCollectionsSortMode {
   if (raw === 'count' || raw === 'random') return raw;
   return 'chrono';
+}
+
+function sanitizeUiTheme(raw: unknown): UiThemePreference {
+  if (raw === 'light' || raw === 'system') return raw;
+  return 'dark';
 }
 
 function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreferencesV1> {
@@ -115,6 +121,9 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   }
   if ('galleryCollectionsSortMode' in patch) {
     next.galleryCollectionsSortMode = sanitizeGalleryCollectionsSortMode(patch.galleryCollectionsSortMode);
+  }
+  if ('uiTheme' in patch) {
+    next.uiTheme = sanitizeUiTheme(patch.uiTheme);
   }
 
   return next;
@@ -208,6 +217,9 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('galleryCollectionsSortMode' in patch) {
     next.galleryCollectionsSortMode = sanitizeGalleryCollectionsSortMode(patch.galleryCollectionsSortMode);
+  }
+  if ('uiTheme' in patch) {
+    next.uiTheme = sanitizeUiTheme(patch.uiTheme);
   }
 
   return next;

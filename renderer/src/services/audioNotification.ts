@@ -1,4 +1,4 @@
-import type { DemoAlertVariant } from '../components/layout/DemoAlert';
+import type { AlertVariant } from '../components/alert/types';
 import { getAppPreferencesSync } from './appPreferencesRuntime';
 
 const SUCCESS_SOUND_URL = './sounds/success.mp3';
@@ -17,11 +17,12 @@ function getAudio(url: string): HTMLAudioElement {
   return audio;
 }
 
-function soundUrlForVariant(variant: DemoAlertVariant): string | null {
+function soundUrlForVariant(variant: AlertVariant): string | null {
   switch (variant) {
     case 'success':
       return SUCCESS_SOUND_URL;
     case 'info':
+    case 'brand':
       return INFO_SOUND_URL;
     case 'warning':
       return WARNING_SOUND_URL;
@@ -36,7 +37,7 @@ export function isNotificationSoundEnabled(): boolean {
   return getAppPreferencesSync().notifySoundEnabled === true;
 }
 
-export function playNotificationSound(variant: DemoAlertVariant): void {
+export function playNotificationSound(variant: AlertVariant): void {
   if (!isNotificationSoundEnabled()) return;
 
   const url = soundUrlForVariant(variant);

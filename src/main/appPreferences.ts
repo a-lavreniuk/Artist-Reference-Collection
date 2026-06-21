@@ -9,6 +9,7 @@ export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
+export type UiThemePreference = 'dark' | 'light' | 'system';
 
 export type AppPreferencesV1 = {
   version: 1;
@@ -38,6 +39,7 @@ export type AppPreferencesV1 = {
   aiSearchStrictness: number;
   galleryCollectionsStripEnabled: boolean;
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
+  uiTheme: UiThemePreference;
 };
 
 const FILENAME = 'arc-app-preferences.json';
@@ -73,7 +75,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiResourcePreset: 50,
     aiSearchStrictness: 50,
     galleryCollectionsStripEnabled: true,
-    galleryCollectionsSortMode: 'chrono'
+    galleryCollectionsSortMode: 'chrono',
+    uiTheme: 'dark'
   };
 }
 
@@ -99,6 +102,11 @@ function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
 function sanitizeAiModelTier(raw: unknown): AiModelTier {
   if (raw === 'medium' || raw === 'heavy') return 'heavy';
   return 'light';
+}
+
+function sanitizeUiTheme(raw: unknown): UiThemePreference {
+  if (raw === 'light' || raw === 'system') return raw;
+  return 'dark';
 }
 
 function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknown>): AppPreferencesV1 {
@@ -153,7 +161,8 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         : d.galleryCollectionsStripEnabled,
     galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
       raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
-    )
+    ),
+    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme)
   };
 }
 
@@ -241,6 +250,9 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('galleryCollectionsSortMode' in patch) {
     next.galleryCollectionsSortMode = sanitizeGalleryCollectionsSortMode(patch.galleryCollectionsSortMode);
+  }
+  if ('uiTheme' in patch) {
+    next.uiTheme = sanitizeUiTheme(patch.uiTheme);
   }
 
   return next;
