@@ -1,0 +1,6 @@
+name = "arc-feedback-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+GITHUB_REPO = "a-lavreniuk/Artist-Reference-Collection"

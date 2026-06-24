@@ -1,0 +1,8 @@
+{
+  "name": "arc-feedback-proxy",
+  "private": true,
+  "main": "worker.js",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  }
+}

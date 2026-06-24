@@ -6,3 +6,9 @@ renderer/dist/
 dist/
 dist-electron/
 npm-debug.log*
+
+# Локальные артефакты разработки
+.cache/
+debug-*.log
+.cursor/debug-*.log
+Artist-Reference-Collection/
