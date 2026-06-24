@@ -92,6 +92,23 @@ export function setSearchAiInParams(prev: URLSearchParams, query: string | null)
   return next;
 }
 
+/** Фильтр ленты по меткам (AND); сбрасывает остальные режимы поиска. */
+export function setSearchTagsInParams(prev: URLSearchParams, tagIds: string[]): URLSearchParams {
+  const next = new URLSearchParams(prev);
+  next.delete(ARC_SEARCH_QUERY_TAG);
+  next.delete(ARC_SEARCH_QUERY_CARD);
+  next.delete(ARC_SEARCH_QUERY_AI);
+  next.delete(ARC_SEARCH_QUERY_COLOR);
+  next.delete(ARC_SEARCH_QUERY_COLOR_TOL);
+  next.delete(ARC_SEARCH_QUERY_SIMILAR);
+  next.delete(ARC_SEARCH_QUERY_SIMILAR_CROP);
+  for (const id of tagIds) {
+    const trimmed = id.trim();
+    if (trimmed) next.append(ARC_SEARCH_QUERY_TAG, trimmed);
+  }
+  return next;
+}
+
 export function parseSearchSimilarRef(
   searchParams: URLSearchParams
 ): { kind: 'card'; cardId: string } | { kind: 'upload' } | null {

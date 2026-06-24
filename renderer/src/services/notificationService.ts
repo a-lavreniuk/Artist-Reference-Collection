@@ -8,6 +8,9 @@ export type AppNotificationPayload = {
   variant: AlertVariant;
   prefKey?: NotificationPrefKey;
   skipPrefCheck?: boolean;
+  /** 0 — только закрытие по крестику. */
+  autoDismissMs?: number;
+  withSound?: boolean;
 };
 
 export function showAppNotification(payload: AppNotificationPayload): void {

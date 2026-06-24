@@ -13,9 +13,10 @@ export type GalleryCollectionStripItem = {
 
 type Props = {
   items: GalleryCollectionStripItem[];
+  onCollectionContextMenu?: (collectionId: string, event: React.MouseEvent) => void;
 };
 
-export default function LibraryCollectionsStrip({ items }: Props) {
+export default function LibraryCollectionsStrip({ items, onCollectionContextMenu }: Props) {
   const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
   const {
@@ -67,6 +68,9 @@ export default function LibraryCollectionsStrip({ items }: Props) {
                 onOpen={() => {
                   if (shouldSuppressChildClick()) return;
                   navigate(`/collections/${item.collection.id}`);
+                }}
+                onContextMenu={(event) => {
+                  onCollectionContextMenu?.(item.collection.id, event);
                 }}
               />
             ))}

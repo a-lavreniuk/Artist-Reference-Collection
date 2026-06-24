@@ -69,6 +69,7 @@ import NavbarSearchModes from './NavbarSearchModes';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { formatNavbarTabCount } from '../../search/formatNavbarTabCount';
 import {
+  ARC_NAVBAR_SEARCH_MODE_CHANGED_EVENT,
   readNavbarSearchMode,
   SEARCH_MODE_META,
   type NavbarSearchMode,
@@ -142,27 +143,39 @@ export default function NavbarSearch({ onPanelOpenChange }: NavbarSearchProps) {
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
+  const aiNavbarModesVisibleRef = useRef(aiNavbarModesVisible);
+
   useEffect(() => {
-    if (aiNavbarModesVisible) return;
+    const wasVisible = aiNavbarModesVisibleRef.current;
+    aiNavbarModesVisibleRef.current = aiNavbarModesVisible;
+    if (!wasVisible || aiNavbarModesVisible) return;
+
     const hasAiOrSimilar =
-      searchMode === 'ai' ||
-      searchMode === 'similar' ||
-      Boolean(parseSearchAiQuery(searchParams)) ||
-      Boolean(parseSearchSimilarRef(searchParams));
+      Boolean(parseSearchAiQuery(searchParams)) || Boolean(parseSearchSimilarRef(searchParams));
     if (!hasAiOrSimilar) return;
     setSearchMode('tags');
     writeNavbarSearchMode('tags');
     clearSimilarUploadPath();
     setSearchParams(clearGallerySearchParams(searchParams), { replace: true });
-  }, [aiNavbarModesVisible, searchMode, searchParams, setSearchParams]);
+  }, [aiNavbarModesVisible, searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (!aiNavbarModesVisible) return;
     if (similarRefFromUrl && searchMode !== 'similar') {
       setSearchMode('similar');
       writeNavbarSearchMode('similar');
     }
-  }, [similarRefFromUrl, searchMode, aiNavbarModesVisible]);
+  }, [similarRefFromUrl, searchMode]);
+
+  useEffect(() => {
+    const onModeChanged = (event: Event) => {
+      const mode = (event as CustomEvent<{ mode?: NavbarSearchMode }>).detail?.mode;
+      if (mode === 'tags' || mode === 'ai' || mode === 'color' || mode === 'similar') {
+        setSearchMode(mode);
+      }
+    };
+    window.addEventListener(ARC_NAVBAR_SEARCH_MODE_CHANGED_EVENT, onModeChanged);
+    return () => window.removeEventListener(ARC_NAVBAR_SEARCH_MODE_CHANGED_EVENT, onModeChanged);
+  }, []);
 
   const loadIndex = useCallback(async () => {
     const cats = await getAllCategories();

@@ -15,6 +15,8 @@ import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
+import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
+import { useCollectionContextMenu } from '../components/collections/useCollectionContextMenu';
 import CollectionSettingsModal, {
   type CollectionSettingsModalState
 } from '../components/collections/CollectionSettingsModal';
@@ -34,7 +36,7 @@ import { useOpenCardUrl } from '../search/openCardUrl';
 import { useGalleryMeta } from '../context/GalleryMetaContext';
 import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedEmptyState';
-import { startVisualSimilarSearch } from '../search/startVisualSimilarSearch';
+import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 import {
   ARC_COLLECTIONS_CHANGED_EVENT,
   addCollection,
@@ -228,6 +230,62 @@ export default function CollectionsPage() {
     if (collection) setCollectionModal({ mode: 'edit', collection });
   };
 
+  const handleToggleMoodboard = useCallback(
+    async (id: string) => {
+      const ids = await getMoodboardCardIds();
+      if (!ids.includes(id)) {
+        await addCardToMoodboard(id);
+        await refreshMoodboard();
+        return;
+      }
+      const onBoard = await isCardOnBoard(id);
+      if (onBoard) {
+        setRemoveMoodboardConfirm({ cardId: id, onBoard: true });
+        return;
+      }
+      await removeCardFromMoodboard(id);
+      await refreshMoodboard();
+    },
+    [refreshMoodboard]
+  );
+
+  const collectionMenuScope = activeCollectionId
+    ? ({ kind: 'collection' as const, collectionId: activeCollectionId })
+    : ({ kind: 'library' as const });
+
+  const { onCardContextMenu, contextMenuLayer: cardContextMenuLayer } = useGalleryCardContextMenu({
+    scope: collectionMenuScope,
+    cards: feed.cards,
+    moodboardCardIds,
+    onOpenCard: openCard,
+    onToggleMoodboard: handleToggleMoodboard,
+    onFindSimilar: (id) => {
+      void startFindSimilarSearch(navigate, searchParams, id);
+    },
+    onCardDeleted: () => void feed.reloadFromStart()
+  });
+
+  const handleDeleteCollection = useCallback(
+    async (id: string) => {
+      await deleteCollection(id);
+      const remaining = (await getAllCollections()).filter((c) => c.id !== id);
+      if (remaining.length === 0) {
+        navigate('/collections', { replace: true });
+      } else if (activeCollectionId === id) {
+        navigate(`/collections/${remaining[0].id}`, { replace: true });
+      }
+      await loadMeta();
+    },
+    [activeCollectionId, loadMeta, navigate]
+  );
+
+  const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
+    useCollectionContextMenu({
+      onOpen: (id) => navigate(`/collections/${id}`),
+      onEdit: openEditCollection,
+      onDelete: handleDeleteCollection
+    });
+
   const collectionModalNode = collectionModal ? (
     <CollectionSettingsModal
       state={collectionModal}
@@ -315,6 +373,7 @@ export default function CollectionsPage() {
           onReorderCollection={(id, insertIndex) => reorderCollectionToIndex(id, insertIndex)}
           onAddCollection={() => setCollectionModal({ mode: 'create' })}
           onEditCollection={openEditCollection}
+          onCollectionContextMenu={openCollectionContextMenu}
         />
 
         <button
@@ -359,23 +418,10 @@ export default function CollectionsPage() {
                   busy={feed.booting || feed.loading || feed.shuffleReloading}
                   onOpenCard={openCard}
                   moodboardCardIds={moodboardCardIds}
-                  onToggleMoodboard={async (id) => {
-                    const ids = await getMoodboardCardIds();
-                    if (!ids.includes(id)) {
-                      await addCardToMoodboard(id);
-                      await refreshMoodboard();
-                      return;
-                    }
-                    const onBoard = await isCardOnBoard(id);
-                    if (onBoard) {
-                      setRemoveMoodboardConfirm({ cardId: id, onBoard: true });
-                      return;
-                    }
-                    await removeCardFromMoodboard(id);
-                    await refreshMoodboard();
-                  }}
+                  onCardContextMenu={onCardContextMenu}
+                  onToggleMoodboard={handleToggleMoodboard}
                   onFindSimilar={(id) => {
-                    startVisualSimilarSearch(navigate, searchParams, id);
+                    void startFindSimilarSearch(navigate, searchParams, id);
                   }}
                 />
                 <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
@@ -406,6 +452,9 @@ export default function CollectionsPage() {
           }}
         />
       ) : null}
+
+      {cardContextMenuLayer}
+      {collectionContextMenuLayer}
 
       <ScrollToTopButton enabled={feed.cards.length > 0} />
       {collectionModalNode}

@@ -16,6 +16,7 @@ type Props = {
   onFindSimilar?: (cardId: string) => void;
   moodboardCardIds?: Set<string>;
   onToggleMoodboard?: (cardId: string) => void | Promise<void>;
+  onCardContextMenu?: (card: CardRecord, event: React.MouseEvent<HTMLDivElement>) => void;
   variant?: MasonryVariant;
   scrollRootRef?: RefObject<HTMLElement | null>;
   loadingMore?: boolean;
@@ -30,6 +31,7 @@ export default function GalleryBoard({
   onFindSimilar,
   moodboardCardIds,
   onToggleMoodboard,
+  onCardContextMenu,
   variant = 'gallery',
   scrollRootRef,
   loadingMore = false,
@@ -97,12 +99,19 @@ export default function GalleryBoard({
           onOpenCard={onOpenCard}
           onFindSimilar={onFindSimilar}
           onToggleMoodboard={onToggleMoodboard}
+          onContextMenu={
+            onCardContextMenu
+              ? (event) => {
+                  onCardContextMenu(card, event);
+                }
+              : undefined
+          }
           moodboardEnabled={moodboardEnabled}
           mediaTab={mediaTab}
         />
       );
     },
-    [cardById, mediaTab, moodboardCardIds, moodboardEnabled, onFindSimilar, onOpenCard, onToggleMoodboard, srcMap]
+    [cardById, mediaTab, moodboardCardIds, moodboardEnabled, onCardContextMenu, onFindSimilar, onOpenCard, onToggleMoodboard, srcMap]
   );
 
   const renderSkeleton = useCallback(

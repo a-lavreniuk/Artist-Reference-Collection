@@ -13,6 +13,7 @@ type Props = {
   onFindSimilar?: (cardId: string) => void;
   inMoodboard?: boolean;
   onToggleMoodboard?: (cardId: string) => void | Promise<void>;
+  onContextMenu?: (event: React.MouseEvent<HTMLDivElement>) => void;
 };
 
 export default function CardDetailSimilarThumb({
@@ -21,7 +22,8 @@ export default function CardDetailSimilarThumb({
   onPick,
   onFindSimilar,
   inMoodboard = false,
-  onToggleMoodboard
+  onToggleMoodboard,
+  onContextMenu
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
@@ -52,6 +54,7 @@ export default function CardDetailSimilarThumb({
           onPick();
         }
       }}
+      onContextMenu={onContextMenu}
     >
       <span className="arc-gallery-card-stack">
         <span

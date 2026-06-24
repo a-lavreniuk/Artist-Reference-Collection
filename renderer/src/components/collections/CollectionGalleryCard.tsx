@@ -11,9 +11,10 @@ type Props = {
   previews: CardRecord[];
   count: number;
   onOpen: () => void;
+  onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
-export default function CollectionGalleryCard({ collection, previews, count, onOpen }: Props) {
+export default function CollectionGalleryCard({ collection, previews, count, onOpen, onContextMenu }: Props) {
   const [srcMap, setSrcMap] = useState<Record<string, string>>({});
   const stripMediaActive = useCardSectionMediaActive('gallery');
 
@@ -41,6 +42,7 @@ export default function CollectionGalleryCard({ collection, previews, count, onO
       className="arc-gallery-collection-card"
       aria-label={`Коллекция «${collection.name}», ${formatCardCountLabel(count)}`}
       onClick={onOpen}
+      onContextMenu={onContextMenu}
     >
       <span className="arc-gallery-collection-card__pics" aria-hidden="true">
         {Array.from({ length: PREVIEW_SLOTS }, (_, index) => {

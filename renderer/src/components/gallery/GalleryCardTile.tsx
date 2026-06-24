@@ -13,6 +13,7 @@ type Props = {
   onOpenCard: (id: string) => void;
   onFindSimilar?: (cardId: string) => void;
   onToggleMoodboard?: (cardId: string) => void | Promise<void>;
+  onContextMenu?: (event: React.MouseEvent<HTMLDivElement>) => void;
   moodboardEnabled?: boolean;
   tileClassName?: string;
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
@@ -25,6 +26,7 @@ function GalleryCardTile({
   onOpenCard,
   onFindSimilar,
   onToggleMoodboard,
+  onContextMenu,
   moodboardEnabled = false,
   tileClassName = '',
   mediaTab
@@ -59,6 +61,7 @@ function GalleryCardTile({
           onOpenCard(card.id);
         }
       }}
+      onContextMenu={onContextMenu}
     >
       <span className="arc-gallery-card-stack">
         <span
@@ -130,6 +133,7 @@ function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
     prev.onOpenCard === next.onOpenCard &&
     prev.onFindSimilar === next.onFindSimilar &&
     prev.onToggleMoodboard === next.onToggleMoodboard &&
+    prev.onContextMenu === next.onContextMenu &&
     prev.mediaTab === next.mediaTab
   );
 }

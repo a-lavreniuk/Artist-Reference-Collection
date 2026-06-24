@@ -9,6 +9,7 @@ type Props = {
   draggingTagId: string | null;
   dragDisabled?: boolean;
   onEdit: (tag: TagRecord) => void;
+  onContextMenu?: (tag: TagRecord, event: React.MouseEvent<HTMLButtonElement>) => void;
   onDragStart: (tagId: string) => void;
   onDragEnd: () => void;
 };
@@ -19,6 +20,7 @@ export default function TagManageChip({
   draggingTagId,
   dragDisabled = false,
   onEdit,
+  onContextMenu,
   onDragStart,
   onDragEnd
 }: Props) {
@@ -41,6 +43,10 @@ export default function TagManageChip({
       aria-label={`Редактировать метку «${tag.name}»`}
       aria-grabbed={draggingTagId === tag.id}
       onClick={() => onEdit(tag)}
+      onContextMenu={(event) => {
+        if (dragDisabled || draggingTagId === tag.id) return;
+        onContextMenu?.(tag, event);
+      }}
       onDragStart={(e) => {
         if (dragDisabled) {
           e.preventDefault();

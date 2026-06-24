@@ -14,6 +14,7 @@ type Props = {
   onReorderCollection: (collectionId: string, insertIndex: number) => void;
   onAddCollection: () => void;
   onEditCollection: (collectionId: string) => void;
+  onCollectionContextMenu?: (collectionId: string, event: React.MouseEvent) => void;
 };
 
 export default function CollectionsPageSidebar({
@@ -23,7 +24,8 @@ export default function CollectionsPageSidebar({
   onSelectCollection,
   onReorderCollection,
   onAddCollection,
-  onEditCollection
+  onEditCollection,
+  onCollectionContextMenu
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -90,6 +92,13 @@ export default function CollectionsPageSidebar({
                   className={`context-menu__item arc-tags-sidebar-row${isActive ? ' is-active' : ''}${isDragging ? ' is-dragging' : ''}`}
                   data-collections-row={collection.id}
                   role="presentation"
+                  onContextMenu={(event) => {
+                    if (dragState) return;
+                    if (event.target instanceof Element && event.target.closest('.arc-tags-sidebar-row-edit')) {
+                      return;
+                    }
+                    onCollectionContextMenu?.(collection.id, event);
+                  }}
                 >
                   <div className="context-menu__item-inner arc-tags-sidebar-row-inner">
                     <button

@@ -19,6 +19,7 @@ import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
 import CardInfoModal from './CardInfoModal';
 import SimilarCardsMasonry from './SimilarCardsMasonry';
+import { useGalleryCardContextMenu } from './useGalleryCardContextMenu';
 import CardDetailTagsModal from './CardDetailTagsModal';
 import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import CardDetailCollectionStrip from './CardDetailCollectionStrip';
@@ -44,7 +45,7 @@ import {
 } from '../../services/db';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
-import { startVisualSimilarSearch } from '../../search/startVisualSimilarSearch';
+import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
@@ -640,7 +641,7 @@ export default function CardDetailOverlay({
   } as CSSProperties;
 
   const handleSimilarFind = (targetId: string) => {
-    startVisualSimilarSearch(navigate, searchParams, targetId);
+    void startFindSimilarSearch(navigate, searchParams, targetId);
   };
 
   const handleSimilarToggleMoodboard = async (targetId: string) => {
@@ -664,6 +665,19 @@ export default function CardDetailOverlay({
     });
     if (targetId === cardId) setInMoodboard(false);
   };
+
+  const { onCardContextMenu: onSimilarCardContextMenu, contextMenuLayer: similarContextMenuLayer } =
+    useGalleryCardContextMenu({
+      scope: inTrash ? { kind: 'trash' } : { kind: 'library' },
+      cards: similar,
+      moodboardCardIds,
+      onOpenCard,
+      onToggleMoodboard: (id) => void handleSimilarToggleMoodboard(id),
+      onFindSimilar: handleSimilarFind,
+      onCardDeleted: async () => {
+        setSimilar(await listSimilarCards(cardId, 15));
+      }
+    });
 
   const addRowButton = (label: string, onClick: () => void) => (
     <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
@@ -1128,6 +1142,7 @@ export default function CardDetailOverlay({
               onOpenCard={onOpenCard}
               onFindSimilar={(id) => void handleSimilarFind(id)}
               onToggleMoodboard={inTrash ? undefined : (id) => void handleSimilarToggleMoodboard(id)}
+              onCardContextMenu={onSimilarCardContextMenu}
             />
           </section>
         ) : null}
@@ -1316,6 +1331,8 @@ export default function CardDetailOverlay({
           onClose={() => setCopyAlertMessage(null)}
         />
       ) : null}
+
+      {similarContextMenuLayer}
     </>
   );
 

@@ -11,9 +11,17 @@ type Props = {
   onApply: (preset: SavedFilterPreset) => void;
   onEdit: (preset: SavedFilterPreset) => void;
   onSave: () => void;
+  onPresetContextMenu?: (preset: SavedFilterPreset, event: React.MouseEvent) => void;
 };
 
-export default function FilterPresetsMenu({ presets, canSave, onApply, onEdit, onSave }: Props) {
+export default function FilterPresetsMenu({
+  presets,
+  canSave,
+  onApply,
+  onEdit,
+  onSave,
+  onPresetContextMenu
+}: Props) {
   const listRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -31,6 +39,9 @@ export default function FilterPresetsMenu({ presets, canSave, onApply, onEdit, o
             name={preset.name}
             onApply={() => onApply(preset)}
             onEdit={() => onEdit(preset)}
+            onContextMenu={
+              onPresetContextMenu ? (event) => onPresetContextMenu(preset, event) : undefined
+            }
           />
         ))}
         {presets.length > 0 ? <ContextMenuSeparator /> : null}

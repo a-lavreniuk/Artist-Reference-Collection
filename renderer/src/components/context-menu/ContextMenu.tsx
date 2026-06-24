@@ -10,21 +10,28 @@ import {
   type ContextMenuRow
 } from './types';
 
+export type ContextMenuPosition = { x: number; y: number };
+
 type Props = {
   open: boolean;
-  anchorRef: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   ariaLabel: string;
   rows?: ContextMenuRow[];
   children?: React.ReactNode;
   noDragClassName?: string;
+  /** Меню под якорем (клик по кнопке). */
+  anchorRef?: React.RefObject<HTMLElement | null>;
+  /** Меню у курсора (ПКМ). Взаимоисключающе с anchorRef. */
+  position?: ContextMenuPosition | null;
 };
 
-function clampMenuPosition(top: number, left: number) {
+function clampMenuPosition(top: number, left: number, menuHeight = 0) {
   const margin = 8;
   const maxLeft = window.innerWidth - CONTEXT_MENU_WIDTH - margin;
   const clampedLeft = Math.max(margin, Math.min(left, maxLeft));
-  const clampedTop = Math.max(margin, top);
+  const maxTop =
+    menuHeight > 0 ? window.innerHeight - menuHeight - margin : Number.POSITIVE_INFINITY;
+  const clampedTop = Math.max(margin, Math.min(top, maxTop));
   return { top: clampedTop, left: clampedLeft };
 }
 
@@ -57,6 +64,7 @@ function renderRow(row: ContextMenuRow, onClose: () => void) {
 export default function ContextMenu({
   open,
   anchorRef,
+  position = null,
   onClose,
   ariaLabel,
   rows,
@@ -69,18 +77,34 @@ export default function ContextMenu({
   const dragClass = noDragClassName.trim();
 
   useLayoutEffect(() => {
-    if (!open || !anchorRef.current) {
+    if (!open) {
       setLayout((prev) => (prev === null ? prev : null));
       return;
     }
+
+    const menuHeight = panelRef.current?.offsetHeight ?? 0;
+
+    if (position) {
+      const nextLayout = clampMenuPosition(position.y, position.x, menuHeight);
+      setLayout((prev) =>
+        prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
+      );
+      return;
+    }
+
+    if (!anchorRef?.current) {
+      setLayout((prev) => (prev === null ? prev : null));
+      return;
+    }
+
     const rect = anchorRef.current.getBoundingClientRect();
     const rawTop = rect.bottom + CONTEXT_MENU_ANCHOR_GAP;
     const rawLeft = rect.right - CONTEXT_MENU_WIDTH;
-    const nextLayout = clampMenuPosition(rawTop, rawLeft);
+    const nextLayout = clampMenuPosition(rawTop, rawLeft, menuHeight);
     setLayout((prev) =>
       prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
     );
-  }, [open, ariaLabel]);
+  }, [open, ariaLabel, anchorRef, position, rows, children]);
 
   useLayoutEffect(() => {
     if (!open || !panelRef.current) return;

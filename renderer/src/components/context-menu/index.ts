@@ -1,5 +1,5 @@
 export { default as ContextMenu } from './ContextMenu';
-export type { ContextMenuRow } from './ContextMenu';
+export type { ContextMenuRow, ContextMenuPosition } from './ContextMenu';
 export { default as ContextMenuItem } from './ContextMenuItem';
 export type { ContextMenuItemProps } from './ContextMenuItem';
 export { default as ContextMenuHeader } from './ContextMenuHeader';

@@ -6,9 +6,10 @@ import { resolveGalleryFeedEmptyState } from '../gallery/galleryFeedEmptyState';
 import type { GalleryFeedQuery } from '../gallery/galleryQuery';
 import { useGalleryFeedSentinel } from '../gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../gallery/useScopedGalleryFeed';
-import { startVisualSimilarSearch } from '../../search/startVisualSimilarSearch';
+import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import GalleryBoard from '../gallery/GalleryBoard';
 import CardInspectModal from '../gallery/CardInspectModal';
+import { useGalleryCardContextMenu } from '../gallery/useGalleryCardContextMenu';
 import ScrollToTopButton from '../layout/ScrollToTopButton';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
 import { EmptyState } from '../empty-state';
@@ -111,6 +112,18 @@ export default function MoodboardCardsView() {
     await refreshMoodboard();
   }, [refreshMoodboard, removeConfirm]);
 
+  const { onCardContextMenu, contextMenuLayer } = useGalleryCardContextMenu({
+    scope: { kind: 'moodboard-cards' },
+    cards: feed.cards,
+    moodboardCardIds,
+    onOpenCard: openCard,
+    onToggleMoodboard: handleToggleMoodboard,
+    onFindSimilar: (id) => {
+      void startFindSimilarSearch(navigate, searchParams, id);
+    },
+    onCardDeleted: () => void feed.reloadFromStart()
+  });
+
   const emptyState = useMemo(() => {
     if (!moodboardIdsReady || !feed.feedSettled) return null;
     if (feed.cards.length > 0 || feed.loading || feed.booting) return null;
@@ -172,9 +185,10 @@ export default function MoodboardCardsView() {
             busy={feed.booting || feed.loading || feed.shuffleReloading}
             onOpenCard={openCard}
             moodboardCardIds={moodboardCardIds}
+            onCardContextMenu={onCardContextMenu}
             onToggleMoodboard={handleToggleMoodboard}
             onFindSimilar={(id) => {
-              startVisualSimilarSearch(navigate, searchParams, id);
+              void startFindSimilarSearch(navigate, searchParams, id);
             }}
           />
           <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
@@ -199,6 +213,8 @@ export default function MoodboardCardsView() {
           onConfirm={confirmRemoveAction}
         />
       ) : null}
+
+      {contextMenuLayer}
 
       <ScrollToTopButton enabled={feed.cards.length > 0} />
     </div>

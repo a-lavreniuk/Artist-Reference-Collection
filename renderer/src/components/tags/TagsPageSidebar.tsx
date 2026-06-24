@@ -21,6 +21,7 @@ type Props = {
   onTagDrop: (tagId: string, targetCategoryId: string) => Promise<void>;
   onAddCategory: () => void;
   onEditCategory: (categoryId: string) => void;
+  onCategoryContextMenu?: (categoryId: string, event: React.MouseEvent) => void;
 };
 
 export default function TagsPageSidebar({
@@ -35,7 +36,8 @@ export default function TagsPageSidebar({
   onReorderCategory,
   onTagDrop,
   onAddCategory,
-  onEditCategory
+  onEditCategory,
+  onCategoryContextMenu
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -121,6 +123,13 @@ export default function TagsPageSidebar({
                   className={`context-menu__item arc-tags-sidebar-row${isActive ? ' is-active' : ''}${isDragging ? ' is-dragging' : ''}`}
                   data-tags-category-row={category.id}
                   role="presentation"
+                  onContextMenu={(event) => {
+                    if (dragState) return;
+                    if (event.target instanceof Element && event.target.closest('.arc-tags-sidebar-row-edit')) {
+                      return;
+                    }
+                    onCategoryContextMenu?.(category.id, event);
+                  }}
                 >
                   <div className="context-menu__item-inner arc-tags-sidebar-row-inner">
                     <button

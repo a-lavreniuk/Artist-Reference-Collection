@@ -15,6 +15,7 @@ type Props = {
   onOpenCard: (id: string) => void;
   onFindSimilar: (id: string) => void;
   onToggleMoodboard?: (id: string) => void | Promise<void>;
+  onCardContextMenu?: (card: CardRecord, event: React.MouseEvent<HTMLDivElement>) => void;
 };
 
 export default function SimilarCardsMasonry({
@@ -24,7 +25,8 @@ export default function SimilarCardsMasonry({
   inTrash,
   onOpenCard,
   onFindSimilar,
-  onToggleMoodboard
+  onToggleMoodboard,
+  onCardContextMenu
 }: Props) {
   const measureRef = useRef<HTMLDivElement>(null);
   const scrollRootRef = useRef<HTMLElement | null>(null);
@@ -70,6 +72,9 @@ export default function SimilarCardsMasonry({
               onFindSimilar={onFindSimilar}
               inMoodboard={moodboardCardIds.has(card.id)}
               onToggleMoodboard={inTrash ? undefined : onToggleMoodboard}
+              onContextMenu={
+                onCardContextMenu ? (event) => onCardContextMenu(card, event) : undefined
+              }
             />
           );
         }}

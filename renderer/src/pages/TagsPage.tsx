@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import TagsCategorySection from '../components/tags/TagsCategorySection';
 import TagsPageSearch from '../components/tags/TagsPageSearch';
 import TagsPageSidebar from '../components/tags/TagsPageSidebar';
+import { useTagCategoryContextMenu } from '../components/tags/useTagCategoryContextMenu';
+import { useTagChipContextMenu } from '../components/tags/useTagChipContextMenu';
 import CategorySettingsModal, {
   type CategorySettingsModalState
 } from '../components/tags/CategorySettingsModal';
@@ -39,8 +41,10 @@ import {
   type CategoryStats,
   type TagRecord
 } from '../services/db';
+import { ARC_SEARCH_QUERY_TAG } from '../search/searchUrl';
 
 export default function TagsPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tagsByCategory, setTagsByCategory] = useState<Record<string, TagRecord[]>>({});
@@ -273,6 +277,39 @@ export default function TagsPage() {
     [categories]
   );
 
+  const resolveCategory = useCallback(
+    (categoryId: string) => {
+      const category = categories.find((c) => c.id === categoryId);
+      return category ? { id: category.id, name: category.name } : null;
+    },
+    [categories]
+  );
+
+  const handleDeleteCategory = useCallback(async (categoryId: string) => {
+    await deleteCategory(categoryId);
+    setSelectedCategoryId((current) => (current === categoryId ? null : current));
+  }, []);
+
+  const { openCategoryContextMenu, contextMenuLayer: categoryContextMenuLayer } =
+    useTagCategoryContextMenu({
+      resolveCategory,
+      onOpen: setSelectedCategoryId,
+      onEdit: openEditCategory,
+      onDelete: handleDeleteCategory
+    });
+
+  const { openTagContextMenu, contextMenuLayer: tagContextMenuLayer } = useTagChipContextMenu({
+    onShowInGallery: (tagId) => {
+      const next = new URLSearchParams();
+      next.append(ARC_SEARCH_QUERY_TAG, tagId);
+      navigate({ pathname: '/gallery', search: `?${next.toString()}` });
+    },
+    onEdit: (tag) => setTagModal({ mode: 'edit', tag }),
+    onDelete: async (tagId) => {
+      await deleteTag(tagId);
+    }
+  });
+
   const toggleCollapse = (categoryId: string) => {
     setCollapsedCategoryIds((prev) => {
       const next = new Set(prev);
@@ -360,6 +397,7 @@ export default function TagsPage() {
           onTagDrop={handleTagDrop}
           onAddCategory={() => setCategoryModal({ mode: 'create' })}
           onEditCategory={openEditCategory}
+          onCategoryContextMenu={openCategoryContextMenu}
         />
 
         <button
@@ -410,6 +448,7 @@ export default function TagsPage() {
                     onToggleCollapse={() => toggleCollapse(cat.id)}
                     onAddTag={() => setTagModal({ mode: 'create', categoryId: cat.id })}
                     onEditTag={(tag) => setTagModal({ mode: 'edit', tag })}
+                    onTagContextMenu={openTagContextMenu}
                     onTagDragStart={handleTagDragStart}
                     onTagDragEnd={handleTagDragEnd}
                     onTagDrop={handleTagDrop}
@@ -424,6 +463,9 @@ export default function TagsPage() {
       </div>
 
       {categoryModalNode}
+
+      {categoryContextMenuLayer}
+      {tagContextMenuLayer}
 
       {tagModal ? (
         <TagSettingsModal

@@ -7,6 +7,8 @@ import { APP_NOTIFICATION_EVENT, type AppNotificationPayload } from '../../servi
 type ActiveAlert = {
   message: string;
   variant: DemoAlertVariant;
+  autoDismissMs?: number;
+  withSound?: boolean;
 };
 
 function isPrefEnabled(prefKey: NotificationPrefKey | undefined, skipPrefCheck: boolean | undefined): boolean {
@@ -27,7 +29,12 @@ export default function NotificationHost({ children }: { children: React.ReactNo
       if (!detail?.message) return;
       if (!isPrefEnabled(detail.prefKey, detail.skipPrefCheck)) return;
 
-      setActive({ message: detail.message, variant: detail.variant ?? 'info' });
+      setActive({
+        message: detail.message,
+        variant: detail.variant ?? 'info',
+        autoDismissMs: detail.autoDismissMs,
+        withSound: detail.withSound
+      });
     };
 
     window.addEventListener(APP_NOTIFICATION_EVENT, onNotify);
@@ -53,7 +60,13 @@ export default function NotificationHost({ children }: { children: React.ReactNo
     <>
       {children}
       {active ? (
-        <DemoAlert message={active.message} variant={active.variant} onClose={dismiss} />
+        <DemoAlert
+          message={active.message}
+          variant={active.variant}
+          autoDismissMs={active.autoDismissMs}
+          withSound={active.withSound}
+          onClose={dismiss}
+        />
       ) : null}
     </>
   );

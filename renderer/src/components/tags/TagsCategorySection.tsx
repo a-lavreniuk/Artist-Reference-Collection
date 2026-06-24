@@ -15,6 +15,7 @@ type Props = {
   onToggleCollapse: () => void;
   onAddTag: () => void;
   onEditTag: (tag: TagRecord) => void;
+  onTagContextMenu?: (tag: TagRecord, event: React.MouseEvent<HTMLButtonElement>) => void;
   onTagDragStart: (tagId: string) => void;
   onTagDragEnd: () => void;
   onTagDrop: (tagId: string, targetCategoryId: string) => Promise<void>;
@@ -31,6 +32,7 @@ export default function TagsCategorySection({
   onToggleCollapse,
   onAddTag,
   onEditTag,
+  onTagContextMenu,
   onTagDragStart,
   onTagDragEnd,
   onTagDrop,
@@ -54,6 +56,7 @@ export default function TagsCategorySection({
           draggingTagId={draggingTagId}
           dragDisabled={false}
           onEdit={onEditTag}
+          onContextMenu={onTagContextMenu}
           onDragStart={onTagDragStart}
           onDragEnd={onTagDragEnd}
         />

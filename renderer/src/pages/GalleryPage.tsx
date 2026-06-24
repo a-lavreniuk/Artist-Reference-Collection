@@ -28,7 +28,9 @@ import {
   getMoodboardCardIds,
   isCardOnBoard,
   removeCardFromMoodboard,
-  addCardToMoodboard
+  addCardToMoodboard,
+  deleteCollection,
+  updateCollection
 } from '../services/db';
 import { useGalleryMeta } from '../context/GalleryMetaContext';
 import { useLibraryConfigured } from '../hooks/useLibraryConfigured';
@@ -39,12 +41,18 @@ import { useOpenCardUrl } from '../search/openCardUrl';
 
 import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedEmptyState';
-import { startVisualSimilarSearch } from '../search/startVisualSimilarSearch';
+import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 
 import { EmptyState } from '../components/empty-state';
 import { useImportContext } from '../components/import/ImportContext';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 import { resolveMainTab } from '../components/layout/navbarLayout';
+import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
+import { resolveGalleryCardContextMenuScope } from '../components/gallery/buildCardContextMenuRows';
+import { useCollectionContextMenu } from '../components/collections/useCollectionContextMenu';
+import CollectionSettingsModal, {
+  type CollectionSettingsModalState
+} from '../components/collections/CollectionSettingsModal';
 
 
 
@@ -123,6 +131,38 @@ export default function GalleryPage() {
   const [importModalMessage, setImportModalMessage] = useState<string | null>(null);
 
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
+  const [stripCollectionModal, setStripCollectionModal] = useState<CollectionSettingsModalState | null>(null);
+
+  const handleToggleMoodboard = useCallback(
+    async (id: string) => {
+      const ids = await getMoodboardCardIds();
+      if (!ids.includes(id)) {
+        await addCardToMoodboard(id);
+        await refreshMoodboard();
+        return;
+      }
+      const onBoard = await isCardOnBoard(id);
+      if (onBoard) {
+        setRemoveMoodboardConfirm({ cardId: id, onBoard: true });
+        return;
+      }
+      await removeCardFromMoodboard(id);
+      await refreshMoodboard();
+    },
+    [refreshMoodboard]
+  );
+
+  const { onCardContextMenu, contextMenuLayer } = useGalleryCardContextMenu({
+    scope: resolveGalleryCardContextMenuScope(feedQuery.libraryScope),
+    cards,
+    moodboardCardIds,
+    onOpenCard: openCard,
+    onToggleMoodboard: handleToggleMoodboard,
+    onFindSimilar: (id) => {
+      void startFindSimilarSearch(navigate, searchParams, id);
+    },
+    onCardDeleted: () => void reloadFromStart()
+  });
 
   const stripDataEnabled =
     ready &&
@@ -136,6 +176,23 @@ export default function GalleryPage() {
   );
 
   const showCollectionsStrip = stripDataEnabled && collectionStripItems.length > 0;
+
+  const openEditStripCollection = useCallback(
+    (id: string) => {
+      const collection = collectionStripItems.find((item) => item.collection.id === id)?.collection;
+      if (collection) setStripCollectionModal({ mode: 'edit', collection });
+    },
+    [collectionStripItems]
+  );
+
+  const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
+    useCollectionContextMenu({
+      onOpen: (id) => navigate(`/collections/${id}`),
+      onEdit: openEditStripCollection,
+      onDelete: async (id) => {
+        await deleteCollection(id);
+      }
+    });
 
   useEffect(() => {
 
@@ -243,7 +300,10 @@ export default function GalleryPage() {
 
       {showCollectionsStrip ? (
         <div className="arc-gallery-collections-block">
-          <LibraryCollectionsStrip items={collectionStripItems} />
+          <LibraryCollectionsStrip
+            items={collectionStripItems}
+            onCollectionContextMenu={openCollectionContextMenu}
+          />
           <div className="arc-gallery-collections-separator" role="separator" aria-hidden="true">
             <hr className="arc-gallery-collections-separator__rule" />
           </div>
@@ -274,34 +334,12 @@ export default function GalleryPage() {
 
             moodboardCardIds={moodboardCardIds}
 
-            onToggleMoodboard={async (id) => {
+            onCardContextMenu={onCardContextMenu}
 
-              const ids = await getMoodboardCardIds();
-
-              if (!ids.includes(id)) {
-
-                await addCardToMoodboard(id);
-                await refreshMoodboard();
-                return;
-
-              }
-
-              const onBoard = await isCardOnBoard(id);
-
-              if (onBoard) {
-
-                setRemoveMoodboardConfirm({ cardId: id, onBoard: true });
-
-                return;
-
-              }
-
-              await removeCardFromMoodboard(id);
-              await refreshMoodboard();
-            }}
+            onToggleMoodboard={handleToggleMoodboard}
 
             onFindSimilar={(id) => {
-              startVisualSimilarSearch(navigate, searchParams, id);
+              void startFindSimilarSearch(navigate, searchParams, id);
             }}
 
           />
@@ -353,7 +391,28 @@ export default function GalleryPage() {
 
       ) : null}
 
+      {contextMenuLayer}
 
+      {collectionContextMenuLayer}
+
+      {stripCollectionModal ? (
+        <CollectionSettingsModal
+          state={stripCollectionModal}
+          stats={null}
+          onClose={() => setStripCollectionModal(null)}
+          onCreate={async () => {}}
+          onSave={async (payload) => {
+            await updateCollection(payload.collectionId, {
+              name: payload.name,
+              description: payload.description
+            });
+          }}
+          onDelete={async (id) => {
+            await deleteCollection(id);
+            setStripCollectionModal(null);
+          }}
+        />
+      ) : null}
 
       {importModalMessage ? (
 

@@ -1,5 +1,5 @@
 ---
-description: Context Menu ARC — единый компонент меню по клику (сетка, сортировка, фильтры, navbar)
+description: Context Menu ARC — единый компонент меню по клику (сетка, сортировка, фильтры, navbar) и по ПКМ
 alwaysApply: true
 ---
 
@@ -10,6 +10,7 @@ alwaysApply: true
 ## Когда использовать
 
 - Меню по **клику** на кнопку или якорь (не ПКМ): navbar, **выбор сетки**, **сортировка**, **фильтры**, списки действий.
+- Меню по **ПКМ** на целевом элементе (карточка, строка сайдбара и т.п.) — тот же компонент, режим `position` у курсора.
 - Пункты с label, иконкой справа, shortcut, counter, секциями, разделителями, слотами под инпут.
 
 **Selector** (`selector` / `selector-dropdown`) — отдельный компонент для другого паттерна; для новых меню сетки, сортировки и фильтров **не** создавай локальные dropdown-обёртки — используй `ContextMenu`.
@@ -17,9 +18,11 @@ alwaysApply: true
 ## Как реализовать
 
 - Импорт из `renderer/src/components/context-menu`.
-- Обёртка: `ContextMenu` + `open` / `anchorRef` / `onClose` / `ariaLabel`.
+- Обёртка: `ContextMenu` + `open` / `onClose` / `ariaLabel`.
+- Позиция: `anchorRef` (клик по кнопке) **или** `position: { x, y }` (ПКМ) — взаимоисключающе.
+- ПКМ: хук `useContextMenuAtPointer` из `renderer/src/hooks/useContextMenuAtPointer.ts`.
 - Содержимое: `rows` (declarative) и/или `children` (`ContextMenuItem`, `ContextMenuHeader`, `ContextMenuSeparator`, `ContextMenuInput`).
-- Эталон: `renderer/src/components/layout/NavbarMenu.tsx`.
+- Эталон клика: `renderer/src/components/layout/NavbarMenu.tsx`. Эталон ПКМ: `useGalleryCardContextMenu`.
 
 ```tsx
 // ✅ Хорошо

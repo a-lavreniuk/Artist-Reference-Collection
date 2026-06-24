@@ -1,5 +1,7 @@
 export type NavbarSearchMode = 'tags' | 'ai' | 'color' | 'similar';
 
+export const ARC_NAVBAR_SEARCH_MODE_CHANGED_EVENT = 'arc:navbar-search-mode-changed';
+
 const STORAGE_KEY = 'arc-navbar-search-mode';
 
 export function readNavbarSearchMode(): NavbarSearchMode {
@@ -18,6 +20,9 @@ export function writeNavbarSearchMode(mode: NavbarSearchMode): void {
   } catch {
     /* ignore */
   }
+  window.dispatchEvent(
+    new CustomEvent(ARC_NAVBAR_SEARCH_MODE_CHANGED_EVENT, { detail: { mode } })
+  );
 }
 
 export const SEARCH_MODE_META: Record<

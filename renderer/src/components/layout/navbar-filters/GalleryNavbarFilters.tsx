@@ -45,6 +45,7 @@ import FilterResolutionCustomSection from './FilterResolutionCustomSection';
 import FilterOptionsMenu from './FilterOptionsMenu';
 import FilterPresetModal from './FilterPresetModal';
 import FilterPresetsMenu from './FilterPresetsMenu';
+import { useFilterPresetContextMenu } from './useFilterPresetContextMenu';
 
 type PresetModalState = null | { mode: 'create' } | { mode: 'edit'; preset: SavedFilterPreset };
 
@@ -908,6 +909,15 @@ export default function GalleryNavbarFilters() {
     setOpenMenu(null);
   };
 
+  const { openPresetContextMenu, contextMenuLayer: presetContextMenuLayer } = useFilterPresetContextMenu({
+    onApply: handleApplyPreset,
+    onRename: openEditPresetModal,
+    onDelete: async (id) => {
+      deletePreset(id);
+      setOpenMenu(null);
+    }
+  });
+
   return (
     <>
       <div
@@ -993,6 +1003,7 @@ export default function GalleryNavbarFilters() {
               onApply={handleApplyPreset}
               onEdit={openEditPresetModal}
               onSave={openCreatePresetModal}
+              onPresetContextMenu={openPresetContextMenu}
             />
           </ContextMenu>
 
@@ -1033,6 +1044,8 @@ export default function GalleryNavbarFilters() {
           onDelete={() => deletePreset(presetModal.preset.id)}
         />
       ) : null}
+
+      {presetContextMenuLayer}
     </>
   );
 }

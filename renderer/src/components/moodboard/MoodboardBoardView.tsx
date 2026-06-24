@@ -13,6 +13,8 @@ import { loadCardOriginalPixelSize } from './board/cardOriginalSize';
 import { fitBoardToViewport } from './board/fitViewport';
 import BoardColorModal from './BoardColorModal';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
+import { useMoodboardQueueContextMenu } from './useMoodboardQueueContextMenu';
+import { useOpenCardUrl } from '../../search/openCardUrl';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import type { MoodboardBoardV1 } from '../../services/arcSchema';
 import type { CardRecord } from '../../services/db';
@@ -80,6 +82,14 @@ export default function MoodboardBoardView() {
   const [queueThumbs, setQueueThumbs] = useState<Record<string, string | null>>({});
 
   const [removeQueueConfirm, setRemoveQueueConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
+  const { openCard } = useOpenCardUrl();
+  const { openQueueCardContextMenu, contextMenuLayer: queueContextMenuLayer } = useMoodboardQueueContextMenu({
+    onOpen: openCard,
+    onRemoveFromMoodboard: async (cardId) => {
+      const onBoard = await isCardOnBoard(cardId);
+      setRemoveQueueConfirm({ cardId, onBoard });
+    }
+  });
   const [colorModal, setColorModal] = useState<'stroke' | 'text' | null>(null);
   const [boardMenuOpen, setBoardMenuOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
@@ -895,6 +905,7 @@ export default function MoodboardBoardView() {
                 <div
                   className={`arc-add-queue-tile-main arc-moodboard-queue-tile-main${alreadyOnBoard ? ' is-on-board' : ''}`}
                   draggable={!alreadyOnBoard}
+                  onContextMenu={(event) => openQueueCardContextMenu(c.id, event)}
                   onDragStart={(e) => {
                     if (alreadyOnBoard) {
                       e.preventDefault();
@@ -1285,6 +1296,8 @@ export default function MoodboardBoardView() {
           }}
         />
       ) : null}
+
+      {queueContextMenuLayer}
 
       {colorModal === 'stroke' ? (
         <BoardColorModal
