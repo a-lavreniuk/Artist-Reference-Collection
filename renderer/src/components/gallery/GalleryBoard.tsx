@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { CardRecord } from '../../services/db';
 import { MasonryGrid, MASONRY_GAP_PX, resolveMasonryColumnCount, type MasonryVariant } from '../masonry';
+import { computeMasonryColumnWidth } from '../masonry/masonryColumnRules';
 import { galleryMasonryItemHeight } from '../masonry/masonryItemHeight';
 import { useContainerWidth } from '../masonry/useMasonryColumnCount';
 import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
 import { useCardSectionMediaActive } from '../layout/cardSectionMedia';
 import { mergeCardsSrcMap, peekCardsSrcMap } from './galleryMediaCache';
+import { setGalleryThumbPixelBudget } from './galleryThumbBudget';
 import GalleryCardTile from './GalleryCardTile';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 
@@ -38,10 +40,13 @@ export default function GalleryBoard({
   busy = false,
   mediaTab
 }: Props) {
-  const [localSrcMap, setLocalSrcMap] = useState<Record<string, string>>({});
+  const [tierSrcMap, setTierSrcMap] = useState<Record<string, string>>({});
   const [gridSizeVersion, setGridSizeVersion] = useState(0);
   const measureRef = useRef<HTMLDivElement>(null);
-  const srcMap = srcMapProp ?? localSrcMap;
+  const srcMap = useMemo(
+    () => ({ ...(srcMapProp ?? {}), ...tierSrcMap }),
+    [srcMapProp, tierSrcMap]
+  );
   const containerWidth = useContainerWidth(measureRef);
   const gridSize = readGridSize();
   const tabMediaActive = useCardSectionMediaActive(mediaTab ?? 'gallery');
@@ -53,22 +58,29 @@ export default function GalleryBoard({
     return () => window.removeEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
   }, []);
 
+  const columnCount = resolveMasonryColumnCount(containerWidth, gridSize, variant);
+  const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, MASONRY_GAP_PX);
+
   useEffect(() => {
-    if (srcMapProp || !thumbsActive) return;
+    setGalleryThumbPixelBudget(columnWidth);
+    return () => setGalleryThumbPixelBudget(0);
+  }, [columnWidth]);
+
+  useEffect(() => {
+    if (!thumbsActive) return;
     const size = readGridSize();
     const peek = peekCardsSrcMap(cards, size, mediaTab);
-    setLocalSrcMap((prev) => ({ ...prev, ...peek }));
+    setTierSrcMap((prev) => ({ ...prev, ...peek }));
     let cancelled = false;
     void (async () => {
-      const resolved = await mergeCardsSrcMap(cards, peek, size, mediaTab);
-      if (!cancelled) setLocalSrcMap((prev) => ({ ...prev, ...resolved }));
+      const base = { ...(srcMapProp ?? {}), ...peek };
+      const resolved = await mergeCardsSrcMap(cards, base, size, mediaTab);
+      if (!cancelled) setTierSrcMap((prev) => ({ ...prev, ...resolved }));
     })();
     return () => {
       cancelled = true;
     };
-  }, [cards, srcMapProp, gridSizeVersion, thumbsActive]);
-
-  const columnCount = resolveMasonryColumnCount(containerWidth, gridSize, variant);
+  }, [cards, srcMapProp, gridSizeVersion, thumbsActive, columnWidth, mediaTab]);
 
   const masonryItems = useMemo(
     () =>

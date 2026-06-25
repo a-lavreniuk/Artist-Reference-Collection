@@ -1,6 +1,7 @@
 import { readFile } from 'fs/promises';
 import type { ArcMoodboardV1, ArcSystemV1 } from './types';
 import { STORAGE_SCHEMA_VERSION } from './types';
+import { THUMB_GENERATION_VERSION } from '../shared/thumbConstants';
 import { atomicWriteJsonFile } from './atomicWrite';
 import { libraryMetaFileAbs, MOODBOARD_FILENAME, SYSTEM_FILENAME } from '../libraryFilenames';
 
@@ -19,7 +20,8 @@ export function defaultSystem(appVersion?: string): ArcSystemV1 {
     version: 1,
     schemaVersion: STORAGE_SCHEMA_VERSION,
     appVersion,
-    duplicateSimilarityThresholdPct: 85
+    duplicateSimilarityThresholdPct: 85,
+    thumbGenerationVersion: THUMB_GENERATION_VERSION
   };
 }
 
@@ -32,12 +34,14 @@ export async function readSystem(libraryRoot: string): Promise<ArcSystemV1> {
     const raw = await readFile(systemPath(libraryRoot), 'utf8');
     const j = JSON.parse(raw) as Partial<ArcSystemV1>;
     const pct = j.duplicateSimilarityThresholdPct;
+    const thumbGen = j.thumbGenerationVersion;
     return {
       version: 1,
       schemaVersion: j.schemaVersion ?? STORAGE_SCHEMA_VERSION,
       appVersion: j.appVersion,
       duplicateSimilarityThresholdPct:
-        typeof pct === 'number' && Number.isFinite(pct) ? Math.min(100, Math.max(50, pct)) : 85
+        typeof pct === 'number' && Number.isFinite(pct) ? Math.min(100, Math.max(50, pct)) : 85,
+      ...(typeof thumbGen === 'number' && Number.isFinite(thumbGen) ? { thumbGenerationVersion: thumbGen } : {})
     };
   } catch {
     return defaultSystem();

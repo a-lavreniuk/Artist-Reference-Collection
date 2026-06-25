@@ -50,6 +50,7 @@ import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recen
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDetailPreviewUrls } from './galleryMediaCache';
+import { ARC_THUMB_BUDGET_CHANGED_EVENT } from './galleryThumbBudget';
 import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
 import { readGridSize } from '../../layout/gridSizePreference';
 import { extractImagePalette, type PaletteSwatch } from './cardDetailPalette';
@@ -120,6 +121,7 @@ export default function CardDetailOverlay({
   const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
   const [similar, setSimilar] = useState<CardRecord[]>([]);
   const [similarSrcMap, setSimilarSrcMap] = useState<Record<string, string>>({});
+  const [thumbBudgetEpoch, setThumbBudgetEpoch] = useState(0);
   const [moodboardCardIds, setMoodboardCardIds] = useState<Set<string>>(new Set());
   const [inMoodboard, setInMoodboard] = useState(false);
   const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
@@ -261,6 +263,12 @@ export default function CardDetailOverlay({
   }, [cardId]);
 
   useEffect(() => {
+    const onBudget = () => setThumbBudgetEpoch((v) => v + 1);
+    window.addEventListener(ARC_THUMB_BUDGET_CHANGED_EVENT, onBudget);
+    return () => window.removeEventListener(ARC_THUMB_BUDGET_CHANGED_EVENT, onBudget);
+  }, []);
+
+  useEffect(() => {
     if (similar.length === 0) {
       setSimilarSrcMap({});
       return;
@@ -275,7 +283,7 @@ export default function CardDetailOverlay({
     return () => {
       cancelled = true;
     };
-  }, [similar]);
+  }, [similar, thumbBudgetEpoch]);
 
   useEffect(() => {
     settingsWidthRef.current = settingsWidth;

@@ -55,6 +55,7 @@ import {
 import { invalidateScoredSearchCache } from './scoredSearchCache';
 import { clearAiResultsCache } from '../ai/aiResultsCache';
 import { ensureDimensionsBackfill, ensureVideoDurationBackfill } from './galleryFilterBackfill';
+import { ensureThumbGenerationBackfill } from './thumbBackfill';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
@@ -368,6 +369,15 @@ async function ensureLibraryReadyInner(root: string): Promise<Database.Database>
       }
     })();
   }, 120_000);
+  setTimeout(() => {
+    void (async () => {
+      try {
+        await ensureThumbGenerationBackfill(root);
+      } catch {
+        /* фоновая перегенерация превью */
+      }
+    })();
+  }, 180_000);
   return openLibraryDb(root);
 }
 

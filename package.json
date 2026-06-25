@@ -17,6 +17,7 @@
     "electron:dev": "npm run build:main && npm run build:preload && npm run rebuild:native && wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
     "dev": "concurrently -k \"npm run renderer:dev\" \"npm run electron:dev\"",
     "verify:ai-models": "node scripts/verify-ai-models.mjs",
+    "thumbs:regenerate": "npm run build:main && cross-env ELECTRON_RUN_AS_NODE=1 electron scripts/regenerate-thumbs.mjs",
     "postinstall": "electron-rebuild -f -w better-sqlite3,sharp,node-llama-cpp"
   },
   "keywords": [],

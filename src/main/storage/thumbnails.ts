@@ -81,10 +81,11 @@ function dominantFromStats(stats: sharp.Stats): string {
 }
 
 async function writeThumbWebp(input: Buffer | string, outputAbs: string, maxSide: number): Promise<void> {
+  const quality = maxSide <= THUMB_S_MAX ? 88 : 85;
   await sharp(input)
     .rotate()
-    .resize(maxSide, maxSide, { fit: 'inside', withoutEnlargement: true })
-    .webp({ quality: 82 })
+    .resize(maxSide, maxSide, { fit: 'inside', withoutEnlargement: true, kernel: 'lanczos3' })
+    .webp({ quality, effort: 6, smartSubsample: false })
     .toFile(outputAbs);
 }
 

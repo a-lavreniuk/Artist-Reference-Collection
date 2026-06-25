@@ -1,8 +1,50 @@
 import type { MainTabKey } from '../layout/navbarLayout';
 import type { CardRecord } from '../../services/db';
 import type { GridSize } from '../../layout/gridSizePreference';
+import { resolveThumbTier, type ThumbTier } from '@arc-main-shared/thumbConstants';
+import { readGalleryThumbPixelBudget } from './galleryThumbBudget';
 
 export type MediaSectionTab = MainTabKey;
+
+export type CardThumbResolveOptions = {
+  /** Минимальная длинная сторона превью (ширина колонки × DPR). */
+  requiredMaxSidePx?: number;
+};
+
+function effectiveRequiredMaxSidePx(options?: CardThumbResolveOptions): number | undefined {
+  const explicit = options?.requiredMaxSidePx;
+  if (explicit != null && explicit > 0) return explicit;
+  const budget = readGalleryThumbPixelBudget();
+  return budget > 0 ? budget : undefined;
+}
+
+function relForThumbTier(
+  card: CardRecord,
+  tier: ThumbTier
+): string | undefined {
+  const thumbS = card.thumbSRelativePath ?? card.thumbRelativePath;
+  const thumbM = card.thumbMRelativePath ?? thumbS;
+  const thumbL = card.thumbLRelativePath ?? thumbM ?? thumbS;
+  if (tier === 'l') return thumbL;
+  if (tier === 's') return thumbS;
+  return thumbM;
+}
+
+export function cardThumbRel(
+  card: CardRecord,
+  gridSize: GridSize = 'm',
+  options?: CardThumbResolveOptions
+): string | null {
+  const tier = resolveThumbTier(gridSize, effectiveRequiredMaxSidePx(options));
+  const rel = relForThumbTier(card, tier);
+
+  if (!rel || rel === 'legacy') {
+    const fallback = card.originalRelativePath;
+    if (!fallback || fallback === 'legacy') return null;
+    return fallback;
+  }
+  return rel;
+}
 
 /** Совпадает с main/toFileUrlHelper — URL для индексных путей без IPC. */
 const LIBRARY_CARD_MEDIA_REL = /^cards\/[^/]+\/(?:thumb_[sml]|original)\.[a-z0-9]+$/i;
@@ -54,24 +96,6 @@ function peekCachedMediaUrl(rel: string, sect?: MediaSectionTab): string | null 
     return urlByRel.get(mediaCacheKey(rel, sect)) ?? urlByRel.get(mediaCacheKey(stable, sect));
   }
   return urlByRel.get(rel) ?? urlByRel.get(stable) ?? null;
-}
-
-export function cardThumbRel(card: CardRecord, gridSize: GridSize = 'm'): string | null {
-  const thumbS = card.thumbSRelativePath ?? card.thumbRelativePath;
-  const thumbM = card.thumbMRelativePath ?? thumbS;
-  const thumbL = card.thumbLRelativePath ?? thumbM ?? thumbS;
-
-  let rel: string | undefined;
-  if (gridSize === 'l') rel = thumbL;
-  else if (gridSize === 's') rel = thumbS;
-  else rel = thumbM;
-
-  if (!rel || rel === 'legacy') {
-    const fallback = card.originalRelativePath;
-    if (!fallback || fallback === 'legacy') return null;
-    return fallback;
-  }
-  return rel;
 }
 
 export function peekMediaUrl(rel: string): string | null {

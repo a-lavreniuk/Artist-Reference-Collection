@@ -7,9 +7,12 @@ export const STORAGE_SCHEMA_VERSION = 9;
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';
 
-export const THUMB_S_MAX = 160;
-export const THUMB_M_MAX = 400;
-export const THUMB_L_MAX = 800;
+export {
+  THUMB_S_MAX,
+  THUMB_M_MAX,
+  THUMB_L_MAX,
+  THUMB_GENERATION_VERSION
+} from '../shared/thumbConstants';
 
 export type CardType = 'image' | 'video';
 
@@ -103,6 +106,8 @@ export type ArcSystemV1 = {
   schemaVersion: number;
   appVersion?: string;
   duplicateSimilarityThresholdPct: number;
+  /** Версия пайплайна thumb_s/thumb_m; см. THUMB_GENERATION_VERSION. */
+  thumbGenerationVersion?: number;
 };
 
 export type ArcMoodboardV1 = {

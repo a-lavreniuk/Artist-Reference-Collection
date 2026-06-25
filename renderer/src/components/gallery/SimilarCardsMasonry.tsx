@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import type { CardRecord } from '../../services/db';
 import { MasonryGrid, MASONRY_GAP_PX, resolveMasonryColumnCount } from '../masonry';
+import { computeMasonryColumnWidth } from '../masonry/masonryColumnRules';
 import { galleryMasonryItemHeight } from '../masonry/masonryItemHeight';
 import { useContainerWidth } from '../masonry/useMasonryColumnCount';
 import { readGridSize } from '../../layout/gridSizePreference';
 import CardDetailSimilarThumb from './CardDetailSimilarThumb';
 import { gallerySkeletonStyle } from './gallerySkeleton';
+import { setGalleryThumbPixelBudget } from './galleryThumbBudget';
 
 type Props = {
   cards: CardRecord[];
@@ -33,6 +35,12 @@ export default function SimilarCardsMasonry({
   const containerWidth = useContainerWidth(measureRef);
   const gridSize = readGridSize();
   const columnCount = resolveMasonryColumnCount(containerWidth, gridSize, 'similar');
+  const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, MASONRY_GAP_PX);
+
+  useEffect(() => {
+    setGalleryThumbPixelBudget(columnWidth);
+    return () => setGalleryThumbPixelBudget(0);
+  }, [columnWidth]);
 
   useEffect(() => {
     const scroll = measureRef.current?.closest('.arc-card-detail-scroll');
