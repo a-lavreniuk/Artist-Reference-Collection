@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import ArcTopBar from './ArcTopBar';
 import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
-import AppUpdateHost from './AppUpdateHost';
+import { AppUpdateProvider } from './appUpdateContext';
 import PendingRestoreModal from './PendingRestoreModal';
 import LibraryRelocatedHost from './LibraryRelocatedHost';
 import ImportHost from '../import/ImportHost';
@@ -80,6 +80,7 @@ export default function AppLayout() {
   }, []);
 
   return (
+    <AppUpdateProvider>
     <GalleryFilterProvider>
     <GalleryMetaProvider>
     <NotificationHost>
@@ -96,7 +97,6 @@ export default function AppLayout() {
         </div>
         <PendingRestoreModal />
         <LibraryRelocatedHost />
-        <AppUpdateHost />
         <BugReportWidget />
       </main>
       </AutoImportHost>
@@ -105,5 +105,6 @@ export default function AppLayout() {
     </NotificationHost>
     </GalleryMetaProvider>
     </GalleryFilterProvider>
+    </AppUpdateProvider>
   );
 }

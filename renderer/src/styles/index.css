@@ -3995,16 +3995,26 @@ body.arc-card-detail-open .arc-app-outlet {
   font-weight: var(--typo-p-s-weight);
 }
 
-.arc-release-notes-list {
-  margin: 0;
-  padding-left: var(--s-4);
+.arc-release-notes-content {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
 }
 
-.arc-release-notes-list__item {
+.arc-release-notes-content__version,
+.arc-release-notes-content__paragraph {
+  margin: 0;
   color: var(--text-elev-primary);
+}
+
+.arc-release-notes-modal__slot {
+  max-height: min(800px, 50vh);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.arc-release-notes-modal__slot::-webkit-scrollbar {
+  display: none;
 }
 
 /* Settings → Обновления (Figma 1037:39869) */
@@ -4071,13 +4081,10 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-settings-updates-changelog {
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
 }
 
-.arc-settings-updates-changelog__date,
-.arc-settings-updates-changelog__line {
-  margin: 0;
-  color: var(--text-elev-primary);
+.arc-settings-updates-changelog__content {
+  gap: var(--s-2);
 }
 
 .arc-settings-updates-actions {

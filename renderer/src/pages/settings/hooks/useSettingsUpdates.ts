@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { DemoAlertVariant } from '../../../components/layout/DemoAlert';
 
 export type ReleaseNotesVersion = {
@@ -42,6 +43,8 @@ function parseUpdateVersion(updateInfo: unknown): string | null {
 }
 
 export function useSettingsUpdates() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [installedVersion, setInstalledVersion] = useState<string | null>(null);
   const [versions, setVersions] = useState<ReleaseNotesVersion[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
@@ -65,14 +68,19 @@ export function useSettingsUpdates() {
         setVersions(notesRes.versions);
         const hasInstalled = notesRes.versions.some((v) => v.version === installed);
         setSelectedVersion(hasInstalled ? installed : (notesRes.versions[0]?.version ?? installed));
-        if (arc.setLastSeenReleaseVersion) {
-          await arc.setLastSeenReleaseVersion(installed);
-        }
       } finally {
         setLoading(false);
       }
     })();
   }, []);
+
+  useEffect(() => {
+    const versionFromNav = (location.state as { releaseNotesVersion?: string } | null)?.releaseNotesVersion;
+    if (!versionFromNav || versions.length === 0) return;
+    if (!versions.some((v) => v.version === versionFromNav)) return;
+    setSelectedVersion(versionFromNav);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate, versions]);
 
   useEffect(() => {
     const arc = window.arc;

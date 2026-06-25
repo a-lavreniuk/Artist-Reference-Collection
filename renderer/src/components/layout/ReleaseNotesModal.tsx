@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import ReleaseNotesContent from './ReleaseNotesContent';
+import { getReleaseNotesPreviewChanges, hasMoreReleaseNotes } from './releaseNotesConstants';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 export type ReleaseNotesData = {
@@ -10,19 +12,13 @@ export type ReleaseNotesData = {
 type Props = {
   data: ReleaseNotesData;
   onClose: () => void;
+  onDetails?: () => void;
 };
 
-function formatBuildDate(isoDate: string): string {
-  const parts = isoDate.trim().split('-');
-  if (parts.length === 3) {
-    const [y, m, d] = parts;
-    return `${d}.${m}.${y}`;
-  }
-  return isoDate;
-}
-
-export default function ReleaseNotesModal({ data, onClose }: Props) {
+export default function ReleaseNotesModal({ data, onClose, onDetails }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const previewChanges = useMemo(() => getReleaseNotesPreviewChanges(data.changes), [data.changes]);
+  const showDetails = hasMoreReleaseNotes(data.changes) && onDetails != null;
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
@@ -55,33 +51,39 @@ export default function ReleaseNotesModal({ data, onClose }: Props) {
         aria-labelledby="arcReleaseNotesTitle"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="arc-modal__header arc-modal__header--title-subtitle">
-          <div className="arc-modal__title-block">
-            <h3 className="arc-modal__title" id="arcReleaseNotesTitle">
-              Версия {data.version}
-            </h3>
-            <p className="arc-modal__subtitle">Сборка от {formatBuildDate(data.buildDate)}</p>
-          </div>
+        <header className="arc-modal__header arc-modal__header--title">
+          <h3 className="arc-modal__title" id="arcReleaseNotesTitle">
+            Что нового?
+          </h3>
           <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
             <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
         <div className="arc-modal__body">
-          <div className="arc-modal__slot">
-            <ul className="arc-release-notes-list">
-              {data.changes.map((line) => (
-                <li key={line} className="arc-release-notes-list__item">
-                  {line}
-                </li>
-              ))}
-            </ul>
+          <div className="arc-modal__slot arc-release-notes-modal__slot">
+            <ReleaseNotesContent
+              version={data.version}
+              buildDate={data.buildDate}
+              changes={previewChanges}
+            />
           </div>
         </div>
-        <footer className="arc-modal__footer arc-modal__footer--actions-1">
-          <button type="button" className="btn btn-brand btn-ds btn-s" onClick={onClose}>
-            <span className="btn-ds__value">Понятно</span>
-          </button>
-        </footer>
+        {showDetails ? (
+          <footer className="arc-modal__footer arc-modal__footer--actions-2">
+            <button type="button" className="btn btn-secondary btn-ds btn-s" onClick={onDetails}>
+              <span className="btn-ds__value">Подробнее</span>
+            </button>
+            <button type="button" className="btn btn-brand btn-ds btn-s" onClick={onClose}>
+              <span className="btn-ds__value">Продолжить</span>
+            </button>
+          </footer>
+        ) : (
+          <footer className="arc-modal__footer arc-modal__footer--actions-1">
+            <button type="button" className="btn btn-brand btn-ds btn-s" onClick={onClose}>
+              <span className="btn-ds__value">Продолжить</span>
+            </button>
+          </footer>
+        )}
       </section>
     </div>
   );
