@@ -184,6 +184,8 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root) return { ok: false as const, error: 'Библиотека не выбрана' };
     await ensureLibraryReady(root);
+    const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
+    void refreshLibrarySessionSnapshotFromDisk();
     if (process.env.NODE_ENV === 'development') {
       try {
         listCardsFromDb(root, { offset: 0, limit: 1, libraryScope: 'all' });
@@ -217,6 +219,8 @@ export function registerStorageIpc(
     if (importedIds.length > 0) {
       const { queueCardsForIndexing } = await import('./ipcAi');
       void queueCardsForIndexing(importedIds);
+      const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
+      void refreshLibrarySessionSnapshotFromDisk();
     }
     return results;
   });
@@ -291,6 +295,12 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root || typeof cardId !== 'string') return;
     await deleteCardFromStorage(root, cardId);
+    try {
+      const { appendHistory } = await import('./libraryHistory');
+      await appendHistory(root, 'Карточка удалена навсегда');
+    } catch {
+      /* ignore */
+    }
   });
 
   ipcMain.handle('arc:storage-empty-trash', async () => {
@@ -298,7 +308,16 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root) return 0;
     await ensureLibraryReady(root);
-    return emptyTrashFromStorage(root);
+    const n = await emptyTrashFromStorage(root);
+    if (n > 0) {
+      try {
+        const { appendHistory } = await import('./libraryHistory');
+        await appendHistory(root, `Очищена корзина: удалено ${n}`);
+      } catch {
+        /* ignore */
+      }
+    }
+    return n;
   });
 
   ipcMain.handle('arc:storage-gallery-filter-stats', async (_e, payload: unknown) => {

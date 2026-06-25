@@ -10,6 +10,8 @@ export function useSettingsLibraryPath() {
   const [migrateError, setMigrateError] = useState<string | null>(null);
   const [oldFolderPath, setOldFolderPath] = useState<string | null>(null);
   const [infoModal, setInfoModal] = useState<string | null>(null);
+  const [showOpenExistingConfirm, setShowOpenExistingConfirm] = useState(false);
+  const [pendingExistingPath, setPendingExistingPath] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!window.arc) {
@@ -29,6 +31,67 @@ export function useSettingsLibraryPath() {
     return () => window.removeEventListener('arc:library-changed', onLibraryChanged);
   }, [refresh]);
 
+  const applyLibraryPath = useCallback(async (picked: string) => {
+    if (!window.arc) return false;
+    setBusy(true);
+    setFieldError(false);
+    try {
+      const res = await window.arc.setLibraryPath(picked);
+      if (!res.ok) {
+        setFieldError(true);
+        setInfoModal(res.error ?? 'Не удалось сохранить путь');
+        return false;
+      }
+      invalidateLibraryCache();
+      await refresh();
+      await getNavbarMetrics();
+      window.dispatchEvent(new CustomEvent('arc:library-changed'));
+      return true;
+    } finally {
+      setBusy(false);
+    }
+  }, [refresh]);
+
+  const createLibraryFlow = useCallback(async () => {
+    if (!window.arc) return;
+    setFieldError(false);
+    setMigrateError(null);
+    setBusy(true);
+    try {
+      const res = await window.arc.createLibraryFolder();
+      if (!res.ok) {
+        setFieldError(true);
+        setInfoModal(res.error);
+        return;
+      }
+      if (res.existingArcLibrary) {
+        setPendingExistingPath(res.absPath);
+        setShowOpenExistingConfirm(true);
+        return;
+      }
+      invalidateLibraryCache();
+      await refresh();
+      await getNavbarMetrics();
+      window.dispatchEvent(new CustomEvent('arc:library-changed'));
+    } finally {
+      setBusy(false);
+    }
+  }, [refresh]);
+
+  const confirmOpenExistingLibrary = useCallback(async () => {
+    if (!window.arc || !pendingExistingPath) return;
+    setShowOpenExistingConfirm(false);
+    const target = pendingExistingPath;
+    setPendingExistingPath(null);
+    const ok = await applyLibraryPath(target);
+    if (!ok) return;
+  }, [applyLibraryPath, pendingExistingPath]);
+
+  const cancelOpenExistingLibrary = useCallback(() => {
+    setShowOpenExistingConfirm(false);
+    setPendingExistingPath(null);
+  }, []);
+
   const chooseLibraryFolderFlow = useCallback(async () => {
     if (!window.arc) return;
     setFieldError(false);
@@ -39,21 +102,7 @@ export function useSettingsLibraryPath() {
     const current = await window.arc.getLibraryPath();
 
     if (!current) {
-      setBusy(true);
-      try {
-        const res = await window.arc.setLibraryPath(picked);
-        if (!res.ok) {
-          setFieldError(true);
-          setInfoModal(res.error ?? 'Не удалось сохранить путь');
-          return;
-        }
-        invalidateLibraryCache();
-        await refresh();
-        await getNavbarMetrics();
-        window.dispatchEvent(new CustomEvent('arc:library-changed'));
-      } finally {
-        setBusy(false);
-      }
+      await applyLibraryPath(picked);
       return;
     }
 
@@ -72,7 +121,7 @@ export function useSettingsLibraryPath() {
     }
     setMigrateTarget(picked);
     setShowMigrateConfirm(true);
-  }, [refresh]);
+  }, [applyLibraryPath]);
 
   const runMigrate = useCallback(async () => {
     if (!window.arc || !migrateTarget) return;
@@ -119,11 +168,15 @@ export function useSettingsLibraryPath() {
     fieldError,
     migrateError,
     showMigrateConfirm,
+    showOpenExistingConfirm,
     oldFolderPath,
     infoModal,
     setInfoModal,
     setOldFolderPath,
+    createLibraryFlow,
     chooseLibraryFolderFlow,
+    confirmOpenExistingLibrary,
+    cancelOpenExistingLibrary,
     runMigrate,
     cancelMigrateConfirm,
     trashOldFolder,

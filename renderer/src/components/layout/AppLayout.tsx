@@ -5,6 +5,7 @@ import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
 import AppUpdateHost from './AppUpdateHost';
 import PendingRestoreModal from './PendingRestoreModal';
+import LibraryRelocatedHost from './LibraryRelocatedHost';
 import ImportHost from '../import/ImportHost';
 import AutoImportHost from '../import/AutoImportHost';
 import NotificationHost from '../notifications/NotificationHost';
@@ -94,6 +95,7 @@ export default function AppLayout() {
           <Outlet />
         </div>
         <PendingRestoreModal />
+        <LibraryRelocatedHost />
         <AppUpdateHost />
         <BugReportWidget />
       </main>

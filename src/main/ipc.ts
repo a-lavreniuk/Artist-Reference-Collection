@@ -27,24 +27,21 @@ import { registerStorageIpc } from './ipcStorage';
 import { resetLibraryStorageCache } from './storage/libraryStorage';
 import { readLibraryDiskStats } from './libraryDiskStats';
 import {
-  invalidateLibraryRootCache,
   readLibraryRootFromDisk,
-  readLibraryRootSync
+  readLibraryRootSync,
+  writeLibraryRootToDisk
 } from './libraryRootConfig';
 import { resolvePathToMediaUrl, resolvePathsToMediaUrls } from './toFileUrlHelper';
 import { beginNavigationEpoch, endNavigationEpoch } from './ipcNavigationPriority';
-const LIBRARY_CONFIG_FILENAME = 'library-root.json';
-
-function libraryConfigPath(): string {
-  return path.join(app.getPath('userData'), LIBRARY_CONFIG_FILENAME);
-}
-
-async function writeLibraryRootToDisk(abs: string): Promise<void> {
-  await mkdir(path.dirname(libraryConfigPath()), { recursive: true });
-  await writeFile(libraryConfigPath(), JSON.stringify({ path: abs }, null, 2), 'utf8');
-  invalidateLibraryRootCache();
-  syncArcMediaServerLibraryRoot(readLibraryRootSync());
-}
+import { applyLibraryFolderIcon } from './libraryFolderIcon';
+import { createDefaultLibraryFolder } from './createLibraryFolder';
+import {
+  checkShouldOfferRelocateModal,
+  refreshLibrarySessionSnapshotFromDisk,
+  updateLibrarySessionSnapshot
+} from './librarySessionSnapshot';
+import { isValidArcLibraryFolder } from './libraryValidate';
+import { countCards, ensureLibraryReady } from './storage/libraryStorage';
 
 async function metadataPath(root: string): Promise<string | null> {
   return resolveLegacyMetadataAbsPath(root);
@@ -53,6 +50,24 @@ async function metadataPath(root: string): Promise<string | null> {
 function assertNotMaintenance(): void {
   if (isMaintenanceLocked()) {
     throw new Error('Идёт операция…');
+  }
+}
+
+async function finalizeLibraryPathChange(resolved: string, applyIcon: boolean): Promise<void> {
+  await writeLibraryRootToDisk(resolved);
+  syncArcMediaServerLibraryRoot(readLibraryRootSync());
+  resetLibraryStorageCache();
+  const { restartAutoImportWatcher } = await import('./autoImportWatcher');
+  restartAutoImportWatcher();
+  if (applyIcon) {
+    void applyLibraryFolderIcon(resolved);
+  }
+  try {
+    await ensureLibraryReady(resolved);
+    const n = countCards(resolved, 'all', 'all');
+    await updateLibrarySessionSnapshot(resolved, n);
+  } catch {
+    /* snapshot best-effort */
   }
 }
 
@@ -209,15 +224,72 @@ export function registerArcIpc(): void {
     const resolved = path.resolve(absPath.trim());
     try {
       await mkdir(resolved, { recursive: true });
-      await writeLibraryRootToDisk(resolved);
-      resetLibraryStorageCache();
-      const { restartAutoImportWatcher } = await import('./autoImportWatcher');
-      restartAutoImportWatcher();
+      await finalizeLibraryPathChange(resolved, true);
       return { ok: true as const };
     } catch (err) {
       return {
         ok: false as const,
         error: err instanceof Error ? err.message : 'Не удалось сохранить путь'
+      };
+    }
+  });
+
+  ipcMain.handle('arc:create-library-folder', async () => {
+    assertNotMaintenance();
+    const created = await createDefaultLibraryFolder();
+    if (!created.ok) {
+      return { ok: false as const, error: created.error };
+    }
+    if (created.existingArcLibrary) {
+      return {
+        ok: true as const,
+        absPath: created.absPath,
+        folderName: created.folderName,
+        existingArcLibrary: true as const
+      };
+    }
+    try {
+      await finalizeLibraryPathChange(created.absPath, true);
+      return {
+        ok: true as const,
+        absPath: created.absPath,
+        folderName: created.folderName,
+        existingArcLibrary: false as const
+      };
+    } catch (err) {
+      return {
+        ok: false as const,
+        error: err instanceof Error ? err.message : 'Не удалось создать библиотеку'
+      };
+    }
+  });
+
+  ipcMain.handle('arc:check-library-relocate-modal', async () => checkShouldOfferRelocateModal());
+
+  ipcMain.handle('arc:validate-library-folder', async (_e, absPath: unknown) => {
+    if (typeof absPath !== 'string' || !absPath.trim()) {
+      return { ok: false as const, valid: false as const };
+    }
+    const valid = await isValidArcLibraryFolder(path.resolve(absPath.trim()));
+    return { ok: true as const, valid };
+  });
+
+  ipcMain.handle('arc:relink-library-folder', async (_e, absPath: unknown) => {
+    assertNotMaintenance();
+    if (typeof absPath !== 'string' || !absPath.trim()) {
+      return { ok: false as const, error: 'Пустой путь' };
+    }
+    const resolved = path.resolve(absPath.trim());
+    if (!(await isValidArcLibraryFolder(resolved))) {
+      return { ok: false as const, error: 'Выбранная папка не является библиотекой ARC' };
+    }
+    try {
+      await finalizeLibraryPathChange(resolved, true);
+      return { ok: true as const };
+    } catch (err) {
+      return {
+        ok: false as const,
+        error: err instanceof Error ? err.message : 'Не удалось подключить библиотеку'
       };
     }
   });
@@ -448,9 +520,7 @@ export function registerArcIpc(): void {
       try {
         const res = await migrateLibraryToFolder(oldRoot, newRoot);
         if (!res.ok) return res;
-        await writeLibraryRootToDisk(newRoot);
-        const { restartAutoImportWatcher } = await import('./autoImportWatcher');
-        restartAutoImportWatcher();
+        await finalizeLibraryPathChange(newRoot, true);
         try {
           await appendHistory(newRoot, 'Перенос хранилища завершён');
         } catch {

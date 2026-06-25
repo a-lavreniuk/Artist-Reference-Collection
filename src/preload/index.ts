@@ -15,6 +15,24 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.sendSync('arc:get-media-server-origin') as string | null,
   setLibraryPath: (absPath: string) =>
     ipcRenderer.invoke('arc:set-library-path', absPath) as Promise<{ ok: boolean; error?: string }>,
+  createLibraryFolder: () =>
+    ipcRenderer.invoke('arc:create-library-folder') as Promise<
+      | {
+          ok: true;
+          absPath: string;
+          folderName: string;
+          existingArcLibrary: boolean;
+        }
+      | { ok: false; error: string }
+    >,
+  checkLibraryRelocateModal: () =>
+    ipcRenderer.invoke('arc:check-library-relocate-modal') as Promise<
+      { show: false } | { show: true; reason: 'path_missing' | 'empty_library' }
+    >,
+  validateLibraryFolder: (absPath: string) =>
+    ipcRenderer.invoke('arc:validate-library-folder', absPath) as Promise<{ ok: boolean; valid: boolean }>,
+  relinkLibraryFolder: (absPath: string) =>
+    ipcRenderer.invoke('arc:relink-library-folder', absPath) as Promise<{ ok: boolean; error?: string }>,
   pickLibraryFolder: () => ipcRenderer.invoke('arc:pick-library-folder') as Promise<string | null>,
   readMetadata: () => ipcRenderer.invoke('arc:read-metadata'),
   writeMetadata: (data: unknown) => ipcRenderer.invoke('arc:write-metadata', data),

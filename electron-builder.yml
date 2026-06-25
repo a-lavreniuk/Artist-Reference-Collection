@@ -23,6 +23,8 @@ extraResources:
     to: icons/icon.png
   - from: build/icons/icon-16.png
     to: icons/icon-16.png
+  - from: build/icons/icon.ico
+    to: icons/icon.ico
 win:
   target:
     - target: nsis

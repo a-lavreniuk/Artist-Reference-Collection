@@ -45,6 +45,15 @@ declare global {
       setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => void;
       getMediaServerOrigin: () => string | null;
       setLibraryPath: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
+      createLibraryFolder: () => Promise<
+        | { ok: true; absPath: string; folderName: string; existingArcLibrary: boolean }
+        | { ok: false; error: string }
+      >;
+      checkLibraryRelocateModal: () => Promise<
+        { show: false } | { show: true; reason: 'path_missing' | 'empty_library' }
+      >;
+      validateLibraryFolder: (absPath: string) => Promise<{ ok: boolean; valid: boolean }>;
+      relinkLibraryFolder: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
       pickLibraryFolder: () => Promise<string | null>;
       readMetadata: () => Promise<ArcMetadataV1 | null>;
       writeMetadata: (data: ArcMetadataV1) => Promise<void>;

@@ -15,16 +15,22 @@ export default function SettingsLibraryPanel() {
     busy,
     migrateError,
     showMigrateConfirm,
+    showOpenExistingConfirm,
     oldFolderPath,
     infoModal,
     setInfoModal,
     setOldFolderPath,
+    createLibraryFlow,
     chooseLibraryFolderFlow,
+    confirmOpenExistingLibrary,
+    cancelOpenExistingLibrary,
     runMigrate,
     cancelMigrateConfirm,
     trashOldFolder,
     openOldFolderInExplorer
   } = useSettingsLibraryPath();
+
+  const hasLibrary = Boolean(libraryPath);
 
   return (
     <>
@@ -33,14 +39,35 @@ export default function SettingsLibraryPanel() {
           <div className="arc-settings-desc-block">
             <p className="typo-p-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
             <div className="arc-settings-action-row">
-              <button
-                type="button"
-                className="btn btn-secondary btn-ds"
-                onClick={() => void chooseLibraryFolderFlow()}
-                disabled={busy || !window.arc}
-              >
-                <span className="btn-ds__value">{busy ? '…' : 'Перенести папку'}</span>
-              </button>
+              {hasLibrary ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-ds"
+                  onClick={() => void chooseLibraryFolderFlow()}
+                  disabled={busy || !window.arc}
+                >
+                  <span className="btn-ds__value">{busy ? '…' : 'Перенести папку'}</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-brand btn-ds"
+                    onClick={() => void createLibraryFlow()}
+                    disabled={busy || !window.arc}
+                  >
+                    <span className="btn-ds__value">{busy ? '…' : 'Создать библиотеку'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-ds"
+                    onClick={() => void chooseLibraryFolderFlow()}
+                    disabled={busy || !window.arc}
+                  >
+                    <span className="btn-ds__value">Выбрать существующую</span>
+                  </button>
+                </>
+              )}
               <span className="typo-p-m arc-settings-action-row__meta" title={libraryPath ?? undefined}>
                 {libraryPath ?? 'Не выбрана'}
               </span>
@@ -52,6 +79,16 @@ export default function SettingsLibraryPanel() {
           </div>
         </div>
       </div>
+
+      {showOpenExistingConfirm ? (
+        <ConfirmModal
+          title="Открыть библиотеку?"
+          message="В папке «Библиотека ARC» уже есть библиотека ARC. Открыть её вместо создания новой?"
+          confirmLabel="Открыть"
+          onCancel={cancelOpenExistingLibrary}
+          onConfirm={() => void confirmOpenExistingLibrary()}
+        />
+      ) : null}
 
       {showMigrateConfirm ? (
         <ConfirmModal

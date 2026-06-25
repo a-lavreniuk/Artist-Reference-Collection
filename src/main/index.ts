@@ -5,6 +5,8 @@ import { appIconPath } from './appIcon';
 import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts } from './devTools';
 import { registerArcIpc } from './ipc';
 import { readLibraryRootSync } from './libraryRootConfig';
+import { refreshBrandingIconIfNeeded } from './libraryFolderIcon';
+import { refreshLibrarySessionSnapshotFromDisk } from './librarySessionSnapshot';
 import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
@@ -102,6 +104,7 @@ app.whenReady().then(async () => {
   clearSessionWindowSize();
 
   await startArcMediaServer(readLibraryRootSync());
+  await refreshBrandingIconIfNeeded();
   registerArcIpc();
   registerAppPreferencesIpc();
   registerWindowChromeIpc();
@@ -138,6 +141,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  void refreshLibrarySessionSnapshotFromDisk();
   shutdownArcMediaServer();
   destroyAppTray();
   unregisterDevToolsShortcuts();
