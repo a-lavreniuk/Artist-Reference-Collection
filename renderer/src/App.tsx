@@ -10,7 +10,6 @@ import TagsPage from './pages/TagsPage';
 
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const UiKitPage = lazy(() => import('./ui-kit/UiKitPage'));
-const SettingsUiKitPanel = lazy(() => import('./pages/settings/panels/SettingsUiKitPanel'));
 const SettingsGeneralPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsGeneralPanel }))
 );
@@ -73,7 +72,6 @@ export default function App() {
           <Route path="duplicates" element={<SettingsNavbarPanelPage panel="duplicates" />} />
           <Route path="settings" element={<SettingsPage />}>
             <Route index element={<Navigate to="general" replace />} />
-            <Route path="ui-kit" element={<SettingsUiKitPanel />} />
             <Route path="general" element={<SettingsGeneralPanel />} />
             <Route path="screenshots" element={<SettingsScreenshotsPanel />} />
             <Route path="notifications" element={<SettingsNotificationsPanel />} />

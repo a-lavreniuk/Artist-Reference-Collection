@@ -3543,15 +3543,6 @@ body.arc-card-detail-open .arc-app-outlet {
   padding-top: var(--s-4);
 }
 
-.arc-settings-page-sidebar__foot {
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
-.arc-settings-page-sidebar__foot > .arc-settings-page-sidebar__pad:last-child {
-  padding-bottom: var(--s-4);
-}
-
 .arc-settings-page-sidebar__scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -3940,61 +3931,6 @@ body.arc-card-detail-open .arc-app-outlet {
   font-weight: var(--typo-p-s-weight);
 }
 
-.arc-settings-ui-kit-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-}
-
-.arc-settings-ui-kit-block {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-}
-
-.arc-settings-ui-kit-block__title {
-  margin: 0;
-  color: var(--text-elev-secondary);
-}
-
-.arc-settings-ui-kit-spacer-demo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-  padding: var(--s-3);
-  border: 1px dashed var(--panel-border);
-  border-radius: var(--radius-m);
-}
-
-.arc-settings-ui-kit-spacer-demo__row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--s-2);
-}
-
-.arc-settings-ui-kit-spacer-demo__bar {
-  height: var(--s-2);
-  border-radius: var(--radius-xs);
-  background: var(--brand-600);
-  flex-shrink: 0;
-}
-
-.arc-settings-ui-kit-separator-demo {
-  display: flex;
-  flex-direction: column;
-  padding: var(--s-3);
-  border: 1px dashed var(--panel-border);
-  border-radius: var(--radius-m);
-}
-
-.arc-settings-ui-kit-separator-demo__block {
-  color: var(--text-elev-secondary);
-  font-size: var(--typo-p-s-size);
-  line-height: var(--typo-p-s-line);
-  font-weight: var(--typo-p-s-weight);
-}
-
 .arc-release-notes-content {
   display: flex;
   flex-direction: column;
@@ -4033,8 +3969,7 @@ body.arc-card-detail-open .arc-app-outlet {
   gap: var(--s-4);
 }
 
-.arc-settings-updates-tabs {
-  display: flex;
+.arc-settings-updates-tabs.tabs {
   flex-wrap: wrap;
   gap: var(--s-1);
   max-width: 100%;
@@ -4046,36 +3981,29 @@ body.arc-card-detail-open .arc-app-outlet {
   display: none;
 }
 
-.arc-settings-updates-tab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 0 var(--s-1);
-  border: none;
-  border-radius: var(--s-1);
+/* Figma 1037:40074 — сегментированные кнопки версий на sunken; размер/радиус — EL-TABS M через .tab-button */
+.arc-settings-updates-tabs .tab-button {
+  white-space: nowrap;
+}
+
+.arc-settings-updates-tabs .tab-button:not(.is-active) {
   background: var(--gray-900);
   color: var(--text-elev-primary);
-  font: inherit;
-  font-size: var(--typo-p-m-size);
-  line-height: var(--typo-p-m-line);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.arc-settings-updates-tab:hover:not(.is-active) {
+.arc-settings-updates-tabs .tab-button:not(.is-active):hover:not(:disabled) {
   background: var(--gray-850);
+  color: var(--text-elev-primary);
 }
 
-.arc-settings-updates-tab:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.arc-settings-updates-tab.is-active {
+.arc-settings-updates-tabs .tab-button.is-active {
   background: var(--brand-550);
   color: var(--brand-100);
+}
+
+.arc-settings-updates-tabs .tab-button.is-active:hover:not(:disabled) {
+  background: var(--brand-600);
+  color: var(--brand-50);
 }
 
 .arc-settings-updates-changelog {

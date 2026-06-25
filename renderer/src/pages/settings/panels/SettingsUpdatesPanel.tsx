@@ -37,7 +37,7 @@ export default function SettingsUpdatesPanel() {
           ) : (
             <>
               <div className="arc-settings-updates-panel__head">
-                <div className="arc-settings-updates-tabs" role="tablist" aria-label="Версии приложения">
+                <div className="tabs tabs-wrap arc-settings-updates-tabs" role="tablist" aria-label="Версии приложения">
                   {versions.map((entry) => {
                     const isCurrent = entry.version === installedVersion;
                     const isSelected = entry.version === selectedVersion;
@@ -47,7 +47,7 @@ export default function SettingsUpdatesPanel() {
                         key={entry.version}
                         type="button"
                         role="tab"
-                        className={`arc-settings-updates-tab${isSelected ? ' is-active' : ''}`}
+                        className={`tab-button${isSelected ? ' is-active' : ''}`}
                         aria-selected={isSelected}
                         onClick={() => setSelectedVersion(entry.version)}
                       >

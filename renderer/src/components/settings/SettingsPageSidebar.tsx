@@ -82,13 +82,6 @@ export default function SettingsPageSidebar() {
           />
         </div>
       </div>
-
-      <div className="arc-settings-page-sidebar__foot">
-        <ContextMenuSeparator />
-        <div className="arc-settings-page-sidebar__pad">
-          <SettingsSidebarNavItem to="/settings/ui-kit" label="UI-Kit" iconClass="arc-icon-grid" />
-        </div>
-      </div>
     </aside>
   );
 }
