@@ -6,8 +6,11 @@ import {
   setSimilarUploadPath,
   type SimilarCropRect
 } from '../../search/similarSearchSession';
+import { SEARCH_MODE_META } from '../../search/navbarSearchMode';
 import SearchPanelFullBleedSep from './SearchPanelFullBleedSep';
+import SearchPanelModeHeader from './SearchPanelModeHeader';
 import SearchPanelRecentCards from './SearchPanelRecentCards';
+import SearchPanelSection from './SearchPanelSection';
 import SimilarImageCropper from './SimilarImageCropper';
 
 type SearchPanelSimilarControlsProps = {
@@ -17,16 +20,10 @@ type SearchPanelSimilarControlsProps = {
   onCropChange: (crop: SimilarCropRect) => void;
   onUploadStaged: (stagedPath: string) => void;
   onClearQuery: () => void;
-  onConfirmSearch: () => void;
   onRecentClear: () => void;
   recentViewedIds: string[];
   onSelectRecentCard: (cardId: string) => void;
 };
-
-function mediaAbsUrl(absPath: string): string {
-  const origin = window.arc?.getMediaServerOrigin?.()?.replace(/\/$/, '') ?? 'arc-media://localhost';
-  return `${origin}/?abs=${encodeURIComponent(absPath)}`;
-}
 
 async function stageDroppedPaths(paths: string[]): Promise<string | null> {
   const imagePath = paths.find((p) => isImportableMediaPath(p) && /\.(png|jpe?g|webp|gif|bmp)$/i.test(p));
@@ -44,7 +41,6 @@ export default function SearchPanelSimilarControls({
   onCropChange,
   onUploadStaged,
   onClearQuery,
-  onConfirmSearch,
   onRecentClear,
   recentViewedIds,
   onSelectRecentCard
@@ -78,68 +74,74 @@ export default function SearchPanelSimilarControls({
   );
 
   const showRecent = recentViewedIds.length > 0;
+  const showSimilarWorkspace = hasQuery || Boolean(previewSrc);
 
   return (
     <div className="arc-search-panel-similar">
-      <div className="arc-search-panel-similar-header">
-        <h3 className="h3 arc-search-panel-mode-header__title">Поиск по совпадениям</h3>
-        {hasQuery ? (
-          <div className="arc-search-panel-similar-actions" data-btn-size="s">
-            <button type="button" className="btn btn-outline btn-ds" onClick={onClearQuery}>
+      <div className="arc-search-panel-similar-intro">
+        <div className="arc-search-panel-similar-header">
+          <SearchPanelModeHeader mode="similar" />
+          {showSimilarWorkspace ? (
+            <button type="button" className="btn btn-outline btn-ds" data-btn-size="s" onClick={onClearQuery}>
               <span className="btn-ds__value">Очистить</span>
             </button>
-            <button type="button" className="btn btn-brand btn-ds" onClick={onConfirmSearch}>
-              <span className="btn-ds__value">Искать</span>
-              <span className="btn-ds__icon arc-icon-search" aria-hidden="true" />
-            </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
+        <p className="arc-search-panel-hint">{SEARCH_MODE_META.similar.panelHint}</p>
       </div>
 
       <SearchPanelFullBleedSep />
 
-      {!hasQuery ? (
-        <div
-          className={`arc-search-panel-similar-dropzone panel elevation-sunken${dragOver ? ' arc-search-panel-similar-dropzone--dropping' : ''}`}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => void onDrop(e)}
-        >
-          <p className="typo-p-l arc-search-panel-similar-dropzone__hint">
-            Перетащите изображение в поле поиска или нажмите на кнопку, чтобы загрузить файл…
-          </p>
-          <button type="button" className="btn btn-brand btn-ds" data-btn-size="m" onClick={() => void pickImage()}>
-            <span className="btn-ds__value">Выбрать изображение</span>
-          </button>
+      {!showSimilarWorkspace ? (
+        <div className="arc-search-panel-similar-dropzone-host">
+          <div
+            className={`arc-import-dropzone arc-search-panel-similar-dropzone${dragOver ? ' arc-import-dropzone--dropping' : ''}`}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => void onDrop(e)}
+          >
+            <p className="typo-p-l arc-search-panel-similar-dropzone__hint">
+              Перетащите изображение в поле поиска или нажмите на кнопку, чтобы загрузить файл…
+            </p>
+            <div className="arc-import-dropzone-cta-wrap">
+              <button
+                type="button"
+                className="btn btn-brand btn-ds arc-import-dropzone-cta"
+                data-btn-size="m"
+                onClick={() => void pickImage()}
+              >
+                <span className="btn-ds__value">Выбрать изображение</span>
+                <span className="btn-ds__icon arc-import-dropzone-plus-icon" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
         </div>
       ) : previewSrc ? (
         <SimilarImageCropper imageSrc={previewSrc} crop={crop} onChange={onCropChange} />
-      ) : null}
+      ) : (
+        <div className="arc-search-panel-similar-loading" role="status" aria-label="Загрузка изображения">
+          <span className="loader" />
+        </div>
+      )}
 
       {showRecent ? <SearchPanelFullBleedSep /> : null}
 
       {showRecent ? (
-        <div className="arc-search-panel-section">
-          <div className="arc-search-panel-section__head">
-            <span className="text-l">Недавние просмотры</span>
-            <button type="button" className="text-s arc-search-panel-section__clear" onClick={onRecentClear}>
-              Очистить
-            </button>
-          </div>
+        <SearchPanelSection title="Недавние просмотры" onClear={onRecentClear}>
           <SearchPanelRecentCards
             cardIds={recentViewedIds}
             onSelect={(id) => {
               onSelectRecentCard(id);
             }}
           />
-        </div>
+        </SearchPanelSection>
       ) : null}
     </div>
   );

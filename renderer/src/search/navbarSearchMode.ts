@@ -50,23 +50,30 @@ export const SEARCH_MODE_META: Record<
     panelHint:
       'Опишите, что ищите, например: «Чёрная кошка». Однако поиск может допускать ошибки…',
     placeholder: 'Поисковый запрос',
-    iconClass: 'arc-icon-filter-list',
+    iconClass: 'arc-icon-ai',
     enabled: true
   },
   color: {
     label: 'По цвету',
     panelTitle: 'Поиск по цвету',
-    panelHint: '',
+    panelHint: 'Задайте доминирующий цвет — найдём карточки с похожей палитрой',
     placeholder: 'Поиск по доминирующему цвету…',
-    iconClass: 'arc-icon-filter',
+    iconClass: 'arc-icon-eyedropper',
     enabled: true
   },
   similar: {
     label: 'Похожие',
     panelTitle: 'Поиск по совпадениям',
-    panelHint: '',
+    panelHint: 'Загрузите изображение или выберите карточку из недавних просмотров',
     placeholder: 'Выберите файл для поиска совпадений…',
     iconClass: 'arc-icon-image',
     enabled: true
   }
 };
+
+export function getLongestSearchPlaceholder(): string {
+  return Object.values(SEARCH_MODE_META)
+    .filter((meta) => meta.enabled)
+    .map((meta) => meta.placeholder)
+    .reduce((longest, current) => (current.length > longest.length ? current : longest), '');
+}

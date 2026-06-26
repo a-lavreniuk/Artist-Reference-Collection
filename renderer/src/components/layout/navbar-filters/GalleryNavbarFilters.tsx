@@ -4,29 +4,24 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
-  type MouseEvent,
-  type RefObject
+  useState
 } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
-import { ContextMenu, ContextMenuInput, type ContextMenuRow } from '../../context-menu';
+import {
+  ContextMenu,
+  ContextMenuInput,
+  type ContextMenuRow
+} from '../../context-menu';
+import { CONTEXT_MENU_ANCHOR_GAP } from '../../context-menu/types';
 import type { ContextMenuSlot } from '../../context-menu/types';
 import ContextMenuHeader from '../../context-menu/ContextMenuHeader';
 import ContextMenuItem from '../../context-menu/ContextMenuItem';
 import ContextMenuSeparator from '../../context-menu/ContextMenuSeparator';
 import { Datepicker } from '../../datepicker';
-import { Tooltip } from '../../tooltip/Tooltip';
 import { useGalleryFilters } from '../../gallery/GalleryFilterContext';
 import {
   FILTER_CHIP_META,
-  GALLERY_ORDERABLE_SORT_FIELDS,
   IMAGE_FILE_EXTENSIONS,
-  SORT_DIRECTION_OPTIONS,
-  SORT_FIELD_LABELS,
-  createGalleryShuffleSort,
-  defaultSortDirectionForField,
-  isGalleryShuffleSort,
   VIDEO_FILE_EXTENSIONS,
   countFilterCategorySelections,
   type AspectRatioFilterValue,
@@ -34,11 +29,9 @@ import {
   type DurationFilterValue,
   type FileWeightFilterValue,
   type GalleryFilterId,
-  type GalleryOrderableSortField,
   type ResolutionFilterValue,
   type SavedFilterPreset
 } from '../../gallery/galleryFilterTypes';
-import { newShuffleSeed } from '../../gallery/shuffleCardIds';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
 import FilterCustomRangeSection from './FilterCustomRangeSection';
 import FilterResolutionCustomSection from './FilterResolutionCustomSection';
@@ -82,17 +75,13 @@ const DEFAULT_RESOLUTION_RANGE = {
   maxH: RESOLUTION_MAX_H
 };
 
-export default function GalleryNavbarFilters() {
-  const location = useLocation();
-  const showShuffleSort = location.pathname === '/gallery';
-  const rowRef = useRef<HTMLDivElement>(null);
+export default function NavbarFiltersMenu() {
+  const rowRef = useRef<HTMLSpanElement>(null);
   const {
     filters,
     patchFilters,
     clearFilters,
     clearFilterCategory,
-    sort,
-    setSort,
     layout,
     reorderFilter,
     toggleFilterVisibility,
@@ -103,8 +92,7 @@ export default function GalleryNavbarFilters() {
     applyPreset,
     deletePreset,
     renamePreset,
-    activeCategoryCount,
-    shuffleReloading
+    activeCategoryCount
   } = useGalleryFilters();
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -328,79 +316,27 @@ export default function GalleryNavbarFilters() {
     }
   }, [customDurationDebounced, filters.duration, patchFilters, stats?.durationMeta.maxSec]);
 
-  const sortRef = useRef<HTMLButtonElement>(null);
-  const chipAnchorRefs = useRef<Record<string, RefObject<HTMLElement | null>>>({});
-  const optionsRef = useRef<HTMLButtonElement>(null);
-  const presetsRef = useRef<HTMLButtonElement>(null);
+  const filtersMainRef = useRef<HTMLButtonElement>(null);
+  const scopeRef = useRef<HTMLSpanElement>(null);
+  const [mainOpen, setMainOpen] = useState(false);
+  const [submenuPosition, setSubmenuPosition] = useState<{ x: number; y: number } | null>(null);
   const weightRangeUserChangeRef = useRef(false);
   const resolutionRangeUserChangeRef = useRef(false);
   const durationRangeUserChangeRef = useRef(false);
 
-  const getChipAnchorRef = (id: GalleryFilterId): RefObject<HTMLElement | null> => {
-    if (!chipAnchorRefs.current[id]) {
-      chipAnchorRefs.current[id] = { current: null };
-    }
-    return chipAnchorRefs.current[id];
-  };
-
   useLayoutEffect(() => {
     if (rowRef.current) void hydrateArcNavbarIcons(rowRef.current);
-  }, [layout, filters, sort, openMenu, activeCategoryCount, stats]);
+  }, [layout, filters, openMenu, mainOpen, activeCategoryCount, stats]);
 
-  const closeMenu = useCallback(() => setOpenMenu(null), []);
+  const closeMenu = useCallback(() => {
+    setOpenMenu(null);
+    setSubmenuPosition(null);
+  }, []);
 
-  const sortRows = useMemo<ContextMenuRow[]>(() => {
-    const fields: GalleryOrderableSortField[] = [...GALLERY_ORDERABLE_SORT_FIELDS];
-    const items: ContextMenuRow[] = [{ type: 'header', key: 'sort-h', label: 'Сортировка' }];
-    for (const field of fields) {
-      items.push({
-        type: 'item',
-        key: `sort-${field}`,
-        label: SORT_FIELD_LABELS[field],
-        selected: sort.field === field,
-        closeOnSelect: false,
-        onSelect: () =>
-          setSort({
-            field,
-            direction:
-              sort.field === field ? sort.direction : defaultSortDirectionForField(field)
-          })
-      });
-    }
-    if (showShuffleSort) {
-      items.push({
-        type: 'item',
-        key: 'sort-shuffle',
-        label: 'Перемешать',
-        closeOnSelect: false,
-        loading: shuffleReloading,
-        disabled: shuffleReloading,
-        onSelect: () => {
-          if (shuffleReloading) return;
-          setSort(createGalleryShuffleSort(newShuffleSeed()));
-        }
-      });
-    }
-    if (!isGalleryShuffleSort(sort)) {
-      const dirOpts = SORT_DIRECTION_OPTIONS[sort.field];
-      items.push({ type: 'separator', key: 'sort-sep' });
-      items.push({
-        type: 'item',
-        key: 'sort-primary',
-        label: dirOpts.primaryLabel,
-        selected: sort.direction === dirOpts.primary,
-        onSelect: () => setSort({ ...sort, direction: dirOpts.primary })
-      });
-      items.push({
-        type: 'item',
-        key: 'sort-secondary',
-        label: dirOpts.secondaryLabel,
-        selected: sort.direction === dirOpts.secondary,
-        onSelect: () => setSort({ ...sort, direction: dirOpts.secondary })
-      });
-    }
-    return items;
-  }, [setSort, showShuffleSort, shuffleReloading, sort]);
+  const closeAllMenus = useCallback(() => {
+    setMainOpen(false);
+    closeMenu();
+  }, [closeMenu]);
 
   const buildAspectRows = (): ContextMenuRow[] => {
     const opts: { key: AspectRatioFilterValue; label: string; iconClass: string }[] = [
@@ -727,13 +663,8 @@ export default function GalleryNavbarFilters() {
     return true;
   });
 
-  const renderChipMenu = (id: GalleryFilterId) => {
-    const anchorRef = getChipAnchorRef(id);
-    const open = openMenu === id;
+  const buildFilterSubmenu = (id: GalleryFilterId) => {
     const meta = FILTER_CHIP_META[id];
-    const selectionCount = countFilterCategorySelections(filters, id);
-    const active = selectionCount > 0;
-
     let rows: ContextMenuRow[] | null = null;
     let children: React.ReactNode = null;
 
@@ -752,135 +683,147 @@ export default function GalleryNavbarFilters() {
         break;
       case 'dateAdded':
         rows = buildDateRows();
-        children = openMenu === 'dateAdded' ? buildDateMenu() : null;
+        children = buildDateMenu();
         break;
       case 'fileWeight':
         rows = buildWeightRows();
-        children =
-          openMenu === 'fileWeight' && stats ? (
-            <FilterCustomRangeSection
-              header="Другой Вес, Мб"
-              headerClassName="arc-filter-custom-range__header"
-              min={0}
-              max={Math.round(stats.fileWeightMeta.maxMb)}
-              valueMin={customWeight.min}
-              valueMax={customWeight.max}
-              onChange={(min, max) => {
-                weightRangeUserChangeRef.current = true;
-                setCustomWeight({ min, max });
-              }}
-              ariaLabel="Другой Вес"
-            />
-          ) : null;
+        children = stats ? (
+          <FilterCustomRangeSection
+            header="Другой Вес, Мб"
+            headerClassName="arc-filter-custom-range__header"
+            min={0}
+            max={Math.round(stats.fileWeightMeta.maxMb)}
+            valueMin={customWeight.min}
+            valueMax={customWeight.max}
+            onChange={(min, max) => {
+              weightRangeUserChangeRef.current = true;
+              setCustomWeight({ min, max });
+            }}
+            ariaLabel="Другой Вес"
+          />
+        ) : null;
         break;
       case 'resolution':
         rows = buildResolutionRows();
-        children =
-          openMenu === 'resolution' ? (
-            <FilterResolutionCustomSection
-              value={customRes}
-              maxBoundW={RESOLUTION_MAX_W}
-              maxBoundH={RESOLUTION_MAX_H}
-              onChange={(next) => {
-                resolutionRangeUserChangeRef.current = true;
-                setCustomRes(next);
-              }}
-            />
-          ) : null;
+        children = (
+          <FilterResolutionCustomSection
+            value={customRes}
+            maxBoundW={RESOLUTION_MAX_W}
+            maxBoundH={RESOLUTION_MAX_H}
+            onChange={(next) => {
+              resolutionRangeUserChangeRef.current = true;
+              setCustomRes(next);
+            }}
+          />
+        );
         break;
       case 'duration':
         rows = buildDurationRows();
-        children =
-          openMenu === 'duration' && stats ? (
-            <FilterCustomRangeSection
-              header="Другая Длительность, сек"
-              headerClassName="arc-filter-custom-range__header"
-              min={0}
-              max={Math.max(1, Math.round(stats.durationMeta.maxSec))}
-              valueMin={customDuration.min}
-              valueMax={customDuration.max}
-              onChange={(min, max) => {
-                durationRangeUserChangeRef.current = true;
-                setCustomDuration({ min, max });
-              }}
-              ariaLabel="Другая Длительность"
-            />
-          ) : null;
+        children = stats ? (
+          <FilterCustomRangeSection
+            header="Другая Длительность, сек"
+            headerClassName="arc-filter-custom-range__header"
+            min={0}
+            max={Math.max(1, Math.round(stats.durationMeta.maxSec))}
+            valueMin={customDuration.min}
+            valueMax={customDuration.max}
+            onChange={(min, max) => {
+              durationRangeUserChangeRef.current = true;
+              setCustomDuration({ min, max });
+            }}
+            ariaLabel="Другая Длительность"
+          />
+        ) : null;
         break;
       default:
         break;
     }
 
-    const handleClearCategory = (e: MouseEvent<HTMLButtonElement>) => {
-      e.stopPropagation();
-      clearFilterCategory(id);
-      closeMenu();
-    };
-
-    return (
-      <>
-        {active ? (
-          <div
-            ref={(el) => {
-              anchorRef.current = el;
-            }}
-            className="arc-navbar-filter-chip-group arc-navbar-no-drag"
-          >
-            <button
-              type="button"
-              className="arc-navbar-filter-chip arc-navbar-filter-chip-filter"
-              aria-expanded={open}
-              aria-haspopup="menu"
-              onClick={() => setOpenMenu(open ? null : id)}
-            >
-              <span className={`btn-ds__icon ${meta.iconClass}`} aria-hidden="true" />
-              <span className="btn-ds__value">{meta.label}</span>
-              <span className="btn-ds__counter">{selectionCount}</span>
-            </button>
-            <Tooltip
-              content="Очистить фильтр"
-              delay={500}
-              position="top"
-              className="arc-navbar-filter-chip-clear-tooltip"
-            >
-              <button
-                type="button"
-                className="arc-navbar-filter-chip-clear arc-navbar-no-drag"
-                aria-label="Очистить фильтр"
-                onClick={handleClearCategory}
-              >
-                <span className="btn-ds__icon arc-icon-close" aria-hidden="true" />
-              </button>
-            </Tooltip>
-          </div>
-        ) : (
-          <button
-            ref={(el) => {
-              anchorRef.current = el;
-            }}
-            type="button"
-            className="btn btn-ghost btn-ds btn-m arc-navbar-filter-chip"
-            aria-expanded={open}
-            aria-haspopup="menu"
-            onClick={() => setOpenMenu(open ? null : id)}
-          >
-            <span className={`btn-ds__icon ${meta.iconClass}`} aria-hidden="true" />
-            <span className="btn-ds__value">{meta.label}</span>
-          </button>
-        )}
-        <ContextMenu
-          open={open}
-          anchorRef={anchorRef}
-          onClose={closeMenu}
-          rows={rows ?? undefined}
-          ariaLabel={meta.label}
-          noDragClassName="arc-navbar-no-drag"
-        >
-          {children}
-        </ContextMenu>
-      </>
-    );
+    return { rows, children, label: meta.label };
   };
+
+  const filterMainRows = useMemo<ContextMenuRow[]>(() => {
+    const items: ContextMenuRow[] = [{ type: 'header', key: 'filters-h', label: 'Список фильтров' }];
+    for (const id of visibleChips) {
+      const meta = FILTER_CHIP_META[id];
+      const selectionCount = countFilterCategorySelections(filters, id);
+      const active = selectionCount > 0;
+      items.push({
+        type: 'item',
+        key: `filter-${id}`,
+        label: meta.label,
+        iconClass: meta.iconClass,
+        counter: active ? selectionCount : undefined,
+        slotOrder: active ? ['icon', 'label', 'counter'] : ['icon', 'label'],
+        closeOnSelect: false,
+        onSelect: () => {
+          const anchor = filtersMainRef.current;
+          if (!anchor) return;
+          const rect = anchor.getBoundingClientRect();
+          setSubmenuPosition({
+            x: rect.right + CONTEXT_MENU_ANCHOR_GAP,
+            y: rect.top + 32
+          });
+          setOpenMenu(id);
+        }
+      });
+    }
+    items.push({ type: 'separator', key: 'filters-sep-1' });
+    items.push({
+      type: 'item',
+      key: 'filter-options',
+      label: 'Настроить список',
+      iconClass: 'arc-icon-filter-list',
+      closeOnSelect: false,
+      onSelect: () => {
+        const anchor = filtersMainRef.current;
+        if (!anchor) return;
+        const rect = anchor.getBoundingClientRect();
+        setSubmenuPosition({
+          x: rect.right + CONTEXT_MENU_ANCHOR_GAP,
+          y: rect.top + 32
+        });
+        setOpenMenu('options');
+      }
+    });
+    items.push({
+      type: 'item',
+      key: 'filter-presets',
+      label: 'Пресеты',
+      iconClass: 'arc-icon-save',
+      closeOnSelect: false,
+      onSelect: () => {
+        const anchor = filtersMainRef.current;
+        if (!anchor) return;
+        const rect = anchor.getBoundingClientRect();
+        setSubmenuPosition({
+          x: rect.right + CONTEXT_MENU_ANCHOR_GAP,
+          y: rect.top + 32
+        });
+        setOpenMenu('presets');
+      }
+    });
+    if (activeCategoryCount > 0) {
+      items.push({ type: 'separator', key: 'filters-sep-2' });
+      items.push({
+        type: 'item',
+        key: 'filter-clear',
+        label: 'Очистить фильтры',
+        iconClass: 'arc-icon-trash',
+        counter: activeCategoryCount,
+        onSelect: () => {
+          clearFilters();
+          closeAllMenus();
+        }
+      });
+    }
+    return items;
+  }, [activeCategoryCount, clearFilters, closeAllMenus, filters, visibleChips]);
+
+  const activeFilterSubmenu = useMemo(() => {
+    if (!openMenu || openMenu === 'options' || openMenu === 'presets') return null;
+    return buildFilterSubmenu(openMenu as GalleryFilterId);
+  }, [openMenu, filters, stats, customWeight, customRes, customDuration, layout]);
 
   const presetNames = useMemo(
     () => new Set(presets.map((p) => p.name.trim().toLowerCase())),
@@ -895,18 +838,18 @@ export default function GalleryNavbarFilters() {
   }, [presetNames, presetModal]);
 
   const openCreatePresetModal = () => {
-    setOpenMenu(null);
+    closeAllMenus();
     setPresetModal({ mode: 'create' });
   };
 
   const openEditPresetModal = (preset: SavedFilterPreset) => {
-    setOpenMenu(null);
+    closeAllMenus();
     setPresetModal({ mode: 'edit', preset });
   };
 
   const handleApplyPreset = (preset: SavedFilterPreset) => {
     applyPreset(preset);
-    setOpenMenu(null);
+    closeAllMenus();
   };
 
   const { openPresetContextMenu, contextMenuLayer: presetContextMenuLayer } = useFilterPresetContextMenu({
@@ -914,117 +857,86 @@ export default function GalleryNavbarFilters() {
     onRename: openEditPresetModal,
     onDelete: async (id) => {
       deletePreset(id);
-      setOpenMenu(null);
+      closeAllMenus();
     }
   });
 
   return (
     <>
-      <div
+      <span
         ref={rowRef}
-        className="arc-navbar-filters-row arc-navbar-no-drag arc-ui-kit-scope"
+        className="arc-navbar-island-action arc-navbar-no-drag arc-ui-kit-scope"
         data-btn-size="m"
-        data-elevation="default"
       >
         <button
-          ref={sortRef}
+          ref={filtersMainRef}
           type="button"
-          className="btn btn-outline btn-ds btn-m arc-navbar-filter-sort"
-          aria-expanded={openMenu === 'sort'}
+          className={`btn btn-ghost btn-ds btn-m btn-icon-only${mainOpen || activeCategoryCount > 0 ? ' is-active' : ''}`}
+          aria-label={activeCategoryCount > 0 ? `Фильтры (${activeCategoryCount})` : 'Фильтры'}
+          aria-expanded={mainOpen}
           aria-haspopup="menu"
-          onClick={() => setOpenMenu(openMenu === 'sort' ? null : 'sort')}
+          onClick={() => {
+            setMainOpen((v) => !v);
+            if (mainOpen) closeMenu();
+          }}
         >
-          <span className="btn-ds__icon arc-icon-sorting" aria-hidden="true" />
-          <span className="btn-ds__value">Сортировка</span>
+          <span className="btn-icon-only__glyph arc-icon-filter" aria-hidden="true" />
         </button>
+
         <ContextMenu
-          open={openMenu === 'sort'}
-          anchorRef={sortRef}
-          onClose={closeMenu}
-          rows={sortRows}
-          ariaLabel="Сортировка"
+          open={mainOpen}
+          anchorRef={filtersMainRef}
+          onClose={closeAllMenus}
+          rows={filterMainRows}
+          ariaLabel="Фильтры"
           noDragClassName="arc-navbar-no-drag"
         />
 
-        <div className="arc-navbar-filters-row__chips">
-          {visibleChips.map((id) => (
-            <span key={id}>{renderChipMenu(id)}</span>
-          ))}
-        </div>
-
-        <div className="btn-group btn-group-ds arc-navbar-filters-options">
-          <button
-            ref={optionsRef}
-            type="button"
-            className="btn btn-ds btn-m btn-icon-only"
-            aria-label="Список фильтров"
-            aria-expanded={openMenu === 'options'}
-            aria-haspopup="menu"
-            onClick={() => setOpenMenu(openMenu === 'options' ? null : 'options')}
-          >
-            <span className="btn-icon-only__glyph arc-icon-filter-list" aria-hidden="true" />
-          </button>
+        {activeFilterSubmenu && submenuPosition ? (
           <ContextMenu
-            open={openMenu === 'options'}
-            anchorRef={optionsRef}
+            open
+            position={submenuPosition}
             onClose={closeMenu}
-            ariaLabel="Список фильтров"
+            rows={activeFilterSubmenu.rows ?? undefined}
+            ariaLabel={activeFilterSubmenu.label}
             noDragClassName="arc-navbar-no-drag"
           >
-            <FilterOptionsMenu
-              layout={layout}
-              hasVideo={stats?.hasVideo ?? true}
-              onReorder={reorderFilter}
-              onToggleVisibility={toggleFilterVisibility}
-            />
+            {activeFilterSubmenu.children}
           </ContextMenu>
+        ) : null}
 
-          <button
-            ref={presetsRef}
-            type="button"
-            className="btn btn-ds btn-m btn-icon-only"
-            aria-label="Пресеты"
-            aria-expanded={openMenu === 'presets'}
-            aria-haspopup="menu"
-            onClick={() => setOpenMenu(openMenu === 'presets' ? null : 'presets')}
-          >
-            <span className="btn-icon-only__glyph arc-icon-save" aria-hidden="true" />
-          </button>
-          <ContextMenu
-            open={openMenu === 'presets'}
-            anchorRef={presetsRef}
-            onClose={closeMenu}
-            ariaLabel="Пресеты"
-            noDragClassName="arc-navbar-no-drag"
-          >
-            <FilterPresetsMenu
-              presets={presets}
-              canSave={activeCategoryCount > 0}
-              onApply={handleApplyPreset}
-              onEdit={openEditPresetModal}
-              onSave={openCreatePresetModal}
-              onPresetContextMenu={openPresetContextMenu}
-            />
-          </ContextMenu>
+        <ContextMenu
+          open={openMenu === 'options' && submenuPosition != null}
+          position={submenuPosition}
+          onClose={closeMenu}
+          ariaLabel="Настроить список фильтров"
+          noDragClassName="arc-navbar-no-drag"
+        >
+          <FilterOptionsMenu
+            layout={layout}
+            hasVideo={stats?.hasVideo ?? true}
+            onReorder={reorderFilter}
+            onToggleVisibility={toggleFilterVisibility}
+          />
+        </ContextMenu>
 
-          <Tooltip content="Очистить фильтры" delay={500} position="top">
-            <button
-              type="button"
-              className="btn btn-ds btn-m"
-              aria-label={`Очистить фильтры${activeCategoryCount ? ` (${activeCategoryCount})` : ''}`}
-              disabled={activeCategoryCount === 0}
-              onClick={clearFilters}
-            >
-              <span className="btn-ds__icon arc-icon-trash" aria-hidden="true" />
-              {activeCategoryCount > 0 ? (
-                <span className="btn-ds__counter" aria-hidden="true">
-                  {activeCategoryCount}
-                </span>
-              ) : null}
-            </button>
-          </Tooltip>
-        </div>
-      </div>
+        <ContextMenu
+          open={openMenu === 'presets' && submenuPosition != null}
+          position={submenuPosition}
+          onClose={closeMenu}
+          ariaLabel="Пресеты"
+          noDragClassName="arc-navbar-no-drag"
+        >
+          <FilterPresetsMenu
+            presets={presets}
+            canSave={activeCategoryCount > 0}
+            onApply={handleApplyPreset}
+            onEdit={openEditPresetModal}
+            onSave={openCreatePresetModal}
+            onPresetContextMenu={openPresetContextMenu}
+          />
+        </ContextMenu>
+      </span>
 
       {presetModal?.mode === 'create' ? (
         <FilterPresetModal

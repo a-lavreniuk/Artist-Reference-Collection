@@ -1,5 +1,5 @@
-import GalleryNavbarFilters from './navbar-filters/GalleryNavbarFilters';
+import NavbarFiltersMenu from './navbar-filters/GalleryNavbarFilters';
 
 export default function NavbarFiltersRow() {
-  return <GalleryNavbarFilters />;
+  return <NavbarFiltersMenu />;
 }

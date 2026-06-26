@@ -1,25 +1,26 @@
 export type NavbarVariant = 'full' | 'compact';
 
-export type MainTabKey = 'gallery' | 'collections' | 'moodboard';
+export type MainTabKey = 'gallery' | 'collections' | 'moodboard' | 'board';
 
 export const MAIN_NAV_TABS: ReadonlyArray<{ key: MainTabKey; label: string; path: string }> = [
   { key: 'gallery', label: 'Библиотека', path: '/gallery' },
   { key: 'collections', label: 'Коллекции', path: '/collections' },
-  { key: 'moodboard', label: 'Мудборд', path: '/moodboard' }
+  { key: 'moodboard', label: 'Мудборд', path: '/moodboard' },
+  { key: 'board', label: 'Доска', path: '/board' }
 ];
 
 export function resolveMainTab(pathname: string): MainTabKey {
   if (pathname.startsWith('/collections')) return 'collections';
   if (pathname.startsWith('/moodboard')) return 'moodboard';
+  if (pathname.startsWith('/board')) return 'board';
   return 'gallery';
 }
 
 /** Полный Search Container: библиотека, коллекция, список карточек мудборда */
-export function resolveNavbarVariant(pathname: string, search = ''): NavbarVariant {
+export function resolveNavbarVariant(pathname: string, _search = ''): NavbarVariant {
   if (pathname === '/gallery') return 'full';
   if (pathname.startsWith('/collections')) return 'full';
   if (pathname.startsWith('/moodboard')) return 'full';
-  if (pathname.startsWith('/board')) return 'compact';
   return 'compact';
 }
 
@@ -29,18 +30,18 @@ export const NAVBAR_LAYOUT_GUTTER_PX = 32;
 /** Высота Top Bar (Figma 1225:11377). */
 export const TOPBAR_HEIGHT_PX = 24;
 
-export function navbarPanelHeightPx(filtersOpen: boolean, variant: NavbarVariant): number {
-  if (variant === 'full' && filtersOpen) return 152;
-  return 72;
+/** Высота островка навбара 2.0 (padding 12 + content 32 + padding 12). */
+export const NAVBAR_ISLAND_HEIGHT_PX = 56;
+
+/** Полоса L + island + L (Figma Navbar 2.0). */
+export const NAVBAR_BAND_HEIGHT_PX = NAVBAR_LAYOUT_GUTTER_PX * 2 + NAVBAR_ISLAND_HEIGHT_PX;
+
+export function navbarPanelHeightPx(): number {
+  return NAVBAR_ISLAND_HEIGHT_PX;
 }
 
-/** Высота полосы Shade: L + panel + L (см. Figma 844:23306, 1112:3702). */
-export function navbarShadeBandHeightFromPanelPx(panelHeightPx: number): number {
-  return NAVBAR_LAYOUT_GUTTER_PX * 2 + panelHeightPx;
-}
-
-export function navbarShadeBandHeightPx(filtersOpen: boolean, variant: NavbarVariant): number {
-  return navbarShadeBandHeightFromPanelPx(navbarPanelHeightPx(filtersOpen, variant));
+export function navbarShadeBandHeightPx(): number {
+  return NAVBAR_BAND_HEIGHT_PX;
 }
 
 const NAVBAR_STACK_CSS_VARS = [
@@ -49,14 +50,19 @@ const NAVBAR_STACK_CSS_VARS = [
   '--arc-navbar-shade-band-height',
   '--arc-navbar-panel-height',
   '--arc-chrome-top-height',
-  '--arc-navbar-search-max-width'
+  '--arc-navbar-search-max-width',
+  '--arc-navbar-search-expanded-width',
+  '--arc-navbar-search-collapsed-width'
 ] as const;
 
 const NAVBAR_SEARCH_WIDTH_CAP_PX = 1008;
 
-/** Синхронизирует высоту Shade (L + panel + L) и chrome stack с фактическим layout host. */
-export function applyNavbarStackCssVars(hostEl: HTMLElement, headerEl: HTMLElement | null): void {
-  const panelHeight = headerEl?.offsetHeight ?? 0;
+/** Figma 889-9667: ширина открытого Search Bar и Search Menu. */
+export const NAVBAR_SEARCH_EXPANDED_WIDTH_PX = 840;
+
+/** Синхронизирует высоту Shade (L + island + L) и chrome stack с фактическим layout host. */
+export function applyNavbarStackCssVars(hostEl: HTMLElement, islandsEl: HTMLElement | null): void {
+  const panelHeight = islandsEl?.offsetHeight ?? NAVBAR_ISLAND_HEIGHT_PX;
   const bandHeight = hostEl.offsetHeight;
   const chromeTopHeight = TOPBAR_HEIGHT_PX + bandHeight;
   const root = document.body;
@@ -77,32 +83,44 @@ export function clearNavbarStackCssVars(): void {
   }
 }
 
-/** Ширина search-bar: по центру панели, без налезания на nav/mgmt при узком окне. */
-export function applyNavbarTopBarLayoutVars(headerEl: HTMLElement | null): void {
-  if (!headerEl) return;
+/** Ширина search-island в expanded: по центру, без налезания на боковые островки. */
+export function applyNavbarIslandsLayoutVars(hostEl: HTMLElement | null): void {
+  if (!hostEl) return;
 
-  const topBar = headerEl.querySelector('.arc-navbar-top-bar');
-  if (!topBar) return;
-
-  const search = topBar.querySelector(
-    '.arc-navbar-top-bar__search:not(.arc-navbar-top-bar__search--spacer)'
-  );
-  if (!search) {
+  const islandsRow = hostEl.querySelector('.arc-navbar-islands');
+  if (!islandsRow) {
     document.body.style.removeProperty('--arc-navbar-search-max-width');
+    document.body.style.removeProperty('--arc-navbar-search-expanded-width');
     return;
   }
 
-  const nav = topBar.querySelector('.arc-navbar-top-bar__nav');
-  const mgmt = topBar.querySelector('.arc-navbar-top-bar__mgmt');
-  const topBarWidth = topBar.getBoundingClientRect().width;
+  const nav = islandsRow.querySelector('.arc-navbar-island--nav');
+  const search = islandsRow.querySelector('.arc-navbar-island--search');
+  const mgmt = islandsRow.querySelector('.arc-navbar-island--mgmt');
+  const rowWidth = islandsRow.getBoundingClientRect().width;
   const navWidth = nav?.getBoundingClientRect().width ?? 0;
   const mgmtWidth = mgmt?.getBoundingClientRect().width ?? 0;
-  const gapPx = parseFloat(getComputedStyle(topBar).columnGap) || 0;
+  const gapPx = parseFloat(getComputedStyle(islandsRow).columnGap) || 0;
   const sideClearance = Math.max(navWidth, mgmtWidth) + gapPx;
   const maxWidth = Math.min(
     NAVBAR_SEARCH_WIDTH_CAP_PX,
-    Math.max(0, topBarWidth - sideClearance * 2)
+    Math.max(0, rowWidth - sideClearance * 2)
   );
 
   document.body.style.setProperty('--arc-navbar-search-max-width', `${maxWidth}px`);
+  document.body.style.setProperty(
+    '--arc-navbar-search-expanded-width',
+    `${Math.min(NAVBAR_SEARCH_EXPANDED_WIDTH_PX, maxWidth)}px`
+  );
+
+  if (search) {
+    const collapsedRaw = parseFloat(
+      getComputedStyle(search).getPropertyValue('--arc-navbar-search-collapsed-width')
+    );
+    if (Number.isFinite(collapsedRaw) && collapsedRaw > 0) {
+      const available = Math.max(0, rowWidth - navWidth - mgmtWidth - gapPx * 2);
+      const clampedCollapsed = Math.min(collapsedRaw, available);
+      document.body.style.setProperty('--arc-navbar-search-collapsed-width', `${clampedCollapsed}px`);
+    }
+  }
 }

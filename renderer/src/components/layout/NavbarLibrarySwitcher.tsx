@@ -1,7 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
-import { Tooltip } from '../tooltip/Tooltip';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import {
   libraryScopeLabel,
@@ -29,7 +28,7 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const anchorRef = useRef<HTMLButtonElement>(null);
-  const groupRef = useRef<HTMLDivElement>(null);
+  const clearRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
   const [emptyTrashBusy, setEmptyTrashBusy] = useState(false);
@@ -38,12 +37,15 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
   const activeLabel = libraryScopeLabel(activeScope);
   const { count: trashCount } = useTrashCardCount();
   const isGalleryPage = location.pathname === '/gallery';
-  const showClearTrash = isGalleryPage && activeScope === 'trash' && trashCount > 0;
+  const isTrashScope = isGalleryPage && activeScope === 'trash';
+  const showClearTrash = isTrashScope && trashCount > 0;
 
   useLayoutEffect(() => {
-    const scope = showClearTrash ? groupRef.current : anchorRef.current;
-    if (scope) void hydrateArcNavbarIcons(scope);
-  }, [showClearTrash, activeScope, activeLabel, trashCount, disabled]);
+    const nodes = [anchorRef.current, clearRef.current].filter(Boolean);
+    for (const node of nodes) {
+      void hydrateArcNavbarIcons(node);
+    }
+  }, [isTrashScope, showClearTrash, activeScope, activeLabel, trashCount, disabled]);
 
   const selectScope = (scope: LibraryScope) => {
     setOpen(false);
@@ -69,11 +71,25 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
     [activeScope, searchParams, location.pathname]
   );
 
-  const switcherButton = (
+  const libraryMenuButton = isTrashScope ? (
     <button
       ref={anchorRef}
       type="button"
-      className="btn btn-outline btn-ds btn-l arc-navbar-library-btn arc-navbar-no-drag"
+      className={`btn btn-ghost btn-ds btn-m arc-navbar-library-btn arc-navbar-no-drag${open ? ' is-active' : ''}`}
+      aria-label="Библиотека: Корзина"
+      aria-expanded={open}
+      aria-haspopup="menu"
+      disabled={disabled}
+      onClick={() => setOpen((v) => !v)}
+    >
+      <span className="btn-ds__icon arc-icon-trash" aria-hidden="true" />
+      <span className="btn-ds__value arc-navbar-library-btn__value">Корзина</span>
+    </button>
+  ) : (
+    <button
+      ref={anchorRef}
+      type="button"
+      className={`btn btn-ghost btn-ds btn-m arc-navbar-library-btn arc-navbar-no-drag${open ? ' is-active' : ''}`}
       aria-label={`Библиотека: ${activeLabel}`}
       aria-expanded={open}
       aria-haspopup="menu"
@@ -87,24 +103,20 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
 
   return (
     <>
+      {libraryMenuButton}
       {showClearTrash ? (
-        <div ref={groupRef} className="btn-group btn-group-ds arc-navbar-library-group">
-          {switcherButton}
-          <Tooltip content="Очистить корзину" delay={500} position="top">
-            <button
-              type="button"
-              className="btn btn-outline btn-ds btn-icon-only arc-navbar-no-drag"
-              aria-label="Очистить корзину"
-              disabled={disabled}
-              onClick={() => setEmptyTrashConfirm(true)}
-            >
-              <span className="btn-icon-only__glyph arc-icon-broom" aria-hidden="true" />
-            </button>
-          </Tooltip>
-        </div>
-      ) : (
-        switcherButton
-      )}
+        <button
+          ref={clearRef}
+          type="button"
+          className="btn btn-ghost btn-ds btn-m arc-navbar-no-drag"
+          aria-label="Очистить корзину"
+          disabled={disabled}
+          onClick={() => setEmptyTrashConfirm(true)}
+        >
+          <span className="btn-ds__icon arc-icon-broom" aria-hidden="true" />
+          <span className="btn-ds__value">Очистить</span>
+        </button>
+      ) : null}
       <ContextMenu
         open={open}
         anchorRef={anchorRef}
