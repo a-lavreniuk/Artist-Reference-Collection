@@ -4286,13 +4286,6 @@ body.arc-card-detail-open .arc-app-outlet {
   width: 100%;
 }
 
-.arc-settings-ai-index-line__loader {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
-  flex-shrink: 0;
-}
-
 .arc-settings-ai-index-line__text {
   margin: 0;
   flex: 1 1 auto;

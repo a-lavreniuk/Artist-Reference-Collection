@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { normalizeHex } from '../../../../utils/colorPicker';
 import type { NavbarSearchBarFieldProps, NavbarSearchModePlugin, NavbarSearchPanelContentProps } from '../types';
 import SearchPanelColorControls from '../../SearchPanelColorControls';
@@ -8,30 +9,50 @@ import { clearAllRecentViewedCardIds } from '../../../../search/recentViewedCard
 
 function ColorBarField({ ctx }: NavbarSearchBarFieldProps) {
   const { displayColorHex, openPanel, handlePanelColorChange } = ctx;
-  const swatchHex = normalizeHex(displayColorHex) ?? `#${displayColorHex.replace(/^#/, '')}`;
+  const [hexDraft, setHexDraft] = useState(displayColorHex);
+
+  useEffect(() => {
+    setHexDraft(displayColorHex);
+  }, [displayColorHex]);
+
+  const swatchHex =
+    normalizeHex(hexDraft) ?? normalizeHex(displayColorHex) ?? `#${displayColorHex.replace(/^#/, '')}`;
+
+  const commitHexDraft = (raw: string) => {
+    const parsed = normalizeHex(raw);
+    if (!parsed) {
+      setHexDraft(displayColorHex);
+      return;
+    }
+    setHexDraft(parsed.replace(/^#/, ''));
+    handlePanelColorChange(parsed);
+  };
 
   return (
-    <div className="arc-navbar-search-color-trigger slot-value">
-      <span className="arc-navbar-search-color-hex-prefix">HEX</span>
+    <>
+      <span className="color-prepend slot-prepend">HEX</span>
       <input
-        className="arc-navbar-search-color-hex-input"
+        className="color-value-input slot-value"
         type="text"
-        value={displayColorHex}
+        value={hexDraft}
         onChange={(e) => {
-          const parsed = normalizeHex(e.target.value);
+          const next = e.target.value.toUpperCase().replace(/[^0-9A-F]/g, '').slice(0, 6);
+          setHexDraft(next);
+          const parsed = normalizeHex(next);
           if (parsed) handlePanelColorChange(parsed);
         }}
+        onBlur={() => commitHexDraft(hexDraft)}
         onFocus={() => openPanel()}
         onClick={() => openPanel()}
         aria-label="HEX цвета"
         spellCheck={false}
       />
       <span
-        className="arc-navbar-search-color-swatch"
+        className="color-swatch-inline slot-trailing"
         style={{ background: swatchHex }}
         aria-hidden="true"
       />
-    </div>
+    </>
   );
 }
 

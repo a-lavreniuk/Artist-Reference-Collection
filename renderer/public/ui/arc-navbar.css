@@ -207,6 +207,22 @@ body::-webkit-scrollbar {
   flex-shrink: 0;
 }
 
+/* Figma 1653:7967 — dot when gallery filters are active */
+.arc-navbar-filter-btn {
+  position: relative;
+}
+
+.arc-navbar-filter-active-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--brand-550);
+  pointer-events: none;
+}
+
 .arc-navbar-island .arc-navbar-search-anchor {
   width: 100%;
   min-width: 0;

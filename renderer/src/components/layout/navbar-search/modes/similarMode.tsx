@@ -20,7 +20,7 @@ function SimilarBarField({ ctx }: NavbarSearchBarFieldProps) {
         {similarSearch.previewSrc ? (
           <img src={similarSearch.previewSrc} alt="" className="arc-navbar-search-similar-thumb" />
         ) : (
-          <span className="typo-p-m arc-navbar-search-similar-placeholder">{placeholder}</span>
+          <span className="arc-navbar-search-similar-placeholder">{placeholder}</span>
         )}
       </button>
       <NavbarSearchBarActions>

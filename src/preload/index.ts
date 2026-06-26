@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { pathsFromFileList, registerFileDropListener } from './fileDropBridge';
+import { pathsFromDroppedDataTransfer, pathsFromFileList, registerFileDropListener } from './fileDropBridge';
 
 type HistoryEntityType = 'card' | 'collection' | 'category' | 'tag';
 type HistorySegmentPayload =
@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('arc', {
   pickImageFiles: () => ipcRenderer.invoke('arc:pick-image-files') as Promise<string[]>,
   pickMediaFiles: () => ipcRenderer.invoke('arc:pick-media-files') as Promise<string[]>,
   getPathsForDroppedFiles: (files: FileList) => pathsFromFileList(files),
+  getPathsForDroppedDataTransfer: (dt: DataTransfer) => pathsFromDroppedDataTransfer(dt),
   onFileDrop: (cb: (paths: string[]) => void) => registerFileDropListener(cb),
   importFiles: (absolutePaths: string[]) =>
     ipcRenderer.invoke('arc:import-files', absolutePaths) as Promise<

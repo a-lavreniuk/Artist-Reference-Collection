@@ -4,6 +4,7 @@ import { NAVBAR_SEARCH_EXPANDED_WIDTH_PX } from '../../navbarLayout';
 import {
   COLLAPSED_ISLAND_LAYOUT,
   computeCollapsedIslandWidth,
+  resolveIslandExpanded,
   resolveIslandWidthCss
 } from '../utils/islandWidth';
 
@@ -44,7 +45,12 @@ export function useNavbarSearchIslandWidth({
       setCollapsedWidth(collapsed);
       island.style.setProperty('--arc-navbar-search-collapsed-width', `${collapsed}px`);
 
-      const isWide = panelOpen || hasValue || searchIslandWidePinned;
+      const isWide = resolveIslandExpanded({
+        panelOpen,
+        hasValue,
+        searchIslandWidePinned,
+        searchMode
+      });
       island.classList.toggle('is-expanded', isWide);
       island.style.setProperty(
         '--arc-navbar-search-island-width',

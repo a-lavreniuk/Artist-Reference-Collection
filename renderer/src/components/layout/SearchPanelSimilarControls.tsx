@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { isImportableMediaPath } from '../../media/allowedImportExtensions';
 import { extractDroppedFilePaths } from '../../media/droppedFilePaths';
 import {
@@ -7,6 +7,7 @@ import {
   type SimilarCropRect
 } from '../../search/similarSearchSession';
 import { SEARCH_MODE_META } from '../../search/navbarSearchMode';
+import { Loader } from '../loader';
 import SearchPanelFullBleedSep from './SearchPanelFullBleedSep';
 import SearchPanelModeHeader from './SearchPanelModeHeader';
 import SearchPanelRecentCards from './SearchPanelRecentCards';
@@ -46,24 +47,12 @@ export default function SearchPanelSimilarControls({
   onSelectRecentCard
 }: SearchPanelSimilarControlsProps) {
   const [dragOver, setDragOver] = useState(false);
+  const showSimilarWorkspace = hasQuery || Boolean(previewSrc);
+  const showSimilarWorkspaceRef = useRef(showSimilarWorkspace);
+  showSimilarWorkspaceRef.current = showSimilarWorkspace;
 
-  const pickImage = useCallback(async () => {
-    if (!window.arc?.pickImageFiles) return;
-    const paths = await window.arc.pickImageFiles();
-    if (!paths.length) return;
-    const staged = await stageDroppedPaths(paths);
-    if (!staged) return;
-    setSimilarUploadPath(staged);
-    onUploadStaged(staged);
-    onCropChange(FULL_SIMILAR_CROP);
-  }, [onCropChange, onUploadStaged]);
-
-  const onDrop = useCallback(
-    async (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragOver(false);
-      const paths = extractDroppedFilePaths(e.dataTransfer);
+  const applyStagedUpload = useCallback(
+    async (paths: string[]) => {
       const staged = await stageDroppedPaths(paths);
       if (!staged) return;
       setSimilarUploadPath(staged);
@@ -73,63 +62,99 @@ export default function SearchPanelSimilarControls({
     [onCropChange, onUploadStaged]
   );
 
+  useEffect(() => {
+    if (!window.arc?.onFileDrop) return undefined;
+    return window.arc.onFileDrop((paths) => {
+      if (!document.body.classList.contains('arc-similar-search-panel-open')) return;
+      if (showSimilarWorkspaceRef.current) return;
+      void applyStagedUpload(paths);
+    });
+  }, [applyStagedUpload]);
+
+  const pickImage = useCallback(async () => {
+    if (!window.arc?.pickImageFiles) return;
+    const paths = await window.arc.pickImageFiles();
+    if (!paths.length) return;
+    await applyStagedUpload(paths);
+  }, [applyStagedUpload]);
+
+  const onDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOver(false);
+      await applyStagedUpload(extractDroppedFilePaths(e.dataTransfer));
+    },
+    [applyStagedUpload]
+  );
+
   const showRecent = recentViewedIds.length > 0;
-  const showSimilarWorkspace = hasQuery || Boolean(previewSrc);
 
   return (
     <div className="arc-search-panel-similar">
-      <div className="arc-search-panel-similar-intro">
+      <div className="arc-search-panel-intro">
         <div className="arc-search-panel-similar-header">
           <SearchPanelModeHeader mode="similar" />
-          {showSimilarWorkspace ? (
-            <button type="button" className="btn btn-outline btn-ds" data-btn-size="s" onClick={onClearQuery}>
+          <div className="arc-search-panel-similar-actions arc-ui-kit-scope" data-btn-size="s">
+            <button
+              type="button"
+              className={`btn btn-outline btn-ds arc-search-panel-similar-clear${showSimilarWorkspace ? '' : ' arc-search-panel-similar-clear--reserved'}`}
+              onClick={onClearQuery}
+              tabIndex={showSimilarWorkspace ? 0 : -1}
+              aria-hidden={!showSimilarWorkspace}
+              disabled={!showSimilarWorkspace}
+            >
               <span className="btn-ds__value">Очистить</span>
             </button>
-          ) : null}
+          </div>
         </div>
         <p className="arc-search-panel-hint">{SEARCH_MODE_META.similar.panelHint}</p>
       </div>
 
       <SearchPanelFullBleedSep />
 
-      {!showSimilarWorkspace ? (
-        <div className="arc-search-panel-similar-dropzone-host">
-          <div
-            className={`arc-import-dropzone arc-search-panel-similar-dropzone${dragOver ? ' arc-import-dropzone--dropping' : ''}`}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => void onDrop(e)}
-          >
-            <p className="typo-p-l arc-search-panel-similar-dropzone__hint">
-              Перетащите изображение в поле поиска или нажмите на кнопку, чтобы загрузить файл…
-            </p>
-            <div className="arc-import-dropzone-cta-wrap">
-              <button
-                type="button"
-                className="btn btn-brand btn-ds arc-import-dropzone-cta"
-                data-btn-size="m"
-                onClick={() => void pickImage()}
-              >
-                <span className="btn-ds__value">Выбрать изображение</span>
-                <span className="btn-ds__icon arc-import-dropzone-plus-icon" aria-hidden="true" />
-              </button>
+      <div className="arc-search-panel-similar-workspace">
+        {!showSimilarWorkspace ? (
+          <div className="arc-search-panel-similar-dropzone-host">
+            <div
+              className={`arc-import-dropzone arc-search-panel-similar-dropzone${dragOver ? ' arc-import-dropzone--dropping' : ''}`}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={(e) => {
+                const next = e.relatedTarget;
+                if (next instanceof Node && e.currentTarget.contains(next)) return;
+                setDragOver(false);
+              }}
+              onDrop={(e) => void onDrop(e)}
+            >
+              <p className="typo-p-l arc-search-panel-similar-dropzone__hint">
+                Перетащите изображение в поле поиска или нажмите на кнопку, чтобы загрузить файл…
+              </p>
+              <div className="arc-import-dropzone-cta-wrap arc-ui-kit-scope" data-btn-size="m">
+                <button
+                  type="button"
+                  className={`btn btn-ds arc-import-dropzone-cta${dragOver ? ' btn-brand' : ' btn-primary'}`}
+                  onClick={() => void pickImage()}
+                >
+                  <span className="btn-ds__value">Выбрать изображение</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : previewSrc ? (
-        <SimilarImageCropper imageSrc={previewSrc} crop={crop} onChange={onCropChange} />
-      ) : (
-        <div className="arc-search-panel-similar-loading" role="status" aria-label="Загрузка изображения">
-          <span className="loader" />
-        </div>
-      )}
+        ) : previewSrc ? (
+          <SimilarImageCropper imageSrc={previewSrc} crop={crop} onChange={onCropChange} />
+        ) : (
+          <div className="arc-search-panel-similar-loading">
+            <Loader size="m" label="Загрузка изображения" />
+          </div>
+        )}
+      </div>
 
       {showRecent ? <SearchPanelFullBleedSep /> : null}
 

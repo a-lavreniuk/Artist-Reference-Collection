@@ -1,8 +1,7 @@
 import { removeCardFilterFromParams } from '../../../../search/openCardUrl';
 import NavbarSearchTagChip from '../components/NavbarSearchTagChip';
 import NavbarSearchBarActions, {
-  NavbarSearchIconButton,
-  NavbarSearchLoader
+  NavbarSearchIconButton
 } from '../components/NavbarSearchBarActions';
 import type { NavbarSearchBarFieldProps, NavbarSearchModePlugin, NavbarSearchPanelContentProps } from '../types';
 import SearchPanelSection from '../../SearchPanelSection';
@@ -82,7 +81,7 @@ function TagsBarField({ ctx }: NavbarSearchBarFieldProps) {
             ) : null}
             <input
               ref={searchInputRef}
-              className="search-inner arc-navbar-search-inner"
+              className="search-inner slot-value arc-navbar-search-inner"
               type="text"
               placeholder={placeholder}
               value={draft}

@@ -17,6 +17,16 @@ export function computeCollapsedIslandWidth(params: {
   );
 }
 
+export function resolveIslandExpanded(params: {
+  panelOpen: boolean;
+  hasValue: boolean;
+  searchIslandWidePinned: boolean;
+  searchMode: string;
+}): boolean {
+  const { panelOpen, hasValue, searchIslandWidePinned, searchMode } = params;
+  return panelOpen || searchIslandWidePinned || (searchMode !== 'color' && hasValue);
+}
+
 export function resolveIslandWidthCss(isWide: boolean, collapsedPx: number, expandedWidthPx: number): string {
   if (isWide) {
     return `var(--arc-navbar-search-expanded-width, ${expandedWidthPx}px)`;

@@ -51,6 +51,7 @@ declare global {
       pickImageFiles: () => Promise<string[]>;
       pickMediaFiles: () => Promise<string[]>;
       getPathsForDroppedFiles: (files: FileList) => string[];
+      getPathsForDroppedDataTransfer: (dt: DataTransfer) => string[];
       onFileDrop: (cb: (paths: string[]) => void) => () => void;
       importFiles: (absolutePaths: string[]) => Promise<ArcImportFileResult[]>;
       storageEnsureReady: () => Promise<{ ok: true } | { ok: false; error: string }>;

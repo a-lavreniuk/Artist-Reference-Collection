@@ -12,7 +12,7 @@ import {
   ContextMenuInput,
   type ContextMenuRow
 } from '../../context-menu';
-import { CONTEXT_MENU_ANCHOR_GAP } from '../../context-menu/types';
+import { resolveFilterSubmenuPosition } from './filterSubmenuPosition';
 import type { ContextMenuSlot } from '../../context-menu/types';
 import ContextMenuHeader from '../../context-menu/ContextMenuHeader';
 import ContextMenuItem from '../../context-menu/ContextMenuItem';
@@ -663,6 +663,17 @@ export default function NavbarFiltersMenu() {
     return true;
   });
 
+  const placeFilterSubmenu = useCallback(
+    (rowKey: string, menuId: string) => {
+      const firstFilterRowKey = visibleChips[0] ? `filter-${visibleChips[0]}` : null;
+      const pos = resolveFilterSubmenuPosition(rowKey, firstFilterRowKey);
+      if (!pos) return;
+      setSubmenuPosition(pos);
+      setOpenMenu(menuId);
+    },
+    [visibleChips]
+  );
+
   const buildFilterSubmenu = (id: GalleryFilterId) => {
     const meta = FILTER_CHIP_META[id];
     let rows: ContextMenuRow[] | null = null;
@@ -756,16 +767,7 @@ export default function NavbarFiltersMenu() {
         counter: active ? selectionCount : undefined,
         slotOrder: active ? ['icon', 'label', 'counter'] : ['icon', 'label'],
         closeOnSelect: false,
-        onSelect: () => {
-          const anchor = filtersMainRef.current;
-          if (!anchor) return;
-          const rect = anchor.getBoundingClientRect();
-          setSubmenuPosition({
-            x: rect.right + CONTEXT_MENU_ANCHOR_GAP,
-            y: rect.top + 32
-          });
-          setOpenMenu(id);
-        }
+        onSelect: () => placeFilterSubmenu(`filter-${id}`, id)
       });
     }
     items.push({ type: 'separator', key: 'filters-sep-1' });
@@ -775,16 +777,7 @@ export default function NavbarFiltersMenu() {
       label: 'Настроить список',
       iconClass: 'arc-icon-filter-list',
       closeOnSelect: false,
-      onSelect: () => {
-        const anchor = filtersMainRef.current;
-        if (!anchor) return;
-        const rect = anchor.getBoundingClientRect();
-        setSubmenuPosition({
-          x: rect.right + CONTEXT_MENU_ANCHOR_GAP,
-          y: rect.top + 32
-        });
-        setOpenMenu('options');
-      }
+      onSelect: () => placeFilterSubmenu('filter-options', 'options')
     });
     items.push({
       type: 'item',
@@ -792,16 +785,7 @@ export default function NavbarFiltersMenu() {
       label: 'Пресеты',
       iconClass: 'arc-icon-save',
       closeOnSelect: false,
-      onSelect: () => {
-        const anchor = filtersMainRef.current;
-        if (!anchor) return;
-        const rect = anchor.getBoundingClientRect();
-        setSubmenuPosition({
-          x: rect.right + CONTEXT_MENU_ANCHOR_GAP,
-          y: rect.top + 32
-        });
-        setOpenMenu('presets');
-      }
+      onSelect: () => placeFilterSubmenu('filter-presets', 'presets')
     });
     if (activeCategoryCount > 0) {
       items.push({ type: 'separator', key: 'filters-sep-2' });
@@ -818,7 +802,7 @@ export default function NavbarFiltersMenu() {
       });
     }
     return items;
-  }, [activeCategoryCount, clearFilters, closeAllMenus, filters, visibleChips]);
+  }, [activeCategoryCount, clearFilters, closeAllMenus, filters, placeFilterSubmenu, visibleChips]);
 
   const activeFilterSubmenu = useMemo(() => {
     if (!openMenu || openMenu === 'options' || openMenu === 'presets') return null;
@@ -871,7 +855,7 @@ export default function NavbarFiltersMenu() {
         <button
           ref={filtersMainRef}
           type="button"
-          className={`btn btn-ghost btn-ds btn-m btn-icon-only${mainOpen || activeCategoryCount > 0 ? ' is-active' : ''}`}
+          className={`btn btn-ghost btn-ds btn-m btn-icon-only arc-navbar-filter-btn${mainOpen || activeCategoryCount > 0 ? ' is-active' : ''}`}
           aria-label={activeCategoryCount > 0 ? `Фильтры (${activeCategoryCount})` : 'Фильтры'}
           aria-expanded={mainOpen}
           aria-haspopup="menu"
@@ -881,6 +865,9 @@ export default function NavbarFiltersMenu() {
           }}
         >
           <span className="btn-icon-only__glyph arc-icon-filter" aria-hidden="true" />
+          {activeCategoryCount > 0 ? (
+            <span className="arc-navbar-filter-active-dot" aria-hidden="true" />
+          ) : null}
         </button>
 
         <ContextMenu

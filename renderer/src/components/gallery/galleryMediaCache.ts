@@ -37,6 +37,14 @@ export function buildLibraryMediaUrl(rel: string, sect?: MediaSectionTab): strin
   return sect ? `${base}&sect=${sect}` : base;
 }
 
+/** Абсолютный путь вне библиотеки — через ?abs= (как main/toFileUrlHelper). */
+export function buildAbsMediaUrl(absPath: string): string | null {
+  if (!absPath?.trim()) return null;
+  const u = new URL(`${mediaServerOrigin().replace(/\/$/, '')}/`);
+  u.searchParams.set('abs', absPath);
+  return u.href;
+}
+
 function rememberMediaUrl(rel: string, href: string, sect?: MediaSectionTab): void {
   const key = mediaCacheKey(rel, sect);
   urlByRel.set(key, href);

@@ -16,15 +16,11 @@ import {
 import { clearGallerySearchParams } from '../../../../search/clearGallerySearch';
 import { getCardById } from '../../../../services/db';
 import { readGridSize } from '../../../../layout/gridSizePreference';
-import { mergeCardsSrcMap, peekCardsSrcMap } from '../../../gallery/galleryMediaCache';
+import { buildAbsMediaUrl, mergeCardsSrcMap, peekCardsSrcMap } from '../../../gallery/galleryMediaCache';
 
 const SIMILAR_SEARCH_DEBOUNCE_MS = 280;
 
 type SimilarQueryRef = ReturnType<typeof parseSearchSimilarRef>;
-
-function mediaAbsUrl(absPath: string): string {
-  return `arc-media://localhost/?abs=${encodeURIComponent(absPath)}`;
-}
 
 export function useNavbarSimilarSearch(
   searchParams: URLSearchParams,
@@ -63,7 +59,7 @@ export function useNavbarSimilarSearch(
       }
       if (similarRef.kind === 'upload') {
         const path = getSimilarUploadPath();
-        if (!cancelled) setPreviewSrc(path ? mediaAbsUrl(path) : null);
+        if (!cancelled) setPreviewSrc(path ? buildAbsMediaUrl(path) : null);
         return;
       }
       const card = await getCardById(similarRef.cardId);
@@ -116,7 +112,7 @@ export function useNavbarSimilarSearch(
     (stagedPath: string, crop: SimilarCropRect = FULL_SIMILAR_CROP) => {
       setSimilarUploadPath(stagedPath);
       setPanelCrop(crop);
-      setPreviewSrc(mediaAbsUrl(stagedPath));
+      setPreviewSrc(buildAbsMediaUrl(stagedPath));
       applySimilarSearch({ kind: 'upload' }, crop);
     },
     [applySimilarSearch]

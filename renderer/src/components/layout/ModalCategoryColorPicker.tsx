@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { clamp, hexToHsv, hsvToHex, normalizeHex } from '../../utils/colorPicker';
 
 type Props = {
@@ -25,8 +25,23 @@ export default function ModalCategoryColorPicker({ value, onChange, variant = 'f
   const [hueTrackWidth, setHueTrackWidth] = useState(0);
 
   const safeHex = normalizeHex(value) ?? '#EAB308';
+  const [hexDraft, setHexDraft] = useState(safeHex);
   const parsed = hexToHsv(safeHex) ?? { h: 45, s: 95, v: 92 };
   const { h: hue, s: saturation, v: brightness } = parsed;
+
+  useEffect(() => {
+    setHexDraft(safeHex);
+  }, [safeHex]);
+
+  const commitHexDraft = (raw: string) => {
+    const parsedHex = normalizeHex(raw);
+    if (!parsedHex) {
+      setHexDraft(safeHex);
+      return;
+    }
+    setHexDraft(parsedHex);
+    onChange(parsedHex);
+  };
 
   useLayoutEffect(() => {
     const el = hueTrackRef.current;
@@ -98,12 +113,14 @@ export default function ModalCategoryColorPicker({ value, onChange, variant = 'f
             <span className="color-prepend slot-prepend">HEX</span>
             <input
               className="color-value-input slot-value"
-              value={safeHex}
+              value={hexDraft}
               onChange={(e) => {
-                const parsedHex = normalizeHex(e.target.value);
-                if (!parsedHex) return;
-                onChange(parsedHex);
+                const next = e.target.value.toUpperCase();
+                setHexDraft(next);
+                const parsedHex = normalizeHex(next);
+                if (parsedHex) onChange(parsedHex);
               }}
+              onBlur={() => commitHexDraft(hexDraft)}
               aria-label="HEX цвета"
             />
             <span className="color-swatch-inline slot-trailing" style={{ background: safeHex }} aria-hidden="true" />

@@ -1,3 +1,4 @@
+import { Loader } from '../loader';
 import { DEFAULT_CONTEXT_MENU_SLOT_ORDER, type ContextMenuSlot } from './types';
 
 export type ContextMenuItemProps = {
@@ -9,6 +10,7 @@ export type ContextMenuItemProps = {
   selected?: boolean;
   disabled?: boolean;
   loading?: boolean;
+  menuKey?: string;
   onSelect?: () => void;
 };
 
@@ -16,7 +18,7 @@ function renderSlot(slot: ContextMenuSlot, props: ContextMenuItemProps) {
   switch (slot) {
     case 'icon':
       if (props.loading) {
-        return <span className="loader" aria-hidden="true" key="icon" />;
+        return <Loader decorative key="icon" />;
       }
       return props.iconClass ? (
         <span
@@ -65,6 +67,7 @@ export default function ContextMenuItem({
   selected,
   disabled,
   loading,
+  menuKey,
   onSelect
 }: ContextMenuItemProps) {
   const order = slotOrder ?? DEFAULT_CONTEXT_MENU_SLOT_ORDER;
@@ -74,6 +77,7 @@ export default function ContextMenuItem({
       type="button"
       role="menuitem"
       className={`context-menu__item${disabled ? ' is-disabled' : ''}`}
+      data-context-menu-key={menuKey}
       disabled={disabled || loading}
       onClick={() => {
         if (disabled || loading) return;

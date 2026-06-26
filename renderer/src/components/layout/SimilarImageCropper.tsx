@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { SimilarCropRect } from '../../search/searchUrl';
 import { normalizeSimilarCrop } from '../../search/similarSearchSession';
 
@@ -17,33 +17,62 @@ type DragState = {
   startCrop: SimilarCropRect;
 };
 
+type CropperLayout = {
+  w: number;
+  h: number;
+  ox: number;
+  oy: number;
+  iw: number;
+  ih: number;
+};
+
+const EMPTY_LAYOUT: CropperLayout = { w: 0, h: 0, ox: 0, oy: 0, iw: 0, ih: 0 };
+
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
+}
+
+/** Видимая область изображения при object-fit: contain внутри элемента <img>. */
+function measureContainedImageLayout(img: HTMLImageElement, root: HTMLElement): CropperLayout {
+  const rootRect = root.getBoundingClientRect();
+  const naturalW = img.naturalWidth;
+  const naturalH = img.naturalHeight;
+  if (!naturalW || !naturalH) {
+    return { ...EMPTY_LAYOUT, w: rootRect.width, h: rootRect.height };
+  }
+
+  const boxW = img.clientWidth;
+  const boxH = img.clientHeight;
+  const scale = Math.min(boxW / naturalW, boxH / naturalH);
+  const iw = naturalW * scale;
+  const ih = naturalH * scale;
+  const imgRect = img.getBoundingClientRect();
+
+  return {
+    w: rootRect.width,
+    h: rootRect.height,
+    ox: imgRect.left - rootRect.left + (boxW - iw) / 2,
+    oy: imgRect.top - rootRect.top + (boxH - ih) / 2,
+    iw,
+    ih
+  };
 }
 
 /** Область кропа с ручками по углам (Figma 892-12002). */
 export default function SimilarImageCropper({ imageSrc, crop, onChange }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState({ w: 0, h: 0, ox: 0, oy: 0, iw: 0, ih: 0 });
+  const [layout, setLayout] = useState<CropperLayout>(EMPTY_LAYOUT);
   const dragRef = useRef<DragState | null>(null);
 
   const safeCrop = normalizeSimilarCrop(crop);
+  const layoutReady = layout.iw >= 1 && layout.ih >= 1;
 
   const measure = useCallback(() => {
     const root = rootRef.current;
     if (!root) return;
     const img = root.querySelector('img');
     if (!img) return;
-    const r = root.getBoundingClientRect();
-    const ir = img.getBoundingClientRect();
-    setLayout({
-      w: r.width,
-      h: r.height,
-      ox: ir.left - r.left,
-      oy: ir.top - r.top,
-      iw: ir.width,
-      ih: ir.height
-    });
+    setLayout(measureContainedImageLayout(img, root));
   }, []);
 
   useLayoutEffect(() => {
@@ -53,27 +82,30 @@ export default function SimilarImageCropper({ imageSrc, crop, onChange }: Props)
     const ro = new ResizeObserver(() => measure());
     ro.observe(root);
     const img = root.querySelector('img');
-    if (img) img.addEventListener('load', measure);
+    if (img) {
+      ro.observe(img);
+      img.addEventListener('load', measure);
+      if (img.complete) measure();
+    }
     return () => {
       ro.disconnect();
       if (img) img.removeEventListener('load', measure);
     };
   }, [imageSrc, measure]);
 
-  const toPx = (c: SimilarCropRect) => ({
-    left: layout.ox + c.x * layout.iw,
-    top: layout.oy + c.y * layout.ih,
-    width: c.w * layout.iw,
-    height: c.h * layout.ih
-  });
-
-  const px = toPx(safeCrop);
+  const framePx = useMemo(() => {
+    if (!layoutReady) return null;
+    return {
+      left: layout.ox + safeCrop.x * layout.iw,
+      top: layout.oy + safeCrop.y * layout.ih,
+      width: safeCrop.w * layout.iw,
+      height: safeCrop.h * layout.ih
+    };
+  }, [layout, layoutReady, safeCrop]);
 
   const applyPointer = (clientX: number, clientY: number) => {
     const drag = dragRef.current;
-    const root = rootRef.current;
-    if (!drag || !root || layout.iw < 1 || layout.ih < 1) return;
-    const rect = root.getBoundingClientRect();
+    if (!drag || !layoutReady) return;
     const dx = (clientX - drag.startX) / layout.iw;
     const dy = (clientY - drag.startY) / layout.ih;
     const s = drag.startCrop;
@@ -124,18 +156,30 @@ export default function SimilarImageCropper({ imageSrc, crop, onChange }: Props)
 
   return (
     <div ref={rootRef} className="arc-similar-cropper">
-      <img className="arc-similar-cropper__image" src={imageSrc} alt="" draggable={false} />
-      <div className="arc-similar-cropper__shade" aria-hidden="true" />
-      <div
-        className="arc-similar-cropper__frame"
-        style={{ left: px.left, top: px.top, width: px.width, height: px.height }}
-        onPointerDown={bindDrag('move')}
-      >
-        <span className="arc-similar-cropper__handle arc-similar-cropper__handle--nw" onPointerDown={bindDrag('nw')} />
-        <span className="arc-similar-cropper__handle arc-similar-cropper__handle--ne" onPointerDown={bindDrag('ne')} />
-        <span className="arc-similar-cropper__handle arc-similar-cropper__handle--sw" onPointerDown={bindDrag('sw')} />
-        <span className="arc-similar-cropper__handle arc-similar-cropper__handle--se" onPointerDown={bindDrag('se')} />
-      </div>
+      <img
+        className="arc-similar-cropper__image"
+        src={imageSrc}
+        alt=""
+        draggable={false}
+        onLoad={measure}
+      />
+      {layoutReady && framePx ? (
+        <div
+          className="arc-similar-cropper__frame"
+          style={{
+            left: framePx.left,
+            top: framePx.top,
+            width: framePx.width,
+            height: framePx.height
+          }}
+          onPointerDown={bindDrag('move')}
+        >
+          <span className="arc-similar-cropper__handle arc-similar-cropper__handle--nw" onPointerDown={bindDrag('nw')} />
+          <span className="arc-similar-cropper__handle arc-similar-cropper__handle--ne" onPointerDown={bindDrag('ne')} />
+          <span className="arc-similar-cropper__handle arc-similar-cropper__handle--sw" onPointerDown={bindDrag('sw')} />
+          <span className="arc-similar-cropper__handle arc-similar-cropper__handle--se" onPointerDown={bindDrag('se')} />
+        </div>
+      ) : null}
     </div>
   );
 }

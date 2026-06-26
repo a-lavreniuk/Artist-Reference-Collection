@@ -396,27 +396,31 @@
 
 .arc-search-panel-color-tolerance-input.input.input-slots {
   flex: 0 0 auto;
-  width: auto;
-  min-width: 0;
-  max-width: none;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  --input-pad-x: 4px;
+  --input-gap: 0;
 }
 
-.arc-search-panel-color-tolerance-input[data-input-size='s'] {
-  width: 4.25rem;
-  min-width: 4.25rem;
-  max-width: 4.25rem;
+.arc-search-panel-color-tolerance-input .slot-trailing {
+  margin-left: 0;
 }
 
 .arc-search-panel-color-tolerance-input__value {
   flex: 1 1 auto;
   min-width: 0;
   width: auto;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
   border: 0;
   background: transparent;
   padding: 0;
   margin: 0;
   outline: none;
   font: inherit;
+  font-variant-numeric: tabular-nums;
   color: var(--input-value-entered);
   text-align: right;
 }
@@ -446,7 +450,6 @@
 .arc-search-panel-similar {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
   min-width: 0;
 }
 
@@ -467,36 +470,56 @@
 .arc-search-panel-similar-actions {
   display: inline-flex;
   align-items: center;
-  gap: var(--s-1);
   flex-shrink: 0;
 }
 
-.arc-search-panel-similar-intro {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
+.arc-search-panel-similar-clear--reserved {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Figma 892:11986 / 892:12450 — единая высота dropzone и cropper */
+.arc-search-panel-similar-workspace {
+  flex-shrink: 0;
+  width: 100%;
   min-width: 0;
+  height: 334px;
 }
 
 .arc-search-panel-similar-dropzone-host {
   position: relative;
-  min-height: 300px;
   width: 100%;
+  height: 100%;
   min-width: 0;
 }
 
 .arc-search-panel-similar-dropzone.arc-import-dropzone {
   position: relative;
   inset: auto;
-  min-height: 300px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: var(--s-4);
   justify-content: center;
   gap: var(--s-3);
+  --import-dropzone-border-color: var(--panel-border);
+  background-color: transparent;
+}
+
+.arc-search-panel-similar-dropzone.arc-import-dropzone.arc-import-dropzone--dropping {
+  --import-dropzone-border-color: var(--btn-brand-fill-default);
+  background-color: color-mix(in srgb, var(--red-500) 32%, transparent);
+}
+
+.arc-search-panel-similar-dropzone.arc-import-dropzone--dropping .arc-search-panel-similar-dropzone__hint {
+  color: var(--typography-brand-primary-hover);
 }
 
 .arc-search-panel-similar-dropzone__hint {
   margin: 0;
-  color: var(--typography-black-bg-secondary-default);
-  max-width: 360px;
+  color: var(--typography-black-bg-primary-default);
+  max-width: 420px;
   text-align: center;
 }
 
@@ -504,20 +527,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
   width: 100%;
-}
-
-.arc-search-panel-similar-loading .loader {
-  width: 24px;
-  height: 24px;
+  height: 100%;
 }
 
 .arc-similar-cropper {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  min-height: 200px;
-  max-height: 320px;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
   overflow: hidden;
   border-radius: var(--radius-s);
   background: var(--gray-900);
@@ -526,18 +548,14 @@
 .arc-similar-cropper__image {
   display: block;
   width: 100%;
-  height: 100%;
-  max-height: 320px;
+  height: auto;
+  max-width: 100%;
+  max-height: 334px;
   object-fit: contain;
   user-select: none;
   pointer-events: none;
-}
-
-.arc-similar-cropper__shade {
-  position: absolute;
-  inset: 0;
-  background: color-mix(in srgb, var(--gray-1000) 45%, transparent);
-  pointer-events: none;
+  position: relative;
+  z-index: 0;
 }
 
 .arc-similar-cropper__frame {
@@ -545,8 +563,10 @@
   box-sizing: border-box;
   border: none;
   border-radius: var(--radius-s);
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--gray-1000) 55%, transparent);
   cursor: move;
   touch-action: none;
+  z-index: 2;
 }
 
 .arc-similar-cropper__handle {

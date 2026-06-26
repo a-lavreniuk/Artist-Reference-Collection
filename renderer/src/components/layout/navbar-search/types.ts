@@ -56,6 +56,7 @@ export type NavbarSearchContextValue = {
   removeTag: (tagId: string) => void;
   resetSearchField: () => void;
   clearAiSearch: () => void;
+  cancelAiSearch: () => void;
   clearAiDraft: () => void;
   applyAiQuery: (raw: string) => void;
   applyCardIdFilter: (raw: string) => void;

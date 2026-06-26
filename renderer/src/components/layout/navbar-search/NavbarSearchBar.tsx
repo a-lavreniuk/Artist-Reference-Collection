@@ -30,7 +30,7 @@ export default function NavbarSearchBar() {
                 isTagsMode
                   ? ' search-multiselect'
                   : ctx.searchMode === 'color'
-                    ? ' arc-navbar-search--color'
+                    ? ' arc-navbar-search--color color-input'
                     : ctx.searchMode === 'similar'
                       ? ' arc-navbar-search--similar'
                       : ' arc-navbar-search--ai'

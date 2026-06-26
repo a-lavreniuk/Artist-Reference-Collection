@@ -25,7 +25,7 @@ import {
   getRecentAiQueries,
   pushRecentAiQuery
 } from '../../../search/recentSearchAi';
-import { ARC_AI_SEARCH_LOADING_EVENT } from '../../../search/aiSearchEvents';
+import { ARC_AI_SEARCH_LOADING_EVENT, dispatchAiSearchLoading } from '../../../search/aiSearchEvents';
 import { clearGallerySearchParams } from '../../../search/clearGallerySearch';
 import { ARC_SEARCH_QUERY_AI } from '../../../search/searchUrl';
 import { clearSimilarUploadPath } from '../../../search/similarSearchSession';
@@ -296,6 +296,18 @@ export function NavbarSearchProvider({
     });
   }, [commitGallerySearchParams]);
 
+  const cancelAiSearch = useCallback(() => {
+    panelHadInteraction.current = true;
+    setFieldError(false);
+    setSearchIslandWidePinned(true);
+    dispatchAiSearchLoading(false);
+    commitGallerySearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete(ARC_SEARCH_QUERY_AI);
+      return next;
+    });
+  }, [commitGallerySearchParams]);
+
   const clearAiDraft = useCallback(() => {
     panelHadInteraction.current = true;
     setDraft('');
@@ -490,6 +502,7 @@ export function NavbarSearchProvider({
     removeTag,
     resetSearchField,
     clearAiSearch,
+    cancelAiSearch,
     clearAiDraft,
     applyAiQuery,
     applyCardIdFilter,

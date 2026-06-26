@@ -1,3 +1,5 @@
+import { Loader } from '../../../loader';
+
 type NavbarSearchBarActionsProps = {
   children: React.ReactNode;
 };
@@ -24,6 +26,14 @@ export function NavbarSearchIconButton({
   );
 }
 
-export function NavbarSearchLoader() {
-  return <span className="loader arc-navbar-search-loader" role="status" aria-label="Поиск" />;
+export function NavbarSearchLoader({ className = 'arc-navbar-search-send-btn' }: { className?: string }) {
+  return (
+    <span
+      className={`tab-button tab-icon-only arc-navbar-search-loader-slot ${className}`}
+      role="status"
+      aria-label="Поиск"
+    >
+      <Loader decorative />
+    </span>
+  );
 }

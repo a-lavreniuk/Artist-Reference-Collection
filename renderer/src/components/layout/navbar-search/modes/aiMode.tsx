@@ -22,6 +22,7 @@ function AiBarField({ ctx }: NavbarSearchBarFieldProps) {
     showAiClearResult,
     clearAiDraft,
     clearAiSearch,
+    cancelAiSearch,
     showAiSend,
     openPanel,
     applyAiQuery,
@@ -34,7 +35,7 @@ function AiBarField({ ctx }: NavbarSearchBarFieldProps) {
     <>
       <input
         ref={searchInputRef}
-        className="search-inner slot-value arc-navbar-search-inner-ai"
+        className="search-inner slot-value arc-navbar-search-inner"
         type="text"
         placeholder={placeholder}
         value={draft}
@@ -49,7 +50,15 @@ function AiBarField({ ctx }: NavbarSearchBarFieldProps) {
       />
       <NavbarSearchBarActions>
         {aiSearching ? (
-          <NavbarSearchLoader />
+          <>
+            <NavbarSearchIconButton
+              ariaLabel="Отменить поиск"
+              iconClass="arc-icon-close"
+              className="arc-navbar-search-clear-btn"
+              onClick={cancelAiSearch}
+            />
+            <NavbarSearchLoader />
+          </>
         ) : (
           <>
             {showAiClearDraft ? (

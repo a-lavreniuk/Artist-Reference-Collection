@@ -25,6 +25,12 @@ type Props = {
   position?: ContextMenuPosition | null;
 };
 
+function resolveAnchorTop(anchorEl: HTMLElement): number {
+  const mgmtIsland = anchorEl.closest('.arc-navbar-island--mgmt');
+  const base = mgmtIsland ?? anchorEl;
+  return base.getBoundingClientRect().bottom + CONTEXT_MENU_ANCHOR_GAP;
+}
+
 function clampMenuPosition(top: number, left: number, menuHeight = 0) {
   const margin = 8;
   const maxLeft = window.innerWidth - CONTEXT_MENU_WIDTH - margin;
@@ -45,6 +51,7 @@ function renderRow(row: ContextMenuRow, onClose: () => void) {
   return (
     <ContextMenuItem
       key={row.key}
+      menuKey={row.key}
       label={row.label}
       iconClass={row.iconClass}
       shortcut={row.shortcut}
@@ -98,7 +105,7 @@ export default function ContextMenu({
     }
 
     const rect = anchorRef.current.getBoundingClientRect();
-    const rawTop = rect.bottom + CONTEXT_MENU_ANCHOR_GAP;
+    const rawTop = resolveAnchorTop(anchorRef.current);
     const rawLeft = rect.right - CONTEXT_MENU_WIDTH;
     const nextLayout = clampMenuPosition(rawTop, rawLeft, menuHeight);
     setLayout((prev) =>
