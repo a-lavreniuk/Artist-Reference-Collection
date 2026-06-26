@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import DemoAlert from '../../../components/layout/DemoAlert';
 import ValueSlider from '../../../components/range-slider/ValueSlider';
+import { Loader } from '../../../components/loader';
 import AiModelCard from '../../../components/settings/AiModelCard';
 import SettingsHardwareRow from '../../../components/settings/SettingsHardwareRow';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
@@ -305,9 +306,7 @@ export default function SettingsAiSearchPanel() {
                     {indexRunning ? (
                       <>
                         <div className="arc-settings-ai-index-line">
-                          {!index?.paused ? (
-                            <span className="loader arc-settings-ai-index-line__loader" aria-hidden="true" />
-                          ) : null}
+                          {!index?.paused ? <Loader decorative /> : null}
                           <p className="typo-p-m arc-settings-ai-index-line__text">{indexStatusLine}</p>
                         </div>
                         <div className="arc-settings-ai-panel__action-row">

@@ -25,6 +25,10 @@ function pathsFromUriList(dt: DataTransfer): string[] {
 
 /** Пути сброшенных файлов (fallback для renderer; основной канал — `window.arc.onFileDrop` в preload). */
 export function extractDroppedFilePaths(dt: DataTransfer): string[] {
+  if (window.arc?.getPathsForDroppedDataTransfer) {
+    const paths = window.arc.getPathsForDroppedDataTransfer(dt);
+    if (paths.length) return paths;
+  }
   if (!dt.files?.length) return pathsFromUriList(dt);
   if (window.arc?.getPathsForDroppedFiles) {
     const paths = window.arc.getPathsForDroppedFiles(dt.files);

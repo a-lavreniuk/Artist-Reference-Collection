@@ -3,11 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import { openBugReportForm } from '../../services/bugReportService';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
+import { useGridSize, type GridSize } from '../../layout/gridSizePreference';
 import type { UiThemePreference } from '../../services/appPreferences';
+
+const GRID_OPTIONS: { key: GridSize; label: string; iconClass: string }[] = [
+  { key: 'l', label: 'Большая', iconClass: 'arc-icon-grid-l' },
+  { key: 'm', label: 'Средняя', iconClass: 'arc-icon-grid-m' },
+  { key: 's', label: 'Маленькая', iconClass: 'arc-icon-grid-s' }
+];
 
 export default function NavbarMenu() {
   const navigate = useNavigate();
   const { prefs, ready, update } = useAppPreferences();
+  const [gridSize, setGridSize] = useGridSize();
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
@@ -20,13 +28,22 @@ export default function NavbarMenu() {
 
   const rows = useMemo<ContextMenuRow[]>(
     () => [
-      { type: 'item', key: 'board', label: 'Доска — в разработке', iconClass: 'arc-icon-whiteboard', onSelect: () => navigate('/board') },
       { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigate('/tags') },
       { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
       { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
       { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/general') },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'dup', label: 'Поиск дублей — в разработке', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
+      { type: 'separator', key: 'sep-grid' },
+      { type: 'header', key: 'grid-size-title', label: 'Размер сетки' },
+      ...GRID_OPTIONS.map((opt) => ({
+        type: 'item' as const,
+        key: `grid-${opt.key}`,
+        label: opt.label,
+        iconClass: opt.iconClass,
+        selected: gridSize === opt.key,
+        onSelect: () => setGridSize(opt.key)
+      })),
       { type: 'separator', key: 'sep2' },
       { type: 'header', key: 'theme-label', label: 'Оформление' },
       {
@@ -58,15 +75,15 @@ export default function NavbarMenu() {
       { type: 'item', key: 'onboarding', label: 'Онбординг', onSelect: () => navigate('/onboarding') },
       { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigate('/ui-kit') }
     ],
-    [navigate, ready, currentTheme]
+    [gridSize, navigate, ready, currentTheme, setGridSize]
   );
 
   return (
-    <>
+    <span className="arc-navbar-island-action">
       <button
         ref={anchorRef}
         type="button"
-        className="btn btn-outline btn-ds btn-l btn-icon-only arc-navbar-no-drag"
+        className={`btn btn-ghost btn-ds btn-m btn-icon-only arc-navbar-no-drag${open ? ' is-active' : ''}`}
         aria-label="Меню"
         aria-expanded={open}
         aria-haspopup="menu"
@@ -82,6 +99,6 @@ export default function NavbarMenu() {
         ariaLabel="Дополнительные разделы"
         noDragClassName="arc-navbar-no-drag"
       />
-    </>
+    </span>
   );
 }

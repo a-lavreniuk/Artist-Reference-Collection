@@ -119,6 +119,22 @@ html[data-theme="dark"] {
   --info-500: #0ea5e9;
   --border-brand: var(--brand-650);
 
+  /* Figma semantic aliases (Typography / Background / Icons) */
+  --typography-black-bg-primary-default: var(--gray-300);
+  --typography-black-bg-primary-hover: var(--gray-50);
+  --typography-black-bg-secondary-default: var(--gray-650);
+  --typography-black-bg-secondary-disabled: var(--gray-850);
+  --typography-brand-primary-default: var(--brand-100);
+  --typography-brand-primary-hover: var(--brand-50);
+  --typography-brand-secondary-default: var(--brand-250);
+  --typography-brand-secondary-hover: var(--brand-300);
+  --icons-black-bg-default: var(--gray-550);
+  --icons-black-bg-hover: var(--gray-50);
+  --icons-black-bg-disabled: var(--gray-850);
+  --background-brand-default: var(--brand-550);
+  --background-brand-hover: var(--brand-600);
+  --background-tertiary-hover: var(--gray-950);
+
   --red-50: #fff5f7;
   --red-100: #ffe0e4;
   --red-150: #fecbd1;
@@ -757,17 +773,65 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   color: currentColor;
 }
 
-/* Counter in EL-TABS-DEFAULT keeps secondary tone on hover/focus. */
+/* Counter: secondary on inactive; brand secondary on active (Figma 32:884). */
 .tab-button .tab-counter {
-  color: var(--tab-inactive-value-default);
+  color: var(--tab-inactive-counter-default);
 }
 
-.tab-button:hover:not(:disabled) .tab-counter,
-.tab-button:focus-visible:not(:disabled) .tab-counter,
-.tab-button.state-hover:not(:disabled) .tab-counter,
-.tab-button.state-focus:not(:disabled) .tab-counter,
-.tab-button.is-active .tab-counter {
-  color: var(--tab-inactive-value-default);
+.tab-button:hover:not(:disabled):not(.is-active) .tab-counter,
+.tab-button:focus-visible:not(:disabled):not(.is-active) .tab-counter,
+.tab-button.state-hover:not(:disabled):not(.is-active) .tab-counter,
+.tab-button.state-focus:not(:disabled):not(.is-active) .tab-counter {
+  color: var(--tab-inactive-counter-hover);
+}
+
+.tab-button.is-active .tab-counter,
+.tab-button.is-active:focus-visible:not(:disabled) .tab-counter,
+.tab-button.is-active.state-focus:not(:disabled) .tab-counter {
+  color: var(--tab-active-counter-default);
+}
+
+.tab-button.is-active:hover:not(:disabled) .tab-counter,
+.tab-button.is-active.state-hover:not(:disabled) .tab-counter {
+  color: var(--tab-active-counter-hover);
+}
+
+.tab-button .tab-icon {
+  color: var(--tab-inactive-icon-default);
+}
+
+.tab-button:hover:not(:disabled):not(.is-active) .tab-icon,
+.tab-button:focus-visible:not(:disabled):not(.is-active) .tab-icon,
+.tab-button.state-hover:not(:disabled):not(.is-active) .tab-icon,
+.tab-button.state-focus:not(:disabled):not(.is-active) .tab-icon {
+  color: var(--tab-inactive-icon-hover);
+}
+
+.tab-button.is-active .tab-icon,
+.tab-button.is-active:hover:not(:disabled) .tab-icon,
+.tab-button.is-active:focus-visible:not(:disabled) .tab-icon,
+.tab-button.is-active.state-hover:not(:disabled) .tab-icon,
+.tab-button.is-active.state-focus:not(:disabled) .tab-icon {
+  color: var(--tab-active-icon-default);
+}
+
+.tab-button.is-active:hover:not(:disabled) .tab-icon,
+.tab-button.is-active.state-hover:not(:disabled) .tab-icon {
+  color: var(--tab-active-icon-hover);
+}
+
+.tab-button:disabled {
+  background: var(--tab-inactive-fill-disabled);
+  color: var(--tab-inactive-value-disabled);
+  cursor: not-allowed;
+}
+
+.tab-button:disabled .tab-counter {
+  color: var(--tab-inactive-counter-disabled);
+}
+
+.tab-button:disabled .tab-icon {
+  color: var(--tab-inactive-icon-disabled);
 }
 
 /* Universal token-aware icon layer with safe fallback.
@@ -3284,30 +3348,34 @@ body[data-elevation="sunken"],
   --btn-group-border-hover: var(--gray-900);
   --btn-group-border-focus: var(--gray-900);
   --btn-group-border-disabled: var(--gray-900);
-  --tab-inactive-fill-default: var(--gray-1000);
-  --tab-inactive-value-default: var(--gray-650);
-  --tab-inactive-counter-default: var(--gray-650);
-  --tab-inactive-icon-default: var(--gray-600);
-  --tab-inactive-fill-hover: var(--gray-1000);
-  --tab-inactive-value-hover: var(--gray-50);
-  --tab-inactive-counter-hover: var(--gray-650);
-  --tab-inactive-icon-hover: var(--gray-50);
-  --tab-inactive-fill-focus: var(--gray-1000);
-  --tab-inactive-value-focus: var(--gray-650);
-  --tab-inactive-counter-focus: var(--gray-650);
-  --tab-inactive-icon-focus: var(--gray-600);
-  --tab-active-fill-default: var(--gray-900);
-  --tab-active-value-default: var(--gray-50);
-  --tab-active-counter-default: var(--gray-650);
-  --tab-active-icon-default: var(--gray-600);
-  --tab-active-fill-hover: var(--gray-900);
-  --tab-active-value-hover: var(--gray-50);
-  --tab-active-counter-hover: var(--gray-650);
-  --tab-active-icon-hover: var(--gray-50);
-  --tab-active-fill-focus: var(--gray-900);
-  --tab-active-value-focus: var(--gray-50);
-  --tab-active-counter-focus: var(--gray-650);
-  --tab-active-icon-focus: var(--gray-600);
+  --tab-inactive-fill-default: transparent;
+  --tab-inactive-value-default: var(--typography-black-bg-primary-default);
+  --tab-inactive-counter-default: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-default: var(--icons-black-bg-default);
+  --tab-inactive-fill-hover: var(--background-tertiary-hover);
+  --tab-inactive-value-hover: var(--typography-black-bg-primary-hover);
+  --tab-inactive-counter-hover: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-hover: var(--icons-black-bg-hover);
+  --tab-inactive-fill-focus: var(--background-tertiary-hover);
+  --tab-inactive-value-focus: var(--typography-black-bg-primary-default);
+  --tab-inactive-counter-focus: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-focus: var(--icons-black-bg-default);
+  --tab-inactive-fill-disabled: transparent;
+  --tab-inactive-value-disabled: var(--typography-black-bg-secondary-disabled);
+  --tab-inactive-counter-disabled: var(--typography-black-bg-secondary-disabled);
+  --tab-inactive-icon-disabled: var(--icons-black-bg-disabled);
+  --tab-active-fill-default: var(--background-brand-default);
+  --tab-active-value-default: var(--typography-brand-primary-default);
+  --tab-active-counter-default: var(--typography-brand-secondary-default);
+  --tab-active-icon-default: var(--typography-brand-primary-default);
+  --tab-active-fill-hover: var(--background-brand-hover);
+  --tab-active-value-hover: var(--typography-brand-primary-hover);
+  --tab-active-counter-hover: var(--typography-brand-secondary-hover);
+  --tab-active-icon-hover: var(--typography-brand-primary-hover);
+  --tab-active-fill-focus: var(--background-brand-default);
+  --tab-active-value-focus: var(--typography-brand-primary-default);
+  --tab-active-counter-focus: var(--typography-brand-secondary-default);
+  --tab-active-icon-focus: var(--typography-brand-primary-default);
   --tag-fill-default: var(--gray-900);
   --tag-text-default: var(--gray-300);
   --tag-counter-default: var(--gray-650);
@@ -3456,30 +3524,34 @@ body[data-elevation="default"],
   --btn-group-border-hover: var(--gray-850);
   --btn-group-border-focus: var(--gray-850);
   --btn-group-border-disabled: var(--gray-850);
-  --tab-inactive-fill-default: var(--gray-950);
-  --tab-inactive-value-default: var(--gray-600);
-  --tab-inactive-counter-default: var(--gray-600);
-  --tab-inactive-icon-default: var(--gray-550);
-  --tab-inactive-fill-hover: var(--gray-950);
-  --tab-inactive-value-hover: var(--gray-50);
-  --tab-inactive-counter-hover: var(--gray-600);
-  --tab-inactive-icon-hover: var(--gray-50);
-  --tab-inactive-fill-focus: var(--gray-950);
-  --tab-inactive-value-focus: var(--gray-600);
-  --tab-inactive-counter-focus: var(--gray-600);
-  --tab-inactive-icon-focus: var(--gray-550);
-  --tab-active-fill-default: var(--gray-850);
-  --tab-active-value-default: var(--gray-50);
-  --tab-active-counter-default: var(--gray-600);
-  --tab-active-icon-default: var(--gray-550);
-  --tab-active-fill-hover: var(--gray-850);
-  --tab-active-value-hover: var(--gray-50);
-  --tab-active-counter-hover: var(--gray-600);
-  --tab-active-icon-hover: var(--gray-50);
-  --tab-active-fill-focus: var(--gray-850);
-  --tab-active-value-focus: var(--gray-50);
-  --tab-active-counter-focus: var(--gray-600);
-  --tab-active-icon-focus: var(--gray-550);
+  --tab-inactive-fill-default: transparent;
+  --tab-inactive-value-default: var(--typography-black-bg-primary-default);
+  --tab-inactive-counter-default: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-default: var(--icons-black-bg-default);
+  --tab-inactive-fill-hover: var(--background-tertiary-hover);
+  --tab-inactive-value-hover: var(--typography-black-bg-primary-hover);
+  --tab-inactive-counter-hover: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-hover: var(--icons-black-bg-hover);
+  --tab-inactive-fill-focus: var(--background-tertiary-hover);
+  --tab-inactive-value-focus: var(--typography-black-bg-primary-default);
+  --tab-inactive-counter-focus: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-focus: var(--icons-black-bg-default);
+  --tab-inactive-fill-disabled: transparent;
+  --tab-inactive-value-disabled: var(--typography-black-bg-secondary-disabled);
+  --tab-inactive-counter-disabled: var(--typography-black-bg-secondary-disabled);
+  --tab-inactive-icon-disabled: var(--icons-black-bg-disabled);
+  --tab-active-fill-default: var(--background-brand-default);
+  --tab-active-value-default: var(--typography-brand-primary-default);
+  --tab-active-counter-default: var(--typography-brand-secondary-default);
+  --tab-active-icon-default: var(--typography-brand-primary-default);
+  --tab-active-fill-hover: var(--background-brand-hover);
+  --tab-active-value-hover: var(--typography-brand-primary-hover);
+  --tab-active-counter-hover: var(--typography-brand-secondary-hover);
+  --tab-active-icon-hover: var(--typography-brand-primary-hover);
+  --tab-active-fill-focus: var(--background-brand-default);
+  --tab-active-value-focus: var(--typography-brand-primary-default);
+  --tab-active-counter-focus: var(--typography-brand-secondary-default);
+  --tab-active-icon-focus: var(--typography-brand-primary-default);
   --tag-fill-default: var(--gray-850);
   --tag-text-default: var(--gray-250);
   --tag-counter-default: var(--gray-600);
@@ -3628,30 +3700,34 @@ body[data-elevation="raised"],
   --btn-group-border-hover: var(--gray-800);
   --btn-group-border-focus: var(--gray-800);
   --btn-group-border-disabled: var(--gray-800);
-  --tab-inactive-fill-default: var(--gray-900);
-  --tab-inactive-value-default: var(--gray-550);
-  --tab-inactive-counter-default: var(--gray-550);
-  --tab-inactive-icon-default: var(--gray-500);
+  --tab-inactive-fill-default: transparent;
+  --tab-inactive-value-default: var(--typography-black-bg-primary-default);
+  --tab-inactive-counter-default: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-default: var(--icons-black-bg-default);
   --tab-inactive-fill-hover: var(--gray-900);
-  --tab-inactive-value-hover: var(--gray-50);
-  --tab-inactive-counter-hover: var(--gray-550);
-  --tab-inactive-icon-hover: var(--gray-50);
+  --tab-inactive-value-hover: var(--typography-black-bg-primary-hover);
+  --tab-inactive-counter-hover: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-hover: var(--icons-black-bg-hover);
   --tab-inactive-fill-focus: var(--gray-900);
-  --tab-inactive-value-focus: var(--gray-550);
-  --tab-inactive-counter-focus: var(--gray-550);
-  --tab-inactive-icon-focus: var(--gray-500);
-  --tab-active-fill-default: var(--gray-800);
-  --tab-active-value-default: var(--gray-50);
-  --tab-active-counter-default: var(--gray-550);
-  --tab-active-icon-default: var(--gray-500);
-  --tab-active-fill-hover: var(--gray-800);
-  --tab-active-value-hover: var(--gray-50);
-  --tab-active-counter-hover: var(--gray-550);
-  --tab-active-icon-hover: var(--gray-50);
-  --tab-active-fill-focus: var(--gray-800);
-  --tab-active-value-focus: var(--gray-50);
-  --tab-active-counter-focus: var(--gray-550);
-  --tab-active-icon-focus: var(--gray-500);
+  --tab-inactive-value-focus: var(--typography-black-bg-primary-default);
+  --tab-inactive-counter-focus: var(--typography-black-bg-secondary-default);
+  --tab-inactive-icon-focus: var(--icons-black-bg-default);
+  --tab-inactive-fill-disabled: transparent;
+  --tab-inactive-value-disabled: var(--typography-black-bg-secondary-disabled);
+  --tab-inactive-counter-disabled: var(--typography-black-bg-secondary-disabled);
+  --tab-inactive-icon-disabled: var(--icons-black-bg-disabled);
+  --tab-active-fill-default: var(--background-brand-default);
+  --tab-active-value-default: var(--typography-brand-primary-default);
+  --tab-active-counter-default: var(--typography-brand-secondary-default);
+  --tab-active-icon-default: var(--typography-brand-primary-default);
+  --tab-active-fill-hover: var(--background-brand-hover);
+  --tab-active-value-hover: var(--typography-brand-primary-hover);
+  --tab-active-counter-hover: var(--typography-brand-secondary-hover);
+  --tab-active-icon-hover: var(--typography-brand-primary-hover);
+  --tab-active-fill-focus: var(--background-brand-default);
+  --tab-active-value-focus: var(--typography-brand-primary-default);
+  --tab-active-counter-focus: var(--typography-brand-secondary-default);
+  --tab-active-icon-focus: var(--typography-brand-primary-default);
   --tag-fill-default: var(--gray-800);
   --tag-text-default: var(--gray-200);
   --tag-counter-default: var(--gray-550);
@@ -3885,6 +3961,10 @@ body[data-elevation="raised"],
   background: var(--button-ghost-disabled);
   border-color: transparent;
   cursor: not-allowed;
+}
+
+.btn-ghost.is-active:not(:disabled) {
+  background: var(--button-ghost-hover);
 }
 
 .btn-outline .btn-ds__value,

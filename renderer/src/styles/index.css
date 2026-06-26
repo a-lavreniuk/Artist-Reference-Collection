@@ -62,7 +62,7 @@ a {
   overflow-x: hidden;
   overflow-y: auto;
   padding: var(--s-4);
-  padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px));
+  padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 56px));
   border-radius: var(--radius-l);
   background: var(--sunken-bg);
   scrollbar-width: none;
@@ -1716,7 +1716,7 @@ body.arc-card-detail-open .arc-app-outlet {
   overflow: hidden;
   background: var(--panel-bg);
   --arc-card-detail-viewport-h: calc(
-    100vh - var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px)) - var(--s-4)
+    100vh - var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 56px)) - var(--s-4)
   );
   --arc-card-detail-main-h: var(--arc-card-detail-viewport-h);
   --arc-card-detail-similar-peek-ratio: 0.24;
@@ -1727,7 +1727,7 @@ body.arc-card-detail-open .arc-app-outlet {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 72px));
+  padding-top: var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 56px));
   background: var(--panel-bg);
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -4221,13 +4221,6 @@ body.arc-card-detail-open .arc-app-outlet {
   width: 100%;
 }
 
-.arc-settings-ai-index-line__loader {
-  width: 16px;
-  height: 16px;
-  border-width: 2px;
-  flex-shrink: 0;
-}
-
 .arc-settings-ai-index-line__text {
   margin: 0;
   flex: 1 1 auto;
@@ -4249,69 +4242,6 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-settings-ai-panel__error {
   margin: 0;
   color: var(--danger-400);
-}
-
-/* Figma 60:5582 — search mode segmented control */
-.arc-navbar-search-row {
-  display: flex;
-  align-items: stretch;
-  gap: var(--s-2);
-  width: 100%;
-  min-width: 0;
-}
-
-.arc-navbar-search-modes {
-  display: inline-flex;
-  align-items: stretch;
-  flex: 0 0 auto;
-  padding: var(--s-0);
-  border-radius: var(--radius-m);
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-}
-
-.arc-navbar-search-mode {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: calc(var(--radius-m) - var(--s-0));
-  background: transparent;
-  color: var(--text-elev-secondary);
-  cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.arc-navbar-search-mode:hover:not(:disabled):not(.is-active) {
-  background: var(--brand-600);
-  color: var(--brand-100);
-}
-
-.arc-navbar-search-mode:focus-visible {
-  outline: 2px solid var(--brand-400);
-  outline-offset: 1px;
-}
-
-.arc-navbar-search-mode.is-active {
-  background: var(--brand-550);
-  color: var(--brand-100);
-}
-
-.arc-navbar-search-mode:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.arc-navbar-search-mode__icon {
-  width: 16px;
-  height: 16px;
-}
-
-.arc-navbar-search-row .arc-navbar-search-stack {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .arc-settings-page--duplicates {

@@ -4,20 +4,19 @@ import { buildBlurLayers } from './shadeBlurLayers';
 const SHADE_MAX_BLUR_PX = 16;
 
 type Props = {
-  filtersOpen: boolean;
   /** Пока открыт поиск — без backdrop-filter (иначе белая кайма по краю окна в Electron). */
   pauseBackdropBlur?: boolean;
 };
 
-export default function NavbarShade({ filtersOpen, pauseBackdropBlur = false }: Props) {
+export default function NavbarShade({ pauseBackdropBlur = false }: Props) {
   const layers = useMemo(
     () =>
       buildBlurLayers({
-        layerCount: filtersOpen ? 16 : 8,
+        layerCount: 8,
         maxBlurPx: SHADE_MAX_BLUR_PX,
         direction: 'toTop'
       }),
-    [filtersOpen]
+    []
   );
 
   return (

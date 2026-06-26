@@ -1,18 +1,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import NavbarFiltersRow from './NavbarFiltersRow';
+import NavbarFiltersMenu from './navbar-filters/GalleryNavbarFilters';
 import NavbarLibrarySwitcher from './NavbarLibrarySwitcher';
 import { useImportContext } from '../import/ImportContext';
 import NavbarMenu from './NavbarMenu';
-import NavbarGridSizeMenu from './NavbarGridSizeMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
-import { Tooltip } from '../tooltip/Tooltip';
+import NavbarSortMenu from './NavbarSortMenu';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { requestCloseCardDetail } from '../gallery/cardDetailEvents';
 import {
+  applyNavbarIslandsLayoutVars,
   applyNavbarStackCssVars,
-  applyNavbarTopBarLayoutVars,
   clearNavbarStackCssVars,
   MAIN_NAV_TABS,
   resolveMainTab,
@@ -26,8 +25,8 @@ export default function TopNavbar() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const hostRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLElement>(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const islandsRef = useRef<HTMLDivElement>(null);
+  const searchIslandRef = useRef<HTMLDivElement>(null);
   const [searchPanelOpen, setSearchPanelOpen] = useState(false);
   const [maintenanceLocked, setMaintenanceLocked] = useState(false);
 
@@ -36,46 +35,40 @@ export default function TopNavbar() {
     [location.pathname, location.search]
   );
   const activeMainTab = useMemo(() => resolveMainTab(location.pathname), [location.pathname]);
-  const showFiltersSection = variant === 'full' && filtersOpen;
+  const showSortAndFilters = variant === 'full';
 
   useEffect(() => {
     if (!window.arc?.onMaintenance) return undefined;
     return window.arc.onMaintenance((v) => setMaintenanceLocked(v));
   }, []);
 
-  useEffect(() => {
-    if (variant !== 'full') {
-      setFiltersOpen(false);
-    }
-  }, [variant]);
-
   useLayoutEffect(() => {
-    if (headerRef.current) {
-      void hydrateArcNavbarIcons(headerRef.current);
+    if (islandsRef.current) {
+      void hydrateArcNavbarIcons(islandsRef.current);
     }
-  }, [variant, filtersOpen, activeMainTab, maintenanceLocked, location.pathname, location.search]);
+  }, [activeMainTab, maintenanceLocked, location.pathname, location.search, searchPanelOpen, variant]);
 
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host) return undefined;
 
     const syncMetrics = () => {
-      applyNavbarStackCssVars(host, headerRef.current);
-      applyNavbarTopBarLayoutVars(headerRef.current);
+      applyNavbarStackCssVars(host, islandsRef.current);
+      applyNavbarIslandsLayoutVars(host);
     };
 
     syncMetrics();
 
     const observer = new ResizeObserver(syncMetrics);
     observer.observe(host);
-    const header = headerRef.current;
-    if (header) {
-      observer.observe(header);
-      const topBar = header.querySelector('.arc-navbar-top-bar');
-      const nav = header.querySelector('.arc-navbar-top-bar__nav');
-      const mgmt = header.querySelector('.arc-navbar-top-bar__mgmt');
-      if (topBar) observer.observe(topBar);
+    const islands = islandsRef.current;
+    if (islands) {
+      observer.observe(islands);
+      const nav = islands.querySelector('.arc-navbar-island--nav');
+      const search = islands.querySelector('.arc-navbar-island--search');
+      const mgmt = islands.querySelector('.arc-navbar-island--mgmt');
       if (nav) observer.observe(nav);
+      if (search) observer.observe(search);
       if (mgmt) observer.observe(mgmt);
     }
 
@@ -83,7 +76,7 @@ export default function TopNavbar() {
       observer.disconnect();
       clearNavbarStackCssVars();
     };
-  }, [variant, filtersOpen, activeMainTab, maintenanceLocked, location.pathname, location.search]);
+  }, [activeMainTab, maintenanceLocked, location.pathname, location.search, searchPanelOpen, variant]);
 
   const handleMainTabClick = (path: string) => {
     if (maintenanceLocked) return;
@@ -103,89 +96,60 @@ export default function TopNavbar() {
 
   return (
     <div ref={hostRef} className="arc-navbar-host">
-      <NavbarShade filtersOpen={showFiltersSection} pauseBackdropBlur={searchPanelOpen} />
+      <NavbarShade pauseBackdropBlur={searchPanelOpen} />
       <div className="arc-navbar-host__inner">
-        <header
-          ref={headerRef}
-          className={`arc-navbar panel elevation-default${showFiltersSection ? ' arc-navbar--filters-open' : ''}`}
-          data-elevation="default"
-          data-navbar-elevation="default"
+        <div
+          ref={islandsRef}
+          className="arc-navbar-islands arc-navbar-no-drag arc-ui-kit-scope"
+          data-btn-size="m"
         >
-          <div className="arc-navbar-top-bar">
-            <div className="arc-navbar-top-bar__nav arc-navbar-no-drag">
-              <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация">
-                {MAIN_NAV_TABS.map((tab) => {
-                  const isActive = tab.key === activeMainTab;
-                  return (
-                    <button
-                      key={tab.key}
-                      className={`tab-button${isActive ? ' is-active' : ''}`}
-                      type="button"
-                      role="tab"
-                      aria-selected={isActive}
-                      disabled={maintenanceLocked}
-                      onClick={() => handleMainTabClick(tab.path)}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {variant === 'full' ? (
-              <div className="arc-navbar-top-bar__search arc-navbar-no-drag">
-                <Tooltip content="Размер сетки" delay={500} position="top">
-                  <span className="arc-tooltip-anchor-inline">
-                    <NavbarGridSizeMenu />
-                  </span>
-                </Tooltip>
-                <button
-                  type="button"
-                  className={`btn btn-outline btn-ds btn-icon-only${filtersOpen ? ' is-active' : ''}`}
-                  aria-label={filtersOpen ? 'Скрыть фильтры' : 'Показать фильтры'}
-                  aria-pressed={filtersOpen}
-                  disabled={maintenanceLocked}
-                  onClick={() => setFiltersOpen((v) => !v)}
-                >
-                  <span className="btn-icon-only__glyph arc-icon-filter" aria-hidden="true" />
-                </button>
-                <div className="arc-navbar-search-wrap">
-                  <NavbarSearch onPanelOpenChange={setSearchPanelOpen} />
-                </div>
-                <Tooltip content="Добавить" delay={500} position="top">
+          <div className="arc-navbar-island arc-navbar-island--nav">
+            <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация">
+              {MAIN_NAV_TABS.map((tab) => {
+                const isActive = tab.key === activeMainTab;
+                return (
                   <button
+                    key={tab.key}
+                    className={`tab-button${isActive ? ' is-active' : ''}`}
                     type="button"
-                    className="btn btn-brand btn-ds btn-icon-only"
+                    role="tab"
+                    aria-selected={isActive}
                     disabled={maintenanceLocked}
-                    aria-label="Добавить"
-                    onClick={openImportPicker}
+                    onClick={() => handleMainTabClick(tab.path)}
                   >
-                    <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
+                    {tab.label}
                   </button>
-                </Tooltip>
-              </div>
-            ) : (
-              <div className="arc-navbar-top-bar__search arc-navbar-top-bar__search--spacer" aria-hidden="true" />
-            )}
-
-            <div
-              className="arc-navbar-top-bar__mgmt arc-navbar-no-drag arc-ui-kit-scope"
-              data-btn-size="l"
-              data-elevation="default"
-            >
-              <NavbarLibrarySwitcher disabled={maintenanceLocked} />
-              <NavbarMenu />
+                );
+              })}
             </div>
           </div>
 
-          {showFiltersSection ? (
-            <>
-              <hr className="arc-navbar-separator" aria-hidden="true" />
-              <NavbarFiltersRow />
-            </>
-          ) : null}
-        </header>
+          <div
+            ref={searchIslandRef}
+            className="arc-navbar-island arc-navbar-island--search"
+          >
+            <NavbarSearch islandRef={searchIslandRef} onPanelOpenChange={setSearchPanelOpen} />
+          </div>
+
+          <div className="arc-navbar-island arc-navbar-island--mgmt">
+            {showSortAndFilters ? (
+              <>
+                <NavbarSortMenu disabled={maintenanceLocked} />
+                <NavbarFiltersMenu />
+              </>
+            ) : null}
+            <NavbarLibrarySwitcher disabled={maintenanceLocked} />
+            <button
+              type="button"
+              className="btn btn-brand btn-ds btn-m"
+              disabled={maintenanceLocked}
+              onClick={openImportPicker}
+            >
+              Добавить
+            </button>
+            <NavbarMenu />
+          </div>
+        </div>
       </div>
     </div>
   );
