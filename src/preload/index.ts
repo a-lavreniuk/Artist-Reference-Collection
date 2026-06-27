@@ -34,6 +34,10 @@ contextBridge.exposeInMainWorld('arc', {
   relinkLibraryFolder: (absPath: string) =>
     ipcRenderer.invoke('arc:relink-library-folder', absPath) as Promise<{ ok: boolean; error?: string }>,
   pickLibraryFolder: () => ipcRenderer.invoke('arc:pick-library-folder') as Promise<string | null>,
+  getDefaultLibraryParent: () =>
+    ipcRenderer.invoke('arc:get-default-library-parent') as Promise<string>,
+  setMainWindowOnboardingMode: (enabled: boolean) =>
+    ipcRenderer.invoke('arc:set-main-window-onboarding-mode', enabled) as Promise<{ ok: boolean }>,
   readMetadata: () => ipcRenderer.invoke('arc:read-metadata'),
   writeMetadata: (data: unknown) => ipcRenderer.invoke('arc:write-metadata', data),
   pickImageFiles: () => ipcRenderer.invoke('arc:pick-image-files') as Promise<string[]>,

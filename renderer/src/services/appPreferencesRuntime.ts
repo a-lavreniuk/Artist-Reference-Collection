@@ -4,6 +4,7 @@ import {
   getAppPreferences,
   setAppPreferences,
   type AppPreferencesV1,
+  type OnboardingSetupStep,
   type GalleryCollectionsSortMode,
   type ScreenshotFormat,
   type UiThemePreference
@@ -31,6 +32,11 @@ function sanitizeGalleryCollectionsSortMode(raw: unknown): GalleryCollectionsSor
 function sanitizeUiTheme(raw: unknown): UiThemePreference {
   if (raw === 'light' || raw === 'system') return raw;
   return 'dark';
+}
+
+function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
+  if (raw === 1 || raw === 2) return raw;
+  return 0;
 }
 
 function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreferencesV1> {
@@ -124,6 +130,12 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   }
   if ('uiTheme' in patch) {
     next.uiTheme = sanitizeUiTheme(patch.uiTheme);
+  }
+  if ('onboardingSetupCompleted' in patch && typeof patch.onboardingSetupCompleted === 'boolean') {
+    next.onboardingSetupCompleted = patch.onboardingSetupCompleted;
+  }
+  if ('onboardingSetupStep' in patch) {
+    next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
   }
 
   return next;
@@ -220,6 +232,12 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('uiTheme' in patch) {
     next.uiTheme = sanitizeUiTheme(patch.uiTheme);
+  }
+  if ('onboardingSetupCompleted' in patch && typeof patch.onboardingSetupCompleted === 'boolean') {
+    next.onboardingSetupCompleted = patch.onboardingSetupCompleted;
+  }
+  if ('onboardingSetupStep' in patch) {
+    next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
   }
 
   return next;

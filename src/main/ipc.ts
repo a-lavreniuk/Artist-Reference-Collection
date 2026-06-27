@@ -302,6 +302,8 @@ export function registerArcIpc(): void {
     return res.filePaths[0] ?? null;
   });
 
+  ipcMain.handle('arc:get-default-library-parent', async () => app.getPath('documents'));
+
   ipcMain.handle('arc:read-metadata', async () => {
     const root = await readLibraryRootFromDisk();
     if (!root) return null;

@@ -72,7 +72,6 @@ export default function NavbarMenu() {
       },
       { type: 'separator', key: 'sep3' },
       { type: 'item', key: 'feedback', label: 'Сообщить о проблеме', iconClass: 'arc-icon-bug-s', onSelect: () => { setOpen(false); void openBugReportForm(); } },
-      { type: 'item', key: 'onboarding', label: 'Онбординг', onSelect: () => navigate('/onboarding') },
       { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigate('/ui-kit') }
     ],
     [gridSize, navigate, ready, currentTheme, setGridSize]

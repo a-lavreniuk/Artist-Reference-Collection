@@ -18,6 +18,11 @@ import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
 import { registerDuplicateScanIpc } from './duplicateFileScan';
 import { bindMainWindow, registerWindowChromeIpc } from './windowChrome';
+import {
+  applyMainWindowOnboardingMode,
+  needsOnboardingSetup,
+  registerOnboardingWindowModeIpc
+} from './onboardingWindowMode';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
 import { registerAiIpc, scheduleIdleIndexing, shutdownAiWorker } from './ipcAi';
 import {
@@ -27,7 +32,7 @@ import {
   WINDOW_MIN_WIDTH
 } from './windowSize';
 
-function createWindow(): BrowserWindow {
+function createWindow(onboardingMode = false): BrowserWindow {
   const preloadPath = path.resolve(__dirname, '..', 'preload', 'index.js');
   const iconPath = appIconPath();
 
@@ -66,7 +71,11 @@ function createWindow(): BrowserWindow {
   });
 
   win.once('ready-to-show', () => {
-    win.maximize();
+    if (onboardingMode) {
+      applyMainWindowOnboardingMode(win);
+    } else {
+      win.maximize();
+    }
     win.show();
   });
 
@@ -110,20 +119,23 @@ app.whenReady().then(async () => {
   registerWindowChromeIpc();
   registerScreenshotIpc();
   registerScreenshotPickerIpc();
+  registerOnboardingWindowModeIpc();
   registerFeedbackIpc();
   registerDuplicateScanIpc();
   registerAutoImportIpc();
   void applyStoredLaunchAtLogin();
   void applyStoredScreenshotShortcut();
   applyStoredFeedbackShortcut();
-  void readAppPreferences().then((prefs) => {
+  void readAppPreferences().then((loadedPrefs) => {
     restartAutoImportWatcher();
-    if (prefs.aiSemanticSearchEnabled) scheduleIdleIndexing();
+    if (loadedPrefs.aiSemanticSearchEnabled) scheduleIdleIndexing();
   });
   registerArcUpdaterIpc();
   registerAiIpc();
   registerDevToolsShortcuts();
-  createWindow();
+  const prefs = await readAppPreferences();
+  const needsSetup = needsOnboardingSetup(readLibraryRootSync(), prefs.onboardingSetupCompleted);
+  createWindow(needsSetup);
   createAppTray();
   initArcUpdater();
 

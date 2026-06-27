@@ -11,8 +11,12 @@ export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 export type UiThemePreference = 'dark' | 'light' | 'system';
 
+export type OnboardingSetupStep = 0 | 1 | 2;
+
 export type AppPreferencesV1 = {
   version: 1;
+  onboardingSetupCompleted: boolean;
+  onboardingSetupStep: OnboardingSetupStep;
   launchAtLogin: boolean;
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
@@ -47,9 +51,16 @@ const FILENAME = 'arc-app-preferences.json';
 let cached: AppPreferencesV1 | null = null;
 let ipcRegistered = false;
 
+function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
+  if (raw === 1 || raw === 2) return raw;
+  return 0;
+}
+
 export function defaultAppPreferences(): AppPreferencesV1 {
   return {
     version: 1,
+    onboardingSetupCompleted: false,
+    onboardingSetupStep: 0,
     launchAtLogin: false,
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
@@ -162,7 +173,12 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
       raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
     ),
-    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme)
+    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme),
+    onboardingSetupCompleted:
+      typeof raw.onboardingSetupCompleted === 'boolean'
+        ? raw.onboardingSetupCompleted
+        : d.onboardingSetupCompleted,
+    onboardingSetupStep: sanitizeOnboardingSetupStep(raw.onboardingSetupStep ?? d.onboardingSetupStep)
   };
 }
 
@@ -253,6 +269,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('uiTheme' in patch) {
     next.uiTheme = sanitizeUiTheme(patch.uiTheme);
+  }
+  if ('onboardingSetupCompleted' in patch && typeof patch.onboardingSetupCompleted === 'boolean') {
+    next.onboardingSetupCompleted = patch.onboardingSetupCompleted;
+  }
+  if ('onboardingSetupStep' in patch) {
+    next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
   }
 
   return next;

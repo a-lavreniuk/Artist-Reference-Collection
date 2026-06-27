@@ -26,7 +26,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/statistics': 'Статистика',
   '/history': 'История',
   '/duplicates': 'Поиск дублей',
-  '/onboarding': 'Онбординг',
   '/ui-kit': 'UI-Kit'
 };
 

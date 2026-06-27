@@ -10,8 +10,12 @@ export type NotificationPrefKey =
   | 'notifyAutoImport'
   | 'notifyFilesAdded';
 
+export type OnboardingSetupStep = 0 | 1 | 2;
+
 export type AppPreferencesV1 = {
   version: 1;
+  onboardingSetupCompleted: boolean;
+  onboardingSetupStep: OnboardingSetupStep;
   launchAtLogin: boolean;
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
@@ -41,9 +45,16 @@ export type AppPreferencesV1 = {
   uiTheme: UiThemePreference;
 };
 
+function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
+  if (raw === 1 || raw === 2) return raw;
+  return 0;
+}
+
 export function defaultAppPreferences(): AppPreferencesV1 {
   return {
     version: 1,
+    onboardingSetupCompleted: false,
+    onboardingSetupStep: 0,
     launchAtLogin: false,
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
@@ -118,7 +129,12 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
       raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
     ),
-    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme)
+    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme),
+    onboardingSetupCompleted:
+      typeof raw.onboardingSetupCompleted === 'boolean'
+        ? raw.onboardingSetupCompleted
+        : d.onboardingSetupCompleted,
+    onboardingSetupStep: sanitizeOnboardingSetupStep(raw.onboardingSetupStep ?? d.onboardingSetupStep)
   };
 }
 

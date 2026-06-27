@@ -1,9 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import OnboardingGate from './components/onboarding/OnboardingGate';
 import AppLayout from './components/layout/AppLayout';
 import CardSectionRoute from './components/layout/CardSectionRoute';
 import GalleryCardEditRedirect from './pages/GalleryCardEditRedirect';
-import OnboardingStubPage from './pages/OnboardingStubPage';
 import SettingsPage from './pages/SettingsPage';
 import SettingsNavbarPanelPage from './pages/SettingsNavbarPanelPage';
 import TagsPage from './pages/TagsPage';
@@ -55,13 +55,13 @@ function RouteFallback() {
 
 export default function App() {
   return (
+    <OnboardingGate>
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Navigate to="/gallery" replace />} />
           <Route path="gallery" element={<CardSectionRoute />} />
           <Route path="gallery/:cardId/edit" element={<GalleryCardEditRedirect />} />
-          <Route path="onboarding" element={<OnboardingStubPage />} />
           <Route path="tags" element={<TagsPage />} />
           <Route path="collections" element={<CardSectionRoute />} />
           <Route path="collections/:collectionId" element={<CardSectionRoute />} />
@@ -90,5 +90,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/gallery" replace />} />
       </Routes>
     </Suspense>
+    </OnboardingGate>
   );
 }

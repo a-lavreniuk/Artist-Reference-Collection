@@ -55,6 +55,8 @@ declare global {
       validateLibraryFolder: (absPath: string) => Promise<{ ok: boolean; valid: boolean }>;
       relinkLibraryFolder: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
       pickLibraryFolder: () => Promise<string | null>;
+      getDefaultLibraryParent: () => Promise<string>;
+      setMainWindowOnboardingMode: (enabled: boolean) => Promise<{ ok: boolean }>;
       readMetadata: () => Promise<ArcMetadataV1 | null>;
       writeMetadata: (data: ArcMetadataV1) => Promise<void>;
       pickImageFiles: () => Promise<string[]>;
