@@ -448,5 +448,26 @@ contextBridge.exposeInMainWorld('arc', {
     const fn = (_: unknown, payload: { message: string; fallback?: boolean }) => cb(payload);
     ipcRenderer.on('arc:ai-error', fn);
     return () => ipcRenderer.removeListener('arc:ai-error', fn);
-  }
+  },
+
+  signalLoadingSplashReady: () => ipcRenderer.invoke('loading:splash-ready') as Promise<{ ok: boolean }>,
+  onLoadingProgress: (
+    cb: (payload: { percent: number; phaseText: string; version: string }) => void
+  ) => {
+    const fn = (_: unknown, payload: { percent: number; phaseText: string; version: string }) => cb(payload);
+    ipcRenderer.on('loading:progress-update', fn);
+    return () => ipcRenderer.removeListener('loading:progress-update', fn);
+  },
+  onLoadingFadeOut: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('loading:splash-fade-out', fn);
+    return () => ipcRenderer.removeListener('loading:splash-fade-out', fn);
+  },
+  signalLoadingFadeComplete: () => {
+    ipcRenderer.send('loading:splash-fade-complete');
+  },
+  reportLoadingBootstrapProgress: (percent: number, phaseText: string) =>
+    ipcRenderer.invoke('loading:bootstrap-progress', { percent, phaseText }) as Promise<{ ok: boolean }>,
+  reportLoadingBootstrapComplete: () =>
+    ipcRenderer.invoke('loading:bootstrap-complete') as Promise<{ ok: boolean }>
 });

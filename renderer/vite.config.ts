@@ -22,7 +22,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        screenshotPicker: path.resolve(__dirname, 'screenshot-picker.html')
+        screenshotPicker: path.resolve(__dirname, 'screenshot-picker.html'),
+        loadingScreen: path.resolve(__dirname, 'loading-screen.html')
       }
     }
   }

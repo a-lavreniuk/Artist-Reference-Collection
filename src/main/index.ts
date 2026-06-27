@@ -19,10 +19,17 @@ import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screens
 import { registerDuplicateScanIpc } from './duplicateFileScan';
 import { bindMainWindow, registerWindowChromeIpc } from './windowChrome';
 import {
-  applyMainWindowOnboardingMode,
   needsOnboardingSetup,
   registerOnboardingWindowModeIpc
 } from './onboardingWindowMode';
+import {
+  destroyLoadingSplash,
+  markMainWindowReadyToShow,
+  registerLoadingSplashIpc,
+  runLoadingSplashAtStartup,
+  setLoadingSplashMilestone,
+  waitForLoadingBootstrapComplete
+} from './loadingSplash';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
 import { registerAiIpc, scheduleIdleIndexing, shutdownAiWorker } from './ipcAi';
 import {
@@ -71,12 +78,7 @@ function createWindow(onboardingMode = false): BrowserWindow {
   });
 
   win.once('ready-to-show', () => {
-    if (onboardingMode) {
-      applyMainWindowOnboardingMode(win);
-    } else {
-      win.maximize();
-    }
-    win.show();
+    markMainWindowReadyToShow(win, onboardingMode);
   });
 
   win.webContents.on('before-input-event', (event, input) => {
@@ -111,7 +113,12 @@ app.whenReady().then(async () => {
   nativeTheme.themeSource = 'system';
 
   clearSessionWindowSize();
+  registerLoadingSplashIpc();
 
+  await runLoadingSplashAtStartup();
+  setLoadingSplashMilestone(0, 'Запуск приложения…');
+
+  setLoadingSplashMilestone(15, 'Инициализация модулей…');
   await startArcMediaServer(readLibraryRootSync());
   await refreshBrandingIconIfNeeded();
   registerArcIpc();
@@ -133,9 +140,16 @@ app.whenReady().then(async () => {
   registerArcUpdaterIpc();
   registerAiIpc();
   registerDevToolsShortcuts();
+
+  setLoadingSplashMilestone(35, 'Загрузка интерфейса…');
   const prefs = await readAppPreferences();
   const needsSetup = needsOnboardingSetup(readLibraryRootSync(), prefs.onboardingSetupCompleted);
-  createWindow(needsSetup);
+  const mainWin = createWindow(needsSetup);
+  mainWin.webContents.once('did-finish-load', () => {
+    setLoadingSplashMilestone(55, 'Подготовка данных…');
+  });
+  void waitForLoadingBootstrapComplete();
+
   createAppTray();
   initArcUpdater();
 
@@ -160,6 +174,7 @@ app.on('will-quit', () => {
   unregisterScreenshotShortcut();
   unregisterFeedbackShortcut();
   destroyScreenshotOverlay();
+  destroyLoadingSplash();
   shutdownAiWorker();
   void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());
 });

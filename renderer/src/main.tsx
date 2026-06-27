@@ -3,11 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { preloadArcNavbarIcons } from './components/layout/navbarIconHydrate';
+import { runLoadingBootstrapReporter } from './loading/loadingBootstrapReporter';
 import './styles/tokens.css';
 import './styles/index.css';
 import './styles/ui-kit.css';
 
 preloadArcNavbarIcons();
+void runLoadingBootstrapReporter();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -341,6 +341,14 @@ declare global {
       }) => void) => () => void;
       onAiIndexComplete?: (cb: (detail: { indexed: number; total: number }) => void) => () => void;
       onAiError?: (cb: (detail: { message: string; fallback?: boolean }) => void) => () => void;
+      signalLoadingSplashReady?: () => Promise<{ ok: boolean }>;
+      onLoadingProgress?: (
+        cb: (payload: { percent: number; phaseText: string; version: string }) => void
+      ) => () => void;
+      onLoadingFadeOut?: (cb: () => void) => () => void;
+      signalLoadingFadeComplete?: () => void;
+      reportLoadingBootstrapProgress?: (percent: number, phaseText: string) => Promise<{ ok: boolean }>;
+      reportLoadingBootstrapComplete?: () => Promise<{ ok: boolean }>;
     };
   }
 }
