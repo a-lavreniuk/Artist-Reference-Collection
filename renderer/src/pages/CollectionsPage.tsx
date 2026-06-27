@@ -279,8 +279,17 @@ export default function CollectionsPage() {
     [activeCollectionId, loadMeta, navigate]
   );
 
+  const resolveCollection = useCallback(
+    (id: string) => {
+      const collection = collections.find((item) => item.id === id);
+      return collection ? { id: collection.id, name: collection.name } : null;
+    },
+    [collections]
+  );
+
   const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
     useCollectionContextMenu({
+      resolveCollection,
       onOpen: (id) => navigate(`/collections/${id}`),
       onEdit: openEditCollection,
       onDelete: handleDeleteCollection

@@ -185,8 +185,17 @@ export default function GalleryPage() {
     [collectionStripItems]
   );
 
+  const resolveStripCollection = useCallback(
+    (id: string) => {
+      const collection = collectionStripItems.find((item) => item.collection.id === id)?.collection;
+      return collection ? { id: collection.id, name: collection.name } : null;
+    },
+    [collectionStripItems]
+  );
+
   const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
     useCollectionContextMenu({
+      resolveCollection: resolveStripCollection,
       onOpen: (id) => navigate(`/collections/${id}`),
       onEdit: openEditStripCollection,
       onDelete: async (id) => {

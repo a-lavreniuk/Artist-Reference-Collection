@@ -11,7 +11,7 @@ import {
 import { useTrashCardCount } from '../../hooks/useTrashCardCount';
 import { emptyTrash } from '../../services/db';
 import { showAppNotification } from '../../services/notificationService';
-import ConfirmModal from '../../pages/settings/ConfirmModal';
+import ConfirmEmptyTrashModal from './ConfirmEmptyTrashModal';
 
 const LIBRARY_OPTIONS: { key: LibraryScope; label: string; iconClass: string }[] = [
   { key: 'all', label: 'Вся библиотека', iconClass: 'arc-icon-folder-open' },
@@ -31,7 +31,6 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
   const clearRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
-  const [emptyTrashBusy, setEmptyTrashBusy] = useState(false);
 
   const activeScope = parseLibraryScope(searchParams);
   const activeLabel = libraryScopeLabel(activeScope);
@@ -126,30 +125,15 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
         noDragClassName="arc-navbar-no-drag"
       />
       {emptyTrashConfirm ? (
-        <ConfirmModal
-          title="Очистить корзину?"
-          message="Все карточки в корзине будут удалены навсегда вместе с файлами."
-          confirmLabel={emptyTrashBusy ? 'Удаление…' : 'Очистить'}
-          confirmVariant="danger"
-          onCancel={() => {
-            if (!emptyTrashBusy) setEmptyTrashConfirm(false);
-          }}
-          onConfirm={() => {
-            if (emptyTrashBusy) return;
-            setEmptyTrashBusy(true);
-            void (async () => {
-              try {
-                await emptyTrash();
-                showAppNotification({
-                  message: 'Корзина очищена',
-                  variant: 'success',
-                  skipPrefCheck: true
-                });
-                setEmptyTrashConfirm(false);
-              } finally {
-                setEmptyTrashBusy(false);
-              }
-            })();
+        <ConfirmEmptyTrashModal
+          onClose={() => setEmptyTrashConfirm(false)}
+          onConfirm={async () => {
+            await emptyTrash();
+            showAppNotification({
+              message: 'Корзина очищена',
+              variant: 'success',
+              skipPrefCheck: true
+            });
           }}
         />
       ) : null}

@@ -338,6 +338,7 @@ export default function CollectionSettingsModal({
 
       {deleteConfirmOpen && isEdit ? (
         <ConfirmCollectionDeleteModal
+          collectionName={state.collection.name}
           onClose={() => setDeleteConfirmOpen(false)}
           onConfirm={async () => {
             await onDelete(state.collection.id);

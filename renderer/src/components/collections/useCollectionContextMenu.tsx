@@ -4,16 +4,24 @@ import { useContextMenuAtPointer } from '../../hooks/useContextMenuAtPointer';
 import ConfirmCollectionDeleteModal from '../layout/ConfirmCollectionDeleteModal';
 import { buildCollectionContextMenuRows } from './buildCollectionContextMenuRows';
 
+type CollectionRef = {
+  id: string;
+  name: string;
+};
+
 type Props = {
+  resolveCollection: (collectionId: string) => CollectionRef | null;
   onOpen: (collectionId: string) => void;
   onEdit: (collectionId: string) => void;
   onDelete: (collectionId: string) => Promise<void>;
 };
 
-export function useCollectionContextMenu({ onOpen, onEdit, onDelete }: Props) {
+export function useCollectionContextMenu({ resolveCollection, onOpen, onEdit, onDelete }: Props) {
   const menu = useContextMenuAtPointer();
   const [menuCollectionId, setMenuCollectionId] = useState<string | null>(null);
   const [deleteCollectionId, setDeleteCollectionId] = useState<string | null>(null);
+
+  const deleteCollection = deleteCollectionId ? resolveCollection(deleteCollectionId) : null;
 
   const closeMenu = useCallback(() => {
     menu.close();
@@ -51,11 +59,12 @@ export function useCollectionContextMenu({ onOpen, onEdit, onDelete }: Props) {
         rows={menuRows}
       />
 
-      {deleteCollectionId ? (
+      {deleteCollection ? (
         <ConfirmCollectionDeleteModal
+          collectionName={deleteCollection.name}
           onClose={() => setDeleteCollectionId(null)}
           onConfirm={async () => {
-            await onDelete(deleteCollectionId);
+            await onDelete(deleteCollection.id);
           }}
         />
       ) : null}
