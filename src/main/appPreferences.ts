@@ -13,10 +13,14 @@ export type UiThemePreference = 'dark' | 'light' | 'system';
 
 export type OnboardingSetupStep = 0 | 1 | 2;
 
+export type OnboardingTourStep = number;
+
 export type AppPreferencesV1 = {
   version: 1;
   onboardingSetupCompleted: boolean;
   onboardingSetupStep: OnboardingSetupStep;
+  onboardingTourCompleted: boolean;
+  onboardingTourStep: OnboardingTourStep;
   launchAtLogin: boolean;
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
@@ -56,11 +60,19 @@ function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
   return 0;
 }
 
+function sanitizeOnboardingTourStep(raw: unknown, maxStep = 16): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0;
+  const n = Math.round(raw);
+  return Math.max(0, Math.min(maxStep, n));
+}
+
 export function defaultAppPreferences(): AppPreferencesV1 {
   return {
     version: 1,
     onboardingSetupCompleted: false,
     onboardingSetupStep: 0,
+    onboardingTourCompleted: false,
+    onboardingTourStep: 0,
     launchAtLogin: false,
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
@@ -178,7 +190,12 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.onboardingSetupCompleted === 'boolean'
         ? raw.onboardingSetupCompleted
         : d.onboardingSetupCompleted,
-    onboardingSetupStep: sanitizeOnboardingSetupStep(raw.onboardingSetupStep ?? d.onboardingSetupStep)
+    onboardingSetupStep: sanitizeOnboardingSetupStep(raw.onboardingSetupStep ?? d.onboardingSetupStep),
+    onboardingTourCompleted:
+      typeof raw.onboardingTourCompleted === 'boolean'
+        ? raw.onboardingTourCompleted
+        : d.onboardingTourCompleted,
+    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep)
   };
 }
 
@@ -275,6 +292,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('onboardingSetupStep' in patch) {
     next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
+  }
+  if ('onboardingTourCompleted' in patch && typeof patch.onboardingTourCompleted === 'boolean') {
+    next.onboardingTourCompleted = patch.onboardingTourCompleted;
+  }
+  if ('onboardingTourStep' in patch) {
+    next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
   }
 
   return next;

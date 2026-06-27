@@ -132,7 +132,7 @@ export default function SettingsStatisticsPanel() {
   ];
 
   return (
-    <div className="arc-stats-dashboard">
+    <div className="arc-stats-dashboard" data-interface-tour-anchor="statistics-main">
       <div className="arc-stats-summary-grid">
         {summaryStats.map((item) => (
           <section key={item.id} className="arc-stats-summary-card panel">

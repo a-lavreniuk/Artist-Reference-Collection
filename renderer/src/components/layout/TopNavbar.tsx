@@ -104,7 +104,7 @@ export default function TopNavbar() {
           data-btn-size="m"
         >
           <div className="arc-navbar-island arc-navbar-island--nav">
-            <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация">
+            <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация" data-interface-tour-anchor="main-tabs">
               {MAIN_NAV_TABS.map((tab) => {
                 const isActive = tab.key === activeMainTab;
                 return (
@@ -116,6 +116,7 @@ export default function TopNavbar() {
                     aria-selected={isActive}
                     disabled={maintenanceLocked}
                     onClick={() => handleMainTabClick(tab.path)}
+                    {...(tab.key === 'moodboard' ? { 'data-interface-tour-anchor': 'main-tab-moodboard' } : {})}
                   >
                     {tab.label}
                   </button>
@@ -127,16 +128,17 @@ export default function TopNavbar() {
           <div
             ref={searchIslandRef}
             className="arc-navbar-island arc-navbar-island--search"
+            data-interface-tour-anchor="navbar-search"
           >
             <NavbarSearch islandRef={searchIslandRef} onPanelOpenChange={setSearchPanelOpen} />
           </div>
 
           <div className="arc-navbar-island arc-navbar-island--mgmt">
             {showSortAndFilters ? (
-              <>
+              <div data-interface-tour-anchor="navbar-sort-filters" className="arc-navbar-sort-filters-anchor">
                 <NavbarSortMenu disabled={maintenanceLocked} />
                 <NavbarFiltersMenu />
-              </>
+              </div>
             ) : null}
             <NavbarLibrarySwitcher disabled={maintenanceLocked} />
             <button
@@ -144,6 +146,7 @@ export default function TopNavbar() {
               className="btn btn-brand btn-ds btn-m"
               disabled={maintenanceLocked}
               onClick={openImportPicker}
+              data-interface-tour-anchor="navbar-add"
             >
               Добавить
             </button>

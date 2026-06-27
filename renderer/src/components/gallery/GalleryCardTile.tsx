@@ -17,6 +17,7 @@ type Props = {
   moodboardEnabled?: boolean;
   tileClassName?: string;
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
+  interfaceTourAnchor?: string;
 };
 
 function GalleryCardTile({
@@ -29,7 +30,8 @@ function GalleryCardTile({
   onContextMenu,
   moodboardEnabled = false,
   tileClassName = '',
-  mediaTab
+  mediaTab,
+  interfaceTourAnchor
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState(false);
@@ -54,6 +56,7 @@ function GalleryCardTile({
       role="button"
       tabIndex={0}
       className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}${tileClassName ? ` ${tileClassName}` : ''}`}
+      {...(interfaceTourAnchor ? { 'data-interface-tour-anchor': interfaceTourAnchor } : {})}
       onClick={() => onOpenCard(card.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

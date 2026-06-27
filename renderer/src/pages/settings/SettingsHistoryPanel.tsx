@@ -98,7 +98,7 @@ export default function SettingsHistoryPanel() {
 
   return (
     <>
-      <div className="arc-settings-stack arc-history-screen">
+      <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main">
         {showEmptySection ? (
           <div className="arc-history-empty-host">
             <EmptyState

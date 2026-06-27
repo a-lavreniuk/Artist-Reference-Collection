@@ -3970,6 +3970,36 @@ html.arc-onboarding-standalone .arc-onboarding-shell {
   color: var(--text-elev-secondary);
 }
 
+/* Тур «Знакомство с интерфейсом» (Figma 1654:31237) */
+.arc-interface-tour-host {
+  position: fixed;
+  inset: 0;
+  z-index: 10080;
+  pointer-events: none;
+}
+
+.arc-interface-tour-host .context-menu-backdrop {
+  z-index: 0;
+  pointer-events: auto;
+}
+
+.arc-interface-tour-modal {
+  position: fixed;
+  z-index: 1;
+  margin: 0;
+  pointer-events: auto;
+}
+
+.arc-navbar-sort-filters-anchor {
+  display: contents;
+}
+
+.arc-settings-interface-tour-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
 /* Настройки: layout и компоненты контентной панели */
 .arc-settings-page {
   display: flex;
@@ -4769,6 +4799,10 @@ html.arc-onboarding-standalone .arc-onboarding-shell {
 
 .arc-settings-desc-block__text {
   margin: 0;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
+  color: var(--text-elev-primary);
 }
 
 .arc-settings-action-row {

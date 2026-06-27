@@ -327,7 +327,7 @@ export default function CollectionsPage() {
   }
 
   if (!collectionsMetaLoaded && !routeCollectionId) {
-    return <div ref={pageRef} className="arc-collections-outlet arc-collections-page" aria-busy="true" />;
+    return <div ref={pageRef} className="arc-collections-outlet arc-collections-page" aria-busy="true" data-interface-tour-anchor="collections-page" />;
   }
 
   if (collectionsMetaLoaded && collections.length > 0 && !routeCollectionId) {
@@ -340,7 +340,7 @@ export default function CollectionsPage() {
 
   if (collectionsMetaLoaded && collections.length === 0) {
     return (
-      <div ref={pageRef} className="arc-collections-outlet arc-collections-page arc-collections-page--solo-empty">
+      <div ref={pageRef} className="arc-collections-outlet arc-collections-page arc-collections-page--solo-empty" data-interface-tour-anchor="collections-page">
         <EmptyState
           {...EMPTY_STATE_COPY.collectionsNone}
           elevation="sunken"
@@ -371,6 +371,7 @@ export default function CollectionsPage() {
     <div
       ref={pageRef}
       className="arc-collections-outlet arc-collections-page"
+      data-interface-tour-anchor="collections-page"
       style={{ ['--arc-collections-sidebar-w' as string]: `${sidebarWidth}px` }}
     >
       <div className="arc-collections-page-main-row">

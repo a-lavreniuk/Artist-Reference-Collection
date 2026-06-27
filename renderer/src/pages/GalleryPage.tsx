@@ -295,7 +295,7 @@ export default function GalleryPage() {
 
   return (
 
-    <div className="arc-gallery-page">
+    <div className="arc-gallery-page" data-interface-tour-anchor="gallery-page">
 
       {booting && !isRemoteSearchFeed && !shuffleReloading ? (
 

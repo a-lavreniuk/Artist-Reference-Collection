@@ -39,6 +39,12 @@ function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
   return 0;
 }
 
+function sanitizeOnboardingTourStep(raw: unknown, maxStep = 16): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0;
+  const n = Math.round(raw);
+  return Math.max(0, Math.min(maxStep, n));
+}
+
 function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreferencesV1> {
   const next: Partial<AppPreferencesV1> = {};
 
@@ -136,6 +142,12 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   }
   if ('onboardingSetupStep' in patch) {
     next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
+  }
+  if ('onboardingTourCompleted' in patch && typeof patch.onboardingTourCompleted === 'boolean') {
+    next.onboardingTourCompleted = patch.onboardingTourCompleted;
+  }
+  if ('onboardingTourStep' in patch) {
+    next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
   }
 
   return next;
@@ -238,6 +250,12 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('onboardingSetupStep' in patch) {
     next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
+  }
+  if ('onboardingTourCompleted' in patch && typeof patch.onboardingTourCompleted === 'boolean') {
+    next.onboardingTourCompleted = patch.onboardingTourCompleted;
+  }
+  if ('onboardingTourStep' in patch) {
+    next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
   }
 
   return next;

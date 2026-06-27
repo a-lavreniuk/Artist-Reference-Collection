@@ -86,6 +86,7 @@ export default function NavbarMenu() {
         aria-label="Меню"
         aria-expanded={open}
         aria-haspopup="menu"
+        data-interface-tour-anchor="navbar-menu"
         onClick={() => setOpen((v) => !v)}
       >
         <span className="btn-icon-only__glyph arc-icon-menu" aria-hidden="true" />

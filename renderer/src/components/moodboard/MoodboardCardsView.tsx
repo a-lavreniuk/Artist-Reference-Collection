@@ -160,7 +160,7 @@ export default function MoodboardCardsView() {
   }
 
   return (
-    <div className="arc-collection-detail arc-moodboard-cards">
+    <div className="arc-collection-detail arc-moodboard-cards" data-interface-tour-anchor="moodboard-page">
       {feed.booting && !isRemoteSearchFeed && !feed.shuffleReloading ? (
         <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
           <span className="loader" aria-hidden="true" />

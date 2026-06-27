@@ -768,8 +768,8 @@ export default function CardDetailOverlay({
             onLostPointerCapture={finishSplitDrag}
           />
 
-          <aside className="arc-card-detail-settings panel elevation-sunken">
-            <div className="arc-card-detail-options">
+          <aside className="arc-card-detail-settings panel elevation-sunken" data-interface-tour-anchor="card-detail-fields">
+            <div className="arc-card-detail-options" data-interface-tour-anchor="card-detail-toolbar">
               <div className="arc-card-detail-options-left">
                 {inTrash ? (
                   <>
@@ -1137,7 +1137,7 @@ export default function CardDetailOverlay({
         </div>
 
         {similar.length > 0 ? (
-          <section className="arc-card-detail-similar">
+          <section className="arc-card-detail-similar" data-interface-tour-anchor="card-detail-similar">
             <div className="arc-card-detail-similar-head">
               <p className="text-l">Похожие изображения</p>
               <span className="text-s arc-card-detail-section-count">{similar.length}</span>

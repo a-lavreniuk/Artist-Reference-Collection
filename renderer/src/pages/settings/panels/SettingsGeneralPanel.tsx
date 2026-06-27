@@ -2,6 +2,8 @@ import SettingsRadioRow from '../../../components/settings/SettingsRadioRow';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
+import { requestInterfaceTourReplay } from '../../../components/onboarding/interfaceTourEvents';
+import { INTERFACE_TOUR_SETTINGS } from '../../../content/onboardingTour';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { GalleryCollectionsSortMode, UiThemePreference } from '../../../services/appPreferences';
 
@@ -30,7 +32,7 @@ export default function SettingsGeneralPanel() {
 
   return (
     <div className="arc-settings-main__scroll">
-      <div className={`arc-settings-main__content${ready ? ' is-prefs-ready' : ''}`}>
+      <div className={`arc-settings-main__content arc-ui-kit-scope${ready ? ' is-prefs-ready' : ''}`} data-btn-size="m">
         <SettingsSection title="Оформление">
           <div className="arc-settings-radio-stack" role="radiogroup" aria-label="Тема оформления">
             {THEME_OPTIONS.map((option) => (
@@ -42,6 +44,32 @@ export default function SettingsGeneralPanel() {
                 onCheckedChange={() => void update({ uiTheme: option.value })}
               />
             ))}
+          </div>
+        </SettingsSection>
+
+        <SettingsSeparator />
+
+        <SettingsSection title={INTERFACE_TOUR_SETTINGS.sectionTitle}>
+          <div className="arc-settings-desc-block">
+            <p className="arc-settings-desc-block__text">{INTERFACE_TOUR_SETTINGS.hint}</p>
+            <div className="arc-settings-interface-tour-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-ds"
+                disabled={disabled}
+                onClick={() => requestInterfaceTourReplay()}
+              >
+                <span className="btn-ds__value">{INTERFACE_TOUR_SETTINGS.replayLabel}</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-ds"
+                disabled={disabled}
+                onClick={() => void window.arc?.openExternalUrl?.(INTERFACE_TOUR_SETTINGS.knowledgeBaseUrl)}
+              >
+                <span className="btn-ds__value">{INTERFACE_TOUR_SETTINGS.knowledgeBaseLabel}</span>
+              </button>
+            </div>
           </div>
         </SettingsSection>
 

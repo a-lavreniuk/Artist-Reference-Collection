@@ -42,6 +42,8 @@ export default function SettingsNavbarPanelPage({ panel }: Props) {
       data-typo-state="default"
       data-btn-size="l"
       data-input-size="l"
+      {...(panel === 'statistics' ? { 'data-interface-tour-anchor': 'statistics-page' } : {})}
+      {...(panel === 'history' ? { 'data-interface-tour-anchor': 'history-page' } : {})}
     >
       {inDevelopment ? <EmptyState {...PANEL_COPY[panel]} fill /> : panelContent(panel)}
     </div>

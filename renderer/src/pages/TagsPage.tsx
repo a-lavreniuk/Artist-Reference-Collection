@@ -370,6 +370,7 @@ export default function TagsPage() {
     <div
       ref={pageRef}
       className="arc-tags-outlet arc-tags-page"
+      data-interface-tour-anchor="tags-page"
       style={{ ['--arc-tags-sidebar-w' as string]: `${sidebarWidth}px` }}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('application/tag-id')) {
