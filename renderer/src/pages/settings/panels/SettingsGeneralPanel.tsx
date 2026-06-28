@@ -8,6 +8,7 @@ import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { GalleryCollectionsSortMode, UiThemePreference } from '../../../services/appPreferences';
 
 const LABEL_LAUNCH_AT_LOGIN = 'Запускать ARC при входе в систему.';
+const LABEL_LAUNCH_AT_LOGIN_HIDDEN = 'Запускать ARC свёрнутым.';
 const LABEL_CLOSE_TO_TRAY = 'При закрытии окна сворачивать приложение, а не закрывать.';
 const LABEL_TRASH_SOURCES =
   'Удалять исходные файлы после добавления их в систему и формирования карточки. Эти файлы будут перенесены в системную корзину.';
@@ -80,8 +81,20 @@ export default function SettingsGeneralPanel() {
             label={LABEL_LAUNCH_AT_LOGIN}
             pressed={prefs?.launchAtLogin ?? false}
             disabled={disabled}
-            onPressedChange={(launchAtLogin) => void update({ launchAtLogin })}
+            onPressedChange={(launchAtLogin) =>
+              void update(
+                launchAtLogin ? { launchAtLogin } : { launchAtLogin: false, launchAtLoginHidden: false }
+              )
+            }
           />
+          {prefs?.launchAtLogin ? (
+            <SettingsToggleRow
+              label={LABEL_LAUNCH_AT_LOGIN_HIDDEN}
+              pressed={prefs.launchAtLoginHidden ?? false}
+              disabled={disabled}
+              onPressedChange={(launchAtLoginHidden) => void update({ launchAtLoginHidden })}
+            />
+          ) : null}
           <SettingsToggleRow
             label={LABEL_CLOSE_TO_TRAY}
             pressed={prefs?.closeToTrayOnWindowClose === true}

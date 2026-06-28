@@ -246,6 +246,7 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:app-preferences-get') as Promise<{
       version: 1;
       launchAtLogin: boolean;
+      launchAtLoginHidden: boolean;
       closeToTrayOnWindowClose: boolean;
       importSourceFilesAction: 'ask' | 'trash';
       deleteCardsUseTrash: boolean;
@@ -272,6 +273,7 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:app-preferences-set', patch) as Promise<{
       version: 1;
       launchAtLogin: boolean;
+      launchAtLoginHidden: boolean;
       closeToTrayOnWindowClose: boolean;
       importSourceFilesAction: 'ask' | 'trash';
       deleteCardsUseTrash: boolean;

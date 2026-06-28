@@ -22,6 +22,7 @@ export type AppPreferencesV1 = {
   onboardingTourCompleted: boolean;
   onboardingTourStep: OnboardingTourStep;
   launchAtLogin: boolean;
+  launchAtLoginHidden: boolean;
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
   deleteCardsUseTrash: boolean;
@@ -74,6 +75,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     onboardingTourCompleted: false,
     onboardingTourStep: 0,
     launchAtLogin: false,
+    launchAtLoginHidden: false,
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
     deleteCardsUseTrash: true,
@@ -135,9 +137,11 @@ function sanitizeUiTheme(raw: unknown): UiThemePreference {
 function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknown>): AppPreferencesV1 {
   const d = defaultAppPreferences();
 
-  return {
+  const sanitized: AppPreferencesV1 = {
     version: 1,
     launchAtLogin: typeof raw.launchAtLogin === 'boolean' ? raw.launchAtLogin : d.launchAtLogin,
+    launchAtLoginHidden:
+      typeof raw.launchAtLoginHidden === 'boolean' ? raw.launchAtLoginHidden : d.launchAtLoginHidden,
     closeToTrayOnWindowClose:
       typeof raw.closeToTrayOnWindowClose === 'boolean' ? raw.closeToTrayOnWindowClose : d.closeToTrayOnWindowClose,
     importSourceFilesAction: sanitizeImportAction(raw.importSourceFilesAction),
@@ -197,6 +201,12 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         : d.onboardingTourCompleted,
     onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep)
   };
+
+  if (!sanitized.launchAtLogin) {
+    sanitized.launchAtLoginHidden = false;
+  }
+
+  return sanitized;
 }
 
 function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>): AppPreferencesV1 {
@@ -204,6 +214,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
 
   if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
     next.launchAtLogin = patch.launchAtLogin;
+  }
+  if ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean') {
+    next.launchAtLoginHidden = patch.launchAtLoginHidden;
+  }
+  if (!next.launchAtLogin) {
+    next.launchAtLoginHidden = false;
   }
   if ('closeToTrayOnWindowClose' in patch && typeof patch.closeToTrayOnWindowClose === 'boolean') {
     next.closeToTrayOnWindowClose = patch.closeToTrayOnWindowClose;
@@ -329,12 +345,19 @@ export function getCloseToTrayOnWindowClose(): boolean {
   return readAppPreferencesSync().closeToTrayOnWindowClose;
 }
 
-export function applyLaunchAtLogin(open: boolean): void {
+export function applyLaunchAtLogin(open: boolean, hidden = false): void {
   if (process.platform === 'linux') return;
   app.setLoginItemSettings({
     openAtLogin: open,
-    openAsHidden: false
+    openAsHidden: open && hidden
   });
+}
+
+export function shouldStartHiddenInTray(prefs: AppPreferencesV1, needsOnboarding: boolean): boolean {
+  if (process.platform === 'linux' || needsOnboarding) return false;
+  if (!prefs.launchAtLogin || !prefs.launchAtLoginHidden) return false;
+  const login = app.getLoginItemSettings();
+  return login.wasOpenedAtLogin === true && login.wasOpenedAsHidden === true;
 }
 
 export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Promise<AppPreferencesV1> {
@@ -344,8 +367,11 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
   const filePath = prefsPath();
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(next, null, 2), 'utf8');
-  if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
-    applyLaunchAtLogin(next.launchAtLogin);
+  if (
+    ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') ||
+    ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean')
+  ) {
+    applyLaunchAtLogin(next.launchAtLogin, next.launchAtLoginHidden);
   }
   if (
     'screenshotsEnabled' in patch ||
@@ -365,7 +391,7 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
 
 export async function applyStoredLaunchAtLogin(): Promise<void> {
   const prefs = await readAppPreferences();
-  applyLaunchAtLogin(prefs.launchAtLogin);
+  applyLaunchAtLogin(prefs.launchAtLogin, prefs.launchAtLoginHidden);
 }
 
 export function registerAppPreferencesIpc(): void {

@@ -21,6 +21,7 @@ export type AppPreferencesV1 = {
   onboardingTourCompleted: boolean;
   onboardingTourStep: OnboardingTourStep;
   launchAtLogin: boolean;
+  launchAtLoginHidden: boolean;
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
   deleteCardsUseTrash: boolean;
@@ -68,6 +69,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     onboardingTourCompleted: false,
     onboardingTourStep: 0,
     launchAtLogin: false,
+    launchAtLoginHidden: false,
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
     deleteCardsUseTrash: true,

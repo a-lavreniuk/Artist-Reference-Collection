@@ -38,6 +38,11 @@ let mainReadyToShow = false;
 let bootstrapDone = false;
 let startupFinishing = false;
 let splashShownAt = 0;
+let startHiddenInTray = false;
+
+export function setStartHiddenInTray(hidden: boolean): void {
+  startHiddenInTray = hidden;
+}
 
 function preloadPath(): string {
   return path.resolve(__dirname, '..', 'preload', 'index.js');
@@ -200,15 +205,17 @@ async function tryFinishStartup(): Promise<void> {
 
   startupFinishing = true;
 
-  const elapsed = Date.now() - splashShownAt;
-  if (splashShownAt > 0 && elapsed < MIN_SPLASH_MS) {
-    await new Promise((r) => setTimeout(r, MIN_SPLASH_MS - elapsed));
-  }
+  if (!startHiddenInTray) {
+    const elapsed = Date.now() - splashShownAt;
+    if (splashShownAt > 0 && elapsed < MIN_SPLASH_MS) {
+      await new Promise((r) => setTimeout(r, MIN_SPLASH_MS - elapsed));
+    }
 
-  while (displayedPercent < 100) {
-    displayedPercent = Math.min(100, displayedPercent + 1);
-    pushSplashState();
-    await new Promise((r) => setTimeout(r, PROGRESS_TICK_MS));
+    while (displayedPercent < 100) {
+      displayedPercent = Math.min(100, displayedPercent + 1);
+      pushSplashState();
+      await new Promise((r) => setTimeout(r, PROGRESS_TICK_MS));
+    }
   }
 
   await closeLoadingSplashWithFade();
@@ -222,6 +229,10 @@ async function tryFinishStartup(): Promise<void> {
 
   if (win.isDestroyed()) return;
 
+  if (startHiddenInTray) {
+    return;
+  }
+
   if (onboardingMode) {
     applyMainWindowOnboardingMode(win);
   } else if (!win.isMaximized()) {
@@ -233,6 +244,14 @@ async function tryFinishStartup(): Promise<void> {
 export function waitForLoadingBootstrapComplete(): Promise<void> {
   if (!bootstrapCompletePromise) resetBootstrapWaiter();
   return bootstrapCompletePromise!;
+}
+
+export async function prepareStartupWithoutSplash(): Promise<void> {
+  resetBootstrapWaiter();
+  splashShownAt = 0;
+  mainReadyToShow = false;
+  bootstrapDone = false;
+  startupFinishing = false;
 }
 
 export async function runLoadingSplashAtStartup(): Promise<void> {

@@ -13,7 +13,7 @@ import { refreshLibrarySessionSnapshotFromDisk } from './librarySessionSnapshot'
 import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
-import { applyStoredLaunchAtLogin, readAppPreferences, registerAppPreferencesIpc } from './appPreferences';
+import { applyStoredLaunchAtLogin, readAppPreferences, registerAppPreferencesIpc, shouldStartHiddenInTray } from './appPreferences';
 import { registerAutoImportIpc, restartAutoImportWatcher } from './autoImportWatcher';
 import { applyStoredScreenshotShortcut, unregisterScreenshotShortcut } from './screenshotShortcut';
 import { applyStoredFeedbackShortcut, registerFeedbackIpc, unregisterFeedbackShortcut } from './feedbackShortcut';
@@ -30,9 +30,11 @@ import {
 import {
   destroyLoadingSplash,
   markMainWindowReadyToShow,
+  prepareStartupWithoutSplash,
   registerLoadingSplashIpc,
   runLoadingSplashAtStartup,
   setLoadingSplashMilestone,
+  setStartHiddenInTray,
   waitForLoadingBootstrapComplete
 } from './loadingSplash';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
@@ -123,8 +125,20 @@ app.whenReady().then(async () => {
   clearSessionWindowSize();
   registerLoadingSplashIpc();
 
-  await runLoadingSplashAtStartup();
-  setLoadingSplashMilestone(0, 'Запуск приложения…');
+  const prefsEarly = await readAppPreferences();
+  const needsSetupEarly = needsOnboardingSetup(readLibraryRootSync(), prefsEarly.onboardingSetupCompleted);
+  const startHiddenInTray = shouldStartHiddenInTray(prefsEarly, needsSetupEarly);
+
+  if (startHiddenInTray) {
+    setStartHiddenInTray(true);
+    await prepareStartupWithoutSplash();
+  } else {
+    await runLoadingSplashAtStartup();
+  }
+
+  if (!startHiddenInTray) {
+    setLoadingSplashMilestone(0, 'Запуск приложения…');
+  }
 
   setLoadingSplashMilestone(15, 'Инициализация модулей…');
   await reconcileLibraryRootConfig();

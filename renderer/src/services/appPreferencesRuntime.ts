@@ -50,6 +50,12 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
 
   if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
     next.launchAtLogin = patch.launchAtLogin;
+    if (!patch.launchAtLogin) {
+      next.launchAtLoginHidden = false;
+    }
+  }
+  if ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean') {
+    next.launchAtLoginHidden = patch.launchAtLoginHidden;
   }
   if ('closeToTrayOnWindowClose' in patch && typeof patch.closeToTrayOnWindowClose === 'boolean') {
     next.closeToTrayOnWindowClose = patch.closeToTrayOnWindowClose;
@@ -158,6 +164,12 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
 
   if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
     next.launchAtLogin = patch.launchAtLogin;
+    if (!patch.launchAtLogin) {
+      next.launchAtLoginHidden = false;
+    }
+  }
+  if ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean') {
+    next.launchAtLoginHidden = patch.launchAtLoginHidden;
   }
   if ('closeToTrayOnWindowClose' in patch && typeof patch.closeToTrayOnWindowClose === 'boolean') {
     next.closeToTrayOnWindowClose = patch.closeToTrayOnWindowClose;
@@ -256,6 +268,10 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
+  }
+
+  if (!next.launchAtLogin) {
+    next.launchAtLoginHidden = false;
   }
 
   return next;
