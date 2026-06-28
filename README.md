@@ -39,7 +39,7 @@
 ### Публикация новой версии
 
 1. Обновите `version` в `package.json` и добавьте запись в `release-notes.json`.
-2. Закоммитьте, создайте тег `vX.Y.Z` и отправьте: `git push origin vX.Y.Z`.
+2. Закоммитьте, создайте тег `X.Y.Z` и отправьте: `git push origin X.Y.Z`.
 3. Workflow `.github/workflows/release-windows.yml` соберёт установщик и опубликует Release с `latest.yml` для автообновления.
 
 Справочник по UI: `renderer/public/ui/arc-ui/arc-ui.html`, токены и стили кнопок/панелей — `renderer/public/ui/arc-ui/arc-ui.css`, навбар — `renderer/public/ui/arc-navbar.css`.
