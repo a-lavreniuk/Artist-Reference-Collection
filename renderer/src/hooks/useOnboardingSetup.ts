@@ -22,7 +22,7 @@ export function useOnboardingGate() {
         return;
       }
 
-      const showSetup = !libraryReady && !prefs.onboardingSetupCompleted;
+      const showSetup = !libraryReady;
       if (!mounted) return;
       setNeedsSetup(showSetup);
       setReady(true);
@@ -55,10 +55,32 @@ export function useOnboardingSetup(onComplete: () => void) {
   }, []);
 
   useEffect(() => {
-    void initAppPreferencesRuntime().then((prefs) => {
+    void (async () => {
+      const prefs = await initAppPreferencesRuntime();
+      const libraryReady = await isLibraryConfigured();
+
+      if (!libraryReady) {
+        if (
+          prefs.onboardingSetupStep !== 0 ||
+          prefs.onboardingSetupCompleted ||
+          prefs.onboardingTourCompleted ||
+          prefs.onboardingTourStep !== 0
+        ) {
+          await patchAppPreferences({
+            onboardingSetupStep: 0,
+            onboardingSetupCompleted: false,
+            onboardingTourCompleted: false,
+            onboardingTourStep: 0
+          });
+        }
+        setStep(0);
+        setPrefsReady(true);
+        return;
+      }
+
       setStep(prefs.onboardingSetupStep);
       setPrefsReady(true);
-    });
+    })();
   }, []);
 
   useEffect(() => () => clearEnterStartTimer(), [clearEnterStartTimer]);
@@ -102,7 +124,12 @@ export function useOnboardingSetup(onComplete: () => void) {
   }, [clearEnterStartTimer]);
 
   const completeSetup = useCallback(async () => {
-    await patchAppPreferences({ onboardingSetupCompleted: true, onboardingSetupStep: 2 });
+    await patchAppPreferences({
+      onboardingSetupCompleted: true,
+      onboardingSetupStep: 2,
+      onboardingTourCompleted: false,
+      onboardingTourStep: 0
+    });
     invalidateLibraryCache();
     await getNavbarMetrics();
     window.dispatchEvent(new CustomEvent('arc:library-changed'));

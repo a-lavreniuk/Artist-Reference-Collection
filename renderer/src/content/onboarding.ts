@@ -1,9 +1,14 @@
 export const ONBOARDING_KNOWLEDGE_BASE_URL =
   'https://arc-knowledge.tilda.ws/tdocs/arc-knowledge-base-9dc2pv4zdf18e47';
 
-export const ONBOARDING_LOGO_SRC = '/onboarding/logo.svg';
-export const ONBOARDING_WELCOME_GRID_SRC = '/onboarding/grid.png';
-export const ONBOARDING_UI_IMAGE_SRC = '/onboarding/ui-Image.png';
+function onboardingAsset(file: string): string {
+  const base = import.meta.env.BASE_URL ?? './';
+  return `${base}onboarding/${file}`;
+}
+
+export const ONBOARDING_LOGO_SRC = onboardingAsset('logo.svg');
+export const ONBOARDING_WELCOME_GRID_SRC = onboardingAsset('grid.png');
+export const ONBOARDING_UI_IMAGE_SRC = onboardingAsset('ui-Image.png');
 
 export const ONBOARDING_WINDOW_WIDTH = 1280;
 export const ONBOARDING_WINDOW_HEIGHT = 800;

@@ -1,10 +1,13 @@
 import { app, BrowserWindow, Menu, nativeTheme } from 'electron';
 import path from 'path';
 
+import { configureAppProfile } from './appProfile';
+configureAppProfile();
+
 import { appIconPath } from './appIcon';
 import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts } from './devTools';
 import { registerArcIpc } from './ipc';
-import { readLibraryRootSync } from './libraryRootConfig';
+import { readLibraryRootSync, reconcileLibraryRootConfig } from './libraryRootConfig';
 import { refreshBrandingIconIfNeeded } from './libraryFolderIcon';
 import { refreshLibrarySessionSnapshotFromDisk } from './librarySessionSnapshot';
 import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
@@ -20,6 +23,8 @@ import { registerDuplicateScanIpc } from './duplicateFileScan';
 import { bindMainWindow, registerWindowChromeIpc } from './windowChrome';
 import {
   needsOnboardingSetup,
+  ONBOARDING_WINDOW_HEIGHT,
+  ONBOARDING_WINDOW_WIDTH,
   registerOnboardingWindowModeIpc
 } from './onboardingWindowMode';
 import {
@@ -44,14 +49,17 @@ function createWindow(onboardingMode = false): BrowserWindow {
   const iconPath = appIconPath();
 
   const win = new BrowserWindow({
-    width: WINDOW_MIN_WIDTH,
-    height: WINDOW_MIN_HEIGHT,
-    minWidth: WINDOW_MIN_WIDTH,
-    minHeight: WINDOW_MIN_HEIGHT,
+    width: onboardingMode ? ONBOARDING_WINDOW_WIDTH : WINDOW_MIN_WIDTH,
+    height: onboardingMode ? ONBOARDING_WINDOW_HEIGHT : WINDOW_MIN_HEIGHT,
+    minWidth: onboardingMode ? ONBOARDING_WINDOW_WIDTH : WINDOW_MIN_WIDTH,
+    minHeight: onboardingMode ? ONBOARDING_WINDOW_HEIGHT : WINDOW_MIN_HEIGHT,
+    maxWidth: onboardingMode ? ONBOARDING_WINDOW_WIDTH : undefined,
+    maxHeight: onboardingMode ? ONBOARDING_WINDOW_HEIGHT : undefined,
+    resizable: !onboardingMode,
     show: false,
     frame: false,
     backgroundColor: '#1a1a1e',
-    ...(process.platform === 'win32' ? { roundedCorners: false as const } : {}),
+    ...(process.platform === 'win32' ? { roundedCorners: onboardingMode } : {}),
     icon: iconPath,
     webPreferences: {
       preload: preloadPath,
@@ -119,6 +127,7 @@ app.whenReady().then(async () => {
   setLoadingSplashMilestone(0, 'Запуск приложения…');
 
   setLoadingSplashMilestone(15, 'Инициализация модулей…');
+  await reconcileLibraryRootConfig();
   await startArcMediaServer(readLibraryRootSync());
   await refreshBrandingIconIfNeeded();
   registerArcIpc();

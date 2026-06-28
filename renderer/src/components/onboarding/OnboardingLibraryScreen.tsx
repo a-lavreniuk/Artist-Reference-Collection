@@ -44,7 +44,9 @@ export default function OnboardingLibraryScreen({ revealed = true, animateEnter 
     setActionBusy(true);
     try {
       const res = await runOnboardingRestoreFlow();
-      if (!res.ok && res.message) {
+      if (res.ok) {
+        onComplete();
+      } else if (res.message) {
         setInfoModal(res.message);
       }
     } finally {

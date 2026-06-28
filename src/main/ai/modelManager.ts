@@ -73,7 +73,11 @@ async function llamaModelInstalled(userDataPath: string, entry: ModelCatalogEntr
   return true;
 }
 
+/** Установлена только модель, явно помеченная в manifest после действия пользователя в настройках. */
 export async function isModelInstalled(userDataPath: string, tier: ModelTier): Promise<boolean> {
+  const manifest = await readModelManifest(userDataPath);
+  if (!manifest[tier]) return false;
+
   const entry = getModelEntry(tier);
   if (entry.stack === 'transformers') {
     return transformersModelInstalled(userDataPath, entry);

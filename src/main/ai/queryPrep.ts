@@ -4,13 +4,13 @@ const CLIP_PROMPT_RE = /^a (photo|picture|image|photograph) of/i;
 type TranslateFn = (text: string) => Promise<string>;
 
 let translateRuEn: TranslateFn | null = null;
-let translateLoading: Promise<TranslateFn> | null = null;
+let translateLoading: Promise<TranslateFn | null> | null = null;
 
 export function hasCyrillic(text: string): boolean {
   return CYRILLIC_RE.test(text);
 }
 
-async function loadRuEnTranslator(modelsDir: string): Promise<TranslateFn> {
+async function loadRuEnTranslator(modelsDir: string): Promise<TranslateFn | null> {
   if (translateRuEn) return translateRuEn;
   if (translateLoading) return translateLoading;
 
@@ -20,19 +20,27 @@ async function loadRuEnTranslator(modelsDir: string): Promise<TranslateFn> {
     const { env, pipeline } = transformers;
     env.cacheDir = path.join(modelsDir, 'transformers');
     env.allowLocalModels = true;
+    env.allowRemoteModels = false;
     env.useBrowserCache = false;
 
-    const translator = await pipeline('translation', 'Xenova/opus-mt-ru-en', { quantized: true });
-    translateRuEn = async (text: string) => {
-      const out = await translator(text);
-      const first = Array.isArray(out) ? out[0] : out;
-      const translated =
-        first && typeof first === 'object' && 'translation_text' in first
-          ? String((first as { translation_text: string }).translation_text)
-          : undefined;
-      return typeof translated === 'string' && translated.trim() ? translated.trim() : text;
-    };
-    return translateRuEn;
+    try {
+      const translator = await pipeline('translation', 'Xenova/opus-mt-ru-en', {
+        quantized: true,
+        local_files_only: true
+      });
+      translateRuEn = async (text: string) => {
+        const out = await translator(text);
+        const first = Array.isArray(out) ? out[0] : out;
+        const translated =
+          first && typeof first === 'object' && 'translation_text' in first
+            ? String((first as { translation_text: string }).translation_text)
+            : undefined;
+        return typeof translated === 'string' && translated.trim() ? translated.trim() : text;
+      };
+      return translateRuEn;
+    } catch {
+      return null;
+    }
   })();
 
   return translateLoading;
@@ -50,7 +58,9 @@ export async function prepareSearchQuery(raw: string, modelsDir: string): Promis
 
   if (hasCyrillic(query)) {
     const translate = await loadRuEnTranslator(modelsDir);
-    query = await translate(query);
+    if (translate) {
+      query = await translate(query);
+    }
   }
 
   if (!CLIP_PROMPT_RE.test(query)) {

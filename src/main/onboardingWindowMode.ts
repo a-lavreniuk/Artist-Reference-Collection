@@ -8,10 +8,15 @@ export const ONBOARDING_WINDOW_WIDTH = 1280;
 export const ONBOARDING_WINDOW_HEIGHT = 800;
 
 const MAIN_WINDOW_BG = '#1a1a1e';
-const ONBOARDING_WINDOW_BG = '#00000000';
 
-export function needsOnboardingSetup(libraryRoot: string | null, onboardingSetupCompleted: boolean): boolean {
-  return !libraryRoot && !onboardingSetupCompleted;
+function setWindowRoundedCorners(win: BrowserWindow, rounded: boolean): void {
+  if (process.platform !== 'win32') return;
+  const w = win as BrowserWindow & { setRoundedCorners?: (rounded: boolean) => void };
+  w.setRoundedCorners?.(rounded);
+}
+
+export function needsOnboardingSetup(libraryRoot: string | null, _onboardingSetupCompleted: boolean): boolean {
+  return !libraryRoot;
 }
 
 export function applyMainWindowOnboardingMode(win: BrowserWindow): void {
@@ -23,7 +28,8 @@ export function applyMainWindowOnboardingMode(win: BrowserWindow): void {
   win.setMaximumSize(ONBOARDING_WINDOW_WIDTH, ONBOARDING_WINDOW_HEIGHT);
   win.setSize(ONBOARDING_WINDOW_WIDTH, ONBOARDING_WINDOW_HEIGHT);
   win.center();
-  win.setBackgroundColor(ONBOARDING_WINDOW_BG);
+  setWindowRoundedCorners(win, true);
+  win.setBackgroundColor(MAIN_WINDOW_BG);
 }
 
 export function restoreMainWindowAfterOnboarding(win: BrowserWindow): void {
@@ -31,6 +37,7 @@ export function restoreMainWindowAfterOnboarding(win: BrowserWindow): void {
   win.setResizable(true);
   win.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT);
   win.setMaximumSize(0, 0);
+  setWindowRoundedCorners(win, false);
   win.setBackgroundColor(MAIN_WINDOW_BG);
   if (!win.isMaximized()) win.maximize();
 }

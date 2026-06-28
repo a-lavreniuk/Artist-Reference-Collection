@@ -41,6 +41,7 @@ import {
   updateLibrarySessionSnapshot
 } from './librarySessionSnapshot';
 import { isValidArcLibraryFolder } from './libraryValidate';
+import { getDefaultLibraryFolderName } from './appProfile';
 import { countCards, ensureLibraryReady } from './storage/libraryStorage';
 
 async function metadataPath(root: string): Promise<string | null> {
@@ -303,6 +304,8 @@ export function registerArcIpc(): void {
   });
 
   ipcMain.handle('arc:get-default-library-parent', async () => app.getPath('documents'));
+
+  ipcMain.handle('arc:get-default-library-folder-name', async () => getDefaultLibraryFolderName());
 
   ipcMain.handle('arc:read-metadata', async () => {
     const root = await readLibraryRootFromDisk();

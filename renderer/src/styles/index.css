@@ -3419,25 +3419,6 @@ html.arc-onboarding-page,
   background: #1a1a1e;
 }
 
-/* Отдельное окно онбординга: прозрачный фон Electron + клип 16px (--radius-l) */
-html.arc-onboarding-standalone,
-html.arc-onboarding-standalone body {
-  background: transparent !important;
-}
-
-html.arc-onboarding-standalone.arc-onboarding-page #root {
-  background: transparent;
-  border-radius: var(--radius-l);
-  overflow: clip;
-  isolation: isolate;
-}
-
-html.arc-onboarding-standalone .arc-onboarding-shell {
-  border-radius: var(--radius-l);
-  overflow: clip;
-  isolation: isolate;
-}
-
 .arc-onboarding-boot {
   flex: 1;
   display: flex;
@@ -3603,15 +3584,15 @@ html.arc-onboarding-standalone .arc-onboarding-shell {
 }
 
 .arc-onboarding-feature-card__icon--search {
-  --arc-onboarding-feature-icon-url: url("/ui/icons/search_xl.svg");
+  --arc-onboarding-feature-icon-url: url("../ui/icons/search_xl.svg");
 }
 
 .arc-onboarding-feature-card__icon--server {
-  --arc-onboarding-feature-icon-url: url("/ui/icons/server_xl.svg");
+  --arc-onboarding-feature-icon-url: url("../ui/icons/server_xl.svg");
 }
 
 .arc-onboarding-feature-card__icon--whiteboard {
-  --arc-onboarding-feature-icon-url: url("/ui/icons/whiteboard_xl.svg");
+  --arc-onboarding-feature-icon-url: url("../ui/icons/whiteboard_xl.svg");
 }
 
 .arc-onboarding-feature-card__content {
@@ -3817,15 +3798,15 @@ html.arc-onboarding-standalone .arc-onboarding-shell {
 }
 
 .arc-onboarding-library-btn__icon--create {
-  --arc-onboarding-library-btn-icon-url: url("/ui/icons/folder-plus_l.svg");
+  --arc-onboarding-library-btn-icon-url: url("../ui/icons/folder-plus_l.svg");
 }
 
 .arc-onboarding-library-btn__icon--open {
-  --arc-onboarding-library-btn-icon-url: url("/ui/icons/folder-open_l.svg");
+  --arc-onboarding-library-btn-icon-url: url("../ui/icons/folder-open_l.svg");
 }
 
 .arc-onboarding-library-btn__icon--restore {
-  --arc-onboarding-library-btn-icon-url: url("/ui/icons/download_l.svg");
+  --arc-onboarding-library-btn-icon-url: url("../ui/icons/download_l.svg");
 }
 
 .arc-onboarding-stage--features.arc-onboarding-stage--instant {
@@ -4485,6 +4466,10 @@ html.arc-onboarding-standalone .arc-onboarding-shell {
 
 .arc-settings-updates-panel__empty {
   color: var(--text-elev-secondary);
+}
+
+.arc-settings-updates-panel__intro {
+  margin-bottom: var(--s-4);
 }
 
 .arc-settings-updates-panel__head {

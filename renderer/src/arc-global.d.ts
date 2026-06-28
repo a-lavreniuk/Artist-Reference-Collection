@@ -56,6 +56,7 @@ declare global {
       relinkLibraryFolder: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
       pickLibraryFolder: () => Promise<string | null>;
       getDefaultLibraryParent: () => Promise<string>;
+      getDefaultLibraryFolderName: () => Promise<string>;
       setMainWindowOnboardingMode: (enabled: boolean) => Promise<{ ok: boolean }>;
       readMetadata: () => Promise<ArcMetadataV1 | null>;
       writeMetadata: (data: ArcMetadataV1) => Promise<void>;

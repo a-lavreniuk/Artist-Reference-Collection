@@ -225,7 +225,18 @@ export async function waitForInterfaceTourAnchor(
 
   const pathname = readPathname();
   const last = findTourAnchor(anchorId, fallbacks);
-  if (!last) return null;
+  if (!last) {
+    const navbarHost = document.querySelector('.arc-navbar-host');
+    if (
+      navbarHost instanceof HTMLElement &&
+      isAnchorVisible(navbarHost) &&
+      options?.routePrefix &&
+      pathname.startsWith(options.routePrefix)
+    ) {
+      return { element: navbarHost, anchorId: 'navbar-host' };
+    }
+    return null;
+  }
 
   const resolvedId =
     queryInterfaceTourAnchor(anchorId) === last

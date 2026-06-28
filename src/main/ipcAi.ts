@@ -167,10 +167,13 @@ async function finalizeModelInstall(
 
   if (options?.withHybridClip) {
     await progress.run(cursor, 55, async (sub) => {
-      await ensureLightClipForHybrid((info) => {
-        const raw = typeof info === 'number' ? info : info.percent;
-        sub(raw);
-      });
+      await ensureLightClipForHybrid(
+        (info) => {
+          const raw = typeof info === 'number' ? info : info.percent;
+          sub(raw);
+        },
+        { allowDownload: true }
+      );
     });
     cursor = 55;
   }

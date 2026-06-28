@@ -34,7 +34,7 @@ export default function OnboardingSetupPage({ onComplete }: Props) {
   }
 
   return (
-    <OnboardingLayout standalone>
+    <OnboardingLayout>
       {(step === 2 || featuresAnimating) ? (
         <OnboardingLibraryScreen
           revealed={(step >= 2 && !featuresAnimating) || libraryEnterStarted}

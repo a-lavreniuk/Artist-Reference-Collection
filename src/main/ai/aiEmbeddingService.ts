@@ -19,13 +19,17 @@ async function readResources(): Promise<AiResourceSettings> {
 }
 
 export async function ensureLightClipForHybrid(
-  onProgress?: (info: number | { percent: number; bytesReceived?: number; bytesTotal?: number }) => void
+  onProgress?: (info: number | { percent: number; bytesReceived?: number; bytesTotal?: number }) => void,
+  options?: { allowDownload?: boolean }
 ): Promise<string> {
   const userData = app.getPath('userData');
   const resources = await readResources();
   const modelsDir = getModelsDir();
 
   if (!(await isModelInstalled(userData, 'light'))) {
+    if (!options?.allowDownload) {
+      throw new Error('Лёгкая модель не установлена. Скачайте её в настройках AI Поиска.');
+    }
     await downloadModelInWorker('light', modelsDir, resources, onProgress);
     await recordInstalledModel(userData, 'light', MODEL_CATALOG.light, MODEL_CATALOG.light.hfRevision ?? 'main');
   }

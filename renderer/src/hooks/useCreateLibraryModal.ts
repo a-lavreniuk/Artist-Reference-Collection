@@ -2,6 +2,11 @@ import { useCallback, useState } from 'react';
 import { ONBOARDING_DEFAULT_LIBRARY_NAME } from '../content/onboarding';
 import { getNavbarMetrics, invalidateLibraryCache } from '../services/db';
 
+async function resolveDefaultLibraryFolderName(): Promise<string> {
+  const fromMain = await window.arc?.getDefaultLibraryFolderName?.();
+  return fromMain?.trim() || ONBOARDING_DEFAULT_LIBRARY_NAME;
+}
+
 type CreateLibraryModalState = {
   folderName: string;
   busy: boolean;
@@ -26,14 +31,17 @@ export function useCreateLibraryModal(onSuccess: () => void) {
   });
 
   const openModal = useCallback(() => {
-    setState({
-      folderName: ONBOARDING_DEFAULT_LIBRARY_NAME,
-      busy: false,
-      emptySubmitted: false,
-      showExistingConfirm: false,
-      pendingExistingPath: null
-    });
-    setOpen(true);
+    void (async () => {
+      const folderName = await resolveDefaultLibraryFolderName();
+      setState({
+        folderName,
+        busy: false,
+        emptySubmitted: false,
+        showExistingConfirm: false,
+        pendingExistingPath: null
+      });
+      setOpen(true);
+    })();
   }, []);
 
   const closeModal = useCallback(() => {

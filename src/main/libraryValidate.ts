@@ -51,6 +51,20 @@ export async function isValidArcLibraryFolder(abs: string): Promise<boolean> {
   return false;
 }
 
+/** Имя для новой библиотеки: в prod не переиспользует занятую папку, даже если там уже ARC-библиотека. */
+export async function resolveFreshLibraryFolderName(parentDir: string, baseName: string): Promise<string> {
+  const parent = path.resolve(parentDir);
+  let n = 1;
+  for (;;) {
+    const name = n === 1 ? baseName : `${baseName} (${n})`;
+    const candidateAbs = path.join(parent, name);
+    if (!(await fileExists(candidateAbs))) return name;
+    if (await isDirEmpty(candidateAbs)) return name;
+    n += 1;
+    if (n > 999) return `${baseName} (${Date.now()})`;
+  }
+}
+
 export async function resolveAvailableLibraryFolderName(parentDir: string, baseName: string): Promise<string> {
   const parent = path.resolve(parentDir);
   const first = path.join(parent, baseName);

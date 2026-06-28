@@ -10,6 +10,9 @@ files:
   - renderer/dist/**/*
   - package.json
   - node_modules/**/*
+  - "!**/*.gguf"
+  - "!**/models/transformers/**"
+  - "!**/models/llama/**"
 asarUnpack:
   - "**/node_modules/ffmpeg-static/**"
   - "**/node_modules/ffprobe-static/**"
@@ -37,6 +40,8 @@ nsis:
   perMachine: false
   runAfterFinish: true
   differentialPackage: true
+  deleteAppDataOnUninstall: true
+  include: uninstaller.nsh
 publish:
   provider: github
   owner: a-lavreniuk
