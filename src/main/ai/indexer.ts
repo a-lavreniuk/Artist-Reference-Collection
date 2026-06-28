@@ -25,6 +25,7 @@ import { clearAiSearchCache, vectorFromNumbers } from './semanticSearch';
 import { upsertCardAiCaption } from '../storage/cardAiCaption';
 import { upsertCardAiCaptionFts } from '../storage/cardFts';
 import { waitForNavigationIpc } from '../ipcNavigationPriority';
+import { logAiIndexer, logAiIndexerError, logAiIndexerWarn } from './aiIndexerLog';
 
 let indexRunning = false;
 let indexPaused = false;
@@ -48,6 +49,8 @@ const INTRA_CARD_BROADCAST_MIN_MS = 300;
 
 let lastIntraCardBroadcastAt = 0;
 let intraCardBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
+/** Карточки с ошибкой индексации в текущей сессии — не повторять в цикле. */
+const skippedCardIds = new Set<string>();
 
 function broadcast(channel: string, payload: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -279,40 +282,54 @@ export async function indexCardById(cardId: string): Promise<boolean> {
   const imagePath = resolveImageAbsPath(opened.root, cardId, db);
   if (!imagePath) return false;
 
-    try {
-      setCurrentCardProgress(5);
-      const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
+  let heavyLoadProgress = 5;
 
-      if (tier === 'heavy') {
-        const caption = await captionForHeavyIndex(imagePath);
-        setCurrentCardProgress(55);
-        const liveDb = requireLibraryDb(opened.root);
-        upsertCardAiCaption(liveDb, cardId, caption);
-        upsertCardAiCaptionFts(liveDb, cardId, caption);
-        const tagNames = getCardTagNames(liveDb, cardId);
-        const hybrid = await embedHeavyHybridForIndex(imagePath, caption, tagNames);
-        setCurrentCardProgress(85);
-        upsertHybridCardEmbeddings(
-          liveDb,
-          cardId,
-          activeModelId,
-          vectorFromNumbers(hybrid.visual),
-          vectorFromNumbers(hybrid.caption)
-        );
-      } else {
-        const vector = await embedImageForTier(tier, imagePath, activeModelId);
-        setCurrentCardProgress(85);
-        const liveDb = requireLibraryDb(opened.root);
-        upsertCardEmbedding(liveDb, cardId, activeModelId, vectorFromNumbers(vector));
-      }
-      clearAiSearchCache();
-      lastError = null;
-      setCurrentCardProgress(100);
-      return true;
-    } catch {
-      setCurrentCardProgress(null);
-      return false;
+  try {
+    setCurrentCardProgress(5);
+    const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
+    logAiIndexer('Индексация карточки', { cardId, tier });
+
+    if (tier === 'heavy') {
+      const onHeavyStatus = (message: string) => {
+        logAiIndexer(message, { cardId });
+        heavyLoadProgress = Math.min(45, heavyLoadProgress + 2);
+        setCurrentCardProgress(heavyLoadProgress);
+      };
+      const caption = await captionForHeavyIndex(imagePath, onHeavyStatus);
+      setCurrentCardProgress(55);
+      const liveDb = requireLibraryDb(opened.root);
+      upsertCardAiCaption(liveDb, cardId, caption);
+      upsertCardAiCaptionFts(liveDb, cardId, caption);
+      const tagNames = getCardTagNames(liveDb, cardId);
+      logAiIndexer('Гибридные эмбеддинги', { cardId });
+      setCurrentCardProgress(65);
+      const hybrid = await embedHeavyHybridForIndex(imagePath, caption, tagNames);
+      setCurrentCardProgress(85);
+      upsertHybridCardEmbeddings(
+        liveDb,
+        cardId,
+        activeModelId,
+        vectorFromNumbers(hybrid.visual),
+        vectorFromNumbers(hybrid.caption)
+      );
+    } else {
+      const vector = await embedImageForTier(tier, imagePath, activeModelId);
+      setCurrentCardProgress(85);
+      const liveDb = requireLibraryDb(opened.root);
+      upsertCardEmbedding(liveDb, cardId, activeModelId, vectorFromNumbers(vector));
     }
+    clearAiSearchCache();
+    lastError = null;
+    setCurrentCardProgress(100);
+    logAiIndexer('Карточка проиндексирована', { cardId });
+    return true;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    lastError = message;
+    logAiIndexerError('Ошибка индексации карточки', err);
+    setCurrentCardProgress(null);
+    return false;
+  }
 }
 
 async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
@@ -349,6 +366,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
       let didWork = false;
       lastIndexed = indexed;
       lastTotal = total;
+      logAiIndexer('Старт цикла индексации', { tier, indexed, total });
       broadcastProgress(indexed, total);
 
       while (!indexPaused) {
@@ -356,7 +374,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
         const batchSize = activeTier === 'heavy' ? HEAVY_BATCH_SIZE : BATCH_SIZE;
         const targets = [
           ...new Set([...queued, ...listMissingForModel(db, activeModelId, tier, batchSize)])
-        ];
+        ].filter((id) => !skippedCardIds.has(id));
         if (targets.length === 0) break;
 
         for (const cardId of targets) {
@@ -367,7 +385,16 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
           lastError = null;
           broadcastProgress(indexed, total, true);
           const ok = await indexCardById(cardId);
-          if (ok) didWork = true;
+          if (ok) {
+            didWork = true;
+          } else {
+            skippedCardIds.add(cardId);
+            logAiIndexerWarn('Карточка пропущена до конца сессии индексации', {
+              cardId,
+              error: lastError
+            });
+            if (lastError) broadcastError(lastError);
+          }
           db = requireLibraryDb(opened.root);
           indexed = countIndexedForModel(db, activeModelId, tier);
           total = countIndexableImageCards(db);
@@ -417,6 +444,7 @@ export async function runFullReindex(): Promise<void> {
   }
   indexPaused = false;
   pendingCardIds.length = 0;
+  skippedCardIds.clear();
 
   const db = requireLibraryDb(opened.root);
   deleteEmbeddingsForModel(db, activeModelId);

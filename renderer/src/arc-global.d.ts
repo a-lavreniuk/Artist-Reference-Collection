@@ -6,7 +6,6 @@ import type {
   SavedFilterPreset
 } from './components/gallery/galleryFilterTypes';
 import type { ArcMetadataV1, CardRecord, CollectionRecord, MoodboardBoardV1 } from './services/arcSchema';
-import type { HistoryEntry, HistorySegment } from './services/historyTypes';
 
 export {};
 
@@ -342,6 +341,14 @@ declare global {
       }) => void) => () => void;
       onAiIndexComplete?: (cb: (detail: { indexed: number; total: number }) => void) => () => void;
       onAiError?: (cb: (detail: { message: string; fallback?: boolean }) => void) => () => void;
+      onAiIndexLog?: (
+        cb: (detail: {
+          level: 'log' | 'warn' | 'error';
+          message: string;
+          detail: Record<string, unknown> | null;
+          at: number;
+        }) => void
+      ) => () => void;
       signalLoadingSplashReady?: () => Promise<{ ok: boolean }>;
       onLoadingProgress?: (
         cb: (payload: { percent: number; phaseText: string; version: string }) => void

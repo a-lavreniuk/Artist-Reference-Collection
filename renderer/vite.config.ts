@@ -20,6 +20,9 @@ export default defineConfig({
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,
     rollupOptions: {
+      treeshake: {
+        moduleSideEffects: (id) => id.includes(`${path.sep}debug${path.sep}`)
+      },
       input: {
         main: path.resolve(__dirname, 'index.html'),
         screenshotPicker: path.resolve(__dirname, 'screenshot-picker.html'),

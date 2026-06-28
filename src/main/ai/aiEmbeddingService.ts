@@ -96,10 +96,13 @@ export async function embedHeavyHybridQuery(
   return { visual, caption };
 }
 
-export async function captionForHeavyIndex(imagePath: string): Promise<string> {
+export async function captionForHeavyIndex(
+  imagePath: string,
+  onStatus?: (message: string) => void
+): Promise<string> {
   const userData = app.getPath('userData');
   const resources = await readResources();
-  return generateJoyCaption(userData, imagePath, resources);
+  return generateJoyCaption(userData, imagePath, resources, { onStatus });
 }
 
 export function clipModelId(): string {

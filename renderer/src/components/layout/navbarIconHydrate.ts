@@ -346,6 +346,10 @@ function resolveIconFile(iconKey: IconKey, scope?: HTMLElement): { preferred: st
     return { preferred: fallback, fallback };
   }
   const preferred = withSizeVariant(fallback, getIconSize(scope));
+  // В каталоге только S-вариант (например ai_s.svg) — не запрашивать отсутствующий _m/_l.
+  if (fallback.endsWith('_s.svg') && preferred !== fallback) {
+    return { preferred: fallback, fallback };
+  }
   return { preferred, fallback };
 }
 

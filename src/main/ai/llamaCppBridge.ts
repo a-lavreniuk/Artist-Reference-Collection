@@ -6,6 +6,12 @@ import path from 'path';
 import type { AiResourceSettings } from './types';
 import { importEsm } from './esmImport';
 import { resolveLlamaServerBinaryFromUserData } from './llamaRuntime';
+import { ensureVisionSafeImagePath } from './indexVisionImage';
+import { logAiIndexer } from './aiIndexerLog';
+
+export type LlamaServerHooks = {
+  onStatus?: (message: string) => void;
+};
 
 type LlamaEmbeddingContextLike = {
   getEmbeddingFor: (input: string) => Promise<{ vector: readonly number[] }>;
@@ -98,18 +104,31 @@ export async function embedTextWithNodeLlama(
   return Array.from(embedding.vector);
 }
 
-async function waitForServerReady(baseUrl: string, timeoutMs = 120_000): Promise<void> {
+async function waitForServerReady(
+  baseUrl: string,
+  timeoutMs = 600_000,
+  hooks?: LlamaServerHooks
+): Promise<void> {
   const started = Date.now();
+  let lastStatusAt = 0;
   while (Date.now() - started < timeoutMs) {
+    const elapsedSec = Math.floor((Date.now() - started) / 1000);
+    if (hooks?.onStatus && Date.now() - lastStatusAt >= 2000) {
+      lastStatusAt = Date.now();
+      hooks.onStatus(`Ожидание llama-server… ${elapsedSec} с`);
+    }
     try {
       const res = await fetch(`${baseUrl}/health`);
-      if (res.ok) return;
+      if (res.ok) {
+        logAiIndexer('llama-server готов', { elapsedSec });
+        return;
+      }
     } catch {
       /* retry */
     }
     await new Promise((r) => setTimeout(r, 500));
   }
-  throw new Error('llama-server не ответил вовремя');
+  throw new Error('llama-server не ответил вовремя (проверьте RAM и настройки GPU)');
 }
 
 export async function ensureLlamaServer(
@@ -117,7 +136,8 @@ export async function ensureLlamaServer(
   weightsPath: string,
   mmprojPath: string | null,
   resources: AiResourceSettings,
-  mode: 'embed' | 'chat'
+  mode: 'embed' | 'chat',
+  hooks?: LlamaServerHooks
 ): Promise<ServerSession> {
   const key = `${weightsPath}::${mmprojPath ?? ''}::${mode}::${resources.gpuLayers}`;
   if (serverSession && serverConfigKey === key) return serverSession;
@@ -133,6 +153,8 @@ export async function ensureLlamaServer(
   }
 
   const port = await getFreePort();
+  logAiIndexer('Запуск llama-server', { mode, port, gpuLayers: resources.gpuLayers ?? 0 });
+  hooks?.onStatus?.('Запуск llama-server…');
   const args = [
     '-m',
     weightsPath,
@@ -158,9 +180,9 @@ export async function ensureLlamaServer(
   const baseUrl = `http://127.0.0.1:${port}`;
 
   child.stderr.on('data', (chunk) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[llama-server]', String(chunk).trim());
-    }
+    const line = String(chunk).trim();
+    if (!line) return;
+    logAiIndexer('llama-server', { line: line.slice(0, 500) });
   });
 
   child.on('exit', () => {
@@ -172,7 +194,7 @@ export async function ensureLlamaServer(
 
   serverSession = { process: child, port, baseUrl };
   serverConfigKey = key;
-  await waitForServerReady(baseUrl);
+  await waitForServerReady(baseUrl, 600_000, hooks);
   return serverSession;
 }
 
@@ -203,25 +225,30 @@ export async function embedImageViaServer(
   resources: AiResourceSettings
 ): Promise<number[]> {
   const session = await ensureLlamaServer(userDataPath, weightsPath, mmprojPath, resources, 'embed');
-  const dataUrl = await imageToDataUrl(imagePath);
+  const vision = await ensureVisionSafeImagePath(imagePath);
+  try {
+    const dataUrl = await imageToDataUrl(vision.path);
 
-  const res = await fetch(`${session.baseUrl}/embeddings`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      input: [{ type: 'image_url', image_url: { url: dataUrl } }]
-    })
-  });
+    const res = await fetch(`${session.baseUrl}/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: [{ type: 'image_url', image_url: { url: dataUrl } }]
+      })
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`embeddings(image) failed: ${res.status} ${body.slice(0, 200)}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`embeddings(image) failed: ${res.status} ${body.slice(0, 200)}`);
+    }
+
+    const json = (await res.json()) as { data?: Array<{ embedding?: number[] }> };
+    const vector = json.data?.[0]?.embedding;
+    if (!vector?.length) throw new Error('Пустой embedding для изображения');
+    return vector;
+  } finally {
+    await vision.dispose();
   }
-
-  const json = (await res.json()) as { data?: Array<{ embedding?: number[] }> };
-  const vector = json.data?.[0]?.embedding;
-  if (!vector?.length) throw new Error('Пустой embedding для изображения');
-  return vector;
 }
 
 export async function embedTextViaServer(
@@ -255,45 +282,56 @@ export async function captionImageViaServer(
   mmprojPath: string,
   imagePath: string,
   resources: AiResourceSettings,
-  prompt = JOYCAPTION_INDEX_PROMPT
+  prompt = JOYCAPTION_INDEX_PROMPT,
+  hooks?: LlamaServerHooks
 ): Promise<string> {
-  const session = await ensureLlamaServer(userDataPath, weightsPath, mmprojPath, resources, 'chat');
-  const dataUrl = await imageToDataUrl(imagePath);
+  const session = await ensureLlamaServer(userDataPath, weightsPath, mmprojPath, resources, 'chat', hooks);
+  const vision = await ensureVisionSafeImagePath(imagePath);
+  try {
+    const dataUrl = await imageToDataUrl(vision.path);
+    logAiIndexer('JoyCaption: запрос подписи', {
+      image: path.basename(imagePath),
+      vision: path.basename(vision.path)
+    });
+    hooks?.onStatus?.('Генерация подписи к изображению…');
 
-  const res = await fetch(`${session.baseUrl}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'joycaption',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: dataUrl } }
-          ]
-        }
-      ],
-      temperature: 0.2,
-      max_tokens: 512
-    })
-  });
+    const res = await fetch(`${session.baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'joycaption',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: dataUrl } }
+            ]
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 512
+      })
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`caption failed: ${res.status} ${body.slice(0, 200)}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`caption failed: ${res.status} ${body.slice(0, 200)}`);
+    }
+
+    const json = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string | Array<{ text?: string }> } }>;
+    };
+    const content = json.choices?.[0]?.message?.content;
+    if (typeof content === 'string' && content.trim()) return content.trim();
+    if (Array.isArray(content)) {
+      const text = content.map((part) => part.text ?? '').join(' ').trim();
+      if (text) return text;
+    }
+    throw new Error('JoyCaption вернул пустой ответ');
+  } finally {
+    await vision.dispose();
   }
-
-  const json = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string | Array<{ text?: string }> } }>;
-  };
-  const content = json.choices?.[0]?.message?.content;
-  if (typeof content === 'string' && content.trim()) return content.trim();
-  if (Array.isArray(content)) {
-    const text = content.map((part) => part.text ?? '').join(' ').trim();
-    if (text) return text;
-  }
-  throw new Error('JoyCaption вернул пустой ответ');
 }
 
 export async function shutdownLlamaBridge(): Promise<void> {

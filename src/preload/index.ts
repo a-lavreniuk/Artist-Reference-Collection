@@ -453,6 +453,26 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:ai-error', fn);
     return () => ipcRenderer.removeListener('arc:ai-error', fn);
   },
+  onAiIndexLog: (
+    cb: (detail: {
+      level: 'log' | 'warn' | 'error';
+      message: string;
+      detail: Record<string, unknown> | null;
+      at: number;
+    }) => void
+  ) => {
+    const fn = (
+      _: unknown,
+      payload: {
+        level: 'log' | 'warn' | 'error';
+        message: string;
+        detail: Record<string, unknown> | null;
+        at: number;
+      }
+    ) => cb(payload);
+    ipcRenderer.on('arc:ai-index-log', fn);
+    return () => ipcRenderer.removeListener('arc:ai-index-log', fn);
+  },
 
   signalLoadingSplashReady: () => ipcRenderer.invoke('loading:splash-ready') as Promise<{ ok: boolean }>,
   onLoadingProgress: (

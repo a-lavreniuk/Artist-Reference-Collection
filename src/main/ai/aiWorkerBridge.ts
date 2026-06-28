@@ -2,6 +2,7 @@ import { app, utilityProcess, type UtilityProcess } from 'electron';
 import path from 'path';
 
 import type { AiResourceSettings, ModelTier, WorkerRequest, WorkerResponse } from './types';
+import { logAiIndexer } from './aiIndexerLog';
 
 type PendingRequest = {
   resolve: (value: WorkerResponse) => void;
@@ -49,14 +50,15 @@ function spawnWorker(): UtilityProcess {
   });
 
   child.stdout?.on('data', (chunk) => {
-    const text = String(chunk);
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ai-worker]', text.trim());
-    }
+    const text = String(chunk).trim();
+    if (!text) return;
+    logAiIndexer('ai-worker', { line: text.slice(0, 500) });
   });
 
   child.stderr?.on('data', (chunk) => {
-    console.error('[ai-worker]', String(chunk).trim());
+    const text = String(chunk).trim();
+    if (!text) return;
+    logAiIndexer('ai-worker stderr', { line: text.slice(0, 500) });
   });
 
   child.on('message', (msg: WorkerResponse) => {

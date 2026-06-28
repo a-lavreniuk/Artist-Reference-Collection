@@ -7,6 +7,7 @@ import GalleryCardEditRedirect from './pages/GalleryCardEditRedirect';
 import SettingsPage from './pages/SettingsPage';
 import SettingsNavbarPanelPage from './pages/SettingsNavbarPanelPage';
 import TagsPage from './pages/TagsPage';
+import { useArcMoodboardLibraryDiag } from './debug/diagHook';
 
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const UiKitPage = lazy(() => import('./ui-kit/UiKitPage'));
@@ -54,6 +55,8 @@ function RouteFallback() {
 }
 
 export default function App() {
+  useArcMoodboardLibraryDiag();
+
   return (
     <OnboardingGate>
     <Suspense fallback={<RouteFallback />}>

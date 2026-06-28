@@ -18,7 +18,11 @@ function stableJson(value: unknown): string {
 
 export function buildGalleryQueryKey(query: GalleryFeedQuery): string {
   const tags = [...query.selectedTagIds].sort().join('\u0001');
-  const mb = [...(query.moodboardCardIds ?? [])].sort().join('\u0001');
+  // undefined/null — лента библиотеки (без фильтра мудборда); [] — пустой мудборд (другой ключ).
+  const mb =
+    query.moodboardCardIds == null
+      ? ''
+      : `mb:${[...query.moodboardCardIds].sort().join('\u0001')}`;
   const sortKey =
     query.sort.field === 'shuffle'
       ? `shuffle:${query.sort.shuffleSeed ?? 0}`
