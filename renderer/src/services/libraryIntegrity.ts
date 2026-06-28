@@ -25,7 +25,8 @@ export const KNOWN_LIBRARY_ROOT_BASENAMES = new Set([
   'arc-index.db-wal',
   'arc-index.db-shm',
   'arc-system.json',
-  'arc-moodboard.json'
+  'arc-moodboard.json',
+  'desktop.ini'
 ]);
 
 /** Убирает из списка сканирования пути системных файлов библиотеки. */
@@ -35,7 +36,7 @@ export function filterScanOrphanPaths(paths: string[]): string[] {
     if (norm === 'meta' || norm.startsWith('meta/')) return false;
     if (/^cards\/[^/]+\/card\.json$/i.test(norm)) return false;
     const base = norm.includes('/') ? norm.slice(norm.lastIndexOf('/') + 1) : norm;
-    return !KNOWN_LIBRARY_ROOT_BASENAMES.has(base);
+    return !KNOWN_LIBRARY_ROOT_BASENAMES.has(base.toLowerCase());
   });
 }
 

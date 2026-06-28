@@ -34,6 +34,7 @@ import {
   getModelIdForTier,
   hasAnyInstalledModel,
   isModelInstalled,
+  hasModelArtifactsOnDisk,
   listModelInstallStatuses
 } from './ai/modelManager';
 import { downloadGgufModel, cancelGgufDownload, pauseGgufDownload, resumeGgufDownload } from './ai/downloadGguf';
@@ -456,7 +457,7 @@ export function registerAiIpc(): void {
       const entry = getModelEntry(tier);
       if (tier === 'heavy') {
         await downloadGgufModel(userData, entry, report);
-        if (!(await isModelInstalled(userData, tier))) {
+        if (!(await hasModelArtifactsOnDisk(userData, tier))) {
           return {
             ok: false as const,
             error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.'
@@ -479,6 +480,12 @@ export function registerAiIpc(): void {
         },
         report
       );
+      if (!(await hasModelArtifactsOnDisk(userData, tier))) {
+        return {
+          ok: false as const,
+          error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.'
+        };
+      }
       await finalizeModelInstall(tier, userData, entry, result.modelId, {
         onComplete: () => scheduleIdleIndexing()
       });
@@ -625,7 +632,7 @@ export function registerAiIpc(): void {
         );
       }
 
-      if (!(await isModelInstalled(userData, tier))) {
+      if (!(await hasModelArtifactsOnDisk(userData, tier))) {
         return { ok: false as const, error: 'Файлы модели не найдены после обновления.' };
       }
 

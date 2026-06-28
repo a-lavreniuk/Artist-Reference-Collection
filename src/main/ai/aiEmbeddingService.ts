@@ -4,7 +4,7 @@ import { readAppPreferences } from '../appPreferences';
 import type { AiResourceSettings, ModelTier } from './types';
 import { MODEL_CATALOG } from './types';
 import { embedImageInWorker, embedTextInWorker, getModelsDir, initAiWorker, downloadModelInWorker } from './aiWorkerBridge';
-import { isModelInstalled } from './modelManager';
+import { isModelInstalled, hasModelArtifactsOnDisk } from './modelManager';
 import { recordInstalledModel } from './modelManifest';
 import { generateJoyCaption } from './joyCaption';
 import { prepareSearchQuery } from './queryPrep';
@@ -31,6 +31,9 @@ export async function ensureLightClipForHybrid(
       throw new Error('Лёгкая модель не установлена. Скачайте её в настройках AI Поиска.');
     }
     await downloadModelInWorker('light', modelsDir, resources, onProgress);
+    if (!(await hasModelArtifactsOnDisk(userData, 'light'))) {
+      throw new Error('Файлы лёгкой модели не найдены после загрузки. Попробуйте ещё раз.');
+    }
     await recordInstalledModel(userData, 'light', MODEL_CATALOG.light, MODEL_CATALOG.light.hfRevision ?? 'main');
   }
 

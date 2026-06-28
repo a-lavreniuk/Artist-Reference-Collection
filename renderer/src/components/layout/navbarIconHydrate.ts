@@ -338,8 +338,13 @@ function withSizeVariant(file: string, size: UiSize): string {
   return file.replace(SIZE_SUFFIX_RE, `_${size}.svg`);
 }
 
+const SIZE_INVARIANT_ICON_KEYS = new Set<IconKey>(['gridL', 'gridM', 'gridS']);
+
 function resolveIconFile(iconKey: IconKey, scope?: HTMLElement): { preferred: string; fallback: string } {
   const fallback = ICON_FILES[iconKey];
+  if (SIZE_INVARIANT_ICON_KEYS.has(iconKey)) {
+    return { preferred: fallback, fallback };
+  }
   const preferred = withSizeVariant(fallback, getIconSize(scope));
   return { preferred, fallback };
 }
