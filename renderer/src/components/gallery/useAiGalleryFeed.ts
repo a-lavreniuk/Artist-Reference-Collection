@@ -21,7 +21,7 @@ export function useAiGalleryFeed(
   const scopeCardIds = options?.scopeCardIds ?? null;
   const collectionId = options?.collectionId ?? null;
   const moodboardCardIds = options?.moodboardCardIds ?? null;
-  const serverScoped = Boolean(collectionId) || Boolean(moodboardCardIds?.length);
+  const serverScoped = Boolean(collectionId) || Array.isArray(moodboardCardIds);
   const [aiErrorOverride, setAiErrorOverride] = useState<string | null>(null);
 
   const requestBase = useMemo(

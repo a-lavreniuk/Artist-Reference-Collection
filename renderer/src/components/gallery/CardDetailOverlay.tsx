@@ -38,7 +38,6 @@ import {
   getCollectionCardCounts,
   getCollectionPreviewSlices,
   listSimilarCards,
-  toggleCardInMoodboard,
   isCardOnBoard,
   removeCardFromMoodboard,
   updateCardPayload
@@ -858,11 +857,9 @@ export default function CardDetailOverlay({
                         onClick={async () => {
                           if (!card) return;
                           if (!inMoodboard) {
-                            const added = await toggleCardInMoodboard(card.id);
-                            setInMoodboard(added);
-                            if (added) {
-                              setMoodboardCardIds((prev) => new Set(prev).add(card.id));
-                            }
+                            await addCardToMoodboard(card.id);
+                            setInMoodboard(true);
+                            setMoodboardCardIds((prev) => new Set(prev).add(card.id));
                             setActionAlert({ message: 'Карточка добавлена в мудборд', variant: 'brand' });
                             return;
                           }
@@ -882,6 +879,7 @@ export default function CardDetailOverlay({
                             next.delete(card.id);
                             return next;
                           });
+                          setActionAlert({ message: 'Карточка убрана из мудборда', variant: 'brand' });
                         }}
                         disabled={!card}
                       >

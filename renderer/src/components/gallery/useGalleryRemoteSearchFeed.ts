@@ -36,7 +36,7 @@ export function useGalleryRemoteSearchFeed(params: UseGalleryRemoteSearchFeedPar
   const isRemoteSearchFeed = isAiSearch || isColorSearch || isSimilarSearch;
 
   const serverScoped =
-    Boolean(feedQuery.collectionId) || Boolean(feedQuery.moodboardCardIds?.length);
+    Boolean(feedQuery.collectionId) || Array.isArray(feedQuery.moodboardCardIds);
   const clientScope = serverScoped ? null : scopeCardIds ?? null;
 
   const aiFeed = useAiGalleryFeed(aiQuery, libraryReady && isAiSearch, sort, {

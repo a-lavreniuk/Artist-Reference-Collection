@@ -735,8 +735,7 @@ export function registerAiIpc(): void {
       const searchResults = await runAiSearch(query);
       const scope =
         scopeCardIds && scopeCardIds.length > 0 ? new Set(scopeCardIds) : null;
-      const moodboardSet =
-        moodboardCardIds && moodboardCardIds.length > 0 ? new Set(moodboardCardIds) : null;
+      const moodboardSet = Array.isArray(moodboardCardIds) ? new Set(moodboardCardIds) : null;
 
       const cards = [];
       for (const hit of searchResults) {

@@ -88,6 +88,10 @@ export async function listCardsPage(params: {
   const sorted = await listCardsSorted('all');
   const tagIds = (params.selectedTagIds ?? []).filter((id) => id.trim().length > 0);
   let list = sorted.filter((c) => cardHasAllTagIds(c, tagIds));
+  if (Array.isArray(params.moodboardCardIds)) {
+    const mbSet = new Set(params.moodboardCardIds);
+    list = list.filter((c) => mbSet.has(c.id));
+  }
   const cardExact = params.cardIdExact?.trim() ?? '';
   if (cardExact) {
     const one = list.find((c) => c.id === cardExact);
