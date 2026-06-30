@@ -23,7 +23,10 @@
 | `npm run renderer:dev` | только фронтенд Vite (порт 5173) |
 | `npm run build` | сборка `main`, `preload` и `renderer` |
 | `npm run dist:win` | установщик Windows (NSIS) в `dist-electron/` |
+| `npm run dist:mac` | установщики macOS (DMG, arm64 + x64) в `dist-electron/` — только на Mac |
 | `npm run publish:win` | сборка и публикация в GitHub Releases (нужен `GH_TOKEN`) |
+
+Подробная инструкция по macOS (локальная сборка, GitHub Actions, установка для тестировщика): [`docs/build-macos.md`](docs/build-macos.md).
 
 ## Установщик и обновления (Windows)
 
@@ -41,5 +44,14 @@
 1. Обновите `version` в `package.json` и добавьте запись в `release-notes.json`.
 2. Закоммитьте, создайте тег `X.Y.Z` и отправьте: `git push origin X.Y.Z`.
 3. Workflow `.github/workflows/release-windows.yml` соберёт установщик и опубликует Release с `latest.yml` для автообновления.
+
+## macOS (тестовые сборки)
+
+Установщики macOS — DMG для **Apple Silicon** (`arm64`) и **Intel** (`x64`). Публикация в Releases пока не настроена.
+
+- **Скачать DMG:** workflow [Build macOS](https://github.com/a-lavreniuk/Artist-Reference-Collection/actions/workflows/build-macos.yml) → **Run workflow** → артефакт `arc-macos-*` в успешном run.
+- **Собрать на Mac:** `npm run dist:mac` (нужен Node.js 22 и Xcode Command Line Tools).
+
+Полная инструкция для тестировщика: [`docs/build-macos.md`](docs/build-macos.md).
 
 Справочник по UI: `renderer/public/ui/arc-ui/arc-ui.html`, токены и стили кнопок/панелей — `renderer/public/ui/arc-ui/arc-ui.css`, навбар — `renderer/public/ui/arc-navbar.css`.
