@@ -13,7 +13,7 @@
     "predist:win": "npm run icons",
     "predist:mac": "npm run icons",
     "dist:win": "npm run build && electron-builder --win",
-    "dist:mac": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --arm64 --x64",
+    "dist:mac": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --arm64 --x64 --publish never",
     "publish:win": "npm run build && electron-builder --win --publish always",
     "renderer:dev": "vite --config renderer/vite.config.ts",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3,sharp,node-llama-cpp",

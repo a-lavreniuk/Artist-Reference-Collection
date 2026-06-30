@@ -36,7 +36,6 @@ mac:
         - x64
   icon: build/icons/icon.png
   category: public.app-category.graphics-design
-  identity: null
   hardenedRuntime: false
   gatekeeperAssess: false
 win:

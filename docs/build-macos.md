@@ -163,4 +163,4 @@ dist-electron/ARC-0.1.2.dmg
 
 Конфигурация: `electron-builder.yml` (секция `mac`), workflow: `.github/workflows/build-macos.yml`.
 
-Подпись и нотаризация отключены (`identity: null`) — только для тестовых сборок.
+Подпись отключена через `CSC_IDENTITY_AUTO_DISCOVERY=false` — только для тестовых сборок. В CI используется `--publish never` (артефакты, без Releases).
