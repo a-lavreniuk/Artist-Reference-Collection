@@ -73,7 +73,8 @@ Skill для разработки и ревью UI в репозитории **A
 | Сетка карточек | `MasonryGrid`, `GalleryBoard` |
 | Валидация поля | `field-error` + `aria-invalid`, **без** текста под полем |
 
-Детальная карта: [component-map.md](references/component-map.md).
+Детальная карта: [component-map.md](references/component-map.md).  
+Синхронизация Knowledge Base с chrome UI: [kb-chrome-contract.md](references/kb-chrome-contract.md).
 
 ### Паттерны композиции (из Vercel composition-patterns, адаптировано)
 
