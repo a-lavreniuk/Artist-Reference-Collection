@@ -39,6 +39,9 @@ const SettingsIntegrityPanel = lazy(() =>
 const SettingsAutoImportPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAutoImportPanel }))
 );
+const SettingsBrowserExtensionPanel = lazy(() =>
+  import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsBrowserExtensionPanel }))
+);
 const SettingsAiSearchPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAiSearchPanel }))
 );
@@ -83,6 +86,7 @@ export default function App() {
             <Route path="backup" element={<SettingsBackupPanel />} />
             <Route path="integrity" element={<SettingsIntegrityPanel />} />
             <Route path="auto-import" element={<SettingsAutoImportPanel />} />
+            <Route path="browser-extension" element={<SettingsBrowserExtensionPanel />} />
             <Route path="ai-search" element={<SettingsAiSearchPanel />} />
             <Route path="updates" element={<SettingsUpdatesPanel />} />
           </Route>

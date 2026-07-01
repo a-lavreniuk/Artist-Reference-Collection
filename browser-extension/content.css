@@ -1,0 +1,263 @@
+/* ARC-2 Extension hover save — scoped subset of arc-ui (Figma 1169:23991 / Button 1797:12202) */
+
+.arc-ext-save-anchor {
+  position: fixed;
+  z-index: 2147483646;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast) ease;
+}
+
+.arc-ext-save-anchor.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.arc-ext-save-anchor.arc-ext-root[data-btn-size='m'] {
+  --transition-fast: 150ms;
+  --radius-s: 8px;
+  --brand-50: #ffefea;
+  --brand-100: #ffded4;
+  --brand-250: #ffad94;
+  --brand-300: #ff9c7f;
+  --brand-550: #e75328;
+  --brand-600: #d04d26;
+  --brand-950: #37180e;
+  --green-650: #059669;
+  --green-600: #10b981;
+  --green-800: #047857;
+  --green-900: #065f46;
+  --btn-h: 32px;
+  --btn-radius: var(--radius-s);
+  --btn-icon-size: 16px;
+  --btn-brand-fill-default: var(--brand-550);
+  --btn-brand-fill-hover: var(--brand-600);
+  --btn-brand-fill-focus: var(--brand-550);
+  --btn-brand-fill-disabled: var(--brand-950);
+  --btn-brand-icon-default: var(--brand-250);
+  --btn-brand-icon-hover: var(--brand-50);
+  --btn-brand-icon-focus: var(--brand-250);
+  --btn-brand-icon-disabled: var(--brand-250);
+  --button-success-default: rgba(16, 185, 129, 0.12);
+  --button-success-hover: rgba(16, 185, 129, 0.18);
+  --button-success-disabled: rgba(16, 185, 129, 0.08);
+  --font-success-secondary-default: var(--green-800);
+  --font-success-secondary-hover: var(--green-650);
+  --font-success-secondary-disabled: var(--green-900);
+  --icons-success-hover: var(--green-600);
+}
+
+.arc-ext-save-anchor .btn {
+  box-sizing: border-box;
+  margin: 0;
+  border: 1px solid transparent;
+  padding: 0;
+  width: max-content;
+  max-width: 100%;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Google Sans', 'Inter', 'Segoe UI', sans-serif;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.arc-ext-save-anchor .btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.arc-ext-save-anchor .btn-icon-only {
+  width: var(--btn-h);
+  height: var(--btn-h);
+  border-radius: var(--btn-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc-ext-save-anchor .btn-icon-only__glyph {
+  width: var(--btn-icon-size);
+  height: var(--btn-icon-size);
+  color: var(--icons-white-default, var(--btn-brand-icon-default));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc-ext-save-anchor .btn-icon-only__glyph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.arc-ext-save-anchor .btn-brand {
+  background: var(--btn-brand-fill-default);
+  border-color: transparent;
+}
+
+.arc-ext-save-anchor .btn-brand:hover:not(:disabled):not(:focus-visible) {
+  background: var(--btn-brand-fill-hover);
+}
+
+.arc-ext-save-anchor .btn-brand:focus-visible:not(:disabled) {
+  background: var(--btn-brand-fill-focus);
+}
+
+.arc-ext-save-anchor .btn-brand:disabled {
+  background: var(--btn-brand-fill-disabled);
+  cursor: not-allowed;
+}
+
+.arc-ext-save-anchor .btn-brand .btn-icon-only__glyph {
+  color: var(--btn-brand-icon-default);
+}
+
+.arc-ext-save-anchor .btn-brand:hover:not(:disabled):not(:focus-visible) .btn-icon-only__glyph {
+  color: var(--btn-brand-icon-hover);
+}
+
+.arc-ext-save-anchor .btn-brand:focus-visible:not(:disabled) .btn-icon-only__glyph {
+  color: var(--btn-brand-icon-focus);
+}
+
+.arc-ext-save-anchor .btn-success {
+  background: var(--button-success-default);
+  border-color: transparent;
+}
+
+.arc-ext-save-anchor .btn-success:hover:not(:disabled) {
+  background: var(--button-success-hover);
+}
+
+.arc-ext-save-anchor .btn-success .btn-icon-only__glyph {
+  color: var(--font-success-secondary-default);
+}
+
+.arc-ext-save-anchor .btn-success:hover:not(:disabled) .btn-icon-only__glyph {
+  color: var(--icons-success-hover);
+}
+
+.arc-ext-save-anchor .btn-loading {
+  position: relative;
+  color: transparent !important;
+  cursor: wait;
+}
+
+.arc-ext-save-anchor .btn-loading .btn-icon-only__glyph {
+  visibility: hidden;
+}
+
+.arc-ext-save-anchor .btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--brand-300);
+  border-top-color: var(--brand-100);
+  border-radius: 50%;
+  animation: arc-ext-spin 0.8s linear infinite;
+}
+
+@keyframes arc-ext-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Toast — offline / queue (subset of arc-ui .toast) */
+.arc-ext-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  max-width: 320px;
+  background: #2a2a30;
+  color: #f0f0f4;
+  border: 1px solid #45454d;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+  font:
+    500 12px/16px 'Google Sans',
+    'Inter',
+    'Segoe UI',
+    sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.arc-ext-toast.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.arc-ext-toast__title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  color: #f0f0f4;
+}
+
+.arc-ext-toast__body,
+.arc-ext-toast__queue {
+  margin: 0;
+  font-weight: 400;
+  color: #a8a8b0;
+}
+
+.arc-ext-toast__queue {
+  color: #e8c468;
+}
+
+.arc-ext-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.arc-ext-toast__btn {
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.arc-ext-toast__btn--brand {
+  background: #e75328;
+  color: #ffded4;
+}
+
+.arc-ext-toast__btn--brand:hover {
+  background: #d04d26;
+}
+
+.arc-ext-toast__btn--ghost {
+  background: transparent;
+  color: #a8a8b0;
+  border-color: #45454d;
+}
+
+.arc-ext-toast__btn--ghost:hover {
+  background: #35353c;
+  color: #f0f0f4;
+}
+
+.arc-ext-toast__btn:focus-visible {
+  outline: 2px solid #ffad94;
+  outline-offset: 2px;
+}

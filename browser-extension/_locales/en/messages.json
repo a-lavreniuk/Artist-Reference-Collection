@@ -1,0 +1,81 @@
+{
+  "extensionName": {
+    "message": "Save to ARC"
+  },
+  "extensionDescription": {
+    "message": "Save images from the web to Artist Reference Collection (ARC)."
+  },
+  "contextMenuTitle": {
+    "message": "Add to library"
+  },
+  "hoverSaveLabel": {
+    "message": "Save to ARC"
+  },
+  "popupHoverHint": {
+    "message": "Hover an image on a page and click the save button, or use the context menu."
+  },
+  "statusConnected": {
+    "message": "ARC connected"
+  },
+  "statusOffline": {
+    "message": "ARC is not running"
+  },
+  "statusDisabled": {
+    "message": "Import API is disabled in ARC settings"
+  },
+  "statusSaved": {
+    "message": "Added to library"
+  },
+  "statusQueued": {
+    "message": "Queued — will send when ARC is available"
+  },
+  "statusQueueFull": {
+    "message": "Queue is full (50 items)"
+  },
+  "statusError": {
+    "message": "Could not save"
+  },
+  "statusDraining": {
+    "message": "Sending queued items…"
+  },
+  "statusDrained": {
+    "message": "Sent $COUNT$ item(s) from queue",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "offlineToastTitle": {
+    "message": "ARC is not running"
+  },
+  "offlineToastBody": {
+    "message": "The image was added to the extension queue (up to 50). When you open ARC with Import API enabled, the queue will be sent automatically."
+  },
+  "offlineToastQueue": {
+    "message": "In queue: $PENDING$ of $MAX$",
+    "placeholders": {
+      "pending": {
+        "content": "$1"
+      },
+      "max": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupOfflineExplain": {
+    "message": "ARC is not available on localhost:47896. You can still save images — they go into a local queue in the extension and are sent when ARC starts."
+  },
+  "popupOfflineQueueEmpty": {
+    "message": "Queue is empty."
+  },
+  "openArcButton": {
+    "message": "Open ARC"
+  },
+  "toastDismiss": {
+    "message": "Dismiss"
+  },
+  "disabledToastBody": {
+    "message": "Enable Import API in ARC Settings → Browser extension."
+  }
+}

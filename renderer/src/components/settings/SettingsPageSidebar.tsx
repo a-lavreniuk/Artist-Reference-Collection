@@ -19,6 +19,12 @@ const LIBRARY_SECTIONS = [
 
 const ADVANCED_SECTIONS = [
   { key: 'auto-import', to: '/settings/auto-import', label: 'Автоимпорт', iconClass: 'arc-icon-autoimport' },
+  {
+    key: 'browser-extension',
+    to: '/settings/browser-extension',
+    label: 'Расширение браузера',
+    iconClass: 'arc-icon-save'
+  },
   { key: 'ai-search', to: '/settings/ai-search', label: 'AI Поиск', iconClass: 'arc-icon-ai' }
 ] as const;
 

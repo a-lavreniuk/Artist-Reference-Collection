@@ -2,7 +2,17 @@ import { app, BrowserWindow, Menu, nativeTheme } from 'electron';
 import path from 'path';
 
 import { configureAppProfile } from './appProfile';
+import {
+  bindDeepLinkSingleInstance,
+  consumePendingDeepLink,
+  registerArcProtocolClient
+} from './deepLink';
+
 configureAppProfile();
+registerArcProtocolClient();
+if (!bindDeepLinkSingleInstance()) {
+  process.exit(0);
+}
 
 import { appIconPath } from './appIcon';
 import { registerDevToolsShortcuts, toggleDevTools, unregisterDevToolsShortcuts } from './devTools';
@@ -11,6 +21,7 @@ import { readLibraryRootSync, reconcileLibraryRootConfig } from './libraryRootCo
 import { refreshBrandingIconIfNeeded } from './libraryFolderIcon';
 import { refreshLibrarySessionSnapshotFromDisk } from './librarySessionSnapshot';
 import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
+import { startImportApiServer, stopImportApiServer } from './importApi/importApiHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
 import { applyStoredLaunchAtLogin, readAppPreferences, registerAppPreferencesIpc, shouldStartHiddenInTray } from './appPreferences';
@@ -143,6 +154,7 @@ app.whenReady().then(async () => {
   setLoadingSplashMilestone(15, 'Инициализация модулей…');
   await reconcileLibraryRootConfig();
   await startArcMediaServer(readLibraryRootSync());
+  await startImportApiServer();
   await refreshBrandingIconIfNeeded();
   registerArcIpc();
   registerAppPreferencesIpc();
@@ -175,6 +187,7 @@ app.whenReady().then(async () => {
 
   createAppTray();
   initArcUpdater();
+  consumePendingDeepLink();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -192,6 +205,7 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   void refreshLibrarySessionSnapshotFromDisk();
   shutdownArcMediaServer();
+  stopImportApiServer();
   destroyAppTray();
   unregisterDevToolsShortcuts();
   unregisterScreenshotShortcut();

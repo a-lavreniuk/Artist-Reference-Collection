@@ -319,6 +319,11 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:screenshot-saved', fn);
     return () => ipcRenderer.removeListener('arc:screenshot-saved', fn);
   },
+  onExtensionImportSaved: (cb: (detail: { cardIds: string[] }) => void) => {
+    const fn = (_: unknown, payload: { cardIds: string[] }) => cb(payload);
+    ipcRenderer.on('arc:extension-import-saved', fn);
+    return () => ipcRenderer.removeListener('arc:extension-import-saved', fn);
+  },
   openBugReportForm: () =>
     ipcRenderer.invoke('arc:bug-report-open') as Promise<
       | { ok: true; formUrl: string }

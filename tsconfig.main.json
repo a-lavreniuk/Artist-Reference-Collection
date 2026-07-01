@@ -6,5 +6,6 @@
     "module": "commonjs",
     "types": ["node"]
   },
-  "include": ["src/main/**/*"]
+  "include": ["src/main/**/*"],
+  "exclude": ["src/main/**/__tests__/**"]
 }

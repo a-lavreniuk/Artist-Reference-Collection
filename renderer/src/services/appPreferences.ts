@@ -38,6 +38,9 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  importApiEnabled: boolean;
+  importApiPrefixEnabled: boolean;
+  importApiPrefixText: string;
   aiSemanticSearchEnabled: boolean;
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -86,6 +89,9 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     autoImportEnabled: false,
     autoImportFolderPath: null,
     autoImportSourceFilesAction: 'ask',
+    importApiEnabled: true,
+    importApiPrefixEnabled: false,
+    importApiPrefixText: '',
     aiSemanticSearchEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
@@ -153,7 +159,13 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
       typeof raw.onboardingTourCompleted === 'boolean'
         ? raw.onboardingTourCompleted
         : d.onboardingTourCompleted,
-    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep)
+    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep),
+    importApiEnabled:
+      typeof raw.importApiEnabled === 'boolean' ? raw.importApiEnabled : d.importApiEnabled,
+    importApiPrefixEnabled:
+      typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
+    importApiPrefixText:
+      typeof raw.importApiPrefixText === 'string' ? raw.importApiPrefixText.trim().slice(0, 64) : d.importApiPrefixText
   };
 }
 

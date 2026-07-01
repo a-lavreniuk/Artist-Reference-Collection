@@ -404,9 +404,15 @@ export function getCurrentLibraryRoot(): string | null {
   return currentRoot;
 }
 
+export type ImportMediaOptions = {
+  linkUrl?: string;
+  name?: string;
+};
+
 export async function importMediaFile(
   libraryRoot: string,
-  sourceAbs: string
+  sourceAbs: string,
+  options?: ImportMediaOptions
 ): Promise<{ ok: true; row: ImportedMediaRow } | { ok: false; error: string }> {
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
@@ -480,6 +486,9 @@ export async function importMediaFile(
       }
     }
 
+    const linkUrlTrimmed = options?.linkUrl?.trim();
+    const nameTrimmed = options?.name?.trim();
+
     const cardJson: CardJsonV1 = {
       version: 1,
       id: cardId,
@@ -495,7 +504,9 @@ export async function importMediaFile(
       tagIds: [],
       collectionIds: [],
       ...(phash ? { phash } : {}),
-      ...(durationMs ? { durationMs } : {})
+      ...(durationMs ? { durationMs } : {}),
+      ...(linkUrlTrimmed ? { linkUrl: linkUrlTrimmed } : {}),
+      ...(nameTrimmed ? { name: nameTrimmed } : {})
     };
     await writeCardJson(root, cardJson);
 
@@ -506,8 +517,8 @@ export async function importMediaFile(
     db.prepare(
       `INSERT INTO cards (
         id, type, added_at, format, width, height, file_size, duration_ms, dominant_color, palette_json, phash_json,
-        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, name, link_url
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardId,
       type,
@@ -523,7 +534,9 @@ export async function importMediaFile(
       originalRel,
       thumbSRel,
       thumbMRel,
-      thumbLRel
+      thumbLRel,
+      cardJson.name ?? null,
+      cardJson.linkUrl ?? null
     );
 
     return {

@@ -1,6 +1,10 @@
 appId: com.arc.artist-reference-collection
 productName: ARC
 copyright: Copyright © ARC
+protocols:
+  - name: ARC
+    schemes:
+      - arc
 directories:
   output: dist-electron
   buildResources: build

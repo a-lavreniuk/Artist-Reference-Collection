@@ -4562,6 +4562,22 @@ html.arc-onboarding-page,
   gap: var(--s-2);
 }
 
+.arc-settings-browser-ext__hint {
+  margin: 0;
+}
+
+.arc-settings-browser-ext__hint + .arc-settings-browser-ext__hint {
+  margin-top: var(--s-2);
+}
+
+.arc-settings-browser-ext__prefix {
+  margin-top: var(--s-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  max-width: 280px;
+}
+
 .arc-settings-ai-panel__section {
   display: flex;
   flex-direction: column;

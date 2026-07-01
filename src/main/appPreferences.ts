@@ -39,6 +39,9 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  importApiEnabled: boolean;
+  importApiPrefixEnabled: boolean;
+  importApiPrefixText: string;
   aiSemanticSearchEnabled: boolean;
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -92,6 +95,9 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     autoImportEnabled: false,
     autoImportFolderPath: null,
     autoImportSourceFilesAction: 'ask',
+    importApiEnabled: true,
+    importApiPrefixEnabled: false,
+    importApiPrefixText: '',
     aiSemanticSearchEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
@@ -134,6 +140,11 @@ function sanitizeUiTheme(raw: unknown): UiThemePreference {
   return 'dark';
 }
 
+function sanitizeImportApiPrefixText(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  return raw.trim().slice(0, 64);
+}
+
 function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknown>): AppPreferencesV1 {
   const d = defaultAppPreferences();
 
@@ -166,6 +177,10 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         ? path.resolve(raw.autoImportFolderPath.trim())
         : d.autoImportFolderPath,
     autoImportSourceFilesAction: sanitizeImportAction(raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction),
+    importApiEnabled: typeof raw.importApiEnabled === 'boolean' ? raw.importApiEnabled : d.importApiEnabled,
+    importApiPrefixEnabled:
+      typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
+    importApiPrefixText: sanitizeImportApiPrefixText(raw.importApiPrefixText ?? d.importApiPrefixText),
     aiSemanticSearchEnabled:
       typeof raw.aiSemanticSearchEnabled === 'boolean' ? raw.aiSemanticSearchEnabled : d.aiSemanticSearchEnabled,
     aiModelTier: sanitizeAiModelTier(raw.aiModelTier ?? d.aiModelTier),
@@ -272,6 +287,15 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = sanitizeImportAction(patch.autoImportSourceFilesAction);
+  }
+  if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
+    next.importApiEnabled = patch.importApiEnabled;
+  }
+  if ('importApiPrefixEnabled' in patch && typeof patch.importApiPrefixEnabled === 'boolean') {
+    next.importApiPrefixEnabled = patch.importApiPrefixEnabled;
+  }
+  if ('importApiPrefixText' in patch) {
+    next.importApiPrefixText = sanitizeImportApiPrefixText(patch.importApiPrefixText);
   }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
@@ -385,6 +409,14 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
   if ('autoImportEnabled' in patch || 'autoImportFolderPath' in patch) {
     const { restartAutoImportWatcher } = await import('./autoImportWatcher');
     restartAutoImportWatcher();
+  }
+  if (
+    'importApiEnabled' in patch ||
+    'importApiPrefixEnabled' in patch ||
+    'importApiPrefixText' in patch
+  ) {
+    const { restartImportApiServer } = await import('./importApi/importApiHost');
+    await restartImportApiServer();
   }
   return next;
 }

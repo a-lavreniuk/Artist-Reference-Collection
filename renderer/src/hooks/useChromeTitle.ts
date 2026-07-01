@@ -12,6 +12,7 @@ const SETTINGS_TITLES: Record<string, string> = {
   '/settings/backup': 'Резервная копия',
   '/settings/integrity': 'Проверка целостности',
   '/settings/auto-import': 'Автоимпорт',
+  '/settings/browser-extension': 'Расширение браузера',
   '/settings/ai-search': 'AI Поиск',
   '/settings/updates': 'Обновления',
   '/settings/ui-kit': 'UI-Kit'

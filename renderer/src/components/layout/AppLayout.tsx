@@ -8,6 +8,7 @@ import PendingRestoreModal from './PendingRestoreModal';
 import LibraryRelocatedHost from './LibraryRelocatedHost';
 import ImportHost from '../import/ImportHost';
 import AutoImportHost from '../import/AutoImportHost';
+import ExtensionImportHost from '../import/ExtensionImportHost';
 import NotificationHost from '../notifications/NotificationHost';
 import ScreenshotHost from '../screenshot/ScreenshotHost';
 import BugReportWidget from '../bug-report/BugReportWidget';
@@ -87,6 +88,7 @@ export default function AppLayout() {
     <NotificationHost>
     <ScreenshotHost>
     <ImportHost>
+      <ExtensionImportHost>
       <AutoImportHost>
       <main className="arc-navbar-shell">
         <MaintenanceBanner />
@@ -102,6 +104,7 @@ export default function AppLayout() {
         <InterfaceTourHost />
       </main>
       </AutoImportHost>
+      </ExtensionImportHost>
     </ImportHost>
     </ScreenshotHost>
     </NotificationHost>

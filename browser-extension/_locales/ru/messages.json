@@ -1,0 +1,81 @@
+{
+  "extensionName": {
+    "message": "Save to ARC"
+  },
+  "extensionDescription": {
+    "message": "Сохраняйте изображения с сайтов в Artist Reference Collection (ARC)."
+  },
+  "contextMenuTitle": {
+    "message": "Добавить в библиотеку"
+  },
+  "hoverSaveLabel": {
+    "message": "Сохранить в ARC"
+  },
+  "popupHoverHint": {
+    "message": "Наведите курсор на изображение и нажмите кнопку сохранения или используйте контекстное меню."
+  },
+  "statusConnected": {
+    "message": "ARC подключён"
+  },
+  "statusOffline": {
+    "message": "ARC не запущен"
+  },
+  "statusDisabled": {
+    "message": "Import API выключен в настройках ARC"
+  },
+  "statusSaved": {
+    "message": "Добавлено в библиотеку"
+  },
+  "statusQueued": {
+    "message": "В очереди — отправим, когда ARC будет доступен"
+  },
+  "statusQueueFull": {
+    "message": "Очередь заполнена (50 элементов)"
+  },
+  "statusError": {
+    "message": "Не удалось сохранить"
+  },
+  "statusDraining": {
+    "message": "Отправка очереди…"
+  },
+  "statusDrained": {
+    "message": "Отправлено из очереди: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "offlineToastTitle": {
+    "message": "ARC не запущен"
+  },
+  "offlineToastBody": {
+    "message": "Изображение добавлено в очередь расширения (до 50). Когда вы откроете ARC с включённым Import API, очередь отправится автоматически."
+  },
+  "offlineToastQueue": {
+    "message": "В очереди: $PENDING$ из $MAX$",
+    "placeholders": {
+      "pending": {
+        "content": "$1"
+      },
+      "max": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupOfflineExplain": {
+    "message": "ARC недоступен на localhost:47896. Сохранять изображения можно — они попадут в локальную очередь расширения и отправятся после запуска ARC."
+  },
+  "popupOfflineQueueEmpty": {
+    "message": "Очередь пуста."
+  },
+  "openArcButton": {
+    "message": "Открыть ARC"
+  },
+  "toastDismiss": {
+    "message": "Закрыть"
+  },
+  "disabledToastBody": {
+    "message": "Включите Import API в настройках ARC → Расширение браузера."
+  }
+}

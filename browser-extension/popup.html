@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Save to ARC</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="arc-ext-popup">
+      <h1 class="arc-ext-popup__title">Save to ARC</h1>
+      <p id="arc-status" class="arc-ext-popup__status" role="status" aria-live="polite"></p>
+      <div id="arc-offline-panel" class="arc-ext-popup__offline" hidden>
+        <p id="arc-offline-text" class="arc-ext-popup__offline-text"></p>
+        <p id="arc-queue-info" class="arc-ext-popup__queue-info"></p>
+        <button type="button" id="arc-open-app" class="arc-ext-popup__cta"></button>
+      </div>
+      <p id="arc-hint" class="arc-ext-popup__hint"></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
