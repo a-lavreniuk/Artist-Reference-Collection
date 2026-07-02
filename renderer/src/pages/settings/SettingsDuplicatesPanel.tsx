@@ -3,7 +3,7 @@ import {
   addSkippedDuplicatePair,
   permanentDeleteCard,
   getDuplicateSimilarityThresholdPct,
-  listCardsSorted,
+  listCardsPage,
   setDuplicateSimilarityThresholdPct,
   type CardRecord
 } from '../../services/db';
@@ -109,7 +109,17 @@ export default function SettingsDuplicatesPanel() {
               return `${a}:${b}`;
             })
           );
-          const images = (await listCardsSorted('all')).filter((c) => c.type === 'image').slice(0, 200);
+          const images: Awaited<ReturnType<typeof listCardsPage>> = [];
+          let scanOffset = 0;
+          while (images.length < 200) {
+            const chunk = await listCardsPage({ offset: scanOffset, limit: 100, libraryScope: 'all' });
+            if (chunk.length === 0) break;
+            for (const c of chunk) {
+              if (c.type === 'image') images.push(c);
+              if (images.length >= 200) break;
+            }
+            scanOffset += chunk.length;
+          }
           const storedPhash = await storageCardsPhash();
           const phashById = new Map(storedPhash.map((x) => [x.id, x.phash]));
           const fps = new Map<string, ImageDupFingerprint | null>();

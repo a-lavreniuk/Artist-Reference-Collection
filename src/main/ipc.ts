@@ -9,6 +9,7 @@ import {
   setActiveMediaTabAndSync,
   syncArcMediaServerLibraryRoot
 } from './media/mediaServerHost';
+import { registerMediaStagingToken } from './media/mediaStagingTokens';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
 import { migrateLibraryToFolder } from './libraryMigrate';
 import { appendHistory, clearHistory, readHistory, type HistorySegment } from './libraryHistory';
@@ -383,6 +384,11 @@ export function registerArcIpc(): void {
     const paths = relativePaths.filter((p): p is string => typeof p === 'string');
     const root = readLibraryRootSync();
     return resolvePathsToMediaUrls(paths, root, isVideoExt, getArcMediaServerOrigin());
+  });
+
+  ipcMain.handle('arc:register-media-staging-token', async (_e, absPath: unknown) => {
+    if (typeof absPath !== 'string' || !absPath.trim()) return null;
+    return registerMediaStagingToken(absPath.trim());
   });
 
   ipcMain.handle('arc:delete-file-if-inside-library', async (_e, relativePath: unknown) => {

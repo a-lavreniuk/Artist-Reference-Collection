@@ -13,8 +13,10 @@ const PROGRESS_TICK_MS = 40;
 const LOADING_PHASES = {
   startup: 'Запуск приложения…',
   modules: 'Инициализация модулей…',
+  database: 'Подготовка базы данных…',
   ui: 'Загрузка интерфейса…',
   data: 'Подготовка данных…',
+  filters: 'Подготовка фильтров…',
   gallery: 'Подготовка галереи…',
   interface: 'Подготовка интерфейса…'
 } as const;

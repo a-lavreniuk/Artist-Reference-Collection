@@ -103,6 +103,7 @@ declare global {
       storageCountCards: (
         filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
       ) => Promise<number>;
+      storageCountCardsWithTagIds: (tagIds: string[]) => Promise<number>;
       storageGalleryFilterStats: (payload: {
         libraryScope?: 'all' | 'untagged' | 'trash';
         selectedTagIds?: string[];
@@ -172,6 +173,7 @@ declare global {
       onMigrationProgress: (cb: (p: { phase: string; current: number; total: number; message?: string }) => void) => () => void;
       toFileUrl: (path: string) => Promise<string | null>;
       toFileUrls: (paths: string[]) => Promise<Record<string, string>>;
+      registerMediaStagingToken: (absPath: string) => Promise<string | null>;
       deleteFileIfInsideLibrary: (relativePath: string) => Promise<void>;
       showItemInFolder: (relativePath: string) => Promise<void>;
       openExternalUrl: (url: string) => Promise<{ ok: true } | { ok: false; error?: string }>;

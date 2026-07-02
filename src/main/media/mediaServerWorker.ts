@@ -9,9 +9,15 @@ import {
 
 type MediaSectionTab = 'gallery' | 'collections' | 'moodboard';
 
+type StagingEntry = {
+  absPath: string;
+  expiresAt: number;
+};
+
 let libraryRoot: string | null = null;
 let activeTab: MediaSectionTab | null = 'gallery';
 let mediaGeneration = 0;
+const stagingByToken = new Map<string, StagingEntry>();
 
 function isSectionAllowed(sect: string | null): boolean {
   if (!sect) return true;
@@ -48,7 +54,8 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
   const abs = resolveMediaAbsFromParams(
     libraryRoot,
     parsed.searchParams.get('rel'),
-    parsed.searchParams.get('abs')
+    parsed.searchParams.get('stg'),
+    stagingByToken
   );
   if (!abs) {
     reject(res, 404);
@@ -107,9 +114,17 @@ process.parentPort.on('message', (event: { data: unknown }) => {
   const msg = event.data as
     | { type: 'init'; libraryRoot: string | null }
     | { type: 'library-root'; libraryRoot: string | null }
-    | { type: 'active-tab'; tab: MediaSectionTab | null; generation: number };
+    | { type: 'active-tab'; tab: MediaSectionTab | null; generation: number }
+    | { type: 'staging-register'; token: string; absPath: string; expiresAt: number };
 
   if (!msg || typeof msg !== 'object' || !('type' in msg)) return;
+
+  if (msg.type === 'staging-register') {
+    if (typeof msg.token === 'string' && typeof msg.absPath === 'string' && typeof msg.expiresAt === 'number') {
+      stagingByToken.set(msg.token, { absPath: msg.absPath, expiresAt: msg.expiresAt });
+    }
+    return;
+  }
 
   if (msg.type === 'init' || msg.type === 'library-root') {
     libraryRoot = msg.libraryRoot;

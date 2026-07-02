@@ -164,9 +164,14 @@ export async function getCategoryStats(categoryId: string): Promise<CategoryStat
 
   let cardsWithTags = 0;
   if (tagIds.size > 0) {
-    const { listCardsSorted } = await import('./cards');
-    const cards = await listCardsSorted('all');
-    cardsWithTags = cards.filter((c) => c.tagIds.some((tid) => tagIds.has(tid))).length;
+    const b = await resolveBackend();
+    if (b === 'file') {
+      cardsWithTags = await storage.storageCountCardsWithTagIds([...tagIds]);
+    } else {
+      const { listCardsSorted } = await import('./cards');
+      const cards = await listCardsSorted('all');
+      cardsWithTags = cards.filter((c) => c.tagIds.some((tid) => tagIds.has(tid))).length;
+    }
   }
 
   return {

@@ -2,6 +2,7 @@ import type { CardRecord } from '../arcSchema';
 import { createEmptyMoodboardBoard } from '../arcSchema';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import * as storage from '../storageClient';
+import { listAllCardsPaginated } from './listAllCardsPaginated';
 import { resolveBackend, STORAGE_KEYS, tryAppendLibraryHistory } from './backend';
 import { historyCardAction, historyQuotedEntity } from '../historySegments';
 import {
@@ -39,10 +40,7 @@ async function persistCards(list: CardRecord[]): Promise<void> {
 export async function listCardsSorted(filter: 'all' | 'images' | 'videos'): Promise<CardRecord[]> {
   const b = await resolveBackend();
   if (b === 'file') {
-    const all = await storage.storageListCards({
-      offset: 0,
-      limit: 1_000_000
-    });
+    const all = await listAllCardsPaginated();
     return all.filter((c) => {
       if (filter === 'images') return c.type === 'image';
       if (filter === 'videos') return c.type === 'video';

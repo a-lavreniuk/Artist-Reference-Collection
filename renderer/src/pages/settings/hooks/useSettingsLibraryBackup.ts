@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DemoAlertVariant } from '../../../components/layout/DemoAlert';
-import { listCardsSorted } from '../../../services/db';
+import { listAllCardsPaginated } from '../../../services/db';
 import { formatBytesRoundedToMb } from '../../../utils/formatBytes';
 import { computeLibraryMediaBytesFromCards } from '../../../utils/computeLibraryMediaBytesFromCards';
 import { type BackupPart } from './settingsLibraryTypes';
@@ -19,7 +19,7 @@ export function useSettingsLibraryBackup() {
       return;
     }
     try {
-      const cards = await listCardsSorted('all');
+      const cards = await listAllCardsPaginated();
       setBytesTotal(await computeLibraryMediaBytesFromCards(window.arc, cards));
     } catch {
       setBytesTotal(0);

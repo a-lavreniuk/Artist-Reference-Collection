@@ -47,11 +47,8 @@ import {
   invalidateGalleryFilterBoundariesCache
 } from './galleryFilterBoundariesCache';
 import { invalidateGalleryFilterStatsCache } from './galleryFilterStatsCache';
-import {
-  buildShuffleCacheKey,
-  getShuffledPageIds,
-  invalidateShuffleIdCache
-} from './shuffleIdCache';
+import { invalidateShuffleIdCache } from './shuffleIdCache';
+import { ensureShuffleSqlFunctions } from './shuffleOrder';
 import { invalidateScoredSearchCache } from './scoredSearchCache';
 import { clearAiResultsCache } from '../ai/aiResultsCache';
 import { ensureDimensionsBackfill, ensureVideoDurationBackfill } from './galleryFilterBackfill';
@@ -587,27 +584,13 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
   if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
 
   if (sort.field === 'shuffle') {
-    const whereClause = wh.length ? ` WHERE ${wh.join(' AND ')}` : '';
-    const idSql = `SELECT c.id FROM cards c${whereClause}`;
-    const shuffleKey = buildShuffleCacheKey(whereClause, binds, sort.shuffleSeed ?? 0);
-    const pageIds = getShuffledPageIds(
-      shuffleKey,
-      () =>
-        (db.prepare(idSql).all(...binds) as { id: string }[]).map((r) => String(r.id)),
-      params.offset,
-      params.limit
-    );
-    if (pageIds.length === 0) return [];
-
-    const placeholders = pageIds.map(() => '?').join(',');
-    const rows = db
-      .prepare(`SELECT c.* FROM cards c WHERE c.id IN (${placeholders})`)
-      .all(...pageIds) as Record<string, unknown>[];
-    const byId = new Map(rows.map((r) => [String(r.id), r]));
-    const ordered = pageIds
-      .map((id) => byId.get(id))
-      .filter((r): r is Record<string, unknown> => r != null);
-    return indexCardRowsWithRelations(db, ordered);
+    ensureShuffleSqlFunctions(db);
+    const shuffleSeed = sort.shuffleSeed ?? 0;
+    if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
+    sql += ' ORDER BY arc_shuffle_key(c.id, ?) ASC LIMIT ? OFFSET ?';
+    binds.push(shuffleSeed, params.limit, params.offset);
+    const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
+    return indexCardRowsWithRelations(db, rows);
   }
 
   sql += ` ${buildGallerySortSql(sort, 'c')} LIMIT ? OFFSET ?`;
@@ -646,6 +629,22 @@ export function countTrashedCards(libraryRoot: string): number {
   const db = openLibraryDb(libraryRoot);
   return (db.prepare('SELECT COUNT(*) AS n FROM cards WHERE COALESCE(is_deleted, 0) = 1').get() as { n: number })
     .n;
+}
+
+/** Карточки (не в корзине), у которых есть хотя бы одна метка из списка. */
+export function countCardsWithAnyTagIds(libraryRoot: string, tagIds: readonly string[]): number {
+  if (tagIds.length === 0) return 0;
+  const db = openLibraryDb(libraryRoot);
+  const placeholders = tagIds.map(() => '?').join(',');
+  const row = db
+    .prepare(
+      `SELECT COUNT(DISTINCT c.id) AS n
+       FROM cards c
+       INNER JOIN card_tags ct ON ct.card_id = c.id
+       WHERE COALESCE(c.is_deleted, 0) = 0 AND ct.tag_id IN (${placeholders})`
+    )
+    .get(...tagIds) as { n: number };
+  return row.n ?? 0;
 }
 
 export async function updateCardInStorage(

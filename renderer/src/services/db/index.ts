@@ -86,6 +86,8 @@ export {
   deleteCard
 } from './cards';
 
+export { LIST_CARDS_PAGE_SIZE, listAllCardsPaginated } from './listAllCardsPaginated';
+
 export {
   isLibraryConfigured,
   getNavbarMetrics,

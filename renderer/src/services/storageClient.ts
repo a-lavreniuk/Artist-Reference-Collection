@@ -95,6 +95,10 @@ export async function storageCountCards(
   return arc().storageCountCards({ filter, libraryScope });
 }
 
+export async function storageCountCardsWithTagIds(tagIds: string[]): Promise<number> {
+  return arc().storageCountCardsWithTagIds(tagIds);
+}
+
 export async function storageListCategories(): Promise<CategoryRecord[]> {
   return arc().storageListCategories();
 }

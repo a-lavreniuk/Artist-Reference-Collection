@@ -1,4 +1,4 @@
-import { mkdir, rm } from 'fs/promises';
+import { mkdir, rm, stat } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 import { app } from 'electron';
@@ -71,12 +71,28 @@ export function similarQueryDir(): string {
   return path.join(app.getPath('userData'), 'similar-query');
 }
 
+const ALLOWED_STAGE_IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']);
+
 export async function stageSimilarQueryFile(sourceAbsPath: string): Promise<string> {
+  const resolved = path.resolve(sourceAbsPath.trim());
+  let fileStat;
+  try {
+    fileStat = await stat(resolved);
+  } catch {
+    throw new Error('Файл не найден.');
+  }
+  if (!fileStat.isFile()) {
+    throw new Error('Указанный путь не является файлом.');
+  }
+  const ext = path.extname(resolved).toLowerCase();
+  if (!ALLOWED_STAGE_IMAGE_EXT.has(ext)) {
+    throw new Error('Неподдерживаемый формат изображения.');
+  }
   const dir = similarQueryDir();
   await mkdir(dir, { recursive: true });
-  const ext = path.extname(sourceAbsPath).toLowerCase() || '.jpg';
-  const dest = path.join(dir, `query-${Date.now()}${ext}`);
-  const input = sharp(sourceAbsPath);
+  const destExt = ext || '.jpg';
+  const dest = path.join(dir, `query-${Date.now()}${destExt}`);
+  const input = sharp(resolved);
   const meta = await input.metadata();
   if (!meta.width || !meta.height) {
     throw new Error('Не удалось прочитать изображение.');

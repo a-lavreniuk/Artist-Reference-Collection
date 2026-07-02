@@ -23,7 +23,7 @@ import type { CategoryRecord, NavbarMetrics, TagRecord } from './types';
 import type { CollectionRecord, CardRecord } from '../arcSchema';
 import { getAllCategories } from './categories';
 import { getAllCollections } from './collections';
-import { listCardsSorted } from './cards';
+import { listAllCardsPaginated } from './listAllCardsPaginated';
 
 export async function isLibraryConfigured(): Promise<boolean> {
   if (!hasArcApi()) return false;
@@ -98,7 +98,7 @@ export async function loadLibraryMetadataSnapshot(): Promise<ArcMetadataV1 | nul
   const [categories, tagsRaw, cards, collections, moodboard] = await Promise.all([
     getAllCategories(),
     storage.storageListAllTags(),
-    listCardsSorted('all'),
+    listAllCardsPaginated(),
     getAllCollections(),
     storage.storageGetMoodboard()
   ]);

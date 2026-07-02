@@ -4,7 +4,7 @@ import {
   getAllCategories,
   getNavbarMetrics,
   getTagsByCategory,
-  listCardsSorted,
+  listAllCardsPaginated,
   deleteTag,
   type CategoryRecord,
   type TagRecord
@@ -69,12 +69,8 @@ export default function SettingsStatisticsPanel() {
         return;
       }
 
-      const cards = await listCardsSorted('all');
-      const trashCards = await storage.storageListCards({
-        offset: 0,
-        limit: 1_000_000,
-        libraryScope: 'trash'
-      });
+      const cards = await listAllCardsPaginated({ libraryScope: 'all' });
+      const trashCards = await listAllCardsPaginated({ libraryScope: 'trash' });
 
       const { imageBytes, videoBytes } = await computeSplitLibraryMediaBytesFromCards(window.arc, cards);
       const trashBytes = await computeTrashBytesFromCards(window.arc, trashCards);

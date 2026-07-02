@@ -15,8 +15,9 @@ function setWindowRoundedCorners(win: BrowserWindow, rounded: boolean): void {
   w.setRoundedCorners?.(rounded);
 }
 
-export function needsOnboardingSetup(libraryRoot: string | null, _onboardingSetupCompleted: boolean): boolean {
-  return !libraryRoot;
+export function needsOnboardingSetup(libraryRoot: string | null, onboardingSetupCompleted: boolean): boolean {
+  if (!libraryRoot) return true;
+  return !onboardingSetupCompleted;
 }
 
 export function applyMainWindowOnboardingMode(win: BrowserWindow): void {

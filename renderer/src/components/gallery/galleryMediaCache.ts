@@ -49,6 +49,9 @@ export function cardThumbRel(
 /** Совпадает с main/toFileUrlHelper — URL для индексных путей без IPC. */
 const LIBRARY_CARD_MEDIA_REL = /^cards\/[^/]+\/(?:thumb_[sml]|original)\.[a-z0-9]+$/i;
 
+/** LRU-кэш URL превью; верхняя граница ~2× лимита карточек в памяти галереи. */
+const MAX_MEDIA_URL_CACHE_ENTRIES = 1024;
+
 const urlByRel = new Map<string, string>();
 
 let cachedMediaServerOrigin: string | null | undefined;
@@ -79,35 +82,57 @@ export function buildLibraryMediaUrl(rel: string, sect?: MediaSectionTab): strin
   return sect ? `${base}&sect=${sect}` : base;
 }
 
-/** Абсолютный путь вне библиотеки — через ?abs= (как main/toFileUrlHelper). */
-export function buildAbsMediaUrl(absPath: string): string | null {
+/** Абсолютный путь вне библиотеки — через staging-токен (?stg=), выданный main. */
+export async function buildAbsMediaUrl(absPath: string): Promise<string | null> {
   if (!absPath?.trim()) return null;
+  if (!window.arc?.registerMediaStagingToken) return null;
+  const token = await window.arc.registerMediaStagingToken(absPath.trim());
+  if (!token) return null;
   const u = new URL(`${mediaServerOrigin().replace(/\/$/, '')}/`);
-  u.searchParams.set('abs', absPath);
+  u.searchParams.set('stg', token);
   return u.href;
+}
+
+function setMediaUrlCache(key: string, href: string): void {
+  if (urlByRel.has(key)) urlByRel.delete(key);
+  urlByRel.set(key, href);
+  while (urlByRel.size > MAX_MEDIA_URL_CACHE_ENTRIES) {
+    const oldest = urlByRel.keys().next().value;
+    if (!oldest) break;
+    urlByRel.delete(oldest);
+  }
 }
 
 function rememberMediaUrl(rel: string, href: string, sect?: MediaSectionTab): void {
   const key = mediaCacheKey(rel, sect);
-  urlByRel.set(key, href);
+  setMediaUrlCache(key, href);
   const stable = rel.replace(/\\/g, '/');
-  if (stable !== rel) urlByRel.set(mediaCacheKey(stable, sect), href);
+  if (stable !== rel) setMediaUrlCache(mediaCacheKey(stable, sect), href);
   if (!sect) {
-    urlByRel.set(rel, href);
-    if (stable !== rel) urlByRel.set(stable, href);
+    setMediaUrlCache(rel, href);
+    if (stable !== rel) setMediaUrlCache(stable, href);
   }
+}
+
+function readMediaUrlCache(key: string): string | null {
+  const href = urlByRel.get(key);
+  if (!href) return null;
+  setMediaUrlCache(key, href);
+  return href;
 }
 
 function peekCachedMediaUrl(rel: string, sect?: MediaSectionTab): string | null {
   const stable = rel.replace(/\\/g, '/');
   if (sect) {
-    return urlByRel.get(mediaCacheKey(rel, sect)) ?? urlByRel.get(mediaCacheKey(stable, sect));
+    return (
+      readMediaUrlCache(mediaCacheKey(rel, sect)) ?? readMediaUrlCache(mediaCacheKey(stable, sect))
+    );
   }
-  return urlByRel.get(rel) ?? urlByRel.get(stable) ?? null;
+  return readMediaUrlCache(rel) ?? readMediaUrlCache(stable);
 }
 
 export function peekMediaUrl(rel: string): string | null {
-  return urlByRel.get(rel) ?? null;
+  return readMediaUrlCache(rel);
 }
 
 export function cardOriginalRel(card: CardRecord): string | null {
@@ -142,7 +167,7 @@ export async function resolveCardDetailPreviewUrls(
 export async function resolveMediaUrl(rel: string): Promise<string | null> {
   if (!rel || rel === 'legacy') return null;
   const stable = rel.replace(/\\/g, '/');
-  const cached = urlByRel.get(rel) ?? urlByRel.get(stable);
+  const cached = readMediaUrlCache(rel) ?? readMediaUrlCache(stable);
   if (cached) return cached;
 
   const local = buildLibraryMediaUrl(rel);

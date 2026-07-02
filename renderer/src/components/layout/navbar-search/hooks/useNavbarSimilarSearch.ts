@@ -59,7 +59,7 @@ export function useNavbarSimilarSearch(
       }
       if (similarRef.kind === 'upload') {
         const path = getSimilarUploadPath();
-        if (!cancelled) setPreviewSrc(path ? buildAbsMediaUrl(path) : null);
+        if (!cancelled) setPreviewSrc(path ? await buildAbsMediaUrl(path) : null);
         return;
       }
       const card = await getCardById(similarRef.cardId);
@@ -112,7 +112,7 @@ export function useNavbarSimilarSearch(
     (stagedPath: string, crop: SimilarCropRect = FULL_SIMILAR_CROP) => {
       setSimilarUploadPath(stagedPath);
       setPanelCrop(crop);
-      setPreviewSrc(buildAbsMediaUrl(stagedPath));
+      void buildAbsMediaUrl(stagedPath).then((href) => setPreviewSrc(href));
       applySimilarSearch({ kind: 'upload' }, crop);
     },
     [applySimilarSearch]

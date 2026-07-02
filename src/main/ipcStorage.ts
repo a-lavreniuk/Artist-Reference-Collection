@@ -11,6 +11,7 @@ import {
 import {
   addSkippedDuplicatePair,
   countCards,
+  countCardsWithAnyTagIds,
   deleteCardFromStorage,
   emptyTrashFromStorage,
   restoreCardFromStorage,
@@ -66,6 +67,36 @@ import {
 } from './libraryFilenames';
 import type { ArcMoodboardV1, ArcSystemV1, CategoryRow, CollectionRow, ListCardsParams, LibraryScope, TagRow } from './storage/types';
 import { readLibraryRootSync } from './libraryRootConfig';
+
+const MAX_LIST_CARDS_SYNC_LIMIT = 500;
+
+function sanitizeListCardsParams(params: unknown): ListCardsParams {
+  const p = params && typeof params === 'object' ? (params as Record<string, unknown>) : {};
+  const offset = typeof p.offset === 'number' && p.offset >= 0 ? Math.floor(p.offset) : 0;
+  const rawLimit = typeof p.limit === 'number' && p.limit > 0 ? Math.floor(p.limit) : 50;
+  const limit = Math.min(rawLimit, MAX_LIST_CARDS_SYNC_LIMIT);
+  const libraryScope: LibraryScope =
+    p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
+  return {
+    offset,
+    limit,
+    libraryScope,
+    selectedTagIds: Array.isArray(p.selectedTagIds)
+      ? p.selectedTagIds.filter((x): x is string => typeof x === 'string')
+      : undefined,
+    cardIdExact: typeof p.cardIdExact === 'string' ? p.cardIdExact : null,
+    collectionId: typeof p.collectionId === 'string' ? p.collectionId : null,
+    moodboardCardIds: Array.isArray(p.moodboardCardIds)
+      ? p.moodboardCardIds.filter((x): x is string => typeof x === 'string')
+      : null,
+    advancedFilters:
+      p.advancedFilters && typeof p.advancedFilters === 'object'
+        ? (p.advancedFilters as ListCardsParams['advancedFilters'])
+        : undefined,
+    sort:
+      p.sort && typeof p.sort === 'object' ? (p.sort as ListCardsParams['sort']) : undefined
+  };
+}
 
 let storageIpcRegistered = false;
 
@@ -186,12 +217,10 @@ export function registerStorageIpc(
     await ensureLibraryReady(root);
     const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
     void refreshLibrarySessionSnapshotFromDisk();
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        listCardsFromDb(root, { offset: 0, limit: 1, libraryScope: 'all' });
-      } catch {
-        /* прогрев SQLite на main */
-      }
+    try {
+      listCardsFromDb(root, { offset: 0, limit: 1, libraryScope: 'all' });
+    } catch {
+      /* прогрев SQLite на main */
     }
     return { ok: true as const };
   });
@@ -228,7 +257,7 @@ export function registerStorageIpc(
   ipcMain.on('arc:storage-list-cards-sync', (event, params: unknown) => {
     enterListCardsHandler();
     try {
-      const p = params as ListCardsParams;
+      const p = sanitizeListCardsParams(params);
       const root = readLibraryRootSync();
       if (!root || !isLibraryRootReady(root)) {
         event.returnValue = [];
@@ -261,7 +290,11 @@ export function registerStorageIpc(
     assertNotMaintenance();
     const root = await readLibraryRoot();
     if (!root) throw new Error('Библиотека не выбрана');
-    const p = payload as {
+    if (!payload || typeof payload !== 'object') throw new Error('Неверные данные');
+    const raw = payload as { cardId?: unknown; patch?: unknown };
+    if (typeof raw.cardId !== 'string' || !raw.cardId.trim()) throw new Error('Неверные данные');
+    if (!raw.patch || typeof raw.patch !== 'object') throw new Error('Неверные данные');
+    const p = raw as {
       cardId: string;
       patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string };
     };
@@ -409,6 +442,14 @@ export function registerStorageIpc(
     const scope =
       p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
     return countCards(root, f, scope);
+  });
+
+  ipcMain.handle('arc:storage-count-cards-with-tag-ids', async (_e, tagIds: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root) return 0;
+    if (!Array.isArray(tagIds) || !tagIds.every((x) => typeof x === 'string')) return 0;
+    await ensureLibraryReady(root);
+    return countCardsWithAnyTagIds(root, tagIds as string[]);
   });
 
   ipcMain.handle('arc:storage-list-categories', async () => {

@@ -21,6 +21,7 @@ import { readLibraryRootSync, reconcileLibraryRootConfig } from './libraryRootCo
 import { refreshBrandingIconIfNeeded } from './libraryFolderIcon';
 import { refreshLibrarySessionSnapshotFromDisk } from './librarySessionSnapshot';
 import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
+import { clearMediaStagingTokens, registerMediaStagingToken } from './media/mediaStagingTokens';
 import { startImportApiServer, stopImportApiServer } from './importApi/importApiHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
@@ -51,6 +52,7 @@ import {
 } from './loadingSplash';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
 import { registerAiIpc, scheduleIdleIndexing, shutdownAiWorker } from './ipcAi';
+import { ensureLibraryReady } from './storage/libraryStorage';
 import {
   clearSessionWindowSize,
   setSessionWindowSize,
@@ -160,6 +162,15 @@ app.whenReady().then(async () => {
 
   setLoadingSplashMilestone(15, 'Инициализация модулей…');
   await reconcileLibraryRootConfig();
+  const libraryRootEarly = readLibraryRootSync();
+  if (libraryRootEarly) {
+    try {
+      await ensureLibraryReady(libraryRootEarly);
+      setLoadingSplashMilestone(25, 'Подготовка базы данных…');
+    } catch (err) {
+      console.error('[ARC] ensureLibraryReady at startup:', err);
+    }
+  }
   await startArcMediaServer(readLibraryRootSync());
   await refreshBrandingIconIfNeeded();
   registerArcIpc();
@@ -205,7 +216,11 @@ app.whenReady().then(async () => {
       }
     }
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(needsOnboardingSetup(readLibraryRootSync(), prefs.onboardingSetupCompleted));
+      void readAppPreferences().then((currentPrefs) => {
+        createWindow(
+          needsOnboardingSetup(readLibraryRootSync(), currentPrefs.onboardingSetupCompleted)
+        );
+      });
     }
   });
 });
@@ -219,6 +234,7 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   void refreshLibrarySessionSnapshotFromDisk();
   shutdownArcMediaServer();
+  clearMediaStagingTokens();
   stopImportApiServer();
   destroyAppTray();
   unregisterDevToolsShortcuts();

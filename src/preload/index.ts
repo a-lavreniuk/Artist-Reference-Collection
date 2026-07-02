@@ -95,6 +95,8 @@ contextBridge.exposeInMainWorld('arc', {
   storageEmptyTrash: () => ipcRenderer.invoke('arc:storage-empty-trash') as Promise<number>,
   storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
     ipcRenderer.invoke('arc:storage-count-cards', payload),
+  storageCountCardsWithTagIds: (tagIds: string[]) =>
+    ipcRenderer.invoke('arc:storage-count-cards-with-tag-ids', tagIds) as Promise<number>,
   storageGalleryFilterStats: (payload: unknown) =>
     ipcRenderer.invoke('arc:storage-gallery-filter-stats', payload),
   storageListFilterPresets: () => ipcRenderer.invoke('arc:storage-list-filter-presets'),
@@ -145,6 +147,8 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:to-file-url', relativePath) as Promise<string | null>,
   toFileUrls: (relativePaths: string[]) =>
     ipcRenderer.invoke('arc:to-file-urls', relativePaths) as Promise<Record<string, string>>,
+  registerMediaStagingToken: (absPath: string) =>
+    ipcRenderer.invoke('arc:register-media-staging-token', absPath) as Promise<string | null>,
   deleteFileIfInsideLibrary: (relativePath: string) =>
     ipcRenderer.invoke('arc:delete-file-if-inside-library', relativePath),
   showItemInFolder: (relativePath: string) => ipcRenderer.invoke('arc:show-item-in-folder', relativePath),

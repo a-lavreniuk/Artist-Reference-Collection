@@ -82,7 +82,9 @@ export function bindMainWindow(win: BrowserWindow): void {
 function resolveTargetWindow(): BrowserWindow | null {
   const win = mainWindowRef;
   if (win && !win.isDestroyed()) return win;
-  return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null;
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed()) return focused;
+  return null;
 }
 
 export function getMainWindow(): BrowserWindow | null {
