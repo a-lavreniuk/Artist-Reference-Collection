@@ -381,7 +381,10 @@ export function shouldStartHiddenInTray(prefs: AppPreferencesV1, needsOnboarding
   if (process.platform === 'linux' || needsOnboarding) return false;
   if (!prefs.launchAtLogin || !prefs.launchAtLoginHidden) return false;
   const login = app.getLoginItemSettings();
-  return login.wasOpenedAtLogin === true && login.wasOpenedAsHidden === true;
+  if (!login.wasOpenedAtLogin) return false;
+  // openAsHidden / wasOpenedAsHidden поддерживается только на macOS.
+  if (process.platform === 'darwin') return login.wasOpenedAsHidden === true;
+  return true;
 }
 
 export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Promise<AppPreferencesV1> {
