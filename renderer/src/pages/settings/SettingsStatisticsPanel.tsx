@@ -139,7 +139,7 @@ export default function SettingsStatisticsPanel() {
             <StatisticsPanelHead
               icon={<span className={`arc-stat-icon arc-stat-icon--${item.icon}`} aria-hidden="true" />}
             >
-              <p className="typo-p-l arc-stats-summary-card__label">{item.label}</p>
+              <p className="typo-p-m arc-stats-summary-card__label">{item.label}</p>
               <p className="h1 arc-stats-summary-card__value">{item.value}</p>
             </StatisticsPanelHead>
           </section>
@@ -158,7 +158,7 @@ export default function SettingsStatisticsPanel() {
               />
             }
           >
-            <p className="typo-p-l arc-stats-tags-panel__title">Популярные метки</p>
+            <p className="typo-p-s arc-stats-tags-panel__title">Популярные метки</p>
             <div className="arc-category-tag-cloud">
               {topTags.length === 0 ? (
                 <p className="hint">Нет популярных меток</p>
@@ -194,7 +194,7 @@ export default function SettingsStatisticsPanel() {
               />
             }
           >
-            <p className="typo-p-l arc-stats-tags-panel__title">Малоиспользуемые метки</p>
+            <p className="typo-p-s arc-stats-tags-panel__title">Малоиспользуемые метки</p>
             <div className="arc-category-tag-cloud">
               {lowTags.length === 0 ? (
                 <p className="hint">Нет малоиспользуемых меток</p>

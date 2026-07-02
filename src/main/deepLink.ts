@@ -28,7 +28,11 @@ export function extractDeepLinkFromArgv(argv: readonly string[]): string | undef
 
 export function focusMainApplicationWindow(): void {
   const wins = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
-  const main = wins.find((w) => !w.webContents.getURL().includes('loading')) ?? wins[0];
+  const main =
+    wins.find((w) => {
+      const url = w.webContents.getURL();
+      return url && !url.includes('loading') && !url.startsWith('devtools://');
+    }) ?? wins[0];
   if (!main) return;
   if (main.isMinimized()) main.restore();
   if (!main.isVisible()) main.show();
@@ -57,7 +61,7 @@ export function registerArcProtocolClient(): void {
 export function bindDeepLinkSingleInstance(): boolean {
   const gotLock = app.requestSingleInstanceLock();
   if (!gotLock) {
-    app.quit();
+    app.exit(0);
     return false;
   }
 

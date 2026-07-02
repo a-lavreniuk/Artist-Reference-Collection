@@ -1,0 +1,209 @@
+/* ARC-2 modal subset for browser extension (Figma 1799:15368, 1799:15407) */
+
+:root {
+  --s-1: 6px;
+  --s-2: 8px;
+  --s-3: 16px;
+  --s-4: 32px;
+  --radius-s: 8px;
+  --radius-l: 16px;
+  --transition-fast: 150ms;
+  --gray-800: #2a2a30;
+  --gray-850: #222228;
+  --gray-950: #1a1a1e;
+  --text-elev-primary: #b4b5bf;
+  --text-elev-secondary: #888890;
+  --panel-border: #2f3035;
+  --panel-bg: #1a1a1e;
+  --arc-modal-shadow: 0 10px 32px rgba(0, 0, 0, 0.32), 0 3px 16px rgba(0, 0, 0, 0.16);
+  --brand-550: #e75328;
+  --brand-600: #d04d26;
+  --brand-100: #ffded4;
+  --success-subtitle: #108967;
+  --danger-subtitle: #b2383e;
+  --warn-subtitle: #e8c468;
+  --btn-h: 24px;
+  --btn-radius: var(--radius-s);
+  --btn-pad-x: var(--s-2);
+  --btn-font-size: 12px;
+  --btn-line-height: 16px;
+}
+
+.arc-ext-modal-host {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast) ease;
+}
+
+.arc-ext-modal-host.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.arc-ext-modal {
+  box-sizing: border-box;
+  width: 400px;
+  max-width: calc(100vw - var(--s-4));
+  border-radius: var(--radius-l);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  box-shadow: var(--arc-modal-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text-elev-primary);
+  pointer-events: auto;
+  font-family: 'Google Sans', 'Inter', 'Segoe UI', sans-serif;
+}
+
+.arc-ext-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.arc-ext-modal__title-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.arc-ext-modal__title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  color: var(--text-elev-primary);
+}
+
+.arc-ext-modal__subtitle {
+  margin: 0;
+  font-size: var(--btn-font-size);
+  line-height: var(--btn-line-height);
+  font-weight: 400;
+}
+
+.arc-ext-modal__subtitle--success {
+  color: var(--success-subtitle);
+}
+
+.arc-ext-modal__subtitle--danger {
+  color: var(--danger-subtitle);
+}
+
+.arc-ext-modal__subtitle--warn {
+  color: var(--warn-subtitle);
+}
+
+.arc-ext-modal__logo {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.arc-ext-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+}
+
+.arc-ext-modal__slot {
+  padding: 0 var(--s-3);
+}
+
+.arc-ext-modal__slot-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+  color: var(--text-elev-primary);
+  word-break: break-word;
+}
+
+.arc-ext-modal__footer {
+  display: flex;
+  align-items: center;
+  padding: var(--s-3);
+  border-top: 1px solid var(--panel-border);
+  gap: var(--s-1);
+}
+
+.arc-ext-modal__footer--end {
+  justify-content: flex-end;
+}
+
+.arc-ext-modal__footer--split {
+  justify-content: space-between;
+}
+
+.arc-ext-modal__footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.arc-ext-btn {
+  box-sizing: border-box;
+  margin: 0;
+  min-height: var(--btn-h);
+  padding: 0 var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+  border: 1px solid transparent;
+  font-size: var(--btn-font-size);
+  line-height: var(--btn-line-height);
+  font-weight: 400;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.arc-ext-btn:focus-visible {
+  outline: 2px solid #ffad94;
+  outline-offset: 2px;
+}
+
+.arc-ext-btn--brand {
+  background: var(--brand-550);
+  color: var(--brand-100);
+}
+
+.arc-ext-btn--brand:hover {
+  background: var(--brand-600);
+}
+
+.arc-ext-btn--outline {
+  background: transparent;
+  border-color: var(--panel-border);
+  color: var(--text-elev-primary);
+}
+
+.arc-ext-btn--outline:hover {
+  background: var(--gray-800);
+}
+
+.arc-ext-btn--secondary {
+  background: var(--panel-border);
+  color: var(--text-elev-primary);
+}
+
+.arc-ext-btn--secondary:hover {
+  background: var(--gray-800);
+}
+
+.arc-ext-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

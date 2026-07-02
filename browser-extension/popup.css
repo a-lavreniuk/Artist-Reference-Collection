@@ -1,88 +1,30 @@
-body {
+body.arc-ext-shell {
   margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  font-size: 13px;
-  color: #e8e8ec;
-  background: #1a1a1e;
-  min-width: 280px;
+  width: 400px;
+  min-height: 264px;
+  background: var(--panel-bg, #1a1a1e);
 }
 
-.arc-ext-popup {
-  padding: 12px;
-  box-sizing: border-box;
-}
-
-.arc-ext-popup__title {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.arc-ext-popup__status {
-  margin: 0 0 8px;
-  min-height: 1.2em;
-  color: #a8a8b0;
-}
-
-.arc-ext-popup__status.is-ok {
-  color: #8fd99a;
-}
-
-.arc-ext-popup__status.is-warn {
-  color: #e8c468;
-}
-
-.arc-ext-popup__status.is-error {
-  color: #f08080;
-}
-
-.arc-ext-popup__hint {
-  margin: 0;
-  color: #888890;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.arc-ext-popup__offline {
-  margin: 0 0 10px;
-  padding: 10px;
-  border: 1px solid #45454d;
-  border-radius: 8px;
-  background: #222228;
-}
-
-.arc-ext-popup__offline-text,
-.arc-ext-popup__queue-info {
-  margin: 0 0 8px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #a8a8b0;
-}
-
-.arc-ext-popup__queue-info {
-  color: #e8c468;
-  margin-bottom: 10px;
-}
-
-.arc-ext-popup__cta {
-  display: block;
+.arc-ext-modal--popup {
   width: 100%;
-  margin: 0;
-  padding: 8px 12px;
+  max-width: none;
   border: none;
-  border-radius: 8px;
-  background: #e75328;
-  color: #ffded4;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.arc-ext-popup__cta:hover {
-  background: #d04d26;
+.arc-ext-modal--popup.is-offline .arc-ext-modal__footer--split,
+.arc-ext-modal--popup.is-disabled .arc-ext-modal__footer--split {
+  justify-content: flex-end;
 }
 
-.arc-ext-popup__cta:focus-visible {
-  outline: 2px solid #ffad94;
-  outline-offset: 2px;
+.arc-ext-modal--popup.is-offline .arc-ext-modal__footer--split #arc-website-btn,
+.arc-ext-modal--popup.is-disabled .arc-ext-modal__footer--split #arc-website-btn,
+.arc-ext-modal--popup.is-disabled .arc-ext-modal__footer--split #arc-open-btn {
+  display: none;
+}
+
+.arc-ext-modal--popup #arc-website-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

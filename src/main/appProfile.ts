@@ -6,8 +6,11 @@ let devProfile = false;
 /** Разделяет dev и установленную версию: userData, библиотека по умолчанию. Вызывать до app.whenReady(). */
 export function configureAppProfile(): void {
   devProfile = !app.isPackaged;
+  app.setName('ARC');
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.arc.artist-reference-collection');
+  }
   if (!devProfile) {
-    app.setName('ARC');
     app.setPath('userData', path.join(app.getPath('appData'), 'ARC'));
     return;
   }

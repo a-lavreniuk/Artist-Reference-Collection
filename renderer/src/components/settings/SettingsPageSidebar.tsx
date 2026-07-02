@@ -23,7 +23,7 @@ const ADVANCED_SECTIONS = [
     key: 'browser-extension',
     to: '/settings/browser-extension',
     label: 'Расширение браузера',
-    iconClass: 'arc-icon-save'
+    iconClass: 'arc-icon-browser'
   },
   { key: 'ai-search', to: '/settings/ai-search', label: 'AI Поиск', iconClass: 'arc-icon-ai' }
 ] as const;

@@ -6,6 +6,7 @@ Companion extension for **Artist Reference Collection (ARC)** — saves images f
 
 - Context menu on images: **Add to library** / **Добавить в библиотеку**
 - **Hover button** on images (brand icon-only 32×32, Figma [1169:23991](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1169-23991)) — click to save
+- **Popup / page modals** in ARC modal layout (Figma [1799:15368](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1799-15368), [1799:15407](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1799-15407))
 - **Alt + right-click** on `<img>`, `<picture>`, or `background-image` on the target element
 - **Local HTTP API** in ARC on `http://127.0.0.1:47896/api/v1/`
 - Offline **queue** (max 50) when ARC is not running; auto-drain when ARC is available (popup open, browser startup, periodic alarm, after each successful save)
@@ -68,6 +69,12 @@ Installed ARC registers the custom protocol **`arc://launch`**. The extension us
 - Works on **Windows and macOS** after install via `electron-builder` (NSIS / DMG). In **dev** mode the protocol is registered only for the current Electron executable.
 
 Browsers cannot start arbitrary `.exe` files directly — only via a registered URL scheme or a native messaging host.
+
+**Troubleshooting**
+
+- Extension shows «ARC не запущен» while ARC is open → restart ARC after updating (Import API must listen on `127.0.0.1:47896` even when Import is disabled in settings; disabled state returns HTTP 403 on import, not connection refused).
+- «Открыть ARC» opens onboarding / second window → usually a **second copy** of the app (dev build + installed build, or stale `arc://` handler). Close extra copies; keep one ARC running. The extension re-checks the API before calling `arc://launch`.
+- Only one ARC instance should own port **47896**; check with `curl http://127.0.0.1:47896/api/v1/app/info`.
 
 ## Install extension (unpacked)
 

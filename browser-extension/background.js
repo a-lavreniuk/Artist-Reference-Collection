@@ -109,9 +109,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'arc:popup-opened') {
     void (async () => {
       const arc = await checkArc();
-      const drained = await drainPendingQueue();
       const pending = await queueLength();
-      sendResponse({ arc, drained, pending, queueMax: QUEUE_MAX });
+      if (arc.ok && pending > 0) {
+        void drainPendingQueue();
+      }
+      sendResponse({ arc, drained: 0, pending, queueMax: QUEUE_MAX });
     })();
     return true;
   }

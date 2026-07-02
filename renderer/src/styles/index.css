@@ -40,6 +40,25 @@ body,
   font-family: "Google Sans", sans-serif;
 }
 
+/* Paragraph S/M/L — Figma type scale; используется в настройках и по всему renderer */
+.typo-p-s {
+  font-size: var(--typo-p-s-size);
+  line-height: var(--typo-p-s-line);
+  font-weight: var(--typo-p-s-weight);
+}
+
+.typo-p-m {
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
+}
+
+.typo-p-l {
+  font-size: var(--typo-p-l-size);
+  line-height: var(--typo-p-l-line);
+  font-weight: var(--typo-p-l-weight);
+}
+
 a {
   color: inherit;
 }
@@ -4142,6 +4161,9 @@ html.arc-onboarding-page,
   padding-block: var(--s-4);
   padding-inline: 0;
   box-sizing: border-box;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-separator {
@@ -4227,6 +4249,9 @@ html.arc-onboarding-page,
   min-width: 0;
   color: var(--text-elev-primary);
   text-align: left;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-toggle-shortcut-row {
@@ -4248,6 +4273,9 @@ html.arc-onboarding-page,
   flex: 0 0 auto;
   color: var(--text-elev-secondary);
   white-space: nowrap;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-radio-inline-group {
@@ -4319,6 +4347,9 @@ html.arc-onboarding-page,
   padding-block: var(--s-4);
   padding-inline: 0;
   box-sizing: border-box;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-shortcuts-panel__group {
@@ -4347,12 +4378,18 @@ html.arc-onboarding-page,
   flex: 1 1 auto;
   min-width: 0;
   color: var(--text-elev-primary);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-shortcut-row__keys {
   flex: 0 0 auto;
   color: var(--text-elev-secondary);
   white-space: nowrap;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-option-card {
@@ -4425,6 +4462,9 @@ html.arc-onboarding-page,
   flex: 1 1 auto;
   min-width: 0;
   color: var(--text-elev-primary);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-option-card__description {
@@ -4562,22 +4602,6 @@ html.arc-onboarding-page,
   gap: var(--s-2);
 }
 
-.arc-settings-browser-ext__hint {
-  margin: 0;
-}
-
-.arc-settings-browser-ext__hint + .arc-settings-browser-ext__hint {
-  margin-top: var(--s-2);
-}
-
-.arc-settings-browser-ext__prefix {
-  margin-top: var(--s-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  max-width: 280px;
-}
-
 .arc-settings-ai-panel__section {
   display: flex;
   flex-direction: column;
@@ -4596,6 +4620,9 @@ html.arc-onboarding-page,
 .arc-settings-hardware-row__label {
   flex: 0 0 auto;
   color: var(--text-elev-secondary);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-hardware-row__value {
@@ -4603,6 +4630,9 @@ html.arc-onboarding-page,
   min-width: 0;
   text-align: right;
   color: var(--text-elev-primary);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-settings-ai-model-cards {
@@ -5202,6 +5232,9 @@ html.arc-onboarding-page,
   gap: var(--s-4);
   width: 100%;
   min-width: 0;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-stats-summary-grid {
@@ -5271,6 +5304,9 @@ html.arc-onboarding-page,
 
 .arc-stats-summary-card__label {
   color: var(--text-elev-secondary);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
 }
 
 .arc-stats-disk-panel {
@@ -5336,6 +5372,9 @@ html.arc-onboarding-page,
 .arc-stats-disk-panel__title {
   margin: 0;
   color: var(--text-elev-secondary);
+  font-size: var(--typo-p-s-size);
+  line-height: var(--typo-p-s-line);
+  font-weight: var(--typo-p-s-weight);
 }
 
 .arc-stats-disk-bar {
@@ -5558,6 +5597,9 @@ html.arc-onboarding-page,
 .arc-stats-tags-panel__title {
   margin: 0;
   color: var(--text-elev-secondary);
+  font-size: var(--typo-p-s-size);
+  line-height: var(--typo-p-s-line);
+  font-weight: var(--typo-p-s-weight);
 }
 
 .arc-stats-tags-panel > .h2.arc-stats-tags-panel__title {

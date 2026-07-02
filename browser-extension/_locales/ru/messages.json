@@ -11,8 +11,23 @@
   "hoverSaveLabel": {
     "message": "Сохранить в ARC"
   },
-  "popupHoverHint": {
-    "message": "Наведите курсор на изображение и нажмите кнопку сохранения или используйте контекстное меню."
+  "modalTitle": {
+    "message": "Save to ARC"
+  },
+  "modalClose": {
+    "message": "Закрыть"
+  },
+  "modalHowToSave": {
+    "message": "Наведите курсор на изображение и нажмите на появившуюся кнопку сохранения. Также можно воспользоваться контекстным меню или комбинацией клавиш Alt + правый клик."
+  },
+  "modalQueueInfo": {
+    "message": "Изображения загружаются в очередь (до 50 штук). Когда вы откроете ARC с включённым параметром Import, очередь автоматически отправится в библиотеку."
+  },
+  "modalQueueBody": {
+    "message": "Изображение добавлено в очередь (до 50 штук). Когда вы откроете ARC с включённым параметром Import, очередь автоматически отправится в библиотеку."
+  },
+  "statusConnectedSubtitle": {
+    "message": "Подключение установлено"
   },
   "statusConnected": {
     "message": "ARC подключён"
@@ -46,12 +61,6 @@
       }
     }
   },
-  "offlineToastTitle": {
-    "message": "ARC не запущен"
-  },
-  "offlineToastBody": {
-    "message": "Изображение добавлено в очередь расширения (до 50). Когда вы откроете ARC с включённым Import API, очередь отправится автоматически."
-  },
   "offlineToastQueue": {
     "message": "В очереди: $PENDING$ из $MAX$",
     "placeholders": {
@@ -63,17 +72,14 @@
       }
     }
   },
-  "popupOfflineExplain": {
-    "message": "ARC недоступен на localhost:47896. Сохранять изображения можно — они попадут в локальную очередь расширения и отправятся после запуска ARC."
-  },
   "popupOfflineQueueEmpty": {
     "message": "Очередь пуста."
   },
   "openArcButton": {
     "message": "Открыть ARC"
   },
-  "toastDismiss": {
-    "message": "Закрыть"
+  "goToWebsite": {
+    "message": "Перейти на сайт"
   },
   "disabledToastBody": {
     "message": "Включите Import API в настройках ARC → Расширение браузера."

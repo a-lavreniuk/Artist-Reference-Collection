@@ -133,6 +133,12 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
   nativeTheme.themeSource = 'system';
 
+  try {
+    await startImportApiServer();
+  } catch (err) {
+    console.error('[ARC Import API] failed to start:', err);
+  }
+
   clearSessionWindowSize();
   registerLoadingSplashIpc();
 
@@ -154,7 +160,6 @@ app.whenReady().then(async () => {
   setLoadingSplashMilestone(15, 'Инициализация модулей…');
   await reconcileLibraryRootConfig();
   await startArcMediaServer(readLibraryRootSync());
-  await startImportApiServer();
   await refreshBrandingIconIfNeeded();
   registerArcIpc();
   registerAppPreferencesIpc();

@@ -143,9 +143,6 @@ export function isImportApiServerRunning(): boolean {
 export async function startImportApiServer(): Promise<void> {
   if (server) return;
 
-  const prefs = readAppPreferencesSync();
-  if (!prefs.importApiEnabled) return;
-
   await new Promise<void>((resolve, reject) => {
     const srv = http.createServer((req, res) => {
       void handleRequest(req, res).catch(() => {
@@ -164,6 +161,9 @@ export async function startImportApiServer(): Promise<void> {
 
     srv.listen(ARC_IMPORT_API_PORT, ARC_IMPORT_API_HOST, () => {
       server = srv;
+      console.info(
+        `[ARC Import API] listening on http://${ARC_IMPORT_API_HOST}:${ARC_IMPORT_API_PORT}/api/v1/`
+      );
       resolve();
     });
   });

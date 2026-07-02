@@ -3,11 +3,23 @@
   const HOVER_DELAY_MS = 120;
   const BTN_SIZE = 32;
   const BTN_INSET = 8;
+  const FEEDBACK_MS = 900;
 
-  const SAVE_IMAGE_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M5.5 4.5C6.05228 4.5 6.5 4.94772 6.5 5.5C6.5 6.05228 6.05228 6.5 5.5 6.5C4.94772 6.5 4.5 6.05228 4.5 5.5C4.5 4.94772 4.94772 4.5 5.5 4.5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 14.5L9.58579 8.41421C10.3668 7.63317 11.6332 7.63316 12.4142 8.41421L14.5 10.5" stroke="currentColor"/><path d="M13.5 0.5V4.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5 7V14.5H1.5V1.5H8" stroke="currentColor"/><path d="M11.5 2.5H15.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const IMAGE_PLUS_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M5.5 4.5C6.05228 4.5 6.5 4.94772 6.5 5.5C6.5 6.05228 6.05228 6.5 5.5 6.5C4.94772 6.5 4.5 6.05228 4.5 5.5C4.5 4.94772 4.94772 4.5 5.5 4.5Z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 14.5L9.58579 8.41421C10.3668 7.63317 11.6332 7.63316 12.4142 8.41421L14.5 10.5" stroke="currentColor" stroke-width="1"/><path d="M13.5 0.5V4.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5 7V12.5C14.5 13.6046 13.6046 14.5 12.5 14.5H3.5C2.39543 14.5 1.5 13.6046 1.5 12.5V3.5C1.5 2.39543 2.39543 1.5 3.5 1.5H8" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><path d="M11.5 2.5H15.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-  const CHECK_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13.5 4.5L5.99935 11.5L2.5 8.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const CHECK_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13.5 4.5L5.99935 11.5L2.5 8.5" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+  const CLOSE_ICON = `<svg width="16" height="16" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 2L10 10M10 2L2 10" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  const STATE_CLASS = {
+    idle: 'arc-ext-hover-btn--idle',
+    loading: 'arc-ext-hover-btn--loading',
+    success: 'arc-ext-hover-btn--success',
+    error: 'arc-ext-hover-btn--error',
+    queue: 'arc-ext-hover-btn--queue'
+  };
+
+  let saveHost = null;
   let saveAnchor = null;
   let saveBtn = null;
   let iconGlyph = null;
@@ -59,43 +71,59 @@
 
   function setButtonState(state) {
     if (!saveBtn) return;
-    saveBtn.classList.remove('btn-brand', 'btn-success', 'btn-loading');
-    saveBtn.disabled = false;
 
-    if (state === 'loading') {
-      saveBtn.classList.add('btn-brand', 'btn-loading');
-      saveBtn.disabled = true;
-      return;
-    }
+    saveBtn.className = 'arc-ext-hover-btn';
+    saveBtn.classList.add(STATE_CLASS[state] ?? STATE_CLASS.idle);
+    saveBtn.disabled = state === 'loading' || state === 'queue';
+
     if (state === 'success') {
-      saveBtn.classList.add('btn-success');
       setIcon(CHECK_ICON);
       return;
     }
-    saveBtn.classList.add('btn-brand');
-    setIcon(SAVE_IMAGE_ICON);
+    if (state === 'error') {
+      setIcon(CLOSE_ICON);
+      return;
+    }
+    if (state === 'idle' || state === 'loading' || state === 'queue') {
+      setIcon(IMAGE_PLUS_ICON);
+    }
   }
 
   function ensureButton() {
-    if (saveAnchor && saveBtn) return saveBtn;
+    if (saveHost && saveAnchor && saveBtn) return saveBtn;
+
+    saveHost = document.createElement('div');
+    saveHost.id = 'arc-ext-save-root';
+
+    const shadow = saveHost.attachShadow({ mode: 'open' });
+
+    const sheet = document.createElement('link');
+    sheet.rel = 'stylesheet';
+    sheet.href = chrome.runtime.getURL('content.css');
+    shadow.appendChild(sheet);
 
     saveAnchor = document.createElement('div');
-    saveAnchor.className = 'arc-ext-save-anchor arc-ext-root';
-    saveAnchor.dataset.btnSize = 'm';
+    saveAnchor.className = 'arc-ext-save-anchor';
 
     saveBtn = document.createElement('button');
     saveBtn.type = 'button';
-    saveBtn.className = 'btn btn-brand btn-icon-only';
+    saveBtn.className = 'arc-ext-hover-btn arc-ext-hover-btn--idle';
     saveBtn.setAttribute('aria-label', chrome.i18n.getMessage('hoverSaveLabel'));
 
     iconGlyph = document.createElement('span');
-    iconGlyph.className = 'btn-icon-only__glyph';
+    iconGlyph.className = 'arc-ext-hover-btn__glyph';
     iconGlyph.setAttribute('aria-hidden', 'true');
-    iconGlyph.innerHTML = SAVE_IMAGE_ICON;
+    iconGlyph.innerHTML = IMAGE_PLUS_ICON;
+
+    const loader = document.createElement('span');
+    loader.className = 'arc-ext-hover-btn__loader';
+    loader.setAttribute('aria-hidden', 'true');
 
     saveBtn.appendChild(iconGlyph);
+    saveBtn.appendChild(loader);
     saveAnchor.appendChild(saveBtn);
-    document.documentElement.appendChild(saveAnchor);
+    shadow.appendChild(saveAnchor);
+    document.documentElement.appendChild(saveHost);
 
     saveBtn.addEventListener('click', onSaveClick);
     saveAnchor.addEventListener('mouseenter', () => {
@@ -151,6 +179,13 @@
     }
   }
 
+  function showFeedback(state, thenHide = true) {
+    setButtonState(state);
+    if (thenHide) {
+      setTimeout(hideButton, FEEDBACK_MS);
+    }
+  }
+
   async function onSaveClick(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -173,24 +208,22 @@
       });
 
       if (res?.ok) {
-        setButtonState('success');
-        setTimeout(hideButton, 900);
+        showFeedback('success');
         return;
       }
 
       if (res?.code === 'queued') {
-        setButtonState('success');
-        window.ArcExtPageToast?.show('queued', {
+        showFeedback('queue');
+        window.ArcExtPageModal?.show('queued', {
           pending: res.pending,
           queueMax: res.queueMax
         });
-        setTimeout(hideButton, 900);
         return;
       }
 
       if (res?.code === 'queue_full') {
-        setButtonState('idle');
-        window.ArcExtPageToast?.show('queue_full', {
+        showFeedback('error');
+        window.ArcExtPageModal?.show('queue_full', {
           pending: res.pending,
           queueMax: res.queueMax
         });
@@ -199,18 +232,25 @@
 
       if (res?.code === 'disabled') {
         setButtonState('idle');
-        window.ArcExtPageToast?.show('disabled');
+        window.ArcExtPageModal?.show('disabled');
         return;
       }
 
-      setButtonState('idle');
+      showFeedback('error');
     } catch {
-      setButtonState('idle');
+      showFeedback('error');
     }
   }
 
+  function isInsideSaveUi(node) {
+    if (!(node instanceof Node) || !saveHost?.shadowRoot) {
+      return false;
+    }
+    return saveHost === node || saveHost.shadowRoot.contains(node);
+  }
+
   function considerTarget(target) {
-    if (saveAnchor && (target === saveAnchor || saveAnchor.contains(target))) {
+    if (isInsideSaveUi(target)) {
       return;
     }
 
