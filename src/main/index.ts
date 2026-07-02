@@ -31,7 +31,8 @@ import { applyStoredFeedbackShortcut, registerFeedbackIpc, unregisterFeedbackSho
 import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
 import { registerDuplicateScanIpc } from './duplicateFileScan';
-import { bindMainWindow, registerWindowChromeIpc } from './windowChrome';
+import { bindMainWindow, getMainWindow, registerWindowChromeIpc, showMainWindowFromUserAction } from './windowChrome';
+import { isScreenshotCaptureInFlight } from './screenshotSession';
 import {
   needsOnboardingSetup,
   ONBOARDING_WINDOW_HEIGHT,
@@ -195,8 +196,16 @@ app.whenReady().then(async () => {
   consumePendingDeepLink();
 
   app.on('activate', () => {
+    if (process.platform === 'darwin') {
+      if (isScreenshotCaptureInFlight()) return;
+      const win = getMainWindow();
+      if (win && !win.isDestroyed() && !win.isVisible()) {
+        showMainWindowFromUserAction();
+        return;
+      }
+    }
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow(needsOnboardingSetup(readLibraryRootSync(), prefs.onboardingSetupCompleted));
     }
   });
 });

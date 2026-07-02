@@ -3,11 +3,11 @@ import { globalShortcut } from 'electron';
 import { readAppPreferencesSync } from './appPreferences';
 import { importScreenshotFromRegion } from './screenshotCapture';
 import { openScreenshotAreaPicker } from './screenshotOverlay';
+import { isScreenshotCaptureInFlight, setScreenshotCaptureInFlight } from './screenshotSession';
 import { SCREENSHOT_ACCELERATOR } from './shared/shortcutAccelerators';
 import { getMainWindow, showMainWindow } from './windowChrome';
 
 let registered = false;
-let captureInFlight = false;
 
 function restoreMainIfHidden(): void {
   const mainWin = getMainWindow();
@@ -17,12 +17,12 @@ function restoreMainIfHidden(): void {
 }
 
 async function onScreenshotHotkey(): Promise<void> {
-  if (captureInFlight) return;
+  if (isScreenshotCaptureInFlight()) return;
 
   const prefs = readAppPreferencesSync();
   if (!prefs.screenshotsEnabled) return;
 
-  captureInFlight = true;
+  setScreenshotCaptureInFlight(true);
 
   const mainWin = getMainWindow();
   const wasVisible = mainWin?.isVisible() ?? false;
@@ -44,7 +44,7 @@ async function onScreenshotHotkey(): Promise<void> {
 
     await importScreenshotFromRegion(pickerResult.region);
   } finally {
-    captureInFlight = false;
+    setScreenshotCaptureInFlight(false);
     restoreMainIfHidden();
   }
 }

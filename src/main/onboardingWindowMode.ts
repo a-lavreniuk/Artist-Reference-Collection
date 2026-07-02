@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain } from 'electron';
 
-import { getMainWindow } from './windowChrome';
+import { forceWebContentsLayoutSync, getMainWindow } from './windowChrome';
 import { WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH } from './windowSize';
 
 /** Синхрон с renderer/src/content/onboarding.ts */
@@ -40,6 +40,7 @@ export function restoreMainWindowAfterOnboarding(win: BrowserWindow): void {
   setWindowRoundedCorners(win, false);
   win.setBackgroundColor(MAIN_WINDOW_BG);
   if (!win.isMaximized()) win.maximize();
+  forceWebContentsLayoutSync(win);
 }
 
 let ipcRegistered = false;

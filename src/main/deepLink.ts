@@ -1,5 +1,7 @@
-import { app, BrowserWindow } from 'electron';
+import { app } from 'electron';
 import path from 'path';
+
+import { showMainWindowFromUserAction } from './windowChrome';
 
 export const ARC_PROTOCOL = 'arc';
 export const ARC_LAUNCH_HOST = 'launch';
@@ -27,16 +29,7 @@ export function extractDeepLinkFromArgv(argv: readonly string[]): string | undef
 }
 
 export function focusMainApplicationWindow(): void {
-  const wins = BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
-  const main =
-    wins.find((w) => {
-      const url = w.webContents.getURL();
-      return url && !url.includes('loading') && !url.startsWith('devtools://');
-    }) ?? wins[0];
-  if (!main) return;
-  if (main.isMinimized()) main.restore();
-  if (!main.isVisible()) main.show();
-  main.focus();
+  showMainWindowFromUserAction();
 }
 
 export function handleDeepLink(url: string | undefined): void {

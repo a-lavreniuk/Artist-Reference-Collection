@@ -1,6 +1,6 @@
 import { app, Menu, Tray } from 'electron';
 
-import { setAppQuitting, showMainWindow } from './windowChrome';
+import { setAppQuitting, showMainWindowFromUserAction } from './windowChrome';
 
 import { loadAppIconImage } from './appIcon';
 
@@ -15,7 +15,7 @@ export function createAppTray(): Tray {
     {
       label: 'Открыть ARC',
       click: () => {
-        showMainWindow({ maximize: true });
+        showMainWindowFromUserAction();
       }
     },
     { type: 'separator' },
@@ -31,11 +31,11 @@ export function createAppTray(): Tray {
   tray.setContextMenu(contextMenu);
 
   tray.on('click', () => {
-    showMainWindow({ maximize: true });
+    showMainWindowFromUserAction();
   });
 
   tray.on('double-click', () => {
-    showMainWindow({ maximize: true });
+    showMainWindowFromUserAction();
   });
 
   return tray;

@@ -24,12 +24,15 @@ export function clampWindowSize(
   height: number,
   workArea?: { width: number; height: number }
 ): WindowSize {
-  let w = Math.max(WINDOW_MIN_WIDTH, Math.round(width));
-  let h = Math.max(WINDOW_MIN_HEIGHT, Math.round(height));
+  const minW = workArea ? Math.min(WINDOW_MIN_WIDTH, workArea.width) : WINDOW_MIN_WIDTH;
+  const minH = workArea ? Math.min(WINDOW_MIN_HEIGHT, workArea.height) : WINDOW_MIN_HEIGHT;
+
+  let w = Math.max(minW, Math.round(width));
+  let h = Math.max(minH, Math.round(height));
 
   if (workArea) {
-    w = Math.min(w, Math.max(WINDOW_MIN_WIDTH, workArea.width));
-    h = Math.min(h, Math.max(WINDOW_MIN_HEIGHT, workArea.height));
+    w = Math.min(w, workArea.width);
+    h = Math.min(h, workArea.height);
   }
 
   return { width: w, height: h };
