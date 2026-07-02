@@ -31,6 +31,22 @@ npm test
 
 При падении — **остановиться**, сообщить пользователю. Merge и push **не делать**.
 
+## 2b. Code review (перед push/merge)
+
+По skill **arc-code-review** (`.cursor/skills/arc-code-review/`):
+
+1. Классифицировать diff:
+   - незакоммиченное на текущей ветке: `git diff --stat` (+ `git diff --stat --cached` если есть staged);
+   - коммиты ветки относительно `main`: `git diff main...HEAD --stat`.
+   - если на `main` без коммитов впереди — опираться на `git diff --stat`, не на `main...HEAD`.
+2. Минимум: **Bugbot** (`review-bugbot` + [bugbot-instructions.md](../arc-code-review/references/bugbot-instructions.md)), кроме diff только в `.cursor/skills/` или docs — тогда Bugbot опционально.
+3. Если diff затрагивает `src/main/`, `src/preload/`, `src/main/storage/` — **Security Review** (+ [security-instructions.md](../arc-code-review/references/security-instructions.md)).
+4. Если diff затрагивает renderer UI — UI-проход через **arc-ui-dev** [review-template.md](../arc-ui-dev/references/review-template.md).
+5. **Critical** findings — остановиться, показать пользователю, merge **не делать** без явного решения.
+6. Предложить текст PR по [pr-description-template.md](../arc-code-review/references/pr-description-template.md), если PR ещё не создан.
+
+Пропустить только если пользователь явно просит «без ревью» / «срочно merge».
+
 ## 3. Коммит (автоматически)
 
 Если есть незакоммиченные изменения:
@@ -109,14 +125,17 @@ Merge и удаление ветки **не нужны**.
 ## 7. Связка с другими skills
 
 - Старт задачи — **anytype-task-take** («возьми задачу»).
-- Этот skill — только git-финал («заверши задачу»).
+- Ревью перед merge — **arc-code-review** (шаг 2b).
+- UI-ревью внутри code review — **arc-ui-dev** (review-template).
+- Этот skill — git-финал («заверши задачу»).
 
 ## Пример
 
 Пользователь на `irreversible-deletions`, есть правки:
 
 1. `npm test` — OK  
-2. commit с сообщением от агента  
-3. Резюме → «Продолжать?» → да  
-4. push ветки → merge в `main` → push `main` → удалить ветку локально и на GitHub  
-5. Отчёт: хеш merge-коммита, что на чистом `main`
+2. **arc-code-review** (шаг 2b): Bugbot + Security/UI по router — OK  
+3. commit с сообщением от агента  
+4. Резюме → «Продолжать?» → да  
+5. push ветки → merge в `main` → push `main` → удалить ветку локально и на GitHub  
+6. Отчёт: хеш merge-коммита, что на чистом `main`
