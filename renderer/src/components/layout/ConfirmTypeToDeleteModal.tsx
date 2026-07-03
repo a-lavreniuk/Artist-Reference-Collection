@@ -124,17 +124,17 @@ export default function ConfirmTypeToDeleteModal({
           </div>
         </div>
         <footer className="arc-modal__footer arc-modal__footer--actions-3">
-          <button
-            type="button"
-            className="btn btn-danger btn-ds btn-s"
-            disabled={busy || !isMatch}
-            onClick={() => void handleConfirm()}
-          >
-            <span className="btn-ds__value">{busy ? busyLabel : confirmLabel}</span>
+          <button type="button" className="btn btn-outline btn-ds btn-s" disabled={busy} onClick={onClose}>
+            <span className="btn-ds__value">Отмена</span>
           </button>
           <div className="arc-modal__footer-right">
-            <button type="button" className="btn btn-outline btn-ds btn-s" disabled={busy} onClick={onClose}>
-              <span className="btn-ds__value">Отмена</span>
+            <button
+              type="button"
+              className="btn btn-danger btn-ds btn-s"
+              disabled={busy || !isMatch}
+              onClick={() => void handleConfirm()}
+            >
+              <span className="btn-ds__value">{busy ? busyLabel : confirmLabel}</span>
             </button>
           </div>
         </footer>
