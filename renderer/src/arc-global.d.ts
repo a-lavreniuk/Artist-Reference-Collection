@@ -198,7 +198,9 @@ declare global {
       }) => Promise<{ ok: true; restart: true } | { ok: false; error: string }>;
       consumePendingRestoreModal: () => Promise<{ message: string } | null>;
       verifyLibraryPaths: (relativePaths: string[]) => Promise<{ missing: string[] }>;
-      scanLibraryOrphanFiles: (referencedPaths: string[]) => Promise<{ orphans: string[] }>;
+      scanLibraryOrphanFiles: (
+        input: string[] | { paths: string[]; cardIds: string[] }
+      ) => Promise<{ orphans: string[] }>;
       sumLibraryFilesBytes: (
         relativePaths: string[]
       ) => Promise<{ ok: true; totalBytes: number } | { ok: false; error: string }>;

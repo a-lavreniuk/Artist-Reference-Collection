@@ -91,14 +91,31 @@ export async function getNavbarMetrics(): Promise<NavbarMetrics> {
   };
 }
 
+export type LoadLibraryMetadataSnapshotOptions = {
+  /** Включить карточки из корзины — их файлы остаются на диске. */
+  includeTrashedCards?: boolean;
+};
+
 /** Снимок метаданных для проверки целостности (новый формат хранения). */
-export async function loadLibraryMetadataSnapshot(): Promise<ArcMetadataV1 | null> {
+export async function loadLibraryMetadataSnapshot(
+  options: LoadLibraryMetadataSnapshotOptions = {}
+): Promise<ArcMetadataV1 | null> {
   const b = await resolveBackend();
   if (b !== 'file') return null;
+  const cardsPromise = options.includeTrashedCards
+    ? Promise.all([
+        listAllCardsPaginated({ libraryScope: 'all' }),
+        listAllCardsPaginated({ libraryScope: 'trash' })
+      ]).then(([active, trashed]) => {
+        const byId = new Map<string, CardRecord>();
+        for (const c of [...active, ...trashed]) byId.set(c.id, c);
+        return [...byId.values()];
+      })
+    : listAllCardsPaginated();
   const [categories, tagsRaw, cards, collections, moodboard] = await Promise.all([
     getAllCategories(),
     storage.storageListAllTags(),
-    listAllCardsPaginated(),
+    cardsPromise,
     getAllCollections(),
     storage.storageGetMoodboard()
   ]);

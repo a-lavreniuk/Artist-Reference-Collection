@@ -630,15 +630,53 @@ export function registerStorageIpc(
     await rebuildIndexFromCardJson(root);
   });
 
-  ipcMain.handle('arc:scan-library-orphan-files', async (_e, referencedList: unknown) => {
+  ipcMain.handle('arc:scan-library-orphan-files', async (_e, payload: unknown) => {
     const root = await readLibraryRoot();
     if (!root) return { orphans: [] as string[] };
-    if (!Array.isArray(referencedList)) return { orphans: [] as string[] };
-    const referenced = new Set<string>();
-    for (const r of referencedList) {
-      if (typeof r !== 'string' || !r.trim()) continue;
-      referenced.add(r.replace(/\\/g, '/'));
+
+    let referencedPaths: string[] = [];
+    let cardIds: string[] = [];
+    if (Array.isArray(payload)) {
+      referencedPaths = payload.filter((r): r is string => typeof r === 'string');
+    } else if (payload && typeof payload === 'object') {
+      const p = payload as { paths?: unknown; cardIds?: unknown; referencedPaths?: unknown };
+      if (Array.isArray(p.paths)) {
+        referencedPaths = p.paths.filter((r): r is string => typeof r === 'string');
+      } else if (Array.isArray(p.referencedPaths)) {
+        referencedPaths = p.referencedPaths.filter((r): r is string => typeof r === 'string');
+      }
+      if (Array.isArray(p.cardIds)) {
+        cardIds = p.cardIds.filter((id): id is string => typeof id === 'string');
+      }
+    } else {
+      return { orphans: [] as string[] };
     }
+
+    const referencedExact = new Set<string>();
+    const referencedLower = new Set<string>();
+    for (const r of referencedPaths) {
+      if (!r.trim()) continue;
+      const norm = r.replace(/\\/g, '/');
+      referencedExact.add(norm);
+      referencedLower.add(norm.toLowerCase());
+    }
+
+    const cardIdExact = new Set<string>();
+    const cardIdLower = new Set<string>();
+    for (const id of cardIds) {
+      if (!id.trim()) continue;
+      cardIdExact.add(id);
+      cardIdLower.add(id.toLowerCase());
+    }
+
+    const isReferencedPath = (norm: string): boolean => {
+      if (referencedExact.has(norm) || referencedLower.has(norm.toLowerCase())) return true;
+      const m = /^cards\/([^/]+)\//i.exec(norm);
+      if (!m) return false;
+      const folderId = m[1]!;
+      return cardIdExact.has(folderId) || cardIdLower.has(folderId.toLowerCase());
+    };
+
     const diskRel = [
       ...(await walkCardsRelativeFiles(root)),
       ...(await walkLegacyMediaRelativeFiles(root))
@@ -656,7 +694,7 @@ export function registerStorageIpc(
       const norm = rel.replace(/\\/g, '/');
       if (isStructuralCardFile(norm)) return false;
       if (norm === LIBRARY_META_DIR || norm.startsWith(`${LIBRARY_META_DIR}/`)) return false;
-      return !referenced.has(norm);
+      return !isReferencedPath(norm);
     });
     orphans.sort((a, b) => a.localeCompare(b, 'en'));
     return { orphans };

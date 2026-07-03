@@ -191,8 +191,8 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:consume-pending-restore-modal') as Promise<{ message: string } | null>,
   verifyLibraryPaths: (relativePaths: string[]) =>
     ipcRenderer.invoke('arc:verify-library-paths', relativePaths) as Promise<{ missing: string[] }>,
-  scanLibraryOrphanFiles: (referencedPaths: string[]) =>
-    ipcRenderer.invoke('arc:scan-library-orphan-files', referencedPaths) as Promise<{ orphans: string[] }>,
+  scanLibraryOrphanFiles: (input: string[] | { paths: string[]; cardIds: string[] }) =>
+    ipcRenderer.invoke('arc:scan-library-orphan-files', input) as Promise<{ orphans: string[] }>,
   sumLibraryFilesBytes: (relativePaths: string[]) =>
     ipcRenderer.invoke('arc:sum-library-files-bytes', relativePaths) as Promise<
       { ok: true; totalBytes: number } | { ok: false; error: string }
