@@ -1,12 +1,13 @@
 /*
- * Белая кайма по краю окна (Electron + backdrop-filter): перекрываем inset-тенью,
- * не отключая blur на кнопках карточек.
+ * Белая кайма по краю окна (Electron + backdrop-filter):
+ * — inset-тень на body::after (z-index выше навбара) — только по краю viewport;
+ * — contain: paint на shade и карточках — без отключения blur.
  */
 body.arc-search-panel-open::after {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 24;
+  z-index: 27;
   pointer-events: none;
   box-shadow: inset 0 0 0 4px #000;
 }
@@ -14,6 +15,10 @@ body.arc-search-panel-open::after {
 body.arc-search-panel-open .arc-search-backdrop {
   inset: -4px;
   box-shadow: inset 0 0 0 4px #000;
+}
+
+body.arc-search-panel-open .arc-navbar-shade {
+  contain: paint;
 }
 
 body.arc-search-panel-open .arc-gallery-card-wrap {

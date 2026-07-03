@@ -96,7 +96,7 @@ export default function TopNavbar() {
 
   return (
     <div ref={hostRef} className="arc-navbar-host">
-      <NavbarShade pauseBackdropBlur={searchPanelOpen} />
+      <NavbarShade />
       <div className="arc-navbar-host__inner">
         <div
           ref={islandsRef}
