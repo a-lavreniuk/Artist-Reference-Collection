@@ -428,7 +428,16 @@ export function NavbarSearchProvider({
 
   useLayoutEffect(() => {
     if (searchAnchorRef.current) void hydrateArcNavbarIcons(searchAnchorRef.current);
-  }, [showAiSend, showAiClearDraft, showAiClearResult, aiSearching, panelOpen, searchMode, displayColorHex]);
+  }, [
+    showAiSend,
+    showAiClearDraft,
+    showAiClearResult,
+    aiSearching,
+    panelOpen,
+    searchMode,
+    displayColorHex,
+    aiNavbarModesVisible
+  ]);
 
   const selectRecentCard = useCallback(
     (id: string) => {
