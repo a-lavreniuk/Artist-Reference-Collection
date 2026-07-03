@@ -1,5 +1,7 @@
 # Browser Extension (Chrome MVP)
 
+> **Чек-листы для тестеров** (актуальная версия) — в Notion KB: [Чек-листы тестирования](https://app.notion.com/p/38fbfa9fcc588169acaff89f56870b11) → **Расширение браузера**. Ниже — техническая документация и локальный manual checklist.
+
 Companion extension for **Artist Reference Collection (ARC)** — saves images from the web into the desktop library via a local HTTP API (same approach as [Eagle Web API](https://developer.eagle.cool/web-api)).
 
 ## Scope (MVP)

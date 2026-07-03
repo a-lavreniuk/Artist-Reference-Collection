@@ -1,5 +1,7 @@
 # Сборка и тестирование ARC на macOS
 
+> **Чек-листы для тестеров** (актуальная версия) — в Notion KB: [Чек-листы тестирования](https://app.notion.com/p/38fbfa9fcc588169acaff89f56870b11) → **macOS smoke**. Ниже — инструкция по сборке и краткий локальный список.
+
 Репозиторий: [github.com/a-lavreniuk/Artist-Reference-Collection](https://github.com/a-lavreniuk/Artist-Reference-Collection)
 
 Получить установщик можно двумя способами: **скачать готовый DMG из GitHub Actions** или **собрать локально на Mac**. Сборка macOS с Windows не поддерживается (ограничение `electron-builder`).
