@@ -414,6 +414,19 @@ body::-webkit-scrollbar {
   max-height: 32px;
 }
 
+/* Paragraph/M — единая типографика tab-button (слева) и btn-ds (справа) */
+.arc-navbar-islands[data-btn-size="m"] {
+  --btn-font-size: var(--typo-p-m-size);
+  --btn-line-height: var(--typo-p-m-line);
+}
+
+.arc-navbar-islands .arc-navbar-island--mgmt .btn,
+.arc-navbar-islands .arc-navbar-island--mgmt .btn-ds,
+.arc-navbar-islands .arc-navbar-island--mgmt .btn-ds__value,
+.arc-navbar-islands .arc-navbar-island--mgmt .btn-ds__counter {
+  font-weight: var(--typo-p-m-weight);
+}
+
 .arc-navbar-page .arc-navbar-row .tabs .tab-button,
 .arc-navbar-main-tabs .tab-button {
   min-height: 32px;

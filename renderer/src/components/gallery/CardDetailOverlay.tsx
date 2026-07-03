@@ -1052,7 +1052,7 @@ export default function CardDetailOverlay({
                 count={tagsSorted.length}
                 footer={addRowButton('Добавить метку', () => setTagsModalOpen(true))}
               >
-                {tagsSorted.length > 0 ? (
+                {tagsSorted.length > 0 && (
                   <div className="arc-card-detail-tags">
                     {tagsSorted.map(({ tag, colorHex }) => {
                       const hasTipText = Boolean(tag.description?.trim());
@@ -1090,8 +1090,6 @@ export default function CardDetailOverlay({
                       );
                     })}
                   </div>
-                ) : (
-                  <p className="text-s arc-card-detail-empty">Меток пока нет</p>
                 )}
               </CollapsibleSection>
 
@@ -1102,7 +1100,7 @@ export default function CardDetailOverlay({
                 count={collectionsResolved.length}
                 footer={addRowButton('Добавить в коллекцию', () => setCollectionsModalOpen(true))}
               >
-                {collectionsResolved.length > 0 ? (
+                {collectionsResolved.length > 0 && (
                   <ul className="arc-card-detail-collections">
                     {collectionsResolved.map((col) => (
                       <li key={col.id} className="arc-card-detail-collection-row panel elevation-sunken">
@@ -1126,8 +1124,6 @@ export default function CardDetailOverlay({
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-s arc-card-detail-empty">Коллекций пока нет</p>
                 )}
               </CollapsibleSection>
             </div>

@@ -2436,11 +2436,6 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-shrink: 0;
 }
 
-.arc-card-detail-empty {
-  margin: 0;
-  color: var(--text-elev-secondary);
-}
-
 .arc-card-detail-add-row-scope {
   display: block;
   width: 100%;
