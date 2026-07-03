@@ -3,6 +3,7 @@ import fs from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 
+import { applyLaunchAtLogin, shouldStartHiddenInTrayFromLaunch } from './launchAtLogin';
 import { registerScreenshotShortcut } from './screenshotShortcut';
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
@@ -369,22 +370,14 @@ export function getCloseToTrayOnWindowClose(): boolean {
   return readAppPreferencesSync().closeToTrayOnWindowClose;
 }
 
-export function applyLaunchAtLogin(open: boolean, hidden = false): void {
-  if (process.platform === 'linux') return;
-  app.setLoginItemSettings({
-    openAtLogin: open,
-    openAsHidden: open && hidden
-  });
-}
-
 export function shouldStartHiddenInTray(prefs: AppPreferencesV1, needsOnboarding: boolean): boolean {
-  if (process.platform === 'linux' || needsOnboarding) return false;
-  if (!prefs.launchAtLogin || !prefs.launchAtLoginHidden) return false;
-  const login = app.getLoginItemSettings();
-  if (!login.wasOpenedAtLogin) return false;
-  // openAsHidden / wasOpenedAsHidden поддерживается только на macOS.
-  if (process.platform === 'darwin') return login.wasOpenedAsHidden === true;
-  return true;
+  return shouldStartHiddenInTrayFromLaunch(
+    prefs.launchAtLogin,
+    prefs.launchAtLoginHidden,
+    needsOnboarding,
+    process.argv,
+    app.getLoginItemSettings()
+  );
 }
 
 export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Promise<AppPreferencesV1> {

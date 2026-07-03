@@ -25,7 +25,8 @@ import { clearMediaStagingTokens, registerMediaStagingToken } from './media/medi
 import { startImportApiServer, stopImportApiServer } from './importApi/importApiHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
-import { applyStoredLaunchAtLogin, readAppPreferences, registerAppPreferencesIpc, shouldStartHiddenInTray } from './appPreferences';
+import { applyStoredLaunchAtLogin, readAppPreferences, readAppPreferencesSync, registerAppPreferencesIpc, shouldStartHiddenInTray } from './appPreferences';
+import { syncPendingHiddenAutostartMarker } from './launchAtLogin';
 import { registerAutoImportIpc, restartAutoImportWatcher } from './autoImportWatcher';
 import { applyStoredScreenshotShortcut, unregisterScreenshotShortcut } from './screenshotShortcut';
 import { applyStoredFeedbackShortcut, registerFeedbackIpc, unregisterFeedbackShortcut } from './feedbackShortcut';
@@ -148,6 +149,7 @@ app.whenReady().then(async () => {
   const prefsEarly = await readAppPreferences();
   const needsSetupEarly = needsOnboardingSetup(readLibraryRootSync(), prefsEarly.onboardingSetupCompleted);
   const startHiddenInTray = shouldStartHiddenInTray(prefsEarly, needsSetupEarly);
+  await applyStoredLaunchAtLogin();
 
   if (startHiddenInTray) {
     setStartHiddenInTray(true);
@@ -182,7 +184,6 @@ app.whenReady().then(async () => {
   registerFeedbackIpc();
   registerDuplicateScanIpc();
   registerAutoImportIpc();
-  void applyStoredLaunchAtLogin();
   void applyStoredScreenshotShortcut();
   applyStoredFeedbackShortcut();
   void readAppPreferences().then((loadedPrefs) => {
@@ -232,6 +233,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  syncPendingHiddenAutostartMarker(readAppPreferencesSync());
   void refreshLibrarySessionSnapshotFromDisk();
   shutdownArcMediaServer();
   clearMediaStagingTokens();
