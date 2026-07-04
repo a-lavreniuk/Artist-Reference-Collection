@@ -27,6 +27,7 @@
   let hoverTimer = null;
   let hideTimer = null;
   let moveRaf = 0;
+  let saveInFlight = false;
 
   function findImageUrlFromTarget(target) {
     if (!(target instanceof Element)) return null;
@@ -189,7 +190,7 @@
   async function onSaveClick(event) {
     event.preventDefault();
     event.stopPropagation();
-    if (!activeImage || !saveBtn) return;
+    if (!activeImage || !saveBtn || saveInFlight || saveBtn.disabled) return;
 
     const found = findImageUrlFromTarget(activeImage);
     if (!found?.url) return;
@@ -197,6 +198,7 @@
     const absolute = resolveAbsoluteUrl(found.url);
     if (!absolute) return;
 
+    saveInFlight = true;
     setButtonState('loading');
 
     try {
@@ -239,6 +241,8 @@
       showFeedback('error');
     } catch {
       showFeedback('error');
+    } finally {
+      saveInFlight = false;
     }
   }
 
