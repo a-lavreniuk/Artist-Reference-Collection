@@ -253,6 +253,77 @@ declare global {
       screenshotPickerCancel?: () => Promise<{ ok: boolean }>;
       startDuplicateFileScan?: () => Promise<{ ok: true }>;
       onDuplicatesFound?: (cb: () => void) => () => void;
+      checkImportDuplicates?: (
+        absolutePaths: string[]
+      ) => Promise<
+        Array<{
+          path: string;
+          existingCardId: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+          existingCard: import('./services/arcSchema').CardRecord | null;
+        }>
+      >;
+      checkExactDuplicateFile?: (absolutePath: string) => Promise<boolean>;
+      probeIncomingFile?: (absolutePath: string) => Promise<{
+        format: string;
+        width?: number;
+        height?: number;
+        fileSize?: number;
+        fileCreatedAt?: string;
+      } | null>;
+      scanDuplicatePairs?: (payload?: {
+        thresholdPct?: number;
+        resetSession?: boolean;
+      }) => Promise<{
+        pairs: Array<{
+          cardIdA: string;
+          cardIdB: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+        }>;
+        thresholdPct: number;
+      }>;
+      runDuplicateScan?: (payload?: {
+        thresholdPct?: number;
+        resetSession?: boolean;
+      }) => Promise<{
+        pairs: Array<{
+          cardIdA: string;
+          cardIdB: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+          cardA: import('./services/arcSchema').CardRecord | null;
+          cardB: import('./services/arcSchema').CardRecord | null;
+        }>;
+        thresholdPct: number;
+        scannedCards: number;
+        totalCards: number;
+        duplicatesFound: number;
+        spaceSavedBytes: number;
+        cancelled: boolean;
+      }>;
+      cancelDuplicateScan?: () => Promise<{ ok: true }>;
+      onDuplicateScanProgress?: (
+        cb: (p: {
+          scannedCards: number;
+          totalCards: number;
+          duplicatesFound: number;
+          etaMs: number | null;
+        }) => void
+      ) => () => void;
+      duplicateSessionSkipPair?: (idA: string, idB: string) => Promise<void>;
+      duplicateResetScanSession?: () => Promise<void>;
+      duplicateGetCachedPairs?: () => Promise<
+        Array<{
+          cardIdA: string;
+          cardIdB: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+        }>
+      >;
+      replaceCardOriginal?: (cardId: string, sourceAbs: string) => Promise<void>;
+      mergeDuplicateCards?: (primaryId: string, secondaryId: string) => Promise<void>;
       autoImportRescan?: () => Promise<{ ok: true }>;
       onAutoImportProgress?: (cb: (p: { current: number; total: number; message?: string }) => void) => () => void;
       onAutoImportBatchDone?: (

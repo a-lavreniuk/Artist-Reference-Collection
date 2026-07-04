@@ -7,12 +7,29 @@ type Props = {
   title: string;
   count?: number;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: ReactNode;
   footer?: ReactNode;
 };
 
-export default function CollapsibleSection({ title, count, defaultOpen = true, children, footer }: Props) {
-  const [open, setOpen] = useState(defaultOpen);
+export default function CollapsibleSection({
+  title,
+  count,
+  defaultOpen = true,
+  open: openProp,
+  onOpenChange,
+  children,
+  footer
+}: Props) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+  const open = openProp ?? uncontrolledOpen;
+
+  const toggleOpen = () => {
+    const next = !open;
+    if (openProp === undefined) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const panelId = useId();
   const headId = useId();
   const toggleScopeRef = useRef<HTMLSpanElement>(null);
@@ -42,7 +59,7 @@ export default function CollapsibleSection({ title, count, defaultOpen = true, c
               className="btn btn-outline btn-icon-only btn-ds arc-card-detail-section-toggle"
               aria-expanded={open}
               aria-controls={panelId}
-              onClick={() => setOpen((v) => !v)}
+              onClick={toggleOpen}
             >
               <span
                 className={`btn-icon-only__glyph ${open ? 'arc-icon-chevron-peak' : 'arc-icon-chevron-bottom'}`}

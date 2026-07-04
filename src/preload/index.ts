@@ -138,6 +138,31 @@ contextBridge.exposeInMainWorld('arc', {
   storageAddSkippedPair: (idA: string, idB: string) =>
     ipcRenderer.invoke('arc:storage-add-skipped-pair', idA, idB),
   storageCardsPhash: () => ipcRenderer.invoke('arc:storage-cards-phash'),
+  checkImportDuplicates: (absolutePaths: string[]) =>
+    ipcRenderer.invoke('arc:check-import-duplicates', absolutePaths),
+  checkExactDuplicateFile: (absolutePath: string) =>
+    ipcRenderer.invoke('arc:check-exact-duplicate-file', absolutePath) as Promise<boolean>,
+  probeIncomingFile: (absolutePath: string) => ipcRenderer.invoke('arc:probe-incoming-file', absolutePath),
+  scanDuplicatePairs: (payload?: { thresholdPct?: number; resetSession?: boolean }) =>
+    ipcRenderer.invoke('arc:scan-duplicate-pairs', payload ?? {}),
+  runDuplicateScan: (payload?: { thresholdPct?: number; resetSession?: boolean }) =>
+    ipcRenderer.invoke('arc:duplicate-scan-run', payload ?? {}),
+  cancelDuplicateScan: () => ipcRenderer.invoke('arc:duplicate-scan-cancel'),
+  onDuplicateScanProgress: (
+    cb: (p: { scannedCards: number; totalCards: number; duplicatesFound: number; etaMs: number | null }) => void
+  ) => {
+    const fn = (_: unknown, payload: unknown) => cb(payload as never);
+    ipcRenderer.on('arc:duplicate-scan-progress', fn);
+    return () => ipcRenderer.removeListener('arc:duplicate-scan-progress', fn);
+  },
+  duplicateSessionSkipPair: (idA: string, idB: string) =>
+    ipcRenderer.invoke('arc:duplicate-session-skip-pair', idA, idB),
+  duplicateResetScanSession: () => ipcRenderer.invoke('arc:duplicate-reset-scan-session'),
+  duplicateGetCachedPairs: () => ipcRenderer.invoke('arc:duplicate-get-cached-pairs'),
+  replaceCardOriginal: (cardId: string, sourceAbs: string) =>
+    ipcRenderer.invoke('arc:replace-card-original', { cardId, sourceAbs }),
+  mergeDuplicateCards: (primaryId: string, secondaryId: string) =>
+    ipcRenderer.invoke('arc:merge-duplicate-cards', { primaryId, secondaryId }),
   onMigrationProgress: (cb: (p: unknown) => void) => {
     const fn = (_: unknown, payload: unknown) => cb(payload);
     ipcRenderer.on('arc:migration-progress', fn);

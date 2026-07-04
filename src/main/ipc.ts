@@ -25,6 +25,7 @@ import {
   resolveLegacyMetadataAbsPath
 } from './libraryFilenames';
 import { registerStorageIpc } from './ipcStorage';
+import { registerDuplicateIpc } from './ipcDuplicates';
 import { resetLibraryStorageCache } from './storage/libraryStorage';
 import { readLibraryDiskStats } from './libraryDiskStats';
 import {
@@ -205,6 +206,7 @@ export function registerArcIpc(): void {
   });
 
   registerStorageIpc(readLibraryRootFromDisk, assertNotMaintenance);
+  registerDuplicateIpc(readLibraryRootFromDisk, assertNotMaintenance);
 
   ipcMain.handle('arc:maintenance-begin', async () => {
     acquireMaintenanceLock();

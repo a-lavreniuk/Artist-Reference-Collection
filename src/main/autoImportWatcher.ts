@@ -201,7 +201,17 @@ async function processQueue(): Promise<void> {
           total,
           message: `Автоимпорт: добавлено ${i} из ${total}`
         });
-        const result = await importMediaFile(libraryRoot, batch[i]);
+        const filePath = batch[i]!;
+        const { isExactDuplicateIncomingFile } = await import('./duplicateScanService');
+        if (await isExactDuplicateIncomingFile(libraryRoot, filePath)) {
+          broadcastProgress({
+            current: i + 1,
+            total,
+            message: `Автоимпорт: добавлено ${i + 1} из ${total}`
+          });
+          continue;
+        }
+        const result = await importMediaFile(libraryRoot, filePath);
         if (result.ok) {
           batchSuccessPaths.push(batch[i]);
           batchImportedIds.push(result.row.id);
@@ -235,6 +245,10 @@ async function processQueue(): Promise<void> {
         attempted: sessionAttempted,
         sourcePaths: sessionSuccessPaths
       });
+      if (sessionImported > 0) {
+        const { triggerDuplicateScanAfterImport } = await import('./ipcDuplicates');
+        void triggerDuplicateScanAfterImport();
+      }
     }
 
     if (importQueue.length > 0 && !isMaintenanceLocked() && readAppPreferencesSync().autoImportEnabled) {

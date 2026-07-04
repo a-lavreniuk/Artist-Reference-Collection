@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { AlertVariant } from './types';
 import { playNotificationSound } from '../../services/audioNotification';
 import { useOverlayMotion } from '../../motion';
@@ -14,6 +14,7 @@ type Props = {
   autoDismissMs?: number;
   hostClassName?: string;
   withSound?: boolean;
+  onActivate?: () => void;
 };
 
 /** Фиксированный toast внизу экрана (Figma Alert, node 52:2131). */
@@ -23,7 +24,8 @@ export default function ToastAlert({
   onClose,
   autoDismissMs = ARC_UI_KIT_ALERT_AUTO_DISMISS_MS,
   hostClassName,
-  withSound = true
+  withSound = true,
+  onActivate
 }: Props) {
   const [closing, setClosing] = useState(false);
   const onCloseRef = useRef(onClose);
@@ -67,7 +69,26 @@ export default function ToastAlert({
       aria-live="polite"
       aria-atomic="true"
     >
-      <div ref={alertRef} className={`alert alert-${variant}`} role="status">
+      <div
+        ref={alertRef}
+        className={`alert alert-${variant}${onActivate ? ' alert--clickable' : ''}`}
+        role="status"
+        {...(onActivate
+          ? {
+              onClick: (e: MouseEvent) => {
+                if ((e.target as HTMLElement).closest('.demo-alert__close')) return;
+                onActivate();
+              },
+              onKeyDown: (e: KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onActivate();
+                }
+              },
+              tabIndex: 0
+            }
+          : {})}
+      >
         <p className="demo-alert__message">{message}</p>
         <button
           type="button"

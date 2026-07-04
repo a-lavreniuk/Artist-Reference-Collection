@@ -7,6 +7,7 @@ import GalleryCardEditRedirect from './pages/GalleryCardEditRedirect';
 import SettingsPage from './pages/SettingsPage';
 import SettingsNavbarPanelPage from './pages/SettingsNavbarPanelPage';
 import TagsPage from './pages/TagsPage';
+import DuplicatesPage from './pages/DuplicatesPage';
 import { useArcMoodboardLibraryDiag } from './debug/diagHook';
 
 const BoardPage = lazy(() => import('./pages/BoardPage'));
@@ -75,7 +76,7 @@ export default function App() {
           <Route path="board" element={<BoardPage />} />
           <Route path="statistics" element={<SettingsNavbarPanelPage panel="statistics" />} />
           <Route path="history" element={<SettingsNavbarPanelPage panel="history" />} />
-          <Route path="duplicates" element={<SettingsNavbarPanelPage panel="duplicates" />} />
+          <Route path="duplicates" element={<DuplicatesPage />} />
           <Route path="settings" element={<SettingsPage />}>
             <Route index element={<Navigate to="general" replace />} />
             <Route path="general" element={<SettingsGeneralPanel />} />

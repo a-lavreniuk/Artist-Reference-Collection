@@ -33,7 +33,7 @@ export default function NavbarMenu() {
       { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
       { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/general') },
       { type: 'separator', key: 'sep1' },
-      { type: 'item', key: 'dup', label: 'Поиск дублей — в разработке', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
+      { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
       { type: 'separator', key: 'sep-grid' },
       { type: 'header', key: 'grid-size-title', label: 'Размер сетки' },
       ...GRID_OPTIONS.map((opt) => ({

@@ -250,6 +250,8 @@ export function registerStorageIpc(
       void queueCardsForIndexing(importedIds);
       const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
       void refreshLibrarySessionSnapshotFromDisk();
+      const { triggerDuplicateScanAfterImport } = await import('./ipcDuplicates');
+      void triggerDuplicateScanAfterImport();
     }
     return results;
   });

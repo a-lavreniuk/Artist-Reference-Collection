@@ -32,7 +32,6 @@ import { applyStoredScreenshotShortcut, unregisterScreenshotShortcut } from './s
 import { applyStoredFeedbackShortcut, registerFeedbackIpc, unregisterFeedbackShortcut } from './feedbackShortcut';
 import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
-import { registerDuplicateScanIpc } from './duplicateFileScan';
 import { bindMainWindow, getMainWindow, registerWindowChromeIpc, showMainWindowFromUserAction } from './windowChrome';
 import { isScreenshotCaptureInFlight } from './screenshotSession';
 import {
@@ -182,7 +181,6 @@ app.whenReady().then(async () => {
   registerScreenshotPickerIpc();
   registerOnboardingWindowModeIpc();
   registerFeedbackIpc();
-  registerDuplicateScanIpc();
   registerAutoImportIpc();
   void applyStoredScreenshotShortcut();
   applyStoredFeedbackShortcut();

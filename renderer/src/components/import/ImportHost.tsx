@@ -5,6 +5,7 @@ import { getImportSourceFilesAction } from '../../import/importDefaults';
 import { showAppNotification } from '../../services/notificationService';
 import DemoAlert from '../layout/DemoAlert';
 import SourceFilesModal from './SourceFilesModal';
+import ImportDuplicatesModal, { type ImportDuplicateConflict } from './ImportDuplicatesModal';
 import { ImportContext } from './ImportContext';
 
 function isFileDragEvent(e: DragEvent): boolean {
@@ -40,7 +41,7 @@ function isSuppressedNativeMediaDragTarget(target: EventTarget | null): boolean 
   );
 }
 
-type ImportPhase = 'idle' | 'overlay' | 'importing' | 'source-modal';
+type ImportPhase = 'idle' | 'overlay' | 'importing' | 'source-modal' | 'duplicate-modal';
 
 export default function ImportHost({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<ImportPhase>('idle');
@@ -49,6 +50,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const [maintenanceLocked, setMaintenanceLocked] = useState(false);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const [sourceModalPaths, setSourceModalPaths] = useState<string[] | null>(null);
+  const [duplicateConflicts, setDuplicateConflicts] = useState<ImportDuplicateConflict[]>([]);
+  const [duplicateIndex, setDuplicateIndex] = useState(0);
   const [importBusy, setImportBusy] = useState(false);
   const overlayOpenedManuallyRef = useRef(false);
   const isDraggingFilesRef = useRef(false);
@@ -90,9 +93,43 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       }) ?? (() => {});
 
     try {
-      const results = await window.arc.importFiles(paths);
-      const successes = results.filter((r) => r.ok);
-      const sourcePaths = paths.filter((_, i) => results[i]?.ok);
+      const dupMatches =
+        window.arc.checkImportDuplicates != null
+          ? await window.arc.checkImportDuplicates(paths)
+          : [];
+      const conflictPaths = new Set(dupMatches.map((m) => m.path));
+      const cleanPaths = paths.filter((p) => !conflictPaths.has(p));
+
+      let successes: Array<{ row: { id: string } }> = [];
+      let sourcePaths: string[] = [];
+
+      if (cleanPaths.length > 0) {
+        const results = await window.arc.importFiles(cleanPaths);
+        successes = results.flatMap((r) => (r.ok ? [{ row: { id: r.row.id } }] : []));
+        sourcePaths = cleanPaths.filter((_, i) => results[i]?.ok);
+      }
+
+      const conflicts = dupMatches.filter((m): m is ImportDuplicateConflict => m.existingCard != null);
+
+      if (conflicts.length > 0) {
+        setProgressMessage(null);
+        setDuplicateConflicts(conflicts);
+        setDuplicateIndex(0);
+        setPhase('duplicate-modal');
+
+        if (successes.length > 0) {
+          const n = successes.length;
+          const word = n === 1 ? 'файл' : n < 5 ? 'файла' : 'файлов';
+          void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
+          window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+          showAppNotification({
+            message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`,
+            variant: 'success',
+            prefKey: 'notifyFilesAdded'
+          });
+        }
+        return;
+      }
 
       if (successes.length > 0) {
         const n = successes.length;
@@ -132,6 +169,23 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       setImportBusy(false);
     }
   }, [canImport]);
+
+  const closeDuplicateModal = useCallback(() => {
+    setDuplicateConflicts([]);
+    setDuplicateIndex(0);
+    setPhase('idle');
+  }, []);
+
+  const onDuplicateResolved = useCallback(() => {
+    if (duplicateIndex + 1 < duplicateConflicts.length) {
+      setDuplicateIndex((i) => i + 1);
+    } else {
+      window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+      setDuplicateConflicts([]);
+      setDuplicateIndex(0);
+      setPhase('idle');
+    }
+  }, [duplicateIndex, duplicateConflicts.length]);
 
   const clearFileDrag = useCallback(() => {
     isDraggingFilesRef.current = false;
@@ -316,6 +370,15 @@ export default function ImportHost({ children }: { children: ReactNode }) {
           fileCount={sourceModalPaths.length}
           onKeep={closeSourceModal}
           onTrashSources={() => void trashSources()}
+        />
+      ) : null}
+
+      {phase === 'duplicate-modal' && duplicateConflicts.length > 0 ? (
+        <ImportDuplicatesModal
+          conflicts={duplicateConflicts}
+          index={duplicateIndex}
+          onResolved={onDuplicateResolved}
+          onClose={closeDuplicateModal}
         />
       ) : null}
     </ImportContext.Provider>
