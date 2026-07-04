@@ -78,6 +78,7 @@ export default function CardDetailCollectionsModal({
   const picker = (
     <ArcAnimatedModalHost
       onClose={onClose}
+      closeDisabled={newCollectionOpen}
       hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
     >
       {() => (

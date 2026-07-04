@@ -36,7 +36,7 @@ export default function UpdateAvailableModal({
         : `Доступна новая версия ${version}. Нажмите «Обновить» — загрузка и перезапуск произойдут автоматически.`;
 
   return (
-    <ArcAnimatedModalHost onClose={onLater}>
+    <ArcAnimatedModalHost onClose={onLater} closeDisabled={busy}>
       {({ requestClose }) => (
         <section
           ref={hostRef}

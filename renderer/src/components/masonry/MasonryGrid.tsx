@@ -240,22 +240,25 @@ export default function MasonryGrid({
     };
   }, [updateItemHeight]);
 
-  const bindItemRef = useCallback((id: string, el: HTMLElement | null) => {
-    const ro = resizeObserverRef.current;
-    const prev = itemRefs.current.get(id);
-    if (prev && ro) ro.unobserve(prev);
-    if (el) {
-      itemRefs.current.set(id, el);
-      if (isMasonryItemRevealed(id)) {
-        el.setAttribute('data-revealed', 'true');
+  const bindItemRef = useCallback(
+    (id: string, el: HTMLElement | null) => {
+      const ro = resizeObserverRef.current;
+      const prev = itemRefs.current.get(id);
+      if (prev && ro) ro.unobserve(prev);
+      if (el) {
+        itemRefs.current.set(id, el);
+        if (!motionEnabled || isMasonryItemRevealed(id)) {
+          el.setAttribute('data-revealed', 'true');
+        } else {
+          el.removeAttribute('data-revealed');
+        }
+        ro?.observe(el);
       } else {
-        el.removeAttribute('data-revealed');
+        itemRefs.current.delete(id);
       }
-      ro?.observe(el);
-    } else {
-      itemRefs.current.delete(id);
-    }
-  }, []);
+    },
+    [motionEnabled]
+  );
 
   const focusItem = useCallback((id: string) => {
     const el = itemRefs.current.get(id);

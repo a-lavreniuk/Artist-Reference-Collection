@@ -36,9 +36,10 @@ function GalleryCardTile({
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const overlayInnerRef = useRef<HTMLSpanElement>(null);
-  const [hovered, setHovered] = useState(false);
+  const [mouseHovered, setMouseHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState(false);
-  const overlayActive = hovered || inMoodboard;
+  const overlayActive = mouseHovered || focused || inMoodboard;
   useCardOverlayStagger(overlayActive, overlayInnerRef);
 
   const iconClass = hoveredBookmarkCardId
@@ -70,11 +71,11 @@ function GalleryCardTile({
         }
       }}
       onContextMenu={onContextMenu}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)}
+      onMouseEnter={() => setMouseHovered(true)}
+      onMouseLeave={() => setMouseHovered(false)}
+      onFocus={() => setFocused(true)}
       onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHovered(false);
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
       }}
     >
       <span className="arc-gallery-card-stack">

@@ -119,6 +119,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
   const picker = (
     <ArcAnimatedModalHost
       onClose={onClose}
+      closeDisabled={tagModal != null}
       className="arc-add-tags-picker-host"
       hostClassName="arc-modal-host--card-detail-nested"
     >

@@ -1,8 +1,10 @@
-import { useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, type ReactNode } from 'react';
 import { useMountOverlayMotion } from './useMountOverlayMotion';
 
 type Props = {
   onClose: () => void;
+  /** When true, Escape and backdrop dismiss are ignored. */
+  closeDisabled?: boolean;
   className?: string;
   hostClassName?: string;
   children: (api: { requestClose: () => void }) => ReactNode;
@@ -11,11 +13,17 @@ type Props = {
 /** Animated `.arc-modal-host` with exit tween before unmount. */
 export default function ArcAnimatedModalHost({
   onClose,
+  closeDisabled = false,
   className = 'arc-modal-host',
   hostClassName = '',
   children
 }: Props) {
-  const { hostRef, requestClose, render } = useMountOverlayMotion(onClose);
+  const { hostRef, requestClose: requestCloseBase, render } = useMountOverlayMotion(onClose);
+
+  const requestClose = useCallback(() => {
+    if (closeDisabled) return;
+    requestCloseBase();
+  }, [closeDisabled, requestCloseBase]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
