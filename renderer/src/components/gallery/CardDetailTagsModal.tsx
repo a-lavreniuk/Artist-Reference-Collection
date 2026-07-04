@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ArcAnimatedModalHost } from '../../motion';
 import { ContextMenuSeparator } from '../context-menu';
 import TagChipToggleWithTooltip from '../tags/TagChipToggleWithTooltip';
 import TagSettingsModal, { type TagSettingsModalState } from '../tags/TagSettingsModal';
@@ -87,16 +88,6 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
     };
   }, []);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || tagModal) return;
-      event.stopPropagation();
-      onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, tagModal]);
-
   const searchQ = normalizeSearchQuery(tagSearch);
 
   const sidebarCategories = useMemo(
@@ -126,21 +117,21 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
   }, [categories, selectedTagIds, tagSearch, selectedCategoryId, tagGroups, tagModal, sidebarCategories]);
 
   const picker = (
-    <div
-      ref={hostRef}
-      className="arc-add-tags-picker-host arc-modal-host--card-detail-nested"
-      aria-hidden="false"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <ArcAnimatedModalHost
+      onClose={onClose}
+      className="arc-add-tags-picker-host"
+      hostClassName="arc-modal-host--card-detail-nested"
     >
-      <div
-        className="arc-add-tags-picker"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Добавить метки"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {() => (
+        <>
+          <div
+            ref={hostRef}
+            className="arc-add-tags-picker"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Добавить метки"
+            onClick={(e) => e.stopPropagation()}
+          >
         <aside
           className="arc-add-tags-picker__sidebar context-menu panel elevation-raised context-menu--static arc-ui-kit-scope"
           data-elevation="raised"
@@ -257,40 +248,42 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
             )}
           </div>
         </div>
-      </div>
+          </div>
 
-      {tagModal ? (
-        <TagSettingsModal
-          state={tagModal}
-          categories={categories}
-          hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
-          onClose={() => setTagModal(null)}
-          onCreate={async (payload) => {
-            const created = await addTag(payload.categoryId, payload.name, {
-              description: payload.description,
-              tooltipImageDataUrl: payload.tooltipImageDataUrl
-            });
-            if (!selectedTagIds.includes(created.id)) {
-              await onToggleTag(created.id);
-            }
-            await reloadCatalog();
-          }}
-          onSave={async (payload) => {
-            await updateTag(payload.tagId, {
-              name: payload.name,
-              categoryId: payload.categoryId,
-              description: payload.description,
-              tooltipImageDataUrl: payload.tooltipImageDataUrl
-            });
-            await reloadCatalog();
-          }}
-          onDelete={async (tagId) => {
-            await deleteTag(tagId);
-            await reloadCatalog();
-          }}
-        />
-      ) : null}
-    </div>
+          {tagModal ? (
+            <TagSettingsModal
+              state={tagModal}
+              categories={categories}
+              hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
+              onClose={() => setTagModal(null)}
+              onCreate={async (payload) => {
+                const created = await addTag(payload.categoryId, payload.name, {
+                  description: payload.description,
+                  tooltipImageDataUrl: payload.tooltipImageDataUrl
+                });
+                if (!selectedTagIds.includes(created.id)) {
+                  await onToggleTag(created.id);
+                }
+                await reloadCatalog();
+              }}
+              onSave={async (payload) => {
+                await updateTag(payload.tagId, {
+                  name: payload.name,
+                  categoryId: payload.categoryId,
+                  description: payload.description,
+                  tooltipImageDataUrl: payload.tooltipImageDataUrl
+                });
+                await reloadCatalog();
+              }}
+              onDelete={async (tagId) => {
+                await deleteTag(tagId);
+                await reloadCatalog();
+              }}
+            />
+          ) : null}
+        </>
+      )}
+    </ArcAnimatedModalHost>
   );
 
   return createPortal(picker, document.body);

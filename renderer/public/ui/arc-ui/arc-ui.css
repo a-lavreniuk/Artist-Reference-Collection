@@ -1118,6 +1118,14 @@ body[data-input-size="s"],
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.btn-ds .arc-icon,
+.btn-icon-only .arc-icon,
+.btn-ds .tab-icon,
+.btn-icon-only .tab-icon {
+  transition: color var(--transition-fast);
 }
 
 .btn-icon-only {
@@ -1139,6 +1147,7 @@ body[data-input-size="s"],
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: color var(--transition-fast);
 }
 
 .btn-icon-svg {
@@ -1150,6 +1159,7 @@ body[data-input-size="s"],
 .btn-icon-svg path {
   stroke: currentColor;
   fill: none;
+  transition: stroke var(--transition-fast), fill var(--transition-fast);
 }
 
 @keyframes spin {

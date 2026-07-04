@@ -15,6 +15,7 @@ import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
+import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
 import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
 import { useCollectionContextMenu } from '../components/collections/useCollectionContextMenu';
 import CollectionSettingsModal, {
@@ -426,6 +427,7 @@ export default function CollectionsPage() {
                   scrollRootRef={scrollRootRef}
                   loadingMore={feed.loading && feed.hasMore}
                   busy={feed.booting || feed.loading || feed.shuffleReloading}
+                  revealResetKey={galleryRevealResetKey(scopedFeedQuery)}
                   onOpenCard={openCard}
                   moodboardCardIds={moodboardCardIds}
                   onCardContextMenu={onCardContextMenu}

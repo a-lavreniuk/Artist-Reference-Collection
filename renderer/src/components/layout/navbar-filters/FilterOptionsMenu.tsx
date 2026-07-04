@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ContextMenuHeader from '../../context-menu/ContextMenuHeader';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
+import { useFilterOptionsListMotion } from '../../../motion';
 import {
   FILTER_CHIP_META,
   type GalleryFilterId,
@@ -30,6 +31,12 @@ export default function FilterOptionsMenu({
     if (!listRef.current) return;
     void hydrateArcNavbarIcons(listRef.current);
   }, [layout.order, layout.visible, dragState]);
+
+  useFilterOptionsListMotion({
+    listRef,
+    order: layout.order,
+    isDragging: dragState != null
+  });
 
   useLayoutEffect(() => {
     if (!dragState) return;

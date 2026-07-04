@@ -1,9 +1,10 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 import type { CardRecord } from '../../services/db';
+import { useCardOverlayStagger } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 import GalleryThumb from './GalleryThumb';
-import { gallerySkeletonStyle } from './gallerySkeleton';
+import { galleryCardAspectRatio } from './gallerySkeleton';
 import { cardFileFormatLabel } from '../../utils/cardFileFormatLabel';
 
 type Props = {
@@ -34,7 +35,11 @@ function GalleryCardTile({
   interfaceTourAnchor
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const overlayInnerRef = useRef<HTMLSpanElement>(null);
+  const [hovered, setHovered] = useState(false);
   const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState(false);
+  const overlayActive = hovered || inMoodboard;
+  useCardOverlayStagger(overlayActive, overlayInnerRef);
 
   const iconClass = hoveredBookmarkCardId
     ? inMoodboard
@@ -65,6 +70,12 @@ function GalleryCardTile({
         }
       }}
       onContextMenu={onContextMenu}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHovered(false);
+      }}
     >
       <span className="arc-gallery-card-stack">
         <span
@@ -77,10 +88,14 @@ function GalleryCardTile({
         {thumbSrc ? (
           <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} />
         ) : (
-          <div className="arc-gallery-skeleton" style={gallerySkeletonStyle(card)} aria-hidden />
+          <div
+            className="arc-gallery-skeleton"
+            style={{ aspectRatio: galleryCardAspectRatio(card), background: 'var(--gray-900)' }}
+            aria-hidden
+          />
         )}
         <span className="arc-gallery-card-overlay">
-          <span className="arc-gallery-card-overlay-inner" data-btn-size="s">
+          <span ref={overlayInnerRef} className="arc-gallery-card-overlay-inner" data-btn-size="s">
             {onFindSimilar ? (
               <button
                 type="button"

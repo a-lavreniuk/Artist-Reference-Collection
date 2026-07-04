@@ -2,6 +2,7 @@
 /** Generated from renderer/public/ui/arc-ui/arc-ui.html — demo logic scoped to .arc-ui-kit-scope. Regenerate: node scripts/gen-ui-kit-boot.mjs */
 
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
+import { playModalHostEnter, playModalHostExit, playToastEnter } from '../motion/playModalHostMotion';
 
 const arcUiKitGlyphHydrators = new WeakMap<HTMLElement, () => Promise<unknown>>();
 
@@ -368,6 +369,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           }
           applyModalState(host, modalCommittedState.get(hostId));
           syncDirtyIndicator(host);
+          playModalHostEnter(host);
           document.dispatchEvent(new CustomEvent("arc-modal:open", { detail: { host: host, trigger: trigger || null } }));
           const dialog = host.querySelector(".arc-modal");
           const focusables = dialog ? getFocusable(dialog) : [];
@@ -385,15 +387,18 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           if (!closingHost) return;
           const saved = closingHost.getAttribute("data-arc-modal-saved") === "true";
           closingHost.removeAttribute("data-arc-modal-saved");
-          closingHost.hidden = true;
-          closingHost.setAttribute("aria-hidden", "true");
           const t = triggerOverride || lastTrigger;
-          document.dispatchEvent(new CustomEvent("arc-modal:close", { detail: { host: closingHost, trigger: t || null, saved: saved } }));
-          activeHost = null;
-          lastTrigger = null;
-          if (t && typeof t.focus === "function") {
-            t.focus();
-          }
+          const finishClose = function () {
+            closingHost.hidden = true;
+            closingHost.setAttribute("aria-hidden", "true");
+            document.dispatchEvent(new CustomEvent("arc-modal:close", { detail: { host: closingHost, trigger: t || null, saved: saved } }));
+            activeHost = null;
+            lastTrigger = null;
+            if (t && typeof t.focus === "function") {
+              t.focus();
+            }
+          };
+          playModalHostExit(closingHost, finishClose);
         }
 
         scope.querySelectorAll("[data-arc-modal-open]").forEach(function (btn) {
@@ -770,6 +775,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             }, docOpts);
           }
           host.appendChild(alertNode);
+          playToastEnter(alertNode);
           closeTimer = window.setTimeout(closeAlert, 3200);
         }
 

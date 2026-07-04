@@ -150,7 +150,6 @@ export function NavbarSearchProvider({
 
   const { dropdownLayout } = useNavbarSearchPanel({
     panelOpen,
-    searchMode,
     getSearchIsland,
     onClose: closePanel,
     onPanelOpenChange,

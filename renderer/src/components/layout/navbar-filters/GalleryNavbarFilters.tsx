@@ -7,6 +7,7 @@ import {
   useState
 } from 'react';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import { arcMotionTokens, ensureGsapSetup, getPrefersReducedMotion, motionDuration } from '../../../motion';
 import {
   ContextMenu,
   ContextMenuInput,
@@ -317,6 +318,29 @@ export default function NavbarFiltersMenu() {
   }, [customDurationDebounced, filters.duration, patchFilters, stats?.durationMeta.maxSec]);
 
   const filtersMainRef = useRef<HTMLButtonElement>(null);
+  const filterActiveDotRef = useRef<HTMLSpanElement>(null);
+  const prevActiveCategoryCountRef = useRef(0);
+
+  useLayoutEffect(() => {
+    if (activeCategoryCount <= 0) {
+      prevActiveCategoryCountRef.current = 0;
+      return;
+    }
+    const dot = filterActiveDotRef.current;
+    if (!dot) return;
+    const wasInactive = prevActiveCategoryCountRef.current === 0;
+    prevActiveCategoryCountRef.current = activeCategoryCount;
+    if (!wasInactive) return;
+
+    const gsap = ensureGsapSetup();
+    const reduced = getPrefersReducedMotion();
+    if (reduced) return;
+    gsap.fromTo(
+      dot,
+      { scale: 0, opacity: 0 },
+      { scale: 1, opacity: 1, duration: motionDuration('fast', false), ease: arcMotionTokens.ease }
+    );
+  }, [activeCategoryCount]);
   const scopeRef = useRef<HTMLSpanElement>(null);
   const [mainOpen, setMainOpen] = useState(false);
   const [submenuPosition, setSubmenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -866,7 +890,7 @@ export default function NavbarFiltersMenu() {
         >
           <span className="btn-icon-only__glyph arc-icon-filter" aria-hidden="true" />
           {activeCategoryCount > 0 ? (
-            <span className="arc-navbar-filter-active-dot" aria-hidden="true" />
+            <span ref={filterActiveDotRef} className="arc-navbar-filter-active-dot" aria-hidden="true" />
           ) : null}
         </button>
 

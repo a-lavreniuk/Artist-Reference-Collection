@@ -8,7 +8,10 @@ import './styles/tokens.css';
 import './styles/index.css';
 import './styles/ui-kit.css';
 
+import { ensureGsapSetup } from './motion/gsapSetup';
+
 preloadArcNavbarIcons();
+ensureGsapSetup();
 void runLoadingBootstrapReporter();
 
 createRoot(document.getElementById('root')!).render(

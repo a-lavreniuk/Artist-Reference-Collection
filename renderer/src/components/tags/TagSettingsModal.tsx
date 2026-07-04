@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
+import { ArcAnimatedModalHost } from '../../motion';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { processTagTooltipImageFile } from './tagTooltipImage';
@@ -123,20 +124,6 @@ export default function TagSettingsModal({
   ]);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (categoryMenuOpen) {
-          setCategoryMenuOpen(false);
-          return;
-        }
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, categoryMenuOpen]);
-
-  useEffect(() => {
     if (!categoryMenuOpen) return;
     const onMouseDown = (e: MouseEvent) => {
       const el = selectorRef.current;
@@ -230,26 +217,19 @@ export default function TagSettingsModal({
 
   return (
     <>
-      <div
-        ref={hostRef}
-        className={hostClassName ? `arc-modal-host ${hostClassName}` : 'arc-modal-host'}
-        aria-hidden="false"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            onClose();
-          }
-        }}
-      >
-        <section
-          className="arc-modal"
-          data-elevation="raised"
-          data-input-size="m"
-          data-btn-size="s"
-          role="dialog"
-          aria-modal="true"
-          aria-label={isEdit ? 'Настройки метки' : 'Новая метка'}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
+        {({ requestClose }) => (
+          <section
+            ref={hostRef}
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="m"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-label={isEdit ? 'Настройки метки' : 'Новая метка'}
+            onClick={(e) => e.stopPropagation()}
+          >
           <header className="arc-modal__header arc-modal__header--tabs">
             <div className="arc-modal__header-tabs tabs" role="tablist" aria-label="Разделы настроек метки">
               <button
@@ -275,7 +255,7 @@ export default function TagSettingsModal({
                 Изображение
               </button>
             </div>
-            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
+            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
               <span className="tab-icon arc-icon-close" aria-hidden="true" />
             </button>
           </header>
@@ -483,7 +463,7 @@ export default function TagSettingsModal({
               <span className="btn-ds__value">Удалить</span>
             </button>
             <div className="arc-modal__footer-right">
-              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={isSaving}>
+              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose} disabled={isSaving}>
                 <span className="btn-ds__value">Отмена</span>
               </button>
               <button
@@ -506,8 +486,9 @@ export default function TagSettingsModal({
               </button>
             </div>
           </footer>
-        </section>
-      </div>
+          </section>
+        )}
+      </ArcAnimatedModalHost>
 
       {deleteConfirmOpen && isEdit ? (
         <ConfirmDeleteTagModal

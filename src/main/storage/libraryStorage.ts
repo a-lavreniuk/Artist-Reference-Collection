@@ -586,7 +586,6 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
   if (sort.field === 'shuffle') {
     ensureShuffleSqlFunctions(db);
     const shuffleSeed = sort.shuffleSeed ?? 0;
-    if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
     sql += ' ORDER BY arc_shuffle_key(c.id, ?) ASC LIMIT ? OFFSET ?';
     binds.push(shuffleSeed, params.limit, params.offset);
     const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];

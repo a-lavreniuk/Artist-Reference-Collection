@@ -1089,14 +1089,19 @@ button.color-swatch-inline:disabled {
 
 .arc-masonry-item {
   box-sizing: border-box;
-  transition:
-    opacity var(--transition-fast),
-    transform var(--transition-fast);
 }
 
-.arc-masonry-item--entering {
+/* Скрыто до reveal — без вспышки «вся сетка → мигание по очереди». */
+.arc-masonry-item:not([data-revealed='true']):not(.arc-masonry-item--skeleton) .arc-gallery-card-wrap {
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateY(10px) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arc-masonry-item:not([data-revealed='true']):not(.arc-masonry-item--skeleton) .arc-gallery-card-wrap {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .arc-masonry-grid .arc-gallery-card-wrap {
@@ -1140,11 +1145,6 @@ button.color-swatch-inline:disabled {
   display: block;
   vertical-align: bottom;
   object-fit: cover;
-  opacity: 0;
-}
-
-.arc-gallery-thumb.is-loaded {
-  opacity: 1;
 }
 
 .arc-gallery-skeleton {
@@ -1692,14 +1692,11 @@ button.color-swatch-inline:disabled {
 
 .arc-gallery-overlay-btn {
   flex: 0 1 auto;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity var(--transition-fast);
 }
 
 .arc-gallery-card-wrap:hover .arc-gallery-overlay-btn,
 .arc-gallery-card-wrap:focus-within .arc-gallery-overlay-btn {
-  opacity: 1;
   pointer-events: auto;
 }
 

@@ -48,6 +48,7 @@ import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
+import { useOverlayMotionPair } from '../../motion';
 import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDetailPreviewUrls } from './galleryMediaCache';
 import { ARC_THUMB_BUDGET_CHANGED_EVENT } from './galleryThumbBudget';
 import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
@@ -101,7 +102,6 @@ export default function CardDetailOverlay({
 }: Props) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const hostRef = useRef<HTMLDivElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
   const inspectVideoRef = useRef<HTMLVideoElement | null>(null);
   const descriptionSaveTimerRef = useRef<number | null>(null);
@@ -149,6 +149,13 @@ export default function CardDetailOverlay({
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(
     null
   );
+  const [closing, setClosing] = useState(false);
+  const requestClose = useCallback(() => setClosing(true), []);
+  const { panelRef, backdropRef, render } = useOverlayMotionPair(!closing, {
+    preset: 'fade-slide-up',
+    backdropPreset: 'fade-scale',
+    onExitComplete: onClose
+  });
 
   const libraryScope = parseLibraryScope(searchParams);
   const inTrash = libraryScope === 'trash';
@@ -178,7 +185,7 @@ export default function CardDetailOverlay({
   }, []);
 
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
+    if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
   }, [
     confirmDelete,
     confirmPermanentDelete,
@@ -324,12 +331,12 @@ export default function CardDetailOverlay({
       else if (removeMoodboardConfirm) setRemoveMoodboardConfirm(null);
       else if (confirmPermanentDelete) setConfirmPermanentDelete(false);
       else if (confirmDelete) setConfirmDelete(false);
-      else onClose();
+      else requestClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [
-    onClose,
+    requestClose,
     confirmDelete,
     confirmPermanentDelete,
     removeMoodboardConfirm,
@@ -460,7 +467,7 @@ export default function CardDetailOverlay({
     try {
       await deleteCard(card.id);
       onDeleted();
-      onClose();
+      requestClose();
     } finally {
       setBusy(false);
     }
@@ -472,7 +479,7 @@ export default function CardDetailOverlay({
     try {
       await restoreCard(card.id);
       onDeleted();
-      onClose();
+      requestClose();
     } finally {
       setBusy(false);
     }
@@ -484,7 +491,7 @@ export default function CardDetailOverlay({
     try {
       await permanentDeleteCard(card.id);
       onDeleted();
-      onClose();
+      requestClose();
     } finally {
       setBusy(false);
     }
@@ -697,9 +704,9 @@ export default function CardDetailOverlay({
 
   const overlay = (
     <>
-      <div className="arc-card-detail-backdrop" aria-hidden="true" />
+      <div ref={backdropRef} className="arc-card-detail-backdrop" aria-hidden="true" />
       <div
-        ref={hostRef}
+        ref={panelRef}
         className="arc-card-detail-overlay arc-ui-kit-scope"
         data-elevation="sunken"
         data-input-size="l"
@@ -929,7 +936,7 @@ export default function CardDetailOverlay({
                   type="button"
                   className="btn btn-outline btn-icon-only btn-ds arc-card-detail-close-btn"
                   aria-label="Закрыть"
-                  onClick={onClose}
+                  onClick={requestClose}
                 >
                   <span className="btn-icon-only__glyph arc-icon-close" aria-hidden="true" />
                 </button>
@@ -1337,6 +1344,8 @@ export default function CardDetailOverlay({
       {similarContextMenuLayer}
     </>
   );
+
+  if (!render) return null;
 
   return createPortal(overlay, document.body);
 }

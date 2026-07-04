@@ -24,6 +24,8 @@ type Props = {
   loadingMore?: boolean;
   busy?: boolean;
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
+  /** Меняется при фильтрах / сортировке — перезапускает reveal карточек. */
+  revealResetKey?: string;
 };
 
 export default function GalleryBoard({
@@ -38,7 +40,8 @@ export default function GalleryBoard({
   scrollRootRef,
   loadingMore = false,
   busy = false,
-  mediaTab
+  mediaTab,
+  revealResetKey = ''
 }: Props) {
   const [tierSrcMap, setTierSrcMap] = useState<Record<string, string>>({});
   const [gridSizeVersion, setGridSizeVersion] = useState(0);
@@ -150,6 +153,7 @@ export default function GalleryBoard({
         scrollRootRef={scrollRootRef}
         gap={MASONRY_GAP_PX}
         layoutEpoch={gridSizeVersion}
+        revealResetKey={revealResetKey}
         loadingMore={loadingMore}
         busy={busy}
         className="arc-gallery-masonry-grid"

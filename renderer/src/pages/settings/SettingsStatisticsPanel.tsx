@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   updateTag,
   getAllCategories,
@@ -21,6 +21,7 @@ import {
   evaluateDiskSpacePressure
 } from '../../utils/evaluateDiskSpacePressure';
 import { showAppNotification } from '../../services/notificationService';
+import { useCountUp } from '../../motion';
 
 const TAG_LIMIT = 20;
 
@@ -30,6 +31,16 @@ type SummaryItem = {
   value: number;
   icon: string;
 };
+
+function SummaryStatValue({ value, enabled }: { value: number; enabled: boolean }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  useCountUp(ref, value, enabled);
+  return (
+    <p ref={ref} className="h1 arc-stats-summary-card__value">
+      {enabled ? 0 : value}
+    </p>
+  );
+}
 
 export default function SettingsStatisticsPanel() {
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getNavbarMetrics>> | null>(null);
@@ -136,7 +147,7 @@ export default function SettingsStatisticsPanel() {
               icon={<span className={`arc-stat-icon arc-stat-icon--${item.icon}`} aria-hidden="true" />}
             >
               <p className="typo-p-m arc-stats-summary-card__label">{item.label}</p>
-              <p className="h1 arc-stats-summary-card__value">{item.value}</p>
+              <SummaryStatValue value={item.value} enabled={metrics !== null} />
             </StatisticsPanelHead>
           </section>
         ))}

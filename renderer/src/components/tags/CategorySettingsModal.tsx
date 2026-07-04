@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, CategoryStats, CategoryWeight } from '../../services/db';
+import { ArcAnimatedModalHost } from '../../motion';
 import ConfirmDeleteCategoryModal from '../layout/ConfirmDeleteCategoryModal';
 import ModalCategoryColorPicker from '../layout/ModalCategoryColorPicker';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
@@ -122,16 +123,6 @@ export default function CategorySettingsModal({
     }
   }, [tab, name, description, colorHex, weight, error, isSaving, stats, deleteConfirmOpen]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
   const submit = async () => {
     const trimmedName = name.trim();
     if (isSaving) return;
@@ -214,26 +205,19 @@ export default function CategorySettingsModal({
 
   return (
     <>
-      <div
-        ref={hostRef}
-        className={hostClassName ? `arc-modal-host ${hostClassName}` : 'arc-modal-host'}
-        aria-hidden="false"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            onClose();
-          }
-        }}
-      >
-        <section
-          className="arc-modal"
-          data-elevation="raised"
-          data-input-size="m"
-          data-btn-size="s"
-          role="dialog"
-          aria-modal="true"
-          aria-label={isEdit ? 'Настройки категории' : 'Новая категория'}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
+        {({ requestClose }) => (
+          <section
+            ref={hostRef}
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="m"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-label={isEdit ? 'Настройки категории' : 'Новая категория'}
+            onClick={(e) => e.stopPropagation()}
+          >
           <header className="arc-modal__header arc-modal__header--tabs">
             <div className="arc-modal__header-tabs tabs" role="tablist" aria-label="Разделы настроек категории">
               {renderTabButton('name', 'Название')}
@@ -241,7 +225,7 @@ export default function CategorySettingsModal({
               {renderTabButton('color', 'Цвет')}
               {renderTabButton('info', 'Информация', !isEdit)}
             </div>
-            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
+            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
               <span className="tab-icon arc-icon-close" aria-hidden="true" />
             </button>
           </header>
@@ -393,7 +377,7 @@ export default function CategorySettingsModal({
                 <span className="btn-ds__value">Удалить</span>
               </button>
               <div className="arc-modal__footer-right">
-                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={isSaving}>
+                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose} disabled={isSaving}>
                   <span className="btn-ds__value">Отмена</span>
                 </button>
                 <button
@@ -414,7 +398,7 @@ export default function CategorySettingsModal({
             </footer>
           ) : (
             <footer className="arc-modal__footer arc-modal__footer--actions-2">
-              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={isSaving}>
+              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose} disabled={isSaving}>
                 <span className="btn-ds__value">Отмена</span>
               </button>
               <button
@@ -427,8 +411,9 @@ export default function CategorySettingsModal({
               </button>
             </footer>
           )}
-        </section>
-      </div>
+          </section>
+        )}
+      </ArcAnimatedModalHost>
 
       {deleteConfirmOpen && isEdit ? (
         <ConfirmDeleteCategoryModal

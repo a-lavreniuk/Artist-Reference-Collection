@@ -5,7 +5,6 @@ import type { NavbarSearchPanelLayout } from '../NavbarSearchPanelPortal';
 
 type UseNavbarSearchPanelOptions = {
   panelOpen: boolean;
-  searchMode: string;
   getSearchIsland: () => HTMLElement | null;
   onClose: () => void;
   onPanelOpenChange?: (open: boolean) => void;
@@ -17,7 +16,6 @@ type UseNavbarSearchPanelOptions = {
 
 export function useNavbarSearchPanel({
   panelOpen,
-  searchMode,
   getSearchIsland,
   onClose,
   onPanelOpenChange,
@@ -84,18 +82,6 @@ export function useNavbarSearchPanel({
   useLayoutEffect(() => {
     onPanelOpenChange?.(panelOpen);
   }, [panelOpen, onPanelOpenChange]);
-
-  useLayoutEffect(() => {
-    if (!panelOpen) return undefined;
-    document.body.classList.add('arc-search-panel-open');
-    if (searchMode === 'similar') {
-      document.body.classList.add('arc-similar-search-panel-open');
-    }
-    return () => {
-      document.body.classList.remove('arc-search-panel-open');
-      document.body.classList.remove('arc-similar-search-panel-open');
-    };
-  }, [panelOpen, searchMode]);
 
   useLayoutEffect(() => {
     if (!detailCardId) return;

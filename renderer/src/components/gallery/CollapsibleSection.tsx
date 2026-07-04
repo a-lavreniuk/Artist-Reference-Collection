@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
+import { useAccordionMotion } from '../../motion';
 
 type Props = {
   title: string;
@@ -15,6 +16,9 @@ export default function CollapsibleSection({ title, count, defaultOpen = true, c
   const panelId = useId();
   const headId = useId();
   const toggleScopeRef = useRef<HTMLSpanElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  useAccordionMotion(open, bodyRef);
 
   useLayoutEffect(() => {
     if (toggleScopeRef.current) void hydrateArcNavbarIcons(toggleScopeRef.current);
@@ -48,12 +52,16 @@ export default function CollapsibleSection({ title, count, defaultOpen = true, c
           </span>
         </Tooltip>
       </div>
-      {open ? (
-        <div id={panelId} className="arc-card-detail-section-body">
-          {children}
-          {footer ? <div className="arc-card-detail-section-footer">{footer}</div> : null}
-        </div>
-      ) : null}
+      <div
+        id={panelId}
+        ref={bodyRef}
+        className="arc-card-detail-section-body"
+        style={open ? undefined : { height: 0, overflow: 'hidden', opacity: 0 }}
+        aria-hidden={!open}
+      >
+        {children}
+        {footer ? <div className="arc-card-detail-section-footer">{footer}</div> : null}
+      </div>
     </section>
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
+import { ArcAnimatedModalHost } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 type Props = {
@@ -25,25 +26,12 @@ export default function CreateLibraryModal({
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
   }, [folderName, busy, emptySubmitted]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !busy) onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [busy, onClose]);
-
   return (
-    <div
-      ref={hostRef}
-      className="arc-modal-host"
-      aria-hidden="false"
-      onClick={(event) => {
-        if (event.target === event.currentTarget && !busy) onClose();
-      }}
-    >
-      <section
-        className="arc-modal"
+    <ArcAnimatedModalHost onClose={onClose}>
+      {({ requestClose }) => (
+        <section
+          ref={hostRef}
+          className="arc-modal"
         data-elevation="raised"
         data-input-size="m"
         data-btn-size="s"
@@ -56,7 +44,15 @@ export default function CreateLibraryModal({
           <h3 className="arc-modal__title" id="arcOnboardingCreateLibraryTitle">
             Создание библиотеки
           </h3>
-          <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose} disabled={busy}>
+          <button
+            type="button"
+            className="arc-modal__close"
+            aria-label="Закрыть"
+            onClick={() => {
+              if (!busy) requestClose();
+            }}
+            disabled={busy}
+          >
             <span className="tab-icon arc-icon-close" aria-hidden="true" />
           </button>
         </header>
@@ -102,7 +98,14 @@ export default function CreateLibraryModal({
         </div>
         <footer className="arc-modal__footer arc-modal__footer--actions-2">
           <div className="arc-modal__footer-right">
-            <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={busy}>
+            <button
+              type="button"
+              className="btn btn-outline btn-ds btn-s"
+              onClick={() => {
+                if (!busy) requestClose();
+              }}
+              disabled={busy}
+            >
               <span className="btn-ds__value">Отмена</span>
             </button>
             <button
@@ -115,7 +118,8 @@ export default function CreateLibraryModal({
             </button>
           </div>
         </footer>
-      </section>
-    </div>
+        </section>
+      )}
+    </ArcAnimatedModalHost>
   );
 }

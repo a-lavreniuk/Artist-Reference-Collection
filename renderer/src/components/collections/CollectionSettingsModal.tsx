@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CollectionRecord, CollectionStats } from '../../services/db';
+import { ArcAnimatedModalHost } from '../../motion';
 import ConfirmCollectionDeleteModal from '../layout/ConfirmCollectionDeleteModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
@@ -94,16 +95,6 @@ export default function CollectionSettingsModal({
     }
   }, [tab, name, description, isSaving, stats, deleteConfirmOpen, duplicateName]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
   const submit = async () => {
     const trimmedName = name.trim();
     if (isSaving) return;
@@ -184,32 +175,25 @@ export default function CollectionSettingsModal({
 
   return (
     <>
-      <div
-        ref={hostRef}
-        className={hostClassName ? `arc-modal-host ${hostClassName}` : 'arc-modal-host'}
-        aria-hidden="false"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            onClose();
-          }
-        }}
-      >
-        <section
-          className="arc-modal"
-          data-elevation="raised"
-          data-input-size="m"
-          data-btn-size="s"
-          role="dialog"
-          aria-modal="true"
-          aria-label={isEdit ? 'Настройки коллекции' : 'Новая коллекция'}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
+        {({ requestClose }) => (
+          <section
+            ref={hostRef}
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="m"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-label={isEdit ? 'Настройки коллекции' : 'Новая коллекция'}
+            onClick={(e) => e.stopPropagation()}
+          >
           <header className="arc-modal__header arc-modal__header--tabs">
             <div className="arc-modal__header-tabs tabs" role="tablist" aria-label="Разделы настроек коллекции">
               {renderTabButton('name', 'Название')}
               {renderTabButton('info', 'Информация', !isEdit)}
             </div>
-            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
+            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
               <span className="tab-icon arc-icon-close" aria-hidden="true" />
             </button>
           </header>
@@ -310,7 +294,7 @@ export default function CollectionSettingsModal({
               <span className="btn-ds__value">Удалить</span>
             </button>
             <div className="arc-modal__footer-right">
-              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={isSaving}>
+              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose} disabled={isSaving}>
                 <span className="btn-ds__value">Отмена</span>
               </button>
               <button
@@ -333,8 +317,9 @@ export default function CollectionSettingsModal({
               </button>
             </div>
           </footer>
-        </section>
-      </div>
+          </section>
+        )}
+      </ArcAnimatedModalHost>
 
       {deleteConfirmOpen && isEdit ? (
         <ConfirmCollectionDeleteModal

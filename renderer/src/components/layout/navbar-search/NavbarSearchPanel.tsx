@@ -66,7 +66,12 @@ export default function NavbarSearchPanel() {
   const ctx = useNavbarSearch();
 
   return (
-    <NavbarSearchPanelPortal open={ctx.panelOpen} layout={ctx.dropdownLayout} onClose={ctx.closePanel}>
+    <NavbarSearchPanelPortal
+      open={ctx.panelOpen}
+      layout={ctx.dropdownLayout}
+      searchMode={ctx.searchMode}
+      onClose={ctx.closePanel}
+    >
       <div className="arc-add-tags-scroll arc-search-panel-scroll">
         <SearchPanelModeTransition ctx={ctx} />
       </div>

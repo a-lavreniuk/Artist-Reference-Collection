@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { arcMotionTokens, ensureGsapSetup, getPrefersReducedMotion, motionDuration } from '../../motion';
 import './Tooltip.css';
 
 export type TooltipVariant = 'default' | 'rich';
@@ -63,6 +64,7 @@ export function Tooltip({
   const isVisibleRef = useRef(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const fadePlayedRef = useRef(false);
 
   isVisibleRef.current = isVisible;
 
@@ -207,6 +209,29 @@ export function Tooltip({
       ro?.disconnect();
     };
   }, [isVisible, position, updateTooltipPosition]);
+
+  useLayoutEffect(() => {
+    if (!isVisible) {
+      fadePlayedRef.current = false;
+      return;
+    }
+    if (!layout || !tooltipRef.current || fadePlayedRef.current) return;
+
+    const el = tooltipRef.current;
+    const gsap = ensureGsapSetup();
+    const reduced = getPrefersReducedMotion();
+    const duration = motionDuration('fast', reduced);
+
+    fadePlayedRef.current = true;
+    gsap.killTweensOf(el);
+    gsap.set(el, { opacity: 0 });
+    if (reduced) {
+      gsap.set(el, { opacity: 1 });
+      return;
+    }
+
+    gsap.to(el, { opacity: 1, duration, ease: arcMotionTokens.ease });
+  }, [isVisible, layout]);
 
   useEffect(() => {
     if (!isVisible || !layout) return;

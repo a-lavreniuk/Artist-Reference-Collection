@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { DatepickerMode } from '../datepicker/dateRangeText';
+import { ArcAnimatedModalHost } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import Calendar, { type CalendarSelection } from './Calendar';
 
@@ -23,15 +24,6 @@ export default function DateRangeModal({ open, mode, value, onClose, onApply }: 
       to: value?.to ?? value?.from ?? null
     });
   }, [open, value?.from, value?.to]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
 
   useLayoutEffect(() => {
     if (!open || !hostRef.current) return;
@@ -59,54 +51,50 @@ export default function DateRangeModal({ open, mode, value, onClose, onApply }: 
   };
 
   return createPortal(
-    <div
-      ref={hostRef}
-      className="arc-modal-host"
-      aria-hidden="false"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section
-        className="arc-modal arc-modal--calendar"
-        data-elevation="raised"
-        data-input-size="m"
-        data-btn-size="s"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Выбор даты"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="arc-modal__body">
-          <div className="arc-modal__slot">
-            <Calendar mode={mode} selection={selection} onSelectionChange={setSelection} />
+    <ArcAnimatedModalHost onClose={onClose}>
+      {({ requestClose }) => (
+        <section
+          ref={hostRef}
+          className="arc-modal arc-modal--calendar"
+          data-elevation="raised"
+          data-input-size="m"
+          data-btn-size="s"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Выбор даты"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="arc-modal__body">
+            <div className="arc-modal__slot">
+              <Calendar mode={mode} selection={selection} onSelectionChange={setSelection} />
+            </div>
           </div>
-        </div>
-        <footer className="arc-modal__footer arc-modal__footer--actions-3">
-          <button
-            type="button"
-            className="btn btn-outline btn-ds btn-s"
-            disabled={!canClear}
-            onClick={handleClear}
-          >
-            <span className="btn-ds__value">Очистить</span>
-          </button>
-          <div className="arc-modal__footer-right">
-            <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose}>
-              <span className="btn-ds__value">Отмена</span>
-            </button>
+          <footer className="arc-modal__footer arc-modal__footer--actions-3">
             <button
               type="button"
-              className="btn btn-brand btn-ds btn-s"
-              disabled={!canApply}
-              onClick={handleApply}
+              className="btn btn-outline btn-ds btn-s"
+              disabled={!canClear}
+              onClick={handleClear}
             >
-              <span className="btn-ds__value">Выбрать</span>
+              <span className="btn-ds__value">Очистить</span>
             </button>
-          </div>
-        </footer>
-      </section>
-    </div>,
+            <div className="arc-modal__footer-right">
+              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose}>
+                <span className="btn-ds__value">Отмена</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-brand btn-ds btn-s"
+                disabled={!canApply}
+                onClick={handleApply}
+              >
+                <span className="btn-ds__value">Выбрать</span>
+              </button>
+            </div>
+          </footer>
+        </section>
+      )}
+    </ArcAnimatedModalHost>,
     document.body
   );
 }

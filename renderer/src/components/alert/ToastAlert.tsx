@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { AlertVariant } from './types';
 import { playNotificationSound } from '../../services/audioNotification';
+import { useOverlayMotion } from '../../motion';
 
 /** Как в UI-kit (`setTimeout(..., 3200)`). */
 const ARC_UI_KIT_ALERT_AUTO_DISMISS_MS = 3200;
@@ -24,9 +25,19 @@ export default function ToastAlert({
   hostClassName,
   withSound = true
 }: Props) {
+  const [closing, setClosing] = useState(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const lastSoundKeyRef = useRef<string | null>(null);
+
+  const alertRef = useOverlayMotion<HTMLDivElement>(!closing, {
+    preset: 'fade-slide-up',
+    onExitComplete: () => onCloseRef.current()
+  });
+
+  const requestClose = useCallback(() => {
+    setClosing(true);
+  }, []);
 
   useEffect(() => {
     if (!withSound) return;
@@ -37,18 +48,18 @@ export default function ToastAlert({
   }, [message, variant, withSound]);
 
   useEffect(() => {
-    if (autoDismissMs <= 0) return;
-    const id = window.setTimeout(() => onCloseRef.current(), autoDismissMs);
+    if (autoDismissMs <= 0 || closing) return;
+    const id = window.setTimeout(() => requestClose(), autoDismissMs);
     return () => window.clearTimeout(id);
-  }, [message, variant, autoDismissMs]);
+  }, [message, variant, autoDismissMs, closing, requestClose]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [requestClose]);
 
   return (
     <div
@@ -56,9 +67,14 @@ export default function ToastAlert({
       aria-live="polite"
       aria-atomic="true"
     >
-      <div className={`alert alert-${variant}`} role="status">
+      <div ref={alertRef} className={`alert alert-${variant}`} role="status">
         <p className="demo-alert__message">{message}</p>
-        <button type="button" className="demo-alert__close" aria-label="Закрыть уведомление" onClick={onClose}>
+        <button
+          type="button"
+          className="demo-alert__close"
+          aria-label="Закрыть уведомление"
+          onClick={requestClose}
+        >
           <svg className="demo-alert__close-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M6 6L18 18" strokeWidth="2" strokeLinecap="round" />
             <path d="M18 6L6 18" strokeWidth="2" strokeLinecap="round" />

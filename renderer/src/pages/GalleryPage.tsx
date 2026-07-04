@@ -46,6 +46,7 @@ import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 import { EmptyState } from '../components/empty-state';
 import { useImportContext } from '../components/import/ImportContext';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
+import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
 import { resolveMainTab } from '../components/layout/navbarLayout';
 import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
 import { resolveGalleryCardContextMenuScope } from '../components/gallery/buildCardContextMenuRows';
@@ -338,6 +339,7 @@ export default function GalleryPage() {
             loadingMore={loading && hasMore}
 
             busy={(booting && !isRemoteSearchFeed && !shuffleReloading) || loading || shuffleReloading}
+            revealResetKey={galleryRevealResetKey(feedQuery)}
 
             onOpenCard={openCard}
 

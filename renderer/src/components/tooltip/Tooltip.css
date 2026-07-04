@@ -76,20 +76,7 @@
   display: none;
 }
 
-/* duration + easing уже в --transition-fast (150ms ease); второй timing-function ломает shorthand и оставляет opacity: 0 */
-.arc-tooltip.arc-tooltip--placed {
-  animation: arc-tooltip-fade-in var(--transition-fast) forwards;
-}
-
-@keyframes arc-tooltip-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
+/* Fade-in через GSAP в Tooltip.tsx (arcMotionTokens.fast) */
 /* Обёртка над disabled-кнопкой: нативный title не срабатывает; тултип ловит hover на span */
 .arc-tooltip-anchor-inline {
   display: inline-flex;
