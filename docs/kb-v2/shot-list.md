@@ -43,7 +43,7 @@
 | ch2-20 | ch2-library-scope-menu.png | Меню «Область библиотеки» |
 | ch2-21 | ch2-add-button.png | Кнопка «Добавить» |
 | ch2-22 | ch2-import-overlay.png | Overlay импорта |
-| ch2-23 | ch2-menu-full.png | Меню «⋯» полностью |
+| ch2-23 | ch2-menu-full.png | Меню полностью |
 | ch2-24 | ch2-menu-grid-size.png | «Размер сетки» в меню |
 | ch2-25 | ch2-menu-theme.png | «Оформление» в меню |
 | ch2-26 | ch2-navbar-compact-tags.png | Компактный навбар на «Категории и метки» |

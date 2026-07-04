@@ -69,7 +69,7 @@ async function main() {
 
   for (const shot of SHOTS) {
     const hashRoute = `#${shot.route.startsWith('/') ? shot.route : `/${shot.route}`}`;
-    await page.goto(`http://localhost:5173/${hashRoute.replace('#', '')}`);
+    await page.goto(`http://localhost:5173/${hashRoute}`);
     await page.waitForTimeout(800);
 
     const el = shot.selector ? page.locator(shot.selector).first() : page;
