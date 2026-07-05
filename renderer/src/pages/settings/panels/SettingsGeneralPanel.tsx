@@ -52,7 +52,7 @@ export default function SettingsGeneralPanel() {
 
         <SettingsSection title={INTERFACE_TOUR_SETTINGS.sectionTitle}>
           <div className="arc-settings-desc-block">
-            <p className="arc-settings-desc-block__text">{INTERFACE_TOUR_SETTINGS.hint}</p>
+            <p className="text-m arc-settings-desc-block__text">{INTERFACE_TOUR_SETTINGS.hint}</p>
             <div className="arc-settings-interface-tour-actions">
               <button
                 type="button"

@@ -37,7 +37,7 @@ export default function SettingsUpdatesPanel() {
           ) : (
             <>
               <div className="arc-settings-desc-block arc-settings-updates-panel__intro">
-                <p className="arc-settings-desc-block__text">
+                <p className="text-m arc-settings-desc-block__text">
                   Первый публичный билд ARC. Отсчёт версий приложения только начинается.
                 </p>
               </div>

@@ -200,14 +200,16 @@ export function useMasonryReveal({
       );
       const pendingWithoutRef = pendingInitial.filter((id) => !itemRefs.current?.has(id));
 
-      if (!batchDoneRef.current) {
-        if (pendingWithoutRef.length > 0 && retryPass < MAX_REF_RETRIES) {
-          retryRaf = requestAnimationFrame(() => run(retryPass + 1));
-          return;
-        }
-        if (pendingWithoutRef.length > 0 && retryPass >= MAX_REF_RETRIES) {
-          forceRevealVisible(gsap, currentVisible, itemRefs, animatingRef.current);
-        }
+      if (pendingWithoutRef.length > 0 && retryPass < MAX_REF_RETRIES) {
+        retryRaf = requestAnimationFrame(() => run(retryPass + 1));
+        return;
+      }
+
+      if (pendingWithoutRef.length > 0 && retryPass >= MAX_REF_RETRIES) {
+        forceRevealVisible(gsap, currentVisible, itemRefs, animatingRef.current);
+      }
+
+      if (!batchDoneRef.current && currentVisible.size > 0) {
         if (pendingInitial.length === 0 || initialEnter.length > 0) {
           batchDoneRef.current = true;
         }
