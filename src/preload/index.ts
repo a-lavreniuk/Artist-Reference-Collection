@@ -84,6 +84,10 @@ contextBridge.exposeInMainWorld('arc', {
   aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
   aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),
   storageGetCard: (cardId: string) => ipcRenderer.invoke('arc:storage-get-card', cardId),
+  storageGetCardDisplayPalette: (cardId: string) =>
+    ipcRenderer.invoke('arc:storage-get-card-display-palette', cardId) as Promise<
+      Array<{ hex: string; pct: number }>
+    >,
   storageUpdateCard: (cardId: string, patch: unknown) =>
     ipcRenderer.invoke('arc:storage-update-card', { cardId, patch }),
   storageInsertCardsMetadata: (cards: unknown) =>

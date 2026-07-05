@@ -59,8 +59,8 @@ import {
   setCachedGalleryFilterStats
 } from './storage/galleryFilterStatsCache';
 import { backfillPalettesBatch, searchCardsByColor } from './storage/colorSearch';
-import { normalizeHex } from './storage/palette';
 import { readCardJson } from './storage/cardFolder';
+import { computeImagePalette, normalizeHex, parsePaletteJson } from './storage/palette';
 import {
   CARDS_DIR,
   LIBRARY_META_DIR
@@ -286,6 +286,23 @@ export function registerStorageIpc(
       ...(cardJson.name ? { name: cardJson.name } : {}),
       ...(cardJson.linkUrl ? { linkUrl: cardJson.linkUrl } : {})
     };
+  });
+
+  ipcMain.handle('arc:storage-get-card-display-palette', async (_e, cardId: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root || typeof cardId !== 'string') return [];
+    await ensureLibraryReady(root);
+    const row = getCardByIdFromDb(root, cardId);
+    if (!row || row.type !== 'image' || !row.originalRel) return [];
+
+    const fallback = parsePaletteJson(row.paletteJson, row.dominantColor);
+    const abs = path.join(root, row.originalRel.replace(/\//g, path.sep));
+    try {
+      const palette = await computeImagePalette(abs, 'display');
+      return palette.length > 0 ? palette : fallback;
+    } catch {
+      return fallback;
+    }
   });
 
   ipcMain.handle('arc:storage-update-card', async (_e, payload: unknown) => {

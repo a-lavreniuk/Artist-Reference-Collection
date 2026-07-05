@@ -78,6 +78,7 @@ declare global {
         sort?: GallerySortState;
       }) => Promise<CardRecord[]>;
       storageGetCard: (cardId: string) => Promise<CardRecord | null>;
+      storageGetCardDisplayPalette: (cardId: string) => Promise<Array<{ hex: string; pct: number }>>;
       storageUpdateCard: (
         cardId: string,
         patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }

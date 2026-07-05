@@ -45,6 +45,7 @@ import {
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
 import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
+import { startColorSearch } from '../../search/startColorSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
@@ -53,7 +54,7 @@ import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDet
 import { ARC_THUMB_BUDGET_CHANGED_EVENT } from './galleryThumbBudget';
 import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
 import { readGridSize } from '../../layout/gridSizePreference';
-import { extractImagePalette, type PaletteSwatch } from './cardDetailPalette';
+import { loadCardDetailPalette, type PaletteSwatch } from './cardDetailPalette';
 import {
   clampCardDetailSettingsWidth,
   readCardDetailSettingsWidth,
@@ -296,12 +297,12 @@ export default function CardDetailOverlay({
   }, [settingsWidth]);
 
   useEffect(() => {
-    if (!src || card?.type !== 'image') {
+    if (card?.type !== 'image') {
       setPalette([]);
       return;
     }
     let cancelled = false;
-    void extractImagePalette(src)
+    void loadCardDetailPalette(cardId)
       .then((rows) => {
         if (!cancelled) setPalette(rows);
       })
@@ -311,7 +312,7 @@ export default function CardDetailOverlay({
     return () => {
       cancelled = true;
     };
-  }, [src, card?.type, cardId]);
+  }, [card?.type, cardId]);
 
   useEffect(() => {
     document.body.classList.add('arc-card-detail-open');
@@ -630,13 +631,8 @@ export default function CardDetailOverlay({
     }
   };
 
-  const copyPaletteHex = async (hex: string) => {
-    try {
-      await navigator.clipboard.writeText(hex);
-      showCopyAlert('Цвет скопирован');
-    } catch {
-      /* clipboard unavailable */
-    }
+  const openPaletteColorSearch = (hex: string) => {
+    startColorSearch(navigate, searchParams, hex);
   };
 
   const videoTier =
@@ -955,15 +951,15 @@ export default function CardDetailOverlay({
                       {palette.map((swatch) => (
                         <Tooltip
                           key={swatch.hex}
-                          content={`${swatch.hex.toUpperCase()} (${swatch.pct}%)`}
+                          content={`Поиск по цвету · ${swatch.hex.toUpperCase()} (${swatch.pct}%)`}
                           position="top"
                         >
                           <button
                             type="button"
                             className="arc-card-detail-palette-swatch"
                             style={{ backgroundColor: swatch.hex }}
-                            aria-label={`${swatch.hex}, ${swatch.pct} процентов`}
-                            onClick={() => void copyPaletteHex(swatch.hex)}
+                            aria-label={`Поиск по цвету ${swatch.hex}, ${swatch.pct} процентов`}
+                            onClick={() => openPaletteColorSearch(swatch.hex)}
                           />
                         </Tooltip>
                       ))}
