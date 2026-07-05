@@ -86,6 +86,8 @@ type Props = {
 const DESCRIPTION_SAVE_MS = 600;
 const FIELD_SAVE_MS = 600;
 
+type DescriptionTab = 'description' | 'ai';
+
 function normalizeExternalUrl(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -132,6 +134,7 @@ export default function CardDetailOverlay({
   const [draftName, setDraftName] = useState('');
   const [draftLink, setDraftLink] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionTab, setDescriptionTab] = useState<DescriptionTab>('description');
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
   const settingsWidthRef = useRef(settingsWidth);
@@ -163,6 +166,7 @@ export default function CardDetailOverlay({
 
   const libraryScope = parseLibraryScope(searchParams);
   const inTrash = libraryScope === 'trash';
+  const hasAiCaption = Boolean(card?.type === 'image' && card.aiCaption?.trim());
 
   const reloadCard = useCallback(async (id: string) => {
     let c = await getCardById(id);
@@ -187,6 +191,38 @@ export default function CardDetailOverlay({
     setCard(c);
     return c;
   }, []);
+
+  const refreshAiCaption = useCallback(async (id: string) => {
+    const c = await getCardById(id);
+    if (!c) return null;
+    setCard((prev) => (prev?.id === id ? { ...prev, aiCaption: c.aiCaption } : prev));
+    return c;
+  }, []);
+
+  useEffect(() => {
+    setDescriptionTab('description');
+  }, [cardId]);
+
+  useEffect(() => {
+    if (!hasAiCaption && descriptionTab === 'ai') {
+      setDescriptionTab('description');
+    }
+  }, [hasAiCaption, descriptionTab]);
+
+  useEffect(() => {
+    const onProgress = window.arc?.onAiIndexProgress?.((payload) => {
+      if (payload.currentCardId !== cardId) return;
+      if ((payload.currentCardProgress ?? 0) < 55) return;
+      void refreshAiCaption(cardId);
+    });
+    const onComplete = window.arc?.onAiIndexComplete?.(() => {
+      void refreshAiCaption(cardId);
+    });
+    return () => {
+      onProgress?.();
+      onComplete?.();
+    };
+  }, [cardId, refreshAiCaption]);
 
   useLayoutEffect(() => {
     if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
@@ -1053,19 +1089,78 @@ export default function CardDetailOverlay({
                       </button>
                     </Tooltip>
                   </div>
-                  <label className="field">
-                    <textarea
-                      className="input textarea"
-                      placeholder="Описание"
-                      rows={4}
-                      value={description}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setDescription(v);
-                        scheduleDescriptionSave(v);
-                      }}
-                    />
-                  </label>
+                  {hasAiCaption ? (
+                    <div className="arc-card-detail-description-editor">
+                      <div
+                        className="arc-card-detail-description-tabs tabs arc-ui-kit-scope"
+                        data-btn-size="s"
+                        role="tablist"
+                        aria-label="Описание карточки"
+                      >
+                        <button
+                          type="button"
+                          className={`tab-button${descriptionTab === 'description' ? ' is-active' : ''}`}
+                          role="tab"
+                          aria-selected={descriptionTab === 'description'}
+                          id="arc-card-detail-desc-tab-description"
+                          aria-controls="arc-card-detail-desc-panel"
+                          onClick={() => setDescriptionTab('description')}
+                        >
+                          Описание
+                        </button>
+                        <button
+                          type="button"
+                          className={`tab-button${descriptionTab === 'ai' ? ' is-active' : ''}`}
+                          role="tab"
+                          aria-selected={descriptionTab === 'ai'}
+                          id="arc-card-detail-desc-tab-ai"
+                          aria-controls="arc-card-detail-desc-panel"
+                          onClick={() => setDescriptionTab('ai')}
+                        >
+                          AI описание
+                        </button>
+                      </div>
+                      <label className="field">
+                        <textarea
+                          id="arc-card-detail-desc-panel"
+                          className="input textarea"
+                          role="tabpanel"
+                          aria-labelledby={
+                            descriptionTab === 'ai'
+                              ? 'arc-card-detail-desc-tab-ai'
+                              : 'arc-card-detail-desc-tab-description'
+                          }
+                          placeholder={descriptionTab === 'ai' ? 'AI описание' : 'Описание'}
+                          rows={4}
+                          value={descriptionTab === 'ai' ? (card?.aiCaption ?? '') : description}
+                          readOnly={descriptionTab === 'ai'}
+                          onChange={
+                            descriptionTab === 'ai'
+                              ? undefined
+                              : (e) => {
+                                  const v = e.target.value;
+                                  setDescription(v);
+                                  scheduleDescriptionSave(v);
+                                }
+                          }
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="field">
+                      <textarea
+                        className="input textarea"
+                        placeholder="Описание"
+                        rows={4}
+                        value={description}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDescription(v);
+                          scheduleDescriptionSave(v);
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
               </CollapsibleSection>
 

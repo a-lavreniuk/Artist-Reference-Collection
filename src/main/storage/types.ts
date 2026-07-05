@@ -96,6 +96,7 @@ export type CardIndexRow = {
   tagIds: string[];
   collectionIds: string[];
   description?: string;
+  aiCaption?: string;
   name?: string;
   linkUrl?: string;
   durationMs?: number;

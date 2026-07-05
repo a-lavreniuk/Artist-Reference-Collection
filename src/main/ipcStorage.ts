@@ -138,6 +138,7 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
     tagIds: row.tagIds,
     collectionIds: row.collectionIds,
     description: row.description,
+    aiCaption: row.aiCaption,
     name: row.name,
     linkUrl: row.linkUrl,
     durationMs: row.durationMs

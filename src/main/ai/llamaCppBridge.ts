@@ -40,7 +40,9 @@ let serverSession: ServerSession | null = null;
 let serverConfigKey: string | null = null;
 
 const JOYCAPTION_INDEX_PROMPT =
-  'Write a descriptive caption for this image in plain English. Describe the subject, colors, composition, style, and mood in one concise paragraph.';
+  'Напиши описательную подпись к этому изображению на русском языке. Опиши предмет, цвета, композицию, стиль и настроение одним связным абзацем.';
+
+const JOYCAPTION_MAX_TOKENS = 1024;
 
 async function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -310,7 +312,7 @@ export async function captionImageViaServer(
           }
         ],
         temperature: 0.2,
-        max_tokens: 512
+        max_tokens: JOYCAPTION_MAX_TOKENS
       })
     });
 

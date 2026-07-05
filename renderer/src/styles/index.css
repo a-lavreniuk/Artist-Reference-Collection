@@ -2334,6 +2334,16 @@ body.arc-card-detail-open .arc-app-outlet {
   gap: var(--s-3);
 }
 
+.arc-card-detail-description-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.arc-card-detail-description-tabs {
+  align-self: flex-start;
+}
+
 .arc-card-detail-section-sep {
   height: 0;
   flex-shrink: 0;

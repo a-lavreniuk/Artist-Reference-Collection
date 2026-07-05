@@ -104,6 +104,10 @@ function rowToCardRecord(row: CardIndexRow): CardIndexRow & { thumbRelativePath:
   };
 }
 
+function readAiCaptionFromDbRow(row: Record<string, unknown>): string | undefined {
+  return row.ai_caption ? String(row.ai_caption) : undefined;
+}
+
 function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collectionIds: string[]): CardIndexRow {
   return {
     id: String(row.id),
@@ -124,6 +128,7 @@ function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collection
     tagIds,
     collectionIds,
     description: row.description ? String(row.description) : undefined,
+    aiCaption: readAiCaptionFromDbRow(row),
     name: row.name ? String(row.name) : undefined,
     linkUrl: row.link_url ? String(row.link_url) : undefined,
     durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined
@@ -1236,4 +1241,4 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
   recomputeTagUsage(db);
 }
 
-export { rowToCardRecord, moveOriginalToCard, cardJsonExistsSync, indexDbPath };
+export { rowToCardRecord, moveOriginalToCard, cardJsonExistsSync, indexDbPath, readAiCaptionFromDbRow };
