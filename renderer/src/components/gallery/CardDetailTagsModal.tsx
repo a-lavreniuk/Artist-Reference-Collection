@@ -7,7 +7,6 @@ import TagSettingsModal, { type TagSettingsModalState } from '../tags/TagSetting
 import { Tooltip } from '../tooltip/Tooltip';
 import {
   ARC_CATEGORIES_CHANGED_EVENT,
-  ARC_TAGS_CHANGED_EVENT,
   addTag,
   deleteTag,
   getAllCategories,
@@ -65,6 +64,19 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tagsByCat, setTagsByCat] = useState<Record<string, TagRecord[]>>({});
   const [tagModal, setTagModal] = useState<TagSettingsModalState | null>(null);
+  const [localSelectedTagIds, setLocalSelectedTagIds] = useState(selectedTagIds);
+
+  useEffect(() => {
+    setLocalSelectedTagIds(selectedTagIds);
+  }, [selectedTagIds]);
+
+  const handleToggleTag = (tagId: string) => {
+    setLocalSelectedTagIds((prev) => {
+      const has = prev.includes(tagId);
+      return has ? prev.filter((id) => id !== tagId) : [...prev, tagId];
+    });
+    void onToggleTag(tagId);
+  };
 
   const reloadCatalog = async () => {
     const cats = await getAllCategories();
@@ -79,12 +91,10 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
 
   useEffect(() => {
     void reloadCatalog();
-    const onCatalog = () => void reloadCatalog();
-    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCatalog);
-    window.addEventListener(ARC_TAGS_CHANGED_EVENT, onCatalog);
+    const onCategoriesChanged = () => void reloadCatalog();
+    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCategoriesChanged);
     return () => {
-      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCatalog);
-      window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onCatalog);
+      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCategoriesChanged);
     };
   }, []);
 
@@ -114,7 +124,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [categories, selectedTagIds, tagSearch, selectedCategoryId, tagGroups, tagModal, sidebarCategories]);
+  }, [categories, localSelectedTagIds, tagSearch, selectedCategoryId, tagGroups, tagModal, sidebarCategories]);
 
   const picker = (
     <ArcAnimatedModalHost
@@ -226,8 +236,8 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                         key={t.id}
                         tag={t}
                         categoryColorHex={cat.colorHex}
-                        selected={selectedTagIds.includes(t.id)}
-                        onToggle={() => void onToggleTag(t.id)}
+                        selected={localSelectedTagIds.includes(t.id)}
+                        onToggle={() => handleToggleTag(t.id)}
                       />
                     ))}
                     <div className="arc-ui-kit-scope" data-elevation="sunken" data-typo-tone="white" data-btn-size="s">
@@ -262,8 +272,8 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                   description: payload.description,
                   tooltipImageDataUrl: payload.tooltipImageDataUrl
                 });
-                if (!selectedTagIds.includes(created.id)) {
-                  await onToggleTag(created.id);
+                if (!localSelectedTagIds.includes(created.id)) {
+                  handleToggleTag(created.id);
                 }
                 await reloadCatalog();
               }}

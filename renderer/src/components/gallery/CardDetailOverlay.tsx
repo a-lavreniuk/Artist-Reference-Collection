@@ -113,6 +113,9 @@ export default function CardDetailOverlay({
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const [card, setCard] = useState<CardRecord | null>(null);
+  const cardRef = useRef<CardRecord | null>(null);
+  const tagPatchQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const collectionPatchQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [thumbSrc, setThumbSrc] = useState<string | null>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [categoriesById, setCategoriesById] = useState<Map<string, CategoryRecord>>(new Map());
@@ -268,6 +271,10 @@ export default function CardDetailOverlay({
     }, RECENT_VIEWED_MIN_MS);
     return () => window.clearTimeout(timer);
   }, [cardId]);
+
+  useEffect(() => {
+    cardRef.current = card;
+  }, [card]);
 
   useEffect(() => {
     const onBudget = () => setThumbBudgetEpoch((v) => v + 1);
@@ -576,59 +583,73 @@ export default function CardDetailOverlay({
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const removeTag = async (tagId: string) => {
-    if (!card) return;
-    const next = card.tagIds.filter((id) => id !== tagId);
-    await updateCardPayload(card.id, { tagIds: next });
-    await reloadCard(card.id);
+  const patchCardTagIds = (computeNext: (tagIds: string[]) => string[]): Promise<void> => {
+    const task = tagPatchQueueRef.current.then(async () => {
+      const current = cardRef.current;
+      if (!current) return;
+      const prevTagIds = current.tagIds;
+      const nextTagIds = computeNext(prevTagIds);
+      const nextCard = { ...current, tagIds: nextTagIds };
+      setCard(nextCard);
+      cardRef.current = nextCard;
+      try {
+        await updateCardPayload(current.id, { tagIds: nextTagIds });
+      } catch {
+        const rolledBack = { ...current, tagIds: prevTagIds };
+        setCard((c) => (c?.id === current.id ? rolledBack : c));
+        if (cardRef.current?.id === current.id) cardRef.current = rolledBack;
+      }
+    });
+    tagPatchQueueRef.current = task.catch(() => undefined);
+    return task;
   };
 
-  const removeCollection = async (collectionId: string) => {
-    if (!card) return;
-    const next = card.collectionIds.filter((id) => id !== collectionId);
-    await updateCardPayload(card.id, { collectionIds: next });
-    setCollectionPreviews(await getCollectionPreviewSlices(3));
-    setCollCounts(await getCollectionCardCounts());
-    await reloadCard(card.id);
+  const patchCardCollectionIds = (computeNext: (collectionIds: string[]) => string[]): Promise<void> => {
+    const task = collectionPatchQueueRef.current.then(async () => {
+      const current = cardRef.current;
+      if (!current) return;
+      const prevCollectionIds = current.collectionIds;
+      const nextCollectionIds = computeNext(prevCollectionIds);
+      const nextCard = { ...current, collectionIds: nextCollectionIds };
+      setCard(nextCard);
+      cardRef.current = nextCard;
+      try {
+        await updateCardPayload(current.id, { collectionIds: nextCollectionIds });
+        setCollectionPreviews(await getCollectionPreviewSlices(3));
+        setCollCounts(await getCollectionCardCounts());
+      } catch {
+        const rolledBack = { ...current, collectionIds: prevCollectionIds };
+        setCard((c) => (c?.id === current.id ? rolledBack : c));
+        if (cardRef.current?.id === current.id) cardRef.current = rolledBack;
+      }
+    });
+    collectionPatchQueueRef.current = task.catch(() => undefined);
+    return task;
   };
 
-  const toggleTagOnCard = async (tagId: string) => {
-    if (!card) return;
-    const has = card.tagIds.includes(tagId);
-    const next = has ? card.tagIds.filter((id) => id !== tagId) : [...card.tagIds, tagId];
-    await updateCardPayload(card.id, { tagIds: next });
-    await reloadCard(card.id);
-  };
+  const removeTag = (tagId: string) => patchCardTagIds((ids) => ids.filter((id) => id !== tagId));
 
-  const applyCollections = async (collectionIds: string[]) => {
-    if (!card) return;
-    await updateCardPayload(card.id, { collectionIds });
-    setCollectionPreviews(await getCollectionPreviewSlices(3));
-    setCollCounts(await getCollectionCardCounts());
-    await reloadCard(card.id);
-  };
+  const removeCollection = (collectionId: string) =>
+    patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
 
-  const toggleCollectionOnCard = async (collectionId: string) => {
-    if (!card) return;
-    const has = card.collectionIds.includes(collectionId);
-    const next = has
-      ? card.collectionIds.filter((id) => id !== collectionId)
-      : [...card.collectionIds, collectionId];
-    await updateCardPayload(card.id, { collectionIds: next });
-    setCollectionPreviews(await getCollectionPreviewSlices(3));
-    setCollCounts(await getCollectionCardCounts());
-    await reloadCard(card.id);
-  };
+  const toggleTagOnCard = (tagId: string) =>
+    patchCardTagIds((ids) =>
+      ids.includes(tagId) ? ids.filter((id) => id !== tagId) : [...ids, tagId]
+    );
+
+  const applyCollections = (collectionIds: string[]) => patchCardCollectionIds(() => collectionIds);
+
+  const toggleCollectionOnCard = (collectionId: string) =>
+    patchCardCollectionIds((ids) =>
+      ids.includes(collectionId) ? ids.filter((id) => id !== collectionId) : [...ids, collectionId]
+    );
 
   const createAndAssignCollection = async (name: string) => {
     if (!card) return;
     const created = await addCollection(name);
-    if (!card.collectionIds.includes(created.id)) {
-      await updateCardPayload(card.id, { collectionIds: [...card.collectionIds, created.id] });
-      setCollectionPreviews(await getCollectionPreviewSlices(3));
-      setCollCounts(await getCollectionCardCounts());
-      await reloadCard(card.id);
-    }
+    await patchCardCollectionIds((ids) =>
+      ids.includes(created.id) ? ids : [...ids, created.id]
+    );
   };
 
   const openPaletteColorSearch = (hex: string) => {
@@ -1295,7 +1316,7 @@ export default function CardDetailOverlay({
         <CardDetailTagsModal
           selectedTagIds={card.tagIds}
           onClose={() => setTagsModalOpen(false)}
-          onToggleTag={(tagId) => void toggleTagOnCard(tagId)}
+          onToggleTag={toggleTagOnCard}
         />
       ) : null}
 
@@ -1303,7 +1324,7 @@ export default function CardDetailOverlay({
         <CardDetailCollectionsModal
           selectedCollectionIds={card.collectionIds}
           onClose={() => setCollectionsModalOpen(false)}
-          onToggleCollection={(collectionId) => void toggleCollectionOnCard(collectionId)}
+          onToggleCollection={toggleCollectionOnCard}
           onCreateAndAssign={(name) => createAndAssignCollection(name)}
         />
       ) : null}

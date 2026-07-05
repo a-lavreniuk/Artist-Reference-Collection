@@ -34,6 +34,11 @@ export default function CardDetailCollectionsModal({
   const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
   const [pendingCollectionId, setPendingCollectionId] = useState<string | null>(null);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+  const [localSelectedCollectionIds, setLocalSelectedCollectionIds] = useState(selectedCollectionIds);
+
+  useEffect(() => {
+    setLocalSelectedCollectionIds(selectedCollectionIds);
+  }, [selectedCollectionIds]);
 
   const reloadCatalog = async () => {
     const [cols, counts, previews] = await Promise.all([
@@ -55,7 +60,7 @@ export default function CardDetailCollectionsModal({
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [collections, selectedCollectionIds, colSearch, collectionPreviews, newCollectionOpen]);
+  }, [collections, localSelectedCollectionIds, colSearch, collectionPreviews, newCollectionOpen]);
 
   const filteredCols = useMemo(() => {
     const q = colSearch.trim().toLowerCase();
@@ -64,9 +69,16 @@ export default function CardDetailCollectionsModal({
 
   const handleToggle = async (collectionId: string) => {
     if (pendingCollectionId) return;
+    const prev = localSelectedCollectionIds;
+    const next = prev.includes(collectionId)
+      ? prev.filter((id) => id !== collectionId)
+      : [...prev, collectionId];
     setPendingCollectionId(collectionId);
+    setLocalSelectedCollectionIds(next);
     try {
       await onToggleCollection(collectionId);
+    } catch {
+      setLocalSelectedCollectionIds(prev);
     } finally {
       setPendingCollectionId(null);
     }
@@ -137,7 +149,7 @@ export default function CardDetailCollectionsModal({
                   collection={collection}
                   previews={collectionPreviews[collection.id] ?? []}
                   count={collCounts[collection.id] ?? 0}
-                  selected={selectedCollectionIds.includes(collection.id)}
+                  selected={localSelectedCollectionIds.includes(collection.id)}
                   disabled={pendingCollectionId !== null}
                   onToggle={() => void handleToggle(collection.id)}
                 />

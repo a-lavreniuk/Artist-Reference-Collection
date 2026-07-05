@@ -11,6 +11,86 @@ type Options = {
   onExitComplete?: () => void;
 };
 
+type OverlayMotionRest = {
+  opacity: number;
+  scale: number;
+  y: number;
+};
+
+function overlayMotionRest(): OverlayMotionRest {
+  return { opacity: 1, scale: 1, y: 0 };
+}
+
+/** Pure entrance decision — used by hooks and unit tests. */
+export function resolveOverlayEntranceAction(
+  entranceDone: boolean,
+  el: HTMLElement | null,
+  animatedEl: HTMLElement | null
+): 'entrance' | 'rest' | 'skip' {
+  if (!el) return 'skip';
+  if (animatedEl !== el) return 'entrance';
+  if (!entranceDone) return 'entrance';
+  return 'rest';
+}
+
+function applyOverlayMotionRest(gsap: ReturnType<typeof ensureGsapSetup>, el: HTMLElement): void {
+  gsap.set(el, overlayMotionRest());
+}
+
+function runOverlayEntrance(
+  el: HTMLElement,
+  preset: OverlayMotionPreset,
+  durationToken: 'fast' | 'base' | 'slow'
+): void {
+  const gsap = ensureGsapSetup();
+  const reduced = getPrefersReducedMotion();
+  const duration = motionDuration(durationToken, reduced);
+  const from = overlayMotionFrom(preset);
+
+  if (reduced) {
+    applyOverlayMotionRest(gsap, el);
+    return;
+  }
+
+  gsap.killTweensOf(el);
+  gsap.fromTo(
+    el,
+    from,
+    {
+      ...overlayMotionRest(),
+      duration,
+      ease: arcMotionTokens.ease,
+      overwrite: true
+    }
+  );
+}
+
+function runOverlayExit(
+  el: HTMLElement,
+  preset: OverlayMotionPreset,
+  durationToken: 'fast' | 'base' | 'slow',
+  onComplete: () => void
+): void {
+  const gsap = ensureGsapSetup();
+  const reduced = getPrefersReducedMotion();
+  const duration = motionDuration(durationToken, reduced);
+  const from = overlayMotionFrom(preset);
+
+  if (reduced) {
+    onComplete();
+    return;
+  }
+
+  gsap.killTweensOf(el);
+  gsap.to(el, {
+    ...from,
+    duration,
+    ease: arcMotionTokens.ease,
+    overwrite: true,
+    onComplete
+  });
+}
+
 export function useOverlayMotion<T extends HTMLElement>(
   open: boolean,
   options: Omit<Options, 'open'> = {}
@@ -24,6 +104,8 @@ export function useOverlayMotion<T extends HTMLElement>(
   const [render, setRender] = useState(open);
   const openRef = useRef(open);
   const prevOpenRef = useRef<boolean | null>(null);
+  const entranceDoneRef = useRef(false);
+  const animatedElRef = useRef<HTMLElement | null>(null);
   const onExitCompleteRef = useRef(onExitComplete);
   onExitCompleteRef.current = onExitComplete;
 
@@ -46,52 +128,36 @@ export function useOverlayMotion<T extends HTMLElement>(
         setRender(false);
         onExitCompleteRef.current?.();
         prevOpenRef.current = false;
+        entranceDoneRef.current = false;
+        animatedElRef.current = null;
       }
       return;
     }
 
     if (open) {
-      if (wasOpen !== true) {
-        const gsap = ensureGsapSetup();
-        const reduced = getPrefersReducedMotion();
-        const duration = motionDuration(durationToken, reduced);
-        const from = overlayMotionFrom(preset);
+      if (animatedElRef.current !== el) {
+        entranceDoneRef.current = false;
+        animatedElRef.current = el;
+      }
 
-        gsap.killTweensOf(el);
-        gsap.fromTo(
-          el,
-          from,
-          {
-            opacity: 1,
-            scale: 1,
-            y: 0,
-            duration,
-            ease: arcMotionTokens.ease,
-            overwrite: true
-          }
-        );
+      const action = resolveOverlayEntranceAction(entranceDoneRef.current, el, animatedElRef.current);
+      if (action === 'entrance') {
+        runOverlayEntrance(el, preset, durationToken);
+        entranceDoneRef.current = true;
+      } else if (action === 'rest') {
+        applyOverlayMotionRest(ensureGsapSetup(), el);
       }
       prevOpenRef.current = true;
       return;
     }
 
     if (wasOpen === true) {
-      const gsap = ensureGsapSetup();
-      const reduced = getPrefersReducedMotion();
-      const duration = motionDuration(durationToken, reduced);
-      const from = overlayMotionFrom(preset);
-
-      gsap.killTweensOf(el);
-      gsap.to(el, {
-        ...from,
-        duration,
-        ease: arcMotionTokens.ease,
-        overwrite: true,
-        onComplete: () => {
-          if (!openRef.current) {
-            setRender(false);
-            onExitCompleteRef.current?.();
-          }
+      entranceDoneRef.current = false;
+      animatedElRef.current = null;
+      runOverlayExit(el, preset, durationToken, () => {
+        if (!openRef.current) {
+          setRender(false);
+          onExitCompleteRef.current?.();
         }
       });
     } else {
@@ -120,6 +186,10 @@ export function useOverlayMotionPair(
   const [render, setRender] = useState(open);
   const openRef = useRef(open);
   const prevOpenRef = useRef<boolean | null>(null);
+  const panelEntranceDoneRef = useRef(false);
+  const backdropEntranceDoneRef = useRef(false);
+  const animatedPanelRef = useRef<HTMLElement | null>(null);
+  const animatedBackdropRef = useRef<HTMLElement | null>(null);
   const onExitCompleteRef = useRef(onExitComplete);
   onExitCompleteRef.current = onExitComplete;
 
@@ -142,48 +212,52 @@ export function useOverlayMotionPair(
         setRender(false);
         onExitCompleteRef.current?.();
         prevOpenRef.current = false;
+        panelEntranceDoneRef.current = false;
+        backdropEntranceDoneRef.current = false;
+        animatedPanelRef.current = null;
+        animatedBackdropRef.current = null;
       }
       return;
     }
 
     const runEntrance = () => {
-      const gsap = ensureGsapSetup();
-      const reduced = getPrefersReducedMotion();
-      const duration = motionDuration(durationToken, reduced);
-      const panelFrom = overlayMotionFrom(preset);
-      const backdropFrom = overlayMotionFrom(backdropPreset);
-
       if (backdrop) {
-        gsap.killTweensOf(backdrop);
-        gsap.fromTo(backdrop, backdropFrom, {
-          opacity: 1,
-          duration,
-          ease: arcMotionTokens.ease
-        });
+        if (animatedBackdropRef.current !== backdrop) {
+          backdropEntranceDoneRef.current = false;
+          animatedBackdropRef.current = backdrop;
+        }
+        if (!backdropEntranceDoneRef.current) {
+          runOverlayEntrance(backdrop, backdropPreset, durationToken);
+          backdropEntranceDoneRef.current = true;
+        } else {
+          applyOverlayMotionRest(ensureGsapSetup(), backdrop);
+        }
       }
+
       if (panel) {
-        gsap.killTweensOf(panel);
-        gsap.fromTo(panel, panelFrom, {
-          opacity: 1,
-          scale: 1,
-          y: 0,
-          duration,
-          ease: arcMotionTokens.ease
-        });
+        if (animatedPanelRef.current !== panel) {
+          panelEntranceDoneRef.current = false;
+          animatedPanelRef.current = panel;
+        }
+        if (!panelEntranceDoneRef.current) {
+          runOverlayEntrance(panel, preset, durationToken);
+          panelEntranceDoneRef.current = true;
+        } else {
+          applyOverlayMotionRest(ensureGsapSetup(), panel);
+        }
       }
     };
 
     const runExit = () => {
-      const gsap = ensureGsapSetup();
-      const reduced = getPrefersReducedMotion();
-      const duration = motionDuration(durationToken, reduced);
-      const panelFrom = overlayMotionFrom(preset);
-      const backdropFrom = overlayMotionFrom(backdropPreset);
+      panelEntranceDoneRef.current = false;
+      backdropEntranceDoneRef.current = false;
+      animatedPanelRef.current = null;
+      animatedBackdropRef.current = null;
 
       let completed = 0;
+      const targets = (panel ? 1 : 0) + (backdrop ? 1 : 0);
       const maybeDone = () => {
         completed += 1;
-        const targets = (panel ? 1 : 0) + (backdrop ? 1 : 0);
         if (completed >= targets && !openRef.current) {
           setRender(false);
           onExitCompleteRef.current?.();
@@ -191,27 +265,15 @@ export function useOverlayMotionPair(
       };
 
       if (backdrop) {
-        gsap.killTweensOf(backdrop);
-        gsap.to(backdrop, {
-          ...backdropFrom,
-          duration,
-          ease: arcMotionTokens.ease,
-          onComplete: maybeDone
-        });
+        runOverlayExit(backdrop, backdropPreset, durationToken, maybeDone);
       }
       if (panel) {
-        gsap.killTweensOf(panel);
-        gsap.to(panel, {
-          ...panelFrom,
-          duration,
-          ease: arcMotionTokens.ease,
-          onComplete: maybeDone
-        });
+        runOverlayExit(panel, preset, durationToken, maybeDone);
       }
     };
 
     if (open) {
-      if (wasOpen !== true) runEntrance();
+      runEntrance();
       prevOpenRef.current = true;
       return;
     }
