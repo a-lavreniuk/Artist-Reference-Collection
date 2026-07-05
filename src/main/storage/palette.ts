@@ -12,6 +12,14 @@ export { normalizeHex } from '../shared/paletteCore';
 
 const PALETTE_SIZE_SEARCH = 128;
 
+/** Сколько свотчей показывать в деталке карточки (как до display-mode). */
+export const CARD_DETAIL_PALETTE_MAX = 8;
+
+export function trimPaletteForDisplay(swatches: PaletteSwatch[], max = CARD_DETAIL_PALETTE_MAX): PaletteSwatch[] {
+  if (swatches.length <= max) return swatches;
+  return swatches.slice(0, max);
+}
+
 /** Палитра для поиска по цвету (mode search: до 20 свотчей, 128×128). */
 export async function computeImagePalette(
   sourceAbs: string,

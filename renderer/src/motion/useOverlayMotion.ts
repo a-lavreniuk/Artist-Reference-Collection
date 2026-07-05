@@ -23,6 +23,9 @@ export function useOverlayMotion<T extends HTMLElement>(
   const ref = useRef<T | null>(null);
   const [render, setRender] = useState(open);
   const openRef = useRef(open);
+  const prevOpenRef = useRef<boolean | null>(null);
+  const onExitCompleteRef = useRef(onExitComplete);
+  onExitCompleteRef.current = onExitComplete;
 
   useEffect(() => {
     openRef.current = open;
@@ -34,44 +37,70 @@ export function useOverlayMotion<T extends HTMLElement>(
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!render || !el) return;
+    const wasOpen = prevOpenRef.current;
 
-    const gsap = ensureGsapSetup();
-    const reduced = getPrefersReducedMotion();
-    const duration = motionDuration(durationToken, reduced);
-    const from = overlayMotionFrom(preset);
+    if (!render) return;
 
-    gsap.killTweensOf(el);
-
-    if (open) {
-      gsap.fromTo(
-        el,
-        from,
-        {
-          opacity: 1,
-          scale: 1,
-          y: 0,
-          duration,
-          ease: arcMotionTokens.ease,
-          overwrite: true
-        }
-      );
+    if (!el) {
+      if (!open && wasOpen !== true) {
+        setRender(false);
+        onExitCompleteRef.current?.();
+        prevOpenRef.current = false;
+      }
       return;
     }
 
-    gsap.to(el, {
-      ...from,
-      duration,
-      ease: arcMotionTokens.ease,
-      overwrite: true,
-      onComplete: () => {
-        if (!openRef.current) {
-          setRender(false);
-          onExitComplete?.();
-        }
+    if (open) {
+      if (wasOpen !== true) {
+        const gsap = ensureGsapSetup();
+        const reduced = getPrefersReducedMotion();
+        const duration = motionDuration(durationToken, reduced);
+        const from = overlayMotionFrom(preset);
+
+        gsap.killTweensOf(el);
+        gsap.fromTo(
+          el,
+          from,
+          {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            duration,
+            ease: arcMotionTokens.ease,
+            overwrite: true
+          }
+        );
       }
-    });
-  }, [open, render, preset, durationToken, onExitComplete]);
+      prevOpenRef.current = true;
+      return;
+    }
+
+    if (wasOpen === true) {
+      const gsap = ensureGsapSetup();
+      const reduced = getPrefersReducedMotion();
+      const duration = motionDuration(durationToken, reduced);
+      const from = overlayMotionFrom(preset);
+
+      gsap.killTweensOf(el);
+      gsap.to(el, {
+        ...from,
+        duration,
+        ease: arcMotionTokens.ease,
+        overwrite: true,
+        onComplete: () => {
+          if (!openRef.current) {
+            setRender(false);
+            onExitCompleteRef.current?.();
+          }
+        }
+      });
+    } else {
+      setRender(false);
+      onExitCompleteRef.current?.();
+    }
+
+    prevOpenRef.current = false;
+  }, [open, render, preset, durationToken]);
 
   return ref;
 }
@@ -90,6 +119,9 @@ export function useOverlayMotionPair(
   const backdropRef = useRef<HTMLElement | null>(null);
   const [render, setRender] = useState(open);
   const openRef = useRef(open);
+  const prevOpenRef = useRef<boolean | null>(null);
+  const onExitCompleteRef = useRef(onExitComplete);
+  onExitCompleteRef.current = onExitComplete;
 
   useEffect(() => {
     openRef.current = open;
@@ -103,19 +135,26 @@ export function useOverlayMotionPair(
     if (!render) return;
     const panel = panelRef.current;
     const backdrop = backdropRef.current;
-    if (!panel && !backdrop) return;
+    const wasOpen = prevOpenRef.current;
 
-    const gsap = ensureGsapSetup();
-    const reduced = getPrefersReducedMotion();
-    const duration = motionDuration(durationToken, reduced);
-    const panelFrom = overlayMotionFrom(preset);
-    const backdropFrom = overlayMotionFrom(backdropPreset);
+    if (!panel && !backdrop) {
+      if (!open && wasOpen !== true) {
+        setRender(false);
+        onExitCompleteRef.current?.();
+        prevOpenRef.current = false;
+      }
+      return;
+    }
 
-    if (panel) gsap.killTweensOf(panel);
-    if (backdrop) gsap.killTweensOf(backdrop);
+    const runEntrance = () => {
+      const gsap = ensureGsapSetup();
+      const reduced = getPrefersReducedMotion();
+      const duration = motionDuration(durationToken, reduced);
+      const panelFrom = overlayMotionFrom(preset);
+      const backdropFrom = overlayMotionFrom(backdropPreset);
 
-    if (open) {
       if (backdrop) {
+        gsap.killTweensOf(backdrop);
         gsap.fromTo(backdrop, backdropFrom, {
           opacity: 1,
           duration,
@@ -123,6 +162,7 @@ export function useOverlayMotionPair(
         });
       }
       if (panel) {
+        gsap.killTweensOf(panel);
         gsap.fromTo(panel, panelFrom, {
           opacity: 1,
           scale: 1,
@@ -131,36 +171,58 @@ export function useOverlayMotionPair(
           ease: arcMotionTokens.ease
         });
       }
-      return;
-    }
+    };
 
-    let completed = 0;
-    const maybeDone = () => {
-      completed += 1;
-      const targets = (panel ? 1 : 0) + (backdrop ? 1 : 0);
-      if (completed >= targets && !openRef.current) {
-        setRender(false);
-        onExitComplete?.();
+    const runExit = () => {
+      const gsap = ensureGsapSetup();
+      const reduced = getPrefersReducedMotion();
+      const duration = motionDuration(durationToken, reduced);
+      const panelFrom = overlayMotionFrom(preset);
+      const backdropFrom = overlayMotionFrom(backdropPreset);
+
+      let completed = 0;
+      const maybeDone = () => {
+        completed += 1;
+        const targets = (panel ? 1 : 0) + (backdrop ? 1 : 0);
+        if (completed >= targets && !openRef.current) {
+          setRender(false);
+          onExitCompleteRef.current?.();
+        }
+      };
+
+      if (backdrop) {
+        gsap.killTweensOf(backdrop);
+        gsap.to(backdrop, {
+          ...backdropFrom,
+          duration,
+          ease: arcMotionTokens.ease,
+          onComplete: maybeDone
+        });
+      }
+      if (panel) {
+        gsap.killTweensOf(panel);
+        gsap.to(panel, {
+          ...panelFrom,
+          duration,
+          ease: arcMotionTokens.ease,
+          onComplete: maybeDone
+        });
       }
     };
 
-    if (backdrop) {
-      gsap.to(backdrop, {
-        ...backdropFrom,
-        duration,
-        ease: arcMotionTokens.ease,
-        onComplete: maybeDone
-      });
+    if (open) {
+      if (wasOpen !== true) runEntrance();
+      prevOpenRef.current = true;
+      return;
     }
-    if (panel) {
-      gsap.to(panel, {
-        ...panelFrom,
-        duration,
-        ease: arcMotionTokens.ease,
-        onComplete: maybeDone
-      });
+
+    if (wasOpen === true) runExit();
+    else {
+      setRender(false);
+      onExitCompleteRef.current?.();
     }
-  }, [open, render, preset, backdropPreset, durationToken, onExitComplete]);
+    prevOpenRef.current = false;
+  }, [open, render, preset, backdropPreset, durationToken]);
 
   return { panelRef, backdropRef, render };
 }

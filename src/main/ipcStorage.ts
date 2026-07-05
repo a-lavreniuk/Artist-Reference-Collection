@@ -60,7 +60,13 @@ import {
 } from './storage/galleryFilterStatsCache';
 import { backfillPalettesBatch, searchCardsByColor } from './storage/colorSearch';
 import { readCardJson } from './storage/cardFolder';
-import { computeImagePalette, normalizeHex, parsePaletteJson } from './storage/palette';
+import {
+  CARD_DETAIL_PALETTE_MAX,
+  computeImagePalette,
+  normalizeHex,
+  parsePaletteJson,
+  trimPaletteForDisplay
+} from './storage/palette';
 import {
   CARDS_DIR,
   LIBRARY_META_DIR
@@ -295,14 +301,21 @@ export function registerStorageIpc(
     const row = getCardByIdFromDb(root, cardId);
     if (!row || row.type !== 'image' || !row.originalRel) return [];
 
-    const fallback = parsePaletteJson(row.paletteJson, row.dominantColor);
+    const stored = parsePaletteJson(row.paletteJson);
+    if (stored.length > 0) {
+      return trimPaletteForDisplay(stored, CARD_DETAIL_PALETTE_MAX);
+    }
+
     const abs = path.join(root, row.originalRel.replace(/\//g, path.sep));
     try {
-      const palette = await computeImagePalette(abs, 'display');
-      return palette.length > 0 ? palette : fallback;
+      const palette = await computeImagePalette(abs, 'search');
+      const computed = trimPaletteForDisplay(palette, CARD_DETAIL_PALETTE_MAX);
+      if (computed.length > 0) return computed;
     } catch {
-      return fallback;
+      /* fallback below */
     }
+
+    return parsePaletteJson(null, row.dominantColor);
   });
 
   ipcMain.handle('arc:storage-update-card', async (_e, payload: unknown) => {
