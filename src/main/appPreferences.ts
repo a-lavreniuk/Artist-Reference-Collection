@@ -5,6 +5,12 @@ import path from 'path';
 
 import { applyLaunchAtLogin, shouldStartHiddenInTrayFromLaunch } from './launchAtLogin';
 import { registerScreenshotShortcut } from './screenshotShortcut';
+import {
+  defaultMcpToolsEnabled,
+  mergeMcpToolsEnabled,
+  sanitizeMcpToolsEnabled,
+  type McpToolsEnabledMap
+} from './shared/mcpToolCatalog';
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
@@ -43,6 +49,8 @@ export type AppPreferencesV1 = {
   importApiEnabled: boolean;
   importApiPrefixEnabled: boolean;
   importApiPrefixText: string;
+  mcpServerEnabled: boolean;
+  mcpToolsEnabled: McpToolsEnabledMap;
   aiSemanticSearchEnabled: boolean;
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -99,6 +107,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     importApiEnabled: true,
     importApiPrefixEnabled: false,
     importApiPrefixText: '',
+    mcpServerEnabled: false,
+    mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
@@ -182,6 +192,8 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     importApiPrefixEnabled:
       typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
     importApiPrefixText: sanitizeImportApiPrefixText(raw.importApiPrefixText ?? d.importApiPrefixText),
+    mcpServerEnabled: typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
+    mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
     aiSemanticSearchEnabled:
       typeof raw.aiSemanticSearchEnabled === 'boolean' ? raw.aiSemanticSearchEnabled : d.aiSemanticSearchEnabled,
     aiModelTier: sanitizeAiModelTier(raw.aiModelTier ?? d.aiModelTier),
@@ -298,6 +310,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   if ('importApiPrefixText' in patch) {
     next.importApiPrefixText = sanitizeImportApiPrefixText(patch.importApiPrefixText);
   }
+  if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
+    next.mcpServerEnabled = patch.mcpServerEnabled;
+  }
+  if ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object') {
+    next.mcpToolsEnabled = mergeMcpToolsEnabled(current.mcpToolsEnabled, patch.mcpToolsEnabled);
+  }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
   }
@@ -413,6 +431,13 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
   ) {
     const { restartImportApiServer } = await import('./importApi/importApiHost');
     await restartImportApiServer();
+  }
+  if (
+    ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') ||
+    ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object')
+  ) {
+    const { restartMcpServer } = await import('./mcp/mcpHost');
+    await restartMcpServer();
   }
   return next;
 }

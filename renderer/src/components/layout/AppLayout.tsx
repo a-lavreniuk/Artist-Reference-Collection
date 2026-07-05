@@ -9,6 +9,7 @@ import LibraryRelocatedHost from './LibraryRelocatedHost';
 import ImportHost from '../import/ImportHost';
 import AutoImportHost from '../import/AutoImportHost';
 import ExtensionImportHost from '../import/ExtensionImportHost';
+import McpCatalogSyncHost from '../import/McpCatalogSyncHost';
 import NotificationHost from '../notifications/NotificationHost';
 import ScreenshotHost from '../screenshot/ScreenshotHost';
 import BugReportWidget from '../bug-report/BugReportWidget';
@@ -89,6 +90,7 @@ export default function AppLayout() {
     <ScreenshotHost>
     <ImportHost>
       <ExtensionImportHost>
+      <McpCatalogSyncHost>
       <AutoImportHost>
       <main className="arc-navbar-shell">
         <MaintenanceBanner />
@@ -104,6 +106,7 @@ export default function AppLayout() {
         <InterfaceTourHost />
       </main>
       </AutoImportHost>
+      </McpCatalogSyncHost>
       </ExtensionImportHost>
     </ImportHost>
     </ScreenshotHost>

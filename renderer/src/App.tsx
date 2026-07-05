@@ -43,6 +43,9 @@ const SettingsAutoImportPanel = lazy(() =>
 const SettingsBrowserExtensionPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsBrowserExtensionPanel }))
 );
+const SettingsMcpServerPanel = lazy(() =>
+  import('./pages/settings/panels/SettingsMcpServerPanel')
+);
 const SettingsAiSearchPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAiSearchPanel }))
 );
@@ -88,6 +91,7 @@ export default function App() {
             <Route path="integrity" element={<SettingsIntegrityPanel />} />
             <Route path="auto-import" element={<SettingsAutoImportPanel />} />
             <Route path="browser-extension" element={<SettingsBrowserExtensionPanel />} />
+            <Route path="mcp-server" element={<SettingsMcpServerPanel />} />
             <Route path="ai-search" element={<SettingsAiSearchPanel />} />
             <Route path="updates" element={<SettingsUpdatesPanel />} />
           </Route>

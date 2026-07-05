@@ -21,7 +21,7 @@ export {
   notifyTagsChanged
 } from './events';
 
-export { invalidateLibraryCache, readTagsUnified } from './backend';
+export { invalidateLibraryCache, invalidateTagsCache, readTagsUnified } from './backend';
 
 export {
   getAllCategories,

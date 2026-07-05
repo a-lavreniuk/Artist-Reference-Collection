@@ -25,6 +25,12 @@ const ADVANCED_SECTIONS = [
     label: 'Расширение браузера',
     iconClass: 'arc-icon-browser'
   },
+  {
+    key: 'mcp-server',
+    to: '/settings/mcp-server',
+    label: 'MCP сервер',
+    iconClass: 'arc-icon-ai'
+  },
   { key: 'ai-search', to: '/settings/ai-search', label: 'AI Поиск', iconClass: 'arc-icon-ai' }
 ] as const;
 

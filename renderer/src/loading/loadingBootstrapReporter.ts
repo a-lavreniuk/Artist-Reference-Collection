@@ -8,11 +8,13 @@ export async function runLoadingBootstrapReporter(): Promise<void> {
   const arc = window.arc;
   if (!arc?.reportLoadingBootstrapProgress) return;
 
+  let libraryReady = false;
+
   try {
     arc.reportLoadingBootstrapProgress(58, 'Подготовка данных…');
     await initAppPreferencesRuntime();
 
-    const libraryReady = await isLibraryConfigured();
+    libraryReady = await isLibraryConfigured();
     if (!libraryReady) {
       arc.reportLoadingBootstrapProgress(75, 'Подготовка интерфейса…');
       return;
@@ -33,6 +35,8 @@ export async function runLoadingBootstrapReporter(): Promise<void> {
     await ensureGalleryBootstrap(defaultGalleryFeedQuery());
   } finally {
     await arc.reportLoadingBootstrapComplete?.();
-    scheduleGalleryWarmup();
+    if (libraryReady) {
+      scheduleGalleryWarmup();
+    }
   }
 }

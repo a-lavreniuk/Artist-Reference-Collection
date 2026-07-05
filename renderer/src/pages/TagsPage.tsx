@@ -33,6 +33,7 @@ import {
   getAllCategories,
   getCategoryStats,
   getTagsByCategory,
+  invalidateTagsCache,
   moveTagToCategory,
   reorderCategoryToIndex,
   updateCategory,
@@ -67,6 +68,7 @@ export default function TagsPage() {
   const mainDropEnabled = selectedCategoryId === null;
 
   const load = useCallback(async () => {
+    invalidateTagsCache();
     const cats = await getAllCategories();
     const tagLists = await Promise.all(cats.map((c) => getTagsByCategory(c.id)));
     const nextTags: Record<string, TagRecord[]> = {};

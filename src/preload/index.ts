@@ -357,6 +357,11 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:extension-import-saved', fn);
     return () => ipcRenderer.removeListener('arc:extension-import-saved', fn);
   },
+  onMcpTagCatalogChanged: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('arc:mcp-tag-catalog-changed', fn);
+    return () => ipcRenderer.removeListener('arc:mcp-tag-catalog-changed', fn);
+  },
   openBugReportForm: () =>
     ipcRenderer.invoke('arc:bug-report-open') as Promise<
       | { ok: true; formUrl: string }

@@ -1072,19 +1072,6 @@ button.color-swatch-inline:disabled {
   box-sizing: border-box;
 }
 
-/* Скрыто до reveal — без вспышки «вся сетка → мигание по очереди». */
-.arc-masonry-item:not([data-revealed='true']):not(.arc-masonry-item--skeleton) .arc-gallery-card-wrap {
-  opacity: 0;
-  transform: translateY(10px) scale(0.98);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .arc-masonry-item:not([data-revealed='true']):not(.arc-masonry-item--skeleton) .arc-gallery-card-wrap {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 .arc-masonry-grid .arc-gallery-card-wrap {
   margin-bottom: 0;
   width: 100%;
@@ -4255,6 +4242,9 @@ html.arc-onboarding-page,
 .arc-settings-toggle-shortcut-row .arc-settings-check-row {
   flex: 1 1 auto;
   min-width: 0;
+  width: auto;
+  max-width: none;
+  align-self: stretch;
 }
 
 .arc-settings-toggle-shortcut-row__hint {

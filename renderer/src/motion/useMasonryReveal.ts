@@ -9,6 +9,8 @@ const revealedIdsGlobal = new Set<string>();
 /** Сколько карточек на первом экране идут с поочерёдным stagger. */
 const FIRST_SCREEN_STAGGER_CAP = 20;
 const MAX_REF_RETRIES = 8;
+const REVEAL_FROM = { y: 10, scale: 0.98 };
+const REVEAL_TO = { y: 0, scale: 1 };
 
 export function resetMasonryRevealCache(): void {
   revealedIdsGlobal.clear();
@@ -60,7 +62,7 @@ function markRevealed(
 ): void {
   const id = itemId(el);
   el.setAttribute('data-revealed', 'true');
-  gsap.set(motionTarget(el), { clearProps: 'opacity,transform' });
+  gsap.set(motionTarget(el), { clearProps: 'transform' });
   if (id) {
     revealedIdsGlobal.add(id);
     animating.delete(id);
@@ -78,6 +80,34 @@ function resetMountedItems(
   }
   animating.clear();
 }
+
+function clearStaleAnimating(
+  gsap: ReturnType<typeof ensureGsapSetup>,
+  itemRefs: React.RefObject<Map<string, HTMLElement>>,
+  animating: Set<string>
+): void {
+  for (const id of [...animating]) {
+    const el = itemRefs.current?.get(id);
+    if (!el || !gsap.isTweening(motionTarget(el))) {
+      animating.delete(id);
+    }
+  }
+}
+
+/** batchDone только когда все видимые id либо раскрыты, либо в активной анимации. */
+export function shouldCloseInitialRevealBatch(
+  visibleCount: number,
+  pendingInitialCount: number,
+  batchDone: boolean
+): boolean {
+  if (batchDone || visibleCount === 0) return false;
+  return pendingInitialCount === 0;
+}
+
+function revealFallbackDelayMs(): number {
+  return 150;
+}
+
 
 function forceRevealVisible(
   gsap: ReturnType<typeof ensureGsapSetup>,
@@ -103,6 +133,7 @@ export function useMasonryReveal({
   const prevResetKeyRef = useRef<string | undefined>(undefined);
   const animatingRef = useRef(new Set<string>());
   const batchDoneRef = useRef(false);
+  const fallbackTimerRef = useRef(0);
   const layoutsRef = useRef(layouts);
   const visibleRef = useRef(visibleIds);
   const appendRef = useRef(appendIds);
@@ -120,15 +151,32 @@ export function useMasonryReveal({
     const gsap = ensureGsapSetup();
 
     if (resetKey !== undefined && resetKey !== prevResetKeyRef.current) {
+      window.clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = 0;
       resetMountedItems(gsap, itemRefs, animatingRef.current);
       revealedIdsGlobal.clear();
       batchDoneRef.current = false;
       prevResetKeyRef.current = resetKey;
     }
 
+    const armRevealFallback = (): void => {
+      window.clearTimeout(fallbackTimerRef.current);
+      const hasHidden = [...visibleRef.current].some((id) => {
+        const el = itemRefs.current?.get(id);
+        return el && !el.hasAttribute('data-revealed');
+      });
+      if (!hasHidden || getPrefersReducedMotion()) return;
+      fallbackTimerRef.current = window.setTimeout(() => {
+        forceRevealVisible(gsap, visibleRef.current, itemRefs, animatingRef.current);
+        fallbackTimerRef.current = 0;
+      }, revealFallbackDelayMs());
+    };
+
     let retryRaf = 0;
 
     const run = (retryPass = 0): void => {
+      clearStaleAnimating(gsap, itemRefs, animatingRef.current);
+
       const reduced = getPrefersReducedMotion();
       const duration = motionDuration('fast', reduced);
       const stagger = reduced ? 0 : arcMotionTokens.stagger;
@@ -141,7 +189,15 @@ export function useMasonryReveal({
       const scrollEnter: HTMLElement[] = [];
 
       for (const id of currentVisible) {
-        if (revealedIdsGlobal.has(id) || animatingRef.current.has(id)) continue;
+        if (revealedIdsGlobal.has(id)) continue;
+        if (animatingRef.current.has(id)) {
+          const stuckEl = itemRefs.current?.get(id);
+          if (stuckEl && !gsap.isTweening(motionTarget(stuckEl))) {
+            animatingRef.current.delete(id);
+          } else {
+            continue;
+          }
+        }
         const el = itemRefs.current?.get(id);
         if (!el) continue;
 
@@ -156,7 +212,6 @@ export function useMasonryReveal({
 
       const playEnter = (
         elements: HTMLElement[],
-        to: gsap.TweenVars,
         staggerEach: number | false
       ) => {
         if (elements.length === 0) return;
@@ -174,8 +229,8 @@ export function useMasonryReveal({
           return;
         }
 
-        gsap.to(targets, {
-          ...to,
+        gsap.fromTo(targets, REVEAL_FROM, {
+          ...REVEAL_TO,
           duration,
           ease: arcMotionTokens.ease,
           stagger: staggerEach === false ? 0 : staggerEach,
@@ -191,8 +246,8 @@ export function useMasonryReveal({
 
       if (initialEnter.length > 0) {
         const sorted = sortByLayout(initialEnter, currentLayouts);
-        playEnter(sorted.slice(0, FIRST_SCREEN_STAGGER_CAP), { opacity: 1, y: 0, scale: 1 }, stagger);
-        playEnter(sorted.slice(FIRST_SCREEN_STAGGER_CAP), { opacity: 1, y: 0, scale: 1 }, false);
+        playEnter(sorted.slice(0, FIRST_SCREEN_STAGGER_CAP), stagger);
+        playEnter(sorted.slice(FIRST_SCREEN_STAGGER_CAP), false);
       }
 
       const pendingInitial = [...currentVisible].filter(
@@ -209,20 +264,22 @@ export function useMasonryReveal({
         forceRevealVisible(gsap, currentVisible, itemRefs, animatingRef.current);
       }
 
-      if (!batchDoneRef.current && currentVisible.size > 0) {
-        if (pendingInitial.length === 0 || initialEnter.length > 0) {
-          batchDoneRef.current = true;
-        }
+      if (shouldCloseInitialRevealBatch(currentVisible.size, pendingInitial.length, batchDoneRef.current)) {
+        batchDoneRef.current = true;
       }
 
-      playEnter(appendEnter, { opacity: 1, y: 0 }, stagger);
-      playEnter(scrollEnter, { opacity: 1, y: 0 }, false);
+      playEnter(appendEnter, stagger);
+      playEnter(scrollEnter, false);
+
+      armRevealFallback();
     };
 
     run(0);
 
     return () => {
       if (retryRaf) cancelAnimationFrame(retryRaf);
+      window.clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = 0;
     };
   }, [enabled, resetKey, visibleKey, appendKey, itemRefs]);
 }

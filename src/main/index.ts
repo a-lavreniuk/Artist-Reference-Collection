@@ -23,6 +23,7 @@ import { refreshLibrarySessionSnapshotFromDisk } from './librarySessionSnapshot'
 import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
 import { clearMediaStagingTokens, registerMediaStagingToken } from './media/mediaStagingTokens';
 import { startImportApiServer, stopImportApiServer } from './importApi/importApiHost';
+import { startMcpServer, stopMcpServer } from './mcp/mcpHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
 import { applyStoredLaunchAtLogin, readAppPreferences, readAppPreferencesSync, registerAppPreferencesIpc, shouldStartHiddenInTray } from './appPreferences';
@@ -142,6 +143,12 @@ app.whenReady().then(async () => {
     console.error('[ARC Import API] failed to start:', err);
   }
 
+  try {
+    await startMcpServer();
+  } catch (err) {
+    console.error('[ARC MCP] failed to start:', err);
+  }
+
   clearSessionWindowSize();
   registerLoadingSplashIpc();
 
@@ -236,6 +243,7 @@ app.on('will-quit', () => {
   shutdownArcMediaServer();
   clearMediaStagingTokens();
   stopImportApiServer();
+  void stopMcpServer();
   destroyAppTray();
   unregisterDevToolsShortcuts();
   unregisterScreenshotShortcut();

@@ -13,6 +13,7 @@ const SETTINGS_TITLES: Record<string, string> = {
   '/settings/integrity': 'Проверка целостности',
   '/settings/auto-import': 'Автоимпорт',
   '/settings/browser-extension': 'Расширение браузера',
+  '/settings/mcp-server': 'MCP сервер',
   '/settings/ai-search': 'AI Поиск',
   '/settings/updates': 'Обновления',
   '/settings/ui-kit': 'UI-Kit'

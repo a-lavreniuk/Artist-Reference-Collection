@@ -1,3 +1,6 @@
+import type { McpToolsEnabledMap } from '@arc-main-shared/mcpToolCatalog';
+import { defaultMcpToolsEnabled, sanitizeMcpToolsEnabled } from '@arc-main-shared/mcpToolCatalog';
+
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
@@ -41,6 +44,8 @@ export type AppPreferencesV1 = {
   importApiEnabled: boolean;
   importApiPrefixEnabled: boolean;
   importApiPrefixText: string;
+  mcpServerEnabled: boolean;
+  mcpToolsEnabled: McpToolsEnabledMap;
   aiSemanticSearchEnabled: boolean;
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -92,6 +97,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     importApiEnabled: true,
     importApiPrefixEnabled: false,
     importApiPrefixText: '',
+    mcpServerEnabled: false,
+    mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
@@ -165,7 +172,10 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     importApiPrefixEnabled:
       typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
     importApiPrefixText:
-      typeof raw.importApiPrefixText === 'string' ? raw.importApiPrefixText.trim().slice(0, 64) : d.importApiPrefixText
+      typeof raw.importApiPrefixText === 'string' ? raw.importApiPrefixText.trim().slice(0, 64) : d.importApiPrefixText,
+    mcpServerEnabled:
+      typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
+    mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled)
   };
 }
 

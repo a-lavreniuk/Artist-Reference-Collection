@@ -8,7 +8,7 @@ import {
   type ReactNode,
   type RefObject
 } from 'react';
-import { useMasonryReveal, resetMasonryRevealCache, isMasonryItemRevealed } from '../../motion';
+import { useMasonryReveal, resetMasonryRevealCache } from '../../motion';
 import {
   canIncrementalAppend,
   layoutMasonryAppend,
@@ -119,8 +119,6 @@ export default function MasonryGrid({
   const allItems = useMemo(() => [...items, ...skeletonItems], [items, skeletonItems]);
 
   const layoutKey = `${layoutEpoch}|${columnCount}|${containerWidth}|${gap}`;
-  /** Только смена сетки / запроса — не ширина контейнера при первом measure. */
-  const revealResetKeyFull = `${layoutEpoch}|${revealResetKey}`;
 
   useLayoutEffect(() => {
     if (containerWidth <= 0 || columnCount <= 0) return;
@@ -193,6 +191,8 @@ export default function MasonryGrid({
   }, [virtualRange.visibleIds, focusedId]);
 
   const motionEnabled = variant === 'gallery' || variant === 'similar';
+  /** Только смена сетки / запроса — не ширина контейнера при первом measure. */
+  const revealResetKeyFull = `${layoutEpoch}|${revealResetKey}`;
 
   useMasonryReveal({
     visibleIds,
@@ -248,17 +248,13 @@ export default function MasonryGrid({
       if (prev && ro) ro.unobserve(prev);
       if (el) {
         itemRefs.current.set(id, el);
-        if (!motionEnabled || isMasonryItemRevealed(id)) {
-          el.setAttribute('data-revealed', 'true');
-        } else {
-          el.removeAttribute('data-revealed');
-        }
+        el.setAttribute('data-revealed', 'true');
         ro?.observe(el);
       } else {
         itemRefs.current.delete(id);
       }
     },
-    [motionEnabled]
+    []
   );
 
   const focusItem = useCallback((id: string) => {
