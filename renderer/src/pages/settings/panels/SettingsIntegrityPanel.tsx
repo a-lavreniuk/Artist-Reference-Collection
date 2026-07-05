@@ -43,7 +43,7 @@ export default function SettingsIntegrityPanel() {
           data-btn-size="m"
         >
           <div className="arc-settings-desc-block">
-            <p className="typo-p-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+            <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
             <button
               type="button"
               className="btn btn-secondary btn-ds"
@@ -56,7 +56,7 @@ export default function SettingsIntegrityPanel() {
 
           {phase === 'no_metadata' ? (
             <div className="arc-integrity-ok panel elevation-default">
-              <p className="typo-p-m">Нет метаданных библиотеки</p>
+              <p className="text-m">Нет метаданных библиотеки</p>
             </div>
           ) : null}
 

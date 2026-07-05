@@ -72,8 +72,8 @@ export default function IntegrityReportView({
           {grouped.metadata.length > 0 ? (
             <section className="arc-integrity-section panel elevation-default">
               <header className="arc-integrity-section__head">
-                <h2 className="arc-integrity-section__title">Метаданные</h2>
-                <p className="typo-p-m arc-integrity-section__hint">
+                <h2 className="text-m arc-integrity-section__title">Метаданные</h2>
+                <p className="text-m arc-integrity-section__hint">
                   Битые ссылки на метки, коллекции, счётчики и мудборд
                 </p>
               </header>
@@ -94,7 +94,7 @@ export default function IntegrityReportView({
                   <span className="btn-ds__value">Исправить метаданные</span>
                 </button>
                 {fileBackend === false ? (
-                  <p className="typo-p-s arc-integrity-section__note">Доступно только для файловой библиотеки</p>
+                  <p className="text-s arc-integrity-section__note">Доступно только для файловой библиотеки</p>
                 ) : null}
               </div>
             </section>
@@ -103,8 +103,8 @@ export default function IntegrityReportView({
           {missingByCard.size > 0 ? (
             <section className="arc-integrity-section panel elevation-default">
               <header className="arc-integrity-section__head">
-                <h2 className="arc-integrity-section__title">Отсутствующие файлы</h2>
-                <p className="typo-p-m arc-integrity-section__hint">
+                <h2 className="text-m arc-integrity-section__title">Отсутствующие файлы</h2>
+                <p className="text-m arc-integrity-section__hint">
                   Файлы на диске не найдены — карточку можно удалить
                 </p>
               </header>
@@ -130,8 +130,8 @@ export default function IntegrityReportView({
           {grouped.duplicatePaths.length > 0 ? (
             <section className="arc-integrity-section panel elevation-default">
               <header className="arc-integrity-section__head">
-                <h2 className="arc-integrity-section__title">Дубликаты путей</h2>
-                <p className="typo-p-m arc-integrity-section__hint">
+                <h2 className="text-m arc-integrity-section__title">Дубликаты путей</h2>
+                <p className="text-m arc-integrity-section__hint">
                   Несколько карточек ссылаются на один файл — удалите лишние
                 </p>
               </header>
@@ -157,8 +157,8 @@ export default function IntegrityReportView({
           {grouped.orphanPaths.length > 0 ? (
             <section className="arc-integrity-section panel elevation-default">
               <header className="arc-integrity-section__head">
-                <h2 className="arc-integrity-section__title">Лишние файлы</h2>
-                <p className="typo-p-m arc-integrity-section__hint">
+                <h2 className="text-m arc-integrity-section__title">Лишние файлы</h2>
+                <p className="text-m arc-integrity-section__hint">
                   Файлы на диске не привязаны ни к одной карточке
                 </p>
               </header>
@@ -176,7 +176,7 @@ export default function IntegrityReportView({
           {grouped.invalidRows.length > 0 ? (
             <section className="arc-integrity-section panel elevation-default">
               <header className="arc-integrity-section__head">
-                <h2 className="arc-integrity-section__title">Битые записи карточек</h2>
+                <h2 className="text-m arc-integrity-section__title">Битые записи карточек</h2>
               </header>
               <ul className="arc-integrity-section__list">
                 {grouped.invalidRows.map((item, idx) => (
@@ -201,8 +201,8 @@ export default function IntegrityReportView({
           {grouped.critical.length > 0 ? (
             <section className="arc-integrity-section panel elevation-default arc-integrity-section--critical">
               <header className="arc-integrity-section__head">
-                <h2 className="arc-integrity-section__title">Критические ошибки</h2>
-                <p className="typo-p-m arc-integrity-section__hint">
+                <h2 className="text-m arc-integrity-section__title">Критические ошибки</h2>
+                <p className="text-m arc-integrity-section__hint">
                   Повторяющиеся id в метаданных — автоматически не исправляется. Попробуйте{' '}
                   <Link to="/settings/backup" className="arc-integrity-section__link">
                     восстановить из резервной копии

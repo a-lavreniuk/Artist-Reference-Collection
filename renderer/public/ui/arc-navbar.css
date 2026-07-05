@@ -522,7 +522,7 @@ body::-webkit-scrollbar {
 
 .arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__value {
   color: var(--btn-brand-value-default);
-  font-weight: 500;
+  font-weight: var(--btn-font-weight, var(--typo-p-m-weight));
 }
 
 .arc-navbar-filter-chip-group .arc-navbar-filter-chip-filter .btn-ds__counter {

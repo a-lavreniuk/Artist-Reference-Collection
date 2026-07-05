@@ -46,7 +46,7 @@ export default function SettingsControlRow({
         {variant === 'checkbox' ? <ArcCheckbox checked={checked} /> : null}
         {variant === 'radio' ? <ArcRadio checked={checked} /> : null}
       </span>
-      <span className="arc-settings-check-row__label typo-p-m">{label}</span>
+      <span className="arc-settings-check-row__label text-m">{label}</span>
     </button>
   );
 }

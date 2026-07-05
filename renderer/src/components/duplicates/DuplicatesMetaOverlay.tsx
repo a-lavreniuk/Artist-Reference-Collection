@@ -13,12 +13,12 @@ export default function DuplicatesMetaOverlay({ card, libraryRootAbs, align }: P
   const path = toDisplayPath(libraryRootAbs, card.originalRelativePath);
   return (
     <div className={`arc-duplicates-meta-overlay arc-duplicates-meta-overlay--${align}`}>
-      <div className="arc-duplicates-meta-overlay__row typo-p-m">
+      <div className="arc-duplicates-meta-overlay__row text-m">
         <span>{meta.format}</span>
         <span>{meta.resolution}</span>
         <span>{meta.size}</span>
       </div>
-      <p className="arc-duplicates-meta-overlay__path typo-p-s" title={path}>
+      <p className="arc-duplicates-meta-overlay__path text-s" title={path}>
         {path}
       </p>
     </div>

@@ -108,7 +108,7 @@ function AiPanelContent({ ctx }: NavbarSearchPanelContentProps) {
     <>
       <div className="arc-search-panel-intro arc-search-panel-intro--ai">
         <SearchPanelModeHeader mode="ai" />
-        <p className="arc-search-panel-hint">{SEARCH_MODE_META.ai.panelHint}</p>
+        <p className="text-m arc-search-panel-hint">{SEARCH_MODE_META.ai.panelHint}</p>
       </div>
 
       {hasRecentSectionsAi ? <SearchPanelFullBleedSep /> : null}

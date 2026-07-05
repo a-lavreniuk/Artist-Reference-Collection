@@ -60,7 +60,7 @@ export default function SearchPanelColorControls({
             })}
           </div>
         </div>
-        <p className="arc-search-panel-hint">{SEARCH_MODE_META.color.panelHint}</p>
+        <p className="text-m arc-search-panel-hint">{SEARCH_MODE_META.color.panelHint}</p>
       </div>
 
       <div className="arc-search-panel-color-picker">

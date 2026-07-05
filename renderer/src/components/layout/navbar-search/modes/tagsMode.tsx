@@ -153,13 +153,13 @@ function TagsPanelContent({ ctx }: NavbarSearchPanelContentProps) {
       {!q ? (
         <div className="arc-search-panel-intro">
           <SearchPanelModeHeader mode={searchMode} />
-          <p className="arc-search-panel-hint">{SEARCH_MODE_META.tags.panelHint}</p>
+          <p className="text-m arc-search-panel-hint">{SEARCH_MODE_META.tags.panelHint}</p>
         </div>
       ) : (
         <>
           <SearchPanelModeHeader mode={searchMode} />
           {rankedTags.length === 0 ? (
-            <p className="arc-search-panel-hint arc-search-panel-hint--no-tags">
+            <p className="text-m arc-search-panel-hint arc-search-panel-hint--no-tags">
               Меток с таким именем не найдено.{' '}
               <SearchPanelCreateTagAction
                 query={draft.trim()}

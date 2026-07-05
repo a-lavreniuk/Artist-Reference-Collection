@@ -33,7 +33,7 @@ export default function SettingsUpdatesPanel() {
       <div className="arc-settings-main__scroll">
         <div className="arc-settings-main__content arc-settings-updates-panel arc-ui-kit-scope" data-btn-size="m">
           {loading ? null : versions.length === 0 ? (
-            <p className="typo-p-m arc-settings-updates-panel__empty">История версий пока недоступна.</p>
+            <p className="text-m arc-settings-updates-panel__empty">История версий пока недоступна.</p>
           ) : (
             <>
               <div className="arc-settings-desc-block arc-settings-updates-panel__intro">
@@ -81,12 +81,12 @@ export default function SettingsUpdatesPanel() {
                 {showUpdateActions ? (
                   <div className="arc-settings-updates-actions__update-row">
                     {checkState === 'updateAvailable' && availableVersion ? (
-                      <p className="typo-p-m arc-settings-updates-actions__status">
+                      <p className="text-m arc-settings-updates-actions__status">
                         Доступна версия {availableVersion}
                       </p>
                     ) : null}
                     {updateBusy ? (
-                      <p className="typo-p-m arc-settings-updates-actions__status">
+                      <p className="text-m arc-settings-updates-actions__status">
                         {checkState === 'installing'
                           ? 'Устанавливаем обновление… Приложение скоро перезапустится.'
                           : downloadPercent != null

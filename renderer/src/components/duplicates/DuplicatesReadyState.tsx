@@ -20,8 +20,8 @@ export default function DuplicatesReadyState({
     <div className="arc-duplicates-fill" data-btn-size="l">
       <div className="arc-duplicates-fill__body">
         <div className="arc-duplicates-fill__text">
-          <h1 className="arc-duplicates-fill__title">Поиск дубликатов</h1>
-          <p className="typo-p-m arc-duplicates-fill__subtitle">
+          <h1 className="h1 arc-duplicates-fill__title">Поиск дубликатов</h1>
+          <p className="text-m arc-duplicates-fill__subtitle">
             Найдите похожие изображения в вашей базе данных. Сканирование может занять несколько минут, в
             зависимости от объёма данных
           </p>
@@ -29,8 +29,8 @@ export default function DuplicatesReadyState({
 
         <div className="arc-duplicates-ready__control">
           <div className="arc-duplicates-ready__threshold-row">
-            <span className="typo-p-m arc-duplicates-ready__threshold-label">Порог похожести</span>
-            <span className="typo-p-m arc-duplicates-ready__threshold-value">{threshold}%</span>
+            <span className="text-m arc-duplicates-ready__threshold-label">Порог похожести</span>
+            <span className="text-m arc-duplicates-ready__threshold-value">{threshold}%</span>
           </div>
           <ValueSlider
             size="s"
@@ -43,9 +43,9 @@ export default function DuplicatesReadyState({
             onChange={onThresholdChange}
             ariaLabel="Порог похожести"
           />
-          <p className="typo-p-s arc-duplicates-ready__hint">{duplicateSimilarityHint(threshold)}</p>
+          <p className="text-s arc-duplicates-ready__hint">{duplicateSimilarityHint(threshold)}</p>
           {noResultsNotice ? (
-            <p className="typo-p-m arc-duplicates-ready__notice">
+            <p className="text-m arc-duplicates-ready__notice">
               Совпадений не найдено. Попробуйте снизить порог похожести
             </p>
           ) : null}

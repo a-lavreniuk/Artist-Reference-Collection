@@ -11,10 +11,10 @@ export default function IntegrityIssueRow({ detail, path, children }: Props) {
   return (
     <div className="arc-integrity-row">
       <div className="arc-integrity-row__text">
-        <p className="typo-p-m arc-integrity-row__detail">{detail}</p>
+        <p className="text-m arc-integrity-row__detail">{detail}</p>
         {path ? (
           <Tooltip content={path} delay={500} position="top" className="arc-integrity-row__path-tooltip">
-            <p className="typo-p-s arc-integrity-row__path">{path}</p>
+            <p className="text-s arc-integrity-row__path">{path}</p>
           </Tooltip>
         ) : null}
       </div>

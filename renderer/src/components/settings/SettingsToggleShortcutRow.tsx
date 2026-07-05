@@ -25,7 +25,7 @@ export default function SettingsToggleShortcutRow({
         disabled={disabled}
         onCheckedChange={onPressedChange}
       />
-      <span className="arc-settings-toggle-shortcut-row__hint typo-p-m" aria-hidden="true">
+      <span className="arc-settings-toggle-shortcut-row__hint hint" aria-hidden="true">
         {shortcut}
       </span>
     </div>

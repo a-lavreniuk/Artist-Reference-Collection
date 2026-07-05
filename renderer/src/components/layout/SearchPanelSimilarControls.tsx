@@ -108,7 +108,7 @@ export default function SearchPanelSimilarControls({
             </button>
           </div>
         </div>
-        <p className="arc-search-panel-hint">{SEARCH_MODE_META.similar.panelHint}</p>
+        <p className="text-m arc-search-panel-hint">{SEARCH_MODE_META.similar.panelHint}</p>
       </div>
 
       <SearchPanelFullBleedSep />
@@ -133,7 +133,7 @@ export default function SearchPanelSimilarControls({
               }}
               onDrop={(e) => void onDrop(e)}
             >
-              <p className="typo-p-l arc-search-panel-similar-dropzone__hint">
+              <p className="text-l arc-search-panel-similar-dropzone__hint">
                 Перетащите изображение в поле поиска или нажмите на кнопку, чтобы загрузить файл…
               </p>
               <div className="arc-import-dropzone-cta-wrap arc-ui-kit-scope" data-btn-size="m">

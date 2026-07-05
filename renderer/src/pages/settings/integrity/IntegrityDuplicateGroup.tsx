@@ -49,9 +49,9 @@ function IntegrityDupCard({
       </div>
       <div className="arc-dup-card__body">
         <Tooltip content={absolutePath} delay={500} position="top" className="arc-dup-card__path-tooltip">
-          <p className="typo-p-m arc-dup-card__path">{absolutePath}</p>
+          <p className="text-m arc-dup-card__path">{absolutePath}</p>
         </Tooltip>
-        <div className="arc-dup-card__meta typo-p-m">
+        <div className="arc-dup-card__meta text-m">
           <span>{info.format}</span>
           <span>{info.resolution}</span>
           <span>{info.size}</span>
@@ -87,14 +87,14 @@ export default function IntegrityDuplicateGroup({
 
   return (
     <div className="arc-integrity-dup-group">
-      <p className="typo-p-m arc-integrity-dup-group__path">{path}</p>
+      <p className="text-m arc-integrity-dup-group__path">{path}</p>
       <div className="arc-integrity-dup-group__grid">
         {cardIds.map((id) => {
           const preview = previews.get(id);
           if (!preview) {
             return (
               <div key={id} className="arc-integrity-dup-group__placeholder panel elevation-default">
-                <p className="typo-p-m">Карточка {id}</p>
+                <p className="text-m">Карточка {id}</p>
                 <button type="button" className="btn btn-danger btn-ds" disabled={busy} onClick={() => onDeleteCard(id)}>
                   <span className="btn-ds__value">Удалить эту</span>
                 </button>

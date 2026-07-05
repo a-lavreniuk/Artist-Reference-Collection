@@ -115,25 +115,25 @@ export default function DuplicatesSidebar({
     >
       <div className="arc-duplicates-sidebar__scanned">
         <div className="arc-duplicates-sidebar__stat">
-          <span className="typo-p-m arc-duplicates-sidebar__stat-label">Карточек просканировано</span>
-          <span className="typo-p-m arc-duplicates-sidebar__stat-value">
+          <span className="text-m arc-duplicates-sidebar__stat-label">Карточек просканировано</span>
+          <span className="text-m arc-duplicates-sidebar__stat-value">
             {scannedCards.toLocaleString('ru-RU')}
           </span>
         </div>
         <div className="arc-duplicates-sidebar__stat">
-          <span className="typo-p-m arc-duplicates-sidebar__stat-label">Дублей найдено</span>
-          <span className="typo-p-m arc-duplicates-sidebar__stat-value">
+          <span className="text-m arc-duplicates-sidebar__stat-label">Дублей найдено</span>
+          <span className="text-m arc-duplicates-sidebar__stat-value">
             {duplicatesFound.toLocaleString('ru-RU')}
           </span>
         </div>
         <div className="arc-duplicates-sidebar__stat">
-          <span className="typo-p-m arc-duplicates-sidebar__stat-label">Слияние сэкономит</span>
-          <span className="typo-p-m arc-duplicates-sidebar__stat-value">{formatBytes(spaceSavedBytes)}</span>
+          <span className="text-m arc-duplicates-sidebar__stat-label">Слияние сэкономит</span>
+          <span className="text-m arc-duplicates-sidebar__stat-value">{formatBytes(spaceSavedBytes)}</span>
         </div>
       </div>
 
       <div className="arc-duplicates-sidebar__modes-block">
-        <span className="typo-p-s arc-duplicates-sidebar__modes-label">Режим сравнения</span>
+        <span className="text-s arc-duplicates-sidebar__modes-label">Режим сравнения</span>
         <div className="tabs arc-duplicates-modes" role="tablist" aria-label="Режим сравнения">
           {MODE_TABS.map((tab) => (
             <button
@@ -186,7 +186,7 @@ export default function DuplicatesSidebar({
                 </span>
               </div>
               <div className="arc-duplicates-row__body">
-                <p className="typo-p-m arc-duplicates-row__sim">{Math.round(pair.similarity)}% Похожесть</p>
+                <p className="text-m arc-duplicates-row__sim">{Math.round(pair.similarity)}% Похожесть</p>
                 <StatusLabel status={status} />
               </div>
               <button

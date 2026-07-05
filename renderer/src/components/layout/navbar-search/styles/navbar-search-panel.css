@@ -39,9 +39,6 @@
 
 .arc-search-panel.arc-ui-kit-scope .arc-search-panel-hint {
   margin: 0;
-  font-size: var(--typo-p-m-size);
-  line-height: var(--typo-p-m-line);
-  font-weight: var(--typo-p-m-weight);
   color: var(--typography-black-bg-secondary-default);
 }
 

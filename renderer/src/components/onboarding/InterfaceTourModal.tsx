@@ -106,7 +106,7 @@ export default function InterfaceTourModal({
         </header>
         <div className="arc-modal__body">
           <div className="arc-modal__slot">
-            <p className="arc-modal__slot-text typo-p-m" id="arcInterfaceTourBody">
+            <p className="arc-modal__slot-text text-m" id="arcInterfaceTourBody">
               {body}
             </p>
           </div>

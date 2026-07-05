@@ -7,10 +7,10 @@ type Props = {
 export default function SettingsHardwareRow({ label, value }: Props) {
   return (
     <div className="arc-settings-hardware-row">
-      <span className="arc-settings-hardware-row__label typo-p-m" data-typo-role="secondary">
+      <span className="arc-settings-hardware-row__label text-m" data-typo-role="secondary">
         {label}
       </span>
-      <span className="arc-settings-hardware-row__value typo-p-m">{value}</span>
+      <span className="arc-settings-hardware-row__value text-m">{value}</span>
     </div>
   );
 }

@@ -119,7 +119,8 @@ export default function MasonryGrid({
   const allItems = useMemo(() => [...items, ...skeletonItems], [items, skeletonItems]);
 
   const layoutKey = `${layoutEpoch}|${columnCount}|${containerWidth}|${gap}`;
-  const revealResetKeyFull = `${layoutKey}|${revealResetKey}`;
+  /** Только смена сетки / запроса — не ширина контейнера при первом measure. */
+  const revealResetKeyFull = `${layoutEpoch}|${revealResetKey}`;
 
   useLayoutEffect(() => {
     if (containerWidth <= 0 || columnCount <= 0) return;

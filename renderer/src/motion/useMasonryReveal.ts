@@ -8,6 +8,7 @@ const revealedIdsGlobal = new Set<string>();
 
 /** Сколько карточек на первом экране идут с поочерёдным stagger. */
 const FIRST_SCREEN_STAGGER_CAP = 20;
+const MAX_REF_RETRIES = 8;
 
 export function resetMasonryRevealCache(): void {
   revealedIdsGlobal.clear();
@@ -25,6 +26,11 @@ type RevealOptions = {
   resetKey?: string;
   enabled?: boolean;
 };
+
+function setMembershipKey(set: Set<string> | undefined): string {
+  if (!set || set.size === 0) return '';
+  return [...set].sort().join('\0');
+}
 
 function motionTarget(el: HTMLElement): HTMLElement {
   return el.querySelector<HTMLElement>('.arc-gallery-card-wrap') ?? el;
@@ -73,6 +79,19 @@ function resetMountedItems(
   animating.clear();
 }
 
+function forceRevealVisible(
+  gsap: ReturnType<typeof ensureGsapSetup>,
+  visible: Set<string>,
+  itemRefs: React.RefObject<Map<string, HTMLElement>>,
+  animating: Set<string>
+): void {
+  for (const id of visible) {
+    if (revealedIdsGlobal.has(id)) continue;
+    const el = itemRefs.current?.get(id);
+    if (el) markRevealed(gsap, el, animating);
+  }
+}
+
 export function useMasonryReveal({
   visibleIds,
   itemRefs,
@@ -91,6 +110,9 @@ export function useMasonryReveal({
   layoutsRef.current = layouts;
   visibleRef.current = visibleIds;
   appendRef.current = appendIds;
+
+  const visibleKey = setMembershipKey(visibleIds);
+  const appendKey = setMembershipKey(appendIds);
 
   useLayoutEffect(() => {
     if (!enabled) return;
@@ -160,6 +182,9 @@ export function useMasonryReveal({
           overwrite: 'auto',
           onComplete: () => {
             sorted.forEach((el) => markRevealed(gsap, el, animatingRef.current));
+          },
+          onInterrupt: () => {
+            sorted.forEach((el) => markRevealed(gsap, el, animatingRef.current));
           }
         });
       };
@@ -176,9 +201,12 @@ export function useMasonryReveal({
       const pendingWithoutRef = pendingInitial.filter((id) => !itemRefs.current?.has(id));
 
       if (!batchDoneRef.current) {
-        if (pendingWithoutRef.length > 0 && retryPass < 6) {
+        if (pendingWithoutRef.length > 0 && retryPass < MAX_REF_RETRIES) {
           retryRaf = requestAnimationFrame(() => run(retryPass + 1));
           return;
+        }
+        if (pendingWithoutRef.length > 0 && retryPass >= MAX_REF_RETRIES) {
+          forceRevealVisible(gsap, currentVisible, itemRefs, animatingRef.current);
         }
         if (pendingInitial.length === 0 || initialEnter.length > 0) {
           batchDoneRef.current = true;
@@ -194,5 +222,5 @@ export function useMasonryReveal({
     return () => {
       if (retryRaf) cancelAnimationFrame(retryRaf);
     };
-  }, [enabled, resetKey, visibleIds, appendIds, itemRefs]);
+  }, [enabled, resetKey, visibleKey, appendKey, itemRefs]);
 }

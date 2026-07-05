@@ -62,7 +62,7 @@ export default function CardDetailSimilarThumb({
           data-btn-size="s"
         >
           <span className={`tab-icon ${mediaTypeIconClass}`} data-arc-icon-size="s" aria-hidden="true" />
-          {formatLabel ? <span className="arc-gallery-card-badge-label">{formatLabel}</span> : null}
+          {formatLabel ? <span className="text-s arc-gallery-card-badge-label">{formatLabel}</span> : null}
         </span>
         {src ? (
           <GalleryThumb card={card} src={src} />

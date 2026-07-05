@@ -16,7 +16,7 @@ export default function StatisticsDiskUsagePanel({ model }: Props) {
         <StatisticsPanelHead
           icon={<span className="arc-stat-icon arc-stat-icon--hard-drive" aria-hidden="true" />}
         >
-          <p className="typo-p-s arc-stats-disk-panel__title">Занимаемое место</p>
+          <p className="text-s arc-stats-disk-panel__title">Занимаемое место</p>
         </StatisticsPanelHead>
         <p className="hint">Данные о диске недоступны</p>
       </section>
@@ -34,7 +34,7 @@ export default function StatisticsDiskUsagePanel({ model }: Props) {
       <StatisticsPanelHead
         icon={<span className="arc-stat-icon arc-stat-icon--hard-drive" aria-hidden="true" />}
       >
-        <p className="typo-p-s arc-stats-disk-panel__title">Занимаемое место</p>
+        <p className="text-s arc-stats-disk-panel__title">Занимаемое место</p>
         <StatisticsDiskBar segments={model.segments} />
         <ul className="arc-stats-disk-panel__legend">
           {model.legend.map((item) => (
@@ -43,8 +43,8 @@ export default function StatisticsDiskUsagePanel({ model }: Props) {
                 className={`arc-stats-disk-panel__legend-swatch arc-stats-disk-bar__segment--${item.tone}`}
                 aria-hidden="true"
               />
-              <span className="typo-p-m">{item.label}</span>
-              <span className="typo-p-m arc-stats-disk-panel__legend-value">
+              <span className="text-m">{item.label}</span>
+              <span className="text-m arc-stats-disk-panel__legend-value">
                 {formatBytesRoundedMbFigma(item.bytes)}
               </span>
             </li>

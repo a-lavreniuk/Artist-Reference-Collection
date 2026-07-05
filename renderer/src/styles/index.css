@@ -40,24 +40,7 @@ body,
   font-family: "Google Sans", sans-serif;
 }
 
-/* Paragraph S/M/L — Figma type scale; используется в настройках и по всему renderer */
-.typo-p-s {
-  font-size: var(--typo-p-s-size);
-  line-height: var(--typo-p-s-line);
-  font-weight: var(--typo-p-s-weight);
-}
-
-.typo-p-m {
-  font-size: var(--typo-p-m-size);
-  line-height: var(--typo-p-m-line);
-  font-weight: var(--typo-p-m-weight);
-}
-
-.typo-p-l {
-  font-size: var(--typo-p-l-size);
-  line-height: var(--typo-p-l-line);
-  font-weight: var(--typo-p-l-weight);
-}
+/* Paragraph S/M/L — use UI-Kit classes .text-s / .text-m / .text-l from arc-ui.css */
 
 a {
   color: inherit;
@@ -524,9 +507,6 @@ html[data-theme="light"] .arc-app-outlet {
   align-items: baseline;
   gap: var(--s-2);
   margin: 0;
-  font-size: var(--typo-h2-size, 28px);
-  line-height: var(--typo-h2-line, 28px);
-  font-weight: 500;
   min-width: 0;
 }
 
@@ -680,8 +660,9 @@ html[data-theme="light"] .arc-app-outlet {
   --btn-radius: 12px;
   --btn-pad-x: 16px;
   --btn-gap: 8px;
-  --btn-font-size: 14px;
-  --btn-line-height: 22px;
+  --btn-font-size: var(--typo-p-m-size);
+  --btn-line-height: var(--typo-p-m-line);
+  --btn-font-weight: var(--typo-p-m-weight);
   --btn-icon-size: 16px;
   --btn-icon-url: url("/ui/icons/Icon%20M.svg");
   --tab-h: 36px;
@@ -697,8 +678,8 @@ html[data-theme="light"] .arc-app-outlet {
   --input-gap: 8px;
   --input-icon-size: 16px;
   --textarea-h: 83px;
-  --input-font-size: 14px;
-  --input-line-height: 22px;
+  --input-font-size: var(--typo-p-m-size);
+  --input-line-height: var(--typo-p-m-line);
   --input-icon-search-url: url("/ui/icons/search_m.svg");
   --input-icon-close-url: url("/ui/icons/close_m.svg");
   --input-icon-trash-url: url("/ui/icons/trash_m.svg");
@@ -1564,8 +1545,9 @@ button.color-swatch-inline:disabled {
   --btn-radius: 8px;
   --btn-pad-x: 8px;
   --btn-gap: 6px;
-  --btn-font-size: 12px;
-  --btn-line-height: 16px;
+  --btn-font-size: var(--typo-p-s-size);
+  --btn-line-height: var(--typo-p-s-line);
+  --btn-font-weight: var(--typo-p-s-weight);
   --btn-icon-size: 12px;
   --tab-icon-size: 12px;
   position: absolute;
@@ -1590,9 +1572,6 @@ button.color-swatch-inline:disabled {
 }
 
 .arc-gallery-card-badge-label {
-  font-size: var(--btn-font-size);
-  line-height: var(--btn-line-height);
-  font-weight: var(--typo-p-s-weight);
   color: var(--gray-50);
   white-space: nowrap;
 }
@@ -1680,8 +1659,9 @@ button.color-swatch-inline:disabled {
   --btn-radius: 8px;
   --btn-pad-x: 8px;
   --btn-gap: 6px;
-  --btn-font-size: 12px;
-  --btn-line-height: 16px;
+  --btn-font-size: var(--typo-p-s-size);
+  --btn-line-height: var(--typo-p-s-line);
+  --btn-font-weight: var(--typo-p-s-weight);
   --btn-icon-size: 12px;
   display: flex;
   align-items: center;
@@ -4194,9 +4174,6 @@ html.arc-onboarding-page,
 .arc-settings-section__title {
   margin: 0;
   color: var(--text-elev-secondary);
-  font-size: var(--typo-p-s-size);
-  line-height: var(--typo-p-s-line);
-  font-weight: var(--typo-p-s-weight);
 }
 
 .arc-settings-section__body {
@@ -4826,9 +4803,6 @@ html.arc-onboarding-page,
 
 .arc-settings-desc-block__text {
   margin: 0;
-  font-size: var(--typo-p-m-size);
-  line-height: var(--typo-p-m-line);
-  font-weight: var(--typo-p-m-weight);
   color: var(--text-elev-primary);
 }
 
@@ -5209,9 +5183,6 @@ html.arc-onboarding-page,
 
 .arc-duplicates-fill__title {
   margin: 0;
-  font-size: var(--typo-h1-size);
-  line-height: var(--typo-h1-line);
-  font-weight: var(--typo-h1-weight);
   color: var(--text-elev-primary);
   text-align: center;
   text-wrap: balance;
@@ -5970,9 +5941,6 @@ html.arc-onboarding-page,
 
 .arc-integrity-section__title {
   margin: 0;
-  font-size: var(--typo-p-m-size);
-  line-height: var(--typo-p-m-line);
-  font-weight: var(--typo-p-m-weight);
   color: var(--text-elev-primary);
 }
 

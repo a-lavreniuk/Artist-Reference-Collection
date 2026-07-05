@@ -70,7 +70,7 @@ export default function EmptyState({
     >
       <div className="arc-empty-state__text">
         <h1 className="h1 arc-empty-state__title">{title}</h1>
-        <p className="typo-p-m arc-empty-state__subtitle">{subtitle}</p>
+        <p className="text-m arc-empty-state__subtitle">{subtitle}</p>
       </div>
       {primaryAction || secondaryAction ? (
         <div ref={actionsRef} className="arc-empty-state__actions arc-ui-kit-scope" data-btn-size="l">

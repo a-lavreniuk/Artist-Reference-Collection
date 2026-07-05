@@ -41,7 +41,7 @@ export default function OldFolderModal({ pathLabel, onLeave, onTrash, onOpenInEx
           <div className="arc-modal__body">
             <div className="arc-modal__slot">
               <p className="arc-modal__slot-text">
-                Перенос завершён. Папка: <code className="typo-p-m">{pathLabel}</code>
+                Перенос завершён. Папка: <code className="text-m">{pathLabel}</code>
               </p>
               <p className="arc-modal__slot-text hint">Что сделать со старой папкой на диске?</p>
             </div>

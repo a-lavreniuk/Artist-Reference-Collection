@@ -18,9 +18,9 @@ export default function SettingsBrowserExtensionPanel() {
     <div className="arc-settings-main__scroll">
       <div className={`arc-settings-main__content arc-ui-kit-scope${ready ? ' is-prefs-ready' : ''}`} data-btn-size="m">
         <div className="arc-settings-desc-block">
-          <p className="typo-p-m arc-settings-desc-block__text">{HINT_INTRO}</p>
-          <p className="typo-p-m arc-settings-desc-block__text">{HINT_INSTALL}</p>
-          <p className="typo-p-m arc-settings-desc-block__text">{HINT_TOGGLE}</p>
+          <p className="text-m arc-settings-desc-block__text">{HINT_INTRO}</p>
+          <p className="text-m arc-settings-desc-block__text">{HINT_INSTALL}</p>
+          <p className="text-m arc-settings-desc-block__text">{HINT_TOGGLE}</p>
           <SettingsToggleRow
             label={LABEL_ENABLE}
             pressed={prefs?.importApiEnabled === true}

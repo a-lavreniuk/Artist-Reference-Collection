@@ -56,9 +56,9 @@ function AiModelCard({
             {!disabled && variant === 'checkbox' ? <ArcCheckbox checked={checked} /> : null}
             {!disabled && variant === 'radio' ? <ArcRadio checked={checked} /> : null}
           </span>
-          <span className="arc-settings-option-card__label typo-p-m">{label}</span>
+          <span className="arc-settings-option-card__label text-m">{label}</span>
         </span>
-        <span className="arc-settings-option-card__description typo-p-s">{description}</span>
+        <span className="arc-settings-option-card__description text-s">{description}</span>
       </button>
       {actions ? (
         <div className="arc-settings-ai-model-card__actions arc-ui-kit-scope" data-btn-size="s">

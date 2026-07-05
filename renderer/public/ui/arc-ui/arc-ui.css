@@ -255,13 +255,13 @@ html[data-theme="dark"] {
   --paragraph-spacing-tight: 6px;
   --typo-h1-size: 34px;
   --typo-h1-line: 34px;
-  --typo-h1-weight: 500;
+  --typo-h1-weight: 600;
   --typo-h2-size: 28px;
   --typo-h2-line: 28px;
-  --typo-h2-weight: 500;
+  --typo-h2-weight: 600;
   --typo-h3-size: 22px;
   --typo-h3-line: 22px;
-  --typo-h3-weight: 500;
+  --typo-h3-weight: 600;
   --typo-p-l-size: 16px;
   --typo-p-l-line: 24px;
   --typo-p-l-weight: 400;
@@ -920,7 +920,7 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   flex: 0 0 auto;
   font-size: var(--typo-p-m-size);
   line-height: var(--typo-p-m-line);
-  font-weight: 500;
+  font-weight: var(--typo-p-m-weight);
   cursor: pointer;
   transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
   font-family: "Google Sans", "Inter", "Segoe UI", sans-serif;
@@ -962,8 +962,9 @@ body[data-btn-size="l"],
   --btn-radius: 12px;
   --btn-pad-x: 16px;
   --btn-gap: 8px;
-  --btn-font-size: 14px;
-  --btn-line-height: 22px;
+  --btn-font-size: var(--typo-p-m-size);
+  --btn-line-height: var(--typo-p-m-line);
+  --btn-font-weight: var(--typo-p-m-weight);
   --btn-icon-size: 24px;
   --btn-icon-url: url("../icons/Icon%20L.svg");
   --tab-h: 40px;
@@ -982,8 +983,9 @@ body[data-btn-size="m"],
   --btn-radius: var(--radius-s);
   --btn-pad-x: var(--s-2);
   --btn-gap: var(--s-1);
-  --btn-font-size: 14px;
-  --btn-line-height: 22px;
+  --btn-font-size: var(--typo-p-m-size);
+  --btn-line-height: var(--typo-p-m-line);
+  --btn-font-weight: var(--typo-p-m-weight);
   --btn-icon-size: 16px;
   --btn-icon-url: url("../icons/Icon%20M.svg");
   --tab-h: 32px;
@@ -1002,8 +1004,9 @@ body[data-btn-size="s"],
   --btn-radius: 8px;
   --btn-pad-x: 8px;
   --btn-gap: 6px;
-  --btn-font-size: 12px;
-  --btn-line-height: 16px;
+  --btn-font-size: var(--typo-p-s-size);
+  --btn-line-height: var(--typo-p-s-line);
+  --btn-font-weight: var(--typo-p-s-weight);
   --btn-icon-size: 12px;
   --btn-icon-url: url("../icons/Icon%20S.svg");
   --tab-h: 24px;
@@ -1023,8 +1026,8 @@ body[data-input-size="l"],
   --input-gap: 8px;
   --input-icon-size: 16px;
   --textarea-h: 87px;
-  --input-font-size: 14px;
-  --input-line-height: 22px;
+  --input-font-size: var(--typo-p-m-size);
+  --input-line-height: var(--typo-p-m-line);
   --input-icon-search-url: url("../icons/search_m.svg");
   --input-icon-close-url: url("../icons/close_m.svg");
   --input-icon-trash-url: url("../icons/trash_m.svg");
@@ -1041,8 +1044,8 @@ body[data-input-size="m"],
   --input-gap: 8px;
   --input-icon-size: 16px;
   --textarea-h: 83px;
-  --input-font-size: 14px;
-  --input-line-height: 22px;
+  --input-font-size: var(--typo-p-m-size);
+  --input-line-height: var(--typo-p-m-line);
   --input-icon-search-url: url("../icons/search_m.svg");
   --input-icon-close-url: url("../icons/close_m.svg");
   --input-icon-trash-url: url("../icons/trash_m.svg");
@@ -1059,8 +1062,8 @@ body[data-input-size="s"],
   --input-gap: 6px;
   --input-icon-size: 12px;
   --textarea-h: 58px;
-  --input-font-size: 12px;
-  --input-line-height: 16px;
+  --input-font-size: var(--typo-p-s-size);
+  --input-line-height: var(--typo-p-s-line);
   --input-icon-search-url: url("../icons/search_s.svg");
   --input-icon-close-url: url("../icons/close_s.svg");
   --input-icon-trash-url: url("../icons/trash_s.svg");
@@ -1076,8 +1079,8 @@ body[data-input-size="s"],
   --input-gap: 8px;
   --input-icon-size: 16px;
   --textarea-h: 87px;
-  --input-font-size: 14px;
-  --input-line-height: 22px;
+  --input-font-size: var(--typo-p-m-size);
+  --input-line-height: var(--typo-p-m-line);
   --input-icon-search-url: url("../icons/search_m.svg");
   --input-icon-close-url: url("../icons/close_m.svg");
   --input-icon-trash-url: url("../icons/trash_m.svg");
@@ -1101,12 +1104,13 @@ body[data-input-size="s"],
 .btn-ds__value {
   font-size: var(--btn-font-size);
   line-height: var(--btn-line-height);
-  font-weight: 500;
+  font-weight: var(--btn-font-weight, var(--typo-p-m-weight));
 }
 
 .btn-ds__counter {
   font-size: var(--btn-font-size);
   line-height: var(--btn-line-height);
+  font-weight: var(--btn-font-weight, var(--typo-p-m-weight));
   opacity: 1;
 }
 

@@ -206,7 +206,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
           <div className="arc-add-tags-picker__tags-scroll">
             {showEmptyCreate ? (
               <div className="arc-add-tags-picker__empty arc-add-tags-picker__group-inset">
-                <p className="typo-p-m arc-add-tags-picker__empty-text">Нет совпадений по запросу.</p>
+                <p className="text-m arc-add-tags-picker__empty-text">Нет совпадений по запросу.</p>
                 <button type="button" className="btn btn-outline btn-ds" onClick={openCreateFromSearch}>
                   <span className="btn-ds__value">Создать метку</span>
                 </button>

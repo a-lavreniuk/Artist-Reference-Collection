@@ -13,9 +13,9 @@ type Props = ReleaseNotesContentData & {
 export default function ReleaseNotesContent({ version, buildDate, changes, className }: Props) {
   return (
     <div className={className ?? 'arc-release-notes-content'}>
-      <p className="arc-release-notes-content__version typo-p-m">{formatReleaseVersionLine(version, buildDate)}</p>
+      <p className="arc-release-notes-content__version text-m">{formatReleaseVersionLine(version, buildDate)}</p>
       {changes.map((line) => (
-        <p key={line} className="arc-release-notes-content__paragraph typo-p-m">
+        <p key={line} className="arc-release-notes-content__paragraph text-m">
           {line}
         </p>
       ))}

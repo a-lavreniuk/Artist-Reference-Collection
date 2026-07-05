@@ -30,22 +30,22 @@ export default function DuplicatesScanningState({
     <div className="arc-duplicates-fill" data-btn-size="l">
       <div className="arc-duplicates-fill__body">
         <div className="arc-duplicates-scanning__head">
-          <h1 className="arc-duplicates-fill__title">Идёт поиск дубликатов</h1>
+          <h1 className="h1 arc-duplicates-fill__title">Идёт поиск дубликатов</h1>
           <div className="arc-duplicates-scanning__stats">
             <div className="arc-duplicates-scanning__stat">
-              <span className="typo-p-m arc-duplicates-scanning__stat-label">Карточек просканировано</span>
-              <span className="typo-p-m arc-duplicates-scanning__stat-value">
+              <span className="text-m arc-duplicates-scanning__stat-label">Карточек просканировано</span>
+              <span className="text-m arc-duplicates-scanning__stat-value">
                 {formatCount(scannedCards)} из {formatCount(totalCards)}
               </span>
             </div>
             <div className="arc-duplicates-scanning__stat">
-              <span className="typo-p-m arc-duplicates-scanning__stat-label">Дублей найдено</span>
-              <span className="typo-p-m arc-duplicates-scanning__stat-value">{formatCount(duplicatesFound)}</span>
+              <span className="text-m arc-duplicates-scanning__stat-label">Дублей найдено</span>
+              <span className="text-m arc-duplicates-scanning__stat-value">{formatCount(duplicatesFound)}</span>
             </div>
             {eta ? (
               <div className="arc-duplicates-scanning__stat">
-                <span className="typo-p-m arc-duplicates-scanning__stat-label">Осталось примерно</span>
-                <span className="typo-p-m arc-duplicates-scanning__stat-value">{eta}</span>
+                <span className="text-m arc-duplicates-scanning__stat-label">Осталось примерно</span>
+                <span className="text-m arc-duplicates-scanning__stat-value">{eta}</span>
               </div>
             ) : null}
           </div>

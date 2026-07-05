@@ -25,7 +25,7 @@ export default function MaintenanceBanner() {
   return (
     <div className="arc-maintenance-banner" role="status" aria-live="polite" aria-busy="true">
       <div className="arc-maintenance-banner__panel">
-        <p className="typo-p-m arc-maintenance-banner__text">Идёт операция…</p>
+        <p className="text-m arc-maintenance-banner__text">Идёт операция…</p>
       </div>
     </div>
   );

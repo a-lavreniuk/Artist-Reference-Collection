@@ -9,7 +9,7 @@ export default function IntegritySummaryBar({ report }: Props) {
 
   if (isClean) {
     return (
-      <p className="typo-p-m arc-integrity-summary__text arc-integrity-summary__text--ok">Проблем не найдено</p>
+      <p className="text-m arc-integrity-summary__text arc-integrity-summary__text--ok">Проблем не найдено</p>
     );
   }
 
@@ -21,7 +21,7 @@ export default function IntegritySummaryBar({ report }: Props) {
     parts.push(`${warningCount} ${pluralize(warningCount, 'предупреждение', 'предупреждения', 'предупреждений')}`);
   }
 
-  return <p className="typo-p-m arc-integrity-summary__text">{parts.join(', ')}</p>;
+  return <p className="text-m arc-integrity-summary__text">{parts.join(', ')}</p>;
 }
 
 function pluralize(n: number, one: string, few: string, many: string): string {

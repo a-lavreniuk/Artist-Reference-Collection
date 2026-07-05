@@ -9,14 +9,14 @@ export function useSettingsArcHint(): ReactNode | null {
       return (
         <>
           Сейчас интерфейс открыт не в Electron. Выбор папки работает только в окне ARC после{' '}
-          <code className="typo-p-m">npm run dev</code>.
+          <code className="text-m">npm run dev</code>.
         </>
       );
     }
     return (
       <>
-        Нет <code className="typo-p-m">window.arc</code>. Выполните{' '}
-        <code className="typo-p-m">npm run build:main && npm run build:preload</code> и перезапустите dev.
+        Нет <code className="text-m">window.arc</code>. Выполните{' '}
+        <code className="text-m">npm run build:main && npm run build:preload</code> и перезапустите dev.
       </>
     );
   }, []);

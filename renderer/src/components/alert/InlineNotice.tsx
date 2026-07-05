@@ -20,8 +20,8 @@ export default function InlineNotice({ variant, title, body, actions, className 
   return (
     <div ref={rootRef} className={rootClass} role="status">
       <div className="arc-inline-notice__copy">
-        <p className="typo-p-m arc-inline-notice__title">{title}</p>
-        {body ? <p className="typo-p-m arc-inline-notice__body">{body}</p> : null}
+        <p className="text-m arc-inline-notice__title">{title}</p>
+        {body ? <p className="text-m arc-inline-notice__body">{body}</p> : null}
       </div>
       {actions ? <div className="arc-inline-notice__actions">{actions}</div> : null}
     </div>

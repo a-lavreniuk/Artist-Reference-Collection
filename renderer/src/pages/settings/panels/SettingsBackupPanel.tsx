@@ -27,7 +27,7 @@ export default function SettingsBackupPanel() {
       <div className="arc-settings-main__scroll">
         <div className="arc-settings-main__content arc-ui-kit-scope" data-btn-size="m">
           <div className="arc-settings-desc-block">
-            <p className="typo-p-m arc-settings-desc-block__text">{LABEL_CREATE}</p>
+            <p className="text-m arc-settings-desc-block__text">{LABEL_CREATE}</p>
             <div className="arc-settings-backup-parts" role="group" aria-label="Количество частей резервной копии">
               {BACKUP_PARTS.map((n) => {
                 const selected = confirmedParts === n;
@@ -60,7 +60,7 @@ export default function SettingsBackupPanel() {
           <SettingsSeparator />
 
           <div className="arc-settings-desc-block">
-            <p className="typo-p-m arc-settings-desc-block__text">{LABEL_RESTORE}</p>
+            <p className="text-m arc-settings-desc-block__text">{LABEL_RESTORE}</p>
             <button
               type="button"
               className="btn btn-secondary btn-ds"

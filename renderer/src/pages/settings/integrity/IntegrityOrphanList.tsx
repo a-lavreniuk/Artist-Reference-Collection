@@ -33,7 +33,7 @@ export default function IntegrityOrphanList({
   return (
     <div className="arc-integrity-orphans">
       <div className="arc-integrity-orphans__toolbar">
-        <p className="typo-p-m arc-integrity-orphans__count">Лишние файлы: {paths.length}</p>
+        <p className="text-m arc-integrity-orphans__count">Лишние файлы: {paths.length}</p>
         {paths.length > 0 ? (
           <button
             type="button"
@@ -51,7 +51,7 @@ export default function IntegrityOrphanList({
           return (
             <li key={rel} className="arc-integrity-orphans__item">
               <Tooltip content={abs} delay={500} position="top" className="arc-integrity-orphans__path-tooltip">
-                <span className="typo-p-m arc-integrity-orphans__path">{rel}</span>
+                <span className="text-m arc-integrity-orphans__path">{rel}</span>
               </Tooltip>
               <div className="arc-integrity-orphans__actions">
                 <button

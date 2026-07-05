@@ -84,7 +84,7 @@ function GalleryCardTile({
           data-btn-size="s"
         >
           <span className={`tab-icon ${mediaTypeIconClass}`} data-arc-icon-size="s" aria-hidden="true" />
-          {formatLabel ? <span className="arc-gallery-card-badge-label">{formatLabel}</span> : null}
+          {formatLabel ? <span className="text-s arc-gallery-card-badge-label">{formatLabel}</span> : null}
         </span>
         {thumbSrc ? (
           <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} />

@@ -11,7 +11,7 @@ export default function NavbarSearchBar() {
 
   return (
     <>
-      <span ref={ctx.measureRef} className="arc-navbar-measure-placeholder typo-p-m" aria-hidden="true">
+      <span ref={ctx.measureRef} className="arc-navbar-measure-placeholder text-m" aria-hidden="true">
         {getLongestSearchPlaceholder()}
       </span>
       <div className="arc-navbar-search-anchor" ref={ctx.searchAnchorRef}>
