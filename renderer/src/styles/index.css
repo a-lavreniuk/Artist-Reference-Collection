@@ -4155,6 +4155,10 @@ html.arc-onboarding-page,
   flex-shrink: 0;
 }
 
+.arc-settings-separator--flush-bottom {
+  margin-bottom: 0;
+}
+
 /* Без анимации toggle до загрузки prefs — иначе «выкл» → «вкл» при входе в раздел. */
 .arc-settings-main__content:not(.is-prefs-ready) .arc-toggle__track,
 .arc-settings-main__content:not(.is-prefs-ready) .arc-toggle__thumb {
@@ -4328,6 +4332,10 @@ html.arc-onboarding-page,
   font-size: var(--typo-p-m-size);
   line-height: var(--typo-p-m-line);
   font-weight: var(--typo-p-m-weight);
+}
+
+.arc-settings-shortcuts-panel__list--compact-top {
+  padding-top: 0;
 }
 
 .arc-settings-shortcuts-panel__group {

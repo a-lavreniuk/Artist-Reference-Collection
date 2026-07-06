@@ -1,13 +1,13 @@
 # ARC MCP Server
 
-Local [Model Context Protocol](https://modelcontextprotocol.io) server embedded in ARC main process. AI agents (Cursor, Claude Desktop, etc.) can read the library and perform allowed write operations while ARC is running.
+Локальный [Model Context Protocol](https://modelcontextprotocol.io) сервер в main-процессе ARC. AI-агенты (Cursor, Claude Desktop и др.) могут читать библиотеку и выполнять разрешённые действия, пока ARC запущен.
 
-## Requirements
+## Требования
 
-- ARC desktop app is running (tray is OK).
-- A library is open in ARC.
-- **Settings → MCP server →** enable «Разрешить подключение MCP-клиентов» and choose which tools are allowed.
-- MCP client configured with the endpoint below.
+- ARC запущен (достаточно иконки в трее).
+- В ARC открыта библиотека.
+- **Настройки → MCP сервер** — включить «Разрешить подключение MCP-клиентов» и выбрать разрешённые инструменты.
+- MCP-клиент настроен на endpoint ниже.
 
 ## Endpoint
 
@@ -15,14 +15,14 @@ Local [Model Context Protocol](https://modelcontextprotocol.io) server embedded 
 |---|---|
 | URL | `http://127.0.0.1:47897/mcp` |
 | Transport | Streamable HTTP |
-| Host | `127.0.0.1` only (not reachable from the network) |
+| Host | только `127.0.0.1` (недоступен из сети) |
 
-Import API for the browser extension remains on port **47896** — separate service.
+Import API для расширения браузера — порт **47896** (отдельный сервис).
 
-## Cursor setup
+## Настройка Cursor
 
-1. Open **Cursor Settings → Tools & MCP → Add Custom MCP**.
-2. Paste into `mcp.json`:
+1. **Cursor Settings → Tools & MCP → Add Custom MCP**
+2. Вставить в `mcp.json`:
 
 ```json
 {
@@ -37,91 +37,206 @@ Import API for the browser extension remains on port **47896** — separate serv
 }
 ```
 
-3. Ensure ARC is running with MCP enabled.
-4. Ask the agent: «What version is ARC?» — it should call `arc_get_app_info`.
+3. Убедиться, что ARC запущен и MCP включён.
+4. Спросить агента: «Какая версия ARC?» — должен вызваться `arc_get_app_info`.
 
-If Cursor shows **No Tools**, toggle `arc-mcp` off and on, or restart Cursor.
+Если в Cursor **No Tools** — переключите `arc-mcp` off/on или перезапустите Cursor.
 
-## Tools (MVP)
+## Инструменты (53)
 
-### Read
+Описания в протоколе MCP и в **Настройки → MCP сервер** — на русском. Каждый инструмент можно отключить отдельным переключателем; после сохранения сервер перезапускается автоматически.
 
-| Tool | Description |
-|------|-------------|
-| `arc_get_app_info` | App version, platform, MCP status, library open |
-| `arc_list_cards` | Paginated cards; filters: tags, collection, scope |
-| `arc_get_card` | Single card by ID |
-| `arc_search_cards` | FTS search (description, link, AI caption) |
-| `arc_list_categories` | Tag categories |
-| `arc_list_tags` | Tag catalog |
-| `arc_list_collections` | Collections |
-| `arc_ai_search` | Semantic search (AI must be enabled + indexed) |
-| `arc_get_library_stats` | Counts, disk usage, AI index status |
+### Приложение (`app`)
 
-### Write — cards
+| Tool | Описание |
+|------|----------|
+| `arc_get_app_info` | Версия ARC, платформа, статус MCP, открыта ли библиотека |
+| `arc_get_library_stats` | Карточки, корзина, диск, статус AI-индекса |
+| `arc_get_recent_history` | Последние записи журнала библиотеки |
+| `arc_get_ai_status` | Модели, индексация, готовность семантического поиска |
 
-| Tool | Description |
-|------|-------------|
-| `arc_import_item` | Import media from HTTP(S) URL |
-| `arc_update_card` | Update `name`, `description`, `collectionIds` only (**not** `tagIds`) |
+### Карточки — чтение (`cards-read`)
 
-### Write — tag catalog (Tags section only)
+| Tool | Описание |
+|------|----------|
+| `arc_list_cards` | Список с пагинацией, фильтрами, сортировкой; корзина: `libraryScope: trash` |
+| `arc_get_card` | Одна карточка по ID |
+| `arc_search_cards` | Полнотекстовый поиск |
+| `arc_get_card_palette` | Палитра и доминантный цвет |
+| `arc_get_card_media_url` | URL превью/оригинала (localhost media-server) |
+| `arc_card_media_resources` | Toggle MCP Resources `arc://card/{id}/thumb` и `/original` |
 
-| Tool | Description |
-|------|-------------|
-| `arc_create_category` | New category |
-| `arc_update_category` | Edit category name, color, weight, description |
-| `arc_create_tag` | New tag in category (does not attach to cards) |
-| `arc_update_tag` | Edit tag name, category, description |
+### Карточки — запись (`cards-write`)
 
-No delete tools in MVP. No batch operations.
+| Tool | Описание |
+|------|----------|
+| `arc_update_card` | Имя, описание, коллекции (без меток) |
+| `arc_set_card_tags` | Полный список меток на карточке |
+| `arc_move_card_to_trash` | Мягкое удаление |
+| `arc_restore_card` | Восстановление из корзины |
+| `arc_permanent_delete_card` | Безвозвратное удаление |
+| `arc_empty_trash` | Очистка корзины |
 
-## Example prompts
+### Импорт (`import`)
 
-**Read-only**
+| Tool | Описание |
+|------|----------|
+| `arc_import_item` | Импорт по HTTP(S) URL |
+| `arc_import_item_base64` | Импорт из base64 |
+| `arc_import_files` | Импорт локальных файлов по путям |
+| `arc_check_import_duplicate` | Проверка дубликата до импорта |
+
+### Коллекции (`collections`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_list_collections` | Список коллекций |
+| `arc_get_collection` | Детали и превью |
+| `arc_create_collection` | Создание |
+| `arc_update_collection` | Редактирование |
+| `arc_delete_collection` | Удаление |
+| `arc_add_cards_to_collection` | Добавить карточки |
+| `arc_remove_cards_from_collection` | Убрать карточки |
+
+### Мудборд (`moodboard`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_get_moodboard` | Карточки и доска |
+| `arc_add_to_moodboard` | Добавить карточки |
+| `arc_remove_from_moodboard` | Убрать карточки |
+| `arc_update_moodboard_board` | Сохранить раскладку доски |
+
+### Каталог меток — чтение (`catalog-read`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_list_categories` | Категории |
+| `arc_list_tags` | Все метки |
+| `arc_list_tags_by_category` | Метки одной категории |
+
+### Каталог меток — запись (`catalog-write`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_create_category` | Создать категорию |
+| `arc_update_category` | Редактировать категорию |
+| `arc_delete_category` | Удалить категорию |
+| `arc_create_tag` | Создать метку (без привязки к карточкам) |
+| `arc_update_tag` | Редактировать метку |
+| `arc_delete_tag` | Удалить метку |
+
+### Визуальный поиск (`visual-search`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_color_search` | Поиск по HEX-цвету |
+| `arc_similar_search` | Похожие изображения по `cardId` |
+
+### Фильтры галереи (`filters`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_get_filter_stats` | Счётчики для navbar-фильтров |
+| `arc_list_filter_presets` | Сохранённые пресеты |
+| `arc_save_filter_preset` | Создать/обновить пресет |
+| `arc_delete_filter_preset` | Удалить пресет |
+| `arc_rename_filter_preset` | Переименовать пресет |
+
+### Дубликаты (`duplicates`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_scan_duplicates` | Запуск сканирования |
+| `arc_list_duplicate_pairs` | Список пар |
+| `arc_merge_duplicates` | Объединение пары |
+| `arc_skip_duplicate_pair` | Пропустить пару |
+
+### AI-поиск (`ai`)
+
+| Tool | Описание |
+|------|----------|
+| `arc_ai_search` | Семантический поиск |
+| `arc_trigger_reindex` | Полная переиндексация |
+
+## MCP Resources
+
+При включённом `arc_card_media_resources`:
+
+| URI | Содержимое |
+|-----|------------|
+| `arc://card/{cardId}/thumb` | JSON с локальным URL превью |
+| `arc://card/{cardId}/original` | JSON с URL оригинала (image/video) |
+
+## MCP Prompts (шаблоны на русском)
+
+| Имя | Назначение |
+|-----|------------|
+| `organize_imports` | Разметить недавний импорт метками/коллекциями |
+| `build_moodboard` | Собрать мудборд по брифу |
+| `find_duplicates` | Найти и предложить merge дубликатов |
+| `color_palette_review` | Подбор референсов по цвету |
+| `library_overview` | Обзор статистики и структуры меток |
+
+## Примеры запросов
+
+**Только чтение**
 
 ```
-List my tag categories and how many tags each has.
+Покажи категории меток и сколько в каждой меток.
 ```
 
 ```
-Search cards for "sunset landscape" and show the first 10 results.
+Найди карточки по запросу «sunset landscape», первые 10 результатов.
 ```
 
-**Tag catalog**
-
 ```
-Create a category "Animals" and tags "cat" and "dog" in it. Show the plan first.
+Список карточек в корзине (libraryScope: trash).
 ```
 
-**Import**
+**Метки на карточках**
 
 ```
-Import this image URL into my library: https://example.com/photo.jpg
+Назначь карточке {id} метки cat и dog. Сначала покажи план.
 ```
 
-## Privacy
+**Импорт**
 
-MCP itself does not send data to the cloud. If you use a **cloud LLM** in Cursor, tool results (file names, tags, search hits) become part of the model context and may be sent to the provider. Use a local model or read-only prompts for sensitive libraries.
+```
+Импортируй https://example.com/photo.jpg в библиотеку.
+```
 
-## Troubleshooting
+**Дубликаты**
 
-| Problem | Check |
-|---------|--------|
-| Connection refused | ARC not running, or port 47897 blocked by another process |
-| HTTP 403 | MCP disabled in Settings, or wrong host (must be localhost) |
-| No Tools in Cursor | Invalid `mcp.json`, toggle server in Cursor, restart ARC |
-| AI search errors | Enable AI Search in settings, install model, wait for indexing |
-| Library errors | Open a library in ARC first |
+```
+Просканируй дубликаты и предложи объединение для первой пары.
+```
 
-## Development
+## Конфиденциальность
 
-- Main module: `src/main/mcp/`
-- Unit tests: `src/main/mcp/*.test.ts`
-- Toggle preference: `mcpServerEnabled` in `appPreferences`
-- Per-tool toggles: `mcpToolsEnabled` in **Settings → MCP server** (groups match the UI). Disabled tools are not registered until the server restarts (automatic on save).
+MCP сам по себе не отправляет данные в облако. При **облачной LLM** в Cursor результаты инструментов (имена файлов, метки, поиск) попадают в контекст модели. Для чувствительных библиотек используйте локальную модель или режим только чтения.
+
+## Устранение неполадок
+
+| Проблема | Проверить |
+|----------|-----------|
+| Connection refused | ARC не запущен или порт 47897 занят |
+| HTTP 403 | MCP выключен в настройках или неверный host |
+| No Tools в Cursor | `mcp.json`, переключить сервер, перезапуск ARC |
+| Ошибки AI-поиска | Включить AI Search, установить модель, дождаться индексации |
+| Ошибки библиотеки | Сначала открыть библиотеку в ARC |
+
+## Разработка
+
+- Код: `src/main/mcp/` (доменные регистраторы в `tools/`)
+- Каталог и тексты RU: `src/main/shared/mcpToolCopy.ts`, `mcpToolCatalog.ts`
+- Схемы параметров: `src/main/mcp/mcpSchemas.ts`
+- Тесты: `src/main/mcp/__tests__/`
+- Глобальный toggle: `mcpServerEnabled` в `appPreferences`
+- Per-tool toggles: `mcpToolsEnabled` в настройках
 
 ```bash
 npm run build:main
 npm test
+npm run verify:renderer-ui
 ```

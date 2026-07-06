@@ -1,24 +1,26 @@
-export const MCP_TOOL_IDS = [
-  'arc_get_app_info',
-  'arc_list_cards',
-  'arc_get_card',
-  'arc_search_cards',
-  'arc_list_categories',
-  'arc_list_tags',
-  'arc_list_collections',
-  'arc_ai_search',
-  'arc_get_library_stats',
-  'arc_import_item',
-  'arc_update_card',
-  'arc_create_category',
-  'arc_update_category',
-  'arc_create_tag',
-  'arc_update_tag'
-] as const;
+import { MCP_TOOL_COPY, MCP_TOOL_IDS, type McpToolId } from './mcpToolCopy';
 
-export type McpToolId = (typeof MCP_TOOL_IDS)[number];
+export { MCP_TOOL_COPY, MCP_TOOL_IDS, type McpToolId } from './mcpToolCopy';
+export {
+  MCP_CONFIRM_HINT,
+  MCP_CATALOG_HINT,
+  mcpToolDescription,
+  mcpToolLabel
+} from './mcpToolCopy';
 
-export type McpToolGroupId = 'app' | 'cards-read' | 'cards-write' | 'catalog-read' | 'catalog-write' | 'ai';
+export type McpToolGroupId =
+  | 'app'
+  | 'cards-read'
+  | 'cards-write'
+  | 'collections'
+  | 'moodboard'
+  | 'catalog-read'
+  | 'catalog-write'
+  | 'visual-search'
+  | 'filters'
+  | 'duplicates'
+  | 'ai'
+  | 'import';
 
 export type McpToolDefinition = {
   id: McpToolId;
@@ -30,28 +32,22 @@ export const MCP_TOOL_GROUPS: ReadonlyArray<{ id: McpToolGroupId; title: string 
   { id: 'app', title: 'Приложение' },
   { id: 'cards-read', title: 'Карточки — чтение' },
   { id: 'cards-write', title: 'Карточки — запись' },
+  { id: 'import', title: 'Импорт' },
+  { id: 'collections', title: 'Коллекции' },
+  { id: 'moodboard', title: 'Мудборд' },
   { id: 'catalog-read', title: 'Каталог меток — чтение' },
   { id: 'catalog-write', title: 'Каталог меток — запись' },
+  { id: 'visual-search', title: 'Визуальный поиск' },
+  { id: 'filters', title: 'Фильтры галереи' },
+  { id: 'duplicates', title: 'Дубликаты' },
   { id: 'ai', title: 'AI-поиск' }
 ];
 
-export const MCP_TOOLS: ReadonlyArray<McpToolDefinition> = [
-  { id: 'arc_get_app_info', groupId: 'app', label: 'Информация о приложении и библиотеке' },
-  { id: 'arc_get_library_stats', groupId: 'app', label: 'Статистика библиотеки и диска' },
-  { id: 'arc_list_cards', groupId: 'cards-read', label: 'Список карточек' },
-  { id: 'arc_get_card', groupId: 'cards-read', label: 'Одна карточка по ID' },
-  { id: 'arc_search_cards', groupId: 'cards-read', label: 'Текстовый поиск карточек' },
-  { id: 'arc_list_collections', groupId: 'cards-read', label: 'Список коллекций' },
-  { id: 'arc_import_item', groupId: 'cards-write', label: 'Импорт по URL' },
-  { id: 'arc_update_card', groupId: 'cards-write', label: 'Обновление карточки (без меток)' },
-  { id: 'arc_list_categories', groupId: 'catalog-read', label: 'Список категорий меток' },
-  { id: 'arc_list_tags', groupId: 'catalog-read', label: 'Список меток' },
-  { id: 'arc_create_category', groupId: 'catalog-write', label: 'Создание категории' },
-  { id: 'arc_update_category', groupId: 'catalog-write', label: 'Редактирование категории' },
-  { id: 'arc_create_tag', groupId: 'catalog-write', label: 'Создание метки' },
-  { id: 'arc_update_tag', groupId: 'catalog-write', label: 'Редактирование метки' },
-  { id: 'arc_ai_search', groupId: 'ai', label: 'Семантический AI-поиск' }
-];
+export const MCP_TOOLS: ReadonlyArray<McpToolDefinition> = MCP_TOOL_IDS.map((id) => ({
+  id,
+  groupId: MCP_TOOL_COPY[id].groupId,
+  label: MCP_TOOL_COPY[id].label
+}));
 
 export type McpToolsEnabledMap = Record<McpToolId, boolean>;
 

@@ -10,7 +10,7 @@ describe('mcpToolCatalog', () => {
   it('defaultMcpToolsEnabled enables all tools', () => {
     const enabled = defaultMcpToolsEnabled();
     expect(Object.values(enabled).every(Boolean)).toBe(true);
-    expect(Object.keys(enabled)).toHaveLength(15);
+    expect(Object.keys(enabled)).toHaveLength(53);
   });
 
   it('sanitizeMcpToolsEnabled fills missing keys with defaults', () => {

@@ -267,7 +267,7 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   };
 }
 
-async function buildAiStatus(): Promise<AiStatus> {
+export async function buildAiStatus(): Promise<AiStatus> {
   const prefs = await readAppPreferences();
   const hardware = detectHardware();
   const supportedTiers = getSupportedTiers(hardware);

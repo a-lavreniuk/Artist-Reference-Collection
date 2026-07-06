@@ -29,7 +29,7 @@ const ADVANCED_SECTIONS = [
     key: 'mcp-server',
     to: '/settings/mcp-server',
     label: 'MCP сервер',
-    iconClass: 'arc-icon-ai'
+    iconClass: 'arc-icon-server-s'
   },
   { key: 'ai-search', to: '/settings/ai-search', label: 'AI Поиск', iconClass: 'arc-icon-ai' }
 ] as const;

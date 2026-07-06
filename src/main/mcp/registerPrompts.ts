@@ -1,0 +1,62 @@
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+const PROMPTS: Array<{
+  name: string;
+  title: string;
+  description: string;
+  text: string;
+}> = [
+  {
+    name: 'organize_imports',
+    title: 'Разметить недавний импорт',
+    description: 'Предложить метки и коллекции для недавно добавленных карточек',
+    text: 'Просмотри последние импортированные карточки в библиотеке ARC, предложи метки и коллекции и спроси подтверждение перед изменениями.'
+  },
+  {
+    name: 'build_moodboard',
+    title: 'Собрать мудборд',
+    description: 'Подобрать карточки и добавить на мудборд по брифу',
+    text: 'По моему брифу найди подходящие референсы в ARC и предложи добавить их на мудборд. Сначала покажи план подбора.'
+  },
+  {
+    name: 'find_duplicates',
+    title: 'Найти дубликаты',
+    description: 'Сканировать библиотеку и предложить объединение дубликатов',
+    text: 'Просканируй библиотеку ARC на дубликаты, покажи пары и предложи объединение с объяснением, какая карточка primary.'
+  },
+  {
+    name: 'color_palette_review',
+    title: 'Подбор по цвету',
+    description: 'Найти референсы с похожей палитрой',
+    text: 'Помоги подобрать референсы в ARC по цвету: уточни целевой HEX или карточку-эталон, затем используй поиск по цвету и покажи результаты.'
+  },
+  {
+    name: 'library_overview',
+    title: 'Обзор библиотеки',
+    description: 'Статистика, структура меток и коллекций',
+    text: 'Дай обзор библиотеки ARC: статистика, основные категории меток, коллекции и идеи по организации. Ничего не меняй без подтверждения.'
+  }
+];
+
+export function registerArcMcpPrompts(server: McpServer): void {
+  for (const prompt of PROMPTS) {
+    server.registerPrompt(
+      prompt.name,
+      {
+        title: prompt.title,
+        description: prompt.description
+      },
+      async () => ({
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: prompt.text
+            }
+          }
+        ]
+      })
+    );
+  }
+}
