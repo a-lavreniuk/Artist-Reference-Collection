@@ -7,6 +7,7 @@ import DemoAlert from '../layout/DemoAlert';
 import SourceFilesModal from './SourceFilesModal';
 import ImportDuplicatesModal, { type ImportDuplicateConflict } from './ImportDuplicatesModal';
 import { ImportContext } from './ImportContext';
+import { useImportDropzonePerimeterDash } from './useImportDropzonePerimeterDash';
 
 function isFileDragEvent(e: DragEvent): boolean {
   const dt = e.dataTransfer;
@@ -57,6 +58,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const isDraggingFilesRef = useRef(false);
   const suppressFileDragRef = useRef(false);
   const ctaWrapRef = useRef<HTMLDivElement>(null);
+  const dropzoneRef = useRef<HTMLDivElement>(null);
+  const borderRectRef = useRef<SVGRectElement>(null);
 
   useEffect(() => {
     void (async () => {
@@ -307,6 +310,12 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const showOverlay = phase === 'overlay' || isDraggingFiles;
   const dropzoneActive = isDraggingFiles;
 
+  useImportDropzonePerimeterDash({
+    enabled: showOverlay,
+    dropzoneRef,
+    borderRectRef
+  });
+
   useEffect(() => {
     if (!showOverlay) return undefined;
     const el = ctaWrapRef.current;
@@ -337,11 +346,15 @@ export default function ImportHost({ children }: { children: ReactNode }) {
           }}
         >
           <div
-            className={`arc-import-dropzone${dropzoneActive ? ' arc-import-dropzone--dropping' : ''}`}
+            ref={dropzoneRef}
+            className={`arc-import-dropzone arc-import-dropzone--animated-border${dropzoneActive ? ' arc-import-dropzone--dropping' : ''}`}
             onDragOver={(e) => {
               e.preventDefault();
             }}
           >
+            <svg className="arc-import-dropzone-border" aria-hidden="true">
+              <rect ref={borderRectRef} />
+            </svg>
             <div ref={ctaWrapRef} className="arc-import-dropzone-cta-wrap">
               <button
                 type="button"
