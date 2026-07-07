@@ -1,0 +1,66 @@
+---
+description: Перед сдачей — проверка фильтра по дате, отображения UI и открытия деталки
+alwaysApply: true
+---
+
+# Critical UX regression gate
+
+Перед сообщением пользователю **«готово к тесту»**, **«завершено»** или **«проверь»** пройди чеклист ниже. Эти зоны часто ломаются после правок в motion, gallery, filters, IPC и overlay.
+
+Связанное правило: **Renderer-Smoke-Check** (`verify:renderer-ui`).
+
+## 1. Автоматически (обязательно)
+
+```bash
+npm run verify:renderer-ui
+npm test
+```
+
+При падении — исправить и перезапустить. **Не сдавать** на ручную проверку.
+
+Если diff затрагивает `src/main/storage/galleryFilter*`, `galleryFilters.ts`, `galleryFilterStats*` — отдельно убедись, что `npm test` зелёный.
+
+## 2. Фильтрация по дате
+
+**Триггер:** `galleryFilters.ts`, `galleryFilterStats*`, `GalleryNavbarFilters.tsx`, `GalleryFilterContext.tsx`, `galleryFilterTypes.ts`, URL-параметры фильтров.
+
+Проверить в коде / diff:
+
+- `dateRangeForPreset` и ветка `dateAdded` в `buildGalleryFilterWhere` не сломаны; при активном пресете SQL-условие не пустое.
+- Пресет `custom`: `from` / `to` попадают в binds; дата-only (`YYYY-MM-DD`) дополняется до конца дня.
+- UI: пункты «Сегодня», «Неделя», «Месяц» и кастомный диапазон по-прежнему вызывают `patchFilters({ dateAdded: … })`, не затирают другие фильтры.
+- Счётчики `stats?.dateAdded` не ломаются из-за изменений в IPC/stats.
+
+## 3. Отображение интерфейса
+
+**Триггер:** `renderer/src/styles/`, layout, navbar, `useOverlayMotion*`, `ToastAlert`, `body`-классы overlay.
+
+Проверить в коде / diff:
+
+- Production bundle собирается (`verify:renderer-ui`).
+- GSAP: вход/выход overlay **только при смене `open`**, не при каждом re-render; при `open=true` не вызывать `killTweensOf` без повторного enter.
+- `body.arc-card-detail-open` → `.arc-app-outlet` не остаётся с `opacity: 0` / `pointer-events: none` после закрытия деталки.
+- Нет удалённых import React-хуков при оставшихся вызовах → белый экран / пустая галерея.
+
+## 4. Открытие деталки
+
+**Триггер:** `CardDetailOverlay.tsx`, `CardInspectModal.tsx`, `openCardUrl.ts`, `useOverlayMotionPair`, `GalleryPage.tsx` / `CollectionsPage.tsx` / `MoodboardCardsView.tsx`.
+
+Проверить в коде / diff:
+
+- Открытие: `detail=` в URL (`ARC_DETAIL_QUERY_CARD`), `{openCardId ? <CardInspectModal …> : null}`.
+- `useOverlayMotionPair(!closing)` + `if (!render) return null` + `createPortal` — при первом открытии `render=true`, entrance не блокируется.
+- `onExitComplete` / `onClose` вызываются при закрытии (в т.ч. если entrance не успел отыграть).
+- Побочные правки (палитра, alert, модалки) не блокируют mount overlay.
+
+## 5. Когда можно пропустить
+
+- Только `docs/`, `.cursor/`, комментарии без runtime.
+- Пользователь просит план / ревью без правок.
+
+## 6. Отчёт пользователю
+
+В конце задачи кратко указать:
+
+- `verify:renderer-ui` — OK / что упало;
+- **Дата / UI / деталка** — «проверено в коде», «затронуто, ручной smoke нужен» или «N/A (не в scope)».

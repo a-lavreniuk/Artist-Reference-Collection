@@ -52,7 +52,7 @@ export default function SettingsAutoImportPanel() {
 
         <div className="arc-settings-desc-block">
 
-          <p className="typo-p-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+          <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
 
           <SettingsToggleRow
 
@@ -90,7 +90,7 @@ export default function SettingsAutoImportPanel() {
 
                   </button>
 
-                  <span className="typo-p-m arc-settings-action-row__meta" title={folderPath ?? undefined}>
+                  <span className="text-m arc-settings-action-row__meta" title={folderPath ?? undefined}>
 
                     {folderPath ?? 'Не выбрана'}
 
@@ -122,7 +122,7 @@ export default function SettingsAutoImportPanel() {
 
           {!window.arc && arcHint ? (
 
-            <div className="typo-p-m hint arc-settings-electron-hint">{arcHint}</div>
+            <div className="hint arc-settings-electron-hint">{arcHint}</div>
 
           ) : null}
 

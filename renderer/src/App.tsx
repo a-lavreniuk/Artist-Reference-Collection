@@ -1,12 +1,14 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import OnboardingGate from './components/onboarding/OnboardingGate';
 import AppLayout from './components/layout/AppLayout';
 import CardSectionRoute from './components/layout/CardSectionRoute';
 import GalleryCardEditRedirect from './pages/GalleryCardEditRedirect';
-import OnboardingStubPage from './pages/OnboardingStubPage';
 import SettingsPage from './pages/SettingsPage';
 import SettingsNavbarPanelPage from './pages/SettingsNavbarPanelPage';
 import TagsPage from './pages/TagsPage';
+import DuplicatesPage from './pages/DuplicatesPage';
+import { useArcMoodboardLibraryDiag } from './debug/diagHook';
 
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const UiKitPage = lazy(() => import('./ui-kit/UiKitPage'));
@@ -38,6 +40,12 @@ const SettingsIntegrityPanel = lazy(() =>
 const SettingsAutoImportPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAutoImportPanel }))
 );
+const SettingsBrowserExtensionPanel = lazy(() =>
+  import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsBrowserExtensionPanel }))
+);
+const SettingsMcpServerPanel = lazy(() =>
+  import('./pages/settings/panels/SettingsMcpServerPanel')
+);
 const SettingsAiSearchPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAiSearchPanel }))
 );
@@ -54,14 +62,16 @@ function RouteFallback() {
 }
 
 export default function App() {
+  useArcMoodboardLibraryDiag();
+
   return (
+    <OnboardingGate>
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Navigate to="/gallery" replace />} />
           <Route path="gallery" element={<CardSectionRoute />} />
           <Route path="gallery/:cardId/edit" element={<GalleryCardEditRedirect />} />
-          <Route path="onboarding" element={<OnboardingStubPage />} />
           <Route path="tags" element={<TagsPage />} />
           <Route path="collections" element={<CardSectionRoute />} />
           <Route path="collections/:collectionId" element={<CardSectionRoute />} />
@@ -69,7 +79,7 @@ export default function App() {
           <Route path="board" element={<BoardPage />} />
           <Route path="statistics" element={<SettingsNavbarPanelPage panel="statistics" />} />
           <Route path="history" element={<SettingsNavbarPanelPage panel="history" />} />
-          <Route path="duplicates" element={<SettingsNavbarPanelPage panel="duplicates" />} />
+          <Route path="duplicates" element={<DuplicatesPage />} />
           <Route path="settings" element={<SettingsPage />}>
             <Route index element={<Navigate to="general" replace />} />
             <Route path="general" element={<SettingsGeneralPanel />} />
@@ -80,6 +90,8 @@ export default function App() {
             <Route path="backup" element={<SettingsBackupPanel />} />
             <Route path="integrity" element={<SettingsIntegrityPanel />} />
             <Route path="auto-import" element={<SettingsAutoImportPanel />} />
+            <Route path="browser-extension" element={<SettingsBrowserExtensionPanel />} />
+            <Route path="mcp-server" element={<SettingsMcpServerPanel />} />
             <Route path="ai-search" element={<SettingsAiSearchPanel />} />
             <Route path="updates" element={<SettingsUpdatesPanel />} />
           </Route>
@@ -90,5 +102,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/gallery" replace />} />
       </Routes>
     </Suspense>
+    </OnboardingGate>
   );
 }

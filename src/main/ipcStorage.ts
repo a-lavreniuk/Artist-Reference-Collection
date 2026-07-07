@@ -11,6 +11,7 @@ import {
 import {
   addSkippedDuplicatePair,
   countCards,
+  countCardsWithAnyTagIds,
   deleteCardFromStorage,
   emptyTrashFromStorage,
   restoreCardFromStorage,
@@ -58,14 +59,50 @@ import {
   setCachedGalleryFilterStats
 } from './storage/galleryFilterStatsCache';
 import { backfillPalettesBatch, searchCardsByColor } from './storage/colorSearch';
-import { normalizeHex } from './storage/palette';
 import { readCardJson } from './storage/cardFolder';
+import {
+  CARD_DETAIL_PALETTE_MAX,
+  computeImagePalette,
+  normalizeHex,
+  parsePaletteJson,
+  trimPaletteForDisplay
+} from './storage/palette';
 import {
   CARDS_DIR,
   LIBRARY_META_DIR
 } from './libraryFilenames';
 import type { ArcMoodboardV1, ArcSystemV1, CategoryRow, CollectionRow, ListCardsParams, LibraryScope, TagRow } from './storage/types';
 import { readLibraryRootSync } from './libraryRootConfig';
+
+const MAX_LIST_CARDS_SYNC_LIMIT = 500;
+
+function sanitizeListCardsParams(params: unknown): ListCardsParams {
+  const p = params && typeof params === 'object' ? (params as Record<string, unknown>) : {};
+  const offset = typeof p.offset === 'number' && p.offset >= 0 ? Math.floor(p.offset) : 0;
+  const rawLimit = typeof p.limit === 'number' && p.limit > 0 ? Math.floor(p.limit) : 50;
+  const limit = Math.min(rawLimit, MAX_LIST_CARDS_SYNC_LIMIT);
+  const libraryScope: LibraryScope =
+    p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
+  return {
+    offset,
+    limit,
+    libraryScope,
+    selectedTagIds: Array.isArray(p.selectedTagIds)
+      ? p.selectedTagIds.filter((x): x is string => typeof x === 'string')
+      : undefined,
+    cardIdExact: typeof p.cardIdExact === 'string' ? p.cardIdExact : null,
+    collectionId: typeof p.collectionId === 'string' ? p.collectionId : null,
+    moodboardCardIds: Array.isArray(p.moodboardCardIds)
+      ? p.moodboardCardIds.filter((x): x is string => typeof x === 'string')
+      : null,
+    advancedFilters:
+      p.advancedFilters && typeof p.advancedFilters === 'object'
+        ? (p.advancedFilters as ListCardsParams['advancedFilters'])
+        : undefined,
+    sort:
+      p.sort && typeof p.sort === 'object' ? (p.sort as ListCardsParams['sort']) : undefined
+  };
+}
 
 let storageIpcRegistered = false;
 
@@ -101,6 +138,7 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
     tagIds: row.tagIds,
     collectionIds: row.collectionIds,
     description: row.description,
+    aiCaption: row.aiCaption,
     name: row.name,
     linkUrl: row.linkUrl,
     durationMs: row.durationMs
@@ -186,12 +224,10 @@ export function registerStorageIpc(
     await ensureLibraryReady(root);
     const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
     void refreshLibrarySessionSnapshotFromDisk();
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        listCardsFromDb(root, { offset: 0, limit: 1, libraryScope: 'all' });
-      } catch {
-        /* прогрев SQLite на main */
-      }
+    try {
+      listCardsFromDb(root, { offset: 0, limit: 1, libraryScope: 'all' });
+    } catch {
+      /* прогрев SQLite на main */
     }
     return { ok: true as const };
   });
@@ -221,6 +257,8 @@ export function registerStorageIpc(
       void queueCardsForIndexing(importedIds);
       const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
       void refreshLibrarySessionSnapshotFromDisk();
+      const { triggerDuplicateScanAfterImport } = await import('./ipcDuplicates');
+      void triggerDuplicateScanAfterImport();
     }
     return results;
   });
@@ -228,7 +266,7 @@ export function registerStorageIpc(
   ipcMain.on('arc:storage-list-cards-sync', (event, params: unknown) => {
     enterListCardsHandler();
     try {
-      const p = params as ListCardsParams;
+      const p = sanitizeListCardsParams(params);
       const root = readLibraryRootSync();
       if (!root || !isLibraryRootReady(root)) {
         event.returnValue = [];
@@ -257,11 +295,39 @@ export function registerStorageIpc(
     };
   });
 
+  ipcMain.handle('arc:storage-get-card-display-palette', async (_e, cardId: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root || typeof cardId !== 'string') return [];
+    await ensureLibraryReady(root);
+    const row = getCardByIdFromDb(root, cardId);
+    if (!row || row.type !== 'image' || !row.originalRel) return [];
+
+    const stored = parsePaletteJson(row.paletteJson);
+    if (stored.length > 0) {
+      return trimPaletteForDisplay(stored, CARD_DETAIL_PALETTE_MAX);
+    }
+
+    const abs = path.join(root, row.originalRel.replace(/\//g, path.sep));
+    try {
+      const palette = await computeImagePalette(abs, 'search');
+      const computed = trimPaletteForDisplay(palette, CARD_DETAIL_PALETTE_MAX);
+      if (computed.length > 0) return computed;
+    } catch {
+      /* fallback below */
+    }
+
+    return parsePaletteJson(null, row.dominantColor);
+  });
+
   ipcMain.handle('arc:storage-update-card', async (_e, payload: unknown) => {
     assertNotMaintenance();
     const root = await readLibraryRoot();
     if (!root) throw new Error('Библиотека не выбрана');
-    const p = payload as {
+    if (!payload || typeof payload !== 'object') throw new Error('Неверные данные');
+    const raw = payload as { cardId?: unknown; patch?: unknown };
+    if (typeof raw.cardId !== 'string' || !raw.cardId.trim()) throw new Error('Неверные данные');
+    if (!raw.patch || typeof raw.patch !== 'object') throw new Error('Неверные данные');
+    const p = raw as {
       cardId: string;
       patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string };
     };
@@ -409,6 +475,14 @@ export function registerStorageIpc(
     const scope =
       p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
     return countCards(root, f, scope);
+  });
+
+  ipcMain.handle('arc:storage-count-cards-with-tag-ids', async (_e, tagIds: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root) return 0;
+    if (!Array.isArray(tagIds) || !tagIds.every((x) => typeof x === 'string')) return 0;
+    await ensureLibraryReady(root);
+    return countCardsWithAnyTagIds(root, tagIds as string[]);
   });
 
   ipcMain.handle('arc:storage-list-categories', async () => {
@@ -589,15 +663,53 @@ export function registerStorageIpc(
     await rebuildIndexFromCardJson(root);
   });
 
-  ipcMain.handle('arc:scan-library-orphan-files', async (_e, referencedList: unknown) => {
+  ipcMain.handle('arc:scan-library-orphan-files', async (_e, payload: unknown) => {
     const root = await readLibraryRoot();
     if (!root) return { orphans: [] as string[] };
-    if (!Array.isArray(referencedList)) return { orphans: [] as string[] };
-    const referenced = new Set<string>();
-    for (const r of referencedList) {
-      if (typeof r !== 'string' || !r.trim()) continue;
-      referenced.add(r.replace(/\\/g, '/'));
+
+    let referencedPaths: string[] = [];
+    let cardIds: string[] = [];
+    if (Array.isArray(payload)) {
+      referencedPaths = payload.filter((r): r is string => typeof r === 'string');
+    } else if (payload && typeof payload === 'object') {
+      const p = payload as { paths?: unknown; cardIds?: unknown; referencedPaths?: unknown };
+      if (Array.isArray(p.paths)) {
+        referencedPaths = p.paths.filter((r): r is string => typeof r === 'string');
+      } else if (Array.isArray(p.referencedPaths)) {
+        referencedPaths = p.referencedPaths.filter((r): r is string => typeof r === 'string');
+      }
+      if (Array.isArray(p.cardIds)) {
+        cardIds = p.cardIds.filter((id): id is string => typeof id === 'string');
+      }
+    } else {
+      return { orphans: [] as string[] };
     }
+
+    const referencedExact = new Set<string>();
+    const referencedLower = new Set<string>();
+    for (const r of referencedPaths) {
+      if (!r.trim()) continue;
+      const norm = r.replace(/\\/g, '/');
+      referencedExact.add(norm);
+      referencedLower.add(norm.toLowerCase());
+    }
+
+    const cardIdExact = new Set<string>();
+    const cardIdLower = new Set<string>();
+    for (const id of cardIds) {
+      if (!id.trim()) continue;
+      cardIdExact.add(id);
+      cardIdLower.add(id.toLowerCase());
+    }
+
+    const isReferencedPath = (norm: string): boolean => {
+      if (referencedExact.has(norm) || referencedLower.has(norm.toLowerCase())) return true;
+      const m = /^cards\/([^/]+)\//i.exec(norm);
+      if (!m) return false;
+      const folderId = m[1]!;
+      return cardIdExact.has(folderId) || cardIdLower.has(folderId.toLowerCase());
+    };
+
     const diskRel = [
       ...(await walkCardsRelativeFiles(root)),
       ...(await walkLegacyMediaRelativeFiles(root))
@@ -615,7 +727,7 @@ export function registerStorageIpc(
       const norm = rel.replace(/\\/g, '/');
       if (isStructuralCardFile(norm)) return false;
       if (norm === LIBRARY_META_DIR || norm.startsWith(`${LIBRARY_META_DIR}/`)) return false;
-      return !referenced.has(norm);
+      return !isReferencedPath(norm);
     });
     orphans.sort((a, b) => a.localeCompare(b, 'en'));
     return { orphans };

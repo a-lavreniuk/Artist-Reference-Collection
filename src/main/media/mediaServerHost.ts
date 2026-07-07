@@ -25,6 +25,14 @@ export function getArcMediaServerOrigin(): string | null {
   return mediaOrigin;
 }
 
+export function syncStagingTokenToMediaWorker(
+  token: string,
+  absPath: string,
+  expiresAt: number
+): void {
+  postToWorker({ type: 'staging-register', token, absPath, expiresAt });
+}
+
 export function syncArcMediaServerLibraryRoot(libraryRoot: string | null): void {
   postToWorker({ type: 'library-root', libraryRoot });
 }

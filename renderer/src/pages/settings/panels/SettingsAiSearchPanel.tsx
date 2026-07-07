@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import DemoAlert from '../../../components/layout/DemoAlert';
 import ValueSlider from '../../../components/range-slider/ValueSlider';
+import { Loader } from '../../../components/loader';
 import AiModelCard from '../../../components/settings/AiModelCard';
 import SettingsHardwareRow from '../../../components/settings/SettingsHardwareRow';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
@@ -28,7 +29,7 @@ import { useSettingsAi } from '../hooks/useSettingsAi';
 import type { AiModelTier } from '../../../services/appPreferences';
 
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <p className="arc-settings-section__title typo-p-s">{children}</p>;
+  return <p className="arc-settings-section__title text-s">{children}</p>;
 }
 
 /** Figma 1036:38165–1036:39527 — AI Поиск */
@@ -81,17 +82,17 @@ export default function SettingsAiSearchPanel() {
       <div className="arc-settings-main__scroll">
         <div className="arc-settings-main__content arc-settings-ai-panel arc-ui-kit-scope" data-btn-size="m">
           {loading ? (
-            <p className="typo-p-m arc-settings-ai-panel__status">Загрузка настроек AI…</p>
+            <p className="text-m arc-settings-ai-panel__status">Загрузка настроек AI…</p>
           ) : !status ? (
             arcHint ? (
-              <div className="typo-p-m hint arc-settings-electron-hint">{arcHint}</div>
+              <div className="hint arc-settings-electron-hint">{arcHint}</div>
             ) : (
-              <p className="typo-p-m arc-settings-ai-panel__status">AI Поиск недоступен.</p>
+              <p className="text-m arc-settings-ai-panel__status">AI Поиск недоступен.</p>
             )
           ) : (
             <>
               <div className="arc-settings-ai-panel__intro">
-                <p className="typo-p-m arc-settings-desc-block__text">{AI_INTRO_TEXT}</p>
+                <p className="text-m arc-settings-desc-block__text">{AI_INTRO_TEXT}</p>
                 <SettingsToggleRow
                   label="Включить AI Поиск"
                   pressed={status.enabled}
@@ -103,7 +104,7 @@ export default function SettingsAiSearchPanel() {
               {phase === 'analyzing' ? (
                 <>
                   <SettingsSeparator />
-                  <p className="typo-p-m arc-settings-ai-panel__status" data-typo-role="secondary">
+                  <p className="text-m arc-settings-ai-panel__status" data-typo-role="secondary">
                     Анализирую характеристики системы…
                   </p>
                 </>
@@ -208,7 +209,7 @@ export default function SettingsAiSearchPanel() {
                         </span>
                       </div>
                       {downloadStatus.subtitle ? (
-                        <p className="typo-p-m arc-settings-ai-status-head__subtitle" data-typo-role="secondary">
+                        <p className="text-m arc-settings-ai-status-head__subtitle" data-typo-role="secondary">
                           {downloadStatus.subtitle}
                         </p>
                       ) : null}
@@ -245,7 +246,7 @@ export default function SettingsAiSearchPanel() {
                           {installStatus.percent}%
                         </span>
                       </div>
-                      <p className="typo-p-m arc-settings-ai-status-head__subtitle" data-typo-role="secondary">
+                      <p className="text-m arc-settings-ai-status-head__subtitle" data-typo-role="secondary">
                         Идёт извлечение и установка файлов, пожалуйста подождите…
                       </p>
                     </div>
@@ -272,7 +273,7 @@ export default function SettingsAiSearchPanel() {
                         onChange={(value) => void updateSearchStrictness(value)}
                         ariaLabel="Точность поиска"
                       />
-                      <p className="typo-p-m arc-settings-ai-slider-col__hint">{strictnessHint(status.searchStrictness)}</p>
+                      <p className="text-m arc-settings-ai-slider-col__hint">{strictnessHint(status.searchStrictness)}</p>
                     </div>
                     <div className="arc-settings-ai-slider-col">
                       <SectionLabel>
@@ -290,7 +291,7 @@ export default function SettingsAiSearchPanel() {
                         onChange={(value) => void updateResourcePreset(value)}
                         ariaLabel="Ресурсы для AI"
                       />
-                      <p className="typo-p-m arc-settings-ai-slider-col__hint">
+                      <p className="text-m arc-settings-ai-slider-col__hint">
                         Доступно {formatRamGb(status.hardware.totalMemoryMb)}. Минимум для модели{' '}
                         {formatRamGb(minRamMb)}
                       </p>
@@ -305,10 +306,8 @@ export default function SettingsAiSearchPanel() {
                     {indexRunning ? (
                       <>
                         <div className="arc-settings-ai-index-line">
-                          {!index?.paused ? (
-                            <span className="loader arc-settings-ai-index-line__loader" aria-hidden="true" />
-                          ) : null}
-                          <p className="typo-p-m arc-settings-ai-index-line__text">{indexStatusLine}</p>
+                          {!index?.paused ? <Loader decorative /> : null}
+                          <p className="text-m arc-settings-ai-index-line__text">{indexStatusLine}</p>
                         </div>
                         <div className="arc-settings-ai-panel__action-row">
                           {index?.paused ? (
@@ -334,7 +333,7 @@ export default function SettingsAiSearchPanel() {
                       </>
                     ) : isIndexComplete(status) ? (
                       <>
-                        <p className="typo-p-m arc-settings-ai-index-line__text">{indexStatusLine}</p>
+                        <p className="text-m arc-settings-ai-index-line__text">{indexStatusLine}</p>
                         <div className="arc-settings-ai-panel__action-row">
                           <button
                             type="button"
@@ -349,7 +348,7 @@ export default function SettingsAiSearchPanel() {
                     ) : (
                       <>
                         {!activeModelReady ? (
-                          <p className="typo-p-m arc-settings-ai-slider-col__hint">
+                          <p className="text-m arc-settings-ai-slider-col__hint">
                             Сначала установите и выберите активную модель.
                           </p>
                         ) : null}

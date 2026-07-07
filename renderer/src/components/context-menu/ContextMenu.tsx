@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { playMenuPanelEnter } from '../../motion/playModalHostMotion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import ContextMenuHeader from './ContextMenuHeader';
 import ContextMenuItem from './ContextMenuItem';
@@ -19,11 +20,15 @@ type Props = {
   rows?: ContextMenuRow[];
   children?: React.ReactNode;
   noDragClassName?: string;
-  /** Меню под якорем (клик по кнопке). */
   anchorRef?: React.RefObject<HTMLElement | null>;
-  /** Меню у курсора (ПКМ). Взаимоисключающе с anchorRef. */
   position?: ContextMenuPosition | null;
 };
+
+function resolveAnchorTop(anchorEl: HTMLElement): number {
+  const mgmtIsland = anchorEl.closest('.arc-navbar-island--mgmt');
+  const base = mgmtIsland ?? anchorEl;
+  return base.getBoundingClientRect().bottom + CONTEXT_MENU_ANCHOR_GAP;
+}
 
 function clampMenuPosition(top: number, left: number, menuHeight = 0) {
   const margin = 8;
@@ -45,6 +50,7 @@ function renderRow(row: ContextMenuRow, onClose: () => void) {
   return (
     <ContextMenuItem
       key={row.key}
+      menuKey={row.key}
       label={row.label}
       iconClass={row.iconClass}
       shortcut={row.shortcut}
@@ -74,10 +80,12 @@ export default function ContextMenu({
   const menuId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<{ top: number; left: number } | null>(null);
+  const menuWasOpenRef = useRef(false);
   const dragClass = noDragClassName.trim();
 
   useLayoutEffect(() => {
     if (!open) {
+      menuWasOpenRef.current = false;
       setLayout((prev) => (prev === null ? prev : null));
       return;
     }
@@ -98,7 +106,7 @@ export default function ContextMenu({
     }
 
     const rect = anchorRef.current.getBoundingClientRect();
-    const rawTop = rect.bottom + CONTEXT_MENU_ANCHOR_GAP;
+    const rawTop = resolveAnchorTop(anchorRef.current);
     const rawLeft = rect.right - CONTEXT_MENU_WIDTH;
     const nextLayout = clampMenuPosition(rawTop, rawLeft, menuHeight);
     setLayout((prev) =>
@@ -107,9 +115,16 @@ export default function ContextMenu({
   }, [open, ariaLabel, anchorRef, position, rows, children]);
 
   useLayoutEffect(() => {
-    if (!open || !panelRef.current) return;
+    if (!open || !panelRef.current || !layout) return;
     void hydrateArcNavbarIcons(panelRef.current);
-  }, [open, rows, children, layout]);
+  }, [open, layout, rows, children]);
+
+  useLayoutEffect(() => {
+    if (!open || !panelRef.current || !layout) return;
+    if (menuWasOpenRef.current) return;
+    menuWasOpenRef.current = true;
+    playMenuPanelEnter(panelRef.current);
+  }, [open, layout]);
 
   useEffect(() => {
     if (!open) return;
@@ -153,4 +168,3 @@ export default function ContextMenu({
 }
 
 export type { ContextMenuRow } from './types';
-

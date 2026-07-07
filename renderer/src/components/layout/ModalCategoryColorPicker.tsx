@@ -1,31 +1,60 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { clamp, hexToHsv, hsvToHex, normalizeHex } from '../../utils/colorPicker';
 
 type Props = {
   value: string;
   onChange: (hex: string) => void;
+  variant?: 'full' | 'paletteOnly';
 };
 
 const HUE_INSET = 2;
 const HUE_THUMB_SIZE = 12;
+const MIN_PICKER_CHROMA = 5;
 
-export default function ModalCategoryColorPicker({ value, onChange }: Props) {
+function pickHueHsv(saturation: number, brightness: number, hue: number) {
+  let s = saturation;
+  let v = brightness;
+  if (s < MIN_PICKER_CHROMA) s = 100;
+  if (v < MIN_PICKER_CHROMA) v = 100;
+  return { h: hue, s, v };
+}
+
+export default function ModalCategoryColorPicker({ value, onChange, variant = 'full' }: Props) {
   const hueTrackRef = useRef<HTMLDivElement>(null);
   const toneTrackRef = useRef<HTMLDivElement>(null);
   const [hueTrackWidth, setHueTrackWidth] = useState(0);
 
   const safeHex = normalizeHex(value) ?? '#EAB308';
+  const [hexDraft, setHexDraft] = useState(safeHex);
   const parsed = hexToHsv(safeHex) ?? { h: 45, s: 95, v: 92 };
   const { h: hue, s: saturation, v: brightness } = parsed;
+
+  useEffect(() => {
+    setHexDraft(safeHex);
+  }, [safeHex]);
+
+  const commitHexDraft = (raw: string) => {
+    const parsedHex = normalizeHex(raw);
+    if (!parsedHex) {
+      setHexDraft(safeHex);
+      return;
+    }
+    setHexDraft(parsedHex);
+    onChange(parsedHex);
+  };
 
   useLayoutEffect(() => {
     const el = hueTrackRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setHueTrackWidth(el.clientWidth));
+    const measure = () => {
+      const width = el.clientWidth;
+      if (width > 0) setHueTrackWidth(width);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setHueTrackWidth(el.clientWidth);
     return () => ro.disconnect();
-  }, []);
+  }, [variant]);
 
   const applyHsv = (h: number, s: number, v: number) => {
     onChange(hsvToHex(h, s, v));
@@ -40,10 +69,13 @@ export default function ModalCategoryColorPicker({ value, onChange }: Props) {
     event.preventDefault();
     const track = hueTrackRef.current;
     if (!track) return;
+    if (track.clientWidth > 0) setHueTrackWidth(track.clientWidth);
     const move = (e: PointerEvent) => {
       const rect = track.getBoundingClientRect();
+      if (rect.width < 1) return;
       const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
-      applyHsv(x * 360, saturation, brightness);
+      const next = pickHueHsv(saturation, brightness, x * 360);
+      applyHsv(next.h, next.s, next.v);
     };
     const up = () => {
       document.removeEventListener('pointermove', move);
@@ -75,22 +107,26 @@ export default function ModalCategoryColorPicker({ value, onChange }: Props) {
 
   return (
     <>
-      <div className="arc-modal__slot">
-        <div className="input color-input input-slots" aria-label="Color value">
-          <span className="color-prepend slot-prepend">HEX</span>
-          <input
-            className="color-value-input slot-value"
-            value={safeHex}
-            onChange={(e) => {
-              const parsedHex = normalizeHex(e.target.value);
-              if (!parsedHex) return;
-              onChange(parsedHex);
-            }}
-            aria-label="HEX цвета"
-          />
-          <span className="color-swatch-inline slot-trailing" style={{ background: safeHex }} aria-hidden="true" />
+      {variant === 'full' ? (
+        <div className="arc-modal__slot">
+          <div className="input color-input input-slots" aria-label="Color value">
+            <span className="color-prepend slot-prepend">HEX</span>
+            <input
+              className="color-value-input slot-value"
+              value={hexDraft}
+              onChange={(e) => {
+                const next = e.target.value.toUpperCase();
+                setHexDraft(next);
+                const parsedHex = normalizeHex(next);
+                if (parsedHex) onChange(parsedHex);
+              }}
+              onBlur={() => commitHexDraft(hexDraft)}
+              aria-label="HEX цвета"
+            />
+            <span className="color-swatch-inline slot-trailing" style={{ background: safeHex }} aria-hidden="true" />
+          </div>
         </div>
-      </div>
+      ) : null}
       <div className="arc-modal__slot">
         <div
           ref={hueTrackRef}

@@ -9,6 +9,7 @@ import {
   setActiveMediaTabAndSync,
   syncArcMediaServerLibraryRoot
 } from './media/mediaServerHost';
+import { registerMediaStagingToken } from './media/mediaStagingTokens';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
 import { migrateLibraryToFolder } from './libraryMigrate';
 import { appendHistory, clearHistory, readHistory, type HistorySegment } from './libraryHistory';
@@ -24,6 +25,7 @@ import {
   resolveLegacyMetadataAbsPath
 } from './libraryFilenames';
 import { registerStorageIpc } from './ipcStorage';
+import { registerDuplicateIpc } from './ipcDuplicates';
 import { resetLibraryStorageCache } from './storage/libraryStorage';
 import { readLibraryDiskStats } from './libraryDiskStats';
 import {
@@ -41,6 +43,7 @@ import {
   updateLibrarySessionSnapshot
 } from './librarySessionSnapshot';
 import { isValidArcLibraryFolder } from './libraryValidate';
+import { getDefaultLibraryFolderName } from './appProfile';
 import { countCards, ensureLibraryReady } from './storage/libraryStorage';
 
 async function metadataPath(root: string): Promise<string | null> {
@@ -203,6 +206,7 @@ export function registerArcIpc(): void {
   });
 
   registerStorageIpc(readLibraryRootFromDisk, assertNotMaintenance);
+  registerDuplicateIpc(readLibraryRootFromDisk, assertNotMaintenance);
 
   ipcMain.handle('arc:maintenance-begin', async () => {
     acquireMaintenanceLock();
@@ -302,6 +306,10 @@ export function registerArcIpc(): void {
     return res.filePaths[0] ?? null;
   });
 
+  ipcMain.handle('arc:get-default-library-parent', async () => app.getPath('documents'));
+
+  ipcMain.handle('arc:get-default-library-folder-name', async () => getDefaultLibraryFolderName());
+
   ipcMain.handle('arc:read-metadata', async () => {
     const root = await readLibraryRootFromDisk();
     if (!root) return null;
@@ -378,6 +386,11 @@ export function registerArcIpc(): void {
     const paths = relativePaths.filter((p): p is string => typeof p === 'string');
     const root = readLibraryRootSync();
     return resolvePathsToMediaUrls(paths, root, isVideoExt, getArcMediaServerOrigin());
+  });
+
+  ipcMain.handle('arc:register-media-staging-token', async (_e, absPath: unknown) => {
+    if (typeof absPath !== 'string' || !absPath.trim()) return null;
+    return registerMediaStagingToken(absPath.trim());
   });
 
   ipcMain.handle('arc:delete-file-if-inside-library', async (_e, relativePath: unknown) => {

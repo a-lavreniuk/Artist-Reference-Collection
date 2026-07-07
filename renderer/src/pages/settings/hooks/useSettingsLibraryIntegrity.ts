@@ -2,108 +2,300 @@ import { useCallback, useState } from 'react';
 import {
   applyLibraryIntegrityFixes,
   invalidateLibraryCache,
-  loadLibraryMetadataSnapshot
+  loadLibraryMetadataSnapshot,
+  permanentDeleteCard
 } from '../../../services/db';
+import { resolveBackend } from '../../../services/db/backend';
 import {
   analyzeIntegrity,
   applyMetadataWarningFixes,
+  buildIntegrityReport,
+  collectIntegrityOrphanScanInput,
   collectReferencedMediaPathsFromMeta,
   filterScanOrphanPaths,
-  isWarningFixable
+  removeInvalidCardRowsFromMeta,
+  type IntegrityReport
 } from '../../../services/libraryIntegrity';
 
+export type IntegrityPhase = 'idle' | 'scanning' | 'ready' | 'no_metadata';
+
+export type IntegrityConfirmState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => Promise<void>;
+};
+
+async function scanLibrary(): Promise<IntegrityReport | null> {
+  const arc = window.arc;
+  if (!arc) return null;
+  const meta = await loadLibraryMetadataSnapshot({ includeTrashedCards: true });
+  if (!meta) return null;
+  const refs = collectReferencedMediaPathsFromMeta(meta);
+  const orphanScan = collectIntegrityOrphanScanInput(meta);
+  const [{ missing }, { orphans }] = await Promise.all([
+    arc.verifyLibraryPaths(refs),
+    arc.scanLibraryOrphanFiles(orphanScan).then((r) => ({
+      orphans: filterScanOrphanPaths(r.orphans)
+    }))
+  ]);
+  const issues = analyzeIntegrity(meta, new Set(missing), orphans);
+  return buildIntegrityReport(issues, orphans);
+}
+
+async function withMaintenance<T>(fn: () => Promise<T>): Promise<T> {
+  const arc = window.arc;
+  if (!arc?.maintenanceBegin) return fn();
+  await arc.maintenanceBegin();
+  try {
+    return await fn();
+  } finally {
+    await arc.maintenanceEnd();
+  }
+}
+
 export function useSettingsLibraryIntegrity() {
-  const [integrityBusy, setIntegrityBusy] = useState(false);
-  const [infoModal, setInfoModal] = useState<string | null>(null);
-  const [warnModal, setWarnModal] = useState<{ text: string; onFix: () => void } | null>(null);
+  const [phase, setPhase] = useState<IntegrityPhase>('idle');
+  const [report, setReport] = useState<IntegrityReport | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<IntegrityConfirmState | null>(null);
+  const [fileBackend, setFileBackend] = useState<boolean | null>(null);
+
+  const refreshBackend = useCallback(async () => {
+    const b = await resolveBackend();
+    setFileBackend(b === 'file');
+  }, []);
 
   const runIntegrity = useCallback(async () => {
     if (!window.arc) return;
-    setIntegrityBusy(true);
+    setPhase('scanning');
+    setBusyAction('scan');
     try {
-      const meta = await loadLibraryMetadataSnapshot();
-      if (!meta) {
-        setInfoModal('Нет метаданных библиотеки.');
+      await refreshBackend();
+      const next = await scanLibrary();
+      if (!next) {
+        setReport(null);
+        setPhase('no_metadata');
         return;
       }
-      const refs = collectReferencedMediaPathsFromMeta(meta);
-      const [{ missing }, { orphans }] = await Promise.all([
-        window.arc.verifyLibraryPaths(refs),
-        window.arc.scanLibraryOrphanFiles(refs).then((r) => ({
-          orphans: filterScanOrphanPaths(r.orphans)
-        }))
-      ]);
-      const missSet = new Set(missing);
-      const issues = analyzeIntegrity(meta, missSet, orphans);
-      const errors = issues.filter((i) => i.level === 'error');
-      const warnings = issues.filter((i) => i.level === 'warning');
-      const fixableWarnings = warnings.filter(isWarningFixable);
-      const hasNonFixableWarnings = warnings.some((w) => !isWarningFixable(w));
-
-      if (errors.length > 0) {
-        setInfoModal(errors.map((e) => e.detail).join('\n'));
-        return;
-      }
-      if (warnings.length === 0) {
-        setInfoModal('Проверка завершена: проблем не найдено.');
-        return;
-      }
-
-      if (fixableWarnings.length > 0) {
-        const hint = hasNonFixableWarnings
-          ? '\n\nАвтоисправление затронет только метаданные (ссылки, счётчики, мудборд). Дубликаты путей к файлам и лишние файлы на диске останутся — их нужно разобрать вручную.'
-          : '';
-        setWarnModal({
-          text: `${warnings.map((w) => w.detail).join('\n')}${hint}`,
-          onFix: async () => {
-            setWarnModal(null);
-            const arc = window.arc;
-            if (!arc) return;
-            const fixed = applyMetadataWarningFixes(meta);
-            await applyLibraryIntegrityFixes(fixed);
-            invalidateLibraryCache();
-            window.dispatchEvent(new CustomEvent('arc:library-changed'));
-            const nextMeta = await loadLibraryMetadataSnapshot();
-            if (!nextMeta) {
-              setInfoModal('Нет метаданных библиотеки.');
-              return;
-            }
-            const refs2 = collectReferencedMediaPathsFromMeta(nextMeta);
-            const [{ missing: m2 }, { orphans: o2 }] = await Promise.all([
-              arc.verifyLibraryPaths(refs2),
-              arc.scanLibraryOrphanFiles(refs2).then((r) => ({
-                orphans: filterScanOrphanPaths(r.orphans)
-              }))
-            ]);
-            const again = analyzeIntegrity(nextMeta, new Set(m2), o2);
-            const err2 = again.filter((i) => i.level === 'error');
-            const warn2 = again.filter((i) => i.level === 'warning');
-            if (err2.length > 0) {
-              setInfoModal(err2.map((e) => e.detail).join('\n'));
-              return;
-            }
-            if (warn2.length === 0) {
-              setInfoModal('Исправления применены. Проблем не осталось.');
-              return;
-            }
-            setInfoModal(`Исправления применены. Остаются предупреждения:\n\n${warn2.map((w) => w.detail).join('\n')}`);
-          }
-        });
-        return;
-      }
-
-      setInfoModal(warnings.map((w) => w.detail).join('\n'));
+      setReport(next);
+      setPhase('ready');
     } finally {
-      setIntegrityBusy(false);
+      setBusyAction(null);
+    }
+  }, [refreshBackend]);
+
+  const rescan = useCallback(async () => {
+    if (!window.arc) return;
+    setBusyAction('scan');
+    try {
+      const next = await scanLibrary();
+      if (!next) {
+        setReport(null);
+        setPhase('no_metadata');
+        return;
+      }
+      setReport(next);
+      setPhase('ready');
+    } finally {
+      setBusyAction(null);
     }
   }, []);
 
+  const afterMutation = useCallback(async () => {
+    invalidateLibraryCache();
+    window.dispatchEvent(new CustomEvent('arc:library-changed'));
+    await rescan();
+  }, [rescan]);
+
+  const fixMetadata = useCallback(async () => {
+    if (!report || fileBackend === false) return;
+    setBusyAction('fix_metadata');
+    try {
+      await withMaintenance(async () => {
+        const meta = await loadLibraryMetadataSnapshot({ includeTrashedCards: true });
+        if (!meta) return;
+        const fixed = applyMetadataWarningFixes(meta);
+        await applyLibraryIntegrityFixes(fixed);
+        await afterMutation();
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  }, [afterMutation, fileBackend, report]);
+
+  const deleteCard = useCallback(
+    async (cardId: string) => {
+      setBusyAction(`delete_card:${cardId}`);
+      try {
+        await withMaintenance(async () => {
+          await permanentDeleteCard(cardId);
+          await afterMutation();
+        });
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [afterMutation]
+  );
+
+  const requestDeleteCard = useCallback(
+    (cardId: string) => {
+      setConfirm({
+        title: 'Удалить карточку',
+        message: `Карточка ${cardId} будет удалена безвозвратно вместе с файлами в библиотеке`,
+        confirmLabel: 'Удалить',
+        onConfirm: async () => {
+          setConfirm(null);
+          await deleteCard(cardId);
+        }
+      });
+    },
+    [deleteCard]
+  );
+
+  const deleteOrphanFile = useCallback(
+    async (relPath: string) => {
+      const arc = window.arc;
+      if (!arc?.deleteFileIfInsideLibrary) return;
+      setBusyAction(`delete_orphan:${relPath}`);
+      try {
+        await withMaintenance(async () => {
+          await arc.deleteFileIfInsideLibrary(relPath);
+          await afterMutation();
+        });
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [afterMutation]
+  );
+
+  const requestDeleteOrphan = useCallback(
+    (relPath: string) => {
+      setConfirm({
+        title: 'Удалить файл',
+        message: `Файл будет удалён из библиотеки:\n${relPath}`,
+        confirmLabel: 'Удалить',
+        onConfirm: async () => {
+          setConfirm(null);
+          await deleteOrphanFile(relPath);
+        }
+      });
+    },
+    [deleteOrphanFile]
+  );
+
+  const deleteAllOrphans = useCallback(
+    async (paths: string[]) => {
+      const arc = window.arc;
+      if (!arc?.deleteFileIfInsideLibrary || paths.length === 0) return;
+      setBusyAction('delete_all_orphans');
+      try {
+        await withMaintenance(async () => {
+          for (const rel of paths) {
+            await arc.deleteFileIfInsideLibrary(rel);
+          }
+          await afterMutation();
+        });
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [afterMutation]
+  );
+
+  const requestDeleteAllOrphans = useCallback(
+    (paths: string[]) => {
+      setConfirm({
+        title: 'Удалить все лишние файлы',
+        message: `Будет удалено файлов: ${paths.length}. Это действие необратимо`,
+        confirmLabel: 'Удалить все',
+        onConfirm: async () => {
+          setConfirm(null);
+          await deleteAllOrphans(paths);
+        }
+      });
+    },
+    [deleteAllOrphans]
+  );
+
+  const removeInvalidRows = useCallback(
+    async (indices: number[]) => {
+      if (fileBackend === false || indices.length === 0) return;
+      setBusyAction('remove_invalid_rows');
+      try {
+        await withMaintenance(async () => {
+          const meta = await loadLibraryMetadataSnapshot({ includeTrashedCards: true });
+          if (!meta) return;
+          const fixed = removeInvalidCardRowsFromMeta(meta, indices);
+          await applyLibraryIntegrityFixes(fixed);
+          await afterMutation();
+        });
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [afterMutation, fileBackend]
+  );
+
+  const requestRemoveInvalidRows = useCallback(
+    (indices: number[]) => {
+      setConfirm({
+        title: 'Удалить битые записи',
+        message: `Из метаданных будут удалены ${indices.length} некорректных записей карточек`,
+        confirmLabel: 'Удалить записи',
+        onConfirm: async () => {
+          setConfirm(null);
+          await removeInvalidRows(indices);
+        }
+      });
+    },
+    [removeInvalidRows]
+  );
+
+  const showOrphanInFolder = useCallback(async (relPath: string) => {
+    const arc = window.arc;
+    if (!arc?.showItemInFolder) return;
+    await arc.showItemInFolder(relPath.replace(/\\/g, '/'));
+  }, []);
+
   return {
-    integrityBusy,
-    infoModal,
-    setInfoModal,
-    warnModal,
-    setWarnModal,
-    runIntegrity
+    phase,
+    report,
+    busyAction,
+    confirm,
+    setConfirm,
+    fileBackend,
+    runIntegrity,
+    rescan,
+    fixMetadata,
+    requestDeleteCard,
+    requestDeleteOrphan,
+    requestDeleteAllOrphans,
+    requestRemoveInvalidRows,
+    showOrphanInFolder,
+    isScanning: phase === 'scanning' || busyAction === 'scan',
+    isBusy: busyAction !== null
   };
+}
+
+import type { CardRecord } from '../../../services/arcSchema';
+
+export type IntegrityCardPreview = {
+  card: CardRecord;
+  imageUrl: string | null;
+};
+
+export async function loadIntegrityCardPreviews(cardIds: string[]): Promise<Map<string, IntegrityCardPreview>> {
+  const { getCardById } = await import('../../../services/db');
+  const arc = window.arc;
+  const out = new Map<string, IntegrityCardPreview>();
+  for (const id of cardIds) {
+    const card = await getCardById(id);
+    if (!card) continue;
+    const imageUrl = arc ? await arc.toFileUrl(card.thumbRelativePath) : null;
+    out.set(id, { card, imageUrl });
+  }
+  return out;
 }

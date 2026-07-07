@@ -15,6 +15,7 @@ import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
 import { EmptyState } from '../empty-state';
 import { useResetGallerySearch } from '../../hooks/useResetGallerySearch';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../gallery/GalleryFilterContext';
+import { galleryRevealResetKey } from '../../motion/galleryRevealEpoch';
 import { useGalleryMeta } from '../../context/GalleryMetaContext';
 import { useLibraryConfigured } from '../../hooks/useLibraryConfigured';
 import {
@@ -160,7 +161,7 @@ export default function MoodboardCardsView() {
   }
 
   return (
-    <div className="arc-collection-detail arc-moodboard-cards">
+    <div className="arc-collection-detail arc-moodboard-cards" data-interface-tour-anchor="moodboard-page">
       {feed.booting && !isRemoteSearchFeed && !feed.shuffleReloading ? (
         <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
           <span className="loader" aria-hidden="true" />
@@ -183,6 +184,7 @@ export default function MoodboardCardsView() {
             scrollRootRef={scrollRootRef}
             loadingMore={feed.loading && feed.hasMore}
             busy={feed.booting || feed.loading || feed.shuffleReloading}
+            revealResetKey={galleryRevealResetKey(feedQuery)}
             onOpenCard={openCard}
             moodboardCardIds={moodboardCardIds}
             onCardContextMenu={onCardContextMenu}

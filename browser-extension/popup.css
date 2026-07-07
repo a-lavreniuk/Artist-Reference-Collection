@@ -1,0 +1,30 @@
+body.arc-ext-shell {
+  margin: 0;
+  width: 400px;
+  min-height: 264px;
+  background: var(--panel-bg, #1a1a1e);
+}
+
+.arc-ext-modal--popup {
+  width: 100%;
+  max-width: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.arc-ext-modal--popup.is-offline .arc-ext-modal__footer--split,
+.arc-ext-modal--popup.is-disabled .arc-ext-modal__footer--split {
+  justify-content: flex-end;
+}
+
+.arc-ext-modal--popup.is-offline .arc-ext-modal__footer--split #arc-website-btn,
+.arc-ext-modal--popup.is-disabled .arc-ext-modal__footer--split #arc-website-btn,
+.arc-ext-modal--popup.is-disabled .arc-ext-modal__footer--split #arc-open-btn {
+  display: none;
+}
+
+.arc-ext-modal--popup #arc-website-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

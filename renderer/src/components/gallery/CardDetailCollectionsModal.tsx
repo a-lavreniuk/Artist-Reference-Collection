@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ArcAnimatedModalHost } from '../../motion';
 import {
   ARC_COLLECTIONS_CHANGED_EVENT,
   getAllCollections,
@@ -33,6 +34,11 @@ export default function CardDetailCollectionsModal({
   const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
   const [pendingCollectionId, setPendingCollectionId] = useState<string | null>(null);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+  const [localSelectedCollectionIds, setLocalSelectedCollectionIds] = useState(selectedCollectionIds);
+
+  useEffect(() => {
+    setLocalSelectedCollectionIds(selectedCollectionIds);
+  }, [selectedCollectionIds]);
 
   const reloadCatalog = async () => {
     const [cols, counts, previews] = await Promise.all([
@@ -52,17 +58,9 @@ export default function CardDetailCollectionsModal({
     return () => window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onCatalog);
   }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !newCollectionOpen) onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, newCollectionOpen]);
-
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [collections, selectedCollectionIds, colSearch, collectionPreviews, newCollectionOpen]);
+  }, [collections, localSelectedCollectionIds, colSearch, collectionPreviews, newCollectionOpen]);
 
   const filteredCols = useMemo(() => {
     const q = colSearch.trim().toLowerCase();
@@ -71,9 +69,16 @@ export default function CardDetailCollectionsModal({
 
   const handleToggle = async (collectionId: string) => {
     if (pendingCollectionId) return;
+    const prev = localSelectedCollectionIds;
+    const next = prev.includes(collectionId)
+      ? prev.filter((id) => id !== collectionId)
+      : [...prev, collectionId];
     setPendingCollectionId(collectionId);
+    setLocalSelectedCollectionIds(next);
     try {
       await onToggleCollection(collectionId);
+    } catch {
+      setLocalSelectedCollectionIds(prev);
     } finally {
       setPendingCollectionId(null);
     }
@@ -83,24 +88,24 @@ export default function CardDetailCollectionsModal({
   const showEmptySearch = !showEmptyCatalog && filteredCols.length === 0;
 
   const picker = (
-    <div
-      ref={hostRef}
-      className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-      aria-hidden="false"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <ArcAnimatedModalHost
+      onClose={onClose}
+      closeDisabled={newCollectionOpen}
+      hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
     >
-      <div
-        className="arc-card-detail-collections-picker panel elevation-raised arc-ui-kit-scope"
-        data-elevation="raised"
-        data-input-size="m"
-        data-btn-size="m"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Коллекции"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {() => (
+        <>
+          <div
+            ref={hostRef}
+            className="arc-card-detail-collections-picker panel elevation-raised arc-ui-kit-scope"
+            data-elevation="raised"
+            data-input-size="m"
+            data-btn-size="m"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Коллекции"
+            onClick={(e) => e.stopPropagation()}
+          >
         <div className="arc-card-detail-collections-picker__fixed">
           <div className="arc-card-detail-collections-picker__inset">
             <div
@@ -144,7 +149,7 @@ export default function CardDetailCollectionsModal({
                   collection={collection}
                   previews={collectionPreviews[collection.id] ?? []}
                   count={collCounts[collection.id] ?? 0}
-                  selected={selectedCollectionIds.includes(collection.id)}
+                  selected={localSelectedCollectionIds.includes(collection.id)}
                   disabled={pendingCollectionId !== null}
                   onToggle={() => void handleToggle(collection.id)}
                 />
@@ -166,23 +171,25 @@ export default function CardDetailCollectionsModal({
             </button>
           </div>
         </div>
-      </div>
+          </div>
 
-      {newCollectionOpen ? (
-        <CollectionSettingsModal
-          state={{ mode: 'create' }}
-          stats={null}
-          hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
-          onClose={() => setNewCollectionOpen(false)}
-          onCreate={async (payload) => {
-            await onCreateAndAssign(payload.name);
-            await reloadCatalog();
-          }}
-          onSave={async () => {}}
-          onDelete={async () => {}}
-        />
-      ) : null}
-    </div>
+          {newCollectionOpen ? (
+            <CollectionSettingsModal
+              state={{ mode: 'create' }}
+              stats={null}
+              hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
+              onClose={() => setNewCollectionOpen(false)}
+              onCreate={async (payload) => {
+                await onCreateAndAssign(payload.name);
+                await reloadCatalog();
+              }}
+              onSave={async () => {}}
+              onDelete={async () => {}}
+            />
+          ) : null}
+        </>
+      )}
+    </ArcAnimatedModalHost>
   );
 
   return createPortal(picker, document.body);

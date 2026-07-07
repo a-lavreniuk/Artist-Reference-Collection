@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   updateTag,
   getAllCategories,
   getNavbarMetrics,
   getTagsByCategory,
-  listCardsSorted,
+  listAllCardsPaginated,
   deleteTag,
   type CategoryRecord,
   type TagRecord
@@ -21,6 +21,7 @@ import {
   evaluateDiskSpacePressure
 } from '../../utils/evaluateDiskSpacePressure';
 import { showAppNotification } from '../../services/notificationService';
+import { useCountUp } from '../../motion';
 
 const TAG_LIMIT = 20;
 
@@ -30,6 +31,16 @@ type SummaryItem = {
   value: number;
   icon: string;
 };
+
+function SummaryStatValue({ value, enabled }: { value: number; enabled: boolean }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  useCountUp(ref, value, enabled);
+  return (
+    <p ref={ref} className="h1 arc-stats-summary-card__value">
+      {enabled ? 0 : value}
+    </p>
+  );
+}
 
 export default function SettingsStatisticsPanel() {
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getNavbarMetrics>> | null>(null);
@@ -69,12 +80,8 @@ export default function SettingsStatisticsPanel() {
         return;
       }
 
-      const cards = await listCardsSorted('all');
-      const trashCards = await storage.storageListCards({
-        offset: 0,
-        limit: 1_000_000,
-        libraryScope: 'trash'
-      });
+      const cards = await listAllCardsPaginated({ libraryScope: 'all' });
+      const trashCards = await listAllCardsPaginated({ libraryScope: 'trash' });
 
       const { imageBytes, videoBytes } = await computeSplitLibraryMediaBytesFromCards(window.arc, cards);
       const trashBytes = await computeTrashBytesFromCards(window.arc, trashCards);
@@ -132,15 +139,15 @@ export default function SettingsStatisticsPanel() {
   ];
 
   return (
-    <div className="arc-stats-dashboard">
+    <div className="arc-stats-dashboard" data-interface-tour-anchor="statistics-main">
       <div className="arc-stats-summary-grid">
         {summaryStats.map((item) => (
           <section key={item.id} className="arc-stats-summary-card panel">
             <StatisticsPanelHead
               icon={<span className={`arc-stat-icon arc-stat-icon--${item.icon}`} aria-hidden="true" />}
             >
-              <p className="typo-p-l arc-stats-summary-card__label">{item.label}</p>
-              <p className="h1 arc-stats-summary-card__value">{item.value}</p>
+              <p className="text-m arc-stats-summary-card__label">{item.label}</p>
+              <SummaryStatValue value={item.value} enabled={metrics !== null} />
             </StatisticsPanelHead>
           </section>
         ))}
@@ -158,7 +165,7 @@ export default function SettingsStatisticsPanel() {
               />
             }
           >
-            <p className="typo-p-l arc-stats-tags-panel__title">Популярные метки</p>
+            <p className="text-s arc-stats-tags-panel__title">Популярные метки</p>
             <div className="arc-category-tag-cloud">
               {topTags.length === 0 ? (
                 <p className="hint">Нет популярных меток</p>
@@ -194,7 +201,7 @@ export default function SettingsStatisticsPanel() {
               />
             }
           >
-            <p className="typo-p-l arc-stats-tags-panel__title">Малоиспользуемые метки</p>
+            <p className="text-s arc-stats-tags-panel__title">Малоиспользуемые метки</p>
             <div className="arc-category-tag-cloud">
               {lowTags.length === 0 ? (
                 <p className="hint">Нет малоиспользуемых меток</p>

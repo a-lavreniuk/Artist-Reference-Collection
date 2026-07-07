@@ -27,7 +27,7 @@ export default function BugReportWidget() {
   if (!ready) return null;
 
   return createPortal(
-    <div ref={rootRef} className="arc-bug-report-widget arc-ui-kit-scope" data-btn-size="l">
+    <div ref={rootRef} className="arc-bug-report-widget arc-ui-kit-scope" data-btn-size="l" data-interface-tour-anchor="bug-report-widget">
       <Tooltip content="Сообщить о проблеме" delay={500} position="left">
         <button
           type="button"

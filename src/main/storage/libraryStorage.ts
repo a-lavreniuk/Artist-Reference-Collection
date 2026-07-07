@@ -47,11 +47,8 @@ import {
   invalidateGalleryFilterBoundariesCache
 } from './galleryFilterBoundariesCache';
 import { invalidateGalleryFilterStatsCache } from './galleryFilterStatsCache';
-import {
-  buildShuffleCacheKey,
-  getShuffledPageIds,
-  invalidateShuffleIdCache
-} from './shuffleIdCache';
+import { invalidateShuffleIdCache } from './shuffleIdCache';
+import { ensureShuffleSqlFunctions } from './shuffleOrder';
 import { invalidateScoredSearchCache } from './scoredSearchCache';
 import { clearAiResultsCache } from '../ai/aiResultsCache';
 import { ensureDimensionsBackfill, ensureVideoDurationBackfill } from './galleryFilterBackfill';
@@ -107,6 +104,10 @@ function rowToCardRecord(row: CardIndexRow): CardIndexRow & { thumbRelativePath:
   };
 }
 
+function readAiCaptionFromDbRow(row: Record<string, unknown>): string | undefined {
+  return row.ai_caption ? String(row.ai_caption) : undefined;
+}
+
 function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collectionIds: string[]): CardIndexRow {
   return {
     id: String(row.id),
@@ -127,6 +128,7 @@ function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collection
     tagIds,
     collectionIds,
     description: row.description ? String(row.description) : undefined,
+    aiCaption: readAiCaptionFromDbRow(row),
     name: row.name ? String(row.name) : undefined,
     linkUrl: row.link_url ? String(row.link_url) : undefined,
     durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined
@@ -404,9 +406,15 @@ export function getCurrentLibraryRoot(): string | null {
   return currentRoot;
 }
 
+export type ImportMediaOptions = {
+  linkUrl?: string;
+  name?: string;
+};
+
 export async function importMediaFile(
   libraryRoot: string,
-  sourceAbs: string
+  sourceAbs: string,
+  options?: ImportMediaOptions
 ): Promise<{ ok: true; row: ImportedMediaRow } | { ok: false; error: string }> {
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
@@ -480,6 +488,9 @@ export async function importMediaFile(
       }
     }
 
+    const linkUrlTrimmed = options?.linkUrl?.trim();
+    const nameTrimmed = options?.name?.trim();
+
     const cardJson: CardJsonV1 = {
       version: 1,
       id: cardId,
@@ -495,7 +506,9 @@ export async function importMediaFile(
       tagIds: [],
       collectionIds: [],
       ...(phash ? { phash } : {}),
-      ...(durationMs ? { durationMs } : {})
+      ...(durationMs ? { durationMs } : {}),
+      ...(linkUrlTrimmed ? { linkUrl: linkUrlTrimmed } : {}),
+      ...(nameTrimmed ? { name: nameTrimmed } : {})
     };
     await writeCardJson(root, cardJson);
 
@@ -506,8 +519,8 @@ export async function importMediaFile(
     db.prepare(
       `INSERT INTO cards (
         id, type, added_at, format, width, height, file_size, duration_ms, dominant_color, palette_json, phash_json,
-        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, name, link_url
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardId,
       type,
@@ -523,7 +536,9 @@ export async function importMediaFile(
       originalRel,
       thumbSRel,
       thumbMRel,
-      thumbLRel
+      thumbLRel,
+      cardJson.name ?? null,
+      cardJson.linkUrl ?? null
     );
 
     return {
@@ -574,27 +589,12 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
   if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
 
   if (sort.field === 'shuffle') {
-    const whereClause = wh.length ? ` WHERE ${wh.join(' AND ')}` : '';
-    const idSql = `SELECT c.id FROM cards c${whereClause}`;
-    const shuffleKey = buildShuffleCacheKey(whereClause, binds, sort.shuffleSeed ?? 0);
-    const pageIds = getShuffledPageIds(
-      shuffleKey,
-      () =>
-        (db.prepare(idSql).all(...binds) as { id: string }[]).map((r) => String(r.id)),
-      params.offset,
-      params.limit
-    );
-    if (pageIds.length === 0) return [];
-
-    const placeholders = pageIds.map(() => '?').join(',');
-    const rows = db
-      .prepare(`SELECT c.* FROM cards c WHERE c.id IN (${placeholders})`)
-      .all(...pageIds) as Record<string, unknown>[];
-    const byId = new Map(rows.map((r) => [String(r.id), r]));
-    const ordered = pageIds
-      .map((id) => byId.get(id))
-      .filter((r): r is Record<string, unknown> => r != null);
-    return indexCardRowsWithRelations(db, ordered);
+    ensureShuffleSqlFunctions(db);
+    const shuffleSeed = sort.shuffleSeed ?? 0;
+    sql += ' ORDER BY arc_shuffle_key(c.id, ?) ASC LIMIT ? OFFSET ?';
+    binds.push(shuffleSeed, params.limit, params.offset);
+    const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
+    return indexCardRowsWithRelations(db, rows);
   }
 
   sql += ` ${buildGallerySortSql(sort, 'c')} LIMIT ? OFFSET ?`;
@@ -633,6 +633,22 @@ export function countTrashedCards(libraryRoot: string): number {
   const db = openLibraryDb(libraryRoot);
   return (db.prepare('SELECT COUNT(*) AS n FROM cards WHERE COALESCE(is_deleted, 0) = 1').get() as { n: number })
     .n;
+}
+
+/** Карточки (не в корзине), у которых есть хотя бы одна метка из списка. */
+export function countCardsWithAnyTagIds(libraryRoot: string, tagIds: readonly string[]): number {
+  if (tagIds.length === 0) return 0;
+  const db = openLibraryDb(libraryRoot);
+  const placeholders = tagIds.map(() => '?').join(',');
+  const row = db
+    .prepare(
+      `SELECT COUNT(DISTINCT c.id) AS n
+       FROM cards c
+       INNER JOIN card_tags ct ON ct.card_id = c.id
+       WHERE COALESCE(c.is_deleted, 0) = 0 AND ct.tag_id IN (${placeholders})`
+    )
+    .get(...tagIds) as { n: number };
+  return row.n ?? 0;
 }
 
 export async function updateCardInStorage(
@@ -1016,6 +1032,126 @@ export async function saveSystemData(libraryRoot: string, data: ArcSystemV1): Pr
   await writeSystem(libraryRoot, data);
 }
 
+export async function replaceCardOriginalFromFile(
+  libraryRoot: string,
+  cardId: string,
+  sourceAbs: string
+): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const db = await ensureLibraryReady(root);
+  const cardJson = await readCardJson(root, cardId);
+  if (!cardJson) throw new Error('Карточка не найдена');
+  if (cardJson.type !== 'image') throw new Error('Замена исходника поддерживается только для изображений');
+
+  const resolved = path.resolve(sourceAbs);
+  const ext = path.extname(resolved);
+  const dir = cardDirAbs(root, cardId);
+
+  const row = db.prepare('SELECT original_rel FROM cards WHERE id = ?').get(cardId) as
+    | { original_rel: string }
+    | undefined;
+  if (row?.original_rel) {
+    const oldAbs = path.join(root, row.original_rel.replace(/\//g, path.sep));
+    try {
+      await unlink(oldAbs);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const thumbSAbs = path.join(dir, 'thumb_s.webp');
+  const thumbMAbs = path.join(dir, 'thumb_m.webp');
+  const thumbLAbs = path.join(dir, 'thumb_l.webp');
+  for (const thumb of [thumbSAbs, thumbMAbs, thumbLAbs]) {
+    try {
+      await unlink(thumb);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const st = await stat(resolved);
+  const { originalAbs, originalRel } = await copyOriginalToCard(root, cardId, resolved, ext);
+  const thumbRes = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
+
+  const modified = new Date().toISOString();
+  cardJson.format = ext.slice(1).toLowerCase();
+  cardJson.width = thumbRes.width || undefined;
+  cardJson.height = thumbRes.height || undefined;
+  cardJson.fileSize = st.size;
+  cardJson.dateModified = modified;
+  cardJson.originalFileName = path.basename(resolved);
+  if (thumbRes.phash) cardJson.phash = thumbRes.phash;
+  else delete cardJson.phash;
+  if (thumbRes.dominantColorHex) cardJson.dominantColorHex = thumbRes.dominantColorHex;
+
+  await writeCardJson(root, cardJson);
+
+  db.prepare(
+    `UPDATE cards SET format = ?, width = ?, height = ?, file_size = ?, dominant_color = ?, palette_json = ?,
+      phash_json = ?, original_rel = ?, date_modified = ? WHERE id = ?`
+  ).run(
+    cardJson.format ?? null,
+    cardJson.width ?? null,
+    cardJson.height ?? null,
+    cardJson.fileSize ?? null,
+    thumbRes.dominantColorHex,
+    JSON.stringify(thumbRes.palette),
+    thumbRes.phash ? JSON.stringify(thumbRes.phash) : null,
+    originalRel,
+    modified,
+    cardId
+  );
+}
+
+export async function mergeDuplicateCards(
+  libraryRoot: string,
+  primaryId: string,
+  secondaryId: string
+): Promise<void> {
+  if (primaryId === secondaryId) throw new Error('Нельзя объединить карточку с собой');
+  const root = path.resolve(libraryRoot);
+  await ensureLibraryReady(root);
+
+  const primaryJson = await readCardJson(root, primaryId);
+  const secondaryJson = await readCardJson(root, secondaryId);
+  if (!primaryJson || !secondaryJson) throw new Error('Карточка не найдена');
+
+  const tagSet = new Set([...primaryJson.tagIds, ...secondaryJson.tagIds]);
+  const colSet = new Set([...primaryJson.collectionIds, ...secondaryJson.collectionIds]);
+
+  primaryJson.tagIds = [...tagSet];
+  primaryJson.collectionIds = [...colSet];
+
+  if (!primaryJson.name?.trim() && secondaryJson.name?.trim()) {
+    primaryJson.name = secondaryJson.name.trim();
+  }
+  if (!primaryJson.linkUrl?.trim() && secondaryJson.linkUrl?.trim()) {
+    primaryJson.linkUrl = secondaryJson.linkUrl.trim();
+  }
+  if (!primaryJson.description?.trim() && secondaryJson.description?.trim()) {
+    primaryJson.description = secondaryJson.description.trim();
+  }
+
+  const modified = new Date().toISOString();
+  primaryJson.dateModified = modified;
+  await writeCardJson(root, primaryJson);
+
+  const db = openLibraryDb(root);
+  db.prepare('UPDATE cards SET name = ?, link_url = ?, description = ?, date_modified = ? WHERE id = ?').run(
+    primaryJson.name ?? null,
+    primaryJson.linkUrl ?? null,
+    primaryJson.description ?? null,
+    modified,
+    primaryId
+  );
+  syncCardRelations(db, primaryId, primaryJson.tagIds, primaryJson.collectionIds);
+  recomputeTagUsage(db);
+
+  addSkippedDuplicatePair(root, primaryId, secondaryId);
+  await softDeleteCardFromStorage(root, secondaryId);
+}
+
 export function listSkippedDuplicatePairs(libraryRoot: string): [string, string][] {
   const db = openLibraryDb(libraryRoot);
   return db
@@ -1105,4 +1241,4 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
   recomputeTagUsage(db);
 }
 
-export { rowToCardRecord, moveOriginalToCard, cardJsonExistsSync, indexDbPath };
+export { rowToCardRecord, moveOriginalToCard, cardJsonExistsSync, indexDbPath, readAiCaptionFromDbRow };

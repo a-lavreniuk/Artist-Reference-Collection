@@ -73,7 +73,8 @@ Skill для разработки и ревью UI в репозитории **A
 | Сетка карточек | `MasonryGrid`, `GalleryBoard` |
 | Валидация поля | `field-error` + `aria-invalid`, **без** текста под полем |
 
-Детальная карта: [component-map.md](references/component-map.md).
+Детальная карта: [component-map.md](references/component-map.md).  
+Синхронизация Knowledge Base с chrome UI: [kb-chrome-contract.md](references/kb-chrome-contract.md).
 
 ### Паттерны композиции (из Vercel composition-patterns, адаптировано)
 
@@ -160,6 +161,14 @@ Skill для разработки и ревью UI в репозитории **A
 2. Пройти [review-template.md](references/review-template.md)
 3. Опционально: сверить с Web Interface Guidelines (Vercel) — **только** там, где нет ARC rule; findings в формате `file:line — issue`
 4. Generic `frontend-design` (Anthropic) **не** использовать для ARC — есть фиксированная дизайн-система
+
+## Code review (PR / diff)
+
+**UI-часть ревью** — этот skill + [review-template.md](references/review-template.md).
+
+**Полное ревью PR** (main, IPC, storage, perf, Bugbot, Security) — делегировать в [arc-code-review](../arc-code-review/SKILL.md). Не дублировать чеклисты IPC/security/perf здесь.
+
+Триггеры: «code review», «ревью PR», «проверь diff», перед merge.
 
 ## Примеры
 

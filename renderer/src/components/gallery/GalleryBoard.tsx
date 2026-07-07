@@ -24,6 +24,8 @@ type Props = {
   loadingMore?: boolean;
   busy?: boolean;
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
+  /** Меняется при фильтрах / сортировке — перезапускает reveal карточек. */
+  revealResetKey?: string;
 };
 
 export default function GalleryBoard({
@@ -38,7 +40,8 @@ export default function GalleryBoard({
   scrollRootRef,
   loadingMore = false,
   busy = false,
-  mediaTab
+  mediaTab,
+  revealResetKey = ''
 }: Props) {
   const [tierSrcMap, setTierSrcMap] = useState<Record<string, string>>({});
   const [gridSizeVersion, setGridSizeVersion] = useState(0);
@@ -111,6 +114,7 @@ export default function GalleryBoard({
           onOpenCard={onOpenCard}
           onFindSimilar={onFindSimilar}
           onToggleMoodboard={onToggleMoodboard}
+          interfaceTourAnchor={cards[0]?.id === card.id ? 'gallery-first-card' : undefined}
           onContextMenu={
             onCardContextMenu
               ? (event) => {
@@ -123,7 +127,7 @@ export default function GalleryBoard({
         />
       );
     },
-    [cardById, mediaTab, moodboardCardIds, moodboardEnabled, onCardContextMenu, onFindSimilar, onOpenCard, onToggleMoodboard, srcMap]
+    [cardById, cards, mediaTab, moodboardCardIds, moodboardEnabled, onCardContextMenu, onFindSimilar, onOpenCard, onToggleMoodboard, srcMap]
   );
 
   const renderSkeleton = useCallback(
@@ -142,13 +146,14 @@ export default function GalleryBoard({
   );
 
   return (
-    <div ref={measureRef} className="arc-gallery-masonry">
+    <div ref={measureRef} className="arc-gallery-masonry" data-interface-tour-anchor="gallery-grid">
       <MasonryGrid
         items={masonryItems}
         variant={variant}
         scrollRootRef={scrollRootRef}
         gap={MASONRY_GAP_PX}
         layoutEpoch={gridSizeVersion}
+        revealResetKey={revealResetKey}
         loadingMore={loadingMore}
         busy={busy}
         className="arc-gallery-masonry-grid"

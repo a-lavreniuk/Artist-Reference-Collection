@@ -22,6 +22,8 @@ export type CardRecord = {
   tagIds: string[];
   collectionIds: string[];
   description?: string;
+  /** AI-описание после heavy-индексации (JoyCaption). */
+  aiCaption?: string;
   /** Пользовательское имя карточки (не имя файла). */
   name?: string;
   /** Внешняя ссылка, связанная с карточкой. */

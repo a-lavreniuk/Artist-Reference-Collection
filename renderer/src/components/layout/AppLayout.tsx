@@ -8,9 +8,12 @@ import PendingRestoreModal from './PendingRestoreModal';
 import LibraryRelocatedHost from './LibraryRelocatedHost';
 import ImportHost from '../import/ImportHost';
 import AutoImportHost from '../import/AutoImportHost';
+import ExtensionImportHost from '../import/ExtensionImportHost';
+import McpCatalogSyncHost from '../import/McpCatalogSyncHost';
 import NotificationHost from '../notifications/NotificationHost';
 import ScreenshotHost from '../screenshot/ScreenshotHost';
 import BugReportWidget from '../bug-report/BugReportWidget';
+import InterfaceTourHost from '../onboarding/InterfaceTourHost';
 import { GalleryFilterProvider } from '../gallery/GalleryFilterContext';
 import { GalleryMetaProvider } from '../../context/GalleryMetaContext';
 import { initAppPreferencesRuntime } from '../../services/appPreferencesRuntime';
@@ -86,6 +89,8 @@ export default function AppLayout() {
     <NotificationHost>
     <ScreenshotHost>
     <ImportHost>
+      <ExtensionImportHost>
+      <McpCatalogSyncHost>
       <AutoImportHost>
       <main className="arc-navbar-shell">
         <MaintenanceBanner />
@@ -98,8 +103,11 @@ export default function AppLayout() {
         <PendingRestoreModal />
         <LibraryRelocatedHost />
         <BugReportWidget />
+        <InterfaceTourHost />
       </main>
       </AutoImportHost>
+      </McpCatalogSyncHost>
+      </ExtensionImportHost>
     </ImportHost>
     </ScreenshotHost>
     </NotificationHost>

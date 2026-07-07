@@ -1,0 +1,138 @@
+/* Hover save button — Figma 1797:12202 / 12226, 1804:78, 1806:3440, 1806:3460, 1806:3469
+   Loaded inside Shadow DOM to avoid host-page CSS overrides. */
+
+:host {
+  all: initial;
+}
+
+.arc-ext-save-anchor {
+  position: fixed;
+  z-index: 2147483646;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.arc-ext-save-anchor.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.arc-ext-hover-btn {
+  --arc-ext-btn-size: 32px;
+  --arc-ext-icon-size: 16px;
+  --brand-50: #ffefea;
+  --brand-250: #ffad94;
+  --brand-550: #e75328;
+  --brand-600: #d04d26;
+  --green-650: #108967;
+  --green-950: #093029;
+  --red-450: #f25659;
+  --red-950: #3f171d;
+  box-sizing: border-box;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  width: var(--arc-ext-btn-size);
+  height: var(--arc-ext-btn-size);
+  border: none;
+  border-radius: 8px;
+  display: block;
+  cursor: pointer;
+  background: var(--brand-550);
+  color: var(--brand-250);
+  font: 0/0 sans-serif;
+  line-height: 0;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.arc-ext-hover-btn:focus-visible {
+  outline: 2px solid var(--brand-250);
+  outline-offset: 2px;
+}
+
+/* Default hover — Figma 1797:12226 */
+.arc-ext-hover-btn--idle:hover:not(:disabled) {
+  background: var(--brand-600);
+  color: var(--brand-50);
+}
+
+.arc-ext-hover-btn__glyph,
+.arc-ext-hover-btn__loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--arc-ext-icon-size);
+  height: var(--arc-ext-icon-size);
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.arc-ext-hover-btn__glyph {
+  display: block;
+}
+
+.arc-ext-hover-btn__glyph svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* Spinner — same as Loader (arc-loader-inline), Figma 1806:3460 / 3469 */
+.arc-ext-hover-btn__loader {
+  display: none;
+  border: 1px solid var(--brand-250);
+  border-top-color: var(--brand-50);
+  border-radius: 50%;
+  animation: arc-ext-spin 0.8s linear infinite;
+  box-sizing: border-box;
+}
+
+.arc-ext-hover-btn--loading,
+.arc-ext-hover-btn--queue {
+  background: var(--brand-600);
+  color: var(--brand-50);
+  cursor: wait;
+}
+
+.arc-ext-hover-btn--loading .arc-ext-hover-btn__glyph,
+.arc-ext-hover-btn--queue .arc-ext-hover-btn__glyph {
+  display: none;
+}
+
+.arc-ext-hover-btn--loading .arc-ext-hover-btn__loader,
+.arc-ext-hover-btn--queue .arc-ext-hover-btn__loader {
+  display: block;
+}
+
+/* Success — Figma 1804:78 */
+.arc-ext-hover-btn--success {
+  background: var(--green-950);
+  color: var(--green-650);
+  cursor: default;
+}
+
+/* Error / danger — Figma 1806:3440 */
+.arc-ext-hover-btn--error {
+  background: var(--red-950);
+  color: var(--red-450);
+  cursor: default;
+}
+
+.arc-ext-hover-btn:disabled {
+  cursor: wait;
+}
+
+@keyframes arc-ext-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}

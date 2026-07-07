@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Save to ARC</title>
+    <link rel="stylesheet" href="arc-modal.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body class="arc-ext-shell">
+    <article class="arc-ext-modal arc-ext-modal--popup" role="dialog" aria-labelledby="arc-modal-title">
+      <header class="arc-ext-modal__header">
+        <div class="arc-ext-modal__title-block">
+          <h1 id="arc-modal-title" class="arc-ext-modal__title">Save to ARC</h1>
+          <p id="arc-modal-subtitle" class="arc-ext-modal__subtitle"></p>
+        </div>
+        <img class="arc-ext-modal__logo" src="icons/icon-32.png" alt="" width="32" height="32" />
+      </header>
+      <div class="arc-ext-modal__body">
+        <div class="arc-ext-modal__slot">
+          <p id="arc-slot-1" class="arc-ext-modal__slot-text"></p>
+        </div>
+        <div class="arc-ext-modal__slot" id="arc-slot-2-wrap">
+          <p id="arc-slot-2" class="arc-ext-modal__slot-text"></p>
+        </div>
+      </div>
+      <footer class="arc-ext-modal__footer arc-ext-modal__footer--split" id="arc-modal-footer">
+        <button type="button" id="arc-website-btn" class="arc-ext-btn arc-ext-btn--secondary"></button>
+        <div class="arc-ext-modal__footer-right">
+          <button type="button" id="arc-close-btn" class="arc-ext-btn arc-ext-btn--outline"></button>
+          <button type="button" id="arc-open-btn" class="arc-ext-btn arc-ext-btn--brand"></button>
+        </div>
+      </footer>
+    </article>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

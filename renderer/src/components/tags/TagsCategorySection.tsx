@@ -84,7 +84,7 @@ export default function TagsCategorySection({
   return (
     <section ref={rootRef} className="arc-tags-category-section" aria-labelledby={`arc-tags-cat-${category.id}`}>
       <div className="arc-tags-category-section__header">
-        <h2 className="arc-tags-category-section__title" id={`arc-tags-cat-${category.id}`}>
+        <h2 className="h2 arc-tags-category-section__title" id={`arc-tags-cat-${category.id}`}>
           <button
             type="button"
             className="arc-tags-category-section__name-btn"

@@ -1,0 +1,47 @@
+name: Build macOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CSC_IDENTITY_AUTO_DISCOVERY: false
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install native build dependencies
+        run: brew install cmake
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Stamp release notes build date
+        run: node scripts/stamp-release-notes.mjs
+
+      - name: Build macOS installers
+        run: npm run dist:mac
+
+      - name: List build output
+        run: ls -la dist-electron/
+
+      - name: Upload DMG artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: arc-macos-${{ github.run_number }}
+          path: dist-electron/*.dmg
+          if-no-files-found: error
+          retention-days: 30

@@ -1,29 +1,10 @@
-import { app, BrowserWindow, Menu, Tray } from 'electron';
+import { app, Menu, Tray } from 'electron';
 
-import { setAppQuitting } from './windowChrome';
+import { setAppQuitting, showMainWindowFromUserAction } from './windowChrome';
 
 import { loadAppIconImage } from './appIcon';
-import { applySessionWindowSize, getSessionWindowSize } from './windowSize';
 
 let tray: Tray | null = null;
-
-function resolveMainWindow(): BrowserWindow | null {
-  const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-  return win && !win.isDestroyed() ? win : null;
-}
-
-export function showMainWindow(): void {
-  const win = resolveMainWindow();
-  if (!win) return;
-
-  if (getSessionWindowSize()) {
-    applySessionWindowSize(win);
-  }
-
-  if (!win.isVisible()) win.show();
-  if (win.isMinimized()) win.restore();
-  win.focus();
-}
 
 export function createAppTray(): Tray {
   const trayIcon = loadAppIconImage(16);
@@ -34,7 +15,7 @@ export function createAppTray(): Tray {
     {
       label: 'Открыть ARC',
       click: () => {
-        showMainWindow();
+        showMainWindowFromUserAction();
       }
     },
     { type: 'separator' },
@@ -50,11 +31,11 @@ export function createAppTray(): Tray {
   tray.setContextMenu(contextMenu);
 
   tray.on('click', () => {
-    showMainWindow();
+    showMainWindowFromUserAction();
   });
 
   tray.on('double-click', () => {
-    showMainWindow();
+    showMainWindowFromUserAction();
   });
 
   return tray;

@@ -1,6 +1,10 @@
 appId: com.arc.artist-reference-collection
 productName: ARC
 copyright: Copyright © ARC
+protocols:
+  - name: ARC
+    schemes:
+      - arc
 directories:
   output: dist-electron
   buildResources: build
@@ -10,6 +14,9 @@ files:
   - renderer/dist/**/*
   - package.json
   - node_modules/**/*
+  - "!**/*.gguf"
+  - "!**/models/transformers/**"
+  - "!**/models/llama/**"
 asarUnpack:
   - "**/node_modules/ffmpeg-static/**"
   - "**/node_modules/ffprobe-static/**"
@@ -25,6 +32,16 @@ extraResources:
     to: icons/icon-16.png
   - from: build/icons/icon.ico
     to: icons/icon.ico
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  icon: build/icons/icon-512.png
+  category: public.app-category.graphics-design
+  hardenedRuntime: false
+  gatekeeperAssess: false
 win:
   target:
     - target: nsis
@@ -37,6 +54,8 @@ nsis:
   perMachine: false
   runAfterFinish: true
   differentialPackage: true
+  deleteAppDataOnUninstall: true
+  include: uninstaller.nsh
 publish:
   provider: github
   owner: a-lavreniuk

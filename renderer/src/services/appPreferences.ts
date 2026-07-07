@@ -1,3 +1,6 @@
+import type { McpToolsEnabledMap } from '@arc-main-shared/mcpToolCatalog';
+import { defaultMcpToolsEnabled, sanitizeMcpToolsEnabled } from '@arc-main-shared/mcpToolCatalog';
+
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
@@ -10,9 +13,18 @@ export type NotificationPrefKey =
   | 'notifyAutoImport'
   | 'notifyFilesAdded';
 
+export type OnboardingSetupStep = 0 | 1 | 2;
+
+export type OnboardingTourStep = number;
+
 export type AppPreferencesV1 = {
   version: 1;
+  onboardingSetupCompleted: boolean;
+  onboardingSetupStep: OnboardingSetupStep;
+  onboardingTourCompleted: boolean;
+  onboardingTourStep: OnboardingTourStep;
   launchAtLogin: boolean;
+  launchAtLoginHidden: boolean;
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
   deleteCardsUseTrash: boolean;
@@ -29,6 +41,11 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  importApiEnabled: boolean;
+  importApiPrefixEnabled: boolean;
+  importApiPrefixText: string;
+  mcpServerEnabled: boolean;
+  mcpToolsEnabled: McpToolsEnabledMap;
   aiSemanticSearchEnabled: boolean;
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -41,10 +58,26 @@ export type AppPreferencesV1 = {
   uiTheme: UiThemePreference;
 };
 
+function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
+  if (raw === 1 || raw === 2) return raw;
+  return 0;
+}
+
+function sanitizeOnboardingTourStep(raw: unknown, maxStep = 16): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0;
+  const n = Math.round(raw);
+  return Math.max(0, Math.min(maxStep, n));
+}
+
 export function defaultAppPreferences(): AppPreferencesV1 {
   return {
     version: 1,
+    onboardingSetupCompleted: false,
+    onboardingSetupStep: 0,
+    onboardingTourCompleted: false,
+    onboardingTourStep: 0,
     launchAtLogin: false,
+    launchAtLoginHidden: false,
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
     deleteCardsUseTrash: true,
@@ -61,6 +94,11 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     autoImportEnabled: false,
     autoImportFolderPath: null,
     autoImportSourceFilesAction: 'ask',
+    importApiEnabled: true,
+    importApiPrefixEnabled: false,
+    importApiPrefixText: '',
+    mcpServerEnabled: false,
+    mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
@@ -118,7 +156,26 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
       raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
     ),
-    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme)
+    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme),
+    onboardingSetupCompleted:
+      typeof raw.onboardingSetupCompleted === 'boolean'
+        ? raw.onboardingSetupCompleted
+        : d.onboardingSetupCompleted,
+    onboardingSetupStep: sanitizeOnboardingSetupStep(raw.onboardingSetupStep ?? d.onboardingSetupStep),
+    onboardingTourCompleted:
+      typeof raw.onboardingTourCompleted === 'boolean'
+        ? raw.onboardingTourCompleted
+        : d.onboardingTourCompleted,
+    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep),
+    importApiEnabled:
+      typeof raw.importApiEnabled === 'boolean' ? raw.importApiEnabled : d.importApiEnabled,
+    importApiPrefixEnabled:
+      typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
+    importApiPrefixText:
+      typeof raw.importApiPrefixText === 'string' ? raw.importApiPrefixText.trim().slice(0, 64) : d.importApiPrefixText,
+    mcpServerEnabled:
+      typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
+    mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled)
   };
 }
 

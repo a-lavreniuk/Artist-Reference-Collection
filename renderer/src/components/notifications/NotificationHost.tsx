@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DemoAlert, { type DemoAlertVariant } from '../layout/DemoAlert';
 import type { NotificationPrefKey } from '../../services/appPreferences';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
@@ -9,6 +10,7 @@ type ActiveAlert = {
   variant: DemoAlertVariant;
   autoDismissMs?: number;
   withSound?: boolean;
+  navigateTo?: string;
 };
 
 function isPrefEnabled(prefKey: NotificationPrefKey | undefined, skipPrefCheck: boolean | undefined): boolean {
@@ -19,6 +21,7 @@ function isPrefEnabled(prefKey: NotificationPrefKey | undefined, skipPrefCheck: 
 }
 
 export default function NotificationHost({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
   const [active, setActive] = useState<ActiveAlert | null>(null);
 
   const dismiss = useCallback(() => setActive(null), []);
@@ -33,7 +36,8 @@ export default function NotificationHost({ children }: { children: React.ReactNo
         message: detail.message,
         variant: detail.variant ?? 'info',
         autoDismissMs: detail.autoDismissMs,
-        withSound: detail.withSound
+        withSound: detail.withSound,
+        navigateTo: detail.navigateTo
       });
     };
 
@@ -47,14 +51,22 @@ export default function NotificationHost({ children }: { children: React.ReactNo
       window.dispatchEvent(
         new CustomEvent(APP_NOTIFICATION_EVENT, {
           detail: {
-            message: 'Найдены дубликаты файлов',
+            message: 'Найдены дубликаты — нажмите, чтобы просмотреть',
             variant: 'warning',
-            prefKey: 'notifyDuplicatesFound'
+            prefKey: 'notifyDuplicatesFound',
+            autoDismissMs: 0,
+            navigateTo: '/duplicates?from=alert'
           } satisfies AppNotificationPayload
         })
       );
     });
   }, []);
+
+  const onActivate = useCallback(() => {
+    if (!active?.navigateTo) return;
+    navigate(active.navigateTo);
+    dismiss();
+  }, [active?.navigateTo, dismiss, navigate]);
 
   return (
     <>
@@ -66,6 +78,7 @@ export default function NotificationHost({ children }: { children: React.ReactNo
           autoDismissMs={active.autoDismissMs}
           withSound={active.withSound}
           onClose={dismiss}
+          onActivate={active.navigateTo ? onActivate : undefined}
         />
       ) : null}
     </>

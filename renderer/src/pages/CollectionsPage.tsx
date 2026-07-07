@@ -15,6 +15,7 @@ import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
+import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
 import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
 import { useCollectionContextMenu } from '../components/collections/useCollectionContextMenu';
 import CollectionSettingsModal, {
@@ -279,8 +280,17 @@ export default function CollectionsPage() {
     [activeCollectionId, loadMeta, navigate]
   );
 
+  const resolveCollection = useCallback(
+    (id: string) => {
+      const collection = collections.find((item) => item.id === id);
+      return collection ? { id: collection.id, name: collection.name } : null;
+    },
+    [collections]
+  );
+
   const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
     useCollectionContextMenu({
+      resolveCollection,
       onOpen: (id) => navigate(`/collections/${id}`),
       onEdit: openEditCollection,
       onDelete: handleDeleteCollection
@@ -318,7 +328,7 @@ export default function CollectionsPage() {
   }
 
   if (!collectionsMetaLoaded && !routeCollectionId) {
-    return <div ref={pageRef} className="arc-collections-outlet arc-collections-page" aria-busy="true" />;
+    return <div ref={pageRef} className="arc-collections-outlet arc-collections-page" aria-busy="true" data-interface-tour-anchor="collections-page" />;
   }
 
   if (collectionsMetaLoaded && collections.length > 0 && !routeCollectionId) {
@@ -331,7 +341,7 @@ export default function CollectionsPage() {
 
   if (collectionsMetaLoaded && collections.length === 0) {
     return (
-      <div ref={pageRef} className="arc-collections-outlet arc-collections-page arc-collections-page--solo-empty">
+      <div ref={pageRef} className="arc-collections-outlet arc-collections-page arc-collections-page--solo-empty" data-interface-tour-anchor="collections-page">
         <EmptyState
           {...EMPTY_STATE_COPY.collectionsNone}
           elevation="sunken"
@@ -362,6 +372,7 @@ export default function CollectionsPage() {
     <div
       ref={pageRef}
       className="arc-collections-outlet arc-collections-page"
+      data-interface-tour-anchor="collections-page"
       style={{ ['--arc-collections-sidebar-w' as string]: `${sidebarWidth}px` }}
     >
       <div className="arc-collections-page-main-row">
@@ -416,6 +427,7 @@ export default function CollectionsPage() {
                   scrollRootRef={scrollRootRef}
                   loadingMore={feed.loading && feed.hasMore}
                   busy={feed.booting || feed.loading || feed.shuffleReloading}
+                  revealResetKey={galleryRevealResetKey(scopedFeedQuery)}
                   onOpenCard={openCard}
                   moodboardCardIds={moodboardCardIds}
                   onCardContextMenu={onCardContextMenu}

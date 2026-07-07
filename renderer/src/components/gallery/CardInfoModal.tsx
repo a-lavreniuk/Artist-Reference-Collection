@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
+import { ArcAnimatedModalHost } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 type Props = {
@@ -70,44 +71,43 @@ export default function CardInfoModal({ card, onClose }: Props) {
   ];
 
   return (
-    <div
-      ref={hostRef}
-      className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-      aria-hidden="false"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <ArcAnimatedModalHost
+      onClose={onClose}
+      hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
     >
-      <section
-        className="arc-modal arc-card-info-modal"
-        data-elevation="raised"
-        data-input-size="m"
-        data-btn-size="m"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="arcCardInfoTitle"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="arc-modal__header arc-modal__header--title">
-          <h3 className="arc-modal__title" id="arcCardInfoTitle">
-            Информация о файле
-          </h3>
-          <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
-            <span className="tab-icon arc-icon-close" aria-hidden="true" />
-          </button>
-        </header>
-        <div className="arc-modal__body">
-          <div className="arc-modal__slot">
-            <InfoRows rows={fileRows} />
+      {({ requestClose }) => (
+        <section
+          ref={hostRef}
+          className="arc-modal arc-card-info-modal"
+          data-elevation="raised"
+          data-input-size="m"
+          data-btn-size="m"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="arcCardInfoTitle"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <header className="arc-modal__header arc-modal__header--title">
+            <h3 className="arc-modal__title" id="arcCardInfoTitle">
+              Информация о файле
+            </h3>
+            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
+              <span className="tab-icon arc-icon-close" aria-hidden="true" />
+            </button>
+          </header>
+          <div className="arc-modal__body">
+            <div className="arc-modal__slot">
+              <InfoRows rows={fileRows} />
+            </div>
+            <div className="arc-modal__slot">
+              <hr className="arc-modal__separator" />
+            </div>
+            <div className="arc-modal__slot">
+              <InfoRows rows={dateRows} />
+            </div>
           </div>
-          <div className="arc-modal__slot">
-            <hr className="arc-modal__separator" />
-          </div>
-          <div className="arc-modal__slot">
-            <InfoRows rows={dateRows} />
-          </div>
-        </div>
-      </section>
-    </div>
+        </section>
+      )}
+    </ArcAnimatedModalHost>
   );
 }

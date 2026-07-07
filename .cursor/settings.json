@@ -2,6 +2,9 @@
   "plugins": {
     "figma": {
       "enabled": true
+    },
+    "gsap-skills": {
+      "enabled": true
     }
   }
 }

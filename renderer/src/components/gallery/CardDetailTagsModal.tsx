@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ArcAnimatedModalHost } from '../../motion';
 import { ContextMenuSeparator } from '../context-menu';
 import TagChipToggleWithTooltip from '../tags/TagChipToggleWithTooltip';
 import TagSettingsModal, { type TagSettingsModalState } from '../tags/TagSettingsModal';
 import { Tooltip } from '../tooltip/Tooltip';
 import {
   ARC_CATEGORIES_CHANGED_EVENT,
-  ARC_TAGS_CHANGED_EVENT,
   addTag,
   deleteTag,
   getAllCategories,
@@ -64,6 +64,19 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tagsByCat, setTagsByCat] = useState<Record<string, TagRecord[]>>({});
   const [tagModal, setTagModal] = useState<TagSettingsModalState | null>(null);
+  const [localSelectedTagIds, setLocalSelectedTagIds] = useState(selectedTagIds);
+
+  useEffect(() => {
+    setLocalSelectedTagIds(selectedTagIds);
+  }, [selectedTagIds]);
+
+  const handleToggleTag = (tagId: string) => {
+    setLocalSelectedTagIds((prev) => {
+      const has = prev.includes(tagId);
+      return has ? prev.filter((id) => id !== tagId) : [...prev, tagId];
+    });
+    void onToggleTag(tagId);
+  };
 
   const reloadCatalog = async () => {
     const cats = await getAllCategories();
@@ -78,24 +91,12 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
 
   useEffect(() => {
     void reloadCatalog();
-    const onCatalog = () => void reloadCatalog();
-    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCatalog);
-    window.addEventListener(ARC_TAGS_CHANGED_EVENT, onCatalog);
+    const onCategoriesChanged = () => void reloadCatalog();
+    window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCategoriesChanged);
     return () => {
-      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCatalog);
-      window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onCatalog);
+      window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCategoriesChanged);
     };
   }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || tagModal) return;
-      event.stopPropagation();
-      onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, tagModal]);
 
   const searchQ = normalizeSearchQuery(tagSearch);
 
@@ -123,24 +124,25 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [categories, selectedTagIds, tagSearch, selectedCategoryId, tagGroups, tagModal, sidebarCategories]);
+  }, [categories, localSelectedTagIds, tagSearch, selectedCategoryId, tagGroups, tagModal, sidebarCategories]);
 
   const picker = (
-    <div
-      ref={hostRef}
-      className="arc-add-tags-picker-host arc-modal-host--card-detail-nested"
-      aria-hidden="false"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <ArcAnimatedModalHost
+      onClose={onClose}
+      closeDisabled={tagModal != null}
+      className="arc-add-tags-picker-host"
+      hostClassName="arc-modal-host--card-detail-nested"
     >
-      <div
-        className="arc-add-tags-picker"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Добавить метки"
-        onClick={(e) => e.stopPropagation()}
-      >
+      {() => (
+        <>
+          <div
+            ref={hostRef}
+            className="arc-add-tags-picker"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Добавить метки"
+            onClick={(e) => e.stopPropagation()}
+          >
         <aside
           className="arc-add-tags-picker__sidebar context-menu panel elevation-raised context-menu--static arc-ui-kit-scope"
           data-elevation="raised"
@@ -214,7 +216,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
           <div className="arc-add-tags-picker__tags-scroll">
             {showEmptyCreate ? (
               <div className="arc-add-tags-picker__empty arc-add-tags-picker__group-inset">
-                <p className="typo-p-m arc-add-tags-picker__empty-text">Нет совпадений по запросу.</p>
+                <p className="text-m arc-add-tags-picker__empty-text">Нет совпадений по запросу.</p>
                 <button type="button" className="btn btn-outline btn-ds" onClick={openCreateFromSearch}>
                   <span className="btn-ds__value">Создать метку</span>
                 </button>
@@ -234,8 +236,8 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                         key={t.id}
                         tag={t}
                         categoryColorHex={cat.colorHex}
-                        selected={selectedTagIds.includes(t.id)}
-                        onToggle={() => void onToggleTag(t.id)}
+                        selected={localSelectedTagIds.includes(t.id)}
+                        onToggle={() => handleToggleTag(t.id)}
                       />
                     ))}
                     <div className="arc-ui-kit-scope" data-elevation="sunken" data-typo-tone="white" data-btn-size="s">
@@ -257,40 +259,42 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
             )}
           </div>
         </div>
-      </div>
+          </div>
 
-      {tagModal ? (
-        <TagSettingsModal
-          state={tagModal}
-          categories={categories}
-          hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
-          onClose={() => setTagModal(null)}
-          onCreate={async (payload) => {
-            const created = await addTag(payload.categoryId, payload.name, {
-              description: payload.description,
-              tooltipImageDataUrl: payload.tooltipImageDataUrl
-            });
-            if (!selectedTagIds.includes(created.id)) {
-              await onToggleTag(created.id);
-            }
-            await reloadCatalog();
-          }}
-          onSave={async (payload) => {
-            await updateTag(payload.tagId, {
-              name: payload.name,
-              categoryId: payload.categoryId,
-              description: payload.description,
-              tooltipImageDataUrl: payload.tooltipImageDataUrl
-            });
-            await reloadCatalog();
-          }}
-          onDelete={async (tagId) => {
-            await deleteTag(tagId);
-            await reloadCatalog();
-          }}
-        />
-      ) : null}
-    </div>
+          {tagModal ? (
+            <TagSettingsModal
+              state={tagModal}
+              categories={categories}
+              hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
+              onClose={() => setTagModal(null)}
+              onCreate={async (payload) => {
+                const created = await addTag(payload.categoryId, payload.name, {
+                  description: payload.description,
+                  tooltipImageDataUrl: payload.tooltipImageDataUrl
+                });
+                if (!localSelectedTagIds.includes(created.id)) {
+                  handleToggleTag(created.id);
+                }
+                await reloadCatalog();
+              }}
+              onSave={async (payload) => {
+                await updateTag(payload.tagId, {
+                  name: payload.name,
+                  categoryId: payload.categoryId,
+                  description: payload.description,
+                  tooltipImageDataUrl: payload.tooltipImageDataUrl
+                });
+                await reloadCatalog();
+              }}
+              onDelete={async (tagId) => {
+                await deleteTag(tagId);
+                await reloadCatalog();
+              }}
+            />
+          ) : null}
+        </>
+      )}
+    </ArcAnimatedModalHost>
   );
 
   return createPortal(picker, document.body);

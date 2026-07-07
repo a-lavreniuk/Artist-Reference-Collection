@@ -53,7 +53,8 @@ function tensorToVector(tensor: TensorLike): number[] {
 async function loadClipEmbedders(
   tier: ModelTier,
   hfId: string,
-  modelsDir: string
+  modelsDir: string,
+  options: { allowRemote: boolean }
 ): Promise<{ modelId: string; embedImage: EmbedFn; embedText: EmbedFn }> {
   const entry = MODEL_CATALOG[tier];
   const transformers = await import('@xenova/transformers');
@@ -61,27 +62,30 @@ async function loadClipEmbedders(
 
   env.cacheDir = path.join(modelsDir, 'transformers');
   env.allowLocalModels = true;
+  env.allowRemoteModels = options.allowRemote;
   env.useBrowserCache = false;
 
   downloadPipelineStep = 0;
   const progressCallback = (progress: { progress?: number }) => {
-    if (downloadAborted || downloadPaused) return;
+    if (!options.allowRemote || downloadAborted || downloadPaused) return;
     if (typeof progress.progress !== 'number') return;
     reportDownloadProgress(tier, normalizeDownloadPercent(progress.progress), downloadPipelineStep);
   };
 
-  const imagePipe = await pipeline('image-feature-extraction', hfId, {
-    progress_callback: progressCallback,
-    quantized: true
-  });
+  const localOnly = !options.allowRemote;
+  const modelOptions = {
+    quantized: true as const,
+    ...(localOnly ? { local_files_only: true as const } : { progress_callback: progressCallback })
+  };
+
+  const imagePipe = await pipeline('image-feature-extraction', hfId, modelOptions);
 
   downloadPipelineStep = 1;
-  const tokenizer = await AutoTokenizer.from_pretrained(hfId, { progress_callback: progressCallback });
-  const textModel = await CLIPTextModelWithProjection.from_pretrained(hfId, {
-    quantized: true,
-    progress_callback: progressCallback
-  });
-  post({ type: 'download-progress', tier, percent: 100 });
+  const tokenizer = await AutoTokenizer.from_pretrained(hfId, modelOptions);
+  const textModel = await CLIPTextModelWithProjection.from_pretrained(hfId, modelOptions);
+  if (options.allowRemote) {
+    post({ type: 'download-progress', tier, percent: 100 });
+  }
 
   return {
     modelId: entry.id,
@@ -118,7 +122,7 @@ async function handleInit(req: Extract<WorkerRequest, { type: 'init' }>): Promis
     return;
   }
 
-  const loaded = await loadClipEmbedders(req.tier, entry.hfId, req.modelsDir);
+  const loaded = await loadClipEmbedders(req.tier, entry.hfId, req.modelsDir, { allowRemote: false });
   activeTier = req.tier;
   activeModelId = loaded.modelId;
   embedImage = loaded.embedImage;
@@ -137,16 +141,17 @@ async function handleDownload(req: Extract<WorkerRequest, { type: 'download-mode
       });
       return;
     }
-    await handleInit({
-      type: 'init',
-      tier: req.tier,
-      modelsDir: req.modelsDir,
-      resources: req.resources
+    const loaded = await loadClipEmbedders(req.tier, MODEL_CATALOG[req.tier].hfId, req.modelsDir, {
+      allowRemote: true
     });
+    activeTier = req.tier;
+    activeModelId = loaded.modelId;
+    embedImage = loaded.embedImage;
+    embedText = loaded.embedText;
     post({
       type: 'download-complete',
       tier: req.tier,
-      modelId: MODEL_CATALOG[req.tier].id
+      modelId: loaded.modelId
     });
   } catch (err) {
     if (downloadAborted) return;

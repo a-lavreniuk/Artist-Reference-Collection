@@ -46,6 +46,7 @@ import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 import { EmptyState } from '../components/empty-state';
 import { useImportContext } from '../components/import/ImportContext';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
+import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
 import { resolveMainTab } from '../components/layout/navbarLayout';
 import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
 import { resolveGalleryCardContextMenuScope } from '../components/gallery/buildCardContextMenuRows';
@@ -185,8 +186,17 @@ export default function GalleryPage() {
     [collectionStripItems]
   );
 
+  const resolveStripCollection = useCallback(
+    (id: string) => {
+      const collection = collectionStripItems.find((item) => item.collection.id === id)?.collection;
+      return collection ? { id: collection.id, name: collection.name } : null;
+    },
+    [collectionStripItems]
+  );
+
   const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
     useCollectionContextMenu({
+      resolveCollection: resolveStripCollection,
       onOpen: (id) => navigate(`/collections/${id}`),
       onEdit: openEditStripCollection,
       onDelete: async (id) => {
@@ -286,7 +296,7 @@ export default function GalleryPage() {
 
   return (
 
-    <div className="arc-gallery-page">
+    <div className="arc-gallery-page" data-interface-tour-anchor="gallery-page">
 
       {booting && !isRemoteSearchFeed && !shuffleReloading ? (
 
@@ -329,6 +339,7 @@ export default function GalleryPage() {
             loadingMore={loading && hasMore}
 
             busy={(booting && !isRemoteSearchFeed && !shuffleReloading) || loading || shuffleReloading}
+            revealResetKey={galleryRevealResetKey(feedQuery)}
 
             onOpenCard={openCard}
 

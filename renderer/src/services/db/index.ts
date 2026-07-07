@@ -21,7 +21,7 @@ export {
   notifyTagsChanged
 } from './events';
 
-export { invalidateLibraryCache, readTagsUnified } from './backend';
+export { invalidateLibraryCache, invalidateTagsCache, readTagsUnified } from './backend';
 
 export {
   getAllCategories,
@@ -85,6 +85,8 @@ export {
   emptyTrash,
   deleteCard
 } from './cards';
+
+export { LIST_CARDS_PAGE_SIZE, listAllCardsPaginated } from './listAllCardsPaginated';
 
 export {
   isLibraryConfigured,

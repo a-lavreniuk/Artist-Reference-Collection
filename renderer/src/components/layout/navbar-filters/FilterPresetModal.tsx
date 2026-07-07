@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import ConfirmDeletePresetModal from '../ConfirmDeletePresetModal';
+import { ArcAnimatedModalHost } from '../../../motion';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
 
 type BaseProps = {
@@ -42,14 +43,6 @@ export default function FilterPresetModal(props: Props) {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
   }, [name, busy, emptySubmitted, deleteConfirmOpen]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !deleteConfirmOpen) onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, deleteConfirmOpen]);
-
   const handleSubmit = async () => {
     if (busy) return;
     if (!trimmed) {
@@ -68,28 +61,24 @@ export default function FilterPresetModal(props: Props) {
 
   return (
     <>
-      <div
-        ref={hostRef}
-        className="arc-modal-host arc-navbar-no-drag"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-      >
-        <section
-          className="arc-modal"
-          data-elevation="raised"
-          data-input-size="m"
-          data-btn-size="s"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="arcFilterPresetTitle"
-          onClick={(e) => e.stopPropagation()}
-        >
+      <ArcAnimatedModalHost onClose={onClose} hostClassName="arc-navbar-no-drag">
+        {({ requestClose }) => (
+          <section
+            ref={hostRef}
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="m"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcFilterPresetTitle"
+            onClick={(e) => e.stopPropagation()}
+          >
           <header className="arc-modal__header arc-modal__header--title">
             <h2 id="arcFilterPresetTitle" className="arc-modal__title">
               {title}
             </h2>
-            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={onClose}>
+            <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
               <span className="tab-icon arc-icon-close" aria-hidden="true" />
             </button>
           </header>
@@ -125,7 +114,7 @@ export default function FilterPresetModal(props: Props) {
                 <span className="btn-ds__value">Удалить</span>
               </button>
               <div className="arc-modal__footer-right">
-                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={busy}>
+                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose} disabled={busy}>
                   <span className="btn-ds__value">Отмена</span>
                 </button>
                 <button
@@ -140,7 +129,7 @@ export default function FilterPresetModal(props: Props) {
             </footer>
           ) : (
             <footer className="arc-modal__footer arc-modal__footer--actions-2">
-              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onClose} disabled={busy}>
+              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose} disabled={busy}>
                 <span className="btn-ds__value">Отмена</span>
               </button>
               <button
@@ -153,8 +142,9 @@ export default function FilterPresetModal(props: Props) {
               </button>
             </footer>
           )}
-        </section>
-      </div>
+          </section>
+        )}
+      </ArcAnimatedModalHost>
 
       {deleteConfirmOpen && isEdit ? (
         <ConfirmDeletePresetModal

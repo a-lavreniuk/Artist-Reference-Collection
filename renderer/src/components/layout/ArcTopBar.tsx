@@ -2,13 +2,16 @@ import { useLayoutEffect, useRef } from 'react';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { useArcHistoryNav } from './useArcHistoryNav';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
+import { useChromeTitle } from '../../hooks/useChromeTitle';
+
 export default function ArcTopBar() {
   const ref = useRef<HTMLElement>(null);
   const { canGoBack, canGoForward, goBack, goForward } = useArcHistoryNav();
+  const chromeTitle = useChromeTitle();
 
   useLayoutEffect(() => {
     if (ref.current) void hydrateArcNavbarIcons(ref.current);
-  }, [canGoBack, canGoForward]);
+  }, [canGoBack, canGoForward, chromeTitle]);
 
   const minimize = () => {
     void window.arc?.windowMinimizeToTray?.();
@@ -53,6 +56,9 @@ export default function ArcTopBar() {
             aria-hidden="true"
           />
         </button>
+        <p className="arc-topbar__title text-s" title={chromeTitle}>
+          {chromeTitle}
+        </p>
       </div>
 
       <div className="arc-topbar__window arc-navbar-no-drag">

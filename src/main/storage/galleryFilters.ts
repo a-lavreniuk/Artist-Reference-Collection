@@ -339,10 +339,14 @@ export function buildGalleryFilterWhere(
     binds.push(collectionId);
   }
 
-  const moodboardIds = ctx.moodboardCardIds?.filter(Boolean) ?? [];
-  if (moodboardIds.length) {
-    wh.push(`${alias}.id IN (${moodboardIds.map(() => '?').join(',')})`);
-    binds.push(...moodboardIds);
+  if (Array.isArray(ctx.moodboardCardIds)) {
+    const moodboardIds = ctx.moodboardCardIds.filter(Boolean);
+    if (moodboardIds.length) {
+      wh.push(`${alias}.id IN (${moodboardIds.map(() => '?').join(',')})`);
+      binds.push(...moodboardIds);
+    } else {
+      wh.push('1 = 0');
+    }
   }
 
   const cardExact = ctx.cardIdExact?.trim() ?? '';

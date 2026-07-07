@@ -6,7 +6,6 @@ import type {
   SavedFilterPreset
 } from './components/gallery/galleryFilterTypes';
 import type { ArcMetadataV1, CardRecord, CollectionRecord, MoodboardBoardV1 } from './services/arcSchema';
-import type { HistoryEntry, HistorySegment } from './services/historyTypes';
 
 export {};
 
@@ -55,11 +54,15 @@ declare global {
       validateLibraryFolder: (absPath: string) => Promise<{ ok: boolean; valid: boolean }>;
       relinkLibraryFolder: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
       pickLibraryFolder: () => Promise<string | null>;
+      getDefaultLibraryParent: () => Promise<string>;
+      getDefaultLibraryFolderName: () => Promise<string>;
+      setMainWindowOnboardingMode: (enabled: boolean) => Promise<{ ok: boolean }>;
       readMetadata: () => Promise<ArcMetadataV1 | null>;
       writeMetadata: (data: ArcMetadataV1) => Promise<void>;
       pickImageFiles: () => Promise<string[]>;
       pickMediaFiles: () => Promise<string[]>;
       getPathsForDroppedFiles: (files: FileList) => string[];
+      getPathsForDroppedDataTransfer: (dt: DataTransfer) => string[];
       onFileDrop: (cb: (paths: string[]) => void) => () => void;
       importFiles: (absolutePaths: string[]) => Promise<ArcImportFileResult[]>;
       storageEnsureReady: () => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -75,6 +78,7 @@ declare global {
         sort?: GallerySortState;
       }) => Promise<CardRecord[]>;
       storageGetCard: (cardId: string) => Promise<CardRecord | null>;
+      storageGetCardDisplayPalette: (cardId: string) => Promise<Array<{ hex: string; pct: number }>>;
       storageUpdateCard: (
         cardId: string,
         patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
@@ -100,6 +104,7 @@ declare global {
       storageCountCards: (
         filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
       ) => Promise<number>;
+      storageCountCardsWithTagIds: (tagIds: string[]) => Promise<number>;
       storageGalleryFilterStats: (payload: {
         libraryScope?: 'all' | 'untagged' | 'trash';
         selectedTagIds?: string[];
@@ -169,6 +174,7 @@ declare global {
       onMigrationProgress: (cb: (p: { phase: string; current: number; total: number; message?: string }) => void) => () => void;
       toFileUrl: (path: string) => Promise<string | null>;
       toFileUrls: (paths: string[]) => Promise<Record<string, string>>;
+      registerMediaStagingToken: (absPath: string) => Promise<string | null>;
       deleteFileIfInsideLibrary: (relativePath: string) => Promise<void>;
       showItemInFolder: (relativePath: string) => Promise<void>;
       openExternalUrl: (url: string) => Promise<{ ok: true } | { ok: false; error?: string }>;
@@ -193,7 +199,9 @@ declare global {
       }) => Promise<{ ok: true; restart: true } | { ok: false; error: string }>;
       consumePendingRestoreModal: () => Promise<{ message: string } | null>;
       verifyLibraryPaths: (relativePaths: string[]) => Promise<{ missing: string[] }>;
-      scanLibraryOrphanFiles: (referencedPaths: string[]) => Promise<{ orphans: string[] }>;
+      scanLibraryOrphanFiles: (
+        input: string[] | { paths: string[]; cardIds: string[] }
+      ) => Promise<{ orphans: string[] }>;
       sumLibraryFilesBytes: (
         relativePaths: string[]
       ) => Promise<{ ok: true; totalBytes: number } | { ok: false; error: string }>;
@@ -231,6 +239,8 @@ declare global {
       getAppPreferences: () => Promise<import('./services/appPreferences').AppPreferencesV1>;
       setAppPreferences: (patch: Partial<import('./services/appPreferences').AppPreferencesV1>) => Promise<import('./services/appPreferences').AppPreferencesV1>;
       onScreenshotSaved: (cb: (detail: { cardId: string }) => void) => () => void;
+      onExtensionImportSaved?: (cb: (detail: { cardIds: string[] }) => void) => () => void;
+      onMcpTagCatalogChanged?: (cb: () => void) => () => void;
       openBugReportForm?: () => Promise<
         | { ok: true; formUrl: string }
         | { ok: false; error: string; code?: string }
@@ -245,6 +255,77 @@ declare global {
       screenshotPickerCancel?: () => Promise<{ ok: boolean }>;
       startDuplicateFileScan?: () => Promise<{ ok: true }>;
       onDuplicatesFound?: (cb: () => void) => () => void;
+      checkImportDuplicates?: (
+        absolutePaths: string[]
+      ) => Promise<
+        Array<{
+          path: string;
+          existingCardId: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+          existingCard: import('./services/arcSchema').CardRecord | null;
+        }>
+      >;
+      checkExactDuplicateFile?: (absolutePath: string) => Promise<boolean>;
+      probeIncomingFile?: (absolutePath: string) => Promise<{
+        format: string;
+        width?: number;
+        height?: number;
+        fileSize?: number;
+        fileCreatedAt?: string;
+      } | null>;
+      scanDuplicatePairs?: (payload?: {
+        thresholdPct?: number;
+        resetSession?: boolean;
+      }) => Promise<{
+        pairs: Array<{
+          cardIdA: string;
+          cardIdB: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+        }>;
+        thresholdPct: number;
+      }>;
+      runDuplicateScan?: (payload?: {
+        thresholdPct?: number;
+        resetSession?: boolean;
+      }) => Promise<{
+        pairs: Array<{
+          cardIdA: string;
+          cardIdB: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+          cardA: import('./services/arcSchema').CardRecord | null;
+          cardB: import('./services/arcSchema').CardRecord | null;
+        }>;
+        thresholdPct: number;
+        scannedCards: number;
+        totalCards: number;
+        duplicatesFound: number;
+        spaceSavedBytes: number;
+        cancelled: boolean;
+      }>;
+      cancelDuplicateScan?: () => Promise<{ ok: true }>;
+      onDuplicateScanProgress?: (
+        cb: (p: {
+          scannedCards: number;
+          totalCards: number;
+          duplicatesFound: number;
+          etaMs: number | null;
+        }) => void
+      ) => () => void;
+      duplicateSessionSkipPair?: (idA: string, idB: string) => Promise<void>;
+      duplicateResetScanSession?: () => Promise<void>;
+      duplicateGetCachedPairs?: () => Promise<
+        Array<{
+          cardIdA: string;
+          cardIdB: string;
+          similarity: number;
+          matchKind: 'exact' | 'similar';
+        }>
+      >;
+      replaceCardOriginal?: (cardId: string, sourceAbs: string) => Promise<void>;
+      mergeDuplicateCards?: (primaryId: string, secondaryId: string) => Promise<void>;
       autoImportRescan?: () => Promise<{ ok: true }>;
       onAutoImportProgress?: (cb: (p: { current: number; total: number; message?: string }) => void) => () => void;
       onAutoImportBatchDone?: (
@@ -338,6 +419,22 @@ declare global {
       }) => void) => () => void;
       onAiIndexComplete?: (cb: (detail: { indexed: number; total: number }) => void) => () => void;
       onAiError?: (cb: (detail: { message: string; fallback?: boolean }) => void) => () => void;
+      onAiIndexLog?: (
+        cb: (detail: {
+          level: 'log' | 'warn' | 'error';
+          message: string;
+          detail: Record<string, unknown> | null;
+          at: number;
+        }) => void
+      ) => () => void;
+      signalLoadingSplashReady?: () => Promise<{ ok: boolean }>;
+      onLoadingProgress?: (
+        cb: (payload: { percent: number; phaseText: string; version: string }) => void
+      ) => () => void;
+      onLoadingFadeOut?: (cb: () => void) => () => void;
+      signalLoadingFadeComplete?: () => void;
+      reportLoadingBootstrapProgress?: (percent: number, phaseText: string) => Promise<{ ok: boolean }>;
+      reportLoadingBootstrapComplete?: () => Promise<{ ok: boolean }>;
     };
   }
 }

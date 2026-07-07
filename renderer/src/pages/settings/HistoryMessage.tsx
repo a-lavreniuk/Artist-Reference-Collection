@@ -36,11 +36,11 @@ export default function HistoryMessage({ entry }: Props) {
   const segments = entry.segments;
 
   if (!segments || segments.length === 0) {
-    return <p className="typo-p-m arc-history-message">{entry.message}</p>;
+    return <p className="text-m arc-history-message">{entry.message}</p>;
   }
 
   return (
-    <p className="typo-p-m arc-history-message">
+    <p className="text-m arc-history-message">
       {segments.map((seg, i) => {
         if (seg.kind === 'text') {
           return <span key={`t-${i}`}>{seg.text}</span>;

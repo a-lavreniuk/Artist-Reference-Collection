@@ -6,7 +6,21 @@ export type GalleryScopeSnapshot = {
   srcMap: Record<string, string>;
   offset: number;
   hasMore: boolean;
+  /** Подтверждённый fetch после готовности БД; без флага пустой snapshot не считается cache hit. */
+  settled?: boolean;
 };
+
+/** Snapshot можно показать без повторного fetch (в т.ч. пустая библиотека после settled fetch). */
+export function isGalleryCacheHit(snapshot: GalleryScopeSnapshot | undefined): snapshot is GalleryScopeSnapshot {
+  if (!snapshot) return false;
+  if (snapshot.cards.length > 0) return true;
+  return snapshot.settled === true;
+}
+
+export function getGalleryCacheHit(key: string): GalleryScopeSnapshot | undefined {
+  const snapshot = getGallerySnapshot(key);
+  return isGalleryCacheHit(snapshot) ? snapshot : undefined;
+}
 
 const snapshots = new Map<string, GalleryScopeSnapshot>();
 
@@ -17,7 +31,8 @@ export function getGallerySnapshot(key: string): GalleryScopeSnapshot | undefine
     cards: [...snap.cards],
     srcMap: { ...snap.srcMap },
     offset: snap.offset,
-    hasMore: snap.hasMore
+    hasMore: snap.hasMore,
+    settled: snap.settled
   };
 }
 
@@ -26,7 +41,8 @@ export function setGallerySnapshot(key: string, snapshot: GalleryScopeSnapshot):
     cards: [...snapshot.cards],
     srcMap: { ...snapshot.srcMap },
     offset: snapshot.offset,
-    hasMore: snapshot.hasMore
+    hasMore: snapshot.hasMore,
+    settled: snapshot.settled
   });
 }
 

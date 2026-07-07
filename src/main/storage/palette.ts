@@ -1,59 +1,39 @@
 import sharp from 'sharp';
 
-export type PaletteSwatch = {
-  hex: string;
-  pct: number;
-};
+import {
+  buildPaletteFromRaw,
+  normalizeHex,
+  type PaletteMode,
+  type PaletteSwatch
+} from '../shared/paletteCore';
 
-const PALETTE_SIZE = 72;
-const MAX_COLORS = 8;
-const MIN_ALPHA = 160;
+export type { PaletteSwatch, PaletteMode } from '../shared/paletteCore';
+export { normalizeHex } from '../shared/paletteCore';
 
-function rgbToHex(r: number, g: number, b: number): string {
-  const to = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
-  return `#${to(r)}${to(g)}${to(b)}`.toUpperCase();
+const PALETTE_SIZE_SEARCH = 128;
+
+/** Сколько свотчей показывать в деталке карточки (как до display-mode). */
+export const CARD_DETAIL_PALETTE_MAX = 8;
+
+export function trimPaletteForDisplay(swatches: PaletteSwatch[], max = CARD_DETAIL_PALETTE_MAX): PaletteSwatch[] {
+  if (swatches.length <= max) return swatches;
+  return swatches.slice(0, max);
 }
 
-/** Палитра 5–8 swatches с долями (как cardDetailPalette, но на стороне main). */
-export async function computeImagePalette(sourceAbs: string, maxColors = MAX_COLORS): Promise<PaletteSwatch[]> {
+/** Палитра для поиска по цвету (mode search: до 20 свотчей, 128×128). */
+export async function computeImagePalette(
+  sourceAbs: string,
+  mode: PaletteMode = 'search'
+): Promise<PaletteSwatch[]> {
+  const sampleSize = mode === 'search' ? PALETTE_SIZE_SEARCH : 72;
   const { data, info } = await sharp(sourceAbs)
     .rotate()
-    .resize(PALETTE_SIZE, PALETTE_SIZE, { fit: 'fill' })
+    .resize(sampleSize, sampleSize, { fit: 'fill' })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  const buckets = new Map<string, number>();
-  let total = 0;
-  const ch = info.channels;
-
-  for (let i = 0; i < data.length; i += ch) {
-    const alpha = data[i + 3] ?? 255;
-    if (alpha < MIN_ALPHA) continue;
-    const r = data[i]! >> 3;
-    const g = data[i + 1]! >> 3;
-    const b = data[i + 2]! >> 3;
-    const key = `${r},${g},${b}`;
-    buckets.set(key, (buckets.get(key) ?? 0) + 1);
-    total += 1;
-  }
-
-  if (total === 0) return [];
-
-  const ranked = [...buckets.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, maxColors)
-    .map(([key, count]) => {
-      const [r, g, b] = key.split(',').map((x) => Number.parseInt(x, 10) * 8 + 4);
-      return { hex: rgbToHex(r, g, b), pct: Math.round((count / total) * 100) };
-    });
-
-  const sumPct = ranked.reduce((acc, row) => acc + row.pct, 0);
-  if (sumPct > 0 && sumPct !== 100 && ranked[0]) {
-    ranked[0] = { ...ranked[0], pct: ranked[0].pct + (100 - sumPct) };
-  }
-
-  return ranked;
+  return buildPaletteFromRaw(data, info.width, info.height, info.channels, mode);
 }
 
 export function parsePaletteJson(raw: string | null | undefined, fallbackDominant?: string): PaletteSwatch[] {
@@ -79,10 +59,4 @@ export function parsePaletteJson(raw: string | null | undefined, fallbackDominan
   }
   const dom = fallbackDominant ? normalizeHex(fallbackDominant) : '';
   return dom ? [{ hex: dom, pct: 100 }] : [];
-}
-
-export function normalizeHex(input: string): string {
-  const t = input.trim().replace(/^#/, '');
-  if (!/^[0-9a-fA-F]{6}$/.test(t)) return '';
-  return `#${t.toUpperCase()}`;
 }

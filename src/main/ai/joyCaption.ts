@@ -1,12 +1,13 @@
 import type { AiResourceSettings } from './types';
 import { MODEL_CATALOG } from './types';
 import { resolveModelFilePaths } from './modelManager';
-import { captionImageViaServer, resolveLlamaServerBinary } from './llamaCppBridge';
+import { captionImageViaServer, resolveLlamaServerBinary, type LlamaServerHooks } from './llamaCppBridge';
 
 export async function generateJoyCaption(
   userDataPath: string,
   imagePath: string,
-  resources: AiResourceSettings
+  resources: AiResourceSettings,
+  hooks?: LlamaServerHooks
 ): Promise<string> {
   const entry = MODEL_CATALOG.heavy;
   const { weightsPath, mmprojPath } = resolveModelFilePaths(userDataPath, entry);
@@ -18,7 +19,7 @@ export async function generateJoyCaption(
       'Для JoyCaption нужен llama-server. Переустановите heavy модель в настройках AI Поиска.'
     );
   }
-  return captionImageViaServer(userDataPath, weightsPath, mmprojPath, imagePath, resources);
+  return captionImageViaServer(userDataPath, weightsPath, mmprojPath, imagePath, resources, undefined, hooks);
 }
 
 export async function testJoyCaptionLoad(
@@ -39,5 +40,5 @@ export async function testJoyCaptionLoad(
       message: 'Среда для тяжёлой модели не установлена. Переустановите модель в настройках AI Поиска.'
     };
   }
-  return { ok: true, message: 'Тяжёлая модель работает. Можно запускать индексацию.' };
+  return { ok: true, message: 'Файлы и среда в порядке. При первой индексации модель загружается в память — это может занять несколько минут.' };
 }

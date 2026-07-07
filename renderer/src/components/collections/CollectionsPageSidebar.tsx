@@ -68,6 +68,7 @@ export default function CollectionsPageSidebar({
       data-elevation="sunken"
       data-typo-tone="white"
       data-btn-size="m"
+      data-interface-tour-anchor="collections-sidebar"
       role="menu"
       aria-label="Коллекции"
     >

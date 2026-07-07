@@ -17,6 +17,10 @@ export function resolveUiTheme(pref: UiThemePreference): ResolvedUiTheme {
   return 'dark';
 }
 
+export function invertResolvedUiTheme(theme: ResolvedUiTheme): ResolvedUiTheme {
+  return theme === 'dark' ? 'light' : 'dark';
+}
+
 export function applyUiTheme(resolved: ResolvedUiTheme): void {
   const root = document.documentElement;
   const body = document.body;

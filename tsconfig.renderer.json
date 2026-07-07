@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "baseUrl": ".",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "paths": {
+      "@arc-main-shared/*": ["src/main/shared/*"]
+    }
+  },
+  "include": ["renderer/src/**/*.ts", "renderer/src/**/*.tsx"],
+  "exclude": ["renderer/src/**/*.test.ts", "renderer/src/**/*.test.tsx"]
+}

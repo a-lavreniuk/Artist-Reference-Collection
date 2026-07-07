@@ -8,13 +8,13 @@ import {
 } from './galleryQuery';
 import { readGridSize } from '../../layout/gridSizePreference';
 import { mergeCardsSrcMap, peekCardsSrcMap, type MediaSectionTab } from './galleryMediaCache';
-import { getGallerySnapshot, setGallerySnapshot } from './galleryScopeCache';
+import { getGalleryCacheHit, setGallerySnapshot } from './galleryScopeCache';
 
 const bootPromises = new Map<string, Promise<void>>();
 
 async function loadFirstPageIntoCache(query: GalleryFeedQuery, mediaSection?: MediaSectionTab): Promise<void> {
   const key = buildGalleryQueryKey(query);
-  if (getGallerySnapshot(key)) {
+  if (getGalleryCacheHit(key)) {
     return;
   }
 
@@ -33,11 +33,17 @@ async function loadFirstPageIntoCache(query: GalleryFeedQuery, mediaSection?: Me
   const gridSize = readGridSize();
   const peek = peekCardsSrcMap(chunk, gridSize, mediaSection);
   const srcMap = await mergeCardsSrcMap(chunk, peek, gridSize, mediaSection);
+  if (chunk.length === 0) {
+    // Пустой ответ до готовности БД (sync list-cards) не кэшируем — иначе залипает empty state.
+    return;
+  }
+
   const snapshot = {
     cards: chunk,
     srcMap,
     offset: chunk.length,
-    hasMore: chunk.length === GALLERY_PAGE_INITIAL
+    hasMore: chunk.length === GALLERY_PAGE_INITIAL,
+    settled: true
   };
   setGallerySnapshot(key, snapshot);
 }
@@ -47,7 +53,7 @@ export function ensureGalleryBootstrap(
   mediaSection?: MediaSectionTab
 ): Promise<void> {
   const key = buildGalleryQueryKey(query);
-  if (getGallerySnapshot(key)) {
+  if (getGalleryCacheHit(key)) {
     return Promise.resolve();
   }
   const existing = bootPromises.get(key);

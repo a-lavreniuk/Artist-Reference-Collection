@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type RefObject
 } from 'react';
+import { useMasonryReveal, resetMasonryRevealCache } from '../../motion';
 import {
   canIncrementalAppend,
   layoutMasonryAppend,
@@ -42,6 +43,8 @@ export type MasonryGridProps = {
   scrollRootRef?: RefObject<HTMLElement | null>;
   gap?: number;
   layoutEpoch?: number;
+  /** Меняется при фильтрах / сортировке — перезапускает reveal. */
+  revealResetKey?: string;
   loadingMore?: boolean;
   loadingSkeletonCount?: number;
   busy?: boolean;
@@ -69,6 +72,7 @@ export default function MasonryGrid({
   scrollRootRef,
   gap = MASONRY_GAP_PX,
   layoutEpoch: layoutEpochProp = 0,
+  revealResetKey = '',
   loadingMore = false,
   loadingSkeletonCount = MASONRY_LOADING_SKELETON_COUNT,
   busy = false,
@@ -86,7 +90,7 @@ export default function MasonryGrid({
   const prevLayoutKeyRef = useRef('');
   const knownIdsRef = useRef<Set<string>>(new Set());
   const [layoutTick, setLayoutTick] = useState(0);
-  const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
+  const [appendIds, setAppendIds] = useState<Set<string>>(() => new Set());
   const [isResizing, setIsResizing] = useState(false);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
@@ -157,14 +161,7 @@ export default function MasonryGrid({
     setLayoutTick((t) => t + 1);
 
     if (newEntering.size > 0) {
-      setEnteringIds((prev) => new Set([...prev, ...newEntering]));
-      window.setTimeout(() => {
-        setEnteringIds((prev) => {
-          const next = new Set(prev);
-          for (const id of newEntering) next.delete(id);
-          return next;
-        });
-      }, 160);
+      setAppendIds(new Set(newEntering));
     }
 
     if (layoutChanged) {
@@ -192,6 +189,27 @@ export default function MasonryGrid({
     if (focusedId) set.add(focusedId);
     return set;
   }, [virtualRange.visibleIds, focusedId]);
+
+  const motionEnabled = variant === 'gallery' || variant === 'similar';
+  /** Только смена сетки / запроса — не ширина контейнера при первом measure. */
+  const revealResetKeyFull = `${layoutEpoch}|${revealResetKey}`;
+
+  useMasonryReveal({
+    visibleIds,
+    itemRefs,
+    layouts,
+    appendIds,
+    resetKey: revealResetKeyFull,
+    enabled: motionEnabled
+  });
+
+  useEffect(() => {
+    if (appendIds.size === 0) return;
+    const id = window.setTimeout(() => setAppendIds(new Set()), 0);
+    return () => window.clearTimeout(id);
+  }, [appendIds]);
+
+  useEffect(() => () => resetMasonryRevealCache(), []);
 
   const updateItemHeight = useCallback((id: string, height: number) => {
     if (!layoutStateRef.current || id.startsWith(SKELETON_PREFIX)) return;
@@ -223,17 +241,21 @@ export default function MasonryGrid({
     };
   }, [updateItemHeight]);
 
-  const bindItemRef = useCallback((id: string, el: HTMLElement | null) => {
-    const ro = resizeObserverRef.current;
-    const prev = itemRefs.current.get(id);
-    if (prev && ro) ro.unobserve(prev);
-    if (el) {
-      itemRefs.current.set(id, el);
-      ro?.observe(el);
-    } else {
-      itemRefs.current.delete(id);
-    }
-  }, []);
+  const bindItemRef = useCallback(
+    (id: string, el: HTMLElement | null) => {
+      const ro = resizeObserverRef.current;
+      const prev = itemRefs.current.get(id);
+      if (prev && ro) ro.unobserve(prev);
+      if (el) {
+        itemRefs.current.set(id, el);
+        el.setAttribute('data-revealed', 'true');
+        ro?.observe(el);
+      } else {
+        itemRefs.current.delete(id);
+      }
+    },
+    []
+  );
 
   const focusItem = useCallback((id: string) => {
     const el = itemRefs.current.get(id);
@@ -275,14 +297,11 @@ export default function MasonryGrid({
           const isSkeleton = item.id.startsWith(SKELETON_PREFIX);
           if (virtualize && !isSkeleton && !visibleIds.has(item.id)) return null;
 
-          const isEntering = enteringIds.has(item.id);
           const style: React.CSSProperties = {
             position: 'absolute',
             left: layout.x,
             top: layout.y,
-            width: layout.width,
-            transform: isEntering ? 'translateY(4px)' : undefined,
-            opacity: isEntering ? 0 : 1
+            width: layout.width
           };
 
           if (isSkeleton) {
@@ -306,7 +325,7 @@ export default function MasonryGrid({
             <div
               key={item.id}
               ref={(el) => bindItemRef(item.id, el)}
-              className={`arc-masonry-item${isEntering ? ' arc-masonry-item--entering' : ''}`}
+              className="arc-masonry-item"
               style={style}
               data-masonry-item-id={item.id}
               role="gridcell"

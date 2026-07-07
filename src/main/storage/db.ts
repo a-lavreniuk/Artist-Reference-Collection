@@ -4,6 +4,7 @@ import path from 'path';
 import { INDEX_DB_FILENAME, libraryMetaFileAbs } from '../libraryFilenames';
 import { ensureCardsFtsSchema } from './cardFts';
 import { ensureCardEmbeddingsSchema } from './cardEmbeddings';
+import { ensureShuffleSqlFunctions } from './shuffleOrder';
 import { STORAGE_SCHEMA_VERSION } from './types';
 
 const SCHEMA_SQL = `
@@ -175,6 +176,7 @@ export function openLibraryDb(libraryRoot: string): Database.Database {
   db.exec(SCHEMA_SQL);
   // Колонки is_deleted/deleted_at и idx_cards_deleted_added — только после ALTER на старых БД.
   migrateLibraryDbSchema(db);
+  ensureShuffleSqlFunctions(db);
   activeDb = db;
   activeRoot = root;
   return db;

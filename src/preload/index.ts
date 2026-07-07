@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { pathsFromFileList, registerFileDropListener } from './fileDropBridge';
+import { pathsFromDroppedDataTransfer, pathsFromFileList, registerFileDropListener } from './fileDropBridge';
 
 type HistoryEntityType = 'card' | 'collection' | 'category' | 'tag';
 type HistorySegmentPayload =
@@ -34,11 +34,18 @@ contextBridge.exposeInMainWorld('arc', {
   relinkLibraryFolder: (absPath: string) =>
     ipcRenderer.invoke('arc:relink-library-folder', absPath) as Promise<{ ok: boolean; error?: string }>,
   pickLibraryFolder: () => ipcRenderer.invoke('arc:pick-library-folder') as Promise<string | null>,
+  getDefaultLibraryParent: () =>
+    ipcRenderer.invoke('arc:get-default-library-parent') as Promise<string>,
+  getDefaultLibraryFolderName: () =>
+    ipcRenderer.invoke('arc:get-default-library-folder-name') as Promise<string>,
+  setMainWindowOnboardingMode: (enabled: boolean) =>
+    ipcRenderer.invoke('arc:set-main-window-onboarding-mode', enabled) as Promise<{ ok: boolean }>,
   readMetadata: () => ipcRenderer.invoke('arc:read-metadata'),
   writeMetadata: (data: unknown) => ipcRenderer.invoke('arc:write-metadata', data),
   pickImageFiles: () => ipcRenderer.invoke('arc:pick-image-files') as Promise<string[]>,
   pickMediaFiles: () => ipcRenderer.invoke('arc:pick-media-files') as Promise<string[]>,
   getPathsForDroppedFiles: (files: FileList) => pathsFromFileList(files),
+  getPathsForDroppedDataTransfer: (dt: DataTransfer) => pathsFromDroppedDataTransfer(dt),
   onFileDrop: (cb: (paths: string[]) => void) => registerFileDropListener(cb),
   importFiles: (absolutePaths: string[]) =>
     ipcRenderer.invoke('arc:import-files', absolutePaths) as Promise<
@@ -77,6 +84,10 @@ contextBridge.exposeInMainWorld('arc', {
   aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
   aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),
   storageGetCard: (cardId: string) => ipcRenderer.invoke('arc:storage-get-card', cardId),
+  storageGetCardDisplayPalette: (cardId: string) =>
+    ipcRenderer.invoke('arc:storage-get-card-display-palette', cardId) as Promise<
+      Array<{ hex: string; pct: number }>
+    >,
   storageUpdateCard: (cardId: string, patch: unknown) =>
     ipcRenderer.invoke('arc:storage-update-card', { cardId, patch }),
   storageInsertCardsMetadata: (cards: unknown) =>
@@ -88,6 +99,8 @@ contextBridge.exposeInMainWorld('arc', {
   storageEmptyTrash: () => ipcRenderer.invoke('arc:storage-empty-trash') as Promise<number>,
   storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
     ipcRenderer.invoke('arc:storage-count-cards', payload),
+  storageCountCardsWithTagIds: (tagIds: string[]) =>
+    ipcRenderer.invoke('arc:storage-count-cards-with-tag-ids', tagIds) as Promise<number>,
   storageGalleryFilterStats: (payload: unknown) =>
     ipcRenderer.invoke('arc:storage-gallery-filter-stats', payload),
   storageListFilterPresets: () => ipcRenderer.invoke('arc:storage-list-filter-presets'),
@@ -129,6 +142,31 @@ contextBridge.exposeInMainWorld('arc', {
   storageAddSkippedPair: (idA: string, idB: string) =>
     ipcRenderer.invoke('arc:storage-add-skipped-pair', idA, idB),
   storageCardsPhash: () => ipcRenderer.invoke('arc:storage-cards-phash'),
+  checkImportDuplicates: (absolutePaths: string[]) =>
+    ipcRenderer.invoke('arc:check-import-duplicates', absolutePaths),
+  checkExactDuplicateFile: (absolutePath: string) =>
+    ipcRenderer.invoke('arc:check-exact-duplicate-file', absolutePath) as Promise<boolean>,
+  probeIncomingFile: (absolutePath: string) => ipcRenderer.invoke('arc:probe-incoming-file', absolutePath),
+  scanDuplicatePairs: (payload?: { thresholdPct?: number; resetSession?: boolean }) =>
+    ipcRenderer.invoke('arc:scan-duplicate-pairs', payload ?? {}),
+  runDuplicateScan: (payload?: { thresholdPct?: number; resetSession?: boolean }) =>
+    ipcRenderer.invoke('arc:duplicate-scan-run', payload ?? {}),
+  cancelDuplicateScan: () => ipcRenderer.invoke('arc:duplicate-scan-cancel'),
+  onDuplicateScanProgress: (
+    cb: (p: { scannedCards: number; totalCards: number; duplicatesFound: number; etaMs: number | null }) => void
+  ) => {
+    const fn = (_: unknown, payload: unknown) => cb(payload as never);
+    ipcRenderer.on('arc:duplicate-scan-progress', fn);
+    return () => ipcRenderer.removeListener('arc:duplicate-scan-progress', fn);
+  },
+  duplicateSessionSkipPair: (idA: string, idB: string) =>
+    ipcRenderer.invoke('arc:duplicate-session-skip-pair', idA, idB),
+  duplicateResetScanSession: () => ipcRenderer.invoke('arc:duplicate-reset-scan-session'),
+  duplicateGetCachedPairs: () => ipcRenderer.invoke('arc:duplicate-get-cached-pairs'),
+  replaceCardOriginal: (cardId: string, sourceAbs: string) =>
+    ipcRenderer.invoke('arc:replace-card-original', { cardId, sourceAbs }),
+  mergeDuplicateCards: (primaryId: string, secondaryId: string) =>
+    ipcRenderer.invoke('arc:merge-duplicate-cards', { primaryId, secondaryId }),
   onMigrationProgress: (cb: (p: unknown) => void) => {
     const fn = (_: unknown, payload: unknown) => cb(payload);
     ipcRenderer.on('arc:migration-progress', fn);
@@ -138,6 +176,8 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:to-file-url', relativePath) as Promise<string | null>,
   toFileUrls: (relativePaths: string[]) =>
     ipcRenderer.invoke('arc:to-file-urls', relativePaths) as Promise<Record<string, string>>,
+  registerMediaStagingToken: (absPath: string) =>
+    ipcRenderer.invoke('arc:register-media-staging-token', absPath) as Promise<string | null>,
   deleteFileIfInsideLibrary: (relativePath: string) =>
     ipcRenderer.invoke('arc:delete-file-if-inside-library', relativePath),
   showItemInFolder: (relativePath: string) => ipcRenderer.invoke('arc:show-item-in-folder', relativePath),
@@ -180,8 +220,8 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:consume-pending-restore-modal') as Promise<{ message: string } | null>,
   verifyLibraryPaths: (relativePaths: string[]) =>
     ipcRenderer.invoke('arc:verify-library-paths', relativePaths) as Promise<{ missing: string[] }>,
-  scanLibraryOrphanFiles: (referencedPaths: string[]) =>
-    ipcRenderer.invoke('arc:scan-library-orphan-files', referencedPaths) as Promise<{ orphans: string[] }>,
+  scanLibraryOrphanFiles: (input: string[] | { paths: string[]; cardIds: string[] }) =>
+    ipcRenderer.invoke('arc:scan-library-orphan-files', input) as Promise<{ orphans: string[] }>,
   sumLibraryFilesBytes: (relativePaths: string[]) =>
     ipcRenderer.invoke('arc:sum-library-files-bytes', relativePaths) as Promise<
       { ok: true; totalBytes: number } | { ok: false; error: string }
@@ -239,6 +279,7 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:app-preferences-get') as Promise<{
       version: 1;
       launchAtLogin: boolean;
+      launchAtLoginHidden: boolean;
       closeToTrayOnWindowClose: boolean;
       importSourceFilesAction: 'ask' | 'trash';
       deleteCardsUseTrash: boolean;
@@ -265,6 +306,7 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:app-preferences-set', patch) as Promise<{
       version: 1;
       launchAtLogin: boolean;
+      launchAtLoginHidden: boolean;
       closeToTrayOnWindowClose: boolean;
       importSourceFilesAction: 'ask' | 'trash';
       deleteCardsUseTrash: boolean;
@@ -309,6 +351,16 @@ contextBridge.exposeInMainWorld('arc', {
     const fn = (_: unknown, payload: { cardId: string }) => cb(payload);
     ipcRenderer.on('arc:screenshot-saved', fn);
     return () => ipcRenderer.removeListener('arc:screenshot-saved', fn);
+  },
+  onExtensionImportSaved: (cb: (detail: { cardIds: string[] }) => void) => {
+    const fn = (_: unknown, payload: { cardIds: string[] }) => cb(payload);
+    ipcRenderer.on('arc:extension-import-saved', fn);
+    return () => ipcRenderer.removeListener('arc:extension-import-saved', fn);
+  },
+  onMcpTagCatalogChanged: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('arc:mcp-tag-catalog-changed', fn);
+    return () => ipcRenderer.removeListener('arc:mcp-tag-catalog-changed', fn);
   },
   openBugReportForm: () =>
     ipcRenderer.invoke('arc:bug-report-open') as Promise<
@@ -443,5 +495,46 @@ contextBridge.exposeInMainWorld('arc', {
     const fn = (_: unknown, payload: { message: string; fallback?: boolean }) => cb(payload);
     ipcRenderer.on('arc:ai-error', fn);
     return () => ipcRenderer.removeListener('arc:ai-error', fn);
-  }
+  },
+  onAiIndexLog: (
+    cb: (detail: {
+      level: 'log' | 'warn' | 'error';
+      message: string;
+      detail: Record<string, unknown> | null;
+      at: number;
+    }) => void
+  ) => {
+    const fn = (
+      _: unknown,
+      payload: {
+        level: 'log' | 'warn' | 'error';
+        message: string;
+        detail: Record<string, unknown> | null;
+        at: number;
+      }
+    ) => cb(payload);
+    ipcRenderer.on('arc:ai-index-log', fn);
+    return () => ipcRenderer.removeListener('arc:ai-index-log', fn);
+  },
+
+  signalLoadingSplashReady: () => ipcRenderer.invoke('loading:splash-ready') as Promise<{ ok: boolean }>,
+  onLoadingProgress: (
+    cb: (payload: { percent: number; phaseText: string; version: string }) => void
+  ) => {
+    const fn = (_: unknown, payload: { percent: number; phaseText: string; version: string }) => cb(payload);
+    ipcRenderer.on('loading:progress-update', fn);
+    return () => ipcRenderer.removeListener('loading:progress-update', fn);
+  },
+  onLoadingFadeOut: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('loading:splash-fade-out', fn);
+    return () => ipcRenderer.removeListener('loading:splash-fade-out', fn);
+  },
+  signalLoadingFadeComplete: () => {
+    ipcRenderer.send('loading:splash-fade-complete');
+  },
+  reportLoadingBootstrapProgress: (percent: number, phaseText: string) =>
+    ipcRenderer.invoke('loading:bootstrap-progress', { percent, phaseText }) as Promise<{ ok: boolean }>,
+  reportLoadingBootstrapComplete: () =>
+    ipcRenderer.invoke('loading:bootstrap-complete') as Promise<{ ok: boolean }>
 });

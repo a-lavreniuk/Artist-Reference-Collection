@@ -1,9 +1,10 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 import type { CardRecord } from '../../services/db';
+import { useCardOverlayStagger } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 import GalleryThumb from './GalleryThumb';
-import { gallerySkeletonStyle } from './gallerySkeleton';
+import { galleryCardAspectRatio } from './gallerySkeleton';
 import { cardFileFormatLabel } from '../../utils/cardFileFormatLabel';
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
   moodboardEnabled?: boolean;
   tileClassName?: string;
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
+  interfaceTourAnchor?: string;
 };
 
 function GalleryCardTile({
@@ -29,10 +31,16 @@ function GalleryCardTile({
   onContextMenu,
   moodboardEnabled = false,
   tileClassName = '',
-  mediaTab
+  mediaTab,
+  interfaceTourAnchor
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const overlayInnerRef = useRef<HTMLSpanElement>(null);
+  const [mouseHovered, setMouseHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState(false);
+  const overlayActive = mouseHovered || focused || inMoodboard;
+  useCardOverlayStagger(overlayActive, overlayInnerRef);
 
   const iconClass = hoveredBookmarkCardId
     ? inMoodboard
@@ -54,6 +62,7 @@ function GalleryCardTile({
       role="button"
       tabIndex={0}
       className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}${tileClassName ? ` ${tileClassName}` : ''}`}
+      {...(interfaceTourAnchor ? { 'data-interface-tour-anchor': interfaceTourAnchor } : {})}
       onClick={() => onOpenCard(card.id)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -62,6 +71,12 @@ function GalleryCardTile({
         }
       }}
       onContextMenu={onContextMenu}
+      onMouseEnter={() => setMouseHovered(true)}
+      onMouseLeave={() => setMouseHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
+      }}
     >
       <span className="arc-gallery-card-stack">
         <span
@@ -69,15 +84,19 @@ function GalleryCardTile({
           data-btn-size="s"
         >
           <span className={`tab-icon ${mediaTypeIconClass}`} data-arc-icon-size="s" aria-hidden="true" />
-          {formatLabel ? <span className="arc-gallery-card-badge-label">{formatLabel}</span> : null}
+          {formatLabel ? <span className="text-s arc-gallery-card-badge-label">{formatLabel}</span> : null}
         </span>
         {thumbSrc ? (
           <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} />
         ) : (
-          <div className="arc-gallery-skeleton" style={gallerySkeletonStyle(card)} aria-hidden />
+          <div
+            className="arc-gallery-skeleton"
+            style={{ aspectRatio: galleryCardAspectRatio(card), background: 'var(--gray-900)' }}
+            aria-hidden
+          />
         )}
         <span className="arc-gallery-card-overlay">
-          <span className="arc-gallery-card-overlay-inner" data-btn-size="s">
+          <span ref={overlayInnerRef} className="arc-gallery-card-overlay-inner" data-btn-size="s">
             {onFindSimilar ? (
               <button
                 type="button"

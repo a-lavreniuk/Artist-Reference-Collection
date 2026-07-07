@@ -18,6 +18,7 @@ globs:
 
 - Компонент: `renderer/src/components/layout/ArcTopBar.tsx`.
 - История: `useArcHistoryNav` (`navigate(-1)` / `navigate(1)`).
+- Заголовок раздела: `useChromeTitle` — Paragraph/S после кнопок «Назад / Вперёд» (Figma 1560:43970).
 - Стили: `.arc-topbar`, `.arc-topbar-btn` в `renderer/public/ui/arc-navbar.css`.
 - Drag окна: `-webkit-app-region: drag` на `.arc-topbar`; кнопки — `arc-navbar-no-drag`.
 - Window controls: существующие `arc-icon-minimize` / `maximize` / `close` (`*_s.svg`), цвет через CSS.

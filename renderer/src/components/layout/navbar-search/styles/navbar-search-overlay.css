@@ -1,0 +1,63 @@
+/*
+ * Белая кайма по краю окна (Electron + backdrop-filter):
+ * — inset-тень на body::after (z-index выше навбара) — только по краю viewport;
+ * — contain: paint на shade и карточках — без отключения blur.
+ */
+body.arc-search-panel-open::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 27;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 4px #000;
+}
+
+body.arc-search-panel-open .arc-search-backdrop {
+  inset: -4px;
+  box-shadow: inset 0 0 0 4px #000;
+}
+
+body.arc-search-panel-open .arc-navbar-shade {
+  contain: paint;
+}
+
+body.arc-search-panel-open .arc-gallery-card-wrap {
+  contain: paint;
+}
+
+body.arc-card-detail-open .arc-search-backdrop,
+body.arc-card-detail-open .arc-search-panel {
+  display: none;
+}
+
+body.arc-card-detail-open.arc-search-panel-open::after {
+  display: none;
+}
+
+.arc-search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  background: transparent;
+}
+
+/* Навбар выше backdrop (25), чтобы режимы поиска кликабельны при открытой панели */
+body.arc-search-panel-open .arc-navbar-host {
+  z-index: 26;
+}
+
+.arc-search-panel {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+  overflow: hidden;
+  overflow-x: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--arc-modal-shadow);
+}

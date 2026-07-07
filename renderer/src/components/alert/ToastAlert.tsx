@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { AlertVariant } from './types';
 import { playNotificationSound } from '../../services/audioNotification';
+import { useOverlayMotion } from '../../motion';
 
 /** Как в UI-kit (`setTimeout(..., 3200)`). */
 const ARC_UI_KIT_ALERT_AUTO_DISMISS_MS = 3200;
@@ -13,6 +14,7 @@ type Props = {
   autoDismissMs?: number;
   hostClassName?: string;
   withSound?: boolean;
+  onActivate?: () => void;
 };
 
 /** Фиксированный toast внизу экрана (Figma Alert, node 52:2131). */
@@ -22,11 +24,22 @@ export default function ToastAlert({
   onClose,
   autoDismissMs = ARC_UI_KIT_ALERT_AUTO_DISMISS_MS,
   hostClassName,
-  withSound = true
+  withSound = true,
+  onActivate
 }: Props) {
+  const [closing, setClosing] = useState(false);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const lastSoundKeyRef = useRef<string | null>(null);
+
+  const alertRef = useOverlayMotion<HTMLDivElement>(!closing, {
+    preset: 'fade-slide-up',
+    onExitComplete: () => onCloseRef.current()
+  });
+
+  const requestClose = useCallback(() => {
+    setClosing(true);
+  }, []);
 
   useEffect(() => {
     if (!withSound) return;
@@ -37,18 +50,18 @@ export default function ToastAlert({
   }, [message, variant, withSound]);
 
   useEffect(() => {
-    if (autoDismissMs <= 0) return;
-    const id = window.setTimeout(() => onCloseRef.current(), autoDismissMs);
+    if (autoDismissMs <= 0 || closing) return;
+    const id = window.setTimeout(() => requestClose(), autoDismissMs);
     return () => window.clearTimeout(id);
-  }, [message, variant, autoDismissMs]);
+  }, [message, variant, autoDismissMs, closing, requestClose]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [requestClose]);
 
   return (
     <div
@@ -56,9 +69,33 @@ export default function ToastAlert({
       aria-live="polite"
       aria-atomic="true"
     >
-      <div className={`alert alert-${variant}`} role="status">
+      <div
+        ref={alertRef}
+        className={`alert alert-${variant}${onActivate ? ' alert--clickable' : ''}`}
+        role="status"
+        {...(onActivate
+          ? {
+              onClick: (e: MouseEvent) => {
+                if ((e.target as HTMLElement).closest('.demo-alert__close')) return;
+                onActivate();
+              },
+              onKeyDown: (e: KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onActivate();
+                }
+              },
+              tabIndex: 0
+            }
+          : {})}
+      >
         <p className="demo-alert__message">{message}</p>
-        <button type="button" className="demo-alert__close" aria-label="Закрыть уведомление" onClick={onClose}>
+        <button
+          type="button"
+          className="demo-alert__close"
+          aria-label="Закрыть уведомление"
+          onClick={requestClose}
+        >
           <svg className="demo-alert__close-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M6 6L18 18" strokeWidth="2" strokeLinecap="round" />
             <path d="M18 6L6 18" strokeWidth="2" strokeLinecap="round" />

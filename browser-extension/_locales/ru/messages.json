@@ -1,0 +1,87 @@
+{
+  "extensionName": {
+    "message": "Save to ARC"
+  },
+  "extensionDescription": {
+    "message": "Сохраняйте изображения с сайтов в Artist Reference Collection (ARC)."
+  },
+  "contextMenuTitle": {
+    "message": "Добавить в библиотеку"
+  },
+  "hoverSaveLabel": {
+    "message": "Сохранить в ARC"
+  },
+  "modalTitle": {
+    "message": "Save to ARC"
+  },
+  "modalClose": {
+    "message": "Закрыть"
+  },
+  "modalHowToSave": {
+    "message": "Наведите курсор на изображение и нажмите на появившуюся кнопку сохранения. Также можно воспользоваться контекстным меню или комбинацией клавиш Alt + правый клик."
+  },
+  "modalQueueInfo": {
+    "message": "Изображения загружаются в очередь (до 50 штук). Когда вы откроете ARC с включённым параметром Import, очередь автоматически отправится в библиотеку."
+  },
+  "modalQueueBody": {
+    "message": "Изображение добавлено в очередь (до 50 штук). Когда вы откроете ARC с включённым параметром Import, очередь автоматически отправится в библиотеку."
+  },
+  "statusConnectedSubtitle": {
+    "message": "Подключение установлено"
+  },
+  "statusConnected": {
+    "message": "ARC подключён"
+  },
+  "statusOffline": {
+    "message": "ARC не запущен"
+  },
+  "statusDisabled": {
+    "message": "Import API выключен в настройках ARC"
+  },
+  "statusSaved": {
+    "message": "Добавлено в библиотеку"
+  },
+  "statusQueued": {
+    "message": "В очереди — отправим, когда ARC будет доступен"
+  },
+  "statusQueueFull": {
+    "message": "Очередь заполнена (50 элементов)"
+  },
+  "statusError": {
+    "message": "Не удалось сохранить"
+  },
+  "statusDraining": {
+    "message": "Отправка очереди…"
+  },
+  "statusDrained": {
+    "message": "Отправлено из очереди: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "offlineToastQueue": {
+    "message": "В очереди: $PENDING$ из $MAX$",
+    "placeholders": {
+      "pending": {
+        "content": "$1"
+      },
+      "max": {
+        "content": "$2"
+      }
+    }
+  },
+  "popupOfflineQueueEmpty": {
+    "message": "Очередь пуста."
+  },
+  "openArcButton": {
+    "message": "Открыть ARC"
+  },
+  "goToWebsite": {
+    "message": "Перейти на сайт"
+  },
+  "disabledToastBody": {
+    "message": "Включите Import API в настройках ARC → Расширение браузера."
+  }
+}

@@ -37,7 +37,7 @@ export default function SettingsLibraryPanel() {
       <div className="arc-settings-main__scroll">
         <div className="arc-settings-main__content arc-ui-kit-scope" data-btn-size="m">
           <div className="arc-settings-desc-block">
-            <p className="typo-p-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+            <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
             <div className="arc-settings-action-row">
               {hasLibrary ? (
                 <button
@@ -68,13 +68,13 @@ export default function SettingsLibraryPanel() {
                   </button>
                 </>
               )}
-              <span className="typo-p-m arc-settings-action-row__meta" title={libraryPath ?? undefined}>
+              <span className="text-m arc-settings-action-row__meta" title={libraryPath ?? undefined}>
                 {libraryPath ?? 'Не выбрана'}
               </span>
             </div>
             {migrateError ? <p className="hint">{migrateError}</p> : null}
             {!window.arc && arcHint ? (
-              <div className="typo-p-m hint arc-settings-electron-hint">{arcHint}</div>
+              <div className="hint arc-settings-electron-hint">{arcHint}</div>
             ) : null}
           </div>
         </div>

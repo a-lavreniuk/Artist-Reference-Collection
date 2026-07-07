@@ -23,10 +23,15 @@ export function isAllowedMediaExt(ext: string): boolean {
 export function resolveMediaAbsFromParams(
   libraryRoot: string | null,
   relEncoded: string | null,
-  absEncoded: string | null
+  stgToken: string | null,
+  stagingAbsByToken?: ReadonlyMap<string, { absPath: string; expiresAt: number }>
 ): string | null {
-  if (absEncoded) {
-    return path.resolve(decodeURIComponent(absEncoded));
+  if (stgToken) {
+    const trimmed = stgToken.trim();
+    if (!trimmed || !stagingAbsByToken) return null;
+    const entry = stagingAbsByToken.get(trimmed);
+    if (!entry || entry.expiresAt <= Date.now()) return null;
+    return path.resolve(entry.absPath);
   }
   if (!relEncoded || !libraryRoot) return null;
 
@@ -54,12 +59,12 @@ export function mimeForMediaExt(ext: string): string {
 
 export function buildMediaServerUrl(
   origin: string,
-  params: { rel?: string; abs?: string; sect?: string }
+  params: { rel?: string; stg?: string; sect?: string }
 ): string {
   const base = origin.replace(/\/$/, '');
   const u = new URL(`${base}/`);
   if (params.rel) u.searchParams.set('rel', params.rel);
-  if (params.abs) u.searchParams.set('abs', params.abs);
+  if (params.stg) u.searchParams.set('stg', params.stg);
   if (params.sect) u.searchParams.set('sect', params.sect);
   return u.href;
 }

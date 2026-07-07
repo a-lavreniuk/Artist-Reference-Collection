@@ -1,0 +1,12 @@
+/* Compound selector beats global `.loader` (28px) from arc-ui.css */
+.loader.arc-loader-inline {
+  width: 16px;
+  height: 16px;
+  border-width: 1px;
+  flex-shrink: 0;
+}
+
+.loader.arc-loader-inline--m {
+  width: 24px;
+  height: 24px;
+}

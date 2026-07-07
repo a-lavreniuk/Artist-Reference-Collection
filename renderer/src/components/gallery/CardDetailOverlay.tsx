@@ -38,7 +38,6 @@ import {
   getCollectionCardCounts,
   getCollectionPreviewSlices,
   listSimilarCards,
-  toggleCardInMoodboard,
   isCardOnBoard,
   removeCardFromMoodboard,
   updateCardPayload
@@ -46,14 +45,16 @@ import {
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
 import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
+import { startColorSearch } from '../../search/startColorSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
+import { useOverlayMotionPair } from '../../motion';
 import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDetailPreviewUrls } from './galleryMediaCache';
 import { ARC_THUMB_BUDGET_CHANGED_EVENT } from './galleryThumbBudget';
 import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
 import { readGridSize } from '../../layout/gridSizePreference';
-import { extractImagePalette, type PaletteSwatch } from './cardDetailPalette';
+import { loadCardDetailPalette, type PaletteSwatch } from './cardDetailPalette';
 import {
   clampCardDetailSettingsWidth,
   readCardDetailSettingsWidth,
@@ -85,6 +86,8 @@ type Props = {
 const DESCRIPTION_SAVE_MS = 600;
 const FIELD_SAVE_MS = 600;
 
+type DescriptionTab = 'description' | 'ai';
+
 function normalizeExternalUrl(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -102,7 +105,6 @@ export default function CardDetailOverlay({
 }: Props) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const hostRef = useRef<HTMLDivElement>(null);
   const settingsScrollRef = useRef<HTMLDivElement>(null);
   const inspectVideoRef = useRef<HTMLVideoElement | null>(null);
   const descriptionSaveTimerRef = useRef<number | null>(null);
@@ -113,6 +115,9 @@ export default function CardDetailOverlay({
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const [card, setCard] = useState<CardRecord | null>(null);
+  const cardRef = useRef<CardRecord | null>(null);
+  const tagPatchQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const collectionPatchQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [thumbSrc, setThumbSrc] = useState<string | null>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [categoriesById, setCategoriesById] = useState<Map<string, CategoryRecord>>(new Map());
@@ -129,6 +134,7 @@ export default function CardDetailOverlay({
   const [draftName, setDraftName] = useState('');
   const [draftLink, setDraftLink] = useState('');
   const [description, setDescription] = useState('');
+  const [descriptionTab, setDescriptionTab] = useState<DescriptionTab>('description');
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
   const settingsWidthRef = useRef(settingsWidth);
@@ -150,9 +156,17 @@ export default function CardDetailOverlay({
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(
     null
   );
+  const [closing, setClosing] = useState(false);
+  const requestClose = useCallback(() => setClosing(true), []);
+  const { panelRef, backdropRef, render } = useOverlayMotionPair(!closing, {
+    preset: 'fade-slide-up',
+    backdropPreset: 'fade-scale',
+    onExitComplete: onClose
+  });
 
   const libraryScope = parseLibraryScope(searchParams);
   const inTrash = libraryScope === 'trash';
+  const hasAiCaption = Boolean(card?.type === 'image' && card.aiCaption?.trim());
 
   const reloadCard = useCallback(async (id: string) => {
     let c = await getCardById(id);
@@ -178,8 +192,40 @@ export default function CardDetailOverlay({
     return c;
   }, []);
 
+  const refreshAiCaption = useCallback(async (id: string) => {
+    const c = await getCardById(id);
+    if (!c) return null;
+    setCard((prev) => (prev?.id === id ? { ...prev, aiCaption: c.aiCaption } : prev));
+    return c;
+  }, []);
+
+  useEffect(() => {
+    setDescriptionTab('description');
+  }, [cardId]);
+
+  useEffect(() => {
+    if (!hasAiCaption && descriptionTab === 'ai') {
+      setDescriptionTab('description');
+    }
+  }, [hasAiCaption, descriptionTab]);
+
+  useEffect(() => {
+    const onProgress = window.arc?.onAiIndexProgress?.((payload) => {
+      if (payload.currentCardId !== cardId) return;
+      if ((payload.currentCardProgress ?? 0) < 55) return;
+      void refreshAiCaption(cardId);
+    });
+    const onComplete = window.arc?.onAiIndexComplete?.(() => {
+      void refreshAiCaption(cardId);
+    });
+    return () => {
+      onProgress?.();
+      onComplete?.();
+    };
+  }, [cardId, refreshAiCaption]);
+
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
+    if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
   }, [
     confirmDelete,
     confirmPermanentDelete,
@@ -263,6 +309,10 @@ export default function CardDetailOverlay({
   }, [cardId]);
 
   useEffect(() => {
+    cardRef.current = card;
+  }, [card]);
+
+  useEffect(() => {
     const onBudget = () => setThumbBudgetEpoch((v) => v + 1);
     window.addEventListener(ARC_THUMB_BUDGET_CHANGED_EVENT, onBudget);
     return () => window.removeEventListener(ARC_THUMB_BUDGET_CHANGED_EVENT, onBudget);
@@ -290,12 +340,12 @@ export default function CardDetailOverlay({
   }, [settingsWidth]);
 
   useEffect(() => {
-    if (!src || card?.type !== 'image') {
+    if (card?.type !== 'image') {
       setPalette([]);
       return;
     }
     let cancelled = false;
-    void extractImagePalette(src)
+    void loadCardDetailPalette(cardId)
       .then((rows) => {
         if (!cancelled) setPalette(rows);
       })
@@ -305,7 +355,7 @@ export default function CardDetailOverlay({
     return () => {
       cancelled = true;
     };
-  }, [src, card?.type, cardId]);
+  }, [card?.type, cardId]);
 
   useEffect(() => {
     document.body.classList.add('arc-card-detail-open');
@@ -325,12 +375,12 @@ export default function CardDetailOverlay({
       else if (removeMoodboardConfirm) setRemoveMoodboardConfirm(null);
       else if (confirmPermanentDelete) setConfirmPermanentDelete(false);
       else if (confirmDelete) setConfirmDelete(false);
-      else onClose();
+      else requestClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [
-    onClose,
+    requestClose,
     confirmDelete,
     confirmPermanentDelete,
     removeMoodboardConfirm,
@@ -461,7 +511,7 @@ export default function CardDetailOverlay({
     try {
       await deleteCard(card.id);
       onDeleted();
-      onClose();
+      requestClose();
     } finally {
       setBusy(false);
     }
@@ -473,7 +523,7 @@ export default function CardDetailOverlay({
     try {
       await restoreCard(card.id);
       onDeleted();
-      onClose();
+      requestClose();
     } finally {
       setBusy(false);
     }
@@ -485,7 +535,7 @@ export default function CardDetailOverlay({
     try {
       await permanentDeleteCard(card.id);
       onDeleted();
-      onClose();
+      requestClose();
     } finally {
       setBusy(false);
     }
@@ -569,68 +619,77 @@ export default function CardDetailOverlay({
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const removeTag = async (tagId: string) => {
-    if (!card) return;
-    const next = card.tagIds.filter((id) => id !== tagId);
-    await updateCardPayload(card.id, { tagIds: next });
-    await reloadCard(card.id);
+  const patchCardTagIds = (computeNext: (tagIds: string[]) => string[]): Promise<void> => {
+    const task = tagPatchQueueRef.current.then(async () => {
+      const current = cardRef.current;
+      if (!current) return;
+      const prevTagIds = current.tagIds;
+      const nextTagIds = computeNext(prevTagIds);
+      const nextCard = { ...current, tagIds: nextTagIds };
+      setCard(nextCard);
+      cardRef.current = nextCard;
+      try {
+        await updateCardPayload(current.id, { tagIds: nextTagIds });
+      } catch {
+        const rolledBack = { ...current, tagIds: prevTagIds };
+        setCard((c) => (c?.id === current.id ? rolledBack : c));
+        if (cardRef.current?.id === current.id) cardRef.current = rolledBack;
+      }
+    });
+    tagPatchQueueRef.current = task.catch(() => undefined);
+    return task;
   };
 
-  const removeCollection = async (collectionId: string) => {
-    if (!card) return;
-    const next = card.collectionIds.filter((id) => id !== collectionId);
-    await updateCardPayload(card.id, { collectionIds: next });
-    setCollectionPreviews(await getCollectionPreviewSlices(3));
-    setCollCounts(await getCollectionCardCounts());
-    await reloadCard(card.id);
+  const patchCardCollectionIds = (computeNext: (collectionIds: string[]) => string[]): Promise<void> => {
+    const task = collectionPatchQueueRef.current.then(async () => {
+      const current = cardRef.current;
+      if (!current) return;
+      const prevCollectionIds = current.collectionIds;
+      const nextCollectionIds = computeNext(prevCollectionIds);
+      const nextCard = { ...current, collectionIds: nextCollectionIds };
+      setCard(nextCard);
+      cardRef.current = nextCard;
+      try {
+        await updateCardPayload(current.id, { collectionIds: nextCollectionIds });
+        setCollectionPreviews(await getCollectionPreviewSlices(3));
+        setCollCounts(await getCollectionCardCounts());
+      } catch {
+        const rolledBack = { ...current, collectionIds: prevCollectionIds };
+        setCard((c) => (c?.id === current.id ? rolledBack : c));
+        if (cardRef.current?.id === current.id) cardRef.current = rolledBack;
+      }
+    });
+    collectionPatchQueueRef.current = task.catch(() => undefined);
+    return task;
   };
 
-  const toggleTagOnCard = async (tagId: string) => {
-    if (!card) return;
-    const has = card.tagIds.includes(tagId);
-    const next = has ? card.tagIds.filter((id) => id !== tagId) : [...card.tagIds, tagId];
-    await updateCardPayload(card.id, { tagIds: next });
-    await reloadCard(card.id);
-  };
+  const removeTag = (tagId: string) => patchCardTagIds((ids) => ids.filter((id) => id !== tagId));
 
-  const applyCollections = async (collectionIds: string[]) => {
-    if (!card) return;
-    await updateCardPayload(card.id, { collectionIds });
-    setCollectionPreviews(await getCollectionPreviewSlices(3));
-    setCollCounts(await getCollectionCardCounts());
-    await reloadCard(card.id);
-  };
+  const removeCollection = (collectionId: string) =>
+    patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
 
-  const toggleCollectionOnCard = async (collectionId: string) => {
-    if (!card) return;
-    const has = card.collectionIds.includes(collectionId);
-    const next = has
-      ? card.collectionIds.filter((id) => id !== collectionId)
-      : [...card.collectionIds, collectionId];
-    await updateCardPayload(card.id, { collectionIds: next });
-    setCollectionPreviews(await getCollectionPreviewSlices(3));
-    setCollCounts(await getCollectionCardCounts());
-    await reloadCard(card.id);
-  };
+  const toggleTagOnCard = (tagId: string) =>
+    patchCardTagIds((ids) =>
+      ids.includes(tagId) ? ids.filter((id) => id !== tagId) : [...ids, tagId]
+    );
+
+  const applyCollections = (collectionIds: string[]) => patchCardCollectionIds(() => collectionIds);
+
+  const toggleCollectionOnCard = (collectionId: string) =>
+    patchCardCollectionIds((ids) =>
+      ids.includes(collectionId) ? ids.filter((id) => id !== collectionId) : [...ids, collectionId]
+    );
 
   const createAndAssignCollection = async (name: string) => {
     if (!card) return;
     const created = await addCollection(name);
-    if (!card.collectionIds.includes(created.id)) {
-      await updateCardPayload(card.id, { collectionIds: [...card.collectionIds, created.id] });
-      setCollectionPreviews(await getCollectionPreviewSlices(3));
-      setCollCounts(await getCollectionCardCounts());
-      await reloadCard(card.id);
-    }
+    await patchCardCollectionIds((ids) =>
+      ids.includes(created.id) ? ids : [...ids, created.id]
+    );
   };
 
-  const copyPaletteHex = async (hex: string) => {
-    try {
-      await navigator.clipboard.writeText(hex);
-      showCopyAlert('Цвет скопирован');
-    } catch {
-      /* clipboard unavailable */
-    }
+  const openPaletteColorSearch = (hex: string) => {
+    startColorSearch(navigate, searchParams, hex);
   };
 
   const videoTier =
@@ -698,9 +757,9 @@ export default function CardDetailOverlay({
 
   const overlay = (
     <>
-      <div className="arc-card-detail-backdrop" aria-hidden="true" />
+      <div ref={backdropRef} className="arc-card-detail-backdrop" aria-hidden="true" />
       <div
-        ref={hostRef}
+        ref={panelRef}
         className="arc-card-detail-overlay arc-ui-kit-scope"
         data-elevation="sunken"
         data-input-size="l"
@@ -768,8 +827,8 @@ export default function CardDetailOverlay({
             onLostPointerCapture={finishSplitDrag}
           />
 
-          <aside className="arc-card-detail-settings panel elevation-sunken">
-            <div className="arc-card-detail-options">
+          <aside className="arc-card-detail-settings panel elevation-sunken" data-interface-tour-anchor="card-detail-fields">
+            <div className="arc-card-detail-options" data-interface-tour-anchor="card-detail-toolbar">
               <div className="arc-card-detail-options-left">
                 {inTrash ? (
                   <>
@@ -858,11 +917,9 @@ export default function CardDetailOverlay({
                         onClick={async () => {
                           if (!card) return;
                           if (!inMoodboard) {
-                            const added = await toggleCardInMoodboard(card.id);
-                            setInMoodboard(added);
-                            if (added) {
-                              setMoodboardCardIds((prev) => new Set(prev).add(card.id));
-                            }
+                            await addCardToMoodboard(card.id);
+                            setInMoodboard(true);
+                            setMoodboardCardIds((prev) => new Set(prev).add(card.id));
                             setActionAlert({ message: 'Карточка добавлена в мудборд', variant: 'brand' });
                             return;
                           }
@@ -882,6 +939,7 @@ export default function CardDetailOverlay({
                             next.delete(card.id);
                             return next;
                           });
+                          setActionAlert({ message: 'Карточка убрана из мудборда', variant: 'brand' });
                         }}
                         disabled={!card}
                       >
@@ -931,7 +989,7 @@ export default function CardDetailOverlay({
                   type="button"
                   className="btn btn-outline btn-icon-only btn-ds arc-card-detail-close-btn"
                   aria-label="Закрыть"
-                  onClick={onClose}
+                  onClick={requestClose}
                 >
                   <span className="btn-icon-only__glyph arc-icon-close" aria-hidden="true" />
                 </button>
@@ -950,15 +1008,15 @@ export default function CardDetailOverlay({
                       {palette.map((swatch) => (
                         <Tooltip
                           key={swatch.hex}
-                          content={`${swatch.hex.toUpperCase()} (${swatch.pct}%)`}
+                          content={`Поиск по цвету · ${swatch.hex.toUpperCase()} (${swatch.pct}%)`}
                           position="top"
                         >
                           <button
                             type="button"
                             className="arc-card-detail-palette-swatch"
                             style={{ backgroundColor: swatch.hex }}
-                            aria-label={`${swatch.hex}, ${swatch.pct} процентов`}
-                            onClick={() => void copyPaletteHex(swatch.hex)}
+                            aria-label={`Поиск по цвету ${swatch.hex}, ${swatch.pct} процентов`}
+                            onClick={() => openPaletteColorSearch(swatch.hex)}
                           />
                         </Tooltip>
                       ))}
@@ -1031,19 +1089,78 @@ export default function CardDetailOverlay({
                       </button>
                     </Tooltip>
                   </div>
-                  <label className="field">
-                    <textarea
-                      className="input textarea"
-                      placeholder="Описание"
-                      rows={4}
-                      value={description}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setDescription(v);
-                        scheduleDescriptionSave(v);
-                      }}
-                    />
-                  </label>
+                  {hasAiCaption ? (
+                    <div className="arc-card-detail-description-editor">
+                      <div
+                        className="arc-card-detail-description-tabs tabs arc-ui-kit-scope"
+                        data-btn-size="s"
+                        role="tablist"
+                        aria-label="Описание карточки"
+                      >
+                        <button
+                          type="button"
+                          className={`tab-button${descriptionTab === 'description' ? ' is-active' : ''}`}
+                          role="tab"
+                          aria-selected={descriptionTab === 'description'}
+                          id="arc-card-detail-desc-tab-description"
+                          aria-controls="arc-card-detail-desc-panel"
+                          onClick={() => setDescriptionTab('description')}
+                        >
+                          Описание
+                        </button>
+                        <button
+                          type="button"
+                          className={`tab-button${descriptionTab === 'ai' ? ' is-active' : ''}`}
+                          role="tab"
+                          aria-selected={descriptionTab === 'ai'}
+                          id="arc-card-detail-desc-tab-ai"
+                          aria-controls="arc-card-detail-desc-panel"
+                          onClick={() => setDescriptionTab('ai')}
+                        >
+                          AI описание
+                        </button>
+                      </div>
+                      <label className="field">
+                        <textarea
+                          id="arc-card-detail-desc-panel"
+                          className="input textarea"
+                          role="tabpanel"
+                          aria-labelledby={
+                            descriptionTab === 'ai'
+                              ? 'arc-card-detail-desc-tab-ai'
+                              : 'arc-card-detail-desc-tab-description'
+                          }
+                          placeholder={descriptionTab === 'ai' ? 'AI описание' : 'Описание'}
+                          rows={4}
+                          value={descriptionTab === 'ai' ? (card?.aiCaption ?? '') : description}
+                          readOnly={descriptionTab === 'ai'}
+                          onChange={
+                            descriptionTab === 'ai'
+                              ? undefined
+                              : (e) => {
+                                  const v = e.target.value;
+                                  setDescription(v);
+                                  scheduleDescriptionSave(v);
+                                }
+                          }
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className="field">
+                      <textarea
+                        className="input textarea"
+                        placeholder="Описание"
+                        rows={4}
+                        value={description}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setDescription(v);
+                          scheduleDescriptionSave(v);
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
               </CollapsibleSection>
 
@@ -1054,7 +1171,7 @@ export default function CardDetailOverlay({
                 count={tagsSorted.length}
                 footer={addRowButton('Добавить метку', () => setTagsModalOpen(true))}
               >
-                {tagsSorted.length > 0 ? (
+                {tagsSorted.length > 0 && (
                   <div className="arc-card-detail-tags">
                     {tagsSorted.map(({ tag, colorHex }) => {
                       const hasTipText = Boolean(tag.description?.trim());
@@ -1092,8 +1209,6 @@ export default function CardDetailOverlay({
                       );
                     })}
                   </div>
-                ) : (
-                  <p className="text-s arc-card-detail-empty">Меток пока нет</p>
                 )}
               </CollapsibleSection>
 
@@ -1104,7 +1219,7 @@ export default function CardDetailOverlay({
                 count={collectionsResolved.length}
                 footer={addRowButton('Добавить в коллекцию', () => setCollectionsModalOpen(true))}
               >
-                {collectionsResolved.length > 0 ? (
+                {collectionsResolved.length > 0 && (
                   <ul className="arc-card-detail-collections">
                     {collectionsResolved.map((col) => (
                       <li key={col.id} className="arc-card-detail-collection-row panel elevation-sunken">
@@ -1128,8 +1243,6 @@ export default function CardDetailOverlay({
                       </li>
                     ))}
                   </ul>
-                ) : (
-                  <p className="text-s arc-card-detail-empty">Коллекций пока нет</p>
                 )}
               </CollapsibleSection>
             </div>
@@ -1137,7 +1250,7 @@ export default function CardDetailOverlay({
         </div>
 
         {similar.length > 0 ? (
-          <section className="arc-card-detail-similar">
+          <section className="arc-card-detail-similar" data-interface-tour-anchor="card-detail-similar">
             <div className="arc-card-detail-similar-head">
               <p className="text-l">Похожие изображения</p>
               <span className="text-s arc-card-detail-section-count">{similar.length}</span>
@@ -1298,7 +1411,7 @@ export default function CardDetailOverlay({
         <CardDetailTagsModal
           selectedTagIds={card.tagIds}
           onClose={() => setTagsModalOpen(false)}
-          onToggleTag={(tagId) => void toggleTagOnCard(tagId)}
+          onToggleTag={toggleTagOnCard}
         />
       ) : null}
 
@@ -1306,7 +1419,7 @@ export default function CardDetailOverlay({
         <CardDetailCollectionsModal
           selectedCollectionIds={card.collectionIds}
           onClose={() => setCollectionsModalOpen(false)}
-          onToggleCollection={(collectionId) => void toggleCollectionOnCard(collectionId)}
+          onToggleCollection={toggleCollectionOnCard}
           onCreateAndAssign={(name) => createAndAssignCollection(name)}
         />
       ) : null}
@@ -1343,6 +1456,8 @@ export default function CardDetailOverlay({
       {similarContextMenuLayer}
     </>
   );
+
+  if (!render) return null;
 
   return createPortal(overlay, document.body);
 }

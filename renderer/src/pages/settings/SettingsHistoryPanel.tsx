@@ -98,7 +98,7 @@ export default function SettingsHistoryPanel() {
 
   return (
     <>
-      <div className="arc-settings-stack arc-history-screen">
+      <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main">
         {showEmptySection ? (
           <div className="arc-history-empty-host">
             <EmptyState
@@ -137,7 +137,7 @@ export default function SettingsHistoryPanel() {
                   <li key={`${e.time}-${i}`} className="arc-history-list__item">
                     {i > 0 ? <div className="arc-history-row-sep" role="separator" /> : null}
                     <div className="arc-history-item">
-                      <span className="typo-p-m arc-history-time">{formatHistoryDisplayTime(e.time)}</span>
+                      <span className="text-m arc-history-time">{formatHistoryDisplayTime(e.time)}</span>
                       <HistoryMessage entry={e} />
                     </div>
                   </li>

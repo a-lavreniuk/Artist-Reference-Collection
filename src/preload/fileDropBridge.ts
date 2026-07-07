@@ -4,6 +4,31 @@ type FileDropListener = (paths: string[]) => void;
 
 const listeners = new Set<FileDropListener>();
 let attached = false;
+/** Последний dragover над локальной drop-зоной (на drop в Electron target часто document). */
+let lastOsFileDragLocalTarget: Element | null = null;
+
+/** Drop-зоны с локальным React-обработчиком — глобальный bridge не перехватывает drop. */
+const LOCAL_FILE_DROP_ROOTS = [
+  '.arc-search-panel-similar-dropzone',
+  '.arc-search-panel-similar-dropzone-host',
+  '.arc-search-panel-similar-workspace'
+] as const;
+
+function isLocalFileDropTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return LOCAL_FILE_DROP_ROOTS.some((selector) => !!target.closest(selector));
+}
+
+/** Панель похожего поиска: drop обрабатывает React / локальный onFileDrop, не глобальный импорт. */
+function isSimilarSearchPanelFileDropTarget(target: EventTarget | null): boolean {
+  if (!document.body.classList.contains('arc-similar-search-panel-open')) return false;
+  if (!(target instanceof Element)) return false;
+  return !!target.closest('.arc-search-panel');
+}
+
+function shouldBypassGlobalFileDrop(target: EventTarget | null): boolean {
+  return isLocalFileDropTarget(target) || isSimilarSearchPanelFileDropTarget(target);
+}
 
 function isOsFileDrag(dt: DataTransfer): boolean {
   if (dt.files?.length) return true;
@@ -75,6 +100,11 @@ function attachFileDropListeners(): void {
       if (!dt || !isOsFileDrag(dt)) return;
       e.preventDefault();
       dt.dropEffect = 'copy';
+      if (e.target instanceof Element && isLocalFileDropTarget(e.target)) {
+        lastOsFileDragLocalTarget = e.target;
+      } else {
+        lastOsFileDragLocalTarget = null;
+      }
     },
     true
   );
@@ -84,6 +114,26 @@ function attachFileDropListeners(): void {
     (e) => {
       const dt = e.dataTransfer;
       if (!dt) return;
+
+      const trackedLocalTarget = lastOsFileDragLocalTarget;
+      lastOsFileDragLocalTarget = null;
+
+      const bypass =
+        shouldBypassGlobalFileDrop(e.target) || shouldBypassGlobalFileDrop(trackedLocalTarget);
+
+      if (bypass) {
+        e.preventDefault();
+        if (isLocalFileDropTarget(trackedLocalTarget) && !isLocalFileDropTarget(e.target)) {
+          emitFileDrop(pathsFromDroppedDataTransfer(dt));
+        }
+        return;
+      }
+
+      if (document.body.classList.contains('arc-similar-search-panel-open')) {
+        e.preventDefault();
+        return;
+      }
+
       e.preventDefault();
       e.stopImmediatePropagation();
       const paths = pathsFromDroppedDataTransfer(dt);

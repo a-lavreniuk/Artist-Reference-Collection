@@ -3,7 +3,14 @@ import fs from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 
+import { applyLaunchAtLogin, shouldStartHiddenInTrayFromLaunch } from './launchAtLogin';
 import { registerScreenshotShortcut } from './screenshotShortcut';
+import {
+  defaultMcpToolsEnabled,
+  mergeMcpToolsEnabled,
+  sanitizeMcpToolsEnabled,
+  type McpToolsEnabledMap
+} from './shared/mcpToolCatalog';
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
@@ -11,9 +18,18 @@ export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 export type UiThemePreference = 'dark' | 'light' | 'system';
 
+export type OnboardingSetupStep = 0 | 1 | 2;
+
+export type OnboardingTourStep = number;
+
 export type AppPreferencesV1 = {
   version: 1;
+  onboardingSetupCompleted: boolean;
+  onboardingSetupStep: OnboardingSetupStep;
+  onboardingTourCompleted: boolean;
+  onboardingTourStep: OnboardingTourStep;
   launchAtLogin: boolean;
+  launchAtLoginHidden: boolean;
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
   deleteCardsUseTrash: boolean;
@@ -30,6 +46,11 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  importApiEnabled: boolean;
+  importApiPrefixEnabled: boolean;
+  importApiPrefixText: string;
+  mcpServerEnabled: boolean;
+  mcpToolsEnabled: McpToolsEnabledMap;
   aiSemanticSearchEnabled: boolean;
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -47,10 +68,26 @@ const FILENAME = 'arc-app-preferences.json';
 let cached: AppPreferencesV1 | null = null;
 let ipcRegistered = false;
 
+function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
+  if (raw === 1 || raw === 2) return raw;
+  return 0;
+}
+
+function sanitizeOnboardingTourStep(raw: unknown, maxStep = 16): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0;
+  const n = Math.round(raw);
+  return Math.max(0, Math.min(maxStep, n));
+}
+
 export function defaultAppPreferences(): AppPreferencesV1 {
   return {
     version: 1,
+    onboardingSetupCompleted: false,
+    onboardingSetupStep: 0,
+    onboardingTourCompleted: false,
+    onboardingTourStep: 0,
     launchAtLogin: false,
+    launchAtLoginHidden: false,
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
     deleteCardsUseTrash: true,
@@ -67,6 +104,11 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     autoImportEnabled: false,
     autoImportFolderPath: null,
     autoImportSourceFilesAction: 'ask',
+    importApiEnabled: true,
+    importApiPrefixEnabled: false,
+    importApiPrefixText: '',
+    mcpServerEnabled: false,
+    mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
@@ -109,12 +151,19 @@ function sanitizeUiTheme(raw: unknown): UiThemePreference {
   return 'dark';
 }
 
+function sanitizeImportApiPrefixText(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  return raw.trim().slice(0, 64);
+}
+
 function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknown>): AppPreferencesV1 {
   const d = defaultAppPreferences();
 
-  return {
+  const sanitized: AppPreferencesV1 = {
     version: 1,
     launchAtLogin: typeof raw.launchAtLogin === 'boolean' ? raw.launchAtLogin : d.launchAtLogin,
+    launchAtLoginHidden:
+      typeof raw.launchAtLoginHidden === 'boolean' ? raw.launchAtLoginHidden : d.launchAtLoginHidden,
     closeToTrayOnWindowClose:
       typeof raw.closeToTrayOnWindowClose === 'boolean' ? raw.closeToTrayOnWindowClose : d.closeToTrayOnWindowClose,
     importSourceFilesAction: sanitizeImportAction(raw.importSourceFilesAction),
@@ -139,6 +188,12 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         ? path.resolve(raw.autoImportFolderPath.trim())
         : d.autoImportFolderPath,
     autoImportSourceFilesAction: sanitizeImportAction(raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction),
+    importApiEnabled: typeof raw.importApiEnabled === 'boolean' ? raw.importApiEnabled : d.importApiEnabled,
+    importApiPrefixEnabled:
+      typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
+    importApiPrefixText: sanitizeImportApiPrefixText(raw.importApiPrefixText ?? d.importApiPrefixText),
+    mcpServerEnabled: typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
+    mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
     aiSemanticSearchEnabled:
       typeof raw.aiSemanticSearchEnabled === 'boolean' ? raw.aiSemanticSearchEnabled : d.aiSemanticSearchEnabled,
     aiModelTier: sanitizeAiModelTier(raw.aiModelTier ?? d.aiModelTier),
@@ -162,8 +217,24 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     galleryCollectionsSortMode: sanitizeGalleryCollectionsSortMode(
       raw.galleryCollectionsSortMode ?? d.galleryCollectionsSortMode
     ),
-    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme)
+    uiTheme: sanitizeUiTheme(raw.uiTheme ?? d.uiTheme),
+    onboardingSetupCompleted:
+      typeof raw.onboardingSetupCompleted === 'boolean'
+        ? raw.onboardingSetupCompleted
+        : d.onboardingSetupCompleted,
+    onboardingSetupStep: sanitizeOnboardingSetupStep(raw.onboardingSetupStep ?? d.onboardingSetupStep),
+    onboardingTourCompleted:
+      typeof raw.onboardingTourCompleted === 'boolean'
+        ? raw.onboardingTourCompleted
+        : d.onboardingTourCompleted,
+    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep)
   };
+
+  if (!sanitized.launchAtLogin) {
+    sanitized.launchAtLoginHidden = false;
+  }
+
+  return sanitized;
 }
 
 function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>): AppPreferencesV1 {
@@ -171,6 +242,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
 
   if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
     next.launchAtLogin = patch.launchAtLogin;
+  }
+  if ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean') {
+    next.launchAtLoginHidden = patch.launchAtLoginHidden;
+  }
+  if (!next.launchAtLogin) {
+    next.launchAtLoginHidden = false;
   }
   if ('closeToTrayOnWindowClose' in patch && typeof patch.closeToTrayOnWindowClose === 'boolean') {
     next.closeToTrayOnWindowClose = patch.closeToTrayOnWindowClose;
@@ -224,6 +301,21 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = sanitizeImportAction(patch.autoImportSourceFilesAction);
   }
+  if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
+    next.importApiEnabled = patch.importApiEnabled;
+  }
+  if ('importApiPrefixEnabled' in patch && typeof patch.importApiPrefixEnabled === 'boolean') {
+    next.importApiPrefixEnabled = patch.importApiPrefixEnabled;
+  }
+  if ('importApiPrefixText' in patch) {
+    next.importApiPrefixText = sanitizeImportApiPrefixText(patch.importApiPrefixText);
+  }
+  if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
+    next.mcpServerEnabled = patch.mcpServerEnabled;
+  }
+  if ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object') {
+    next.mcpToolsEnabled = mergeMcpToolsEnabled(current.mcpToolsEnabled, patch.mcpToolsEnabled);
+  }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
   }
@@ -253,6 +345,18 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('uiTheme' in patch) {
     next.uiTheme = sanitizeUiTheme(patch.uiTheme);
+  }
+  if ('onboardingSetupCompleted' in patch && typeof patch.onboardingSetupCompleted === 'boolean') {
+    next.onboardingSetupCompleted = patch.onboardingSetupCompleted;
+  }
+  if ('onboardingSetupStep' in patch) {
+    next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
+  }
+  if ('onboardingTourCompleted' in patch && typeof patch.onboardingTourCompleted === 'boolean') {
+    next.onboardingTourCompleted = patch.onboardingTourCompleted;
+  }
+  if ('onboardingTourStep' in patch) {
+    next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
   }
 
   return next;
@@ -284,12 +388,14 @@ export function getCloseToTrayOnWindowClose(): boolean {
   return readAppPreferencesSync().closeToTrayOnWindowClose;
 }
 
-export function applyLaunchAtLogin(open: boolean): void {
-  if (process.platform === 'linux') return;
-  app.setLoginItemSettings({
-    openAtLogin: open,
-    openAsHidden: false
-  });
+export function shouldStartHiddenInTray(prefs: AppPreferencesV1, needsOnboarding: boolean): boolean {
+  return shouldStartHiddenInTrayFromLaunch(
+    prefs.launchAtLogin,
+    prefs.launchAtLoginHidden,
+    needsOnboarding,
+    process.argv,
+    app.getLoginItemSettings()
+  );
 }
 
 export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Promise<AppPreferencesV1> {
@@ -299,8 +405,11 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
   const filePath = prefsPath();
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(next, null, 2), 'utf8');
-  if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
-    applyLaunchAtLogin(next.launchAtLogin);
+  if (
+    ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') ||
+    ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean')
+  ) {
+    applyLaunchAtLogin(next.launchAtLogin, next.launchAtLoginHidden);
   }
   if (
     'screenshotsEnabled' in patch ||
@@ -315,12 +424,27 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
     const { restartAutoImportWatcher } = await import('./autoImportWatcher');
     restartAutoImportWatcher();
   }
+  if (
+    'importApiEnabled' in patch ||
+    'importApiPrefixEnabled' in patch ||
+    'importApiPrefixText' in patch
+  ) {
+    const { restartImportApiServer } = await import('./importApi/importApiHost');
+    await restartImportApiServer();
+  }
+  if (
+    ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') ||
+    ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object')
+  ) {
+    const { restartMcpServer } = await import('./mcp/mcpHost');
+    await restartMcpServer();
+  }
   return next;
 }
 
 export async function applyStoredLaunchAtLogin(): Promise<void> {
   const prefs = await readAppPreferences();
-  applyLaunchAtLogin(prefs.launchAtLogin);
+  applyLaunchAtLogin(prefs.launchAtLogin, prefs.launchAtLoginHidden);
 }
 
 export function registerAppPreferencesIpc(): void {

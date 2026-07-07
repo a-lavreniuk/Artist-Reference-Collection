@@ -70,6 +70,11 @@ export function invalidateLibraryCache(): void {
   tagsLoadPromise = null;
 }
 
+/** Сброс кэша меток (категории читаются без кэша, метки — с кэшем). */
+export function invalidateTagsCache(): void {
+  tagsLoadPromise = null;
+}
+
 export let fileBackendResolved = false;
 
 let backendInitPromise: Promise<'file' | 'local'> | null = null;
@@ -239,6 +244,7 @@ export async function persistTags(list: TagRecord[]): Promise<void> {
 export async function readTagsUnified(): Promise<TagRecord[]> {
   const b = await resolveBackend();
   if (b === 'file') {
+    await storage.storageEnsureReady();
     if (!tagsLoadPromise) {
       tagsLoadPromise = storage.storageListAllTags().then((raw) => raw.map(mapStorageTag));
     }

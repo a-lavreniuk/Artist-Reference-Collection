@@ -4,10 +4,12 @@ import {
   getAppPreferences,
   setAppPreferences,
   type AppPreferencesV1,
+  type OnboardingSetupStep,
   type GalleryCollectionsSortMode,
   type ScreenshotFormat,
   type UiThemePreference
 } from './appPreferences';
+import { mergeMcpToolsEnabled } from '@arc-main-shared/mcpToolCatalog';
 
 let cache: AppPreferencesV1 | null = null;
 let initPromise: Promise<AppPreferencesV1> | null = null;
@@ -33,11 +35,28 @@ function sanitizeUiTheme(raw: unknown): UiThemePreference {
   return 'dark';
 }
 
-function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreferencesV1> {
+function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
+  if (raw === 1 || raw === 2) return raw;
+  return 0;
+}
+
+function sanitizeOnboardingTourStep(raw: unknown, maxStep = 16): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0;
+  const n = Math.round(raw);
+  return Math.max(0, Math.min(maxStep, n));
+}
+
+function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreferencesV1): Partial<AppPreferencesV1> {
   const next: Partial<AppPreferencesV1> = {};
 
   if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
     next.launchAtLogin = patch.launchAtLogin;
+    if (!patch.launchAtLogin) {
+      next.launchAtLoginHidden = false;
+    }
+  }
+  if ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean') {
+    next.launchAtLoginHidden = patch.launchAtLoginHidden;
   }
   if ('closeToTrayOnWindowClose' in patch && typeof patch.closeToTrayOnWindowClose === 'boolean') {
     next.closeToTrayOnWindowClose = patch.closeToTrayOnWindowClose;
@@ -91,6 +110,22 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
   }
+  if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
+    next.importApiEnabled = patch.importApiEnabled;
+  }
+  if ('importApiPrefixEnabled' in patch && typeof patch.importApiPrefixEnabled === 'boolean') {
+    next.importApiPrefixEnabled = patch.importApiPrefixEnabled;
+  }
+  if ('importApiPrefixText' in patch) {
+    next.importApiPrefixText =
+      typeof patch.importApiPrefixText === 'string' ? patch.importApiPrefixText.trim().slice(0, 64) : '';
+  }
+  if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
+    next.mcpServerEnabled = patch.mcpServerEnabled;
+  }
+  if ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object') {
+    next.mcpToolsEnabled = mergeMcpToolsEnabled(current.mcpToolsEnabled, patch.mcpToolsEnabled);
+  }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
   }
@@ -125,6 +160,18 @@ function normalizePatch(patch: Partial<AppPreferencesV1>): Partial<AppPreference
   if ('uiTheme' in patch) {
     next.uiTheme = sanitizeUiTheme(patch.uiTheme);
   }
+  if ('onboardingSetupCompleted' in patch && typeof patch.onboardingSetupCompleted === 'boolean') {
+    next.onboardingSetupCompleted = patch.onboardingSetupCompleted;
+  }
+  if ('onboardingSetupStep' in patch) {
+    next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
+  }
+  if ('onboardingTourCompleted' in patch && typeof patch.onboardingTourCompleted === 'boolean') {
+    next.onboardingTourCompleted = patch.onboardingTourCompleted;
+  }
+  if ('onboardingTourStep' in patch) {
+    next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
+  }
 
   return next;
 }
@@ -134,6 +181,12 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
 
   if ('launchAtLogin' in patch && typeof patch.launchAtLogin === 'boolean') {
     next.launchAtLogin = patch.launchAtLogin;
+    if (!patch.launchAtLogin) {
+      next.launchAtLoginHidden = false;
+    }
+  }
+  if ('launchAtLoginHidden' in patch && typeof patch.launchAtLoginHidden === 'boolean') {
+    next.launchAtLoginHidden = patch.launchAtLoginHidden;
   }
   if ('closeToTrayOnWindowClose' in patch && typeof patch.closeToTrayOnWindowClose === 'boolean') {
     next.closeToTrayOnWindowClose = patch.closeToTrayOnWindowClose;
@@ -187,6 +240,22 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
   }
+  if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
+    next.importApiEnabled = patch.importApiEnabled;
+  }
+  if ('importApiPrefixEnabled' in patch && typeof patch.importApiPrefixEnabled === 'boolean') {
+    next.importApiPrefixEnabled = patch.importApiPrefixEnabled;
+  }
+  if ('importApiPrefixText' in patch) {
+    next.importApiPrefixText =
+      typeof patch.importApiPrefixText === 'string' ? patch.importApiPrefixText.trim().slice(0, 64) : '';
+  }
+  if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
+    next.mcpServerEnabled = patch.mcpServerEnabled;
+  }
+  if ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object') {
+    next.mcpToolsEnabled = mergeMcpToolsEnabled(current.mcpToolsEnabled, patch.mcpToolsEnabled);
+  }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
   }
@@ -220,6 +289,22 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('uiTheme' in patch) {
     next.uiTheme = sanitizeUiTheme(patch.uiTheme);
+  }
+  if ('onboardingSetupCompleted' in patch && typeof patch.onboardingSetupCompleted === 'boolean') {
+    next.onboardingSetupCompleted = patch.onboardingSetupCompleted;
+  }
+  if ('onboardingSetupStep' in patch) {
+    next.onboardingSetupStep = sanitizeOnboardingSetupStep(patch.onboardingSetupStep);
+  }
+  if ('onboardingTourCompleted' in patch && typeof patch.onboardingTourCompleted === 'boolean') {
+    next.onboardingTourCompleted = patch.onboardingTourCompleted;
+  }
+  if ('onboardingTourStep' in patch) {
+    next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
+  }
+
+  if (!next.launchAtLogin) {
+    next.launchAtLoginHidden = false;
   }
 
   return next;
@@ -259,7 +344,7 @@ export function getAppPreferencesSync(): AppPreferencesV1 {
 }
 
 export async function patchAppPreferences(patch: Partial<AppPreferencesV1>): Promise<AppPreferencesV1> {
-  const normalized = normalizePatch(patch);
+  const normalized = normalizePatch(patch, getAppPreferencesSync());
   if (Object.keys(normalized).length === 0) {
     return getAppPreferencesSync();
   }

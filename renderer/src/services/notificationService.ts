@@ -11,6 +11,8 @@ export type AppNotificationPayload = {
   /** 0 — только закрытие по крестику. */
   autoDismissMs?: number;
   withSound?: boolean;
+  /** Клик по alert — переход (например /duplicates?from=alert). */
+  navigateTo?: string;
 };
 
 export function showAppNotification(payload: AppNotificationPayload): void {

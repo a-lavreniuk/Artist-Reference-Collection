@@ -33,6 +33,7 @@ import {
   getAllCategories,
   getCategoryStats,
   getTagsByCategory,
+  invalidateTagsCache,
   moveTagToCategory,
   reorderCategoryToIndex,
   updateCategory,
@@ -67,6 +68,7 @@ export default function TagsPage() {
   const mainDropEnabled = selectedCategoryId === null;
 
   const load = useCallback(async () => {
+    invalidateTagsCache();
     const cats = await getAllCategories();
     const tagLists = await Promise.all(cats.map((c) => getTagsByCategory(c.id)));
     const nextTags: Record<string, TagRecord[]> = {};
@@ -370,6 +372,7 @@ export default function TagsPage() {
     <div
       ref={pageRef}
       className="arc-tags-outlet arc-tags-page"
+      data-interface-tour-anchor="tags-page"
       style={{ ['--arc-tags-sidebar-w' as string]: `${sidebarWidth}px` }}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('application/tag-id')) {

@@ -432,6 +432,9 @@ export function resolveAiActivityMessage(snapshot: ReturnType<typeof getAiSettin
     const percent =
       index.total > 0 ? Math.max(0, Math.min(100, Math.round((index.indexed / index.total) * 100))) : 0;
     if (index.indexed === 0 && index.currentCardId) {
+      if (cardPercent != null && cardPercent <= 45) {
+        return `Загрузка модели и подпись к изображению (${cardPercent}%)`;
+      }
       if (cardPercent != null) return `Индексация… обработка карточки (${cardPercent}%)`;
       return `Индексация… обработка карточки (${percent}%)`;
     }
@@ -481,7 +484,9 @@ export function resolveActivityProgress(snapshot: ReturnType<typeof getAiSetting
       index.paused
         ? `Индексация на паузе · ${percent}%`
         : index.indexed === 0 && index.currentCardId
-          ? `Индексация… обработка карточки · ${cardPercent ?? percent}%`
+          ? cardPercent != null && cardPercent <= 45
+            ? `Загрузка модели и подпись · ${cardPercent}%`
+            : `Индексация… обработка карточки · ${cardPercent ?? percent}%`
           : `Индексация… ${percent}%`;
     return { visible: true, label, percent, indeterminate: false };
   }

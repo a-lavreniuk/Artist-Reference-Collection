@@ -23,6 +23,7 @@ import { isCardSectionMediaActive } from '../layout/cardSectionMedia';
 import { clearMeasuredMasonryHeights } from '../masonry/masonryItemHeight';
 import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
 import {
+  getGalleryCacheHit,
   getGallerySnapshot,
   invalidateAllGallerySnapshots,
   setGallerySnapshot,
@@ -96,7 +97,7 @@ export function useGalleryFeed(
   const queryRef = useRef(query);
   queryRef.current = query;
 
-  const initialSnapshot = useMemo(() => getGallerySnapshot(queryKey), [queryKey]);
+  const initialSnapshot = useMemo(() => getGalleryCacheHit(queryKey), [queryKey]);
 
   const [cards, setCards] = useState<CardRecord[]>(() => initialSnapshot?.cards ?? []);
   const [srcMap, setSrcMap] = useState<Record<string, string>>(() => initialSnapshot?.srcMap ?? {});
@@ -181,7 +182,7 @@ export function useGalleryFeed(
       if (trimmed.removedCount > 0) {
         compensateScrollForTrim(trimmed.removedCount);
       }
-      const next = { ...snapshot, cards: trimmed.cards, srcMap: trimmed.srcMap };
+      const next = { ...snapshot, cards: trimmed.cards, srcMap: trimmed.srcMap, settled: true };
       setGallerySnapshot(queryKey, next);
       applySnapshot(next);
     },
@@ -193,7 +194,7 @@ export function useGalleryFeed(
       setFeedSettled(false);
       return;
     }
-    const cached = getGallerySnapshot(queryKey);
+    const cached = getGalleryCacheHit(queryKey);
     if (cached) {
       applySnapshot(cached);
       setBooting(false);
@@ -365,7 +366,7 @@ export function useGalleryFeed(
   }, [invalidatePrefetch, queryKey]);
 
   useLayoutEffect(() => {
-    const cached = getGallerySnapshot(queryKey);
+    const cached = getGalleryCacheHit(queryKey);
     if (cached) {
       applySnapshot(cached);
       setBooting(false);
@@ -414,7 +415,7 @@ export function useGalleryFeed(
       try {
         await ensureGalleryBootstrap(queryRef.current, mediaTab);
         if (seq !== loadSeqRef.current) return;
-        const warmed = getGallerySnapshot(queryKey);
+        const warmed = getGalleryCacheHit(queryKey);
         if (warmed) {
           applySnapshot(warmed);
           setFeedSettled(true);
