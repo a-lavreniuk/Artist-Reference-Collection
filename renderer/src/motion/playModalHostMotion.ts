@@ -128,6 +128,37 @@ export function playMenuPanelEnter(panel: HTMLElement): void {
 
 }
 
+const MENU_ITEMS_ENTER_SPEED = 2;
+
+/** Context menu rows/items — stagger fade-in on open. */
+export function playMenuItemsEnter(panel: HTMLElement): void {
+  const gsap = ensureGsapSetup();
+  const reduced = getPrefersReducedMotion();
+  const duration = motionDuration('fast', reduced) / MENU_ITEMS_ENTER_SPEED;
+  const nodes = panel.querySelectorAll<HTMLElement>(
+    '.context-menu__item, .context-menu__separator, .context-menu__header, .context-menu__filter-row'
+  );
+
+  gsap.killTweensOf(nodes);
+  if (reduced) {
+    gsap.set(nodes, { opacity: 1 });
+    return;
+  }
+
+  gsap.set(nodes, { opacity: 0 });
+  gsap.fromTo(
+    nodes,
+    { opacity: 0 },
+    {
+      opacity: 1,
+      duration,
+      stagger: arcMotionTokens.stagger / MENU_ITEMS_ENTER_SPEED,
+      ease: arcMotionTokens.ease,
+      overwrite: true
+    }
+  );
+}
+
 
 
 /** Toast alert — снизу вверх через прозрачность. */

@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { playMenuPanelEnter } from '../../motion/playModalHostMotion';
+import { playMenuItemsEnter, playMenuPanelEnter } from '../../motion/playModalHostMotion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import ContextMenuHeader from './ContextMenuHeader';
 import ContextMenuItem from './ContextMenuItem';
@@ -81,11 +81,17 @@ export default function ContextMenu({
   const panelRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<{ top: number; left: number } | null>(null);
   const menuWasOpenRef = useRef(false);
+  const contentSignatureRef = useRef('');
   const dragClass = noDragClassName.trim();
+
+  const contentSignature = `${ariaLabel}|${
+    rows?.map((row) => (row.type === 'item' ? row.key : `${row.type}:${row.key}`)).join(',') ?? ''
+  }|${children ? 'children' : ''}`;
 
   useLayoutEffect(() => {
     if (!open) {
       menuWasOpenRef.current = false;
+      contentSignatureRef.current = '';
       setLayout((prev) => (prev === null ? prev : null));
       return;
     }
@@ -121,10 +127,21 @@ export default function ContextMenu({
 
   useLayoutEffect(() => {
     if (!open || !panelRef.current || !layout) return;
-    if (menuWasOpenRef.current) return;
+
+    const isFirstOpen = !menuWasOpenRef.current;
+    const isContentSwap =
+      menuWasOpenRef.current && contentSignatureRef.current !== contentSignature;
+
+    if (!isFirstOpen && !isContentSwap) return;
+
     menuWasOpenRef.current = true;
-    playMenuPanelEnter(panelRef.current);
-  }, [open, layout]);
+    contentSignatureRef.current = contentSignature;
+
+    if (isFirstOpen) {
+      playMenuPanelEnter(panelRef.current);
+    }
+    playMenuItemsEnter(panelRef.current);
+  }, [open, layout, contentSignature]);
 
   useEffect(() => {
     if (!open) return;

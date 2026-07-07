@@ -1072,6 +1072,10 @@ button.color-swatch-inline:disabled {
   box-sizing: border-box;
 }
 
+.arc-masonry-grid .arc-masonry-item:not([data-revealed]):not(.arc-masonry-item--skeleton) {
+  opacity: 0;
+}
+
 .arc-masonry-grid .arc-gallery-card-wrap {
   margin-bottom: 0;
   width: 100%;

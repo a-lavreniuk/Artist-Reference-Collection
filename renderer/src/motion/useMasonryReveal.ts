@@ -9,8 +9,8 @@ const revealedIdsGlobal = new Set<string>();
 /** Сколько карточек на первом экране идут с поочерёдным stagger. */
 const FIRST_SCREEN_STAGGER_CAP = 20;
 const MAX_REF_RETRIES = 8;
-const REVEAL_FROM = { y: 10, scale: 0.98 };
-const REVEAL_TO = { y: 0, scale: 1 };
+const REVEAL_FROM = { opacity: 0, y: 10, scale: 0.98 };
+const REVEAL_TO = { opacity: 1, y: 0, scale: 1 };
 
 export function resetMasonryRevealCache(): void {
   revealedIdsGlobal.clear();
@@ -35,7 +35,7 @@ function setMembershipKey(set: Set<string> | undefined): string {
 }
 
 function motionTarget(el: HTMLElement): HTMLElement {
-  return el.querySelector<HTMLElement>('.arc-gallery-card-wrap') ?? el;
+  return el;
 }
 
 function itemId(el: HTMLElement): string | null {
@@ -62,7 +62,7 @@ function markRevealed(
 ): void {
   const id = itemId(el);
   el.setAttribute('data-revealed', 'true');
-  gsap.set(motionTarget(el), { clearProps: 'transform' });
+  gsap.set(motionTarget(el), { clearProps: 'transform,opacity' });
   if (id) {
     revealedIdsGlobal.add(id);
     animating.delete(id);
@@ -161,11 +161,11 @@ export function useMasonryReveal({
 
     const armRevealFallback = (): void => {
       window.clearTimeout(fallbackTimerRef.current);
-      const hasHidden = [...visibleRef.current].some((id) => {
-        const el = itemRefs.current?.get(id);
-        return el && !el.hasAttribute('data-revealed');
+      const hasStuckHidden = [...visibleRef.current].some((id) => {
+        if (revealedIdsGlobal.has(id) || animatingRef.current.has(id)) return false;
+        return Boolean(itemRefs.current?.get(id));
       });
-      if (!hasHidden || getPrefersReducedMotion()) return;
+      if (!hasStuckHidden || getPrefersReducedMotion()) return;
       fallbackTimerRef.current = window.setTimeout(() => {
         forceRevealVisible(gsap, visibleRef.current, itemRefs, animatingRef.current);
         fallbackTimerRef.current = 0;
@@ -229,6 +229,7 @@ export function useMasonryReveal({
           return;
         }
 
+        gsap.set(targets, REVEAL_FROM);
         gsap.fromTo(targets, REVEAL_FROM, {
           ...REVEAL_TO,
           duration,

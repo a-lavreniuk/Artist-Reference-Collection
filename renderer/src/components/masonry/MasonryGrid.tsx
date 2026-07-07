@@ -8,7 +8,7 @@ import {
   type ReactNode,
   type RefObject
 } from 'react';
-import { useMasonryReveal, resetMasonryRevealCache } from '../../motion';
+import { useMasonryReveal, resetMasonryRevealCache, isMasonryItemRevealed } from '../../motion';
 import {
   canIncrementalAppend,
   layoutMasonryAppend,
@@ -88,6 +88,7 @@ export default function MasonryGrid({
   const layoutStateRef = useRef<MasonryLayoutState | null>(null);
   const prevIdsRef = useRef<string[]>([]);
   const prevLayoutKeyRef = useRef('');
+  const hadStableLayoutRef = useRef(false);
   const knownIdsRef = useRef<Set<string>>(new Set());
   const [layoutTick, setLayoutTick] = useState(0);
   const [appendIds, setAppendIds] = useState<Set<string>>(() => new Set());
@@ -127,7 +128,7 @@ export default function MasonryGrid({
     const layoutChanged = layoutKey !== prevLayoutKeyRef.current;
     const needsFull = layoutChanged || !layoutStateRef.current || !canIncrementalAppend(prevIdsRef.current, ids);
 
-    if (layoutChanged && layoutStateRef.current) {
+    if (layoutChanged && layoutStateRef.current && hadStableLayoutRef.current) {
       captureRatio();
       setIsResizing(true);
     }
@@ -158,6 +159,7 @@ export default function MasonryGrid({
 
     prevIdsRef.current = ids;
     prevLayoutKeyRef.current = layoutKey;
+    hadStableLayoutRef.current = true;
     setLayoutTick((t) => t + 1);
 
     if (newEntering.size > 0) {
@@ -248,7 +250,9 @@ export default function MasonryGrid({
       if (prev && ro) ro.unobserve(prev);
       if (el) {
         itemRefs.current.set(id, el);
-        el.setAttribute('data-revealed', 'true');
+        if (isMasonryItemRevealed(id)) {
+          el.setAttribute('data-revealed', 'true');
+        }
         ro?.observe(el);
       } else {
         itemRefs.current.delete(id);

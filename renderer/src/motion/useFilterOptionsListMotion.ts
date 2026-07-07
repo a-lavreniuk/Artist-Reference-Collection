@@ -26,21 +26,6 @@ export function useFilterOptionsListMotion({ listRef, order, isDragging }: Args)
     if (!mountedRef.current) {
       mountedRef.current = true;
       prevOrderRef.current = order;
-      if (reduced) return;
-
-      const rows = list.querySelectorAll<HTMLElement>('.context-menu__filter-row:not(.is-dragging)');
-      gsap.fromTo(
-        rows,
-        { opacity: 0, scale: 0.98 },
-        {
-          opacity: 1,
-          scale: 1,
-          duration,
-          stagger: arcMotionTokens.stagger,
-          ease: arcMotionTokens.ease,
-          overwrite: true
-        }
-      );
       return;
     }
 

@@ -689,13 +689,12 @@ export default function NavbarFiltersMenu() {
 
   const placeFilterSubmenu = useCallback(
     (rowKey: string, menuId: string) => {
-      const firstFilterRowKey = visibleChips[0] ? `filter-${visibleChips[0]}` : null;
-      const pos = resolveFilterSubmenuPosition(rowKey, firstFilterRowKey);
+      const pos = resolveFilterSubmenuPosition(rowKey);
       if (!pos) return;
       setSubmenuPosition(pos);
       setOpenMenu(menuId);
     },
-    [visibleChips]
+    []
   );
 
   const buildFilterSubmenu = (id: GalleryFilterId) => {
@@ -789,7 +788,7 @@ export default function NavbarFiltersMenu() {
         label: meta.label,
         iconClass: meta.iconClass,
         counter: active ? selectionCount : undefined,
-        slotOrder: active ? ['icon', 'label', 'counter'] : ['icon', 'label'],
+        slotOrder: ['label', 'counter', 'icon'],
         closeOnSelect: false,
         onSelect: () => placeFilterSubmenu(`filter-${id}`, id)
       });
@@ -819,6 +818,7 @@ export default function NavbarFiltersMenu() {
         label: 'Очистить фильтры',
         iconClass: 'arc-icon-trash',
         counter: activeCategoryCount,
+        slotOrder: ['label', 'counter', 'icon'],
         onSelect: () => {
           clearFilters();
           closeAllMenus();
