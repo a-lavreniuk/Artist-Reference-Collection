@@ -834,6 +834,28 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   color: var(--tab-inactive-icon-disabled);
 }
 
+/* Icon hosts: color transitions sync with parent background/text on hover. */
+.tab-icon,
+.tab-counter,
+.context-menu__item-icon,
+.context-menu__item-check,
+.context-menu__item-counter,
+.context-menu__item-shortcut,
+.input-inline-icon,
+.search-icon,
+.selector-clear,
+.selector-caret,
+.arc-modal__close,
+.arc-datepicker__icon,
+.btn-ds__value,
+.btn-ds__counter {
+  transition: color var(--transition-fast);
+}
+
+.context-menu__item-inner {
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
 /* Universal token-aware icon layer with safe fallback.
    Base background image is always visible.
    Mask overlay applies currentColor when supported. */

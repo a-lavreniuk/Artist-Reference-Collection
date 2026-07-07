@@ -17,6 +17,11 @@
   display: block;
 }
 
+.arc-navbar-icon-svg [stroke],
+.arc-navbar-icon-svg [fill]:not([fill="none"]) {
+  transition: stroke var(--transition-fast), fill var(--transition-fast);
+}
+
 * {
   box-sizing: border-box;
   scrollbar-width: none;
@@ -1594,11 +1599,13 @@ button.color-swatch-inline:disabled {
 .arc-gallery-card-badge .arc-navbar-icon-svg [stroke],
 .arc-card-slot-blur-btn .arc-navbar-icon-svg [stroke] {
   stroke: currentColor !important;
+  transition: stroke var(--transition-fast) !important;
 }
 
 .arc-gallery-card-badge .arc-navbar-icon-svg [fill]:not([fill="none"]),
 .arc-card-slot-blur-btn .arc-navbar-icon-svg [fill]:not([fill="none"]) {
   fill: currentColor !important;
+  transition: fill var(--transition-fast) !important;
 }
 
 .arc-card-slot-blur-btn .btn-ds__icon,
@@ -1613,11 +1620,13 @@ button.color-swatch-inline:disabled {
 .arc-card-slot-blur-btn .btn-ds__icon [stroke],
 .arc-card-slot-blur-btn .btn-icon-only__glyph [stroke] {
   stroke: currentColor !important;
+  transition: stroke var(--transition-fast) !important;
 }
 
 .arc-card-slot-blur-btn .btn-ds__icon [fill]:not([fill="none"]),
 .arc-card-slot-blur-btn .btn-icon-only__glyph [fill]:not([fill="none"]) {
   fill: currentColor !important;
+  transition: fill var(--transition-fast) !important;
 }
 
 .arc-gallery-card-overlay {
@@ -2825,6 +2834,7 @@ body.arc-card-detail-open .arc-app-outlet {
   background-color: currentColor;
   -webkit-mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
   mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+  transition: background-color var(--transition-fast);
 }
 
 /* Глобальный overlay импорта — Figma ARC-2 Add Images (1144:10678) */

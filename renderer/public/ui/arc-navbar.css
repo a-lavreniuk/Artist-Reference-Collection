@@ -801,6 +801,7 @@ body::-webkit-scrollbar {
 .context-menu__filter-row-handle-icon,
 .context-menu__filter-row-visibility-icon {
   color: var(--menu-row-icon-default);
+  transition: color var(--transition-fast);
 }
 
 .context-menu__filter-row-label {
@@ -941,6 +942,7 @@ body::-webkit-scrollbar {
 .context-menu__preset-row-edit-icon {
   flex-shrink: 0;
   color: var(--menu-row-icon-default);
+  transition: color var(--transition-fast);
 }
 
 .context-menu__preset-save {
