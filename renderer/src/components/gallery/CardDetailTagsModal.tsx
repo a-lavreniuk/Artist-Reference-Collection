@@ -3,10 +3,14 @@ import { createPortal } from 'react-dom';
 import { ArcAnimatedModalHost } from '../../motion';
 import { ContextMenuSeparator } from '../context-menu';
 import TagChipToggleWithTooltip from '../tags/TagChipToggleWithTooltip';
+import CategorySettingsModal, {
+  type CategorySettingsModalState
+} from '../tags/CategorySettingsModal';
 import TagSettingsModal, { type TagSettingsModalState } from '../tags/TagSettingsModal';
 import { Tooltip } from '../tooltip/Tooltip';
 import {
   ARC_CATEGORIES_CHANGED_EVENT,
+  addCategory,
   addTag,
   deleteTag,
   getAllCategories,
@@ -63,7 +67,9 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [tagsByCat, setTagsByCat] = useState<Record<string, TagRecord[]>>({});
+  const [catalogReady, setCatalogReady] = useState(false);
   const [tagModal, setTagModal] = useState<TagSettingsModalState | null>(null);
+  const [categoryModal, setCategoryModal] = useState<CategorySettingsModalState | null>(null);
   const [localSelectedTagIds, setLocalSelectedTagIds] = useState(selectedTagIds);
 
   useEffect(() => {
@@ -87,6 +93,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
       map[c.id] = lists[i] ?? [];
     });
     setTagsByCat(map);
+    setCatalogReady(true);
   };
 
   useEffect(() => {
@@ -110,6 +117,13 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
     [categories, tagsByCat, searchQ, selectedCategoryId]
   );
 
+  const showEmptyCatalog = catalogReady && categories.length === 0;
+  const totalTagCount = useMemo(
+    () => Object.values(tagsByCat).reduce((count, tags) => count + tags.length, 0),
+    [tagsByCat]
+  );
+  const showEmptyTags =
+    catalogReady && !showEmptyCatalog && totalTagCount === 0 && searchQ.length === 0;
   const showEmptyCreate = searchQ.length > 0 && tagGroups.length === 0 && categories.length > 0;
 
   const openCreateTag = (categoryId: string, initialName?: string) => {
@@ -122,14 +136,31 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
     openCreateTag(categoryId, tagSearch.trim());
   };
 
+  const openCreateFirstTag = () => {
+    const categoryId = selectedCategoryId ?? categories[0]?.id;
+    if (!categoryId) return;
+    openCreateTag(categoryId);
+  };
+
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [categories, localSelectedTagIds, tagSearch, selectedCategoryId, tagGroups, tagModal, sidebarCategories]);
+  }, [
+    categories,
+    localSelectedTagIds,
+    tagSearch,
+    selectedCategoryId,
+    tagGroups,
+    tagModal,
+    categoryModal,
+    sidebarCategories,
+    showEmptyCatalog,
+    showEmptyTags
+  ]);
 
   const picker = (
     <ArcAnimatedModalHost
       onClose={onClose}
-      closeDisabled={tagModal != null}
+      closeDisabled={tagModal != null || categoryModal != null}
       className="arc-add-tags-picker-host"
       hostClassName="arc-modal-host--card-detail-nested"
     >
@@ -173,6 +204,19 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
               ))}
             </div>
           </div>
+          <div className="arc-add-tags-picker__sidebar-foot">
+            <ContextMenuSeparator />
+            <div className="arc-add-tags-picker__sidebar-pad">
+              <button
+                type="button"
+                className="btn btn-outline btn-ds arc-add-tags-picker__sidebar-new"
+                onClick={() => setCategoryModal({ mode: 'create' })}
+              >
+                <span className="btn-ds__value">Новая категория</span>
+                <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
         </aside>
 
         <div
@@ -214,7 +258,16 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
           </div>
 
           <div className="arc-add-tags-picker__tags-scroll">
-            {showEmptyCreate ? (
+            {showEmptyCatalog ? (
+              <p className="text-s arc-add-tags-picker__empty-catalog">Категорий пока нет.</p>
+            ) : showEmptyTags ? (
+              <div className="arc-add-tags-picker__empty arc-add-tags-picker__group-inset">
+                <p className="text-m arc-add-tags-picker__empty-text">Меток пока нет.</p>
+                <button type="button" className="btn btn-outline btn-ds" onClick={openCreateFirstTag}>
+                  <span className="btn-ds__value">Создать метку</span>
+                </button>
+              </div>
+            ) : showEmptyCreate ? (
               <div className="arc-add-tags-picker__empty arc-add-tags-picker__group-inset">
                 <p className="text-m arc-add-tags-picker__empty-text">Нет совпадений по запросу.</p>
                 <button type="button" className="btn btn-outline btn-ds" onClick={openCreateFromSearch}>
@@ -290,6 +343,25 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                 await deleteTag(tagId);
                 await reloadCatalog();
               }}
+            />
+          ) : null}
+
+          {categoryModal ? (
+            <CategorySettingsModal
+              state={categoryModal}
+              stats={null}
+              hostClassName="arc-modal-host--card-detail-nested arc-add-tags-picker-nested-modal"
+              onClose={() => setCategoryModal(null)}
+              onCreate={async (payload) => {
+                const created = await addCategory(payload.name, payload.colorHex, {
+                  weight: payload.weight,
+                  description: payload.description
+                });
+                setSelectedCategoryId(created.id);
+                await reloadCatalog();
+              }}
+              onSave={async () => {}}
+              onDelete={async () => {}}
             />
           ) : null}
         </>

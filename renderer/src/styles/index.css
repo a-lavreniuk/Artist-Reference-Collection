@@ -1981,10 +1981,38 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-add-tags-picker__sidebar-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  padding-bottom: var(--s-3);
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+.arc-add-tags-picker__sidebar-foot {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-bottom: var(--s-3);
+  box-sizing: border-box;
+}
+
+.arc-add-tags-picker__sidebar-foot .context-menu__sep {
+  width: 100%;
+  height: 1px;
+  margin: 0 0 var(--s-3);
+  padding: 0;
+  border: 0;
+  background: var(--panel-border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.arc-add-tags-picker__sidebar-new {
+  width: 100%;
+  justify-content: center;
+}
+
+.arc-add-tags-picker__empty-catalog {
+  margin: 0;
+  padding: 0 var(--s-3);
+  color: var(--text-elev-secondary);
 }
 
 .arc-add-tags-picker__sidebar-pad {
