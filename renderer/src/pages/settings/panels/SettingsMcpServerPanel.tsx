@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
+import DemoAlert from '../../../components/layout/DemoAlert';
 import SettingsMcpToolRow from '../../../components/settings/SettingsMcpToolRow';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
@@ -24,12 +25,14 @@ const HINT_PRIVACY =
   'При использовании облачной модели информация о файлах, метках и результатах поиска может попадать в контекст LLM-провайдера. Чтобы защитить чувствительные данные, рекомендуется использовать локальную модель или ограничить доступ только чтением.';
 const HINT_TOOLS =
   'Отключённые инструменты недоступны MCP-клиентам до переподключения.';
+const COPY_SUCCESS_MESSAGE = 'Конфигурация MCP сервера скопирована в буфер';
 
 const MCP_PORT = 47897;
 
 /** Настройки локального MCP-сервера ARC */
 export default function SettingsMcpServerPanel() {
   const { prefs, ready, update } = useAppPreferences();
+  const [copyAlertKey, setCopyAlertKey] = useState(0);
   const disabled = !ready;
   const mcpEnabled = prefs?.mcpServerEnabled === true;
 
@@ -64,9 +67,12 @@ export default function SettingsMcpServerPanel() {
   );
 
   const copyMcpJson = useCallback(() => {
-    void navigator.clipboard.writeText(mcpJson).catch(() => {
-      /* clipboard unavailable */
-    });
+    void navigator.clipboard
+      .writeText(mcpJson)
+      .then(() => setCopyAlertKey((key) => key + 1))
+      .catch(() => {
+        /* clipboard unavailable */
+      });
   }, [mcpJson]);
 
   const setToolEnabled = (toolId: McpToolId, pressed: boolean) => {
@@ -78,6 +84,7 @@ export default function SettingsMcpServerPanel() {
   };
 
   return (
+    <>
     <div className="arc-settings-main__scroll arc-settings-shortcuts-panel">
       <div className="arc-settings-main__content arc-ui-kit-scope" data-btn-size="m">
         <div className="arc-settings-desc-block">
@@ -145,5 +152,15 @@ export default function SettingsMcpServerPanel() {
         </div>
       ) : null}
     </div>
+
+    {copyAlertKey > 0 ? (
+      <DemoAlert
+        key={copyAlertKey}
+        message={COPY_SUCCESS_MESSAGE}
+        variant="success"
+        onClose={() => setCopyAlertKey(0)}
+      />
+    ) : null}
+    </>
   );
 }
