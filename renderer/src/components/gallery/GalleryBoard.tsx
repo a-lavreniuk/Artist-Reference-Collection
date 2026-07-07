@@ -19,6 +19,12 @@ type Props = {
   moodboardCardIds?: Set<string>;
   onToggleMoodboard?: (cardId: string) => void | Promise<void>;
   onCardContextMenu?: (card: CardRecord, event: React.MouseEvent<HTMLDivElement>) => void;
+  isCardSelected?: (cardId: string) => boolean;
+  onCardClick?: (cardId: string, event: React.MouseEvent<HTMLDivElement>) => void;
+  onCardPointerDown?: (cardId: string, event: React.PointerEvent<HTMLDivElement>) => void;
+  onCardPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onCardPointerUp?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  boardRef?: RefObject<HTMLDivElement | null>;
   variant?: MasonryVariant;
   scrollRootRef?: RefObject<HTMLElement | null>;
   loadingMore?: boolean;
@@ -36,6 +42,12 @@ export default function GalleryBoard({
   moodboardCardIds,
   onToggleMoodboard,
   onCardContextMenu,
+  isCardSelected,
+  onCardClick,
+  onCardPointerDown,
+  onCardPointerMove,
+  onCardPointerUp,
+  boardRef: boardRefProp,
   variant = 'gallery',
   scrollRootRef,
   loadingMore = false,
@@ -45,12 +57,13 @@ export default function GalleryBoard({
 }: Props) {
   const [tierSrcMap, setTierSrcMap] = useState<Record<string, string>>({});
   const [gridSizeVersion, setGridSizeVersion] = useState(0);
-  const measureRef = useRef<HTMLDivElement>(null);
+  const internalBoardRef = useRef<HTMLDivElement>(null);
+  const boardRef = boardRefProp ?? internalBoardRef;
   const srcMap = useMemo(
     () => ({ ...(srcMapProp ?? {}), ...tierSrcMap }),
     [srcMapProp, tierSrcMap]
   );
-  const containerWidth = useContainerWidth(measureRef);
+  const containerWidth = useContainerWidth(boardRef);
   const gridSize = readGridSize();
   const tabMediaActive = useCardSectionMediaActive(mediaTab ?? 'gallery');
   const thumbsActive = mediaTab === undefined ? true : tabMediaActive;
@@ -102,6 +115,17 @@ export default function GalleryBoard({
 
   const moodboardEnabled = Boolean(moodboardCardIds && onToggleMoodboard);
 
+  const handleCardClick = useCallback(
+    (cardId: string, event: React.MouseEvent<HTMLDivElement>) => {
+      if (onCardClick) {
+        onCardClick(cardId, event);
+        return;
+      }
+      onOpenCard(cardId);
+    },
+    [onCardClick, onOpenCard]
+  );
+
   const renderItem = useCallback(
     (id: string) => {
       const card = cardById.get(id);
@@ -111,7 +135,11 @@ export default function GalleryBoard({
           card={card}
           thumbSrc={srcMap[card.id]}
           inMoodboard={moodboardCardIds?.has(card.id) ?? false}
-          onOpenCard={onOpenCard}
+          isSelected={isCardSelected?.(card.id) ?? false}
+          onCardClick={handleCardClick}
+          onCardPointerDown={onCardPointerDown}
+          onCardPointerMove={onCardPointerMove}
+          onCardPointerUp={onCardPointerUp}
           onFindSimilar={onFindSimilar}
           onToggleMoodboard={onToggleMoodboard}
           interfaceTourAnchor={cards[0]?.id === card.id ? 'gallery-first-card' : undefined}
@@ -127,7 +155,22 @@ export default function GalleryBoard({
         />
       );
     },
-    [cardById, cards, mediaTab, moodboardCardIds, moodboardEnabled, onCardContextMenu, onFindSimilar, onOpenCard, onToggleMoodboard, srcMap]
+    [
+      cardById,
+      cards,
+      handleCardClick,
+      isCardSelected,
+      mediaTab,
+      moodboardCardIds,
+      moodboardEnabled,
+      onCardContextMenu,
+      onCardPointerDown,
+      onCardPointerMove,
+      onCardPointerUp,
+      onFindSimilar,
+      onToggleMoodboard,
+      srcMap
+    ]
   );
 
   const renderSkeleton = useCallback(
@@ -146,7 +189,7 @@ export default function GalleryBoard({
   );
 
   return (
-    <div ref={measureRef} className="arc-gallery-masonry" data-interface-tour-anchor="gallery-grid">
+    <div ref={boardRef} className="arc-gallery-masonry" data-interface-tour-anchor="gallery-grid">
       <MasonryGrid
         items={masonryItems}
         variant={variant}

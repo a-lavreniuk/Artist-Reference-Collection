@@ -50,6 +50,7 @@ import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
 import { resolveMainTab } from '../components/layout/navbarLayout';
 import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
 import { resolveGalleryCardContextMenuScope } from '../components/gallery/buildCardContextMenuRows';
+import { useGalleryMultiSelect } from '../components/gallery/useGalleryMultiSelect';
 import { useCollectionContextMenu } from '../components/collections/useCollectionContextMenu';
 import CollectionSettingsModal, {
   type CollectionSettingsModalState
@@ -128,9 +129,11 @@ export default function GalleryPage() {
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLElement | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+
+  const selectionResetKey = galleryRevealResetKey(feedQuery);
 
   const [importModalMessage, setImportModalMessage] = useState<string | null>(null);
-
   const [removeMoodboardConfirm, setRemoveMoodboardConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
   const [stripCollectionModal, setStripCollectionModal] = useState<CollectionSettingsModalState | null>(null);
 
@@ -153,6 +156,19 @@ export default function GalleryPage() {
     [refreshMoodboard]
   );
 
+  const multiSelect = useGalleryMultiSelect({
+    cards,
+    resetKey: selectionResetKey,
+    scrollRootRef,
+    boardRef,
+    moodboardCardIds,
+    scope: resolveGalleryCardContextMenuScope(feedQuery.libraryScope),
+    enabled: ready,
+    onOpenCard: openCard,
+    onRefresh: () => void reloadFromStart(),
+    refreshMoodboard: () => void refreshMoodboard()
+  });
+
   const { onCardContextMenu, contextMenuLayer } = useGalleryCardContextMenu({
     scope: resolveGalleryCardContextMenuScope(feedQuery.libraryScope),
     cards,
@@ -162,7 +178,13 @@ export default function GalleryPage() {
     onFindSimilar: (id) => {
       void startFindSimilarSearch(navigate, searchParams, id);
     },
-    onCardDeleted: () => void reloadFromStart()
+    onCardDeleted: () => void reloadFromStart(),
+    getSelectedCardIds: () => multiSelect.selectedCardIds,
+    isCardSelected: multiSelect.isSelected,
+    selectionModeActive: multiSelect.selectionMode,
+    onToggleCardSelection: multiSelect.toggleCardSelection,
+    onStartMultiSelect: multiSelect.enterSelectionWithCard,
+    bulkHandlers: multiSelect.bulkHandlers
   });
 
   const stripDataEnabled =
@@ -336,6 +358,8 @@ export default function GalleryPage() {
 
             scrollRootRef={scrollRootRef}
 
+            boardRef={boardRef}
+
             loadingMore={loading && hasMore}
 
             busy={(booting && !isRemoteSearchFeed && !shuffleReloading) || loading || shuffleReloading}
@@ -346,6 +370,16 @@ export default function GalleryPage() {
             moodboardCardIds={moodboardCardIds}
 
             onCardContextMenu={onCardContextMenu}
+
+            isCardSelected={multiSelect.isSelected}
+
+            onCardClick={multiSelect.handleCardClick}
+
+            onCardPointerDown={multiSelect.handleCardPointerDown}
+
+            onCardPointerMove={multiSelect.onCardPointerMove}
+
+            onCardPointerUp={multiSelect.onCardPointerUp}
 
             onToggleMoodboard={handleToggleMoodboard}
 
@@ -434,6 +468,10 @@ export default function GalleryPage() {
 
 
       {ready && cards.length > 0 ? <GalleryBottomShade /> : null}
+
+      {multiSelect.selectionBar}
+      {multiSelect.collectionsModal}
+      {multiSelect.marqueeOverlay}
 
       <ScrollToTopButton enabled={ready && cards.length > 0} align="center-outlet" />
 

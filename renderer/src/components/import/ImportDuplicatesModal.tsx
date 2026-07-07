@@ -14,11 +14,14 @@ export type ImportDuplicateConflict = {
   existingCard: CardRecord | null;
 };
 
+import { bulkAddToCollection } from '../gallery/galleryBulkActions';
+
 type Props = {
   conflicts: ImportDuplicateConflict[];
   index: number;
   onResolved: () => void;
   onClose: () => void;
+  assignToCollectionId?: string;
 };
 
 function baseName(p: string): string {
@@ -26,7 +29,13 @@ function baseName(p: string): string {
   return parts[parts.length - 1] || p;
 }
 
-export default function ImportDuplicatesModal({ conflicts, index, onResolved, onClose }: Props) {
+export default function ImportDuplicatesModal({
+  conflicts,
+  index,
+  onResolved,
+  onClose,
+  assignToCollectionId
+}: Props) {
   const conflict = conflicts[index];
   const modalRef = useRef<HTMLElement>(null);
   const [incomingUrl, setIncomingUrl] = useState<string | null>(null);
@@ -73,11 +82,17 @@ export default function ImportDuplicatesModal({ conflicts, index, onResolved, on
   const incomingName = baseName(conflict.path);
   const existingName = baseName(existing.originalRelativePath);
 
+  const assignImported = async (cardId: string) => {
+    if (!assignToCollectionId) return;
+    await bulkAddToCollection([cardId], assignToCollectionId);
+  };
+
   const handleReplace = async () => {
     if (busy || !window.arc?.replaceCardOriginal) return;
     setBusy(true);
     try {
       await window.arc.replaceCardOriginal(conflict.existingCardId, conflict.path);
+      await assignImported(conflict.existingCardId);
       onResolved();
     } finally {
       setBusy(false);
@@ -86,7 +101,7 @@ export default function ImportDuplicatesModal({ conflicts, index, onResolved, on
 
   const handleKeepExisting = () => {
     if (busy) return;
-    onResolved();
+    void assignImported(conflict.existingCardId).finally(onResolved);
   };
 
   const handleKeepBoth = async () => {
@@ -96,6 +111,7 @@ export default function ImportDuplicatesModal({ conflicts, index, onResolved, on
       const results = await window.arc.importFiles([conflict.path]);
       if (results[0]?.ok) {
         await addSkippedDuplicatePair(conflict.existingCardId, results[0].row.id);
+        await assignImported(results[0].row.id);
       }
       onResolved();
     } finally {

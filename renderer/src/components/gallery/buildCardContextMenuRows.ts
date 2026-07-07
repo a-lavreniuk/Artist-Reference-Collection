@@ -22,9 +22,54 @@ function itemRow(
   };
 }
 
-function trashMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
-  const { actions, hasSourcePath } = input;
+function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
+  const { actions, inMoodboard, menuCardIsSelected } = input;
+  const moodboardLabel = inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд';
+  const moodboardIcon = inMoodboard ? 'arc-icon-bookmark-minus' : 'arc-icon-bookmark-plus';
+
   return [
+    itemRow(
+      menuCardIsSelected ? 'deselect' : 'select',
+      menuCardIsSelected ? 'Снять выбор с карточки' : 'Выбрать карточку',
+      'arc-icon-check',
+      () => actions.onToggleCardSelection?.()
+    ),
+    { type: 'separator', key: 'sep-main' },
+    itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
+    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections),
+    { type: 'separator', key: 'sep-danger' },
+    itemRow('trash', 'Отправить в корзину', 'arc-icon-trash', actions.onSendToTrash)
+  ];
+}
+
+function multiSelectTrashMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
+  const { actions, menuCardIsSelected } = input;
+
+  return [
+    itemRow(
+      menuCardIsSelected ? 'deselect' : 'select',
+      menuCardIsSelected ? 'Снять выбор с карточки' : 'Выбрать карточку',
+      'arc-icon-check',
+      () => actions.onToggleCardSelection?.()
+    ),
+    { type: 'separator', key: 'sep-main' },
+    itemRow('restore', 'Восстановить', 'arc-icon-undo', () => actions.onRestore?.()),
+    { type: 'separator', key: 'sep-danger' },
+    itemRow('permanent-delete', 'Удалить навсегда', 'arc-icon-trash', () => actions.onPermanentDelete?.())
+  ];
+}
+
+function trashMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
+  const { actions, hasSourcePath, bulkSelectionCount, onStartMultiSelect } = input;
+  const bulk = (bulkSelectionCount ?? 0) > 1;
+  const rows: ContextMenuRow[] = [];
+
+  if (!bulk && onStartMultiSelect) {
+    rows.push(itemRow('multi-select', 'Выбрать несколько', 'arc-icon-check', onStartMultiSelect));
+    rows.push({ type: 'separator', key: 'sep-multi' });
+  }
+
+  rows.push(
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
     itemRow('restore', 'Восстановить', 'arc-icon-undo', () => actions.onRestore?.()),
     itemRow('open-folder', 'Открыть папку исходника', 'arc-icon-folder-open', actions.onOpenSourceFolder, {
@@ -32,15 +77,25 @@ function trashMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
     }),
     { type: 'separator', key: 'sep-danger' },
     itemRow('permanent-delete', 'Удалить навсегда', 'arc-icon-trash', () => actions.onPermanentDelete?.())
-  ];
+  );
+
+  return rows;
 }
 
 function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
-  const { inMoodboard, hasSourcePath, actions } = input;
+  const { inMoodboard, hasSourcePath, actions, bulkSelectionCount, onStartMultiSelect } = input;
   const moodboardLabel = inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд';
   const moodboardIcon = inMoodboard ? 'arc-icon-bookmark-minus' : 'arc-icon-bookmark-plus';
+  const bulk = (bulkSelectionCount ?? 0) > 1;
 
-  const rows: ContextMenuRow[] = [
+  const rows: ContextMenuRow[] = [];
+
+  if (!bulk && onStartMultiSelect) {
+    rows.push(itemRow('multi-select', 'Выбрать несколько', 'arc-icon-check', onStartMultiSelect));
+    rows.push({ type: 'separator', key: 'sep-multi' });
+  }
+
+  rows.push(
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
     itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections),
@@ -48,7 +103,7 @@ function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[]
     itemRow('open-folder', 'Открыть папку исходника', 'arc-icon-folder-open', actions.onOpenSourceFolder, {
       disabled: !hasSourcePath
     })
-  ];
+  );
 
   if (input.scope.kind === 'collection' && actions.onRemoveFromCollection) {
     rows.push(
@@ -71,6 +126,12 @@ function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[]
 }
 
 export function buildCardContextMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
+  if (input.selectionModeActive) {
+    if (input.scope.kind === 'trash') {
+      return multiSelectTrashMenuRows(input);
+    }
+    return multiSelectLibraryMenuRows(input);
+  }
   if (input.scope.kind === 'trash') {
     return trashMenuRows(input);
   }

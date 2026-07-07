@@ -28,7 +28,7 @@ describe('renderer UI smoke', () => {
 
   it('GalleryCardTile renders without throw', () => {
     expect(() =>
-      renderToString(<GalleryCardTile card={stubCard} onOpenCard={() => undefined} />)
+      renderToString(<GalleryCardTile card={stubCard} onCardClick={() => undefined} />)
     ).not.toThrow();
   });
 

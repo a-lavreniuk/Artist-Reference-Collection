@@ -374,6 +374,21 @@ export function registerArcIpc(): void {
     return res.filePaths;
   });
 
+  ipcMain.handle('arc:classify-dropped-paths', async (_e, absolutePaths: unknown) => {
+    if (!Array.isArray(absolutePaths) || !absolutePaths.every((x) => typeof x === 'string')) {
+      throw new Error('Неверный список путей');
+    }
+    const { classifyDroppedPaths } = await import('./importPathUtils');
+    return classifyDroppedPaths(absolutePaths as string[]);
+  });
+
+  ipcMain.handle('arc:list-importable-files-in-directory', async (_e, folderPath: unknown) => {
+    if (typeof folderPath !== 'string' || !folderPath.trim()) {
+      throw new Error('Неверный путь к папке');
+    }
+    const { listImportableFilesInDirectoryRoot } = await import('./importPathUtils');
+    return listImportableFilesInDirectoryRoot(folderPath.trim());
+  });
 
   ipcMain.handle('arc:to-file-url', async (_e, relativePath: unknown) => {
     if (typeof relativePath !== 'string') return null;

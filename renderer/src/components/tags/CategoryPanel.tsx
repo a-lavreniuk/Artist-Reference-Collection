@@ -1,11 +1,10 @@
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CategoryRecord, CategoryWeight, TagRecord } from '../../services/db';
 import CategoryColorModal from '../layout/CategoryColorModal';
 import ConfirmDeleteCategoryModal from '../layout/ConfirmDeleteCategoryModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import TagCategoryDropSurface from './TagCategoryDropSurface';
-import { Tooltip } from '../tooltip/Tooltip';
-import { TagTooltipBody } from '../tooltip/TagTooltipBody';
+import TagManageChip from './TagManageChip';
 import { EmptyState } from '../empty-state';
 import { EMPTY_STATE_COPY } from '../../content/emptyStates';
 import { normalizeHex } from '../../utils/colorPicker';
@@ -30,11 +29,13 @@ type Props = {
   onDelete: () => Promise<void>;
   onAddTag: (name: string) => Promise<void>;
   onEditTag: (tag: TagRecord) => void;
-  draggingTagId: string | null;
+  draggingTagIds: ReadonlySet<string> | null;
   allTags: TagRecord[];
+  isTagSelected: (tagId: string) => boolean;
+  onTagChipPointerDown?: (tag: TagRecord, event: React.PointerEvent<HTMLButtonElement>) => boolean;
   onTagDragStart: (tagId: string) => void;
   onTagDragEnd: () => void;
-  onTagDrop: (tagId: string, targetCategoryId: string) => Promise<void>;
+  onTagDrop: (tagIds: string[], targetCategoryId: string) => Promise<void>;
 };
 
 export default function CategoryPanel({
@@ -50,8 +51,10 @@ export default function CategoryPanel({
   onDelete,
   onAddTag,
   onEditTag,
-  draggingTagId,
+  draggingTagIds,
   allTags,
+  isTagSelected,
+  onTagChipPointerDown,
   onTagDragStart,
   onTagDragEnd,
   onTagDrop
@@ -273,7 +276,7 @@ export default function CategoryPanel({
         <TagCategoryDropSurface
           className="arc-category-panel-tags"
           categoryId={category.id}
-          draggingTagId={draggingTagId}
+          draggingTagIds={draggingTagIds}
           allTags={allTags}
           onTagDrop={onTagDrop}
         >
@@ -344,74 +347,20 @@ export default function CategoryPanel({
                 onPrimaryAction={() => tagInputRef.current?.focus()}
               />
             ) : (
-              tags.map((tag) => {
-                const hasTipText = Boolean(tag.description?.trim());
-                const hasTipImage = Boolean(tag.tooltipImageDataUrl?.startsWith('data:image/'));
-                const canShowTooltip = hasTipText || hasTipImage;
-                /** Пока метку переносят, не вешаем кастомный tooltip (избегаем всплытия на исходном месте). */
-                const useCustomTooltip = canShowTooltip && draggingTagId !== tag.id;
-
-                const hintParts = [tag.description?.trim()].filter(Boolean) as string[];
-                if (tag.tooltipImageDataUrl) {
-                  hintParts.push('Есть изображение для подсказки');
-                }
-                const titleHint = hintParts.length ? hintParts.join(' — ') : 'Открыть настройки метки';
-
-                const chip = (
-                  <button
-                    type="button"
-                    className={`chip${draggingTagId === tag.id ? ' arc-tag-chip--dragging' : ''}`}
-                    draggable={!busy}
-                    aria-label={`Редактировать метку «${tag.name}»`}
-                    aria-grabbed={draggingTagId === tag.id}
-                    onClick={() => {
-                      if (busy) return;
-                      onEditTag(tag);
-                    }}
-                    onDragStart={(e) => {
-                      if (busy) {
-                        e.preventDefault();
-                        return;
-                      }
-                      e.dataTransfer.setData('application/tag-id', tag.id);
-                      e.dataTransfer.setData('text/plain', tag.id);
-                      e.dataTransfer.effectAllowed = 'move';
-                      onTagDragStart(tag.id);
-                    }}
-                    onDragEnd={() => onTagDragEnd()}
-                  >
-                    <span className="chip-color" style={{ background: category.colorHex }} aria-hidden="true" />
-                    <span>{tag.name}</span>
-                    <span className="chip-count">{tag.usageCount}</span>
-                  </button>
-                );
-
-                return (
-                  <Fragment key={tag.id}>
-                    {useCustomTooltip ? (
-                      <Tooltip
-                        content={
-                          <TagTooltipBody
-                            description={tag.description}
-                            imageDataUrl={tag.tooltipImageDataUrl}
-                          />
-                        }
-                        delay={1000}
-                        position="top"
-                        variant="rich"
-                      >
-                        {chip}
-                      </Tooltip>
-                    ) : !canShowTooltip ? (
-                      <Tooltip content={titleHint} delay={500} position="top">
-                        {chip}
-                      </Tooltip>
-                    ) : (
-                      chip
-                    )}
-                  </Fragment>
-                );
-              })
+              tags.map((tag) => (
+                <TagManageChip
+                  key={tag.id}
+                  tag={tag}
+                  categoryColorHex={category.colorHex}
+                  draggingTagIds={draggingTagIds}
+                  selected={isTagSelected(tag.id)}
+                  dragDisabled={busy}
+                  onEdit={onEditTag}
+                  onChipPointerDown={(t, event) => onTagChipPointerDown?.(t, event) ?? false}
+                  onDragStart={onTagDragStart}
+                  onDragEnd={onTagDragEnd}
+                />
+              ))
             )}
           </div>
         </TagCategoryDropSurface>

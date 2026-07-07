@@ -64,6 +64,10 @@ declare global {
       getPathsForDroppedFiles: (files: FileList) => string[];
       getPathsForDroppedDataTransfer: (dt: DataTransfer) => string[];
       onFileDrop: (cb: (paths: string[]) => void) => () => void;
+      classifyDroppedPaths?: (
+        absolutePaths: string[]
+      ) => Promise<{ files: string[]; directories: string[] }>;
+      listImportableFilesInDirectory?: (folderPath: string) => Promise<string[]>;
       importFiles: (absolutePaths: string[]) => Promise<ArcImportFileResult[]>;
       storageEnsureReady: () => Promise<{ ok: true } | { ok: false; error: string }>;
       storageListCards: (params: {

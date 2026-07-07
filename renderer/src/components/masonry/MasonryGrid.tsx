@@ -250,7 +250,7 @@ export default function MasonryGrid({
       if (prev && ro) ro.unobserve(prev);
       if (el) {
         itemRefs.current.set(id, el);
-        if (isMasonryItemRevealed(id)) {
+        if (!motionEnabled || isMasonryItemRevealed(id)) {
           el.setAttribute('data-revealed', 'true');
         }
         ro?.observe(el);
@@ -258,7 +258,7 @@ export default function MasonryGrid({
         itemRefs.current.delete(id);
       }
     },
-    []
+    [motionEnabled]
   );
 
   const focusItem = useCallback((id: string) => {

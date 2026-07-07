@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useRef } from 'react';
 import type { TagRecord } from '../../services/db';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
@@ -6,28 +6,35 @@ import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 type Props = {
   tag: TagRecord;
   categoryColorHex: string;
-  draggingTagId: string | null;
+  draggingTagIds: ReadonlySet<string> | null;
+  selected?: boolean;
   dragDisabled?: boolean;
   onEdit: (tag: TagRecord) => void;
+  onChipPointerDown?: (tag: TagRecord, event: React.PointerEvent<HTMLButtonElement>) => boolean;
   onContextMenu?: (tag: TagRecord, event: React.MouseEvent<HTMLButtonElement>) => void;
-  onDragStart: (tagId: string) => void;
+  onDragStart: (tagId: string, dataTransfer: DataTransfer) => void;
   onDragEnd: () => void;
 };
 
 export default function TagManageChip({
   tag,
   categoryColorHex,
-  draggingTagId,
+  draggingTagIds,
+  selected = false,
   dragDisabled = false,
   onEdit,
+  onChipPointerDown,
   onContextMenu,
   onDragStart,
   onDragEnd
 }: Props) {
+  const isDragging = draggingTagIds?.has(tag.id) ?? false;
+  const suppressClickRef = useRef(false);
+
   const hasTipText = Boolean(tag.description?.trim());
   const hasTipImage = Boolean(tag.tooltipImageDataUrl?.startsWith('data:image/'));
   const canShowTooltip = hasTipText || hasTipImage;
-  const useCustomTooltip = canShowTooltip && draggingTagId !== tag.id;
+  const useCustomTooltip = canShowTooltip && !isDragging;
 
   const hintParts = [tag.description?.trim()].filter(Boolean) as string[];
   if (tag.tooltipImageDataUrl) {
@@ -38,13 +45,30 @@ export default function TagManageChip({
   const chip = (
     <button
       type="button"
-      className={`chip${draggingTagId === tag.id ? ' arc-tag-chip--dragging' : ''}`}
+      className={`chip${isDragging ? ' arc-tag-chip--dragging' : ''}${selected ? ' arc-tag-chip--selected' : ''}`}
       draggable={!dragDisabled}
       aria-label={`Редактировать метку «${tag.name}»`}
-      aria-grabbed={draggingTagId === tag.id}
-      onClick={() => onEdit(tag)}
+      aria-grabbed={isDragging}
+      aria-pressed={selected}
+      onPointerDown={(event) => {
+        onChipPointerDown?.(tag, event);
+      }}
+      onClick={(event) => {
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        if (event.ctrlKey || event.metaKey || event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        onEdit(tag);
+      }}
       onContextMenu={(event) => {
-        if (dragDisabled || draggingTagId === tag.id) return;
+        if (dragDisabled || isDragging) return;
         onContextMenu?.(tag, event);
       }}
       onDragStart={(e) => {
@@ -52,12 +76,14 @@ export default function TagManageChip({
           e.preventDefault();
           return;
         }
-        e.dataTransfer.setData('application/tag-id', tag.id);
-        e.dataTransfer.setData('text/plain', tag.id);
+        suppressClickRef.current = true;
         e.dataTransfer.effectAllowed = 'move';
-        onDragStart(tag.id);
+        onDragStart(tag.id, e.dataTransfer);
       }}
-      onDragEnd={() => onDragEnd()}
+      onDragEnd={() => {
+        suppressClickRef.current = true;
+        onDragEnd();
+      }}
     >
       <span className="chip-color" style={{ background: categoryColorHex }} aria-hidden="true" />
       <span>{tag.name}</span>

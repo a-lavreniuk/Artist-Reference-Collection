@@ -20,14 +20,28 @@ function itemRow(
 }
 
 export function buildTagChipContextMenuRows(actions: {
-  onShowInGallery: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  bulk?: boolean;
+  onShowInGallery?: () => void;
+  onMoveToCategory: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }): ContextMenuRow[] {
-  return [
-    itemRow('gallery', 'Показать в галерее', 'arc-icon-image', actions.onShowInGallery),
-    itemRow('edit', 'Редактировать', 'arc-icon-edit', actions.onEdit),
-    { type: 'separator', key: 'sep-danger' },
-    itemRow('delete', 'Удалить метку', 'arc-icon-trash', actions.onDelete)
+  const rows: ContextMenuRow[] = [
+    itemRow('move-category', 'Переместить в категорию…', 'arc-icon-chevrons-up-down', actions.onMoveToCategory)
   ];
+
+  if (actions.onShowInGallery) {
+    rows.unshift(itemRow('gallery', 'Показать в галерее', 'arc-icon-image', actions.onShowInGallery));
+  }
+
+  if (actions.onEdit) {
+    rows.push(itemRow('edit', 'Редактировать', 'arc-icon-edit', actions.onEdit));
+  }
+
+  if (actions.onDelete) {
+    rows.push({ type: 'separator', key: 'sep-danger' });
+    rows.push(itemRow('delete', 'Удалить метку', 'arc-icon-trash', actions.onDelete));
+  }
+
+  return rows;
 }

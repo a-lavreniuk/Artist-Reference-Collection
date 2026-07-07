@@ -1,17 +1,21 @@
 type Props = {
   checked: boolean;
+  indeterminate?: boolean;
   className?: string;
 };
 
 /** Декоративный чекбокс 16×16 (Figma Checkbox, node 774:2185). Переключение — у родительской кнопки строки. */
-export default function ArcCheckbox({ checked, className = '' }: Props) {
+export default function ArcCheckbox({ checked, indeterminate = false, className = '' }: Props) {
+  const showCheck = checked && !indeterminate;
   return (
     <span
-      className={`arc-checkbox${checked ? ' arc-checkbox--checked' : ''}${className ? ` ${className}` : ''}`}
+      className={`arc-checkbox${showCheck ? ' arc-checkbox--checked' : ''}${indeterminate ? ' arc-checkbox--indeterminate' : ''}${className ? ` ${className}` : ''}`}
       aria-hidden="true"
     >
       <span className="arc-checkbox__box" />
-      {checked ? (
+      {indeterminate ? (
+        <span className="arc-checkbox__dash" aria-hidden="true" />
+      ) : showCheck ? (
         <span className="arc-checkbox__check" aria-hidden="true">
           <svg viewBox="0 0 8 6" fill="none" aria-hidden="true">
             <path

@@ -11,7 +11,11 @@ type Props = {
   card: CardRecord;
   thumbSrc?: string;
   inMoodboard?: boolean;
-  onOpenCard: (id: string) => void;
+  isSelected?: boolean;
+  onCardClick: (cardId: string, event: React.MouseEvent<HTMLDivElement>) => void;
+  onCardPointerDown?: (cardId: string, event: React.PointerEvent<HTMLDivElement>) => void;
+  onCardPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onCardPointerUp?: (event: React.PointerEvent<HTMLDivElement>) => void;
   onFindSimilar?: (cardId: string) => void;
   onToggleMoodboard?: (cardId: string) => void | Promise<void>;
   onContextMenu?: (event: React.MouseEvent<HTMLDivElement>) => void;
@@ -25,7 +29,11 @@ function GalleryCardTile({
   card,
   thumbSrc,
   inMoodboard = false,
-  onOpenCard,
+  isSelected = false,
+  onCardClick,
+  onCardPointerDown,
+  onCardPointerMove,
+  onCardPointerUp,
   onFindSimilar,
   onToggleMoodboard,
   onContextMenu,
@@ -61,13 +69,24 @@ function GalleryCardTile({
       ref={rootRef}
       role="button"
       tabIndex={0}
-      className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}${tileClassName ? ` ${tileClassName}` : ''}`}
+      className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}${isSelected ? ' is-selected' : ''}${tileClassName ? ` ${tileClassName}` : ''}`}
+      data-gallery-card-id={card.id}
       {...(interfaceTourAnchor ? { 'data-interface-tour-anchor': interfaceTourAnchor } : {})}
-      onClick={() => onOpenCard(card.id)}
+      onClick={(event) => onCardClick(card.id, event)}
+      onPointerDown={
+        onCardPointerDown
+          ? (event) => {
+              onCardPointerDown(card.id, event);
+            }
+          : undefined
+      }
+      onPointerMove={onCardPointerMove}
+      onPointerUp={onCardPointerUp}
+      onPointerCancel={onCardPointerUp}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onOpenCard(card.id);
+          onCardClick(card.id, e as unknown as React.MouseEvent<HTMLDivElement>);
         }
       }}
       onContextMenu={onContextMenu}
@@ -147,9 +166,13 @@ function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
     prev.card.type === next.card.type &&
     prev.thumbSrc === next.thumbSrc &&
     prev.inMoodboard === next.inMoodboard &&
+    prev.isSelected === next.isSelected &&
     prev.moodboardEnabled === next.moodboardEnabled &&
     prev.tileClassName === next.tileClassName &&
-    prev.onOpenCard === next.onOpenCard &&
+    prev.onCardClick === next.onCardClick &&
+    prev.onCardPointerDown === next.onCardPointerDown &&
+    prev.onCardPointerMove === next.onCardPointerMove &&
+    prev.onCardPointerUp === next.onCardPointerUp &&
     prev.onFindSimilar === next.onFindSimilar &&
     prev.onToggleMoodboard === next.onToggleMoodboard &&
     prev.onContextMenu === next.onContextMenu &&

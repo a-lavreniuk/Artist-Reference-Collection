@@ -11,6 +11,7 @@ export type CardContextMenuActions = {
   onFindSimilar: () => void;
   onOpenSourceFolder: () => void;
   onSendToTrash: () => void;
+  onToggleCardSelection?: () => void;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
   onRemoveFromCollection?: () => void;
@@ -22,4 +23,8 @@ export type BuildCardContextMenuRowsInput = {
   inMoodboard: boolean;
   hasSourcePath: boolean;
   actions: CardContextMenuActions;
+  bulkSelectionCount?: number;
+  selectionModeActive?: boolean;
+  menuCardIsSelected?: boolean;
+  onStartMultiSelect?: () => void;
 };

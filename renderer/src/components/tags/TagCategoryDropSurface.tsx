@@ -1,11 +1,13 @@
-import { type ReactNode, useState } from 'react';
+import { type MutableRefObject, type ReactNode, useState } from 'react';
 import type { TagRecord } from '../../services/db';
+import { isTagDragEvent, readTagDragIds } from './tagDragPayload';
 
 type Props = {
   categoryId: string;
-  draggingTagId: string | null;
+  draggingTagIds: ReadonlySet<string> | null;
+  draggingTagIdsRef?: MutableRefObject<ReadonlySet<string> | null>;
   allTags: TagRecord[];
-  onTagDrop: (tagId: string, targetCategoryId: string) => void | Promise<void>;
+  onTagDrop: (tagIds: string[], targetCategoryId: string) => void | Promise<void>;
   className?: string;
   children: ReactNode;
 };
@@ -15,7 +17,8 @@ type Props = {
  */
 export default function TagCategoryDropSurface({
   categoryId,
-  draggingTagId,
+  draggingTagIds,
+  draggingTagIdsRef,
   allTags,
   onTagDrop,
   className = '',
@@ -24,25 +27,36 @@ export default function TagCategoryDropSurface({
   const [isTagDragOver, setIsTagDragOver] = useState(false);
   const [activeDragTagId, setActiveDragTagId] = useState<string | null>(null);
 
+  const resolveDraggingTagIds = (): ReadonlySet<string> | null => {
+    const fromRef = draggingTagIdsRef?.current;
+    if (fromRef && fromRef.size > 0) return fromRef;
+    return draggingTagIds;
+  };
+
   const handleTagDragOver = (e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes('application/tag-id')) {
+    if (!isTagDragEvent(e.dataTransfer)) {
       return;
     }
     e.preventDefault();
     e.stopPropagation();
 
-    if (!draggingTagId) {
+    const activeIds = resolveDraggingTagIds();
+    if (!activeIds || activeIds.size === 0) {
       e.dataTransfer.dropEffect = 'none';
       setIsTagDragOver(false);
       setActiveDragTagId(null);
       return;
     }
 
-    const tag = allTags.find((t) => t.id === draggingTagId);
-    if (tag && tag.categoryId !== categoryId) {
+    const movable = [...activeIds].some((tagId) => {
+      const tag = allTags.find((t) => t.id === tagId);
+      return tag && tag.categoryId !== categoryId;
+    });
+
+    if (movable) {
       e.dataTransfer.dropEffect = 'move';
       setIsTagDragOver(true);
-      setActiveDragTagId(draggingTagId);
+      setActiveDragTagId([...activeIds][0] ?? null);
     } else {
       e.dataTransfer.dropEffect = 'none';
       setIsTagDragOver(false);
@@ -62,21 +76,26 @@ export default function TagCategoryDropSurface({
   };
 
   const handleTagDrop = (e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes('application/tag-id')) {
+    if (!isTagDragEvent(e.dataTransfer)) {
       return;
     }
     e.preventDefault();
     e.stopPropagation();
 
-    const tagId =
-      draggingTagId ||
-      e.dataTransfer.getData('application/tag-id') ||
-      e.dataTransfer.getData('text/plain');
-    if (tagId) {
-      const tag = allTags.find((t) => t.id === tagId);
-      if (tag && tag.categoryId !== categoryId) {
-        void onTagDrop(tagId, categoryId);
-      }
+    const activeIds = resolveDraggingTagIds();
+    const ids = readTagDragIds(e.dataTransfer, activeIds);
+    if (ids.length === 0) {
+      setIsTagDragOver(false);
+      setActiveDragTagId(null);
+      return;
+    }
+
+    const movable = ids.filter((id) => {
+      const tag = allTags.find((t) => t.id === id);
+      return tag && tag.categoryId !== categoryId;
+    });
+    if (movable.length > 0) {
+      void onTagDrop(movable, categoryId);
     }
     setIsTagDragOver(false);
     setActiveDragTagId(null);
@@ -88,7 +107,7 @@ export default function TagCategoryDropSurface({
     <div
       className={`${className}${isDropHighlight ? ' arc-category-panel-tags--drop-target' : ''}`.trim()}
       onDragOverCapture={(e) => {
-        if (e.dataTransfer.types.includes('application/tag-id')) {
+        if (isTagDragEvent(e.dataTransfer)) {
           e.preventDefault();
         }
       }}
