@@ -12,6 +12,8 @@ import {
 } from './types';
 
 export type ContextMenuPosition = { x: number; y: number };
+export type ContextMenuAnchorAlign = 'start' | 'end';
+export type ContextMenuAnchorPlacement = 'belowAnchor' | 'belowIsland';
 
 type Props = {
   open: boolean;
@@ -22,6 +24,13 @@ type Props = {
   noDragClassName?: string;
   anchorRef?: React.RefObject<HTMLElement | null>;
   position?: ContextMenuPosition | null;
+  /** Ширина панели; по умолчанию CONTEXT_MENU_WIDTH (250). */
+  menuWidth?: number;
+  /** Горизонтальное выравнивание относительно якоря. */
+  anchorAlign?: ContextMenuAnchorAlign;
+  /** belowAnchor — под якорем; belowIsland — под navbar-island (как у фильтров). */
+  anchorPlacement?: ContextMenuAnchorPlacement;
+  panelClassName?: string;
 };
 
 function resolveAnchorTop(anchorEl: HTMLElement): number {
@@ -30,9 +39,9 @@ function resolveAnchorTop(anchorEl: HTMLElement): number {
   return base.getBoundingClientRect().bottom + CONTEXT_MENU_ANCHOR_GAP;
 }
 
-function clampMenuPosition(top: number, left: number, menuHeight = 0) {
+function clampMenuPosition(top: number, left: number, menuHeight = 0, menuWidth = CONTEXT_MENU_WIDTH) {
   const margin = 8;
-  const maxLeft = window.innerWidth - CONTEXT_MENU_WIDTH - margin;
+  const maxLeft = window.innerWidth - menuWidth - margin;
   const clampedLeft = Math.max(margin, Math.min(left, maxLeft));
   const maxTop =
     menuHeight > 0 ? window.innerHeight - menuHeight - margin : Number.POSITIVE_INFINITY;
@@ -75,7 +84,11 @@ export default function ContextMenu({
   ariaLabel,
   rows,
   children,
-  noDragClassName = ''
+  noDragClassName = '',
+  menuWidth = CONTEXT_MENU_WIDTH,
+  anchorAlign = 'end',
+  anchorPlacement = 'belowIsland',
+  panelClassName = ''
 }: Props) {
   const menuId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -99,7 +112,7 @@ export default function ContextMenu({
     const menuHeight = panelRef.current?.offsetHeight ?? 0;
 
     if (position) {
-      const nextLayout = clampMenuPosition(position.y, position.x, menuHeight);
+      const nextLayout = clampMenuPosition(position.y, position.x, menuHeight, menuWidth);
       setLayout((prev) =>
         prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
       );
@@ -112,13 +125,16 @@ export default function ContextMenu({
     }
 
     const rect = anchorRef.current.getBoundingClientRect();
-    const rawTop = resolveAnchorTop(anchorRef.current);
-    const rawLeft = rect.right - CONTEXT_MENU_WIDTH;
-    const nextLayout = clampMenuPosition(rawTop, rawLeft, menuHeight);
+    const rawTop =
+      anchorPlacement === 'belowAnchor'
+        ? rect.bottom + CONTEXT_MENU_ANCHOR_GAP
+        : resolveAnchorTop(anchorRef.current);
+    const rawLeft = anchorAlign === 'start' ? rect.left : rect.right - menuWidth;
+    const nextLayout = clampMenuPosition(rawTop, rawLeft, menuHeight, menuWidth);
     setLayout((prev) =>
       prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
     );
-  }, [open, ariaLabel, anchorRef, position, rows, children]);
+  }, [open, ariaLabel, anchorRef, position, rows, children, menuWidth, anchorAlign, anchorPlacement]);
 
   useLayoutEffect(() => {
     if (!open || !panelRef.current || !layout) return;
@@ -155,7 +171,14 @@ export default function ContextMenu({
   if (!open || !layout) return null;
 
   const backdropClass = ['context-menu-backdrop', dragClass].filter(Boolean).join(' ');
-  const panelClass = ['context-menu', 'panel', 'elevation-raised', 'arc-ui-kit-scope', dragClass]
+  const panelClass = [
+    'context-menu',
+    'panel',
+    'elevation-raised',
+    'arc-ui-kit-scope',
+    dragClass,
+    panelClassName
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -172,7 +195,7 @@ export default function ContextMenu({
         data-typo-tone="white"
         data-input-size="s"
         data-btn-size="m"
-        style={{ top: layout.top, left: layout.left, width: CONTEXT_MENU_WIDTH }}
+        style={{ top: layout.top, left: layout.left, width: menuWidth }}
       >
         <div className="context-menu__list">
           {rows?.map((row) => renderRow(row, onClose))}

@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { clamp, hexToHsv, hsvToHex, normalizeHex } from '../../utils/colorPicker';
+import ColorFormatInput from './ColorFormatInput';
 
 type Props = {
   value: string;
@@ -25,23 +26,8 @@ export default function ModalCategoryColorPicker({ value, onChange, variant = 'f
   const [hueTrackWidth, setHueTrackWidth] = useState(0);
 
   const safeHex = normalizeHex(value) ?? '#EAB308';
-  const [hexDraft, setHexDraft] = useState(safeHex);
   const parsed = hexToHsv(safeHex) ?? { h: 45, s: 95, v: 92 };
   const { h: hue, s: saturation, v: brightness } = parsed;
-
-  useEffect(() => {
-    setHexDraft(safeHex);
-  }, [safeHex]);
-
-  const commitHexDraft = (raw: string) => {
-    const parsedHex = normalizeHex(raw);
-    if (!parsedHex) {
-      setHexDraft(safeHex);
-      return;
-    }
-    setHexDraft(parsedHex);
-    onChange(parsedHex);
-  };
 
   useLayoutEffect(() => {
     const el = hueTrackRef.current;
@@ -109,22 +95,7 @@ export default function ModalCategoryColorPicker({ value, onChange, variant = 'f
     <>
       {variant === 'full' ? (
         <div className="arc-modal__slot">
-          <div className="input color-input input-slots" aria-label="Color value">
-            <span className="color-prepend slot-prepend">HEX</span>
-            <input
-              className="color-value-input slot-value"
-              value={hexDraft}
-              onChange={(e) => {
-                const next = e.target.value.toUpperCase();
-                setHexDraft(next);
-                const parsedHex = normalizeHex(next);
-                if (parsedHex) onChange(parsedHex);
-              }}
-              onBlur={() => commitHexDraft(hexDraft)}
-              aria-label="HEX цвета"
-            />
-            <span className="color-swatch-inline slot-trailing" style={{ background: safeHex }} aria-hidden="true" />
-          </div>
+          <ColorFormatInput value={safeHex} onChange={onChange} ariaLabel="Цвет" />
         </div>
       ) : null}
       <div className="arc-modal__slot">

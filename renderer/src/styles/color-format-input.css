@@ -1,0 +1,67 @@
+.arc-color-format-prepend {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.arc-color-format-prepend:hover {
+  color: var(--text-elev-primary);
+}
+
+.arc-color-format-prepend:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+  border-radius: calc(var(--radius-s) / 2);
+}
+
+.arc-color-format-channels {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-color-format-channels--compact {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.arc-color-format-channel-sep {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 1px;
+  margin: var(--s-1) 0;
+  background: var(--panel-border, var(--surface-border-raised));
+}
+
+.arc-color-format-channel-sep--compact {
+  margin: 0 var(--s-1);
+}
+
+.arc-color-format-input--compact {
+  width: 2.25rem;
+  min-width: 2.25rem;
+  flex: 0 1 auto;
+  text-align: center;
+}
+
+.arc-navbar-search .arc-color-format-input--compact {
+  width: 1.75rem;
+  min-width: 1.75rem;
+}
+
+.arc-color-format-input .slot-trailing {
+  flex-shrink: 0;
+}
+
+.context-menu.context-menu--color-format {
+  --menu-content-inset-x: var(--s-2);
+  padding: var(--s-1) 0;
+}

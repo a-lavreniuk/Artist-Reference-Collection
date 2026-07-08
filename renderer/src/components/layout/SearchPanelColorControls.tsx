@@ -1,4 +1,5 @@
 import ModalCategoryColorPicker from './ModalCategoryColorPicker';
+import PantoneNearestMatches from './PantoneNearestMatches';
 import SearchPanelModeHeader from './SearchPanelModeHeader';
 import ValueSlider from '../range-slider/ValueSlider';
 import { COLOR_SEARCH_PRESETS } from '../../search/colorPresets';
@@ -10,6 +11,8 @@ type SearchPanelColorControlsProps = {
   tolerance: number;
   onColorChange: (hex: string) => void;
   onToleranceChange: (value: number) => void;
+  /** Режим Pantone: под палитрой показываются ближайшие совпадения. */
+  pantoneMode?: boolean;
 };
 
 function clampTolerance(value: number): number {
@@ -21,7 +24,8 @@ export default function SearchPanelColorControls({
   colorHex,
   tolerance,
   onColorChange,
-  onToleranceChange
+  onToleranceChange,
+  pantoneMode = false
 }: SearchPanelColorControlsProps) {
   const safeHex = normalizeHex(colorHex) ?? COLOR_SEARCH_PRESETS[1].hex;
   const activePresetId = COLOR_SEARCH_PRESETS.find((p) => p.hex.toUpperCase() === safeHex.toUpperCase())?.id;
@@ -66,6 +70,8 @@ export default function SearchPanelColorControls({
       <div className="arc-search-panel-color-picker">
         <ModalCategoryColorPicker value={safeHex} onChange={onColorChange} variant="paletteOnly" />
       </div>
+
+      {pantoneMode ? <PantoneNearestMatches colorHex={safeHex} onSelect={onColorChange} /> : null}
 
       <div className="arc-search-panel-color-tolerance-row">
         <p className="text-m arc-search-panel-color-tolerance-row__label">Точность</p>

@@ -1,6 +1,7 @@
 import type { RefObject, Dispatch, SetStateAction, KeyboardEvent } from 'react';
 import type { CategoryRecord, TagRecord } from '../../../services/db';
 import type { NavbarSearchMode } from '../../../search/navbarSearchMode';
+import type { ColorFormat } from '../../../utils/colorFormats';
 import type { NavbarSearchPanelLayout } from './NavbarSearchPanelPortal';
 import type { useNavbarSimilarSearch } from './hooks/useNavbarSimilarSearch';
 
@@ -32,6 +33,8 @@ export type NavbarSearchContextValue = {
   colorHex: string | null;
   colorTolerance: number;
   displayColorHex: string;
+  colorFormat: ColorFormat;
+  setColorFormat: (format: ColorFormat) => void;
   categories: CategoryRecord[];
   tagsIndex: Map<string, TagRecord>;
   categoryById: Map<string, CategoryRecord>;

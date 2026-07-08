@@ -52,6 +52,11 @@ import { useNavbarSimilarSearch } from './hooks/useNavbarSimilarSearch';
 import { useNavbarSearchPanel, useSearchIslandRef } from './hooks/useNavbarSearchPanel';
 import { useNavbarSearchChipsScroll, useNavbarSearchIslandWidth } from './hooks/useNavbarSearchIslandWidth';
 import { removeTagIdFromParams, toggleTagIdInParams } from './utils/searchUrlCommit';
+import type { ColorFormat } from '../../../utils/colorFormats';
+import {
+  readColorSearchFormatPreference,
+  writeColorSearchFormatPreference
+} from '../../../hooks/useColorFormatPreference';
 
 const COLOR_SEARCH_DEBOUNCE_MS = 280;
 const UUID_LIKE =
@@ -93,6 +98,7 @@ export function NavbarSearchProvider({
   const [aiSearching, setAiSearching] = useState(false);
   const [panelColorHex, setPanelColorHex] = useState(COLOR_SEARCH_PRESETS[1].hex);
   const [panelColorTolerance, setPanelColorTolerance] = useState(DEFAULT_COLOR_SEARCH_TOLERANCE);
+  const [colorFormat, setColorFormatState] = useState<ColorFormat>(() => readColorSearchFormatPreference());
   const [searchIslandWidePinned, setSearchIslandWidePinned] = useState(false);
 
   const searchAnchorRef = useRef<HTMLDivElement>(null);
@@ -267,6 +273,11 @@ export function NavbarSearchProvider({
     },
     [applyColorSearchDebounced, panelColorTolerance]
   );
+
+  const setColorFormat = useCallback((format: ColorFormat) => {
+    setColorFormatState(format);
+    writeColorSearchFormatPreference(format);
+  }, []);
 
   const handlePanelToleranceChange = useCallback(
     (value: number) => {
@@ -486,6 +497,8 @@ export function NavbarSearchProvider({
     colorHex,
     colorTolerance,
     displayColorHex,
+    colorFormat,
+    setColorFormat,
     categories,
     tagsIndex,
     categoryById,

@@ -22,4 +22,5 @@ export type ContextMenuRow =
   | { type: 'header'; key: string; label: string };
 
 export const CONTEXT_MENU_WIDTH = 250;
+export const CONTEXT_MENU_COLOR_FORMAT_WIDTH = 120;
 export const CONTEXT_MENU_ANCHOR_GAP = 8;

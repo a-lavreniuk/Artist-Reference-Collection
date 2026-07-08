@@ -24,7 +24,8 @@ export function resolveIslandExpanded(params: {
   searchMode: string;
 }): boolean {
   const { panelOpen, hasValue, searchIslandWidePinned, searchMode } = params;
-  return panelOpen || searchIslandWidePinned || (searchMode !== 'color' && hasValue);
+  if (searchMode === 'color') return true;
+  return panelOpen || searchIslandWidePinned || hasValue;
 }
 
 export function resolveIslandWidthCss(isWide: boolean, collapsedPx: number, expandedWidthPx: number): string {

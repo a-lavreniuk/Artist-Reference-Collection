@@ -25,7 +25,7 @@ describe('computeCollapsedIslandWidth', () => {
 });
 
 describe('resolveIslandExpanded', () => {
-  it('does not expand color mode from hasValue alone', () => {
+  it('expands color mode for hex input width', () => {
     expect(
       resolveIslandExpanded({
         panelOpen: false,
@@ -33,7 +33,7 @@ describe('resolveIslandExpanded', () => {
         searchIslandWidePinned: false,
         searchMode: 'color'
       })
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('expands color mode when panel is open', () => {

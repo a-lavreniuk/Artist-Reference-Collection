@@ -64,6 +64,7 @@ export function useNavbarSearchPanel({
       if (!(target instanceof Node)) return;
       if (document.querySelector('.arc-search-panel')?.contains(target)) return;
       if (getSearchIsland()?.contains(target)) return;
+      if (target instanceof Element && target.closest('.context-menu, .context-menu-backdrop')) return;
       onClose();
     };
     document.addEventListener('pointerdown', onPointerDown, true);
@@ -73,7 +74,9 @@ export function useNavbarSearchPanel({
   useLayoutEffect(() => {
     if (!panelOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (document.querySelector('.context-menu')) return;
+      onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
