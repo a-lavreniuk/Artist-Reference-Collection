@@ -5,11 +5,12 @@ import { app } from 'electron';
 
 import { readAppPreferencesSync } from '../appPreferences';
 import { readLibraryRootSync } from '../libraryRootConfig';
+import { addCardsToCollection, ensureCollectionRecord } from '../mcp/collectionService';
 import { importMediaFile } from '../storage/libraryStorage';
 import { refreshLibrarySessionSnapshotFromDisk } from '../librarySessionSnapshot';
 import { notifyRendererExtensionImport } from './notifyRenderer';
 import { ARC_IMPORT_API_HOST, ARC_IMPORT_API_PORT, MAX_IMPORT_BODY_BYTES } from './constants';
-import { handleAppInfo, handleItemAdd } from './importApiHandlers';
+import { handleAppInfo, handleCollectionEnsure, handleItemAdd } from './importApiHandlers';
 import { downloadUrlToTempFile } from './importFromRemote';
 import type { ImportApiHandlerDeps } from './types';
 
@@ -70,10 +71,20 @@ function buildDeps(): ImportApiHandlerDeps {
     getLibraryRoot: () => readLibraryRootSync(),
     isApiEnabled: () => readAppPreferencesSync().importApiEnabled,
     resolveCardName: resolveCardNameFromPrefs,
-    importFromUrl: async ({ libraryRoot, url, website, name }) => {
+    importFromUrl: async ({ libraryRoot, url, fallbackUrl, website, name, collectionId, quiet }) => {
       let cleanup: (() => Promise<void>) | null = null;
       try {
-        const { tempPath, cleanup: rm } = await downloadUrlToTempFile(url, MAX_IMPORT_BODY_BYTES);
+        let downloaded: { tempPath: string; cleanup: () => Promise<void> };
+        try {
+          downloaded = await downloadUrlToTempFile(url, MAX_IMPORT_BODY_BYTES);
+        } catch (primaryErr) {
+          if (fallbackUrl && fallbackUrl !== url) {
+            downloaded = await downloadUrlToTempFile(fallbackUrl, MAX_IMPORT_BODY_BYTES);
+          } else {
+            throw primaryErr;
+          }
+        }
+        const { tempPath, cleanup: rm } = downloaded;
         cleanup = rm;
         const result = await importMediaFile(libraryRoot, tempPath, {
           linkUrl: website,
@@ -82,16 +93,33 @@ function buildDeps(): ImportApiHandlerDeps {
         if (!result.ok) {
           return { ok: false, error: result.error };
         }
+
+        if (collectionId) {
+          await addCardsToCollection(libraryRoot, collectionId, [result.row.id]);
+        }
+
         const { queueCardsForIndexing } = await import('../ipcAi');
         void queueCardsForIndexing([result.row.id]);
         void refreshLibrarySessionSnapshotFromDisk();
-        notifyRendererExtensionImport([result.row.id]);
+        notifyRendererExtensionImport([result.row.id], {
+          collectionId,
+          quiet
+        });
         return { ok: true, id: result.row.id };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Import failed';
         return { ok: false, error: message };
       } finally {
         if (cleanup) await cleanup();
+      }
+    },
+    ensureCollection: async ({ libraryRoot, name, description }) => {
+      try {
+        const { collection, created } = ensureCollectionRecord(libraryRoot, { name, description });
+        return { ok: true, id: collection.id, name: collection.name, created };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Collection ensure failed';
+        return { ok: false, error: message };
       }
     }
   };
@@ -122,6 +150,21 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     try {
       const body = await readJsonBody(req, MAX_IMPORT_BODY_BYTES);
       const result = await handleItemAdd(deps, body);
+      sendJson(res, result.status, result.body);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'BODY_TOO_LARGE') {
+        sendJson(res, 413, { status: 'error', message: 'Request body too large' });
+        return;
+      }
+      sendJson(res, 400, { status: 'error', message: 'Invalid JSON' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/v1/collection/ensure') {
+    try {
+      const body = await readJsonBody(req, MAX_IMPORT_BODY_BYTES);
+      const result = await handleCollectionEnsure(deps, body);
       sendJson(res, result.status, result.body);
     } catch (err) {
       if (err instanceof Error && err.message === 'BODY_TOO_LARGE') {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { ARC_IMPORT_API_PORT } from '../constants';
-import { buildAppInfoData, handleAppInfo, handleItemAdd, validateItemUrl } from '../importApiHandlers';
+import { buildAppInfoData, handleAppInfo, handleCollectionEnsure, handleItemAdd, validateItemUrl } from '../importApiHandlers';
 import type { ImportApiHandlerDeps } from '../types';
 
 function makeDeps(overrides: Partial<ImportApiHandlerDeps> = {}): ImportApiHandlerDeps {
@@ -12,6 +12,12 @@ function makeDeps(overrides: Partial<ImportApiHandlerDeps> = {}): ImportApiHandl
     isApiEnabled: () => true,
     resolveCardName: (pageTitle) => pageTitle?.trim(),
     importFromUrl: vi.fn(async () => ({ ok: true, id: 'card-1' })),
+    ensureCollection: vi.fn(async () => ({
+      ok: true,
+      id: 'col-1',
+      name: 'Board',
+      created: true
+    })),
     ...overrides
   };
 }
@@ -92,9 +98,33 @@ describe('handleItemAdd', () => {
     expect(importFromUrl).toHaveBeenCalledWith({
       libraryRoot: '/library',
       url: 'https://cdn.example/photo.jpg',
+      fallbackUrl: undefined,
       website: 'https://example.com/page',
-      name: 'prefix Title'
+      name: 'prefix Title',
+      collectionId: undefined,
+      quiet: false
     });
+  });
+
+  it('forwards a valid fallbackUrl and drops an invalid one', async () => {
+    const importFromUrl = vi.fn(async () => ({ ok: true as const, id: 'uuid-2' }));
+    const deps = makeDeps({ resolveCardName: () => undefined, importFromUrl });
+
+    await handleItemAdd(deps, {
+      url: 'https://cdn.example/originals/a.jpg',
+      fallbackUrl: 'https://cdn.example/236x/a.jpg'
+    });
+    expect(importFromUrl).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fallbackUrl: 'https://cdn.example/236x/a.jpg' })
+    );
+
+    await handleItemAdd(deps, {
+      url: 'https://cdn.example/originals/b.jpg',
+      fallbackUrl: 'not-a-url'
+    });
+    expect(importFromUrl).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fallbackUrl: undefined })
+    );
   });
 
   it('returns 500 when import fails', async () => {
@@ -108,5 +138,33 @@ describe('handleItemAdd', () => {
     if (res.body.status === 'error') {
       expect(res.body.message).toBe('Download failed');
     }
+  });
+});
+
+describe('handleCollectionEnsure', () => {
+  it('returns 403 when API disabled', async () => {
+    const res = await handleCollectionEnsure(makeDeps({ isApiEnabled: () => false }), { name: 'Board' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when name missing', async () => {
+    const res = await handleCollectionEnsure(makeDeps(), {});
+    expect(res.status).toBe(400);
+  });
+
+  it('ensures collection', async () => {
+    const ensureCollection = vi.fn(async () => ({
+      ok: true as const,
+      id: 'col-uuid',
+      name: 'Преимущества',
+      created: true
+    }));
+    const res = await handleCollectionEnsure(makeDeps({ ensureCollection }), { name: 'Преимущества' });
+    expect(res.status).toBe(200);
+    expect(ensureCollection).toHaveBeenCalledWith({
+      libraryRoot: '/library',
+      name: 'Преимущества',
+      description: undefined
+    });
   });
 });

@@ -1,5 +1,11 @@
 import { ARC_IMPORT_API_PORT } from './constants';
-import type { AppInfoData, ImportApiHandlerDeps, ItemAddRequestBody, JSendResponse } from './types';
+import type {
+  AppInfoData,
+  CollectionEnsureRequestBody,
+  ImportApiHandlerDeps,
+  ItemAddRequestBody,
+  JSendResponse
+} from './types';
 
 export function buildAppInfoData(
   deps: Pick<ImportApiHandlerDeps, 'getAppVersion' | 'getPlatform' | 'isApiEnabled'>
@@ -22,10 +28,22 @@ function parseItemAddBody(raw: unknown): ItemAddRequestBody | null {
   const o = raw as Record<string, unknown>;
   const body: ItemAddRequestBody = {};
   if (typeof o.url === 'string') body.url = o.url;
+  if (typeof o.fallbackUrl === 'string') body.fallbackUrl = o.fallbackUrl;
   if (typeof o.base64 === 'string') body.base64 = o.base64;
   if (typeof o.website === 'string') body.website = o.website;
   if (typeof o.pageTitle === 'string') body.pageTitle = o.pageTitle;
   if (typeof o.name === 'string') body.name = o.name;
+  if (typeof o.collectionId === 'string') body.collectionId = o.collectionId;
+  if (o.quiet === true) body.quiet = true;
+  return body;
+}
+
+function parseCollectionEnsureBody(raw: unknown): CollectionEnsureRequestBody | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const body: CollectionEnsureRequestBody = {};
+  if (typeof o.name === 'string') body.name = o.name;
+  if (typeof o.description === 'string') body.description = o.description;
   return body;
 }
 
@@ -43,6 +61,13 @@ export type ItemAddHttpStatus = 200 | 400 | 403 | 503 | 500;
 export type ItemAddResult = {
   status: ItemAddHttpStatus;
   body: JSendResponse<{ id: string }>;
+};
+
+export type CollectionEnsureHttpStatus = 200 | 400 | 403 | 503 | 500;
+
+export type CollectionEnsureResult = {
+  status: CollectionEnsureHttpStatus;
+  body: JSendResponse<{ id: string; name: string; created: boolean }>;
 };
 
 export async function handleItemAdd(deps: ImportApiHandlerDeps, rawBody: unknown): Promise<ItemAddResult> {
@@ -75,12 +100,19 @@ export async function handleItemAdd(deps: ImportApiHandlerDeps, rawBody: unknown
 
   const name = deps.resolveCardName(body.pageTitle, body.name);
   const website = body.website?.trim() || undefined;
+  const collectionId = body.collectionId?.trim() || undefined;
+  const fallbackCandidate = body.fallbackUrl?.trim();
+  const fallbackUrl =
+    fallbackCandidate && validateItemUrl(fallbackCandidate) ? fallbackCandidate : undefined;
 
   const result = await deps.importFromUrl({
     libraryRoot,
     url,
+    fallbackUrl,
     website,
-    name
+    name,
+    collectionId,
+    quiet: body.quiet === true
   });
 
   if (!result.ok) {
@@ -88,4 +120,46 @@ export async function handleItemAdd(deps: ImportApiHandlerDeps, rawBody: unknown
   }
 
   return { status: 200, body: { status: 'success', data: { id: result.id } } };
+}
+
+export async function handleCollectionEnsure(
+  deps: ImportApiHandlerDeps,
+  rawBody: unknown
+): Promise<CollectionEnsureResult> {
+  if (!deps.isApiEnabled()) {
+    return { status: 403, body: { status: 'error', message: 'Import API disabled' } };
+  }
+
+  const libraryRoot = deps.getLibraryRoot();
+  if (!libraryRoot) {
+    return { status: 503, body: { status: 'error', message: 'Library not selected' } };
+  }
+
+  const body = parseCollectionEnsureBody(rawBody);
+  if (!body) {
+    return { status: 400, body: { status: 'error', message: 'Invalid request body' } };
+  }
+
+  const name = body.name?.trim();
+  if (!name) {
+    return { status: 400, body: { status: 'error', message: 'name is required' } };
+  }
+
+  const result = await deps.ensureCollection({
+    libraryRoot,
+    name,
+    description: body.description?.trim() || undefined
+  });
+
+  if (!result.ok) {
+    return { status: 500, body: { status: 'error', message: result.error } };
+  }
+
+  return {
+    status: 200,
+    body: {
+      status: 'success',
+      data: { id: result.id, name: result.name, created: result.created }
+    }
+  };
 }

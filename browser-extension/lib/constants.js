@@ -1,4 +1,8 @@
-export const ARC_LAUNCH_URL = 'arc://launch';
+(() => {
+  const NS = (window.__ARC__ = window.__ARC__ || {});
 
-/** Заглушка — URL сайта пропишем позже. */
-export const ARC_WEBSITE_URL = '';
+  NS.ARC_LAUNCH_URL = 'arc://launch';
+
+  /** Заглушка — URL сайта пропишем позже. */
+  NS.ARC_WEBSITE_URL = '';
+})();

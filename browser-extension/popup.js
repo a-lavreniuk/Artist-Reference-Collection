@@ -1,13 +1,22 @@
-import { ARC_LAUNCH_URL, ARC_WEBSITE_URL } from './lib/constants.js';
+(() => {
+const NS = (window.__ARC__ = window.__ARC__ || {});
+const { ARC_LAUNCH_URL, ARC_WEBSITE_URL, isPinterestBoardUrl } = NS;
 
 const modalEl = document.querySelector('.arc-ext-modal--popup');
 const subtitleEl = document.getElementById('arc-modal-subtitle');
 const slot1El = document.getElementById('arc-slot-1');
 const slot2Wrap = document.getElementById('arc-slot-2-wrap');
 const slot2El = document.getElementById('arc-slot-2');
+const boardSlot = document.getElementById('arc-board-slot');
+const downloadBoardBtn = document.getElementById('arc-download-board-btn');
+const boardProgressEl = document.getElementById('arc-board-progress');
 const websiteBtn = document.getElementById('arc-website-btn');
 const closeBtn = document.getElementById('arc-close-btn');
 const openBtn = document.getElementById('arc-open-btn');
+
+let activeTabId = null;
+let boardDownloadInFlight = false;
+let arcConnectionReady = false;
 
 function msg(key, substitutions) {
   return chrome.i18n.getMessage(key, substitutions);
@@ -49,6 +58,26 @@ function bindStaticLabels() {
     openBtn.textContent = msg('openArcButton');
     openBtn.addEventListener('click', openArcApp);
   }
+  if (downloadBoardBtn) {
+    downloadBoardBtn.textContent = msg('downloadBoardButton');
+    downloadBoardBtn.addEventListener('click', () => void startBoardDownload());
+  }
+}
+
+function setBoardProgress(text, visible = true) {
+  if (!boardProgressEl) return;
+  boardProgressEl.textContent = text;
+  boardProgressEl.hidden = !visible;
+}
+
+function setBoardSlotVisible(visible) {
+  if (!boardSlot) return;
+  boardSlot.hidden = !visible;
+}
+
+function updateBoardButtonState() {
+  if (!downloadBoardBtn) return;
+  downloadBoardBtn.disabled = boardDownloadInFlight || !arcConnectionReady;
 }
 
 function showConnectedLayout(pending, queueMax) {
@@ -58,7 +87,10 @@ function showConnectedLayout(pending, queueMax) {
   if (slot2El) slot2El.textContent = msg('modalQueueInfo');
   if (slot2Wrap) slot2Wrap.hidden = false;
   if (pending > 0 && subtitleEl) {
-    setSubtitle(`${msg('statusConnectedSubtitle')} · ${msg('offlineToastQueue', [String(pending), String(queueMax)])}`, 'success');
+    setSubtitle(
+      `${msg('statusConnectedSubtitle')} · ${msg('offlineToastQueue', [String(pending), String(queueMax)])}`,
+      'success'
+    );
   }
 }
 
@@ -89,6 +121,83 @@ function showDrainingLayout() {
   if (slot2Wrap) slot2Wrap.hidden = true;
 }
 
+async function detectPinterestBoard() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+  activeTabId = tab?.id ?? null;
+
+  let onBoard = typeof tab?.url === 'string' && isPinterestBoardUrl(tab.url);
+
+  if (!onBoard && tab?.id) {
+    try {
+      const state = await chrome.tabs.sendMessage(tab.id, { type: 'arc:board-page-state' });
+      onBoard = state?.isBoard === true;
+    } catch {
+      // Content script not ready on this tab.
+    }
+  }
+
+  setBoardSlotVisible(onBoard);
+  updateBoardButtonState();
+
+  if (!onBoard) {
+    setBoardProgress('', false);
+  }
+}
+
+async function startBoardDownload() {
+  if (!activeTabId || boardDownloadInFlight) return;
+
+  boardDownloadInFlight = true;
+  if (downloadBoardBtn) downloadBoardBtn.disabled = true;
+  setBoardProgress(msg('boardDownloadCollecting'), true);
+
+  let result;
+  try {
+    result = await chrome.runtime.sendMessage({
+      type: 'arc:download-pinterest-board',
+      tabId: activeTabId
+    });
+  } catch {
+    result = { ok: false, code: 'error' };
+  }
+
+  if (result?.ok) {
+    setBoardProgress(
+      msg('boardDownloadDone', [
+        String(result.imported ?? 0),
+        result.collectionName ?? ''
+      ]),
+      true
+    );
+    setSubtitle(msg('statusConnectedSubtitle'), 'success');
+  } else if (result?.code === 'disabled') {
+    showDisabledLayout();
+    setBoardProgress(msg('statusDisabled'), true);
+  } else if (result?.code === 'offline') {
+    showOfflineLayout(0, 50);
+    setBoardProgress(msg('statusOffline'), true);
+  } else if (result?.code === 'no_pins') {
+    setBoardProgress(msg('boardDownloadNoPins'), true);
+  } else if (result?.code === 'no_content') {
+    setBoardProgress(msg('boardDownloadNoContent'), true);
+  } else {
+    setBoardProgress(msg('boardDownloadFailed'), true);
+  }
+
+  boardDownloadInFlight = false;
+  updateBoardButtonState();
+}
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type !== 'arc:board-download-progress') return;
+  if (message.tabId !== activeTabId) return;
+  setBoardProgress(
+    msg('boardDownloadProgress', [String(message.done ?? 0), String(message.total ?? 0)]),
+    true
+  );
+});
+
 async function refreshConnectionStatus() {
   showDrainingLayout();
 
@@ -104,25 +213,31 @@ async function refreshConnectionStatus() {
 
   const queueMax = res?.queueMax ?? 50;
   const pending = res?.pending ?? 0;
+  arcConnectionReady = res?.arc?.ok === true;
 
   if (!res) {
     showOfflineLayout(pending, queueMax);
     setSubtitle(msg('statusOffline'), 'danger');
+    await detectPinterestBoard();
     return;
   }
 
   if (res?.arc?.ok) {
     showConnectedLayout(pending, queueMax);
+    await detectPinterestBoard();
     return;
   }
 
   if (res?.arc?.reason === 'disabled') {
     showDisabledLayout();
+    await detectPinterestBoard();
     return;
   }
 
   showOfflineLayout(pending, queueMax);
+  await detectPinterestBoard();
 }
 
 bindStaticLabels();
 void refreshConnectionStatus();
+})();

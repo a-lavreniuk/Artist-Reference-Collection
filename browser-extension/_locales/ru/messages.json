@@ -83,5 +83,34 @@
   },
   "disabledToastBody": {
     "message": "Включите Import API в настройках ARC → Расширение браузера."
+  },
+  "downloadBoardButton": {
+    "message": "Скачать эту доску"
+  },
+  "boardDownloadCollecting": {
+    "message": "Собираем пины с доски…"
+  },
+  "boardDownloadProgress": {
+    "message": "Скачивание: $DONE$ из $TOTAL$",
+    "placeholders": {
+      "done": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "boardDownloadDone": {
+    "message": "Готово: $COUNT$ изображений в коллекции «$NAME$»",
+    "placeholders": {
+      "count": { "content": "$1" },
+      "name": { "content": "$2" }
+    }
+  },
+  "boardDownloadNoPins": {
+    "message": "На странице не найдено пинов для скачивания"
+  },
+  "boardDownloadNoContent": {
+    "message": "Не удалось прочитать страницу доски. Обновите вкладку и попробуйте снова"
+  },
+  "boardDownloadFailed": {
+    "message": "Не удалось скачать доску"
   }
 }

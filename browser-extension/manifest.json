@@ -17,12 +17,23 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["contextMenus", "storage", "alarms"],
+  "permissions": ["contextMenus", "storage", "alarms", "tabs"],
   "host_permissions": ["http://127.0.0.1:47896/*", "http://localhost:47896/*"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["lib/pageModal.js", "content.js"],
+      "js": [
+        "lib/sites/urlUtils.js",
+        "lib/sites/generic.js",
+        "lib/sites/pinterest.js",
+        "lib/sites/artstation.js",
+        "lib/sites/registry.js",
+        "lib/pinterest/board.js",
+        "lib/sites/resolveSave.js",
+        "lib/constants.js",
+        "lib/pageModal.js",
+        "content.js"
+      ],
       "css": ["arc-modal.css"],
       "run_at": "document_end"
     }

@@ -10,6 +10,7 @@ import { readAppPreferencesSync } from '../appPreferences';
 import { queueCardsForIndexing } from '../ipcAi';
 import { refreshLibrarySessionSnapshotFromDisk } from '../librarySessionSnapshot';
 import { notifyRendererExtensionImport } from '../importApi/notifyRenderer';
+import { addCardsToCollection, ensureCollectionRecord } from './collectionService';
 import {
   checkImportDuplicates,
   isExactDuplicateIncomingFile
@@ -41,7 +42,7 @@ export function buildImportDeps(libraryRoot: string): ImportApiHandlerDeps {
     getLibraryRoot: () => libraryRoot,
     isApiEnabled: () => true,
     resolveCardName: resolveCardNameFromPrefs,
-    importFromUrl: async ({ libraryRoot: root, url, website, name }) => {
+    importFromUrl: async ({ libraryRoot: root, url, website, name, collectionId, quiet }) => {
       let cleanup: (() => Promise<void>) | null = null;
       try {
         const { tempPath, cleanup: rm } = await downloadUrlToTempFile(url, MAX_IMPORT_BODY_BYTES);
@@ -53,15 +54,29 @@ export function buildImportDeps(libraryRoot: string): ImportApiHandlerDeps {
         if (!result.ok) {
           return { ok: false, error: result.error };
         }
+
+        if (collectionId) {
+          await addCardsToCollection(root, collectionId, [result.row.id]);
+        }
+
         void queueCardsForIndexing([result.row.id]);
         void refreshLibrarySessionSnapshotFromDisk();
-        notifyRendererExtensionImport([result.row.id]);
+        notifyRendererExtensionImport([result.row.id], { collectionId, quiet });
         return { ok: true, id: result.row.id };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Import failed';
         return { ok: false, error: message };
       } finally {
         if (cleanup) await cleanup();
+      }
+    },
+    ensureCollection: async ({ libraryRoot: root, name, description }) => {
+      try {
+        const { collection, created } = ensureCollectionRecord(root, { name, description });
+        return { ok: true, id: collection.id, name: collection.name, created };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Collection ensure failed';
+        return { ok: false, error: message };
       }
     }
   };

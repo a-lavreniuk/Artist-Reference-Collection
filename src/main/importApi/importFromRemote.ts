@@ -3,9 +3,43 @@ import { unlink, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 
-import { isVideoExt } from '../ffmpeg';
+import { assembleHlsToMp4, isVideoExt } from '../ffmpeg';
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']);
+
+const HLS_CONTENT_TYPES = new Set(['application/vnd.apple.mpegurl', 'application/x-mpegurl']);
+
+/** HLS-плейлист определяем по расширению `.m3u8` или по Content-Type. */
+export function isHlsUrl(url: string, contentType?: string | null): boolean {
+  try {
+    if (new URL(url).pathname.toLowerCase().endsWith('.m3u8')) return true;
+  } catch {
+    /* ignore */
+  }
+  const ct = contentType?.split(';')[0]?.trim().toLowerCase();
+  return ct ? HLS_CONTENT_TYPES.has(ct) : false;
+}
+
+async function downloadHlsToTempFile(
+  url: string,
+  maxBytes: number
+): Promise<{ tempPath: string; cleanup: () => Promise<void> }> {
+  const tempPath = path.join(os.tmpdir(), `arc-ext-import-${crypto.randomUUID()}.mp4`);
+  const cleanup = async () => {
+    try {
+      await unlink(tempPath);
+    } catch {
+      /* ignore */
+    }
+  };
+  try {
+    await assembleHlsToMp4(url, tempPath, maxBytes);
+  } catch (e) {
+    await cleanup();
+    throw e;
+  }
+  return { tempPath, cleanup };
+}
 
 function extFromContentType(contentType: string | null): string | null {
   if (!contentType) return null;
@@ -44,6 +78,10 @@ export async function downloadUrlToTempFile(
   url: string,
   maxBytes = 32 * 1024 * 1024
 ): Promise<{ tempPath: string; cleanup: () => Promise<void> }> {
+  if (isHlsUrl(url)) {
+    return downloadHlsToTempFile(url, maxBytes);
+  }
+
   const res = await fetch(url, { redirect: 'follow' });
   if (!res.ok) {
     throw new Error(`Download failed: HTTP ${res.status}`);

@@ -98,6 +98,64 @@ function runProcess(
 
 const FRAME_TIMEOUT_MS = 120_000;
 const PROBE_TIMEOUT_MS = 30_000;
+const HLS_TIMEOUT_MS = 180_000;
+
+/**
+ * Скачивает HLS-поток (.m3u8) и собирает его в локальный MP4 без перекодирования.
+ * Рассчитан на потоки Pinterest (MPEG-TS + AAC): используется ремукс `-c copy`
+ * и битстрим-фильтр `aac_adtstoasc` для корректной упаковки звука в MP4.
+ * @param maxBytes ограничение размера выходного файла (ffmpeg `-fs`); 0/undefined — без лимита.
+ */
+export async function assembleHlsToMp4(
+  hlsUrl: string,
+  outputMp4Abs: string,
+  maxBytes?: number
+): Promise<void> {
+  const ffmpeg = resolveFfmpegExecutable();
+  const tmpOut = `${outputMp4Abs}.${process.pid}.tmp.mp4`;
+  try {
+    if (fs.existsSync(tmpOut)) await unlink(tmpOut);
+  } catch {
+    /* ignore */
+  }
+
+  const args = [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    '-protocol_whitelist',
+    'http,https,tcp,tls,crypto',
+    '-i',
+    hlsUrl,
+    '-c',
+    'copy',
+    '-bsf:a',
+    'aac_adtstoasc'
+  ];
+  if (typeof maxBytes === 'number' && maxBytes > 0) {
+    args.push('-fs', String(maxBytes));
+  }
+  args.push(tmpOut);
+
+  try {
+    const { code, stderr } = await runProcess(ffmpeg, args, HLS_TIMEOUT_MS);
+    if (code !== 0) {
+      throw new Error(stderr.trim() || `ffmpeg завершился с кодом ${code}`);
+    }
+    if (!fs.existsSync(tmpOut) || fs.statSync(tmpOut).size === 0) {
+      throw new Error('ffmpeg не создал видеофайл из HLS');
+    }
+    await rename(tmpOut, outputMp4Abs);
+  } catch (e) {
+    try {
+      if (fs.existsSync(tmpOut)) await unlink(tmpOut);
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  }
+}
 
 /**
  * Первый кадр -> JPEG (для превью карточки).

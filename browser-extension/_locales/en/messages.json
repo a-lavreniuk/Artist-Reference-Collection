@@ -83,5 +83,34 @@
   },
   "disabledToastBody": {
     "message": "Enable Import API in ARC Settings → Browser extension."
+  },
+  "downloadBoardButton": {
+    "message": "Download this board"
+  },
+  "boardDownloadCollecting": {
+    "message": "Collecting pins from the board…"
+  },
+  "boardDownloadProgress": {
+    "message": "Downloading: $DONE$ of $TOTAL$",
+    "placeholders": {
+      "done": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "boardDownloadDone": {
+    "message": "Done: $COUNT$ images in collection \"$NAME$\"",
+    "placeholders": {
+      "count": { "content": "$1" },
+      "name": { "content": "$2" }
+    }
+  },
+  "boardDownloadNoPins": {
+    "message": "No pins found on this page"
+  },
+  "boardDownloadNoContent": {
+    "message": "Could not read the board page. Refresh the tab and try again"
+  },
+  "boardDownloadFailed": {
+    "message": "Could not download the board"
   }
 }
