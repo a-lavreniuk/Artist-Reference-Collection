@@ -125,7 +125,7 @@ export async function assembleHlsToMp4(
     'error',
     '-y',
     '-protocol_whitelist',
-    'file,http,https,tcp,tls,crypto',
+    'http,https,tcp,tls,crypto',
     '-i',
     hlsUrl,
     '-c',
