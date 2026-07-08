@@ -28,13 +28,15 @@ Skill для разработки и ревью UI в репозитории **A
 
 ## Приоритет источников
 
-1. `.cursor/rules/*.mdc` — обязательные ограничения (см. [rules-index.md](references/rules-index.md))
+1. `.cursor/rules/*.mdc` — обязательные ограничения (см. [rules-index.md](references/rules-index.md)); для контролов — **`UI-Kit-DS-Guard.mdc`**
 2. Макет Figma ARC-2 — конкретный node для задачи
 3. UI-Kit в приложении (`renderer/src/ui-kit/arcUiKitMain.html`, `UiKitPage.tsx`)
 4. Эталонные экраны в коде (см. [component-map.md](references/component-map.md))
 5. Общие практики React (composition, perf) — только если не противоречат п.1–4
 
 ## Workflow: перед правками
+
+**Обязательно:** правило `UI-Kit-DS-Guard.mdc` — gate + карта элементов.
 
 ```
 - [ ] 1. Понять задачу на языке UI (что видит пользователь)

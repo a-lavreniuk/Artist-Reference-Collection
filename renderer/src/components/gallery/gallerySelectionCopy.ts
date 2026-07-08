@@ -27,6 +27,10 @@ export function formatMoodboardAddToast(count: number): string {
   return `Добавлено в мудборд: ${count} ${pluralCardsRu(count)}`;
 }
 
+export function formatMoodboardRemoveToast(count: number): string {
+  return `Убрано из мудборда: ${count} ${pluralCardsRu(count)}`;
+}
+
 export function formatCollectionAddToast(count: number): string {
   return `Добавлено в коллекцию: ${count} ${pluralCardsRu(count)}`;
 }

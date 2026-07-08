@@ -33,7 +33,7 @@ type Props = {
   allTags: TagRecord[];
   isTagSelected: (tagId: string) => boolean;
   onTagChipPointerDown?: (tag: TagRecord, event: React.PointerEvent<HTMLButtonElement>) => boolean;
-  onTagDragStart: (tagId: string) => void;
+  onTagDragStart: (tagId: string, dataTransfer: DataTransfer) => void;
   onTagDragEnd: () => void;
   onTagDrop: (tagIds: string[], targetCategoryId: string) => Promise<void>;
 };

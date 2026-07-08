@@ -10,6 +10,7 @@ import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import GalleryBoard from '../gallery/GalleryBoard';
 import CardInspectModal from '../gallery/CardInspectModal';
 import { useGalleryCardContextMenu } from '../gallery/useGalleryCardContextMenu';
+import { useGalleryMultiSelect } from '../gallery/useGalleryMultiSelect';
 import ScrollToTopButton from '../layout/ScrollToTopButton';
 import ConfirmRemoveFromMoodboardModal from './ConfirmRemoveFromMoodboardModal';
 import { EmptyState } from '../empty-state';
@@ -43,6 +44,7 @@ export default function MoodboardCardsView() {
   const [removeConfirm, setRemoveConfirm] = useState<{ cardId: string; onBoard: boolean } | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLElement | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
 
   const feedQuery = useMemo<GalleryFeedQuery>(
     () => ({
@@ -113,6 +115,19 @@ export default function MoodboardCardsView() {
     await refreshMoodboard();
   }, [refreshMoodboard, removeConfirm]);
 
+  const multiSelect = useGalleryMultiSelect({
+    cards: feed.cards,
+    resetKey: galleryRevealResetKey(feedQuery),
+    scrollRootRef,
+    boardRef,
+    moodboardCardIds,
+    scope: { kind: 'moodboard-cards' },
+    enabled: libraryStorageReady,
+    onOpenCard: openCard,
+    onRefresh: () => void feed.reloadFromStart(),
+    refreshMoodboard: () => void refreshMoodboard()
+  });
+
   const { onCardContextMenu, contextMenuLayer } = useGalleryCardContextMenu({
     scope: { kind: 'moodboard-cards' },
     cards: feed.cards,
@@ -122,7 +137,13 @@ export default function MoodboardCardsView() {
     onFindSimilar: (id) => {
       void startFindSimilarSearch(navigate, searchParams, id);
     },
-    onCardDeleted: () => void feed.reloadFromStart()
+    onCardDeleted: () => void feed.reloadFromStart(),
+    getSelectedCardIds: () => multiSelect.selectedCardIds,
+    isCardSelected: multiSelect.isSelected,
+    selectionModeActive: multiSelect.selectionMode,
+    onToggleCardSelection: multiSelect.toggleCardSelection,
+    onStartMultiSelect: multiSelect.enterSelectionWithCard,
+    bulkHandlers: multiSelect.bulkHandlers
   });
 
   const emptyState = useMemo(() => {
@@ -182,12 +203,18 @@ export default function MoodboardCardsView() {
             srcMap={feed.srcMap}
             mediaTab="moodboard"
             scrollRootRef={scrollRootRef}
+            boardRef={boardRef}
             loadingMore={feed.loading && feed.hasMore}
             busy={feed.booting || feed.loading || feed.shuffleReloading}
             revealResetKey={galleryRevealResetKey(feedQuery)}
             onOpenCard={openCard}
             moodboardCardIds={moodboardCardIds}
             onCardContextMenu={onCardContextMenu}
+            isCardSelected={multiSelect.isSelected}
+            onCardClick={multiSelect.handleCardClick}
+            onCardPointerDown={multiSelect.handleCardPointerDown}
+            onCardPointerMove={multiSelect.onCardPointerMove}
+            onCardPointerUp={multiSelect.onCardPointerUp}
             onToggleMoodboard={handleToggleMoodboard}
             onFindSimilar={(id) => {
               void startFindSimilarSearch(navigate, searchParams, id);
@@ -217,6 +244,10 @@ export default function MoodboardCardsView() {
       ) : null}
 
       {contextMenuLayer}
+
+      {multiSelect.selectionBar}
+      {multiSelect.collectionsModal}
+      {multiSelect.marqueeOverlay}
 
       <ScrollToTopButton enabled={feed.cards.length > 0} />
     </div>

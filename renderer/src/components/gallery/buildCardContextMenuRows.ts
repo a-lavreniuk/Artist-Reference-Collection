@@ -27,7 +27,7 @@ function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): Conte
   const moodboardLabel = inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд';
   const moodboardIcon = inMoodboard ? 'arc-icon-bookmark-minus' : 'arc-icon-bookmark-plus';
 
-  return [
+  const rows: ContextMenuRow[] = [
     itemRow(
       menuCardIsSelected ? 'deselect' : 'select',
       menuCardIsSelected ? 'Снять выбор с карточки' : 'Выбрать карточку',
@@ -36,10 +36,21 @@ function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): Conte
     ),
     { type: 'separator', key: 'sep-main' },
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
-    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections),
+    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections)
+  ];
+
+  if (input.scope.kind === 'collection' && actions.onRemoveFromCollection) {
+    rows.push(
+      itemRow('remove-collection', 'Убрать из этой коллекции', 'arc-icon-layout-grid', actions.onRemoveFromCollection)
+    );
+  }
+
+  rows.push(
     { type: 'separator', key: 'sep-danger' },
     itemRow('trash', 'Отправить в корзину', 'arc-icon-trash', actions.onSendToTrash)
-  ];
+  );
+
+  return rows;
 }
 
 function multiSelectTrashMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {

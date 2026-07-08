@@ -114,6 +114,8 @@ function attachFileDropListeners(): void {
     (e) => {
       const dt = e.dataTransfer;
       if (!dt) return;
+      // Внутренние перетаскивания (метки и т.п.) не трогаем — пропускаем к React-обработчикам.
+      if (!isOsFileDrag(dt)) return;
 
       const trackedLocalTarget = lastOsFileDragLocalTarget;
       lastOsFileDragLocalTarget = null;

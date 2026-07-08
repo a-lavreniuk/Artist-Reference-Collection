@@ -2,6 +2,7 @@ import {
   addCardToMoodboard,
   getCardById,
   permanentDeleteCard,
+  removeCardFromMoodboard,
   restoreCard,
   softDeleteCard,
   updateCardPayload
@@ -42,6 +43,19 @@ export async function bulkAddMissingToMoodboard(
   for (const cardId of cardIds) {
     if (moodboardCardIds.has(cardId)) continue;
     await addCardToMoodboard(cardId);
+    count += 1;
+  }
+  return count;
+}
+
+export async function bulkRemoveFromMoodboard(
+  cardIds: readonly string[],
+  moodboardCardIds: ReadonlySet<string>
+): Promise<number> {
+  let count = 0;
+  for (const cardId of cardIds) {
+    if (!moodboardCardIds.has(cardId)) continue;
+    await removeCardFromMoodboard(cardId);
     count += 1;
   }
   return count;

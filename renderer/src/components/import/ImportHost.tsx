@@ -79,6 +79,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   );
   const assignCollectionIdRef = useRef<string | null>(null);
   const emptyFolderResolverRef = useRef<(() => void) | null>(null);
+  /** Разрешается, когда пользователь закрыл модалку дублей/источников — чтобы импорт папок шёл строго по очереди. */
+  const importFlowResolverRef = useRef<(() => void) | null>(null);
   const overlayOpenedManuallyRef = useRef(false);
   const isDraggingFilesRef = useRef(false);
   const suppressFileDragRef = useRef(false);
@@ -121,6 +123,18 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     setEmptyFolderName(null);
     const resolve = emptyFolderResolverRef.current;
     emptyFolderResolverRef.current = null;
+    resolve?.();
+  }, []);
+
+  const waitForImportFlow = useCallback(() => {
+    return new Promise<void>((resolve) => {
+      importFlowResolverRef.current = resolve;
+    });
+  }, []);
+
+  const resolveImportFlow = useCallback(() => {
+    const resolve = importFlowResolverRef.current;
+    importFlowResolverRef.current = null;
     resolve?.();
   }, []);
 
@@ -179,6 +193,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
             prefKey: 'notifyFilesAdded'
           });
         }
+        await waitForImportFlow();
         return;
       }
 
@@ -201,6 +216,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         if (sourceAction === 'ask') {
           setSourceModalPaths(sourcePaths);
           setPhase('source-modal');
+          await waitForImportFlow();
         } else if (sourceAction === 'trash') {
           for (const abs of sourcePaths) {
             await window.arc.trashPath(abs);
@@ -219,7 +235,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       unsub();
       setImportBusy(false);
     }
-  }, [assignImportedCards, canImport]);
+  }, [assignImportedCards, canImport, waitForImportFlow]);
 
   const executeFolderImports = useCallback(
     async (folderPaths: string[], plan: FolderImportPlan, looseFiles: string[]) => {
@@ -308,7 +324,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     setDuplicateIndex(0);
     setDuplicateAssignCollectionId(undefined);
     setPhase('idle');
-  }, []);
+    resolveImportFlow();
+  }, [resolveImportFlow]);
 
   const onDuplicateResolved = useCallback(() => {
     if (duplicateIndex + 1 < duplicateConflicts.length) {
@@ -318,8 +335,9 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       setDuplicateConflicts([]);
       setDuplicateIndex(0);
       setPhase('idle');
+      resolveImportFlow();
     }
-  }, [duplicateIndex, duplicateConflicts.length]);
+  }, [duplicateIndex, duplicateConflicts.length, resolveImportFlow]);
 
   const clearFileDrag = useCallback(() => {
     isDraggingFilesRef.current = false;
@@ -423,6 +441,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const closeSourceModal = () => {
     setSourceModalPaths(null);
     setPhase('idle');
+    resolveImportFlow();
   };
 
   const trashSources = async () => {

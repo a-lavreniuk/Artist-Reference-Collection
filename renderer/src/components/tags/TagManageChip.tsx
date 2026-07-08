@@ -1,4 +1,4 @@
-import { Fragment, useRef } from 'react';
+import { useRef } from 'react';
 import type { TagRecord } from '../../services/db';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
@@ -34,7 +34,6 @@ export default function TagManageChip({
   const hasTipText = Boolean(tag.description?.trim());
   const hasTipImage = Boolean(tag.tooltipImageDataUrl?.startsWith('data:image/'));
   const canShowTooltip = hasTipText || hasTipImage;
-  const useCustomTooltip = canShowTooltip && !isDragging;
 
   const hintParts = [tag.description?.trim()].filter(Boolean) as string[];
   if (tag.tooltipImageDataUrl) {
@@ -91,24 +90,23 @@ export default function TagManageChip({
     </button>
   );
 
+  // Обёртка Tooltip и сам узел кнопки остаются стабильными при перетаскивании:
+  // на время drag прячем только содержимое подсказки (content=null), не пересоздавая DOM,
+  // иначе браузер отменяет нативный drag.
+  const tooltipContent = isDragging
+    ? null
+    : canShowTooltip
+      ? <TagTooltipBody description={tag.description} imageDataUrl={tag.tooltipImageDataUrl} />
+      : titleHint;
+
   return (
-    <Fragment>
-      {useCustomTooltip ? (
-        <Tooltip
-          content={<TagTooltipBody description={tag.description} imageDataUrl={tag.tooltipImageDataUrl} />}
-          delay={1000}
-          position="top"
-          variant="rich"
-        >
-          {chip}
-        </Tooltip>
-      ) : !canShowTooltip ? (
-        <Tooltip content={titleHint} delay={500} position="top">
-          {chip}
-        </Tooltip>
-      ) : (
-        chip
-      )}
-    </Fragment>
+    <Tooltip
+      content={tooltipContent}
+      delay={canShowTooltip ? 1000 : 500}
+      position="top"
+      variant={canShowTooltip ? 'rich' : 'default'}
+    >
+      {chip}
+    </Tooltip>
   );
 }

@@ -9,6 +9,7 @@ import {
   bulkAddToCollection,
   bulkPermanentDelete,
   bulkRemoveFromCollection,
+  bulkRemoveFromMoodboard,
   bulkRestore,
   bulkSendToTrash,
   bulkToggleCollectionForCards
@@ -16,6 +17,7 @@ import {
 import {
   formatCollectionRemoveToast,
   formatMoodboardAddToast,
+  formatMoodboardRemoveToast,
   formatPermanentDeleteToast,
   formatRestoreToast,
   formatTrashToast
@@ -74,6 +76,7 @@ export function useGalleryMultiSelect({
   const barVariant: GallerySelectionBarVariant = useMemo(() => {
     if (scope.kind === 'trash') return 'trash';
     if (scope.kind === 'collection') return 'collection';
+    if (scope.kind === 'moodboard-cards') return 'moodboard';
     return 'library';
   }, [scope.kind]);
 
@@ -118,6 +121,14 @@ export function useGalleryMultiSelect({
     );
   }, [moodboardCardIds, runBulk]);
 
+  const onRemoveFromMoodboard = useCallback(() => {
+    const ids = [...selectedIdsRef.current];
+    void runBulk(
+      () => bulkRemoveFromMoodboard(ids, moodboardCardIds),
+      formatMoodboardRemoveToast
+    );
+  }, [moodboardCardIds, runBulk]);
+
   const onTrashAction = useCallback(() => {
     const ids = [...selectedIdsRef.current];
     if (scope.kind === 'trash') return;
@@ -158,6 +169,16 @@ export function useGalleryMultiSelect({
         await runBulk(() => bulkPermanentDelete(cardIds), formatPermanentDeleteToast);
       },
       onBulkToggleMoodboard: async (cardIds: string[]) => {
+        const allInMoodboard =
+          cardIds.length > 0 && cardIds.every((id) => moodboardCardIds.has(id));
+        // В мудборде — всегда убираем; иначе тумблер по составу выбора (как подпись пункта меню).
+        if (scope.kind === 'moodboard-cards' || allInMoodboard) {
+          await runBulk(
+            () => bulkRemoveFromMoodboard(cardIds, moodboardCardIds),
+            formatMoodboardRemoveToast
+          );
+          return;
+        }
         await runBulk(
           () => bulkAddMissingToMoodboard(cardIds, moodboardCardIds),
           formatMoodboardAddToast
@@ -173,12 +194,13 @@ export function useGalleryMultiSelect({
         );
       }
     }),
-    [moodboardCardIds, runBulk]
+    [moodboardCardIds, runBulk, scope.kind]
   );
 
   const handleCardPointerDown = useCallback(
     (cardId: string, event: React.PointerEvent) => {
-      if (event.button === 0) {
+      // При Shift/Ctrl не трогаем якорь: он нужен click-обработчику для диапазонного выбора.
+      if (event.button === 0 && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
         selection.noteAnchor(cardId);
       }
       longPress.onPointerDown(cardId, event);
@@ -246,11 +268,13 @@ export function useGalleryMultiSelect({
     };
   }, [enabled, selection.selectedCount]);
 
+  const isMoodboardScope = scope.kind === 'moodboard-cards';
   const selectionBar = enabled ? (
     <GallerySelectionBar
       selectedCount={selection.selectedCount}
       variant={barVariant}
-      onAddToMoodboard={scope.kind === 'trash' ? undefined : onAddToMoodboard}
+      onAddToMoodboard={scope.kind === 'trash' || isMoodboardScope ? undefined : onAddToMoodboard}
+      onRemoveFromMoodboard={isMoodboardScope ? onRemoveFromMoodboard : undefined}
       onCollectionAction={scope.kind === 'trash' ? undefined : onCollectionAction}
       onTrashAction={scope.kind === 'trash' ? undefined : onTrashAction}
       onRestore={scope.kind === 'trash' ? onRestore : undefined}

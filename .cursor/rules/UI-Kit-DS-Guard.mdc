@@ -1,0 +1,67 @@
+---
+description: Обязательное использование элементов UI-Kit / arc-ui; запрет локальных вариантов кнопок, инпутов и прочих контролов.
+alwaysApply: true
+---
+
+# UI-Kit / Design System Guard (ARC)
+
+Источник правды: `renderer/public/ui/arc-ui/arc-ui.html`, `renderer/src/ui-kit/arcUiKitMain.html`, `UiKitPage.tsx`, классы в `arc-ui.css`.
+
+Дополняет `UI-Consistency-Guard.mdc`, `Common-Components.mdc`, `Figma.mdc`. При конфликте — **классы из Figma и UI-Kit важнее** локальной интерпретации.
+
+## Gate перед любым новым UI в renderer
+
+Перед первой строкой разметки/стилей:
+
+1. Прочитать skill `arc-ui-dev` → «Перед правками».
+2. Найти эталон: UI-Kit → похожий экран в `renderer/src/pages/` → `component-map.md`.
+3. Если в Figma указаны классы — **перенести их дословно** в JSX; не «рисовать похоже».
+4. В ответе пользователю (или в плане) явно указать: **элемент → классы / компонент → файл-эталон**.
+
+Без выполнения gate — не писать кастомные `__action`, `__btn`, `__icon` на интерактивных элементах.
+
+## Карта элементов (только через DS)
+
+| Элемент | Как использовать | Не делать |
+|---------|------------------|-----------|
+| Кнопка | `btn btn-* btn-ds` (+ `btn-m` / `btn-s` при необходимости); icon-only: `btn-icon-only` + `btn-icon-only__glyph` + `arc-icon-*` | Локальные `*-__action`, свои размеры/hover/focus |
+| Таб | `tabs` + `tab-button` (+ `tab-icon`, `tab-counter`) | Свои tab-стили |
+| Инпут | `field` + `input` / `input-live` / `input-slots`; ошибка: `field-error`, `aria-invalid` | `hint-error`, inline-текст ошибки |
+| Textarea | `field` + `input textarea` | Локальные textarea-стили |
+| Селектор | `field selector-field` + `pseudo-select` (или готовый React-компонент проекта) | `.selector-dropdown` в страницах |
+| Чип метки | `chip` (+ `TagChipToggleWithTooltip` и др. из `components/tags/`) | Локальные chip-кнопки |
+| Типографика | `text-s` / `text-m` / `text-l`, `h1`–`h3` | Несуществующие `typo-p-*` без класса в CSS |
+| Панель | `panel` + `elevation-*` | Дублировать panel-токены локально |
+| Меню | `ContextMenu` | Локальные dropdown/menu |
+| Tooltip | `Tooltip` | `title=` на кнопках |
+| Empty state | `EmptyState` + `emptyStates.ts` | `.arc-page-empty`, локальные hint |
+| Иконка | `arc-icon-*` + `hydrateArcNavbarIcons`; glyph в `btn-icon-only__glyph` / `tab-icon` | Свои `*-__icon` без DS-обёртки |
+| Toggle / checkbox / radio (настройки) | `SettingsToggleRow`, `SettingsCheckboxRow`, `SettingsRadioRow` | Одноразовые check-строки |
+| Модалка | `MessageModal`, существующие modal-паттерны | Новый modal-каркас без согласования |
+| Datepicker / calendar | `Datepicker`, `Calendar` | Локальный date-picker |
+| Slider | `RangeSlider` / `ValueSlider` | Свой range input UI |
+| Группа кнопок | `btn-group btn-group-ds` | Свой segmented control |
+
+Обёртка scope: `arc-ui-kit-scope` + `data-btn-size="m|s|l"` + при необходимости `data-elevation`, `data-typo-tone`.
+
+## Запрещено
+
+- Новый визуальный вариант кнопки, инпута, меню, tooltip, empty state, если аналог есть в UI-Kit или `renderer/src/components/`.
+- Копировать CSS из одного компонента в другой «как есть».
+- Хардкод `#hex`, произвольных `px`/`ms` при наличии токена (`--s-*`, `--typo-*`, `--transition-*`).
+- Интерактивный `<button>` / `<input>` только с локальными BEM-классами страницы.
+
+## Допустимые исключения
+
+- Layout-обёртка страницы (`*-page`, `*-main`, grid/flex) без дублирования стилей контролов.
+- Расширение **общего** компонента или токена в `arc-ui.css` — после оценки влияния на UI-Kit.
+- Новый паттерн — только если в UI-Kit и коде нет аналога; сначала согласовать с пользователем.
+
+## Перед «готово к тесту»
+
+- [ ] Все кнопки/инпуты/меню — классы из UI-Kit или общий React-компонент.
+- [ ] Есть `hover` / `focus` / `disabled` / `error` где применимо.
+- [ ] Нет новых локальных `__action` / `__btn` / dropdown-обёрток.
+- [ ] Сверка с Figma node и UI-Kit пройдена.
+
+Эталоны кнопок icon-only ghost: `NavbarSortMenu.tsx`, `GalleryNavbarFilters.tsx`, `NavbarMenu.tsx`.
