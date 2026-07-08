@@ -28,3 +28,13 @@ body.arc-ext-shell {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.arc-ext-btn--block {
+  width: 100%;
+  justify-content: center;
+}
+
+.arc-ext-modal__slot-text--progress {
+  margin-top: var(--s-2, 8px);
+  color: var(--text-elev-secondary, #888890);
+}

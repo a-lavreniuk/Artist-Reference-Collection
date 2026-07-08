@@ -43,6 +43,22 @@ export function createCollectionRecord(
   return col;
 }
 
+export function ensureCollectionRecord(
+  libraryRoot: string,
+  input: { name: string; description?: string }
+): { collection: CollectionRow; created: boolean } {
+  const name = normalizeName(input.name);
+  const collections = listCollections(libraryRoot);
+  const existing = collections.find((c) => c.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    return { collection: existing, created: false };
+  }
+  return {
+    collection: createCollectionRecord(libraryRoot, input),
+    created: true
+  };
+}
+
 export function updateCollectionRecord(
   libraryRoot: string,
   input: { collectionId: string; name?: string; description?: string }

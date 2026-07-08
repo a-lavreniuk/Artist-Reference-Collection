@@ -352,8 +352,8 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:screenshot-saved', fn);
     return () => ipcRenderer.removeListener('arc:screenshot-saved', fn);
   },
-  onExtensionImportSaved: (cb: (detail: { cardIds: string[] }) => void) => {
-    const fn = (_: unknown, payload: { cardIds: string[] }) => cb(payload);
+  onExtensionImportSaved: (cb: (detail: { cardIds: string[]; collectionId?: string; quiet?: boolean }) => void) => {
+    const fn = (_: unknown, payload: { cardIds: string[]; collectionId?: string; quiet?: boolean }) => cb(payload);
     ipcRenderer.on('arc:extension-import-saved', fn);
     return () => ipcRenderer.removeListener('arc:extension-import-saved', fn);
   },

@@ -1,10 +1,10 @@
-import { checkArc, importItem } from './lib/arcApi.js';
+import { checkArc, ensureCollection, importItem } from './lib/arcApi.js';
 import { drainQueue, enqueue, queueLength, QUEUE_MAX } from './lib/queue.js';
 
 const MENU_ID = 'arc-add-to-library';
 const DRAIN_ALARM = 'arc-drain-queue';
 
-/** @typedef {{ url: string, website?: string, pageTitle?: string }} SavePayload */
+/** @typedef {{ url: string, website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} SavePayload */
 
 async function syncDrainAlarm() {
   const len = await queueLength();
@@ -65,6 +65,72 @@ async function trySaveOrQueue(payload) {
   return { ok: false, code: 'error', message: result.message };
 }
 
+/**
+ * @param {number} tabId
+ * @param {(detail: { done: number, total: number }) => void} [onProgress]
+ */
+async function downloadPinterestBoard(tabId, onProgress) {
+  const arc = await checkArc();
+  if (!arc.ok) {
+    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : 'offline' };
+  }
+
+  let board;
+  try {
+    board = await chrome.tabs.sendMessage(tabId, { type: 'arc:collect-pinterest-board' });
+  } catch {
+    return { ok: false, code: 'no_content' };
+  }
+
+  if (!board?.pins?.length) {
+    return { ok: false, code: 'no_pins' };
+  }
+
+  const collection = await ensureCollection(board.boardName);
+  if (!collection.ok) {
+    return { ok: false, code: collection.code, message: collection.message };
+  }
+
+  const total = board.pins.length;
+  let imported = 0;
+  let failed = 0;
+
+  for (let index = 0; index < board.pins.length; index += 1) {
+    const pin = board.pins[index];
+    const result = await importItem({
+      url: pin.url,
+      website: pin.website ?? board.boardUrl,
+      pageTitle: board.boardName,
+      name: pin.name,
+      collectionId: collection.id,
+      quiet: true
+    });
+
+    if (result.ok) {
+      imported += 1;
+    } else {
+      failed += 1;
+    }
+
+    onProgress?.({ done: index + 1, total });
+  }
+
+  if (imported > 0) {
+    void drainPendingQueue();
+  }
+
+  return {
+    ok: imported > 0,
+    code: imported > 0 ? 'done' : 'error',
+    imported,
+    failed,
+    total,
+    collectionId: collection.id,
+    collectionName: collection.name,
+    created: collection.created
+  };
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -89,19 +155,42 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId !== MENU_ID || !info.srcUrl) return;
-  void trySaveOrQueue({
-    url: info.srcUrl,
-    website: tab?.url ?? info.pageUrl,
-    pageTitle: tab?.title
-  });
+
+  void (async () => {
+    /** @type {SavePayload} */
+    let payload = {
+      url: info.srcUrl,
+      website: tab?.url ?? info.pageUrl ?? undefined,
+      pageTitle: tab?.title
+    };
+
+    if (tab?.id) {
+      try {
+        const resolved = await chrome.tabs.sendMessage(tab.id, {
+          type: 'arc:resolve-save',
+          url: info.srcUrl,
+          website: payload.website,
+          pageTitle: payload.pageTitle
+        });
+        if (resolved?.url) {
+          payload = resolved;
+        }
+      } catch {
+        // Content script unavailable — use raw URL from context menu.
+      }
+    }
+
+    await trySaveOrQueue(payload);
+  })();
 });
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'arc:save-image' && typeof message.url === 'string') {
     void trySaveOrQueue({
       url: message.url,
       website: typeof message.website === 'string' ? message.website : undefined,
-      pageTitle: typeof message.pageTitle === 'string' ? message.pageTitle : undefined
+      pageTitle: typeof message.pageTitle === 'string' ? message.pageTitle : undefined,
+      name: typeof message.name === 'string' ? message.name : undefined
     }).then((res) => sendResponse(res));
     return true;
   }
@@ -115,6 +204,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }
       sendResponse({ arc, drained: 0, pending, queueMax: QUEUE_MAX });
     })();
+    return true;
+  }
+
+  if (message?.type === 'arc:download-pinterest-board' && typeof message.tabId === 'number') {
+    void downloadPinterestBoard(message.tabId, (progress) => {
+      chrome.runtime.sendMessage({
+        type: 'arc:board-download-progress',
+        tabId: message.tabId,
+        ...progress
+      }).catch(() => {});
+    }).then((res) => sendResponse(res));
     return true;
   }
 

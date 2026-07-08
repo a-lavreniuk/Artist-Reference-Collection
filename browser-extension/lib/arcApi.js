@@ -52,7 +52,7 @@ export async function checkArc() {
 }
 
 /**
- * @param {{ url: string, website?: string, pageTitle?: string }} payload
+ * @param {{ url: string, website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} payload
  */
 export async function importItem(payload) {
   const body = {
@@ -60,6 +60,16 @@ export async function importItem(payload) {
     website: payload.website,
     pageTitle: payload.pageTitle
   };
+
+  if (payload.name?.trim()) {
+    body.name = payload.name.trim();
+  }
+  if (payload.collectionId?.trim()) {
+    body.collectionId = payload.collectionId.trim();
+  }
+  if (payload.quiet === true) {
+    body.quiet = true;
+  }
 
   // Single host only: 127.0.0.1 and localhost hit the same server; retrying after
   // client timeout duplicates cards because the first request may already be processed.
@@ -87,6 +97,51 @@ export async function importItem(payload) {
   } catch (err) {
     if (isAbortError(err)) {
       return { ok: false, code: 'error', message: 'Import timed out' };
+    }
+    const message = err instanceof Error ? err.message : 'Network error';
+    return { ok: false, code: 'error', message };
+  }
+}
+
+/**
+ * @param {string} name
+ * @returns {Promise<{ ok: true, id: string, name: string, created: boolean } | { ok: false, code: string, message?: string }>}
+ */
+export async function ensureCollection(name) {
+  const trimmed = name?.trim();
+  if (!trimmed) {
+    return { ok: false, code: 'error', message: 'Collection name is required' };
+  }
+
+  try {
+    const res = await fetchWithTimeout(
+      `${apiBase(ARC_API_PRIMARY_HOST)}/collection/ensure`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed })
+      },
+      IMPORT_REQUEST_TIMEOUT_MS
+    );
+    const json = await res.json();
+    if (res.status === 503) {
+      return { ok: false, code: 'no_library', message: json?.message ?? 'Library not selected' };
+    }
+    if (res.status === 403) {
+      return { ok: false, code: 'disabled', message: json?.message ?? 'Import API disabled' };
+    }
+    if (!res.ok || json?.status !== 'success') {
+      return { ok: false, code: 'error', message: json?.message ?? `HTTP ${res.status}` };
+    }
+    return {
+      ok: true,
+      id: json.data?.id,
+      name: json.data?.name ?? trimmed,
+      created: json.data?.created === true
+    };
+  } catch (err) {
+    if (isAbortError(err)) {
+      return { ok: false, code: 'error', message: 'Request timed out' };
     }
     const message = err instanceof Error ? err.message : 'Network error';
     return { ok: false, code: 'error', message };

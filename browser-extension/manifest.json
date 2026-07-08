@@ -17,14 +17,20 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["contextMenus", "storage", "alarms"],
+  "permissions": ["contextMenus", "storage", "alarms", "tabs"],
   "host_permissions": ["http://127.0.0.1:47896/*", "http://localhost:47896/*"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["lib/pageModal.js", "content.js"],
+      "js": ["lib/pageModal.js"],
       "css": ["arc-modal.css"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "type": "module"
     }
   ],
   "web_accessible_resources": [

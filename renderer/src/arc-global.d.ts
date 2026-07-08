@@ -239,7 +239,7 @@ declare global {
       getAppPreferences: () => Promise<import('./services/appPreferences').AppPreferencesV1>;
       setAppPreferences: (patch: Partial<import('./services/appPreferences').AppPreferencesV1>) => Promise<import('./services/appPreferences').AppPreferencesV1>;
       onScreenshotSaved: (cb: (detail: { cardId: string }) => void) => () => void;
-      onExtensionImportSaved?: (cb: (detail: { cardIds: string[] }) => void) => () => void;
+      onExtensionImportSaved?: (cb: (detail: { cardIds: string[]; collectionId?: string; quiet?: boolean }) => void) => () => void;
       onMcpTagCatalogChanged?: (cb: () => void) => () => void;
       openBugReportForm?: () => Promise<
         | { ok: true; formUrl: string }

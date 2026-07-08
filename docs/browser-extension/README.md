@@ -15,6 +15,39 @@ Companion extension for **Artist Reference Collection (ARC)** — saves images f
 
 Not in MVP: Safari/Firefox, batch save, page screenshots, tags/collections at save time, Chrome Web Store publish.
 
+## Supported sites (site handlers)
+
+### Pinterest — доска целиком
+
+На странице **доски** Pinterest (`https://<locale>.pinterest.com/<user>/<board>/`):
+
+1. Откройте доску в браузере.
+2. Кликните иконку расширения ARC.
+3. В popup появится кнопка **«Скачать эту доску»**.
+4. После клика расширение прокрутит доску, соберёт пины, создаст в ARC **коллекцию** с названием доски и добавит в неё изображения.
+
+Требования: ARC запущен, библиотека открыта, Import API включён.
+
+### Pinterest / ArtStation — одиночные изображения
+
+Расширение выбирает URL и имя карточки через `browser-extension/lib/sites/`:
+
+| Сайт | Что делает handler |
+|------|-------------------|
+| **Pinterest** (`*.pinterest.com`) | Апгрейд `i.pinimg.com` URL до `/originals/`, `srcset` / `data-pin-media`, `og:image`; имя — заголовок пина |
+| **ArtStation** (`*.artstation.com`) | Полноразмерный artwork (`srcset`, `data-image`, `og:image`); имя — название работы и автор |
+| **Остальные сайты** | Generic: `img.currentSrc` / `src` / `background-image` без изменений |
+
+Ограничение: ARC скачивает URL **без cookies браузера** — gated-контент может сохраниться только в preview-качестве.
+
+## Import API endpoints
+
+| Method | Path | Назначение |
+|--------|------|------------|
+| GET | `/api/v1/app/info` | Health / статус Import API |
+| POST | `/api/v1/item/add` | Импорт одного изображения (`collectionId`, `quiet` опционально) |
+| POST | `/api/v1/collection/ensure` | Создать коллекцию или вернуть существующую по имени |
+
 ## Eagle vs ARC
 
 | Eagle | ARC |
@@ -51,12 +84,13 @@ Request:
 {
   "url": "https://cdn.example/photo.jpg",
   "website": "https://example.com/page",
-  "pageTitle": "Page title"
+  "pageTitle": "Page title",
+  "name": "Optional explicit card name"
 }
 ```
 
 - `website` → card `linkUrl`
-- `pageTitle` (+ optional prefix from ARC Settings) → card `name`
+- `name` (если передано расширением) или `pageTitle` (+ optional prefix from ARC Settings) → card `name`
 - **503** if no library is open in ARC
 - **403** if Import API is disabled in Settings → **Расширение браузера**
 
@@ -93,6 +127,10 @@ Browsers cannot start arbitrary `.exe` files directly — only via a registered 
 5. **ARC offline** — quit ARC, save images → status **Queued**; start ARC → queue drains automatically (or reopen popup).
 6. **No library** — ARC running without library → POST returns 503.
 7. **API disabled** — toggle off in Settings → extension shows **Import API disabled**.
+8. **Pinterest** — open a pin page → hover save or context menu → card uses full-resolution `pinimg` URL (check dimensions in card detail vs page thumbnail).
+9. **ArtStation** — open an artwork page → hover save or context menu → card uses full artwork asset; name includes title/author when available.
+10. **Pinterest board** — open a board URL → extension popup → **Download this board** → collection appears in ARC with board name and imported pins; progress shown in popup.
+11. **Generic regression** — save from a non-Pinterest/ArtStation site → behavior unchanged from before site handlers.
 
 ## Permissions (Chrome)
 
@@ -105,4 +143,5 @@ Browsers cannot start arbitrary `.exe` files directly — only via a registered 
 ## Development
 
 - Main process API: `src/main/importApi/`
+- Site handlers: `browser-extension/lib/sites/`
 - Unit tests: `npm test` (includes `src/main/importApi/__tests__/importApiHandlers.test.ts`)
