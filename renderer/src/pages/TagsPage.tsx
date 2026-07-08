@@ -6,6 +6,8 @@ import TagsPageSearch from '../components/tags/TagsPageSearch';
 import TagsPageSidebar from '../components/tags/TagsPageSidebar';
 import { useTagCategoryContextMenu } from '../components/tags/useTagCategoryContextMenu';
 import { useTagChipContextMenu } from '../components/tags/useTagChipContextMenu';
+import { moveTagsToCategory, useTagMultiSelect } from '../components/tags/useTagMultiSelect';
+import { isTagDragEvent, writeTagDragPayload } from '../components/tags/tagDragPayload';
 import CategorySettingsModal, {
   type CategorySettingsModalState
 } from '../components/tags/CategorySettingsModal';
@@ -52,7 +54,8 @@ export default function TagsPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<string>>(() => new Set());
-  const [draggingTagId, setDraggingTagId] = useState<string | null>(null);
+  const [draggingTagIds, setDraggingTagIds] = useState<ReadonlySet<string> | null>(null);
+  const draggingTagIdsRef = useRef<ReadonlySet<string> | null>(null);
   const [tagModal, setTagModal] = useState<TagSettingsModalState | null>(null);
   const [categoryModal, setCategoryModal] = useState<CategorySettingsModalState | null>(null);
   const [categoryModalStats, setCategoryModalStats] = useState<CategoryStats | null>(null);
@@ -128,7 +131,7 @@ export default function TagsPage() {
 
   /** Прокрутка панелей во время DnD меток */
   useEffect(() => {
-    if (!draggingTagId) return;
+    if (!draggingTagIds || draggingTagIds.size === 0) return;
 
     const EDGE = 72;
     const maxStep = 24;
@@ -163,7 +166,7 @@ export default function TagsPage() {
     };
 
     const onDragOverCapture = (e: DragEvent) => {
-      if (!e.dataTransfer?.types.includes('application/tag-id')) return;
+      if (!e.dataTransfer || !isTagDragEvent(e.dataTransfer)) return;
       activeScrollEl = findScrollPanel(e.clientY);
       if (!activeScrollEl) {
         edgeVy = 0;
@@ -203,7 +206,7 @@ export default function TagsPage() {
       edgeVy = 0;
       if (rafId) window.cancelAnimationFrame(rafId);
     };
-  }, [draggingTagId]);
+  }, [draggingTagIds]);
 
   const sidebarCategories = useMemo(
     () => filterSidebarCategories(categories, tagsByCategory, searchQ, selectedCategoryId),
@@ -213,6 +216,17 @@ export default function TagsPage() {
   const mainSections = useMemo(
     () => buildTagPickerGroups(categories, tagsByCategory, searchQ, selectedCategoryId),
     [categories, tagsByCategory, searchQ, selectedCategoryId]
+  );
+
+  const orderedTagIds = useMemo(
+    () => mainSections.flatMap((section) => section.tags.map((tag) => tag.id)),
+    [mainSections]
+  );
+
+  const tagMultiSelect = useTagMultiSelect(
+    orderedTagIds,
+    `${searchQ}|${selectedCategoryId ?? ''}`,
+    Boolean(draggingTagIds && draggingTagIds.size > 0)
   );
 
   const totalTagCount = useMemo(
@@ -226,23 +240,34 @@ export default function TagsPage() {
     if (pageRef.current) {
       void hydrateArcNavbarIcons(pageRef.current);
     }
-  }, [categories.length, sidebarWidth, searchQuery, selectedCategoryId, mainSections.length, draggingTagId]);
+  }, [categories.length, sidebarWidth, searchQuery, selectedCategoryId, mainSections.length, draggingTagIds]);
 
-  const handleTagDragStart = (tagId: string) => {
-    setDraggingTagId(tagId);
+  const handleTagDragStart = (tagId: string, dataTransfer: DataTransfer) => {
+    const ids = tagMultiSelect.resolveDragTagIds(tagId);
+    draggingTagIdsRef.current = ids;
+    writeTagDragPayload(dataTransfer, ids);
+    setDraggingTagIds(ids);
   };
 
   const handleTagDragEnd = () => {
-    setDraggingTagId(null);
+    draggingTagIdsRef.current = null;
+    setDraggingTagIds(null);
   };
 
-  const handleTagDrop = async (tagId: string, targetCategoryId: string) => {
+  const handleTagDrop = async (tagIds: string[], targetCategoryId: string) => {
     try {
-      await moveTagToCategory(tagId, targetCategoryId);
+      await moveTagsToCategory(tagIds, targetCategoryId, moveTagToCategory);
     } finally {
-      setDraggingTagId(null);
+      draggingTagIdsRef.current = null;
+      setDraggingTagIds(null);
+      tagMultiSelect.clearSelection();
     }
   };
+
+  const handleMoveTagsToCategory = useCallback(async (tagIds: string[], categoryId: string) => {
+    await moveTagsToCategory(tagIds, categoryId, moveTagToCategory);
+    tagMultiSelect.clearSelection();
+  }, [tagMultiSelect.clearSelection]);
 
   const resolvedCategoryModal = useMemo((): CategorySettingsModalState | null => {
     if (!categoryModal) return null;
@@ -301,6 +326,8 @@ export default function TagsPage() {
     });
 
   const { openTagContextMenu, contextMenuLayer: tagContextMenuLayer } = useTagChipContextMenu({
+    categories,
+    selectedTagIds: tagMultiSelect.selectedTagIds,
     onShowInGallery: (tagId) => {
       const next = new URLSearchParams();
       next.append(ARC_SEARCH_QUERY_TAG, tagId);
@@ -309,7 +336,8 @@ export default function TagsPage() {
     onEdit: (tag) => setTagModal({ mode: 'edit', tag }),
     onDelete: async (tagId) => {
       await deleteTag(tagId);
-    }
+    },
+    onMoveTagsToCategory: handleMoveTagsToCategory
   });
 
   const toggleCollapse = (categoryId: string) => {
@@ -375,14 +403,14 @@ export default function TagsPage() {
       data-interface-tour-anchor="tags-page"
       style={{ ['--arc-tags-sidebar-w' as string]: `${sidebarWidth}px` }}
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('application/tag-id')) {
+        if (isTagDragEvent(e.dataTransfer)) {
           e.preventDefault();
         }
       }}
       onDrop={(e) => {
-        if (e.dataTransfer.types.includes('application/tag-id')) {
+        if (isTagDragEvent(e.dataTransfer)) {
           e.preventDefault();
-          setDraggingTagId(null);
+          handleTagDragEnd();
         }
       }}
     >
@@ -392,7 +420,8 @@ export default function TagsPage() {
           tagsByCategory={tagsByCategory}
           totalTagCount={totalTagCount}
           selectedCategoryId={selectedCategoryId}
-          draggingTagId={draggingTagId}
+          draggingTagIds={draggingTagIds}
+          draggingTagIdsRef={draggingTagIdsRef}
           allTags={allTags}
           onSelectAll={() => setSelectedCategoryId(null)}
           onSelectCategory={setSelectedCategoryId}
@@ -446,11 +475,14 @@ export default function TagsPage() {
                     tags={tags}
                     collapsed={collapsedCategoryIds.has(cat.id)}
                     mainDropEnabled={mainDropEnabled}
-                    draggingTagId={draggingTagId}
+                    draggingTagIds={draggingTagIds}
+                    draggingTagIdsRef={draggingTagIdsRef}
                     allTags={allTags}
+                    isTagSelected={tagMultiSelect.isSelected}
                     onToggleCollapse={() => toggleCollapse(cat.id)}
                     onAddTag={() => setTagModal({ mode: 'create', categoryId: cat.id })}
                     onEditTag={(tag) => setTagModal({ mode: 'edit', tag })}
+                    onTagChipPointerDown={(tag, event) => tagMultiSelect.handleTagPointerDown(tag.id, event)}
                     onTagContextMenu={openTagContextMenu}
                     onTagDragStart={handleTagDragStart}
                     onTagDragEnd={handleTagDragEnd}

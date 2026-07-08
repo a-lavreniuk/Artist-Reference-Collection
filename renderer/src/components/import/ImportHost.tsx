@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ARC_CARDS_CHANGED_EVENT, isLibraryConfigured } from '../../services/db';
+import { ARC_CARDS_CHANGED_EVENT, isLibraryConfigured, addCollection, getAllCollections } from '../../services/db';
 import { isImportableMediaPath } from '../../media/allowedImportExtensions';
 import { getImportSourceFilesAction } from '../../import/importDefaults';
 import { showAppNotification } from '../../services/notificationService';
 import DemoAlert from '../layout/DemoAlert';
 import SourceFilesModal from './SourceFilesModal';
 import ImportDuplicatesModal, { type ImportDuplicateConflict } from './ImportDuplicatesModal';
+import ImportFolderCollectionsModal, {
+  type FolderImportDropContext
+} from './ImportFolderCollectionsModal';
+import MessageModal from '../layout/MessageModal';
 import { ImportContext } from './ImportContext';
 import { useImportDropzonePerimeterDash } from './useImportDropzonePerimeterDash';
+import { bulkAddToCollection } from '../gallery/galleryBulkActions';
+import {
+  folderBaseName,
+  resolveFolderCollectionTarget,
+  SINGLE_FOLDER_IMPORT_PLAN,
+  type FolderImportPlan
+} from '../../import/folderImportPlan';
+import type { CollectionRecord } from '../../services/arcSchema';
 
 function isFileDragEvent(e: DragEvent): boolean {
   const dt = e.dataTransfer;
@@ -42,7 +54,13 @@ function isSuppressedNativeMediaDragTarget(target: EventTarget | null): boolean 
   );
 }
 
-type ImportPhase = 'idle' | 'overlay' | 'importing' | 'source-modal' | 'duplicate-modal';
+type ImportPhase =
+  | 'idle'
+  | 'overlay'
+  | 'importing'
+  | 'source-modal'
+  | 'duplicate-modal'
+  | 'folder-modal';
 
 export default function ImportHost({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<ImportPhase>('idle');
@@ -54,6 +72,15 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const [duplicateConflicts, setDuplicateConflicts] = useState<ImportDuplicateConflict[]>([]);
   const [duplicateIndex, setDuplicateIndex] = useState(0);
   const [importBusy, setImportBusy] = useState(false);
+  const [folderDropContext, setFolderDropContext] = useState<FolderImportDropContext | null>(null);
+  const [emptyFolderName, setEmptyFolderName] = useState<string | null>(null);
+  const [duplicateAssignCollectionId, setDuplicateAssignCollectionId] = useState<string | undefined>(
+    undefined
+  );
+  const assignCollectionIdRef = useRef<string | null>(null);
+  const emptyFolderResolverRef = useRef<(() => void) | null>(null);
+  /** Разрешается, когда пользователь закрыл модалку дублей/источников — чтобы импорт папок шёл строго по очереди. */
+  const importFlowResolverRef = useRef<(() => void) | null>(null);
   const overlayOpenedManuallyRef = useRef(false);
   const isDraggingFilesRef = useRef(false);
   const suppressFileDragRef = useRef(false);
@@ -78,6 +105,38 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   }, []);
 
   const canImport = libraryReady && !maintenanceLocked && !importBusy;
+
+  const assignImportedCards = useCallback(async (cardIds: string[]) => {
+    const collectionId = assignCollectionIdRef.current;
+    if (!collectionId || cardIds.length === 0) return;
+    await bulkAddToCollection(cardIds, collectionId);
+  }, []);
+
+  const showEmptyFolderModal = useCallback((folderName: string) => {
+    return new Promise<void>((resolve) => {
+      emptyFolderResolverRef.current = resolve;
+      setEmptyFolderName(folderName);
+    });
+  }, []);
+
+  const closeEmptyFolderModal = useCallback(() => {
+    setEmptyFolderName(null);
+    const resolve = emptyFolderResolverRef.current;
+    emptyFolderResolverRef.current = null;
+    resolve?.();
+  }, []);
+
+  const waitForImportFlow = useCallback(() => {
+    return new Promise<void>((resolve) => {
+      importFlowResolverRef.current = resolve;
+    });
+  }, []);
+
+  const resolveImportFlow = useCallback(() => {
+    const resolve = importFlowResolverRef.current;
+    importFlowResolverRef.current = null;
+    resolve?.();
+  }, []);
 
   const runImport = useCallback(async (rawPaths: string[]) => {
     if (!window.arc || !canImport) return;
@@ -110,6 +169,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         const results = await window.arc.importFiles(cleanPaths);
         successes = results.flatMap((r) => (r.ok ? [{ row: { id: r.row.id } }] : []));
         sourcePaths = cleanPaths.filter((_, i) => results[i]?.ok);
+        const importedIds = successes.map((s) => s.row.id);
+        await assignImportedCards(importedIds);
       }
 
       const conflicts = dupMatches.filter((m): m is ImportDuplicateConflict => m.existingCard != null);
@@ -118,6 +179,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         setProgressMessage(null);
         setDuplicateConflicts(conflicts);
         setDuplicateIndex(0);
+        setDuplicateAssignCollectionId(assignCollectionIdRef.current ?? undefined);
         setPhase('duplicate-modal');
 
         if (successes.length > 0) {
@@ -131,6 +193,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
             prefKey: 'notifyFilesAdded'
           });
         }
+        await waitForImportFlow();
         return;
       }
 
@@ -153,6 +216,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         if (sourceAction === 'ask') {
           setSourceModalPaths(sourcePaths);
           setPhase('source-modal');
+          await waitForImportFlow();
         } else if (sourceAction === 'trash') {
           for (const abs of sourcePaths) {
             await window.arc.trashPath(abs);
@@ -171,13 +235,97 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       unsub();
       setImportBusy(false);
     }
-  }, [canImport]);
+  }, [assignImportedCards, canImport, waitForImportFlow]);
+
+  const executeFolderImports = useCallback(
+    async (folderPaths: string[], plan: FolderImportPlan, looseFiles: string[]) => {
+      if (!window.arc?.listImportableFilesInDirectory) return;
+
+      setImportBusy(true);
+      let collections: CollectionRecord[] = await getAllCollections();
+      const pendingNames = new Set<string>();
+
+      try {
+        for (const folderPath of folderPaths) {
+          const filePaths = await window.arc.listImportableFilesInDirectory(folderPath);
+          const folderName = folderBaseName(folderPath);
+
+          if (filePaths.length === 0) {
+            await showEmptyFolderModal(folderName);
+            continue;
+          }
+
+          const resolved = resolveFolderCollectionTarget(
+            folderName,
+            collections,
+            plan,
+            pendingNames
+          );
+          if (resolved.kind === 'skip') continue;
+
+          let collectionId = resolved.collectionId;
+          if (!collectionId) {
+            const createName = resolved.createName?.trim();
+            if (!createName) continue;
+            const created = await addCollection(createName);
+            collectionId = created.id;
+            collections = [...collections, created];
+            pendingNames.add(createName.toLowerCase());
+          }
+
+          assignCollectionIdRef.current = collectionId;
+          await runImport(filePaths);
+          assignCollectionIdRef.current = null;
+        }
+      } finally {
+        assignCollectionIdRef.current = null;
+        setImportBusy(false);
+      }
+
+      if (looseFiles.length > 0) {
+        await runImport(looseFiles);
+      }
+    },
+    [runImport, showEmptyFolderModal]
+  );
+
+  const handleDroppedPaths = useCallback(
+    async (paths: string[]) => {
+      if (!window.arc || !canImport || paths.length === 0) return;
+
+      let looseFiles = paths.filter((p) => isImportableMediaPath(p));
+      let folderPaths: string[] = [];
+
+      if (window.arc.classifyDroppedPaths) {
+        const classified = await window.arc.classifyDroppedPaths(paths);
+        looseFiles = classified.files.filter((p) => isImportableMediaPath(p));
+        folderPaths = classified.directories;
+      }
+
+      if (folderPaths.length > 0) {
+        if (folderPaths.length === 1) {
+          void executeFolderImports(folderPaths, SINGLE_FOLDER_IMPORT_PLAN, looseFiles);
+          return;
+        }
+        setFolderDropContext({ folderPaths, looseFiles });
+        setPhase('folder-modal');
+        return;
+      }
+
+      if (looseFiles.length > 0) {
+        await runImport(looseFiles);
+      }
+    },
+    [canImport, executeFolderImports, runImport]
+  );
 
   const closeDuplicateModal = useCallback(() => {
     setDuplicateConflicts([]);
     setDuplicateIndex(0);
+    setDuplicateAssignCollectionId(undefined);
     setPhase('idle');
-  }, []);
+    resolveImportFlow();
+  }, [resolveImportFlow]);
 
   const onDuplicateResolved = useCallback(() => {
     if (duplicateIndex + 1 < duplicateConflicts.length) {
@@ -187,8 +335,9 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       setDuplicateConflicts([]);
       setDuplicateIndex(0);
       setPhase('idle');
+      resolveImportFlow();
     }
-  }, [duplicateIndex, duplicateConflicts.length]);
+  }, [duplicateIndex, duplicateConflicts.length, resolveImportFlow]);
 
   const clearFileDrag = useCallback(() => {
     isDraggingFilesRef.current = false;
@@ -203,9 +352,9 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     return window.arc.onFileDrop((paths) => {
       if (document.body.classList.contains('arc-similar-search-panel-open')) return;
       clearFileDrag();
-      if (paths.length) void runImport(paths);
+      if (paths.length) void handleDroppedPaths(paths);
     });
-  }, [clearFileDrag, runImport]);
+  }, [clearFileDrag, handleDroppedPaths]);
 
   useEffect(() => {
     const onDragStart = (e: DragEvent) => {
@@ -292,6 +441,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const closeSourceModal = () => {
     setSourceModalPaths(null);
     setPhase('idle');
+    resolveImportFlow();
   };
 
   const trashSources = async () => {
@@ -392,6 +542,31 @@ export default function ImportHost({ children }: { children: ReactNode }) {
           index={duplicateIndex}
           onResolved={onDuplicateResolved}
           onClose={closeDuplicateModal}
+          assignToCollectionId={duplicateAssignCollectionId}
+        />
+      ) : null}
+
+      {folderDropContext && folderDropContext.folderPaths.length > 0 ? (
+        <ImportFolderCollectionsModal
+          drop={folderDropContext}
+          onClose={() => {
+            setFolderDropContext(null);
+            setPhase('idle');
+          }}
+          onConfirm={(plan) => {
+            const drop = folderDropContext;
+            setFolderDropContext(null);
+            setPhase('idle');
+            void executeFolderImports(drop.folderPaths, plan, drop.looseFiles);
+          }}
+        />
+      ) : null}
+
+      {emptyFolderName ? (
+        <MessageModal
+          title="В папке нет подходящих файлов"
+          message={`В корне папки «${emptyFolderName}» нет изображений или видео для импорта. Подпапки не просматриваются.`}
+          onClose={closeEmptyFolderModal}
         />
       ) : null}
     </ImportContext.Provider>

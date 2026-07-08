@@ -44,6 +44,13 @@ contextBridge.exposeInMainWorld('arc', {
   writeMetadata: (data: unknown) => ipcRenderer.invoke('arc:write-metadata', data),
   pickImageFiles: () => ipcRenderer.invoke('arc:pick-image-files') as Promise<string[]>,
   pickMediaFiles: () => ipcRenderer.invoke('arc:pick-media-files') as Promise<string[]>,
+  classifyDroppedPaths: (absolutePaths: string[]) =>
+    ipcRenderer.invoke('arc:classify-dropped-paths', absolutePaths) as Promise<{
+      files: string[];
+      directories: string[];
+    }>,
+  listImportableFilesInDirectory: (folderPath: string) =>
+    ipcRenderer.invoke('arc:list-importable-files-in-directory', folderPath) as Promise<string[]>,
   getPathsForDroppedFiles: (files: FileList) => pathsFromFileList(files),
   getPathsForDroppedDataTransfer: (dt: DataTransfer) => pathsFromDroppedDataTransfer(dt),
   onFileDrop: (cb: (paths: string[]) => void) => registerFileDropListener(cb),

@@ -807,6 +807,10 @@ button.color-swatch-inline:disabled {
   opacity: 0.88;
 }
 
+.chip.arc-tag-chip--selected:not(.arc-tag-chip--dragging) {
+  box-shadow: inset 0 0 0 1px var(--brand-400);
+}
+
 /* Превью изображения метки: модалка и rich-tooltip (Figma 160:10445, max 368×207) */
 .arc-tag-preview-frame {
   width: 100%;
@@ -1109,6 +1113,60 @@ button.color-swatch-inline:disabled {
 .arc-gallery-card-wrap:focus-visible {
   outline: 2px solid var(--input-border-focus);
   outline-offset: 2px;
+}
+
+.arc-gallery-card-wrap.is-selected {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.arc-gallery-selection-bar {
+  position: fixed;
+  bottom: var(--s-4);
+  width: max-content;
+  max-width: calc(100vw - var(--s-4) * 2);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 56px;
+  padding: 12px;
+  pointer-events: auto;
+}
+
+.arc-gallery-selection-bar__counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-h, 32px);
+  padding: 0 var(--s-2);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
+  color: var(--typography-black-bg-primary-default);
+  white-space: nowrap;
+}
+
+.arc-gallery-marquee {
+  position: fixed;
+  z-index: 9;
+  border: 1px solid var(--input-border-focus);
+  background: color-mix(in srgb, var(--brand-550) 12%, transparent);
+  pointer-events: none;
+}
+
+body.arc-gallery-selection-active .arc-scroll-to-top--center-outlet {
+  bottom: calc(var(--s-4) + 56px + var(--s-2));
+}
+
+.arc-card-detail-collections-picker__footer-actions {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.arc-card-detail-collections-picker__footer-actions .btn-brand {
+  flex: 1;
 }
 
 .arc-gallery-thumb-wrap {
@@ -4339,6 +4397,12 @@ html.arc-onboarding-page,
   font-size: var(--typo-p-m-size);
   line-height: var(--typo-p-m-line);
   font-weight: var(--typo-p-m-weight);
+}
+
+.arc-settings-check-row__label--s {
+  font-size: var(--typo-p-s-size);
+  line-height: var(--typo-p-s-line);
+  font-weight: var(--typo-p-s-weight);
 }
 
 .arc-settings-toggle-shortcut-row {

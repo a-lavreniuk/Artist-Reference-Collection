@@ -4540,6 +4540,23 @@ body[data-elevation="raised"],
   height: 100%;
 }
 
+.arc-checkbox--indeterminate .arc-checkbox__box {
+  border-color: transparent;
+  background: var(--brand-550);
+}
+
+.arc-checkbox__dash {
+  position: absolute;
+  top: 50%;
+  left: 28.13%;
+  right: 28.13%;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--brand-50);
+  pointer-events: none;
+}
+
 /* Radio (Figma 808:3922) */
 .arc-radio {
   position: relative;

@@ -12,10 +12,17 @@ import {
 } from '../../services/db';
 import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import ConfirmPermanentDeleteCardModal from './ConfirmPermanentDeleteCardModal';
-import {
-  buildCardContextMenuRows
-} from './buildCardContextMenuRows';
+import { buildCardContextMenuRows } from './buildCardContextMenuRows';
 import type { CardContextMenuScope } from './cardContextMenuTypes';
+
+type BulkHandlers = {
+  onBulkSendToTrash?: (cardIds: string[]) => void | Promise<void>;
+  onBulkRestore?: (cardIds: string[]) => void | Promise<void>;
+  onBulkPermanentDelete?: (cardIds: string[]) => void | Promise<void>;
+  onBulkToggleMoodboard?: (cardIds: string[]) => void | Promise<void>;
+  onBulkOpenCollections?: (cardIds: string[]) => void;
+  onBulkRemoveFromCollection?: (cardIds: string[], collectionId: string) => void | Promise<void>;
+};
 
 type Props = {
   scope: CardContextMenuScope;
@@ -25,6 +32,12 @@ type Props = {
   onToggleMoodboard: (id: string) => void | Promise<void>;
   onFindSimilar: (id: string) => void;
   onCardDeleted: () => void | Promise<void>;
+  getSelectedCardIds?: () => readonly string[];
+  isCardSelected?: (cardId: string) => boolean;
+  selectionModeActive?: boolean;
+  onToggleCardSelection?: (cardId: string) => void;
+  onStartMultiSelect?: (cardId: string) => void;
+  bulkHandlers?: BulkHandlers;
 };
 
 export function useGalleryCardContextMenu({
@@ -34,7 +47,13 @@ export function useGalleryCardContextMenu({
   onOpenCard,
   onToggleMoodboard,
   onFindSimilar,
-  onCardDeleted
+  onCardDeleted,
+  getSelectedCardIds = () => [],
+  isCardSelected = () => false,
+  selectionModeActive = false,
+  onToggleCardSelection,
+  onStartMultiSelect,
+  bulkHandlers
 }: Props) {
   const menu = useContextMenuAtPointer();
   const [menuCardId, setMenuCardId] = useState<string | null>(null);
@@ -52,6 +71,18 @@ export function useGalleryCardContextMenu({
     setMenuCardId(null);
   }, [menu]);
 
+  const resolveTargetIds = useCallback(
+    (cardId: string) => {
+      const selected = getSelectedCardIds();
+      if (selectionModeActive && selected.length > 0) {
+        return [...selected];
+      }
+      if (selected.length > 0 && isCardSelected(cardId)) return [...selected];
+      return [cardId];
+    },
+    [getSelectedCardIds, isCardSelected, selectionModeActive]
+  );
+
   const openAtCard = useCallback(
     (card: CardRecord, event: React.MouseEvent) => {
       menu.openAt(event);
@@ -63,21 +94,50 @@ export function useGalleryCardContextMenu({
   const scopeCollectionId = scope.kind === 'collection' ? scope.collectionId : null;
 
   const openCollectionsPicker = useCallback(async (cardId: string) => {
+    const targetIds = resolveTargetIds(cardId);
+    if (targetIds.length > 1) {
+      bulkHandlers?.onBulkOpenCollections?.(targetIds);
+      return;
+    }
     const card = await getCardById(cardId);
     if (!card) return;
     setCollectionsCard(card);
     setCollectionsCardId(cardId);
-  }, []);
+  }, [bulkHandlers, resolveTargetIds]);
 
   const menuRows = useMemo(() => {
     if (!menuCard) return [];
+    const targetIds = resolveTargetIds(menuCard.id);
+    const bulkCount = targetIds.length;
+    const allInMoodboard = targetIds.every((id) => moodboardCardIds.has(id));
+    const anyInMoodboard = targetIds.some((id) => moodboardCardIds.has(id));
+    const inMoodboard = bulkCount > 1 ? allInMoodboard : moodboardCardIds.has(menuCard.id);
+    const hasSourcePath = bulkCount > 1 ? targetIds.some((id) => {
+      const card = cards.find((c) => c.id === id);
+      return Boolean(card?.originalRelativePath?.trim());
+    }) : Boolean(menuCard.originalRelativePath?.trim());
+
     return buildCardContextMenuRows({
       scope,
-      inMoodboard: moodboardCardIds.has(menuCard.id),
-      hasSourcePath: Boolean(menuCard.originalRelativePath?.trim()),
+      inMoodboard,
+      hasSourcePath,
+      bulkSelectionCount: bulkCount,
+      selectionModeActive,
+      menuCardIsSelected: isCardSelected(menuCard.id),
+      onStartMultiSelect:
+        bulkCount <= 1 && onStartMultiSelect
+          ? () => onStartMultiSelect(menuCard.id)
+          : undefined,
       actions: {
         onOpen: () => onOpenCard(menuCard.id),
-        onToggleMoodboard: () => void onToggleMoodboard(menuCard.id),
+        onToggleCardSelection: () => onToggleCardSelection?.(menuCard.id),
+        onToggleMoodboard: () => {
+          if (bulkCount > 1) {
+            void bulkHandlers?.onBulkToggleMoodboard?.(targetIds);
+            return;
+          }
+          void onToggleMoodboard(menuCard.id);
+        },
         onOpenCollections: () => void openCollectionsPicker(menuCard.id),
         onFindSimilar: () => onFindSimilar(menuCard.id),
         onOpenSourceFolder: () => {
@@ -85,16 +145,41 @@ export function useGalleryCardContextMenu({
           void window.arc.showItemInFolder(menuCard.originalRelativePath);
         },
         onSendToTrash: async () => {
+          if (bulkCount > 1) {
+            await bulkHandlers?.onBulkSendToTrash?.(targetIds);
+            return;
+          }
           await deleteCard(menuCard.id);
           await onCardDeleted();
         },
         onRestore: async () => {
+          if (bulkCount > 1) {
+            await bulkHandlers?.onBulkRestore?.(targetIds);
+            return;
+          }
           await restoreCard(menuCard.id);
           await onCardDeleted();
         },
-        onPermanentDelete: () => setPermanentDeleteCardId(menuCard.id),
+        onPermanentDelete: () => {
+          if (bulkCount > 1) {
+            void bulkHandlers?.onBulkPermanentDelete?.(targetIds);
+            return;
+          }
+          if (scope.kind === 'trash') {
+            void (async () => {
+              await permanentDeleteCard(menuCard.id);
+              await onCardDeleted();
+            })();
+            return;
+          }
+          setPermanentDeleteCardId(menuCard.id);
+        },
         onRemoveFromCollection: scopeCollectionId
           ? async () => {
+              if (bulkCount > 1) {
+                await bulkHandlers?.onBulkRemoveFromCollection?.(targetIds, scopeCollectionId);
+                return;
+              }
               const next = menuCard.collectionIds.filter((id) => id !== scopeCollectionId);
               await updateCardPayload(menuCard.id, { collectionIds: next });
               await onCardDeleted();
@@ -102,20 +187,33 @@ export function useGalleryCardContextMenu({
           : undefined,
         onRemoveFromMoodboard:
           scope.kind === 'moodboard-cards'
-            ? () => void onToggleMoodboard(menuCard.id)
+            ? () => {
+                if (bulkCount > 1 && anyInMoodboard) {
+                  void bulkHandlers?.onBulkToggleMoodboard?.(targetIds);
+                  return;
+                }
+                void onToggleMoodboard(menuCard.id);
+              }
             : undefined
       }
     });
   }, [
+    bulkHandlers,
+    cards,
     menuCard,
     moodboardCardIds,
     onCardDeleted,
     onFindSimilar,
     onOpenCard,
+    onStartMultiSelect,
+    onToggleCardSelection,
     onToggleMoodboard,
     openCollectionsPicker,
+    resolveTargetIds,
+    selectionModeActive,
     scope,
-    scopeCollectionId
+    scopeCollectionId,
+    isCardSelected
   ]);
 
   const contextMenuLayer = (

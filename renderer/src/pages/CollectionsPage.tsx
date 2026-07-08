@@ -17,6 +17,7 @@ import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSent
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
 import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
 import { useGalleryCardContextMenu } from '../components/gallery/useGalleryCardContextMenu';
+import { useGalleryMultiSelect } from '../components/gallery/useGalleryMultiSelect';
 import { useCollectionContextMenu } from '../components/collections/useCollectionContextMenu';
 import CollectionSettingsModal, {
   type CollectionSettingsModalState
@@ -85,6 +86,7 @@ export default function CollectionsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLElement | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
   sidebarWidthRef.current = sidebarWidth;
 
   const activeCollectionId = routeCollectionId ?? null;
@@ -254,6 +256,21 @@ export default function CollectionsPage() {
     ? ({ kind: 'collection' as const, collectionId: activeCollectionId })
     : ({ kind: 'library' as const });
 
+  const selectionResetKey = `${galleryRevealResetKey(scopedFeedQuery)}|${activeCollectionId ?? ''}`;
+
+  const multiSelect = useGalleryMultiSelect({
+    cards: feed.cards,
+    resetKey: selectionResetKey,
+    scrollRootRef,
+    boardRef,
+    moodboardCardIds,
+    scope: collectionMenuScope,
+    enabled: Boolean(activeCollectionId) && libraryStorageReady,
+    onOpenCard: openCard,
+    onRefresh: () => void feed.reloadFromStart(),
+    refreshMoodboard: () => void refreshMoodboard()
+  });
+
   const { onCardContextMenu, contextMenuLayer: cardContextMenuLayer } = useGalleryCardContextMenu({
     scope: collectionMenuScope,
     cards: feed.cards,
@@ -263,7 +280,13 @@ export default function CollectionsPage() {
     onFindSimilar: (id) => {
       void startFindSimilarSearch(navigate, searchParams, id);
     },
-    onCardDeleted: () => void feed.reloadFromStart()
+    onCardDeleted: () => void feed.reloadFromStart(),
+    getSelectedCardIds: () => multiSelect.selectedCardIds,
+    isCardSelected: multiSelect.isSelected,
+    selectionModeActive: multiSelect.selectionMode,
+    onToggleCardSelection: multiSelect.toggleCardSelection,
+    onStartMultiSelect: multiSelect.enterSelectionWithCard,
+    bulkHandlers: multiSelect.bulkHandlers
   });
 
   const handleDeleteCollection = useCallback(
@@ -425,12 +448,18 @@ export default function CollectionsPage() {
                   mediaTab="collections"
                   variant="collections"
                   scrollRootRef={scrollRootRef}
+                  boardRef={boardRef}
                   loadingMore={feed.loading && feed.hasMore}
                   busy={feed.booting || feed.loading || feed.shuffleReloading}
                   revealResetKey={galleryRevealResetKey(scopedFeedQuery)}
                   onOpenCard={openCard}
                   moodboardCardIds={moodboardCardIds}
                   onCardContextMenu={onCardContextMenu}
+                  isCardSelected={multiSelect.isSelected}
+                  onCardClick={multiSelect.handleCardClick}
+                  onCardPointerDown={multiSelect.handleCardPointerDown}
+                  onCardPointerMove={multiSelect.onCardPointerMove}
+                  onCardPointerUp={multiSelect.onCardPointerUp}
                   onToggleMoodboard={handleToggleMoodboard}
                   onFindSimilar={(id) => {
                     void startFindSimilarSearch(navigate, searchParams, id);
@@ -467,6 +496,10 @@ export default function CollectionsPage() {
 
       {cardContextMenuLayer}
       {collectionContextMenuLayer}
+
+      {multiSelect.selectionBar}
+      {multiSelect.collectionsModal}
+      {multiSelect.marqueeOverlay}
 
       <ScrollToTopButton enabled={feed.cards.length > 0} />
       {collectionModalNode}

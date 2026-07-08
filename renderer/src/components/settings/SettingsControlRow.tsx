@@ -9,6 +9,7 @@ type Props = {
   label: string;
   checked: boolean;
   disabled?: boolean;
+  labelSize?: 'm' | 's';
   onCheckedChange?: (checked: boolean) => void;
 };
 
@@ -18,6 +19,7 @@ export default function SettingsControlRow({
   label,
   checked,
   disabled = false,
+  labelSize = 'm',
   onCheckedChange
 }: Props) {
   const role = variant === 'toggle' ? 'switch' : variant === 'checkbox' ? 'checkbox' : 'radio';
@@ -46,7 +48,11 @@ export default function SettingsControlRow({
         {variant === 'checkbox' ? <ArcCheckbox checked={checked} /> : null}
         {variant === 'radio' ? <ArcRadio checked={checked} /> : null}
       </span>
-      <span className="arc-settings-check-row__label text-m">{label}</span>
+      <span
+        className={`arc-settings-check-row__label${labelSize === 's' ? ' arc-settings-check-row__label--s' : ''}`}
+      >
+        {label}
+      </span>
     </button>
   );
 }

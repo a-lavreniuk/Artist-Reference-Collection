@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { type MutableRefObject, useCallback, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CategoryRecord, TagRecord } from '../../services/db';
@@ -13,12 +13,13 @@ type Props = {
   tagsByCategory: Record<string, TagRecord[]>;
   totalTagCount: number;
   selectedCategoryId: string | null;
-  draggingTagId: string | null;
+  draggingTagIds: ReadonlySet<string> | null;
+  draggingTagIdsRef?: MutableRefObject<ReadonlySet<string> | null>;
   allTags: TagRecord[];
   onSelectAll: () => void;
   onSelectCategory: (categoryId: string) => void;
   onReorderCategory: (categoryId: string, insertIndex: number) => void;
-  onTagDrop: (tagId: string, targetCategoryId: string) => Promise<void>;
+  onTagDrop: (tagIds: string[], targetCategoryId: string) => Promise<void>;
   onAddCategory: () => void;
   onEditCategory: (categoryId: string) => void;
   onCategoryContextMenu?: (categoryId: string, event: React.MouseEvent) => void;
@@ -29,7 +30,8 @@ export default function TagsPageSidebar({
   tagsByCategory,
   totalTagCount,
   selectedCategoryId,
-  draggingTagId,
+  draggingTagIds,
+  draggingTagIdsRef,
   allTags,
   onSelectAll,
   onSelectCategory,
@@ -55,7 +57,7 @@ export default function TagsPageSidebar({
     if (rootRef.current) {
       void hydrateArcNavbarIcons(rootRef.current);
     }
-  }, [categories, selectedCategoryId, dragState, draggingTagId, totalTagCount]);
+  }, [categories, selectedCategoryId, dragState, draggingTagIds, totalTagCount]);
 
   useLayoutEffect(() => {
     if (!dragState) return;
@@ -115,7 +117,8 @@ export default function TagsPageSidebar({
               <TagCategoryDropSurface
                 key={category.id}
                 categoryId={category.id}
-                draggingTagId={draggingTagId}
+                draggingTagIds={draggingTagIds}
+                draggingTagIdsRef={draggingTagIdsRef}
                 allTags={allTags}
                 onTagDrop={onTagDrop}
                 className={`arc-tags-sidebar-row-drop${insertBefore ? ' is-drop-before' : ''}`}

@@ -13,9 +13,11 @@ export type ShortcutId =
   | 'moodboard.redo'
   | 'moodboard.deleteSelection'
   | 'moodboard.clearSelection'
-  | 'moodboard.pan';
+  | 'moodboard.pan'
+  | 'gallery.deleteSelection'
+  | 'gallery.clearSelection';
 
-export type ShortcutGroupId = 'global' | 'devtools' | 'moodboard';
+export type ShortcutGroupId = 'global' | 'devtools' | 'moodboard' | 'gallery';
 
 export type ShortcutDefinition = {
   id: ShortcutId;
@@ -38,7 +40,8 @@ export type ShortcutGroupDefinition = {
 export const SHORTCUT_GROUPS: readonly ShortcutGroupDefinition[] = [
   { id: 'global', title: 'Глобальные' },
   { id: 'devtools', title: 'Разработка' },
-  { id: 'moodboard', title: 'Мудборд' }
+  { id: 'moodboard', title: 'Мудборд' },
+  { id: 'gallery', title: 'Галерея' }
 ] as const;
 
 export const SHORTCUTS: readonly ShortcutDefinition[] = [
@@ -111,6 +114,22 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'moodboard',
     label: 'Панорамирование',
     defaultAccelerator: 'Space',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'gallery.deleteSelection',
+    groupId: 'gallery',
+    label: 'Удалить выделение',
+    defaultAccelerator: ['Delete', 'Backspace'],
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'gallery.clearSelection',
+    groupId: 'gallery',
+    label: 'Снять выделение',
+    defaultAccelerator: 'Escape',
     scope: 'renderer',
     settingsVisible: true
   }

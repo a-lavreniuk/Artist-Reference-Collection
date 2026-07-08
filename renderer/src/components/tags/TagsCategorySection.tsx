@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { type MutableRefObject, useLayoutEffect, useRef } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
@@ -10,15 +10,18 @@ type Props = {
   tags: TagRecord[];
   collapsed: boolean;
   mainDropEnabled: boolean;
-  draggingTagId: string | null;
+  draggingTagIds: ReadonlySet<string> | null;
+  draggingTagIdsRef?: MutableRefObject<ReadonlySet<string> | null>;
   allTags: TagRecord[];
+  isTagSelected: (tagId: string) => boolean;
   onToggleCollapse: () => void;
   onAddTag: () => void;
   onEditTag: (tag: TagRecord) => void;
+  onTagChipPointerDown?: (tag: TagRecord, event: React.PointerEvent<HTMLButtonElement>) => boolean;
   onTagContextMenu?: (tag: TagRecord, event: React.MouseEvent<HTMLButtonElement>) => void;
-  onTagDragStart: (tagId: string) => void;
+  onTagDragStart: (tagId: string, dataTransfer: DataTransfer) => void;
   onTagDragEnd: () => void;
-  onTagDrop: (tagId: string, targetCategoryId: string) => Promise<void>;
+  onTagDrop: (tagIds: string[], targetCategoryId: string) => Promise<void>;
   onEditCategory: () => void;
 };
 
@@ -27,11 +30,14 @@ export default function TagsCategorySection({
   tags,
   collapsed,
   mainDropEnabled,
-  draggingTagId,
+  draggingTagIds,
+  draggingTagIdsRef,
   allTags,
+  isTagSelected,
   onToggleCollapse,
   onAddTag,
   onEditTag,
+  onTagChipPointerDown,
   onTagContextMenu,
   onTagDragStart,
   onTagDragEnd,
@@ -44,7 +50,7 @@ export default function TagsCategorySection({
     if (rootRef.current) {
       void hydrateArcNavbarIcons(rootRef.current);
     }
-  }, [category, tags, collapsed, draggingTagId]);
+  }, [category, tags, collapsed, draggingTagIds]);
 
   const tagCloud = (
     <div className="arc-tags-category-section__tags">
@@ -53,9 +59,11 @@ export default function TagsCategorySection({
           key={tag.id}
           tag={tag}
           categoryColorHex={category.colorHex}
-          draggingTagId={draggingTagId}
+          draggingTagIds={draggingTagIds}
+          selected={isTagSelected(tag.id)}
           dragDisabled={false}
           onEdit={onEditTag}
+          onChipPointerDown={(t, event) => onTagChipPointerDown?.(t, event) ?? false}
           onContextMenu={onTagContextMenu}
           onDragStart={onTagDragStart}
           onDragEnd={onTagDragEnd}
@@ -121,7 +129,8 @@ export default function TagsCategorySection({
           <TagCategoryDropSurface
             className="arc-tags-category-section__drop"
             categoryId={category.id}
-            draggingTagId={draggingTagId}
+            draggingTagIds={draggingTagIds}
+            draggingTagIdsRef={draggingTagIdsRef}
             allTags={allTags}
             onTagDrop={onTagDrop}
           >
