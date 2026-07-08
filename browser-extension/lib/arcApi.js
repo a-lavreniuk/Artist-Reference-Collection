@@ -52,7 +52,7 @@ export async function checkArc() {
 }
 
 /**
- * @param {{ url: string, website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} payload
+ * @param {{ url: string, fallbackUrl?: string, website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} payload
  */
 export async function importItem(payload) {
   const body = {
@@ -61,6 +61,9 @@ export async function importItem(payload) {
     pageTitle: payload.pageTitle
   };
 
+  if (payload.fallbackUrl?.trim()) {
+    body.fallbackUrl = payload.fallbackUrl.trim();
+  }
   if (payload.name?.trim()) {
     body.name = payload.name.trim();
   }

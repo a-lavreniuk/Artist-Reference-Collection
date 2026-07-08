@@ -4,7 +4,7 @@ import { drainQueue, enqueue, queueLength, QUEUE_MAX } from './lib/queue.js';
 const MENU_ID = 'arc-add-to-library';
 const DRAIN_ALARM = 'arc-drain-queue';
 
-/** @typedef {{ url: string, website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} SavePayload */
+/** @typedef {{ url: string, fallbackUrl?: string, website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} SavePayload */
 
 async function syncDrainAlarm() {
   const len = await queueLength();
@@ -86,6 +86,11 @@ async function downloadPinterestBoard(tabId, onProgress) {
     return { ok: false, code: 'no_pins' };
   }
 
+  console.info(
+    `[ARC board] collected ${board.pins.length} pins:`,
+    board.pins.map((p) => ({ url: p.url, fallbackUrl: p.fallbackUrl }))
+  );
+
   const collection = await ensureCollection(board.boardName);
   if (!collection.ok) {
     return { ok: false, code: collection.code, message: collection.message };
@@ -99,6 +104,7 @@ async function downloadPinterestBoard(tabId, onProgress) {
     const pin = board.pins[index];
     const result = await importItem({
       url: pin.url,
+      fallbackUrl: pin.fallbackUrl,
       website: pin.website ?? board.boardUrl,
       pageTitle: board.boardName,
       name: pin.name,
@@ -110,6 +116,7 @@ async function downloadPinterestBoard(tabId, onProgress) {
       imported += 1;
     } else {
       failed += 1;
+      console.warn('[ARC board] pin import failed:', pin.url, result.message ?? result.code);
     }
 
     onProgress?.({ done: index + 1, total });
@@ -188,6 +195,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'arc:save-image' && typeof message.url === 'string') {
     void trySaveOrQueue({
       url: message.url,
+      fallbackUrl: typeof message.fallbackUrl === 'string' ? message.fallbackUrl : undefined,
       website: typeof message.website === 'string' ? message.website : undefined,
       pageTitle: typeof message.pageTitle === 'string' ? message.pageTitle : undefined,
       name: typeof message.name === 'string' ? message.name : undefined

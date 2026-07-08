@@ -4,6 +4,7 @@ export type JSendResponse<T = unknown> = JSendSuccess<T> | JSendError;
 
 export type ItemAddRequestBody = {
   url?: string;
+  fallbackUrl?: string;
   base64?: string;
   website?: string;
   pageTitle?: string;
@@ -34,6 +35,7 @@ export type ImportApiHandlerDeps = {
   importFromUrl: (args: {
     libraryRoot: string;
     url: string;
+    fallbackUrl?: string;
     website?: string;
     name?: string;
     collectionId?: string;

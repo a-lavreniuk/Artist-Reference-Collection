@@ -71,10 +71,20 @@ function buildDeps(): ImportApiHandlerDeps {
     getLibraryRoot: () => readLibraryRootSync(),
     isApiEnabled: () => readAppPreferencesSync().importApiEnabled,
     resolveCardName: resolveCardNameFromPrefs,
-    importFromUrl: async ({ libraryRoot, url, website, name, collectionId, quiet }) => {
+    importFromUrl: async ({ libraryRoot, url, fallbackUrl, website, name, collectionId, quiet }) => {
       let cleanup: (() => Promise<void>) | null = null;
       try {
-        const { tempPath, cleanup: rm } = await downloadUrlToTempFile(url, MAX_IMPORT_BODY_BYTES);
+        let downloaded: { tempPath: string; cleanup: () => Promise<void> };
+        try {
+          downloaded = await downloadUrlToTempFile(url, MAX_IMPORT_BODY_BYTES);
+        } catch (primaryErr) {
+          if (fallbackUrl && fallbackUrl !== url) {
+            downloaded = await downloadUrlToTempFile(fallbackUrl, MAX_IMPORT_BODY_BYTES);
+          } else {
+            throw primaryErr;
+          }
+        }
+        const { tempPath, cleanup: rm } = downloaded;
         cleanup = rm;
         const result = await importMediaFile(libraryRoot, tempPath, {
           linkUrl: website,

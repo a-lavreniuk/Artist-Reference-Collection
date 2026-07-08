@@ -1,5 +1,6 @@
-import { ARC_LAUNCH_URL, ARC_WEBSITE_URL } from './lib/constants.js';
-import { isPinterestBoardUrl } from './lib/pinterest/board.js';
+(() => {
+const NS = (window.__ARC__ = window.__ARC__ || {});
+const { ARC_LAUNCH_URL, ARC_WEBSITE_URL, isPinterestBoardUrl } = NS;
 
 const modalEl = document.querySelector('.arc-ext-modal--popup');
 const subtitleEl = document.getElementById('arc-modal-subtitle');
@@ -239,3 +240,4 @@ async function refreshConnectionStatus() {
 
 bindStaticLabels();
 void refreshConnectionStatus();
+})();

@@ -98,11 +98,33 @@ describe('handleItemAdd', () => {
     expect(importFromUrl).toHaveBeenCalledWith({
       libraryRoot: '/library',
       url: 'https://cdn.example/photo.jpg',
+      fallbackUrl: undefined,
       website: 'https://example.com/page',
       name: 'prefix Title',
       collectionId: undefined,
       quiet: false
     });
+  });
+
+  it('forwards a valid fallbackUrl and drops an invalid one', async () => {
+    const importFromUrl = vi.fn(async () => ({ ok: true as const, id: 'uuid-2' }));
+    const deps = makeDeps({ resolveCardName: () => undefined, importFromUrl });
+
+    await handleItemAdd(deps, {
+      url: 'https://cdn.example/originals/a.jpg',
+      fallbackUrl: 'https://cdn.example/236x/a.jpg'
+    });
+    expect(importFromUrl).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fallbackUrl: 'https://cdn.example/236x/a.jpg' })
+    );
+
+    await handleItemAdd(deps, {
+      url: 'https://cdn.example/originals/b.jpg',
+      fallbackUrl: 'not-a-url'
+    });
+    expect(importFromUrl).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fallbackUrl: undefined })
+    );
   });
 
   it('returns 500 when import fails', async () => {

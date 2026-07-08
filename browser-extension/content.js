@@ -1,6 +1,13 @@
-import { findImageUrlFromTarget } from './lib/sites/generic.js';
-import { resolveSaveFromTarget, resolveSaveFromUrl } from './lib/sites/resolveSave.js';
-import { collectPinterestBoardPins, getPinterestBoardMeta, isPinterestBoardUrl } from './lib/pinterest/board.js';
+(() => {
+const NS = (window.__ARC__ = window.__ARC__ || {});
+const {
+  findSaveableTarget,
+  resolveSaveFromTarget,
+  resolveSaveFromUrl,
+  collectPinterestBoardPins,
+  getPinterestBoardMeta,
+  isPinterestBoardUrl
+} = NS;
 
 const MIN_IMAGE_PX = 64;
 const HOVER_DELAY_MS = 120;
@@ -226,7 +233,7 @@ function considerTarget(target) {
     return;
   }
 
-  const found = findImageUrlFromTarget(target);
+  const found = findSaveableTarget(target);
   if (!found?.url || !isLargeEnough(found.el)) {
     scheduleHide();
     return;
@@ -301,7 +308,7 @@ document.addEventListener(
   'contextmenu',
   (event) => {
     if (!event.altKey) return;
-    const found = findImageUrlFromTarget(event.target);
+    const found = findSaveableTarget(event.target);
     if (!found?.url) return;
 
     const payload = resolveSaveFromTarget(found.el);
@@ -316,3 +323,4 @@ document.addEventListener(
   },
   true
 );
+})();

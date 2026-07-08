@@ -1,21 +1,24 @@
-import { genericHandler } from './generic.js';
-import { pinterestHandler } from './pinterest.js';
-import { artstationHandler } from './artstation.js';
+(() => {
+  const NS = (window.__ARC__ = window.__ARC__ || {});
+  const { genericHandler, pinterestHandler, artstationHandler } = NS;
 
-/**
- * @param {string} hostname
- * @returns {import('./types.js').SiteHandler}
- */
-export function getSiteHandler(hostname) {
-  const host = hostname.toLowerCase();
+  /**
+   * @param {string} hostname
+   * @returns {import('./types.js').SiteHandler}
+   */
+  function getSiteHandler(hostname) {
+    const host = hostname.toLowerCase();
 
-  if (host === 'pinterest.com' || host.endsWith('.pinterest.com')) {
-    return pinterestHandler;
+    if (host === 'pinterest.com' || host.endsWith('.pinterest.com')) {
+      return pinterestHandler;
+    }
+
+    if (host === 'artstation.com' || host.endsWith('.artstation.com')) {
+      return artstationHandler;
+    }
+
+    return genericHandler;
   }
 
-  if (host === 'artstation.com' || host.endsWith('.artstation.com')) {
-    return artstationHandler;
-  }
-
-  return genericHandler;
-}
+  Object.assign(NS, { getSiteHandler });
+})();

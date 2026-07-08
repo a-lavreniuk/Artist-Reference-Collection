@@ -22,15 +22,20 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["lib/pageModal.js"],
+      "js": [
+        "lib/sites/urlUtils.js",
+        "lib/sites/generic.js",
+        "lib/sites/pinterest.js",
+        "lib/sites/artstation.js",
+        "lib/sites/registry.js",
+        "lib/pinterest/board.js",
+        "lib/sites/resolveSave.js",
+        "lib/constants.js",
+        "lib/pageModal.js",
+        "content.js"
+      ],
       "css": ["arc-modal.css"],
       "run_at": "document_end"
-    },
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_end",
-      "type": "module"
     }
   ],
   "web_accessible_resources": [

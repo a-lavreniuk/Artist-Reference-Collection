@@ -1,6 +1,7 @@
-import { ARC_LAUNCH_URL, ARC_WEBSITE_URL } from './constants.js';
-
 (function () {
+  const NS = (window.__ARC__ = window.__ARC__ || {});
+  const { ARC_LAUNCH_URL, ARC_WEBSITE_URL } = NS;
+
   const AUTO_HIDE_MS = 14000;
   const LOGO_URL = chrome.runtime.getURL('icons/icon-32.png');
 
