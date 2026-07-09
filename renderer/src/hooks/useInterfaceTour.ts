@@ -19,6 +19,7 @@ import {
   ARC_INTERFACE_TOUR_REPLAY_EVENT,
   ARC_INTERFACE_TOUR_SETUP_COMPLETED_EVENT
 } from '../components/onboarding/interfaceTourEvents';
+import { getManualSectionNavigationEpoch } from '../search/sectionNavigation';
 
 const CARD_STEP_FIRST_INDEX = 11;
 const CARD_STEP_LAST_INDEX = 14;
@@ -57,6 +58,9 @@ export function useInterfaceTour() {
   const openingTourCardRef = useRef(false);
   /** Автонавигация только после смены шага тура, не при ручном переключении вкладок. */
   const routeSyncRequestedRef = useRef(false);
+  /** Пользователь ушёл с маршрута шага тура вручную — не откатывать на step.route. */
+  const userOverrodeTourRouteRef = useRef(false);
+  const manualSectionNavEpochRef = useRef(getManualSectionNavigationEpoch());
 
   navigateRef.current = navigate;
   locationRef.current = location;
@@ -70,6 +74,7 @@ export function useInterfaceTour() {
     const currentPrefs = getAppPreferencesSync();
     if (!currentPrefs.onboardingSetupCompleted || currentPrefs.onboardingTourCompleted) return false;
     autoStartedRef.current = true;
+    userOverrodeTourRouteRef.current = false;
     routeSyncRequestedRef.current = true;
     setStepIndex(currentPrefs.onboardingTourStep);
     setActive(true);
@@ -123,6 +128,7 @@ export function useInterfaceTour() {
     const onReplay = () => {
       tourCardIdRef.current = null;
       openingTourCardRef.current = false;
+      userOverrodeTourRouteRef.current = false;
       routeSyncRequestedRef.current = true;
       if (openCardIdRef.current) {
         closeCardRef.current();
@@ -134,12 +140,6 @@ export function useInterfaceTour() {
     window.addEventListener(ARC_INTERFACE_TOUR_REPLAY_EVENT, onReplay);
     return () => window.removeEventListener(ARC_INTERFACE_TOUR_REPLAY_EVENT, onReplay);
   }, []);
-
-  useEffect(() => {
-    if (active) {
-      routeSyncRequestedRef.current = true;
-    }
-  }, [active, stepIndex]);
 
   useEffect(() => {
     if (!active) {
@@ -154,6 +154,17 @@ export function useInterfaceTour() {
 
     const pathname = resolveActivePathname(getPathname);
     const isCardStep = stepIndex >= CARD_STEP_FIRST_INDEX && stepIndex <= CARD_STEP_LAST_INDEX;
+    const manualSectionNavEpoch = getManualSectionNavigationEpoch();
+    if (manualSectionNavEpoch !== manualSectionNavEpochRef.current) {
+      manualSectionNavEpochRef.current = manualSectionNavEpoch;
+      routeSyncRequestedRef.current = false;
+      userOverrodeTourRouteRef.current = true;
+      prepareGenerationRef.current += 1;
+      openingTourCardRef.current = false;
+      setPreparing(false);
+      setAnchorEl(null);
+      return;
+    }
 
     if (stepIndex >= STATS_STEP_INDEX && openCardId) {
       setPreparing(true);
@@ -165,7 +176,10 @@ export function useInterfaceTour() {
     }
 
     if (!pathnameMatchesRoute(pathname, step.route)) {
-      if (!routeSyncRequestedRef.current) {
+      if (!routeSyncRequestedRef.current || userOverrodeTourRouteRef.current) {
+        prepareGenerationRef.current += 1;
+        openingTourCardRef.current = false;
+        routeSyncRequestedRef.current = false;
         setPreparing(false);
         setAnchorEl(null);
         return;
@@ -176,6 +190,7 @@ export function useInterfaceTour() {
       return;
     }
 
+    userOverrodeTourRouteRef.current = false;
     routeSyncRequestedRef.current = false;
 
     const generation = ++prepareGenerationRef.current;
@@ -202,15 +217,17 @@ export function useInterfaceTour() {
         if (generation !== prepareGenerationRef.current) return;
 
         if (isCardStep && hasCards) {
-          if (!pathnameMatchesRoute(resolveActivePathname(getPathname), '/gallery')) {
-            navigateToTourRoute('/gallery');
+          if (!pathnameMatchesRoute(resolveActivePathname(getPathname), step.route)) {
+            if (!routeSyncRequestedRef.current || userOverrodeTourRouteRef.current) return;
+            navigateToTourRoute(step.route);
             return;
           }
 
-          await waitForRouteCommit('/gallery', ['gallery-grid', 'gallery-page'], 12000, getPathname);
+          await waitForRouteCommit(step.route, ['gallery-grid', 'gallery-page'], 12000, getPathname);
           if (generation !== prepareGenerationRef.current) return;
 
           if (!openCardIdRef.current && !tourCardIdRef.current && !openingTourCardRef.current) {
+            if (!routeSyncRequestedRef.current || userOverrodeTourRouteRef.current) return;
             openingTourCardRef.current = true;
             const page = await listCardsPage({ offset: 0, limit: 1 });
             const firstId = page[0]?.id;
@@ -276,6 +293,7 @@ export function useInterfaceTour() {
 
   const goBack = useCallback(() => {
     openingTourCardRef.current = false;
+    userOverrodeTourRouteRef.current = false;
     routeSyncRequestedRef.current = true;
     setStepIndex((current) => {
       const next = Math.max(0, current - 1);
@@ -290,6 +308,7 @@ export function useInterfaceTour() {
       return;
     }
     openingTourCardRef.current = false;
+    userOverrodeTourRouteRef.current = false;
     routeSyncRequestedRef.current = true;
     const next = stepIndex + 1;
     setStepIndex(next);

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
+import { useNavigateToAppSection } from '../../search/openCardUrl';
 import { openBugReportForm } from '../../services/bugReportService';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
 import { useGridSize, type GridSize } from '../../layout/gridSizePreference';
@@ -13,7 +13,7 @@ const GRID_OPTIONS: { key: GridSize; label: string; iconClass: string }[] = [
 ];
 
 export default function NavbarMenu() {
-  const navigate = useNavigate();
+  const navigateToSection = useNavigateToAppSection();
   const { prefs, ready, update } = useAppPreferences();
   const [gridSize, setGridSize] = useGridSize();
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -28,12 +28,12 @@ export default function NavbarMenu() {
 
   const rows = useMemo<ContextMenuRow[]>(
     () => [
-      { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigate('/tags') },
-      { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigate('/statistics') },
-      { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigate('/history') },
-      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigate('/settings/general') },
+      { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigateToSection('/tags') },
+      { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigateToSection('/statistics') },
+      { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigateToSection('/history') },
+      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigateToSection('/settings/general') },
       { type: 'separator', key: 'sep1' },
-      { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigate('/duplicates') },
+      { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigateToSection('/duplicates') },
       { type: 'separator', key: 'sep-grid' },
       { type: 'header', key: 'grid-size-title', label: 'Размер сетки' },
       ...GRID_OPTIONS.map((opt) => ({
@@ -72,9 +72,9 @@ export default function NavbarMenu() {
       },
       { type: 'separator', key: 'sep3' },
       { type: 'item', key: 'feedback', label: 'Сообщить о проблеме', iconClass: 'arc-icon-bug-s', onSelect: () => { setOpen(false); void openBugReportForm(); } },
-      { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigate('/ui-kit') }
+      { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigateToSection('/ui-kit') }
     ],
-    [gridSize, navigate, ready, currentTheme, setGridSize]
+    [gridSize, navigateToSection, ready, currentTheme, setGridSize]
   );
 
   return (

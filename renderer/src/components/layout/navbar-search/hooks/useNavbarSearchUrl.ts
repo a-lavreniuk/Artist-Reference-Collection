@@ -18,6 +18,11 @@ export function useNavbarSearchUrl() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { clearFilters } = useGalleryFilters();
 
+  const isCardHostRoute =
+    location.pathname === '/gallery' ||
+    location.pathname.startsWith('/collections') ||
+    location.pathname.startsWith('/moodboard');
+
   const navigateToSearchHost = useCallback(
     (nextParams?: URLSearchParams) => {
       if (location.pathname.startsWith('/collections') || location.pathname.startsWith('/moodboard')) {
@@ -35,17 +40,15 @@ export function useNavbarSearchUrl() {
   const commitGallerySearchParams = useCallback(
     (updater: (prev: URLSearchParams) => URLSearchParams, options?: { replace?: boolean }) => {
       const next = updater(searchParams);
-      if (
-        location.pathname === '/gallery' ||
-        location.pathname.startsWith('/collections') ||
-        location.pathname.startsWith('/moodboard')
-      ) {
+      if (isCardHostRoute) {
         setSearchParams(next, { replace: options?.replace ?? true });
         return;
       }
-      navigateToSearchHost(next);
+      // На non-card страницах (board/tags/settings/...) не уводим пользователя в галерею
+      // из фоновой синхронизации navbar search.
+      setSearchParams(next, { replace: options?.replace ?? true });
     },
-    [location.pathname, navigateToSearchHost, searchParams, setSearchParams]
+    [isCardHostRoute, location.pathname, searchParams, setSearchParams]
   );
 
   const resetSearchField = useCallback(() => {

@@ -8,7 +8,8 @@ import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
 import NavbarSortMenu from './NavbarSortMenu';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
-import { requestCloseCardDetail } from '../gallery/cardDetailEvents';
+import { beginManualSectionNavigation } from '../../search/sectionNavigation';
+import { parseDetailCardId, stripOpenCardFromParams } from '../../search/openCardUrl';
 import {
   applyNavbarIslandsLayoutVars,
   applyNavbarStackCssVars,
@@ -80,18 +81,21 @@ export default function TopNavbar() {
 
   const handleMainTabClick = (path: string) => {
     if (maintenanceLocked) return;
-    const nextTab = resolveMainTab(path);
-    if (nextTab !== activeMainTab) {
-      requestCloseCardDetail();
-    }
+    const hasOpenDetail = Boolean(parseDetailCardId(searchParams));
+    const baseParams = hasOpenDetail
+      ? stripOpenCardFromParams(searchParams)
+      : new URLSearchParams(searchParams);
+
     const leavingGallery = activeMainTab === 'gallery' && !path.startsWith('/gallery');
+    let search = '';
     if (leavingGallery && parseLibraryScope(searchParams) !== 'all') {
-      const nextParams = setLibraryScopeInParams(searchParams, 'all');
-      const search = nextParams.toString();
-      navigate({ pathname: path, search: search ? `?${search}` : '' });
-      return;
+      const nextParams = setLibraryScopeInParams(baseParams, 'all');
+      const qs = nextParams.toString();
+      search = qs ? `?${qs}` : '';
     }
-    navigate(path);
+
+    beginManualSectionNavigation();
+    navigate({ pathname: path, search }, { replace: true });
   };
 
   return (

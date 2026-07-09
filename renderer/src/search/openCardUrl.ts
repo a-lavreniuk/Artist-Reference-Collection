@@ -1,7 +1,11 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ARC_CARD_DETAIL_CLOSE_EVENT } from '../components/gallery/cardDetailEvents';
 import { ARC_SEARCH_QUERY_CARD, parseSearchCardId } from './searchUrl';
+import {
+  beginManualSectionNavigation,
+  getManualSectionNavigationEpoch
+} from './sectionNavigation';
 
 /** Открытая детальная карточка (шаги «назад/вперёд»). Не путать с `card=` — фильтр ленты. */
 export const ARC_DETAIL_QUERY_CARD = 'detail';
@@ -81,13 +85,35 @@ export function useOpenCardUrl(): OpenCardUrlApi {
     closeCardReplace();
   }, [closeCardReplace]);
 
+  const sectionNavEpochRef = useRef(getManualSectionNavigationEpoch());
+
   useEffect(() => {
-    const onCloseRequest = () => closeCardReplace();
+    const onCloseRequest = () => {
+      if (getManualSectionNavigationEpoch() !== sectionNavEpochRef.current) return;
+      closeCardReplace();
+    };
     window.addEventListener(ARC_CARD_DETAIL_CLOSE_EVENT, onCloseRequest);
     return () => window.removeEventListener(ARC_CARD_DETAIL_CLOSE_EVENT, onCloseRequest);
   }, [closeCardReplace]);
 
+  useEffect(() => {
+    sectionNavEpochRef.current = getManualSectionNavigationEpoch();
+  });
+
   return { openCardId, openCard, closeCard, closeCardReplace };
+}
+
+/** Один navigate при смене раздела: снимает detail= без отдельного closeCard (избегает гонки с /gallery). */
+export function useNavigateToAppSection() {
+  const navigate = useNavigate();
+
+  return useCallback(
+    (pathname: string, search = '') => {
+      beginManualSectionNavigation();
+      navigate({ pathname, search }, { replace: true });
+    },
+    [navigate]
+  );
 }
 
 /** Удаляет `detail` и при совпадении — `card` из query (сброс чипа ID в поиске). */
