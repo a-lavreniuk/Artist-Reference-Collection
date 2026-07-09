@@ -3,7 +3,7 @@
   "name": "__MSG_extensionName__",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
-  "version": "0.1.0",
+  "version": "0.1.7",
   "icons": {
     "16": "icons/icon-32.png",
     "48": "icons/icon-64.png",
@@ -18,7 +18,14 @@
     "type": "module"
   },
   "permissions": ["contextMenus", "storage", "alarms", "tabs"],
-  "host_permissions": ["http://127.0.0.1:47896/*", "http://localhost:47896/*"],
+  "host_permissions": [
+    "http://127.0.0.1:47896/*",
+    "http://localhost:47896/*",
+    "https://*.pinterest.com/*",
+    "https://pinterest.com/*",
+    "https://*.pinterest.ru/*",
+    "https://pinterest.ru/*"
+  ],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -26,6 +33,7 @@
         "lib/sites/urlUtils.js",
         "lib/sites/generic.js",
         "lib/sites/pinterest.js",
+        "lib/sites/youtube.js",
         "lib/sites/artstation.js",
         "lib/sites/registry.js",
         "lib/pinterest/board.js",

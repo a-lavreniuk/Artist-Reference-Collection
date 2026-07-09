@@ -12,7 +12,9 @@ import { notifyRendererExtensionImport } from './notifyRenderer';
 import { ARC_IMPORT_API_HOST, ARC_IMPORT_API_PORT, MAX_IMPORT_BODY_BYTES } from './constants';
 import { handleAppInfo, handleCollectionEnsure, handleItemAdd } from './importApiHandlers';
 import { downloadUrlToTempFile } from './importFromRemote';
+import { resolveImportMaxBytes, resolveImportMediaKind } from './importMediaKind';
 import type { ImportApiHandlerDeps } from './types';
+import { downloadYoutubeToTempFile, isYoutubeUrl } from './youtubeDownload';
 
 let server: http.Server | null = null;
 
@@ -71,19 +73,44 @@ function buildDeps(): ImportApiHandlerDeps {
     getLibraryRoot: () => readLibraryRootSync(),
     isApiEnabled: () => readAppPreferencesSync().importApiEnabled,
     resolveCardName: resolveCardNameFromPrefs,
-    importFromUrl: async ({ libraryRoot, url, fallbackUrl, website, name, collectionId, quiet }) => {
+    importFromUrl: async ({
+      libraryRoot,
+      url,
+      fallbackUrl,
+      mediaKind,
+      website,
+      name,
+      collectionId,
+      quiet
+    }) => {
       let cleanup: (() => Promise<void>) | null = null;
       try {
+        const kind = resolveImportMediaKind(url, mediaKind);
+        const maxBytes = resolveImportMaxBytes(url, kind);
         let downloaded: { tempPath: string; cleanup: () => Promise<void> };
+
+        const downloadPrimary = async () => {
+          if (isYoutubeUrl(url)) {
+            return downloadYoutubeToTempFile(url, maxBytes);
+          }
+          return downloadUrlToTempFile(url, maxBytes, kind);
+        };
+
         try {
-          downloaded = await downloadUrlToTempFile(url, MAX_IMPORT_BODY_BYTES);
+          downloaded = await downloadPrimary();
         } catch (primaryErr) {
-          if (fallbackUrl && fallbackUrl !== url) {
-            downloaded = await downloadUrlToTempFile(fallbackUrl, MAX_IMPORT_BODY_BYTES);
+          const allowFallback = kind === 'image' && fallbackUrl && fallbackUrl !== url;
+          if (allowFallback) {
+            downloaded = await downloadUrlToTempFile(
+              fallbackUrl,
+              resolveImportMaxBytes(fallbackUrl, 'image'),
+              'image'
+            );
           } else {
             throw primaryErr;
           }
         }
+
         const { tempPath, cleanup: rm } = downloaded;
         cleanup = rm;
         const result = await importMediaFile(libraryRoot, tempPath, {

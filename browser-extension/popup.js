@@ -7,8 +7,10 @@ const subtitleEl = document.getElementById('arc-modal-subtitle');
 const slot1El = document.getElementById('arc-slot-1');
 const slot2Wrap = document.getElementById('arc-slot-2-wrap');
 const slot2El = document.getElementById('arc-slot-2');
-const boardSlot = document.getElementById('arc-board-slot');
+const pinterestSection = document.getElementById('arc-pinterest-section');
+const pinterestBodyEl = document.getElementById('arc-pinterest-body');
 const downloadBoardBtn = document.getElementById('arc-download-board-btn');
+const boardProgressWrap = document.getElementById('arc-board-progress-wrap');
 const boardProgressEl = document.getElementById('arc-board-progress');
 const websiteBtn = document.getElementById('arc-website-btn');
 const closeBtn = document.getElementById('arc-close-btn');
@@ -62,17 +64,24 @@ function bindStaticLabels() {
     downloadBoardBtn.textContent = msg('downloadBoardButton');
     downloadBoardBtn.addEventListener('click', () => void startBoardDownload());
   }
+  if (pinterestBodyEl) {
+    pinterestBodyEl.textContent = msg('modalPinterestBody');
+  }
+  if (modalEl?.querySelector('#arc-modal-title')) {
+    modalEl.querySelector('#arc-modal-title').textContent = msg('modalTitle');
+  }
 }
 
 function setBoardProgress(text, visible = true) {
-  if (!boardProgressEl) return;
+  if (!boardProgressEl || !boardProgressWrap) return;
   boardProgressEl.textContent = text;
-  boardProgressEl.hidden = !visible;
+  boardProgressWrap.hidden = !visible || !text;
 }
 
 function setBoardSlotVisible(visible) {
-  if (!boardSlot) return;
-  boardSlot.hidden = !visible;
+  if (!pinterestSection) return;
+  pinterestSection.hidden = !visible;
+  pinterestSection.classList.toggle('is-visible', visible);
 }
 
 function updateBoardButtonState() {
@@ -239,5 +248,6 @@ async function refreshConnectionStatus() {
 }
 
 bindStaticLabels();
+setBoardSlotVisible(false);
 void refreshConnectionStatus();
 })();

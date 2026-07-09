@@ -4,6 +4,9 @@ import os from 'os';
 import path from 'path';
 
 import { assembleHlsToMp4, isVideoExt } from '../ffmpeg';
+import { MAX_IMPORT_IMAGE_BYTES, MAX_IMPORT_VIDEO_BYTES } from './constants';
+import type { ImportMediaKind } from './importMediaKind';
+import { resolveImportMaxBytes } from './importMediaKind';
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']);
 
@@ -52,7 +55,9 @@ function extFromContentType(contentType: string | null): string | null {
     'image/bmp': '.bmp',
     'image/gif': '.gif',
     'video/mp4': '.mp4',
-    'video/webm': '.webm'
+    'video/webm': '.webm',
+    'video/quicktime': '.mov',
+    'video/x-m4v': '.m4v'
   };
   return map[ct] ?? null;
 }
@@ -74,12 +79,20 @@ function isAllowedExt(ext: string): boolean {
   return IMAGE_EXT.has(e) || isVideoExt(e);
 }
 
+function exceedsLimit(total: number, maxBytes: number): boolean {
+  return Number.isFinite(maxBytes) && total > maxBytes;
+}
+
 export async function downloadUrlToTempFile(
   url: string,
-  maxBytes = 32 * 1024 * 1024
+  maxBytes?: number,
+  mediaKind?: ImportMediaKind | null
 ): Promise<{ tempPath: string; cleanup: () => Promise<void> }> {
+  const limit = maxBytes ?? resolveImportMaxBytes(url, mediaKind);
+
   if (isHlsUrl(url)) {
-    return downloadHlsToTempFile(url, maxBytes);
+    const hlsLimit = Number.isFinite(limit) ? limit : MAX_IMPORT_VIDEO_BYTES;
+    return downloadHlsToTempFile(url, hlsLimit);
   }
 
   const res = await fetch(url, { redirect: 'follow' });
@@ -88,7 +101,7 @@ export async function downloadUrlToTempFile(
   }
 
   const contentLength = res.headers.get('content-length');
-  if (contentLength && Number(contentLength) > maxBytes) {
+  if (contentLength && exceedsLimit(Number(contentLength), limit)) {
     throw new Error('File too large');
   }
 
@@ -96,7 +109,7 @@ export async function downloadUrlToTempFile(
   let total = 0;
   if (!res.body) {
     const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > maxBytes) throw new Error('File too large');
+    if (exceedsLimit(buf.length, limit)) throw new Error('File too large');
     chunks.push(buf);
     total = buf.length;
   } else {
@@ -106,7 +119,7 @@ export async function downloadUrlToTempFile(
       if (done) break;
       if (!value) continue;
       total += value.byteLength;
-      if (total > maxBytes) throw new Error('File too large');
+      if (exceedsLimit(total, limit)) throw new Error('File too large');
       chunks.push(Buffer.from(value));
     }
   }
@@ -133,3 +146,5 @@ export async function downloadUrlToTempFile(
 
   return { tempPath, cleanup };
 }
+
+export { MAX_IMPORT_IMAGE_BYTES, MAX_IMPORT_VIDEO_BYTES };

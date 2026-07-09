@@ -2,9 +2,12 @@ export type JSendSuccess<T> = { status: 'success'; data: T };
 export type JSendError = { status: 'error'; message: string };
 export type JSendResponse<T = unknown> = JSendSuccess<T> | JSendError;
 
+export type ImportMediaKind = 'image' | 'video';
+
 export type ItemAddRequestBody = {
   url?: string;
   fallbackUrl?: string;
+  mediaKind?: ImportMediaKind;
   base64?: string;
   website?: string;
   pageTitle?: string;
@@ -36,6 +39,7 @@ export type ImportApiHandlerDeps = {
     libraryRoot: string;
     url: string;
     fallbackUrl?: string;
+    mediaKind?: ImportMediaKind;
     website?: string;
     name?: string;
     collectionId?: string;

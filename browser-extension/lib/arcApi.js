@@ -4,7 +4,9 @@ export const ARC_API_PRIMARY_HOST = '127.0.0.1';
 export const ARC_API_PORT = 47896;
 const REQUEST_TIMEOUT_MS = 2500;
 /** Server downloads remote image before responding — keep well above info ping timeout. */
-const IMPORT_REQUEST_TIMEOUT_MS = 60_000;
+const IMPORT_IMAGE_TIMEOUT_MS = 60_000;
+/** Video / YouTube / HLS imports may take several minutes. */
+const IMPORT_VIDEO_TIMEOUT_MS = 15 * 60 * 1000;
 
 function apiBase(host) {
   return `http://${host}:${ARC_API_PORT}/api/v1`;
@@ -18,6 +20,25 @@ function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
 
 function isAbortError(err) {
   return err instanceof Error && err.name === 'AbortError';
+}
+
+function isYoutubeImportUrl(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host.includes('youtube.com') || host.includes('youtu.be');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * @param {{ url: string, mediaKind?: 'image' | 'video' }} payload
+ */
+function importTimeoutFor(payload) {
+  if (payload.mediaKind === 'video' || isYoutubeImportUrl(payload.url)) {
+    return IMPORT_VIDEO_TIMEOUT_MS;
+  }
+  return IMPORT_IMAGE_TIMEOUT_MS;
 }
 
 /**
@@ -52,7 +73,7 @@ export async function checkArc() {
 }
 
 /**
- * @param {{ url: string, fallbackUrl?: string, website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} payload
+ * @param {{ url: string, fallbackUrl?: string, mediaKind?: 'image' | 'video', website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} payload
  */
 export async function importItem(payload) {
   const body = {
@@ -63,6 +84,9 @@ export async function importItem(payload) {
 
   if (payload.fallbackUrl?.trim()) {
     body.fallbackUrl = payload.fallbackUrl.trim();
+  }
+  if (payload.mediaKind === 'video' || payload.mediaKind === 'image') {
+    body.mediaKind = payload.mediaKind;
   }
   if (payload.name?.trim()) {
     body.name = payload.name.trim();
@@ -84,7 +108,7 @@ export async function importItem(payload) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       },
-      IMPORT_REQUEST_TIMEOUT_MS
+      importTimeoutFor(payload)
     );
     const json = await res.json();
     if (res.status === 503) {
@@ -124,7 +148,7 @@ export async function ensureCollection(name) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmed })
       },
-      IMPORT_REQUEST_TIMEOUT_MS
+      IMPORT_IMAGE_TIMEOUT_MS
     );
     const json = await res.json();
     if (res.status === 503) {

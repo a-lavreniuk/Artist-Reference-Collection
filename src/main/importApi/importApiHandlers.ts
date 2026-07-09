@@ -3,6 +3,7 @@ import type {
   AppInfoData,
   CollectionEnsureRequestBody,
   ImportApiHandlerDeps,
+  ImportMediaKind,
   ItemAddRequestBody,
   JSendResponse
 } from './types';
@@ -29,6 +30,7 @@ function parseItemAddBody(raw: unknown): ItemAddRequestBody | null {
   const body: ItemAddRequestBody = {};
   if (typeof o.url === 'string') body.url = o.url;
   if (typeof o.fallbackUrl === 'string') body.fallbackUrl = o.fallbackUrl;
+  if (o.mediaKind === 'image' || o.mediaKind === 'video') body.mediaKind = o.mediaKind;
   if (typeof o.base64 === 'string') body.base64 = o.base64;
   if (typeof o.website === 'string') body.website = o.website;
   if (typeof o.pageTitle === 'string') body.pageTitle = o.pageTitle;
@@ -104,11 +106,14 @@ export async function handleItemAdd(deps: ImportApiHandlerDeps, rawBody: unknown
   const fallbackCandidate = body.fallbackUrl?.trim();
   const fallbackUrl =
     fallbackCandidate && validateItemUrl(fallbackCandidate) ? fallbackCandidate : undefined;
+  const mediaKind: ImportMediaKind | undefined =
+    body.mediaKind === 'video' || body.mediaKind === 'image' ? body.mediaKind : undefined;
 
   const result = await deps.importFromUrl({
     libraryRoot,
     url,
     fallbackUrl,
+    mediaKind,
     website,
     name,
     collectionId,

@@ -99,6 +99,7 @@ describe('handleItemAdd', () => {
       libraryRoot: '/library',
       url: 'https://cdn.example/photo.jpg',
       fallbackUrl: undefined,
+      mediaKind: undefined,
       website: 'https://example.com/page',
       name: 'prefix Title',
       collectionId: undefined,
@@ -124,6 +125,23 @@ describe('handleItemAdd', () => {
     });
     expect(importFromUrl).toHaveBeenLastCalledWith(
       expect.objectContaining({ fallbackUrl: undefined })
+    );
+  });
+
+  it('forwards mediaKind to importFromUrl', async () => {
+    const importFromUrl = vi.fn(async () => ({ ok: true as const, id: 'uuid-3' }));
+    const deps = makeDeps({ importFromUrl });
+
+    await handleItemAdd(deps, {
+      url: 'https://v.pinimg.com/videos/mc/720p/aa/bb/cc/clip.mp4',
+      mediaKind: 'video'
+    });
+
+    expect(importFromUrl).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: 'https://v.pinimg.com/videos/mc/720p/aa/bb/cc/clip.mp4',
+        mediaKind: 'video'
+      })
     );
   });
 

@@ -4,6 +4,11 @@ const {
   findSaveableTarget,
   resolveSaveFromTarget,
   resolveSaveFromUrl,
+  resolvePinPageMedia,
+  waitForPinPageMedia,
+  isDirectMediaUrl,
+  isPinterestPinPageUrl,
+  findPinWebsiteFromTarget,
   collectPinterestBoardPins,
   getPinterestBoardMeta,
   isPinterestBoardUrl
@@ -201,18 +206,63 @@ async function sendSavePayload(payload) {
   showFeedback('error');
 }
 
+/**
+ * @param {Element} targetEl
+ * @returns {Promise<import('./lib/sites/types.js').SavePayload | null>}
+ */
+async function resolveSavePayloadForClick(targetEl) {
+  const pinWebsite =
+    (isPinterestPinPageUrl(location.href) ? location.href.split('?')[0] : null) ??
+    findPinWebsiteFromTarget(targetEl);
+
+  if (pinWebsite && /pinterest\./i.test(location.hostname)) {
+    try {
+      const remote = await chrome.runtime.sendMessage({
+        type: 'arc:resolve-pin-payload',
+        pinWebsite
+      });
+      if (remote?.url) return remote;
+    } catch (err) {
+      console.warn('[ARC] background pin resolve failed:', err);
+    }
+  }
+
+  const pinCloseup = isPinterestPinPageUrl(location.href);
+  if (pinCloseup && typeof waitForPinPageMedia === 'function') {
+    const quick = resolveSaveFromTarget(targetEl);
+    if (quick?.url && isDirectMediaUrl(quick.url)) {
+      return quick;
+    }
+
+    const waited = await waitForPinPageMedia(8000);
+    if (waited?.url && isDirectMediaUrl(waited.url)) {
+      return waited;
+    }
+
+    return quick?.url ? quick : waited;
+  }
+
+  return resolveSaveFromTarget(targetEl);
+}
+
 async function onSaveClick(event) {
   event.preventDefault();
   event.stopPropagation();
   if (!activeImage || !saveBtn || saveInFlight || saveBtn.disabled) return;
 
-  const payload = resolveSaveFromTarget(activeImage);
-  if (!payload) return;
-
   saveInFlight = true;
   setButtonState('loading');
 
   try {
+    const payload = await resolveSavePayloadForClick(activeImage);
+    if (!payload?.url) {
+      showFeedback('error');
+      return;
+    }
+    if (!isDirectMediaUrl(payload.url) && isPinterestPinPageUrl(payload.url)) {
+      showFeedback('error');
+      return;
+    }
     await sendSavePayload(payload);
   } catch {
     showFeedback('error');
@@ -251,10 +301,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     const payload = resolveSaveFromUrl({
       url: typeof message.url === 'string' ? message.url : '',
       website: typeof message.website === 'string' ? message.website : location.href,
-      pageTitle: typeof message.pageTitle === 'string' ? message.pageTitle : document.title
+      pageTitle: typeof message.pageTitle === 'string' ? message.pageTitle : document.title,
+      mediaKind: message.mediaKind === 'video' || message.mediaKind === 'image' ? message.mediaKind : undefined
     });
 
     sendResponse(payload);
+    return true;
+  }
+
+  if (message?.type === 'arc:resolve-pin-page') {
+    void waitForPinPageMedia()
+      .then((payload) => sendResponse(payload))
+      .catch(() => sendResponse(null));
     return true;
   }
 

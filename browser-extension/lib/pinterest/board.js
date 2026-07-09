@@ -3,9 +3,7 @@
   const {
     cleanPageTitle,
     getMetaContent,
-    pickLargestImageUrlFromElement,
-    resolveAbsoluteUrl,
-    upgradePinimgUrl
+    resolveAbsoluteUrl
   } = NS;
 
   const BOARD_PATH_BLOCKLIST = new Set([
@@ -77,91 +75,89 @@
   }
 
   /**
-   * Adds every currently-rendered pin into `pins`. Pinterest virtualizes the
-   * board (off-screen pins leave the DOM), so this runs on each scroll pass and
-   * accumulates rather than reading the DOM once at the end.
-   *
-   * @param {Map<string, { url: string, website: string, name?: string }>} pins
+   * @param {Map<string, { website: string, name?: string }>} pins
+   * @param {string} pinId
+   * @param {string} website
+   * @param {string} [name]
+   */
+  function addBoardPin(pins, pinId, website, name) {
+    if (!pinId || pins.has(pinId)) return;
+    pins.set(pinId, {
+      website,
+      ...(name?.trim() ? { name: name.trim() } : {})
+    });
+  }
+
+  /**
+   * @param {Map<string, { website: string, name?: string }>} pins
    * @param {string} boardUrl
    */
   function extractPinsInto(pins, boardUrl) {
-    for (const anchor of document.querySelectorAll('a[href*="/pin/"]')) {
+    const scope =
+      document.querySelector('[data-test-id="board-feed"]') ??
+      document.querySelector('main') ??
+      document;
+
+    for (const tile of scope.querySelectorAll(
+      '[data-test-id="pin"], [data-test-id="pinWrapper"], [data-test-id="deep-dive-pin"]'
+    )) {
+      const anchor = tile.querySelector('a[href*="/pin/"]');
       if (!(anchor instanceof HTMLAnchorElement)) continue;
 
       const pinMatch = /\/pin\/(\d+)/.exec(anchor.pathname);
       if (!pinMatch) continue;
 
-      const pinId = pinMatch[1];
-      if (pins.has(pinId)) continue;
+      const pinWebsite = resolveAbsoluteUrl(anchor.href, boardUrl);
+      if (!pinWebsite) continue;
 
-      const container =
-        anchor.closest('[data-test-id="pin"], [data-test-id="pinWrapper"], [data-test-id="deep-dive-pin"]') ??
-        anchor.parentElement ??
-        anchor;
+      const alt = tile.querySelector('img')?.getAttribute('alt');
+      addBoardPin(pins, pinMatch[1], pinWebsite.split('?')[0], alt ?? undefined);
+    }
 
-      let imageUrl = null;
+    for (const anchor of scope.querySelectorAll('a[href*="/pin/"]')) {
+      if (!(anchor instanceof HTMLAnchorElement)) continue;
 
-      if (container instanceof Element) {
-        const img = container.querySelector('img');
-        if (img instanceof HTMLImageElement) {
-          imageUrl = pickLargestImageUrlFromElement(img) || img.currentSrc || img.src;
-        }
-
-        const dataPinMedia =
-          container.getAttribute('data-pin-media') ??
-          anchor.getAttribute('data-pin-media') ??
-          container.querySelector('[data-pin-media]')?.getAttribute('data-pin-media');
-        if (dataPinMedia) {
-          imageUrl = dataPinMedia;
-        }
-      }
-
-      const absolute = resolveAbsoluteUrl(imageUrl ?? '', boardUrl);
-      if (!absolute || !absolute.includes('pinimg.com')) continue;
+      const pinMatch = /\/pin\/(\d+)/.exec(anchor.pathname);
+      if (!pinMatch) continue;
 
       const pinWebsite = resolveAbsoluteUrl(anchor.href, boardUrl);
       if (!pinWebsite) continue;
 
-      const alt = container instanceof Element ? container.querySelector('img')?.getAttribute('alt') : null;
+      const container =
+        anchor.closest('[data-test-id="pin"], [data-test-id="pinWrapper"], [data-test-id="deep-dive-pin"]') ??
+        anchor.parentElement;
+      const alt =
+        container instanceof Element ? container.querySelector('img')?.getAttribute('alt') : null;
 
-      const upgraded = upgradePinimgUrl(absolute);
-
-      pins.set(pinId, {
-        url: upgraded,
-        // Board thumbnails are always .jpg; the /originals/ upgrade can 404 when
-        // the real original is png/webp/gif. Keep the rendered URL as fallback.
-        ...(upgraded !== absolute ? { fallbackUrl: absolute } : {}),
-        website: pinWebsite.split('?')[0],
-        ...(alt?.trim() ? { name: alt.trim() } : {})
-      });
+      addBoardPin(pins, pinMatch[1], pinWebsite.split('?')[0], alt ?? undefined);
     }
   }
 
   /**
-   * @returns {Promise<{ boardName: string, boardUrl: string, pins: Array<{ url: string, website: string, name?: string }> }>}
+   * @returns {Promise<{ boardName: string, boardUrl: string, pins: Array<{ website: string, name?: string }> }>}
    */
   async function collectPinterestBoardPins() {
     const meta = getPinterestBoardMeta();
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    /** @type {Map<string, { url: string, website: string, name?: string }>} */
+    /** @type {Map<string, { website: string, name?: string }>} */
     const pins = new Map();
 
     window.scrollTo(0, 0);
-    await delay(400);
+    await delay(600);
     extractPinsInto(pins, meta.boardUrl);
 
     let stablePasses = 0;
     let lastSize = pins.size;
 
-    for (let pass = 0; pass < 60 && stablePasses < 4; pass += 1) {
+    for (let pass = 0; pass < 80 && stablePasses < 6; pass += 1) {
       const beforeY = window.scrollY;
-      window.scrollBy(0, Math.round(window.innerHeight * 0.85));
-      await delay(600);
+      window.scrollBy(0, Math.round(window.innerHeight * 0.9));
+      await delay(700);
       extractPinsInto(pins, meta.boardUrl);
 
       const atBottom =
-        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8;
       const didNotMove = window.scrollY === beforeY;
 
       if (pins.size !== lastSize) {
@@ -173,6 +169,7 @@
     }
 
     window.scrollTo(0, 0);
+    console.info(`[ARC board] extracted ${pins.size} pin URLs from board DOM`);
     return { ...meta, pins: [...pins.values()] };
   }
 

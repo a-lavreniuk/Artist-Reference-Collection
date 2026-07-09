@@ -17,16 +17,31 @@
         <img class="arc-ext-modal__logo" src="icons/icon-32.png" alt="" width="32" height="32" />
       </header>
       <div class="arc-ext-modal__body">
-        <div class="arc-ext-modal__slot">
-          <p id="arc-slot-1" class="arc-ext-modal__slot-text"></p>
-        </div>
-        <div class="arc-ext-modal__slot" id="arc-slot-2-wrap">
-          <p id="arc-slot-2" class="arc-ext-modal__slot-text"></p>
-        </div>
-        <div class="arc-ext-modal__slot" id="arc-board-slot" hidden>
-          <button type="button" id="arc-download-board-btn" class="arc-ext-btn arc-ext-btn--brand arc-ext-btn--block"></button>
-          <p id="arc-board-progress" class="arc-ext-modal__slot-text arc-ext-modal__slot-text--progress" hidden></p>
-        </div>
+        <section class="arc-ext-modal__section" aria-label="Save instructions">
+          <div class="arc-ext-modal__slot">
+            <p id="arc-slot-1" class="arc-ext-modal__slot-text"></p>
+          </div>
+          <div class="arc-ext-modal__slot" id="arc-slot-2-wrap">
+            <p id="arc-slot-2" class="arc-ext-modal__slot-text"></p>
+          </div>
+        </section>
+        <section
+          class="arc-ext-modal__section arc-ext-modal__section--pinterest"
+          id="arc-pinterest-section"
+          aria-label="Pinterest board"
+          hidden
+        >
+          <hr class="arc-ext-modal__separator" />
+          <div class="arc-ext-modal__slot">
+            <p id="arc-pinterest-body" class="arc-ext-modal__slot-text"></p>
+          </div>
+          <div class="arc-ext-modal__slot arc-ext-modal__slot--action">
+            <button type="button" id="arc-download-board-btn" class="arc-ext-btn arc-ext-btn--brand"></button>
+          </div>
+          <div class="arc-ext-modal__slot" id="arc-board-progress-wrap" hidden>
+            <p id="arc-board-progress" class="arc-ext-modal__slot-text"></p>
+          </div>
+        </section>
       </div>
       <footer class="arc-ext-modal__footer arc-ext-modal__footer--split" id="arc-modal-footer">
         <button type="button" id="arc-website-btn" class="arc-ext-btn arc-ext-btn--secondary"></button>

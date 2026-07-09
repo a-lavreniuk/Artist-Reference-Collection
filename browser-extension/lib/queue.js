@@ -2,7 +2,7 @@ export const QUEUE_KEY = 'arcImportQueue';
 export const QUEUE_MAX = 50;
 
 /**
- * @returns {Promise<Array<{ url: string, website?: string, pageTitle?: string }>>}
+ * @returns {Promise<Array<{ url: string, fallbackUrl?: string, mediaKind?: 'image' | 'video', website?: string, pageTitle?: string, name?: string }>>}
  */
 export async function readQueue() {
   const data = await chrome.storage.local.get(QUEUE_KEY);
@@ -11,14 +11,14 @@ export async function readQueue() {
 }
 
 /**
- * @param {Array<{ url: string, website?: string, pageTitle?: string }>} items
+ * @param {Array<{ url: string, fallbackUrl?: string, mediaKind?: 'image' | 'video', website?: string, pageTitle?: string, name?: string }>} items
  */
 async function writeQueue(items) {
   await chrome.storage.local.set({ [QUEUE_KEY]: items.slice(0, QUEUE_MAX) });
 }
 
 /**
- * @param {{ url: string, website?: string, pageTitle?: string }} item
+ * @param {{ url: string, fallbackUrl?: string, mediaKind?: 'image' | 'video', website?: string, pageTitle?: string, name?: string }} item
  * @returns {Promise<'queued' | 'full'>}
  */
 export async function enqueue(item) {
@@ -30,7 +30,7 @@ export async function enqueue(item) {
 }
 
 /**
- * @param {(item: { url: string, website?: string, pageTitle?: string }) => Promise<'ok' | 'retry'>} handler
+ * @param {(item: { url: string, fallbackUrl?: string, mediaKind?: 'image' | 'video', website?: string, pageTitle?: string, name?: string }) => Promise<'ok' | 'retry'>} handler
  * @returns {Promise<number>}
  */
 export async function drainQueue(handler) {

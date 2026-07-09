@@ -3,7 +3,7 @@
     "message": "Save to ARC"
   },
   "extensionDescription": {
-    "message": "Save images from the web to Artist Reference Collection (ARC)."
+    "message": "Save images and videos from the web to Artist Reference Collection (ARC)."
   },
   "contextMenuTitle": {
     "message": "Add to library"
@@ -18,13 +18,16 @@
     "message": "Close"
   },
   "modalHowToSave": {
-    "message": "Hover over an image and click the save button that appears. You can also use the context menu or Alt + right-click."
+    "message": "Hover over an image or video and click the save button that appears. You can also use the context menu."
   },
   "modalQueueInfo": {
-    "message": "Images go into a queue (up to 50). When you open ARC with Import enabled, the queue is sent to your library automatically."
+    "message": "Media files go into a queue (up to 50). When you open ARC with Import enabled, the queue is sent to your library automatically."
+  },
+  "modalPinterestBody": {
+    "message": "You can download this Pinterest board. All files will be added to a collection with the same name."
   },
   "modalQueueBody": {
-    "message": "The image was added to the queue (up to 50). When you open ARC with Import enabled, the queue is sent to your library automatically."
+    "message": "The item was added to the queue (up to 50). When you open ARC with Import enabled, the queue is sent to your library automatically."
   },
   "statusConnectedSubtitle": {
     "message": "Connection established"
@@ -85,7 +88,7 @@
     "message": "Enable Import API in ARC Settings → Browser extension."
   },
   "downloadBoardButton": {
-    "message": "Download this board"
+    "message": "Download board"
   },
   "boardDownloadCollecting": {
     "message": "Collecting pins from the board…"
@@ -98,7 +101,7 @@
     }
   },
   "boardDownloadDone": {
-    "message": "Done: $COUNT$ images in collection \"$NAME$\"",
+    "message": "Done: $COUNT$ cards in collection \"$NAME$\"",
     "placeholders": {
       "count": { "content": "$1" },
       "name": { "content": "$2" }

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { MAX_IMPORT_VIDEO_BYTES } from '../constants';
 import { isHlsUrl } from '../importFromRemote';
+import {
+  isImageImportUrl,
+  isVideoImportUrl,
+  resolveImportMaxBytes,
+  resolveImportMediaKind
+} from '../importMediaKind';
 
 describe('isHlsUrl', () => {
   it('detects .m3u8 by URL path', () => {
@@ -22,5 +29,25 @@ describe('isHlsUrl', () => {
 
   it('handles invalid URLs without throwing', () => {
     expect(isHlsUrl('not a url')).toBe(false);
+  });
+});
+
+describe('importMediaKind', () => {
+  it('classifies video URLs', () => {
+    expect(isVideoImportUrl('https://www.youtube.com/watch?v=abc')).toBe(true);
+    expect(isVideoImportUrl('https://v.pinimg.com/videos/mc/720p/aa/bb/cc/clip.mp4')).toBe(true);
+    expect(isVideoImportUrl('https://cdn.example.com/stream.m3u8')).toBe(true);
+    expect(isImageImportUrl('https://i.pinimg.com/originals/aa/bb/cc/image.jpg')).toBe(true);
+  });
+
+  it('uses explicit mediaKind when provided', () => {
+    expect(resolveImportMediaKind('https://example.com/file.bin', 'video')).toBe('video');
+    expect(resolveImportMediaKind('https://example.com/photo.jpg', 'image')).toBe('image');
+  });
+
+  it('applies unlimited image cap and 512MB video cap', () => {
+    expect(resolveImportMaxBytes('https://example.com/photo.jpg')).toBe(Number.POSITIVE_INFINITY);
+    expect(resolveImportMaxBytes('https://example.com/clip.mp4')).toBe(MAX_IMPORT_VIDEO_BYTES);
+    expect(resolveImportMaxBytes('https://www.youtube.com/watch?v=abc')).toBe(MAX_IMPORT_VIDEO_BYTES);
   });
 });

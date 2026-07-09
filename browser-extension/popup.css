@@ -9,8 +9,48 @@ body.arc-ext-shell {
   width: 100%;
   max-width: none;
   border: none;
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: var(--radius-l, 16px);
+  box-shadow: var(--arc-modal-shadow);
+}
+
+.arc-ext-modal--popup .arc-ext-modal__body {
+  gap: var(--s-3, 16px);
+}
+
+.arc-ext-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, 16px);
+  width: 100%;
+}
+
+.arc-ext-modal__section[hidden] {
+  display: none !important;
+}
+
+.arc-ext-modal__section--pinterest:not(.is-visible) {
+  display: none;
+}
+
+.arc-ext-modal__section--pinterest.is-visible {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, 16px);
+}
+
+.arc-ext-modal__separator {
+  margin: 0;
+  border: none;
+  height: 1px;
+  width: 100%;
+  background: var(--panel-border, #2f3035);
+}
+
+.arc-ext-modal__slot--action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2, 8px);
 }
 
 .arc-ext-modal--popup.is-offline .arc-ext-modal__footer--split,
@@ -32,9 +72,4 @@ body.arc-ext-shell {
 .arc-ext-btn--block {
   width: 100%;
   justify-content: center;
-}
-
-.arc-ext-modal__slot-text--progress {
-  margin-top: var(--s-2, 8px);
-  color: var(--text-elev-secondary, #888890);
 }

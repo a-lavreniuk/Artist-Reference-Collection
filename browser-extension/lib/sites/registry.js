@@ -1,6 +1,6 @@
 (() => {
   const NS = (window.__ARC__ = window.__ARC__ || {});
-  const { genericHandler, pinterestHandler, artstationHandler } = NS;
+  const { genericHandler, pinterestHandler, artstationHandler, youtubeHandler, isYoutubeHost } = NS;
 
   /**
    * @param {string} hostname
@@ -8,6 +8,10 @@
    */
   function getSiteHandler(hostname) {
     const host = hostname.toLowerCase();
+
+    if (isYoutubeHost?.(host)) {
+      return youtubeHandler;
+    }
 
     if (host === 'pinterest.com' || host.endsWith('.pinterest.com')) {
       return pinterestHandler;
