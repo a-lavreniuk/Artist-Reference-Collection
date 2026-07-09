@@ -1,12 +1,10 @@
 import DemoAlert from '../../../components/layout/DemoAlert';
-import { useAppUpdate } from '../../../components/layout/appUpdateContext';
 import ReleaseNotesContent from '../../../components/layout/ReleaseNotesContent';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import { useSettingsUpdates } from '../hooks/useSettingsUpdates';
 
 /** Figma 1037:39869 — Обновления */
 export default function SettingsUpdatesPanel() {
-  const { previewReleaseNotes } = useAppUpdate();
   const {
     loading,
     installedVersion,
@@ -26,7 +24,6 @@ export default function SettingsUpdatesPanel() {
   } = useSettingsUpdates();
 
   const showUpdateActions = checkState === 'updateAvailable' || updateBusy;
-  const showDevPreview = import.meta.env.DEV && selectedEntry != null && selectedEntry.changes.length > 0;
 
   return (
     <>
@@ -113,23 +110,6 @@ export default function SettingsUpdatesPanel() {
                 >
                   <span className="btn-ds__value">{checking ? '…' : 'Проверить обновления'}</span>
                 </button>
-
-                {showDevPreview ? (
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-ds"
-                    disabled={updateBusy}
-                    onClick={() =>
-                      previewReleaseNotes({
-                        version: selectedEntry.version,
-                        buildDate: selectedEntry.buildDate,
-                        changes: selectedEntry.changes
-                      })
-                    }
-                  >
-                    <span className="btn-ds__value">Показать «Что нового»</span>
-                  </button>
-                ) : null}
               </div>
             </>
           )}

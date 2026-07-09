@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-06-21T12:38:37.465Z",
+  "exportedAt": "2026-07-09T07:30:50.113Z",
   "collection": "Colors",
   "fileKey": "JD3pZdlV4Sz62creRMQsJV",
   "modes": {
@@ -38,16 +38,16 @@
     },
     "Typography/Brand/Primary/Disabled": {
       "sunken": {
-        "alias": "Brand/300",
-        "cssPrimitive": "var(--brand-300)"
+        "alias": "Brand/250",
+        "cssPrimitive": "var(--brand-250)"
       },
       "default": {
-        "alias": "Brand/350",
-        "cssPrimitive": "var(--brand-350)"
+        "alias": "Brand/250",
+        "cssPrimitive": "var(--brand-250)"
       },
       "raised": {
-        "alias": "Brand/400",
-        "cssPrimitive": "var(--brand-400)"
+        "alias": "Brand/300",
+        "cssPrimitive": "var(--brand-300)"
       }
     },
     "Typography/Brand/Secondary/Default": {
@@ -74,22 +74,22 @@
         "cssPrimitive": "var(--brand-700)"
       },
       "raised": {
-        "alias": "Gray/700",
-        "cssPrimitive": "var(--gray-700)"
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
       }
     },
     "Typography/Brand/Secondary/Disabled": {
       "sunken": {
-        "alias": "Brand/300",
-        "cssPrimitive": "var(--brand-300)"
+        "alias": "Brand/250",
+        "cssPrimitive": "var(--brand-250)"
       },
       "default": {
-        "alias": "Brand/350",
-        "cssPrimitive": "var(--brand-350)"
+        "alias": "Brand/250",
+        "cssPrimitive": "var(--brand-250)"
       },
       "raised": {
-        "alias": "Brand/400",
-        "cssPrimitive": "var(--brand-400)"
+        "alias": "Brand/300",
+        "cssPrimitive": "var(--brand-300)"
       }
     },
     "Typography/White Bg/Primary/Default": {
@@ -262,30 +262,30 @@
     },
     "Background/Brand/Default": {
       "sunken": {
-        "alias": "Brand/500",
-        "cssPrimitive": "var(--brand-500)"
+        "alias": "Brand/400",
+        "cssPrimitive": "var(--brand-400)"
       },
       "default": {
-        "alias": "Brand/500",
-        "cssPrimitive": "var(--brand-500)"
+        "alias": "Brand/400",
+        "cssPrimitive": "var(--brand-400)"
       },
       "raised": {
-        "alias": "Brand/500",
-        "cssPrimitive": "var(--brand-500)"
+        "alias": "Brand/450",
+        "cssPrimitive": "var(--brand-450)"
       }
     },
     "Background/Brand/Hover": {
       "sunken": {
-        "alias": "Brand/550",
-        "cssPrimitive": "var(--brand-550)"
+        "alias": "Brand/450",
+        "cssPrimitive": "var(--brand-450)"
       },
       "default": {
-        "alias": "Brand/550",
-        "cssPrimitive": "var(--brand-550)"
+        "alias": "Brand/450",
+        "cssPrimitive": "var(--brand-450)"
       },
       "raised": {
-        "alias": "Brand/550",
-        "cssPrimitive": "var(--brand-550)"
+        "alias": "Brand/500",
+        "cssPrimitive": "var(--brand-500)"
       }
     },
     "Background/Brand/Disabled": {
@@ -294,12 +294,12 @@
         "cssPrimitive": "var(--brand-100)"
       },
       "default": {
-        "alias": "Brand/150",
-        "cssPrimitive": "var(--brand-150)"
+        "alias": "Brand/100",
+        "cssPrimitive": "var(--brand-100)"
       },
       "raised": {
-        "alias": "Brand/200",
-        "cssPrimitive": "var(--brand-200)"
+        "alias": "Brand/150",
+        "cssPrimitive": "var(--brand-150)"
       }
     },
     "Background/Primary/Default": {
@@ -308,12 +308,12 @@
         "cssPrimitive": "var(--gray-800)"
       },
       "default": {
-        "alias": "Gray/850",
-        "cssPrimitive": "var(--gray-850)"
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
       },
       "raised": {
-        "alias": "Gray/900",
-        "cssPrimitive": "var(--gray-900)"
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
       }
     },
     "Background/Primary/Hover": {
@@ -322,12 +322,12 @@
         "cssPrimitive": "var(--gray-850)"
       },
       "default": {
-        "alias": "Gray/900",
-        "cssPrimitive": "var(--gray-900)"
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
       },
       "raised": {
-        "alias": "Gray/950",
-        "cssPrimitive": "var(--gray-950)"
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
       }
     },
     "Background/Primary/Disabled": {
@@ -336,12 +336,12 @@
         "cssPrimitive": "var(--gray-100)"
       },
       "default": {
-        "alias": "Gray/150",
-        "cssPrimitive": "var(--gray-150)"
+        "alias": "Gray/100",
+        "cssPrimitive": "var(--gray-100)"
       },
       "raised": {
-        "alias": "Gray/200",
-        "cssPrimitive": "var(--gray-200)"
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
       }
     },
     "Background/Secondary/Default": {
@@ -350,12 +350,12 @@
         "cssPrimitive": "var(--gray-100)"
       },
       "default": {
-        "alias": "Gray/150",
-        "cssPrimitive": "var(--gray-150)"
+        "alias": "Gray/100",
+        "cssPrimitive": "var(--gray-100)"
       },
       "raised": {
-        "alias": "Gray/200",
-        "cssPrimitive": "var(--gray-200)"
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
       }
     },
     "Background/Secondary/Hover": {
@@ -364,20 +364,6 @@
         "cssPrimitive": "var(--gray-150)"
       },
       "default": {
-        "alias": "Gray/200",
-        "cssPrimitive": "var(--gray-200)"
-      },
-      "raised": {
-        "alias": "Gray/250",
-        "cssPrimitive": "var(--gray-250)"
-      }
-    },
-    "Background/Secondary/Disabled": {
-      "sunken": {
-        "alias": "Gray/100",
-        "cssPrimitive": "var(--gray-100)"
-      },
-      "default": {
         "alias": "Gray/150",
         "cssPrimitive": "var(--gray-150)"
       },
@@ -386,24 +372,38 @@
         "cssPrimitive": "var(--gray-200)"
       }
     },
+    "Background/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Gray/100",
+        "cssPrimitive": "var(--gray-100)"
+      },
+      "default": {
+        "alias": "Gray/100",
+        "cssPrimitive": "var(--gray-100)"
+      },
+      "raised": {
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
+      }
+    },
     "Background/Tertiary/Default": {
       "sunken": {
         "alias": "Gray/25",
         "cssPrimitive": "var(--gray-25)"
       },
       "default": {
-        "alias": "Gray/50",
-        "cssPrimitive": "var(--gray-50)"
+        "alias": "Gray/25",
+        "cssPrimitive": "var(--gray-25)"
       },
       "raised": {
-        "alias": "Gray/100",
-        "cssPrimitive": "var(--gray-100)"
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
       }
     },
     "Background/Danger/Default": {
       "sunken": {
-        "alias": "Red/250",
-        "cssPrimitive": "var(--red-250)"
+        "alias": "Red/300",
+        "cssPrimitive": "var(--red-300)"
       },
       "default": {
         "alias": "Red/300",
@@ -416,8 +416,8 @@
     },
     "Background/Danger/Hover": {
       "sunken": {
-        "alias": "Red/300",
-        "cssPrimitive": "var(--red-300)"
+        "alias": "Red/350",
+        "cssPrimitive": "var(--red-350)"
       },
       "default": {
         "alias": "Red/350",
@@ -434,18 +434,18 @@
         "cssPrimitive": "var(--red-100)"
       },
       "default": {
-        "alias": "Red/150",
-        "cssPrimitive": "var(--red-150)"
+        "alias": "Red/100",
+        "cssPrimitive": "var(--red-100)"
       },
       "raised": {
-        "alias": "Red/200",
-        "cssPrimitive": "var(--red-200)"
+        "alias": "Red/150",
+        "cssPrimitive": "var(--red-150)"
       }
     },
     "Background/Success/Default": {
       "sunken": {
-        "alias": "Green/250",
-        "cssPrimitive": "var(--green-250)"
+        "alias": "Green/300",
+        "cssPrimitive": "var(--green-300)"
       },
       "default": {
         "alias": "Green/300",
@@ -458,8 +458,8 @@
     },
     "Background/Success/Hover": {
       "sunken": {
-        "alias": "Green/300",
-        "cssPrimitive": "var(--green-300)"
+        "alias": "Green/350",
+        "cssPrimitive": "var(--green-350)"
       },
       "default": {
         "alias": "Green/350",
@@ -476,18 +476,18 @@
         "cssPrimitive": "var(--green-100)"
       },
       "default": {
-        "alias": "Green/150",
-        "cssPrimitive": "var(--green-150)"
+        "alias": "Green/100",
+        "cssPrimitive": "var(--green-100)"
       },
       "raised": {
-        "alias": "Green/200",
-        "cssPrimitive": "var(--green-200)"
+        "alias": "Green/150",
+        "cssPrimitive": "var(--green-150)"
       }
     },
     "Background/Warning/Default": {
       "sunken": {
-        "alias": "Yellow/250",
-        "cssPrimitive": "var(--yellow-250)"
+        "alias": "Yellow/300",
+        "cssPrimitive": "var(--yellow-300)"
       },
       "default": {
         "alias": "Yellow/300",
@@ -500,8 +500,8 @@
     },
     "Background/Warning/Hover": {
       "sunken": {
-        "alias": "Yellow/300",
-        "cssPrimitive": "var(--yellow-300)"
+        "alias": "Yellow/350",
+        "cssPrimitive": "var(--yellow-350)"
       },
       "default": {
         "alias": "Yellow/350",
@@ -518,26 +518,26 @@
         "cssPrimitive": "var(--yellow-100)"
       },
       "default": {
-        "alias": "Yellow/150",
-        "cssPrimitive": "var(--yellow-150)"
+        "alias": "Yellow/100",
+        "cssPrimitive": "var(--yellow-100)"
       },
       "raised": {
-        "alias": "Yellow/200",
-        "cssPrimitive": "var(--yellow-200)"
+        "alias": "Yellow/150",
+        "cssPrimitive": "var(--yellow-150)"
       }
     },
     "Background/Tertiary/Hover": {
       "sunken": {
-        "alias": "Gray/50",
-        "cssPrimitive": "var(--gray-50)"
+        "alias": "Gray/100",
+        "cssPrimitive": "var(--gray-100)"
       },
       "default": {
         "alias": "Gray/100",
         "cssPrimitive": "var(--gray-100)"
       },
       "raised": {
-        "alias": "Gray/150",
-        "cssPrimitive": "var(--gray-150)"
+        "alias": "Gray/100",
+        "cssPrimitive": "var(--gray-100)"
       }
     },
     "Background/Tertiary/Disabled": {
@@ -546,32 +546,18 @@
         "cssPrimitive": "var(--gray-25)"
       },
       "default": {
-        "alias": "Gray/50",
-        "cssPrimitive": "var(--gray-50)"
+        "alias": "Gray/25",
+        "cssPrimitive": "var(--gray-25)"
       },
       "raised": {
-        "alias": "Gray/100",
-        "cssPrimitive": "var(--gray-100)"
+        "alias": "Gray/25",
+        "cssPrimitive": "var(--gray-25)"
       }
     },
     "Typography/Danger/Primary/Default": {
       "sunken": {
-        "alias": "Red/600",
-        "cssPrimitive": "var(--red-600)"
-      },
-      "default": {
-        "alias": "Red/650",
-        "cssPrimitive": "var(--red-650)"
-      },
-      "raised": {
         "alias": "Red/700",
         "cssPrimitive": "var(--red-700)"
-      }
-    },
-    "Typography/Danger/Primary/Hover": {
-      "sunken": {
-        "alias": "Red/650",
-        "cssPrimitive": "var(--red-650)"
       },
       "default": {
         "alias": "Red/700",
@@ -582,38 +568,38 @@
         "cssPrimitive": "var(--red-750)"
       }
     },
+    "Typography/Danger/Primary/Hover": {
+      "sunken": {
+        "alias": "Red/750",
+        "cssPrimitive": "var(--red-750)"
+      },
+      "default": {
+        "alias": "Red/750",
+        "cssPrimitive": "var(--red-750)"
+      },
+      "raised": {
+        "alias": "Red/800",
+        "cssPrimitive": "var(--red-800)"
+      }
+    },
     "Typography/Danger/Primary/Disabled": {
       "sunken": {
         "alias": "Red/250",
         "cssPrimitive": "var(--red-250)"
       },
       "default": {
-        "alias": "Red/300",
-        "cssPrimitive": "var(--red-300)"
+        "alias": "Red/250",
+        "cssPrimitive": "var(--red-250)"
       },
       "raised": {
-        "alias": "Red/350",
-        "cssPrimitive": "var(--red-350)"
+        "alias": "Red/300",
+        "cssPrimitive": "var(--red-300)"
       }
     },
     "Typography/Danger/Secondary/Default": {
       "sunken": {
-        "alias": "Red/450",
-        "cssPrimitive": "var(--red-450)"
-      },
-      "default": {
-        "alias": "Red/500",
-        "cssPrimitive": "var(--red-500)"
-      },
-      "raised": {
         "alias": "Red/550",
         "cssPrimitive": "var(--red-550)"
-      }
-    },
-    "Typography/Danger/Secondary/Hover": {
-      "sunken": {
-        "alias": "Red/500",
-        "cssPrimitive": "var(--red-500)"
       },
       "default": {
         "alias": "Red/550",
@@ -624,38 +610,38 @@
         "cssPrimitive": "var(--red-600)"
       }
     },
+    "Typography/Danger/Secondary/Hover": {
+      "sunken": {
+        "alias": "Red/600",
+        "cssPrimitive": "var(--red-600)"
+      },
+      "default": {
+        "alias": "Red/600",
+        "cssPrimitive": "var(--red-600)"
+      },
+      "raised": {
+        "alias": "Red/650",
+        "cssPrimitive": "var(--red-650)"
+      }
+    },
     "Typography/Danger/Secondary/Disabled": {
       "sunken": {
         "alias": "Red/250",
         "cssPrimitive": "var(--red-250)"
       },
       "default": {
-        "alias": "Red/300",
-        "cssPrimitive": "var(--red-300)"
+        "alias": "Red/250",
+        "cssPrimitive": "var(--red-250)"
       },
       "raised": {
-        "alias": "Red/350",
-        "cssPrimitive": "var(--red-350)"
+        "alias": "Red/300",
+        "cssPrimitive": "var(--red-300)"
       }
     },
     "Typography/Success/Primary/Default": {
       "sunken": {
-        "alias": "Green/600",
-        "cssPrimitive": "var(--green-600)"
-      },
-      "default": {
-        "alias": "Green/650",
-        "cssPrimitive": "var(--green-650)"
-      },
-      "raised": {
         "alias": "Green/700",
         "cssPrimitive": "var(--green-700)"
-      }
-    },
-    "Typography/Success/Primary/Hover": {
-      "sunken": {
-        "alias": "Green/650",
-        "cssPrimitive": "var(--green-650)"
       },
       "default": {
         "alias": "Green/700",
@@ -666,38 +652,38 @@
         "cssPrimitive": "var(--green-750)"
       }
     },
+    "Typography/Success/Primary/Hover": {
+      "sunken": {
+        "alias": "Green/750",
+        "cssPrimitive": "var(--green-750)"
+      },
+      "default": {
+        "alias": "Green/750",
+        "cssPrimitive": "var(--green-750)"
+      },
+      "raised": {
+        "alias": "Green/800",
+        "cssPrimitive": "var(--green-800)"
+      }
+    },
     "Typography/Success/Primary/Disabled": {
       "sunken": {
         "alias": "Green/250",
         "cssPrimitive": "var(--green-250)"
       },
       "default": {
-        "alias": "Green/300",
-        "cssPrimitive": "var(--green-300)"
+        "alias": "Green/250",
+        "cssPrimitive": "var(--green-250)"
       },
       "raised": {
-        "alias": "Green/350",
-        "cssPrimitive": "var(--green-350)"
+        "alias": "Green/300",
+        "cssPrimitive": "var(--green-300)"
       }
     },
     "Typography/Success/Secondary/Default": {
       "sunken": {
-        "alias": "Green/450",
-        "cssPrimitive": "var(--green-450)"
-      },
-      "default": {
-        "alias": "Green/500",
-        "cssPrimitive": "var(--green-500)"
-      },
-      "raised": {
         "alias": "Green/550",
         "cssPrimitive": "var(--green-550)"
-      }
-    },
-    "Typography/Success/Secondary/Hover": {
-      "sunken": {
-        "alias": "Green/500",
-        "cssPrimitive": "var(--green-500)"
       },
       "default": {
         "alias": "Green/550",
@@ -708,38 +694,38 @@
         "cssPrimitive": "var(--green-600)"
       }
     },
+    "Typography/Success/Secondary/Hover": {
+      "sunken": {
+        "alias": "Green/550",
+        "cssPrimitive": "var(--green-550)"
+      },
+      "default": {
+        "alias": "Green/600",
+        "cssPrimitive": "var(--green-600)"
+      },
+      "raised": {
+        "alias": "Green/650",
+        "cssPrimitive": "var(--green-650)"
+      }
+    },
     "Typography/Success/Secondary/Disabled": {
       "sunken": {
         "alias": "Green/250",
         "cssPrimitive": "var(--green-250)"
       },
       "default": {
-        "alias": "Green/300",
-        "cssPrimitive": "var(--green-300)"
+        "alias": "Green/250",
+        "cssPrimitive": "var(--green-250)"
       },
       "raised": {
-        "alias": "Green/350",
-        "cssPrimitive": "var(--green-350)"
+        "alias": "Green/300",
+        "cssPrimitive": "var(--green-300)"
       }
     },
     "Typography/Warning/Primary/Default": {
       "sunken": {
-        "alias": "Yellow/600",
-        "cssPrimitive": "var(--yellow-600)"
-      },
-      "default": {
-        "alias": "Yellow/650",
-        "cssPrimitive": "var(--yellow-650)"
-      },
-      "raised": {
         "alias": "Yellow/700",
         "cssPrimitive": "var(--yellow-700)"
-      }
-    },
-    "Typography/Warning/Primary/Hover": {
-      "sunken": {
-        "alias": "Yellow/650",
-        "cssPrimitive": "var(--yellow-650)"
       },
       "default": {
         "alias": "Yellow/700",
@@ -750,14 +736,28 @@
         "cssPrimitive": "var(--yellow-750)"
       }
     },
+    "Typography/Warning/Primary/Hover": {
+      "sunken": {
+        "alias": "Yellow/750",
+        "cssPrimitive": "var(--yellow-750)"
+      },
+      "default": {
+        "alias": "Yellow/750",
+        "cssPrimitive": "var(--yellow-750)"
+      },
+      "raised": {
+        "alias": "Yellow/800",
+        "cssPrimitive": "var(--yellow-800)"
+      }
+    },
     "Typography/Warning/Primary/Disabled": {
       "sunken": {
         "alias": "Yellow/250",
         "cssPrimitive": "var(--yellow-250)"
       },
       "default": {
-        "alias": "Yellow/300",
-        "cssPrimitive": "var(--yellow-300)"
+        "alias": "Yellow/250",
+        "cssPrimitive": "var(--yellow-250)"
       },
       "raised": {
         "alias": "Yellow/350",
@@ -766,22 +766,8 @@
     },
     "Typography/Warning/Secondary/Default": {
       "sunken": {
-        "alias": "Yellow/450",
-        "cssPrimitive": "var(--yellow-450)"
-      },
-      "default": {
-        "alias": "Yellow/500",
-        "cssPrimitive": "var(--yellow-500)"
-      },
-      "raised": {
         "alias": "Yellow/550",
         "cssPrimitive": "var(--yellow-550)"
-      }
-    },
-    "Typography/Warning/Secondary/Hover": {
-      "sunken": {
-        "alias": "Yellow/500",
-        "cssPrimitive": "var(--yellow-500)"
       },
       "default": {
         "alias": "Yellow/550",
@@ -792,18 +778,32 @@
         "cssPrimitive": "var(--yellow-600)"
       }
     },
+    "Typography/Warning/Secondary/Hover": {
+      "sunken": {
+        "alias": "Yellow/550",
+        "cssPrimitive": "var(--yellow-550)"
+      },
+      "default": {
+        "alias": "Yellow/550",
+        "cssPrimitive": "var(--yellow-550)"
+      },
+      "raised": {
+        "alias": "Yellow/650",
+        "cssPrimitive": "var(--yellow-650)"
+      }
+    },
     "Typography/Warning/Secondary/Disabled": {
       "sunken": {
         "alias": "Yellow/250",
         "cssPrimitive": "var(--yellow-250)"
       },
       "default": {
-        "alias": "Yellow/300",
-        "cssPrimitive": "var(--yellow-300)"
+        "alias": "Yellow/250",
+        "cssPrimitive": "var(--yellow-250)"
       },
       "raised": {
-        "alias": "Yellow/350",
-        "cssPrimitive": "var(--yellow-350)"
+        "alias": "Yellow/300",
+        "cssPrimitive": "var(--yellow-300)"
       }
     },
     "Background/Background": {
@@ -812,12 +812,12 @@
         "cssPrimitive": "var(--gray-25)"
       },
       "default": {
-        "alias": "Gray/50",
-        "cssPrimitive": "var(--gray-50)"
+        "alias": "Gray/25",
+        "cssPrimitive": "var(--gray-25)"
       },
       "raised": {
-        "alias": "Gray/100",
-        "cssPrimitive": "var(--gray-100)"
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
       }
     },
     "Border/Default": {
@@ -826,12 +826,12 @@
         "cssPrimitive": "var(--gray-100)"
       },
       "default": {
-        "alias": "Gray/150",
-        "cssPrimitive": "var(--gray-150)"
+        "alias": "Gray/100",
+        "cssPrimitive": "var(--gray-100)"
       },
       "raised": {
-        "alias": "Gray/200",
-        "cssPrimitive": "var(--gray-200)"
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
       }
     },
     "Border/Hover": {
@@ -840,12 +840,12 @@
         "cssPrimitive": "var(--gray-150)"
       },
       "default": {
-        "alias": "Gray/200",
-        "cssPrimitive": "var(--gray-200)"
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
       },
       "raised": {
-        "alias": "Gray/250",
-        "cssPrimitive": "var(--gray-250)"
+        "alias": "Gray/200",
+        "cssPrimitive": "var(--gray-200)"
       }
     },
     "Border/Danger": {
@@ -854,12 +854,12 @@
         "cssPrimitive": "var(--red-400)"
       },
       "default": {
-        "alias": "Red/450",
-        "cssPrimitive": "var(--red-450)"
+        "alias": "Red/400",
+        "cssPrimitive": "var(--red-400)"
       },
       "raised": {
-        "alias": "Red/500",
-        "cssPrimitive": "var(--red-500)"
+        "alias": "Red/450",
+        "cssPrimitive": "var(--red-450)"
       }
     },
     "Border/Warning": {
@@ -868,12 +868,12 @@
         "cssPrimitive": "var(--yellow-400)"
       },
       "default": {
-        "alias": "Yellow/450",
-        "cssPrimitive": "var(--yellow-450)"
+        "alias": "Yellow/400",
+        "cssPrimitive": "var(--yellow-400)"
       },
       "raised": {
-        "alias": "Yellow/500",
-        "cssPrimitive": "var(--yellow-500)"
+        "alias": "Yellow/450",
+        "cssPrimitive": "var(--yellow-450)"
       }
     },
     "Border/Success": {
@@ -882,12 +882,12 @@
         "cssPrimitive": "var(--green-400)"
       },
       "default": {
-        "alias": "Green/450",
-        "cssPrimitive": "var(--green-450)"
+        "alias": "Green/400",
+        "cssPrimitive": "var(--green-400)"
       },
       "raised": {
-        "alias": "Green/500",
-        "cssPrimitive": "var(--green-500)"
+        "alias": "Green/450",
+        "cssPrimitive": "var(--green-450)"
       }
     },
     "Border/Brand": {
@@ -906,30 +906,30 @@
     },
     "Icons/Brand/Default": {
       "sunken": {
-        "alias": "Gray/950",
-        "cssPrimitive": "var(--gray-950)"
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
       },
       "default": {
-        "alias": "Gray/950",
-        "cssPrimitive": "var(--gray-950)"
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
       },
       "raised": {
-        "alias": "Gray/950",
-        "cssPrimitive": "var(--gray-950)"
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
       }
     },
     "Icons/Brand/Hover": {
       "sunken": {
-        "alias": "Gray/1000",
-        "cssPrimitive": "var(--gray-1000)"
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
       },
       "default": {
-        "alias": "Gray/1000",
-        "cssPrimitive": "var(--gray-1000)"
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
       },
       "raised": {
-        "alias": "Gray/1000",
-        "cssPrimitive": "var(--gray-1000)"
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
       }
     },
     "Icons/Brand/Disabled": {
@@ -948,12 +948,12 @@
     },
     "Icons/White Bg/Default": {
       "sunken": {
-        "alias": "Gray/500",
-        "cssPrimitive": "var(--gray-500)"
+        "alias": "Gray/400",
+        "cssPrimitive": "var(--gray-400)"
       },
       "default": {
-        "alias": "Gray/550",
-        "cssPrimitive": "var(--gray-550)"
+        "alias": "Gray/500",
+        "cssPrimitive": "var(--gray-500)"
       },
       "raised": {
         "alias": "Gray/600",
@@ -998,8 +998,8 @@
         "cssPrimitive": "var(--gray-500)"
       },
       "raised": {
-        "alias": "Gray/500",
-        "cssPrimitive": "var(--gray-500)"
+        "alias": "Gray/550",
+        "cssPrimitive": "var(--gray-550)"
       }
     },
     "Blur/Background/Default": {
@@ -1060,12 +1060,12 @@
         "cssPrimitive": "var(--gray-250)"
       },
       "default": {
-        "alias": "Gray/300",
-        "cssPrimitive": "var(--gray-300)"
+        "alias": "Gray/250",
+        "cssPrimitive": "var(--gray-250)"
       },
       "raised": {
-        "alias": "Gray/350",
-        "cssPrimitive": "var(--gray-350)"
+        "alias": "Gray/300",
+        "cssPrimitive": "var(--gray-300)"
       }
     },
     "Icons/Danger/Default": {

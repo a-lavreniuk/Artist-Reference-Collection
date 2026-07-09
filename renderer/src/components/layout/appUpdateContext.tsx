@@ -1,21 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReleaseNotesModal, { type ReleaseNotesData } from './ReleaseNotesModal';
 import UpdateAvailableModal, { type UpdateModalPhase } from './UpdateAvailableModal';
-
-type AppUpdateContextValue = {
-  previewReleaseNotes: (data: ReleaseNotesData) => void;
-};
-
-const AppUpdateContext = createContext<AppUpdateContextValue | null>(null);
-
-export function useAppUpdate(): AppUpdateContextValue {
-  const ctx = useContext(AppUpdateContext);
-  if (!ctx) {
-    throw new Error('useAppUpdate must be used within AppUpdateProvider');
-  }
-  return ctx;
-}
 
 export function AppUpdateProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -23,7 +9,6 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
   const [updatePhase, setUpdatePhase] = useState<UpdateModalPhase>('prompt');
   const [downloadPercent, setDownloadPercent] = useState<number | null>(null);
   const [releaseNotes, setReleaseNotes] = useState<ReleaseNotesData | null>(null);
-  const [releaseNotesPreview, setReleaseNotesPreview] = useState(false);
   const pendingUpdateVersionRef = useRef<string | null>(null);
   const releaseNotesRef = useRef<ReleaseNotesData | null>(null);
   const changelogResolvedRef = useRef(false);
@@ -48,34 +33,27 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
   const closeReleaseNotes = useCallback(async () => {
     if (!releaseNotes) return;
 
-    if (!releaseNotesPreview && window.arc?.setLastSeenReleaseVersion) {
+    if (window.arc?.setLastSeenReleaseVersion) {
       await window.arc.setLastSeenReleaseVersion(releaseNotes.version);
     }
 
     setReleaseNotes(null);
-    setReleaseNotesPreview(false);
     tryFlushPendingUpdate();
-  }, [releaseNotes, releaseNotesPreview, tryFlushPendingUpdate]);
-
-  const previewReleaseNotes = useCallback((data: ReleaseNotesData) => {
-    setReleaseNotesPreview(true);
-    setReleaseNotes(data);
-  }, []);
+  }, [releaseNotes, tryFlushPendingUpdate]);
 
   const openReleaseNotesDetails = useCallback(async () => {
     if (!releaseNotes) return;
 
     const version = releaseNotes.version;
 
-    if (!releaseNotesPreview && window.arc?.setLastSeenReleaseVersion) {
+    if (window.arc?.setLastSeenReleaseVersion) {
       await window.arc.setLastSeenReleaseVersion(version);
     }
 
     setReleaseNotes(null);
-    setReleaseNotesPreview(false);
     navigate('/settings/updates', { state: { releaseNotesVersion: version } });
     tryFlushPendingUpdate();
-  }, [releaseNotes, releaseNotesPreview, navigate, tryFlushPendingUpdate]);
+  }, [releaseNotes, navigate, tryFlushPendingUpdate]);
 
   useEffect(() => {
     const arc = window.arc;
@@ -112,7 +90,6 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setReleaseNotesPreview(false);
       setReleaseNotes({
         version,
         buildDate: notes.buildDate,
@@ -176,7 +153,7 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AppUpdateContext.Provider value={{ previewReleaseNotes }}>
+    <>
       {children}
       {releaseNotes ? (
         <ReleaseNotesModal
@@ -194,6 +171,6 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
           onLater={handleLater}
         />
       ) : null}
-    </AppUpdateContext.Provider>
+    </>
   );
 }

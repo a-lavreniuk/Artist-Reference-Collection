@@ -152,7 +152,7 @@ export default function TopNavbar() {
               onClick={openImportPicker}
               data-interface-tour-anchor="navbar-add"
             >
-              Добавить
+              <span className="btn-ds__value">Добавить</span>
             </button>
             <NavbarMenu />
           </div>

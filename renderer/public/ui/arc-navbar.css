@@ -64,6 +64,13 @@ body::-webkit-scrollbar {
   --icons-danger-disabled: var(--red-900);
 }
 
+html[data-theme="light"] .arc-topbar {
+  background: var(--gray-150);
+  --icons-white-default: var(--icons-black-bg-default, var(--gray-550));
+  --icons-white-hover: var(--icons-black-bg-hover, var(--gray-950));
+  --icons-white-disabled: var(--icons-black-bg-disabled, var(--gray-300));
+}
+
 .arc-topbar__steps,
 .arc-topbar__window {
   display: flex;
@@ -174,6 +181,12 @@ body::-webkit-scrollbar {
   box-shadow:
     inset 0 -1px 0 var(--gray-800),
     inset 0 -8px 16px color-mix(in srgb, var(--gray-50) 4%, transparent);
+}
+
+html[data-theme="light"] .arc-navbar-island {
+  box-shadow:
+    inset 0 -1px 0 var(--gray-150),
+    inset 0 8px 16px #fff;
 }
 
 .arc-navbar-island--nav {
@@ -829,6 +842,10 @@ body::-webkit-scrollbar {
   filter: drop-shadow(0 var(--s-1) var(--s-2) rgba(0, 0, 0, 0.32));
 }
 
+html[data-theme="light"] .context-menu__filter-row-ghost .context-menu__filter-row-inner {
+  filter: drop-shadow(0 var(--s-1) var(--s-2) rgba(0, 0, 0, 0.06));
+}
+
 .context-menu__preset-list {
   display: flex;
   flex-direction: column;
@@ -1025,6 +1042,10 @@ body::-webkit-scrollbar {
   z-index: 1;
   pointer-events: none;
   background: linear-gradient(180deg, #000 0%, transparent 100%);
+}
+
+html[data-theme="light"] .arc-navbar-shade__tint {
+  background: linear-gradient(180deg, var(--shade-tint-from, var(--app-bg)) 0%, transparent 100%);
 }
 
 

@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-06-02T20:04:50.491Z",
+  "exportedAt": "2026-07-09T07:30:51.691Z",
   "collection": "Colors",
   "fileKey": "JD3pZdlV4Sz62creRMQsJV",
   "modes": {
@@ -8,306 +8,1192 @@
     "raised": "Dark / Raised"
   },
   "variables": {
-    "Background/Background": {
-      "sunken": { "alias": "Gray/1000", "cssPrimitive": "var(--gray-1000)" },
-      "default": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" },
-      "raised": { "alias": "Gray/900", "cssPrimitive": "var(--gray-900)" }
+    "Typography/Brand/Primary/Default": {
+      "sunken": {
+        "alias": "Brand/950",
+        "cssPrimitive": "var(--brand-950)"
+      },
+      "default": {
+        "alias": "Brand/950",
+        "cssPrimitive": "var(--brand-950)"
+      },
+      "raised": {
+        "alias": "Brand/950",
+        "cssPrimitive": "var(--brand-950)"
+      }
     },
-    "Border/Default": {
-      "sunken": { "alias": "Gray/900", "cssPrimitive": "var(--gray-900)" },
-      "default": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" },
-      "raised": { "alias": "Gray/800", "cssPrimitive": "var(--gray-800)" }
-    },
-    "Typography/Black Bg/Primary/Default": {
-      "sunken": { "alias": "Gray/300", "cssPrimitive": "var(--gray-300)" },
-      "default": { "alias": "Gray/250", "cssPrimitive": "var(--gray-250)" },
-      "raised": { "alias": "Gray/200", "cssPrimitive": "var(--gray-200)" }
-    },
-    "Typography/Black Bg/Primary/Hover": {
-      "sunken": { "alias": "Gray/50", "cssPrimitive": "var(--gray-50)" },
-      "default": { "alias": "Gray/50", "cssPrimitive": "var(--gray-50)" },
-      "raised": { "alias": "Gray/50", "cssPrimitive": "var(--gray-50)" }
-    },
-    "Typography/Black Bg/Primary/Disabled": {
-      "sunken": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" },
-      "default": { "alias": "Gray/800", "cssPrimitive": "var(--gray-800)" },
-      "raised": { "alias": "Gray/750", "cssPrimitive": "var(--gray-750)" }
-    },
-    "Typography/Black Bg/Secondary/Default": {
-      "sunken": { "alias": "Gray/650", "cssPrimitive": "var(--gray-650)" },
-      "default": { "alias": "Gray/600", "cssPrimitive": "var(--gray-600)" },
-      "raised": { "alias": "Gray/550", "cssPrimitive": "var(--gray-550)" }
-    },
-    "Typography/Black Bg/Secondary/Hover": {
-      "sunken": { "alias": "Gray/650", "cssPrimitive": "var(--gray-650)" },
-      "default": { "alias": "Gray/600", "cssPrimitive": "var(--gray-600)" },
-      "raised": { "alias": "Gray/550", "cssPrimitive": "var(--gray-550)" }
-    },
-    "Typography/Black Bg/Secondary/Disabled": {
-      "sunken": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" },
-      "default": { "alias": "Gray/800", "cssPrimitive": "var(--gray-800)" },
-      "raised": { "alias": "Gray/750", "cssPrimitive": "var(--gray-750)" }
-    },
-    "Background/Tertiary/Default": {
-      "sunken": { "alias": "Gray/1000", "cssPrimitive": "var(--gray-1000)" },
-      "default": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" },
-      "raised": { "alias": "Gray/900", "cssPrimitive": "var(--gray-900)" }
-    },
-    "Background/Tertiary/Hover": {
-      "sunken": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" },
-      "default": { "alias": "Gray/900", "cssPrimitive": "var(--gray-900)" },
-      "raised": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" }
-    },
-    "Background/Tertiary/Disabled": {
-      "sunken": { "alias": "Gray/1000", "cssPrimitive": "var(--gray-1000)" },
-      "default": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" },
-      "raised": { "alias": "Gray/900", "cssPrimitive": "var(--gray-900)" }
-    },
-    "Background/Secondary/Default": {
-      "sunken": { "alias": "Gray/900", "cssPrimitive": "var(--gray-900)" },
-      "default": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" },
-      "raised": { "alias": "Gray/800", "cssPrimitive": "var(--gray-800)" }
-    },
-    "Background/Secondary/Hover": {
-      "sunken": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" },
-      "default": { "alias": "Gray/800", "cssPrimitive": "var(--gray-800)" },
-      "raised": { "alias": "Gray/750", "cssPrimitive": "var(--gray-750)" }
-    },
-    "Background/Primary/Disabled": {
-      "sunken": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" },
-      "default": { "alias": "Gray/900", "cssPrimitive": "var(--gray-900)" },
-      "raised": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" }
-    },
-    "Background/Brand/Disabled": {
-      "sunken": { "alias": "Brand/950", "cssPrimitive": "var(--brand-950)" },
-      "default": { "alias": "Brand/900", "cssPrimitive": "var(--brand-900)" },
-      "raised": { "alias": "Brand/850", "cssPrimitive": "var(--brand-850)" }
-    },
-    "Background/Danger/Default": {
-      "sunken": { "alias": "Red/950", "cssPrimitive": "var(--red-950)" },
-      "default": { "alias": "Red/900", "cssPrimitive": "var(--red-900)" },
-      "raised": { "alias": "Red/850", "cssPrimitive": "var(--red-850)" }
-    },
-    "Background/Danger/Hover": {
-      "sunken": { "alias": "Red/900", "cssPrimitive": "var(--red-900)" },
-      "default": { "alias": "Red/850", "cssPrimitive": "var(--red-850)" },
-      "raised": { "alias": "Red/800", "cssPrimitive": "var(--red-800)" }
-    },
-    "Background/Danger/Disabled": {
-      "sunken": { "alias": "Red/1000", "cssPrimitive": "var(--red-1000)" },
-      "default": { "alias": "Red/950", "cssPrimitive": "var(--red-950)" },
-      "raised": { "alias": "Red/900", "cssPrimitive": "var(--red-900)" }
-    },
-    "Background/Success/Default": {
-      "sunken": { "alias": "Green/950", "cssPrimitive": "var(--green-950)" },
-      "default": { "alias": "Green/900", "cssPrimitive": "var(--green-900)" },
-      "raised": { "alias": "Green/850", "cssPrimitive": "var(--green-850)" }
-    },
-    "Background/Success/Hover": {
-      "sunken": { "alias": "Green/900", "cssPrimitive": "var(--green-900)" },
-      "default": { "alias": "Green/850", "cssPrimitive": "var(--green-850)" },
-      "raised": { "alias": "Green/800", "cssPrimitive": "var(--green-800)" }
-    },
-    "Background/Success/Disabled": {
-      "sunken": { "alias": "Green/1000", "cssPrimitive": "var(--green-1000)" },
-      "default": { "alias": "Green/950", "cssPrimitive": "var(--green-950)" },
-      "raised": { "alias": "Green/900", "cssPrimitive": "var(--green-900)" }
-    },
-    "Background/Warning/Default": {
-      "sunken": { "alias": "Yellow/950", "cssPrimitive": "var(--yellow-950)" },
-      "default": { "alias": "Yellow/900", "cssPrimitive": "var(--yellow-900)" },
-      "raised": { "alias": "Yellow/850", "cssPrimitive": "var(--yellow-850)" }
-    },
-    "Background/Warning/Hover": {
-      "sunken": { "alias": "Yellow/900", "cssPrimitive": "var(--yellow-900)" },
-      "default": { "alias": "Yellow/850", "cssPrimitive": "var(--yellow-850)" },
-      "raised": { "alias": "Yellow/800", "cssPrimitive": "var(--yellow-800)" }
-    },
-    "Background/Warning/Disabled": {
-      "sunken": { "alias": "Yellow/1000", "cssPrimitive": "var(--yellow-1000)" },
-      "default": { "alias": "Yellow/950", "cssPrimitive": "var(--yellow-950)" },
-      "raised": { "alias": "Yellow/900", "cssPrimitive": "var(--yellow-900)" }
-    },
-    "Border/Danger": {
-      "sunken": { "alias": "Red/900", "cssPrimitive": "var(--red-900)" },
-      "default": { "alias": "Red/850", "cssPrimitive": "var(--red-850)" },
-      "raised": { "alias": "Red/800", "cssPrimitive": "var(--red-800)" }
-    },
-    "Icons/Black Bg/Default": {
-      "sunken": { "alias": "Gray/600", "cssPrimitive": "var(--gray-600)" },
-      "default": { "alias": "Gray/550", "cssPrimitive": "var(--gray-550)" },
-      "raised": { "alias": "Gray/500", "cssPrimitive": "var(--gray-500)" }
-    },
-    "Icons/Black Bg/Hover": {
-      "sunken": { "alias": "Gray/50", "cssPrimitive": "var(--gray-50)" },
-      "default": { "alias": "Gray/50", "cssPrimitive": "var(--gray-50)" },
-      "raised": { "alias": "Gray/50", "cssPrimitive": "var(--gray-50)" }
-    },
-    "Icons/Black Bg/Disabled": {
-      "sunken": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" },
-      "default": { "alias": "Gray/800", "cssPrimitive": "var(--gray-800)" },
-      "raised": { "alias": "Gray/750", "cssPrimitive": "var(--gray-750)" }
-    },
-    "Typography/Danger/Primary/Default": {
-      "sunken": { "alias": "Red/650", "cssPrimitive": "var(--red-650)" },
-      "default": { "alias": "Red/600", "cssPrimitive": "var(--red-600)" },
-      "raised": { "alias": "Red/550", "cssPrimitive": "var(--red-550)" }
-    },
-    "Typography/Danger/Primary/Hover": {
-      "sunken": { "alias": "Red/600", "cssPrimitive": "var(--red-600)" },
-      "default": { "alias": "Red/550", "cssPrimitive": "var(--red-550)" },
-      "raised": { "alias": "Red/500", "cssPrimitive": "var(--red-500)" }
-    },
-    "Typography/Danger/Primary/Disabled": {
-      "sunken": { "alias": "Red/900", "cssPrimitive": "var(--red-900)" },
-      "default": { "alias": "Red/850", "cssPrimitive": "var(--red-850)" },
-      "raised": { "alias": "Red/800", "cssPrimitive": "var(--red-800)" }
-    },
-    "Typography/Danger/Secondary/Default": {
-      "sunken": { "alias": "Red/800", "cssPrimitive": "var(--red-800)" },
-      "default": { "alias": "Red/750", "cssPrimitive": "var(--red-750)" },
-      "raised": { "alias": "Red/700", "cssPrimitive": "var(--red-700)" }
-    },
-    "Typography/Danger/Secondary/Hover": {
-      "sunken": { "alias": "Red/750", "cssPrimitive": "var(--red-750)" },
-      "default": { "alias": "Red/700", "cssPrimitive": "var(--red-700)" },
-      "raised": { "alias": "Red/650", "cssPrimitive": "var(--red-650)" }
-    },
-    "Typography/Danger/Secondary/Disabled": {
-      "sunken": { "alias": "Red/900", "cssPrimitive": "var(--red-900)" },
-      "default": { "alias": "Red/850", "cssPrimitive": "var(--red-850)" },
-      "raised": { "alias": "Red/800", "cssPrimitive": "var(--red-800)" }
-    },
-    "Icons/Danger/Default": {
-      "sunken": { "alias": "Red/750", "cssPrimitive": "var(--red-750)" },
-      "default": { "alias": "Red/700", "cssPrimitive": "var(--red-700)" },
-      "raised": { "alias": "Red/650", "cssPrimitive": "var(--red-650)" }
-    },
-    "Icons/Danger/Hover": {
-      "sunken": { "alias": "Red/600", "cssPrimitive": "var(--red-600)" },
-      "default": { "alias": "Red/550", "cssPrimitive": "var(--red-550)" },
-      "raised": { "alias": "Red/500", "cssPrimitive": "var(--red-500)" }
-    },
-    "Icons/Danger/Disabled": {
-      "sunken": { "alias": "Red/900", "cssPrimitive": "var(--red-900)" },
-      "default": { "alias": "Red/850", "cssPrimitive": "var(--red-850)" },
-      "raised": { "alias": "Red/800", "cssPrimitive": "var(--red-800)" }
-    },
-    "Typography/Success/Primary/Default": {
-      "sunken": { "alias": "Green/650", "cssPrimitive": "var(--green-650)" },
-      "default": { "alias": "Green/600", "cssPrimitive": "var(--green-600)" },
-      "raised": { "alias": "Green/550", "cssPrimitive": "var(--green-550)" }
-    },
-    "Typography/Success/Primary/Hover": {
-      "sunken": { "alias": "Green/600", "cssPrimitive": "var(--green-600)" },
-      "default": { "alias": "Green/550", "cssPrimitive": "var(--green-550)" },
-      "raised": { "alias": "Green/500", "cssPrimitive": "var(--green-500)" }
-    },
-    "Typography/Success/Primary/Disabled": {
-      "sunken": { "alias": "Green/900", "cssPrimitive": "var(--green-900)" },
-      "default": { "alias": "Green/850", "cssPrimitive": "var(--green-850)" },
-      "raised": { "alias": "Green/800", "cssPrimitive": "var(--green-800)" }
-    },
-    "Typography/Success/Secondary/Default": {
-      "sunken": { "alias": "Green/800", "cssPrimitive": "var(--green-800)" },
-      "default": { "alias": "Green/750", "cssPrimitive": "var(--green-750)" },
-      "raised": { "alias": "Green/700", "cssPrimitive": "var(--green-700)" }
-    },
-    "Typography/Success/Secondary/Hover": {
-      "sunken": { "alias": "Green/700", "cssPrimitive": "var(--green-700)" },
-      "default": { "alias": "Green/650", "cssPrimitive": "var(--green-650)" },
-      "raised": { "alias": "Green/600", "cssPrimitive": "var(--green-600)" }
-    },
-    "Typography/Success/Secondary/Disabled": {
-      "sunken": { "alias": "Green/900", "cssPrimitive": "var(--green-900)" },
-      "default": { "alias": "Green/850", "cssPrimitive": "var(--green-850)" },
-      "raised": { "alias": "Green/800", "cssPrimitive": "var(--green-800)" }
-    },
-    "Icons/Success/Default": {
-      "sunken": { "alias": "Green/750", "cssPrimitive": "var(--green-750)" },
-      "default": { "alias": "Green/700", "cssPrimitive": "var(--green-700)" },
-      "raised": { "alias": "Green/650", "cssPrimitive": "var(--green-650)" }
-    },
-    "Icons/Success/Hover": {
-      "sunken": { "alias": "Green/600", "cssPrimitive": "var(--green-600)" },
-      "default": { "alias": "Green/550", "cssPrimitive": "var(--green-550)" },
-      "raised": { "alias": "Green/500", "cssPrimitive": "var(--green-500)" }
-    },
-    "Icons/Success/Disabled": {
-      "sunken": { "alias": "Green/950", "cssPrimitive": "var(--green-950)" },
-      "default": { "alias": "Green/900", "cssPrimitive": "var(--green-900)" },
-      "raised": { "alias": "Green/800", "cssPrimitive": "var(--green-800)" }
-    },
-    "Typography/Warning/Primary/Default": {
-      "sunken": { "alias": "Yellow/650", "cssPrimitive": "var(--yellow-650)" },
-      "default": { "alias": "Yellow/600", "cssPrimitive": "var(--yellow-600)" },
-      "raised": { "alias": "Yellow/550", "cssPrimitive": "var(--yellow-550)" }
-    },
-    "Typography/Warning/Primary/Hover": {
-      "sunken": { "alias": "Yellow/600", "cssPrimitive": "var(--yellow-600)" },
-      "default": { "alias": "Yellow/550", "cssPrimitive": "var(--yellow-550)" },
-      "raised": { "alias": "Yellow/500", "cssPrimitive": "var(--yellow-500)" }
-    },
-    "Typography/Warning/Primary/Disabled": {
-      "sunken": { "alias": "Yellow/900", "cssPrimitive": "var(--yellow-900)" },
-      "default": { "alias": "Yellow/850", "cssPrimitive": "var(--yellow-850)" },
-      "raised": { "alias": "Yellow/800", "cssPrimitive": "var(--yellow-800)" }
-    },
-    "Typography/Warning/Secondary/Default": {
-      "sunken": { "alias": "Yellow/800", "cssPrimitive": "var(--yellow-800)" },
-      "default": { "alias": "Yellow/750", "cssPrimitive": "var(--yellow-750)" },
-      "raised": { "alias": "Yellow/700", "cssPrimitive": "var(--yellow-700)" }
-    },
-    "Typography/Warning/Secondary/Hover": {
-      "sunken": { "alias": "Yellow/750", "cssPrimitive": "var(--yellow-750)" },
-      "default": { "alias": "Yellow/800", "cssPrimitive": "var(--yellow-800)" },
-      "raised": { "alias": "Yellow/750", "cssPrimitive": "var(--yellow-750)" }
-    },
-    "Typography/Warning/Secondary/Disabled": {
-      "sunken": { "alias": "Yellow/900", "cssPrimitive": "var(--yellow-900)" },
-      "default": { "alias": "Yellow/850", "cssPrimitive": "var(--yellow-850)" },
-      "raised": { "alias": "Yellow/800", "cssPrimitive": "var(--yellow-800)" }
-    },
-    "Icons/Warning/Default": {
-      "sunken": { "alias": "Yellow/750", "cssPrimitive": "var(--yellow-750)" },
-      "default": { "alias": "Yellow/700", "cssPrimitive": "var(--yellow-700)" },
-      "raised": { "alias": "Yellow/650", "cssPrimitive": "var(--yellow-650)" }
-    },
-    "Icons/Warning/Hover": {
-      "sunken": { "alias": "Yellow/600", "cssPrimitive": "var(--yellow-600)" },
-      "default": { "alias": "Yellow/550", "cssPrimitive": "var(--yellow-550)" },
-      "raised": { "alias": "Yellow/500", "cssPrimitive": "var(--yellow-500)" }
-    },
-    "Icons/Warning/Disabled": {
-      "sunken": { "alias": "Yellow/900", "cssPrimitive": "var(--yellow-900)" },
-      "default": { "alias": "Yellow/850", "cssPrimitive": "var(--yellow-850)" },
-      "raised": { "alias": "Yellow/800", "cssPrimitive": "var(--yellow-800)" }
-    },
-    "Typography/White Bg/Primary/Default": {
-      "sunken": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" },
-      "default": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" },
-      "raised": { "alias": "Gray/950", "cssPrimitive": "var(--gray-950)" }
-    },
-    "Typography/White Bg/Primary/Hover": {
-      "sunken": { "alias": "Gray/1000", "cssPrimitive": "var(--gray-1000)" },
-      "default": { "alias": "Gray/1000", "cssPrimitive": "var(--gray-1000)" },
-      "raised": { "alias": "Gray/1000", "cssPrimitive": "var(--gray-1000)" }
-    },
-    "Typography/White Bg/Primary/Disabled": {
-      "sunken": { "alias": "Gray/850", "cssPrimitive": "var(--gray-850)" },
-      "default": { "alias": "Gray/800", "cssPrimitive": "var(--gray-800)" },
-      "raised": { "alias": "Gray/750", "cssPrimitive": "var(--gray-750)" }
-    },
-    "Typography/White Bg/Secondary/Default": {
-      "sunken": { "alias": "Gray/450", "cssPrimitive": "var(--gray-450)" },
-      "default": { "alias": "Gray/450", "cssPrimitive": "var(--gray-450)" },
-      "raised": { "alias": "Gray/450", "cssPrimitive": "var(--gray-450)" }
+    "Typography/Brand/Primary/Hover": {
+      "sunken": {
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
+      },
+      "default": {
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
+      },
+      "raised": {
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
+      }
     },
     "Typography/Brand/Primary/Disabled": {
-      "sunken": { "alias": "Brand/850", "cssPrimitive": "var(--brand-850)" },
-      "default": { "alias": "Brand/800", "cssPrimitive": "var(--brand-800)" },
-      "raised": { "alias": "Brand/750", "cssPrimitive": "var(--brand-750)" }
+      "sunken": {
+        "alias": "Brand/850",
+        "cssPrimitive": "var(--brand-850)"
+      },
+      "default": {
+        "alias": "Brand/800",
+        "cssPrimitive": "var(--brand-800)"
+      },
+      "raised": {
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
+      }
+    },
+    "Typography/Brand/Secondary/Default": {
+      "sunken": {
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
+      },
+      "default": {
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
+      },
+      "raised": {
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
+      }
+    },
+    "Typography/Brand/Secondary/Hover": {
+      "sunken": {
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
+      },
+      "default": {
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
+      },
+      "raised": {
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
+      }
+    },
+    "Typography/Brand/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Brand/850",
+        "cssPrimitive": "var(--brand-850)"
+      },
+      "default": {
+        "alias": "Brand/800",
+        "cssPrimitive": "var(--brand-800)"
+      },
+      "raised": {
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
+      }
+    },
+    "Typography/White Bg/Primary/Default": {
+      "sunken": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "default": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "raised": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      }
+    },
+    "Typography/White Bg/Primary/Hover": {
+      "sunken": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      },
+      "default": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      },
+      "raised": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      }
+    },
+    "Typography/White Bg/Primary/Disabled": {
+      "sunken": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "default": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "raised": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      }
+    },
+    "Typography/White Bg/Secondary/Default": {
+      "sunken": {
+        "alias": "Gray/450",
+        "cssPrimitive": "var(--gray-450)"
+      },
+      "default": {
+        "alias": "Gray/450",
+        "cssPrimitive": "var(--gray-450)"
+      },
+      "raised": {
+        "alias": "Gray/450",
+        "cssPrimitive": "var(--gray-450)"
+      }
+    },
+    "Typography/White Bg/Secondary/Hover": {
+      "sunken": {
+        "alias": "Gray/450",
+        "cssPrimitive": "var(--gray-450)"
+      },
+      "default": {
+        "alias": "Gray/450",
+        "cssPrimitive": "var(--gray-450)"
+      },
+      "raised": {
+        "alias": "Gray/450",
+        "cssPrimitive": "var(--gray-450)"
+      }
+    },
+    "Typography/White Bg/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "default": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "raised": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      }
+    },
+    "Typography/Black Bg/Primary/Default": {
+      "sunken": {
+        "alias": "Gray/300",
+        "cssPrimitive": "var(--gray-300)"
+      },
+      "default": {
+        "alias": "Gray/250",
+        "cssPrimitive": "var(--gray-250)"
+      },
+      "raised": {
+        "alias": "Gray/200",
+        "cssPrimitive": "var(--gray-200)"
+      }
+    },
+    "Typography/Black Bg/Primary/Hover": {
+      "sunken": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "default": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "raised": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      }
+    },
+    "Typography/Black Bg/Primary/Disabled": {
+      "sunken": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "default": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "raised": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      }
+    },
+    "Typography/Black Bg/Secondary/Default": {
+      "sunken": {
+        "alias": "Gray/650",
+        "cssPrimitive": "var(--gray-650)"
+      },
+      "default": {
+        "alias": "Gray/600",
+        "cssPrimitive": "var(--gray-600)"
+      },
+      "raised": {
+        "alias": "Gray/550",
+        "cssPrimitive": "var(--gray-550)"
+      }
+    },
+    "Typography/Black Bg/Secondary/Hover": {
+      "sunken": {
+        "alias": "Gray/650",
+        "cssPrimitive": "var(--gray-650)"
+      },
+      "default": {
+        "alias": "Gray/600",
+        "cssPrimitive": "var(--gray-600)"
+      },
+      "raised": {
+        "alias": "Gray/550",
+        "cssPrimitive": "var(--gray-550)"
+      }
+    },
+    "Typography/Black Bg/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "default": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "raised": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      }
+    },
+    "Background/Brand/Default": {
+      "sunken": {
+        "alias": "Brand/450",
+        "cssPrimitive": "var(--brand-450)"
+      },
+      "default": {
+        "alias": "Brand/450",
+        "cssPrimitive": "var(--brand-450)"
+      },
+      "raised": {
+        "alias": "Brand/450",
+        "cssPrimitive": "var(--brand-450)"
+      }
+    },
+    "Background/Brand/Hover": {
+      "sunken": {
+        "alias": "Brand/500",
+        "cssPrimitive": "var(--brand-500)"
+      },
+      "default": {
+        "alias": "Brand/500",
+        "cssPrimitive": "var(--brand-500)"
+      },
+      "raised": {
+        "alias": "Brand/500",
+        "cssPrimitive": "var(--brand-500)"
+      }
+    },
+    "Background/Brand/Disabled": {
+      "sunken": {
+        "alias": "Brand/950",
+        "cssPrimitive": "var(--brand-950)"
+      },
+      "default": {
+        "alias": "Brand/900",
+        "cssPrimitive": "var(--brand-900)"
+      },
+      "raised": {
+        "alias": "Brand/850",
+        "cssPrimitive": "var(--brand-850)"
+      }
+    },
+    "Background/Primary/Default": {
+      "sunken": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "default": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "raised": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      }
+    },
+    "Background/Primary/Hover": {
+      "sunken": {
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
+      },
+      "default": {
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
+      },
+      "raised": {
+        "alias": "Gray/150",
+        "cssPrimitive": "var(--gray-150)"
+      }
+    },
+    "Background/Primary/Disabled": {
+      "sunken": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "default": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      },
+      "raised": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      }
+    },
+    "Background/Secondary/Default": {
+      "sunken": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      },
+      "default": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "raised": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      }
+    },
+    "Background/Secondary/Hover": {
+      "sunken": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "default": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "raised": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      }
+    },
+    "Background/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "default": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      },
+      "raised": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      }
+    },
+    "Background/Tertiary/Default": {
+      "sunken": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      },
+      "default": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "raised": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      }
+    },
+    "Background/Danger/Default": {
+      "sunken": {
+        "alias": "Red/900",
+        "cssPrimitive": "var(--red-900)"
+      },
+      "default": {
+        "alias": "Red/850",
+        "cssPrimitive": "var(--red-850)"
+      },
+      "raised": {
+        "alias": "Red/800",
+        "cssPrimitive": "var(--red-800)"
+      }
+    },
+    "Background/Danger/Hover": {
+      "sunken": {
+        "alias": "Red/850",
+        "cssPrimitive": "var(--red-850)"
+      },
+      "default": {
+        "alias": "Red/800",
+        "cssPrimitive": "var(--red-800)"
+      },
+      "raised": {
+        "alias": "Red/750",
+        "cssPrimitive": "var(--red-750)"
+      }
+    },
+    "Background/Danger/Disabled": {
+      "sunken": {
+        "alias": "Red/1000",
+        "cssPrimitive": "var(--red-1000)"
+      },
+      "default": {
+        "alias": "Red/950",
+        "cssPrimitive": "var(--red-950)"
+      },
+      "raised": {
+        "alias": "Red/900",
+        "cssPrimitive": "var(--red-900)"
+      }
+    },
+    "Background/Success/Default": {
+      "sunken": {
+        "alias": "Green/900",
+        "cssPrimitive": "var(--green-900)"
+      },
+      "default": {
+        "alias": "Green/850",
+        "cssPrimitive": "var(--green-850)"
+      },
+      "raised": {
+        "alias": "Green/800",
+        "cssPrimitive": "var(--green-800)"
+      }
+    },
+    "Background/Success/Hover": {
+      "sunken": {
+        "alias": "Green/850",
+        "cssPrimitive": "var(--green-850)"
+      },
+      "default": {
+        "alias": "Green/800",
+        "cssPrimitive": "var(--green-800)"
+      },
+      "raised": {
+        "alias": "Green/750",
+        "cssPrimitive": "var(--green-750)"
+      }
+    },
+    "Background/Success/Disabled": {
+      "sunken": {
+        "alias": "Green/1000",
+        "cssPrimitive": "var(--green-1000)"
+      },
+      "default": {
+        "alias": "Green/950",
+        "cssPrimitive": "var(--green-950)"
+      },
+      "raised": {
+        "alias": "Green/900",
+        "cssPrimitive": "var(--green-900)"
+      }
+    },
+    "Background/Warning/Default": {
+      "sunken": {
+        "alias": "Yellow/900",
+        "cssPrimitive": "var(--yellow-900)"
+      },
+      "default": {
+        "alias": "Yellow/850",
+        "cssPrimitive": "var(--yellow-850)"
+      },
+      "raised": {
+        "alias": "Yellow/800",
+        "cssPrimitive": "var(--yellow-800)"
+      }
+    },
+    "Background/Warning/Hover": {
+      "sunken": {
+        "alias": "Yellow/850",
+        "cssPrimitive": "var(--yellow-850)"
+      },
+      "default": {
+        "alias": "Yellow/800",
+        "cssPrimitive": "var(--yellow-800)"
+      },
+      "raised": {
+        "alias": "Yellow/750",
+        "cssPrimitive": "var(--yellow-750)"
+      }
+    },
+    "Background/Warning/Disabled": {
+      "sunken": {
+        "alias": "Yellow/1000",
+        "cssPrimitive": "var(--yellow-1000)"
+      },
+      "default": {
+        "alias": "Yellow/950",
+        "cssPrimitive": "var(--yellow-950)"
+      },
+      "raised": {
+        "alias": "Yellow/900",
+        "cssPrimitive": "var(--yellow-900)"
+      }
+    },
+    "Background/Tertiary/Hover": {
+      "sunken": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "default": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      },
+      "raised": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      }
+    },
+    "Background/Tertiary/Disabled": {
+      "sunken": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      },
+      "default": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "raised": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      }
+    },
+    "Typography/Danger/Primary/Default": {
+      "sunken": {
+        "alias": "Red/550",
+        "cssPrimitive": "var(--red-550)"
+      },
+      "default": {
+        "alias": "Red/500",
+        "cssPrimitive": "var(--red-500)"
+      },
+      "raised": {
+        "alias": "Red/450",
+        "cssPrimitive": "var(--red-450)"
+      }
+    },
+    "Typography/Danger/Primary/Hover": {
+      "sunken": {
+        "alias": "Red/500",
+        "cssPrimitive": "var(--red-500)"
+      },
+      "default": {
+        "alias": "Red/450",
+        "cssPrimitive": "var(--red-450)"
+      },
+      "raised": {
+        "alias": "Red/400",
+        "cssPrimitive": "var(--red-400)"
+      }
+    },
+    "Typography/Danger/Primary/Disabled": {
+      "sunken": {
+        "alias": "Red/900",
+        "cssPrimitive": "var(--red-900)"
+      },
+      "default": {
+        "alias": "Red/850",
+        "cssPrimitive": "var(--red-850)"
+      },
+      "raised": {
+        "alias": "Red/800",
+        "cssPrimitive": "var(--red-800)"
+      }
+    },
+    "Typography/Danger/Secondary/Default": {
+      "sunken": {
+        "alias": "Red/750",
+        "cssPrimitive": "var(--red-750)"
+      },
+      "default": {
+        "alias": "Red/700",
+        "cssPrimitive": "var(--red-700)"
+      },
+      "raised": {
+        "alias": "Red/650",
+        "cssPrimitive": "var(--red-650)"
+      }
+    },
+    "Typography/Danger/Secondary/Hover": {
+      "sunken": {
+        "alias": "Red/700",
+        "cssPrimitive": "var(--red-700)"
+      },
+      "default": {
+        "alias": "Red/650",
+        "cssPrimitive": "var(--red-650)"
+      },
+      "raised": {
+        "alias": "Red/600",
+        "cssPrimitive": "var(--red-600)"
+      }
+    },
+    "Typography/Danger/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Red/900",
+        "cssPrimitive": "var(--red-900)"
+      },
+      "default": {
+        "alias": "Red/850",
+        "cssPrimitive": "var(--red-850)"
+      },
+      "raised": {
+        "alias": "Red/800",
+        "cssPrimitive": "var(--red-800)"
+      }
+    },
+    "Typography/Success/Primary/Default": {
+      "sunken": {
+        "alias": "Green/550",
+        "cssPrimitive": "var(--green-550)"
+      },
+      "default": {
+        "alias": "Green/500",
+        "cssPrimitive": "var(--green-500)"
+      },
+      "raised": {
+        "alias": "Green/450",
+        "cssPrimitive": "var(--green-450)"
+      }
+    },
+    "Typography/Success/Primary/Hover": {
+      "sunken": {
+        "alias": "Green/500",
+        "cssPrimitive": "var(--green-500)"
+      },
+      "default": {
+        "alias": "Green/450",
+        "cssPrimitive": "var(--green-450)"
+      },
+      "raised": {
+        "alias": "Green/400",
+        "cssPrimitive": "var(--green-400)"
+      }
+    },
+    "Typography/Success/Primary/Disabled": {
+      "sunken": {
+        "alias": "Green/900",
+        "cssPrimitive": "var(--green-900)"
+      },
+      "default": {
+        "alias": "Green/850",
+        "cssPrimitive": "var(--green-850)"
+      },
+      "raised": {
+        "alias": "Green/800",
+        "cssPrimitive": "var(--green-800)"
+      }
+    },
+    "Typography/Success/Secondary/Default": {
+      "sunken": {
+        "alias": "Green/750",
+        "cssPrimitive": "var(--green-750)"
+      },
+      "default": {
+        "alias": "Green/700",
+        "cssPrimitive": "var(--green-700)"
+      },
+      "raised": {
+        "alias": "Green/650",
+        "cssPrimitive": "var(--green-650)"
+      }
+    },
+    "Typography/Success/Secondary/Hover": {
+      "sunken": {
+        "alias": "Green/650",
+        "cssPrimitive": "var(--green-650)"
+      },
+      "default": {
+        "alias": "Green/600",
+        "cssPrimitive": "var(--green-600)"
+      },
+      "raised": {
+        "alias": "Green/550",
+        "cssPrimitive": "var(--green-550)"
+      }
+    },
+    "Typography/Success/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Green/900",
+        "cssPrimitive": "var(--green-900)"
+      },
+      "default": {
+        "alias": "Green/850",
+        "cssPrimitive": "var(--green-850)"
+      },
+      "raised": {
+        "alias": "Green/800",
+        "cssPrimitive": "var(--green-800)"
+      }
+    },
+    "Typography/Warning/Primary/Default": {
+      "sunken": {
+        "alias": "Yellow/550",
+        "cssPrimitive": "var(--yellow-550)"
+      },
+      "default": {
+        "alias": "Yellow/500",
+        "cssPrimitive": "var(--yellow-500)"
+      },
+      "raised": {
+        "alias": "Yellow/450",
+        "cssPrimitive": "var(--yellow-450)"
+      }
+    },
+    "Typography/Warning/Primary/Hover": {
+      "sunken": {
+        "alias": "Yellow/500",
+        "cssPrimitive": "var(--yellow-500)"
+      },
+      "default": {
+        "alias": "Yellow/450",
+        "cssPrimitive": "var(--yellow-450)"
+      },
+      "raised": {
+        "alias": "Yellow/400",
+        "cssPrimitive": "var(--yellow-400)"
+      }
+    },
+    "Typography/Warning/Primary/Disabled": {
+      "sunken": {
+        "alias": "Yellow/900",
+        "cssPrimitive": "var(--yellow-900)"
+      },
+      "default": {
+        "alias": "Yellow/850",
+        "cssPrimitive": "var(--yellow-850)"
+      },
+      "raised": {
+        "alias": "Yellow/800",
+        "cssPrimitive": "var(--yellow-800)"
+      }
+    },
+    "Typography/Warning/Secondary/Default": {
+      "sunken": {
+        "alias": "Yellow/750",
+        "cssPrimitive": "var(--yellow-750)"
+      },
+      "default": {
+        "alias": "Yellow/700",
+        "cssPrimitive": "var(--yellow-700)"
+      },
+      "raised": {
+        "alias": "Yellow/650",
+        "cssPrimitive": "var(--yellow-650)"
+      }
+    },
+    "Typography/Warning/Secondary/Hover": {
+      "sunken": {
+        "alias": "Yellow/700",
+        "cssPrimitive": "var(--yellow-700)"
+      },
+      "default": {
+        "alias": "Yellow/750",
+        "cssPrimitive": "var(--yellow-750)"
+      },
+      "raised": {
+        "alias": "Yellow/600",
+        "cssPrimitive": "var(--yellow-600)"
+      }
+    },
+    "Typography/Warning/Secondary/Disabled": {
+      "sunken": {
+        "alias": "Yellow/900",
+        "cssPrimitive": "var(--yellow-900)"
+      },
+      "default": {
+        "alias": "Yellow/850",
+        "cssPrimitive": "var(--yellow-850)"
+      },
+      "raised": {
+        "alias": "Yellow/800",
+        "cssPrimitive": "var(--yellow-800)"
+      }
+    },
+    "Background/Background": {
+      "sunken": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      },
+      "default": {
+        "alias": "Gray/950",
+        "cssPrimitive": "var(--gray-950)"
+      },
+      "raised": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      }
+    },
+    "Border/Default": {
+      "sunken": {
+        "alias": "Gray/900",
+        "cssPrimitive": "var(--gray-900)"
+      },
+      "default": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "raised": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      }
+    },
+    "Border/Hover": {
+      "sunken": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "default": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      },
+      "raised": {
+        "alias": "Gray/700",
+        "cssPrimitive": "var(--gray-700)"
+      }
+    },
+    "Border/Danger": {
+      "sunken": {
+        "alias": "Red/850",
+        "cssPrimitive": "var(--red-850)"
+      },
+      "default": {
+        "alias": "Red/800",
+        "cssPrimitive": "var(--red-800)"
+      },
+      "raised": {
+        "alias": "Red/750",
+        "cssPrimitive": "var(--red-750)"
+      }
+    },
+    "Border/Warning": {
+      "sunken": {
+        "alias": "Yellow/850",
+        "cssPrimitive": "var(--yellow-850)"
+      },
+      "default": {
+        "alias": "Yellow/800",
+        "cssPrimitive": "var(--yellow-800)"
+      },
+      "raised": {
+        "alias": "Yellow/750",
+        "cssPrimitive": "var(--yellow-750)"
+      }
+    },
+    "Border/Success": {
+      "sunken": {
+        "alias": "Green/850",
+        "cssPrimitive": "var(--green-850)"
+      },
+      "default": {
+        "alias": "Green/800",
+        "cssPrimitive": "var(--green-800)"
+      },
+      "raised": {
+        "alias": "Green/750",
+        "cssPrimitive": "var(--green-750)"
+      }
+    },
+    "Border/Brand": {
+      "sunken": {
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
+      },
+      "default": {
+        "alias": "Brand/700",
+        "cssPrimitive": "var(--brand-700)"
+      },
+      "raised": {
+        "alias": "Brand/650",
+        "cssPrimitive": "var(--brand-650)"
+      }
+    },
+    "Icons/Brand/Default": {
+      "sunken": {
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
+      },
+      "default": {
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
+      },
+      "raised": {
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
+      }
+    },
+    "Icons/Brand/Hover": {
+      "sunken": {
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
+      },
+      "default": {
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
+      },
+      "raised": {
+        "alias": "Brand/1000",
+        "cssPrimitive": "var(--brand-1000)"
+      }
+    },
+    "Icons/Brand/Disabled": {
+      "sunken": {
+        "alias": "Brand/850",
+        "cssPrimitive": "var(--brand-850)"
+      },
+      "default": {
+        "alias": "Brand/800",
+        "cssPrimitive": "var(--brand-800)"
+      },
+      "raised": {
+        "alias": "Brand/750",
+        "cssPrimitive": "var(--brand-750)"
+      }
+    },
+    "Icons/White Bg/Default": {
+      "sunken": {
+        "alias": "Gray/500",
+        "cssPrimitive": "var(--gray-500)"
+      },
+      "default": {
+        "alias": "Gray/500",
+        "cssPrimitive": "var(--gray-500)"
+      },
+      "raised": {
+        "alias": "Gray/500",
+        "cssPrimitive": "var(--gray-500)"
+      }
+    },
+    "Icons/White Bg/Hover": {
+      "sunken": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      },
+      "default": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      },
+      "raised": {
+        "alias": "Gray/1000",
+        "cssPrimitive": "var(--gray-1000)"
+      }
+    },
+    "Icons/White Bg/Disabled": {
+      "sunken": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "default": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "raised": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      }
+    },
+    "Icons/Black Bg/Default": {
+      "sunken": {
+        "alias": "Gray/600",
+        "cssPrimitive": "var(--gray-600)"
+      },
+      "default": {
+        "alias": "Gray/550",
+        "cssPrimitive": "var(--gray-550)"
+      },
+      "raised": {
+        "alias": "Gray/500",
+        "cssPrimitive": "var(--gray-500)"
+      }
+    },
+    "Blur/Background/Default": {
+      "sunken": null,
+      "default": null,
+      "raised": null
+    },
+    "Blur/Background/Hover": {
+      "sunken": null,
+      "default": null,
+      "raised": null
+    },
+    "Blur/Typography": {
+      "sunken": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "default": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "raised": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      }
+    },
+    "Blur/Icon": {
+      "sunken": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "default": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "raised": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      }
+    },
+    "Icons/Black Bg/Hover": {
+      "sunken": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "default": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      },
+      "raised": {
+        "alias": "Gray/50",
+        "cssPrimitive": "var(--gray-50)"
+      }
+    },
+    "Icons/Black Bg/Disabled": {
+      "sunken": {
+        "alias": "Gray/850",
+        "cssPrimitive": "var(--gray-850)"
+      },
+      "default": {
+        "alias": "Gray/800",
+        "cssPrimitive": "var(--gray-800)"
+      },
+      "raised": {
+        "alias": "Gray/750",
+        "cssPrimitive": "var(--gray-750)"
+      }
+    },
+    "Icons/Danger/Default": {
+      "sunken": {
+        "alias": "Red/750",
+        "cssPrimitive": "var(--red-750)"
+      },
+      "default": {
+        "alias": "Red/700",
+        "cssPrimitive": "var(--red-700)"
+      },
+      "raised": {
+        "alias": "Red/650",
+        "cssPrimitive": "var(--red-650)"
+      }
+    },
+    "Icons/Danger/Hover": {
+      "sunken": {
+        "alias": "Red/550",
+        "cssPrimitive": "var(--red-550)"
+      },
+      "default": {
+        "alias": "Red/500",
+        "cssPrimitive": "var(--red-500)"
+      },
+      "raised": {
+        "alias": "Red/450",
+        "cssPrimitive": "var(--red-450)"
+      }
+    },
+    "Icons/Danger/Disabled": {
+      "sunken": {
+        "alias": "Red/900",
+        "cssPrimitive": "var(--red-900)"
+      },
+      "default": {
+        "alias": "Red/850",
+        "cssPrimitive": "var(--red-850)"
+      },
+      "raised": {
+        "alias": "Red/800",
+        "cssPrimitive": "var(--red-800)"
+      }
+    },
+    "Icons/Success/Default": {
+      "sunken": {
+        "alias": "Green/750",
+        "cssPrimitive": "var(--green-750)"
+      },
+      "default": {
+        "alias": "Green/700",
+        "cssPrimitive": "var(--green-700)"
+      },
+      "raised": {
+        "alias": "Green/650",
+        "cssPrimitive": "var(--green-650)"
+      }
+    },
+    "Icons/Success/Hover": {
+      "sunken": {
+        "alias": "Green/550",
+        "cssPrimitive": "var(--green-550)"
+      },
+      "default": {
+        "alias": "Green/500",
+        "cssPrimitive": "var(--green-500)"
+      },
+      "raised": {
+        "alias": "Green/450",
+        "cssPrimitive": "var(--green-450)"
+      }
+    },
+    "Icons/Success/Disabled": {
+      "sunken": {
+        "alias": "Green/950",
+        "cssPrimitive": "var(--green-950)"
+      },
+      "default": {
+        "alias": "Green/900",
+        "cssPrimitive": "var(--green-900)"
+      },
+      "raised": {
+        "alias": "Green/800",
+        "cssPrimitive": "var(--green-800)"
+      }
+    },
+    "Icons/Warning/Default": {
+      "sunken": {
+        "alias": "Yellow/750",
+        "cssPrimitive": "var(--yellow-750)"
+      },
+      "default": {
+        "alias": "Yellow/700",
+        "cssPrimitive": "var(--yellow-700)"
+      },
+      "raised": {
+        "alias": "Yellow/650",
+        "cssPrimitive": "var(--yellow-650)"
+      }
+    },
+    "Icons/Warning/Hover": {
+      "sunken": {
+        "alias": "Yellow/550",
+        "cssPrimitive": "var(--yellow-550)"
+      },
+      "default": {
+        "alias": "Yellow/500",
+        "cssPrimitive": "var(--yellow-500)"
+      },
+      "raised": {
+        "alias": "Yellow/450",
+        "cssPrimitive": "var(--yellow-450)"
+      }
+    },
+    "Icons/Warning/Disabled": {
+      "sunken": {
+        "alias": "Yellow/900",
+        "cssPrimitive": "var(--yellow-900)"
+      },
+      "default": {
+        "alias": "Yellow/850",
+        "cssPrimitive": "var(--yellow-850)"
+      },
+      "raised": {
+        "alias": "Yellow/800",
+        "cssPrimitive": "var(--yellow-800)"
+      }
     }
   },
-  "_note": "Подмножество 86 переменных Colors. Полный экспорт: node scripts/export-figma-colors-elevation.mjs + use_figma."
+  "_note": "Полный экспорт 86 переменных Colors (Dark). Перегенерация: node scripts/export-figma-colors-elevation.mjs --theme dark + use_figma."
 }

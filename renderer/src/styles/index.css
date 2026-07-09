@@ -211,23 +211,8 @@ html[data-theme="light"] .arc-app-outlet {
   padding: var(--s-1) 0;
 }
 
-.arc-tags-page-sidebar .context-menu__item.is-active .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-tags-page-sidebar .context-menu__item.is-active:hover .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-tags-page-sidebar .context-menu__item.is-active .context-menu__item-label,
-.arc-tags-page-sidebar .context-menu__item.is-active .context-menu__item-counter {
-  color: var(--brand-50);
-}
-
 .arc-tags-page-sidebar .context-menu__item.is-active .arc-tags-sidebar-row-handle .context-menu__item-icon {
-  color: var(--brand-50);
+  color: var(--tab-active-icon-default);
 }
 
 .arc-tags-page-main {
@@ -390,7 +375,7 @@ html[data-theme="light"] .arc-app-outlet {
 }
 
 .arc-tags-sidebar-row.is-active .arc-tags-sidebar-row-edit .context-menu__item-icon {
-  color: var(--brand-50);
+  color: var(--tab-active-icon-default);
 }
 
 .arc-tags-sidebar-row:hover:not(:has(.arc-tags-sidebar-row-edit:hover)):not(
@@ -459,7 +444,7 @@ html[data-theme="light"] .arc-app-outlet {
 .arc-tags-sidebar-row-select .context-menu__item-counter {
   flex: 0 0 auto;
   margin-left: auto;
-  color: var(--text-elev-secondary);
+  color: var(--menu-row-counter-default);
 }
 
 .arc-tags-sidebar-row-ghost {
@@ -1013,6 +998,10 @@ button.color-swatch-inline:disabled {
   background: var(--gray-900);
 }
 
+html[data-theme="light"] .arc-gallery-collection-card__pic {
+  background: var(--gray-150);
+}
+
 .arc-gallery-collection-card__pic--grow {
   flex: 1 1 0;
   width: auto;
@@ -1021,6 +1010,10 @@ button.color-swatch-inline:disabled {
 
 .arc-gallery-collection-card__pic--empty {
   background: var(--gray-900);
+}
+
+html[data-theme="light"] .arc-gallery-collection-card__pic--empty {
+  background: var(--gray-150);
 }
 
 .arc-gallery-collection-card__img {
@@ -1275,6 +1268,11 @@ body.arc-gallery-selection-active .arc-scroll-to-top--center-outlet {
   opacity: 0.6;
 }
 
+html[data-theme="light"] .arc-gallery-bottom-shade__tint {
+  background: linear-gradient(0deg, var(--shade-tint-from, var(--app-bg)) 0%, transparent 100%);
+  opacity: 1;
+}
+
 /* Страница «Коллекции» (Figma 946:2295) */
 .arc-collections-outlet {
   padding: 0;
@@ -1388,23 +1386,8 @@ body.arc-gallery-selection-active .arc-scroll-to-top--center-outlet {
   padding: 0;
 }
 
-.arc-collections-page-sidebar .context-menu__item.is-active .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-collections-page-sidebar .context-menu__item.is-active:hover .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-collections-page-sidebar .context-menu__item.is-active .context-menu__item-label,
-.arc-collections-page-sidebar .context-menu__item.is-active .context-menu__item-counter {
-  color: var(--brand-50);
-}
-
 .arc-collections-page-sidebar .context-menu__item.is-active .arc-tags-sidebar-row-handle .context-menu__item-icon {
-  color: var(--brand-50);
+  color: var(--tab-active-icon-default);
 }
 
 .arc-collections-page-main {
@@ -2086,20 +2069,6 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-add-tags-picker__sidebar-scroll::-webkit-scrollbar {
   width: 0;
   height: 0;
-}
-
-.arc-add-tags-picker__sidebar .context-menu__item.is-active .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-add-tags-picker__sidebar .context-menu__item.is-active:hover .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-add-tags-picker__sidebar .context-menu__item.is-active .context-menu__item-label {
-  color: var(--brand-50);
 }
 
 .arc-add-tags-picker__sidebar .context-menu__item-inner {
@@ -4232,21 +4201,6 @@ html.arc-onboarding-page,
   padding: 0;
 }
 
-.arc-settings-page-sidebar .context-menu__item.is-active .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-settings-page-sidebar .context-menu__item.is-active:hover .context-menu__item-inner {
-  background: var(--brand-600);
-  color: var(--brand-50);
-}
-
-.arc-settings-page-sidebar .context-menu__item.is-active .context-menu__item-label,
-.arc-settings-page-sidebar .context-menu__item.is-active .context-menu__item-icon {
-  color: var(--brand-50);
-}
-
 .arc-settings-page-main {
   flex: 1 1 0;
   min-width: 0;
@@ -4694,23 +4648,23 @@ html.arc-onboarding-page,
 }
 
 .arc-settings-updates-tabs .tab-button:not(.is-active) {
-  background: var(--gray-900);
-  color: var(--text-elev-primary);
+  background: var(--btn-secondary-fill-default);
+  color: var(--btn-secondary-value-default);
 }
 
 .arc-settings-updates-tabs .tab-button:not(.is-active):hover:not(:disabled) {
-  background: var(--gray-850);
-  color: var(--text-elev-primary);
+  background: var(--btn-secondary-fill-hover);
+  color: var(--btn-secondary-value-hover);
 }
 
 .arc-settings-updates-tabs .tab-button.is-active {
-  background: var(--brand-550);
-  color: var(--brand-100);
+  background: var(--btn-brand-fill-default);
+  color: var(--btn-brand-value-default);
 }
 
 .arc-settings-updates-tabs .tab-button.is-active:hover:not(:disabled) {
-  background: var(--brand-600);
-  color: var(--brand-50);
+  background: var(--btn-brand-fill-hover);
+  color: var(--btn-brand-value-hover);
 }
 
 .arc-settings-updates-changelog {

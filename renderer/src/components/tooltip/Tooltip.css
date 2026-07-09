@@ -12,7 +12,7 @@
   font-size: var(--typo-p-s-size);
   line-height: var(--typo-p-s-line);
   font-weight: var(--typo-p-s-weight);
-  color: var(--brand-100);
+  color: var(--typography-brand-primary-default);
   white-space: normal;
   word-wrap: break-word;
   pointer-events: none;
@@ -31,7 +31,7 @@
 
 .arc-tooltip__inner {
   padding: var(--s-1);
-  background: var(--brand-550);
+  background: var(--background-brand-default);
   border: none;
   border-radius: var(--s-1);
   box-shadow: none;
@@ -45,7 +45,7 @@
 }
 
 .arc-tooltip__arrow-fill {
-  fill: var(--brand-550);
+  fill: var(--background-brand-default);
 }
 
 .arc-tooltip--arrow-edge-bottom .arc-tooltip__arrow {

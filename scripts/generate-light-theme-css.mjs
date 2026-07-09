@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildElevationDecls, buildLightRootDecls, declBlock, v } from './lib/build-light-elevation.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -29,201 +30,6 @@ const ELEVATION_SELECTORS = {
     'html[data-theme="light"] .arc-ui-kit-scope[data-elevation="raised"]',
   ],
 };
-
-/** Component token mappings (Figma paths mirror dark elevation blocks in arc-ui.css) */
-const COMPONENT_MAPPINGS = [
-  { css: '--input-fill-default', figma: 'Background/Tertiary/Default' },
-  { css: '--input-fill-hover', figma: 'Background/Tertiary/Hover' },
-  { css: '--input-fill-disabled', figma: 'Background/Tertiary/Disabled' },
-  { css: '--input-value-default', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--input-value-entered', figma: 'Typography/Black Bg/Primary/Hover' },
-  { css: '--input-value-hover', figma: 'Typography/Black Bg/Primary/Hover' },
-  { css: '--input-value-disabled', figma: 'Typography/Black Bg/Primary/Disabled' },
-  { css: '--input-border-default', figma: 'Border/Default' },
-  { css: '--input-border-hover', figma: 'Border/Hover' },
-  { css: '--input-border-focus', figma: 'Border/Brand' },
-  { css: '--input-border-error', figma: 'Border/Danger' },
-  { css: '--input-border-error-hover', figma: 'Border/Danger' },
-  { css: '--input-border-disabled', figma: 'Border/Default' },
-  { css: '--input-icon-default', figma: 'Icons/Black Bg/Default' },
-  { css: '--input-icon-hover', figma: 'Icons/Black Bg/Hover' },
-
-  { css: '--btn-primary-fill-default', figma: 'Background/Primary/Default' },
-  { css: '--btn-primary-fill-hover', figma: 'Background/Primary/Hover' },
-  { css: '--btn-primary-fill-focus', figma: 'Background/Primary/Default' },
-  { css: '--btn-primary-value-default', figma: 'Typography/White Bg/Primary/Default' },
-  { css: '--btn-primary-value-hover', figma: 'Typography/White Bg/Primary/Hover' },
-  { css: '--btn-primary-value-focus', figma: 'Typography/White Bg/Primary/Default' },
-  { css: '--btn-primary-counter-default', figma: 'Typography/White Bg/Secondary/Default' },
-  { css: '--btn-primary-counter-hover', figma: 'Typography/White Bg/Secondary/Hover' },
-  { css: '--btn-primary-counter-focus', figma: 'Typography/White Bg/Secondary/Default' },
-  { css: '--btn-primary-icon-default', figma: 'Icons/White Bg/Default' },
-  { css: '--btn-primary-icon-hover', figma: 'Icons/White Bg/Hover' },
-  { css: '--btn-primary-icon-focus', figma: 'Icons/White Bg/Default' },
-  { css: '--btn-primary-fill-disabled', figma: 'Background/Primary/Disabled' },
-  { css: '--btn-primary-value-disabled', figma: 'Typography/White Bg/Primary/Disabled' },
-  { css: '--btn-primary-counter-disabled', figma: 'Typography/White Bg/Secondary/Disabled' },
-  { css: '--btn-primary-icon-disabled', figma: 'Icons/White Bg/Disabled' },
-
-  { css: '--btn-brand-fill-default', figma: 'Background/Brand/Default' },
-  { css: '--btn-brand-fill-hover', figma: 'Background/Brand/Hover' },
-  { css: '--btn-brand-fill-focus', figma: 'Background/Brand/Default' },
-  { css: '--btn-brand-value-default', figma: 'Typography/Brand/Primary/Default' },
-  { css: '--btn-brand-value-hover', figma: 'Typography/Brand/Primary/Hover' },
-  { css: '--btn-brand-value-focus', figma: 'Typography/Brand/Primary/Default' },
-  { css: '--btn-brand-counter-default', figma: 'Typography/Brand/Secondary/Default' },
-  { css: '--btn-brand-counter-hover', figma: 'Typography/Brand/Secondary/Hover' },
-  { css: '--btn-brand-counter-focus', figma: 'Typography/Brand/Secondary/Default' },
-  { css: '--btn-brand-icon-default', figma: 'Icons/Brand/Default' },
-  { css: '--btn-brand-icon-hover', figma: 'Icons/Brand/Hover' },
-  { css: '--btn-brand-icon-focus', figma: 'Icons/Brand/Default' },
-  { css: '--btn-brand-fill-disabled', figma: 'Background/Brand/Disabled' },
-  { css: '--btn-brand-value-disabled', figma: 'Typography/Brand/Primary/Disabled' },
-  { css: '--btn-brand-counter-disabled', figma: 'Typography/Brand/Secondary/Disabled' },
-  { css: '--btn-brand-icon-disabled', figma: 'Icons/Brand/Disabled' },
-
-  { css: '--btn-secondary-fill-default', figma: 'Background/Secondary/Default' },
-  { css: '--btn-secondary-value-default', figma: 'Typography/Black Bg/Primary/Default' },
-  { css: '--btn-secondary-counter-default', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--btn-secondary-icon-default', figma: 'Icons/Black Bg/Default' },
-  { css: '--btn-secondary-fill-hover', figma: 'Background/Secondary/Hover' },
-  { css: '--btn-secondary-value-hover', figma: 'Typography/Black Bg/Primary/Default' },
-  { css: '--btn-secondary-counter-hover', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--btn-secondary-icon-hover', figma: 'Icons/Black Bg/Hover' },
-  { css: '--btn-secondary-fill-focus', figma: 'Background/Secondary/Default' },
-  { css: '--btn-secondary-value-focus', figma: 'Typography/Black Bg/Primary/Default' },
-  { css: '--btn-secondary-counter-focus', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--btn-secondary-icon-focus', figma: 'Icons/Black Bg/Default' },
-  { css: '--btn-secondary-fill-disabled', figma: 'Background/Primary/Disabled' },
-  { css: '--btn-secondary-value-disabled', figma: 'Typography/Black Bg/Primary/Disabled' },
-  { css: '--btn-secondary-counter-disabled', figma: 'Typography/Black Bg/Secondary/Disabled' },
-  { css: '--btn-secondary-icon-disabled', figma: 'Icons/Black Bg/Disabled' },
-
-  { css: '--btn-group-fill-default', figma: 'Background/Tertiary/Default' },
-  { css: '--btn-group-fill-hover', figma: 'Background/Tertiary/Hover' },
-  { css: '--btn-group-fill-focus', figma: 'Background/Tertiary/Default' },
-  { css: '--btn-group-fill-disabled', figma: 'Background/Tertiary/Disabled' },
-  { css: '--btn-group-value-default', figma: 'Typography/Black Bg/Primary/Default' },
-  { css: '--btn-group-value-hover', figma: 'Typography/Black Bg/Primary/Default' },
-  { css: '--btn-group-value-focus', figma: 'Typography/Black Bg/Primary/Default' },
-  { css: '--btn-group-value-disabled', figma: 'Typography/Black Bg/Primary/Disabled' },
-  { css: '--btn-group-counter-default', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--btn-group-counter-hover', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--btn-group-counter-focus', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--btn-group-counter-disabled', figma: 'Typography/Black Bg/Secondary/Disabled' },
-  { css: '--btn-group-icon-default', figma: 'Icons/Black Bg/Default' },
-  { css: '--btn-group-icon-hover', figma: 'Icons/Black Bg/Hover' },
-  { css: '--btn-group-icon-focus', figma: 'Icons/Black Bg/Default' },
-  { css: '--btn-group-icon-disabled', figma: 'Icons/Black Bg/Disabled' },
-  { css: '--btn-group-border-default', figma: 'Border/Default' },
-  { css: '--btn-group-border-hover', figma: 'Border/Default' },
-  { css: '--btn-group-border-focus', figma: 'Border/Default' },
-  { css: '--btn-group-border-disabled', figma: 'Border/Default' },
-
-  { css: '--tab-inactive-fill-default', figma: 'Background/Tertiary/Default' },
-  { css: '--tab-inactive-value-default', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-inactive-counter-default', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-inactive-icon-default', figma: 'Icons/Black Bg/Default' },
-  { css: '--tab-inactive-fill-hover', figma: 'Background/Tertiary/Default' },
-  { css: '--tab-inactive-value-hover', figma: 'Typography/Black Bg/Primary/Hover' },
-  { css: '--tab-inactive-counter-hover', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-inactive-icon-hover', figma: 'Icons/Black Bg/Hover' },
-  { css: '--tab-inactive-fill-focus', figma: 'Background/Tertiary/Default' },
-  { css: '--tab-inactive-value-focus', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-inactive-counter-focus', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-inactive-icon-focus', figma: 'Icons/Black Bg/Default' },
-  { css: '--tab-active-fill-default', figma: 'Background/Secondary/Default' },
-  { css: '--tab-active-value-default', figma: 'Typography/Black Bg/Primary/Hover' },
-  { css: '--tab-active-counter-default', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-active-icon-default', figma: 'Icons/Black Bg/Default' },
-  { css: '--tab-active-fill-hover', figma: 'Background/Secondary/Default' },
-  { css: '--tab-active-value-hover', figma: 'Typography/Black Bg/Primary/Hover' },
-  { css: '--tab-active-counter-hover', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-active-icon-hover', figma: 'Icons/Black Bg/Hover' },
-  { css: '--tab-active-fill-focus', figma: 'Background/Secondary/Default' },
-  { css: '--tab-active-value-focus', figma: 'Typography/Black Bg/Primary/Hover' },
-  { css: '--tab-active-counter-focus', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tab-active-icon-focus', figma: 'Icons/Black Bg/Default' },
-
-  { css: '--tag-fill-default', figma: 'Background/Secondary/Default' },
-  { css: '--tag-text-default', figma: 'Typography/Black Bg/Primary/Default' },
-  { css: '--tag-counter-default', figma: 'Typography/Black Bg/Secondary/Default' },
-  { css: '--tag-fill-hover', figma: 'Background/Secondary/Hover' },
-  { css: '--tag-text-hover', figma: 'Typography/Black Bg/Primary/Hover' },
-  { css: '--tag-counter-hover', figma: 'Typography/Black Bg/Secondary/Hover' },
-  { css: '--tag-border-hover', figma: 'Border/Hover' },
-  { css: '--tag-fill-active', figma: 'Background/Primary/Default' },
-  { css: '--tag-text-active', figma: 'Typography/White Bg/Primary/Default' },
-  { css: '--tag-counter-active', figma: 'Typography/White Bg/Secondary/Default' },
-  { css: '--tag-fill-active-hover', figma: 'Background/Primary/Hover' },
-  { css: '--tag-text-active-hover', figma: 'Typography/White Bg/Primary/Hover' },
-  { css: '--tag-counter-active-hover', figma: 'Typography/White Bg/Secondary/Hover' },
-
-  { css: '--button-outline-default', figma: 'Background/Tertiary/Default' },
-  { css: '--button-outline-hover', figma: 'Background/Tertiary/Hover' },
-  { css: '--button-outline-disabled', figma: 'Background/Tertiary/Disabled' },
-  { css: '--button-outline-border-default', figma: 'Border/Default' },
-  { css: '--button-outline-border-hover', figma: 'Border/Default' },
-  { css: '--button-outline-border-disabled', figma: 'Border/Default' },
-  { css: '--button-ghost-default', figma: 'Background/Tertiary/Default' },
-  { css: '--button-ghost-hover', figma: 'Background/Tertiary/Hover' },
-  { css: '--button-ghost-disabled', figma: 'Background/Tertiary/Disabled' },
-
-  { css: '--font-white-primary-default', figma: 'Typography/White Bg/Primary/Default' },
-  { css: '--font-white-primary-hover', figma: 'Typography/White Bg/Primary/Hover' },
-  { css: '--font-white-primary-disabled', figma: 'Typography/White Bg/Primary/Disabled' },
-  { css: '--font-white-secondary-default', figma: 'Typography/White Bg/Secondary/Default' },
-  { css: '--font-white-secondary-hover', figma: 'Typography/White Bg/Secondary/Hover' },
-  { css: '--font-white-secondary-disabled', figma: 'Typography/White Bg/Secondary/Disabled' },
-  { css: '--icons-white-default', figma: 'Icons/White Bg/Default' },
-  { css: '--icons-white-hover', figma: 'Icons/White Bg/Hover' },
-  { css: '--icons-white-disabled', figma: 'Icons/White Bg/Disabled' },
-
-  { css: '--button-danger-default', figma: 'Background/Danger/Default' },
-  { css: '--button-danger-hover', figma: 'Background/Danger/Hover' },
-  { css: '--button-danger-disabled', figma: 'Background/Danger/Disabled' },
-  { css: '--button-danger-border-default', figma: 'Background/Danger/Default' },
-  { css: '--button-danger-border-hover', figma: 'Background/Danger/Hover' },
-  { css: '--button-danger-border-disabled', figma: 'Background/Danger/Disabled' },
-  { css: '--font-danger-primary-default', figma: 'Typography/Danger/Primary/Default' },
-  { css: '--font-danger-primary-hover', figma: 'Typography/Danger/Primary/Hover' },
-  { css: '--font-danger-primary-disabled', figma: 'Typography/Danger/Primary/Disabled' },
-  { css: '--font-danger-secondary-default', figma: 'Typography/Danger/Secondary/Default' },
-  { css: '--font-danger-secondary-hover', figma: 'Typography/Danger/Secondary/Hover' },
-  { css: '--font-danger-secondary-disabled', figma: 'Typography/Danger/Secondary/Disabled' },
-  { css: '--icons-danger-default', figma: 'Icons/Danger/Default' },
-  { css: '--icons-danger-hover', figma: 'Icons/Danger/Hover' },
-  { css: '--icons-danger-disabled', figma: 'Icons/Danger/Disabled' },
-
-  { css: '--button-success-default', figma: 'Background/Success/Default' },
-  { css: '--button-success-hover', figma: 'Background/Success/Hover' },
-  { css: '--button-success-disabled', figma: 'Background/Success/Disabled' },
-  { css: '--button-success-border-default', figma: 'Background/Success/Default' },
-  { css: '--button-success-border-hover', figma: 'Background/Success/Hover' },
-  { css: '--button-success-border-disabled', figma: 'Background/Success/Disabled' },
-  { css: '--font-success-primary-default', figma: 'Typography/Success/Primary/Default' },
-  { css: '--font-success-primary-hover', figma: 'Typography/Success/Primary/Hover' },
-  { css: '--font-success-primary-disabled', figma: 'Typography/Success/Primary/Disabled' },
-  { css: '--font-success-secondary-default', figma: 'Typography/Success/Secondary/Default' },
-  { css: '--font-success-secondary-hover', figma: 'Typography/Success/Secondary/Hover' },
-  { css: '--font-success-secondary-disabled', figma: 'Typography/Success/Secondary/Disabled' },
-  { css: '--icons-success-default', figma: 'Icons/Success/Default' },
-  { css: '--icons-success-hover', figma: 'Icons/Success/Hover' },
-  { css: '--icons-success-disabled', figma: 'Icons/Success/Disabled' },
-
-  { css: '--button-warning-default', figma: 'Background/Warning/Default' },
-  { css: '--button-warning-hover', figma: 'Background/Warning/Hover' },
-  { css: '--button-warning-disabled', figma: 'Background/Warning/Disabled' },
-  { css: '--font-warning-primary-default', figma: 'Typography/Warning/Primary/Default' },
-  { css: '--font-warning-primary-hover', figma: 'Typography/Warning/Primary/Hover' },
-  { css: '--font-warning-primary-disabled', figma: 'Typography/Warning/Primary/Disabled' },
-  { css: '--font-warning-secondary-default', figma: 'Typography/Warning/Secondary/Default' },
-  { css: '--font-warning-secondary-hover', figma: 'Typography/Warning/Secondary/Hover' },
-  { css: '--font-warning-secondary-disabled', figma: 'Typography/Warning/Secondary/Disabled' },
-  { css: '--icons-warning-default', figma: 'Icons/Warning/Default' },
-  { css: '--icons-warning-hover', figma: 'Icons/Warning/Hover' },
-  { css: '--icons-warning-disabled', figma: 'Icons/Warning/Disabled' },
-];
 
 /**
  * data-typo-tone → Figma Typography prefix (те же имена групп, что в arc-ui.css).
@@ -355,9 +161,9 @@ const ALERT_DARK_OVERRIDES = {
   '--alert-info-border': 'var(--gray-100)',
   '--alert-info-text': 'var(--gray-950)',
   '--alert-info-close': 'var(--gray-550)',
-  '--alert-brand-bg': 'var(--brand-550)',
-  '--alert-brand-text': 'var(--brand-100)',
-  '--alert-brand-close': 'var(--brand-250)',
+  '--alert-brand-bg': 'var(--brand-450)',
+  '--alert-brand-text': 'var(--brand-950)',
+  '--alert-brand-close': 'var(--brand-750)',
   '--alert-success-border': 'var(--green-850)',
   '--alert-warning-border': 'var(--yellow-850)',
 };
@@ -366,44 +172,6 @@ const ALERT_LIGHT_OVERRIDES = {
   '--alert-info-border': 'transparent',
   '--alert-brand-border': 'transparent',
 };
-
-function v(data, mode, figmaPath) {
-  const entry = data.variables[figmaPath]?.[mode];
-  return entry?.cssPrimitive ?? null;
-}
-
-function resolveLight(data, mode, figmaPath) {
-  return v(data, mode, figmaPath);
-}
-
-function declBlock(entries) {
-  return entries.map(([k, val]) => `  ${k}: ${val};`).join('\n');
-}
-
-function buildElevationBlock(data, mode) {
-  const panelDecls = [
-    ['--app-bg', 'var(--gray-25)'],
-    ['--panel-bg', v(data, mode, 'Background/Background')],
-    ['--panel-border', v(data, mode, 'Border/Default')],
-    ['--text-elev-primary', v(data, mode, 'Typography/Black Bg/Primary/Default')],
-    ['--text-elev-secondary', v(data, mode, 'Typography/Black Bg/Secondary/Default')],
-  ].filter(([, val]) => val);
-
-  const componentDecls = COMPONENT_MAPPINGS
-    .map(({ css, figma }) => [css, resolveLight(data, mode, figma)])
-    .filter(([, val]) => val);
-
-  const surfaceDecls = [
-    ['--button-outline-default', 'var(--panel-bg)'],
-    ['--button-outline-hover', resolveLight(data, mode, 'Background/Tertiary/Hover')],
-    ['--button-outline-disabled', 'var(--panel-bg)'],
-    ['--button-ghost-default', 'var(--panel-bg)'],
-    ['--button-ghost-hover', resolveLight(data, mode, 'Background/Tertiary/Hover')],
-    ['--button-ghost-disabled', 'var(--panel-bg)'],
-  ].filter(([, val]) => val);
-
-  return declBlock([...panelDecls, ...componentDecls, ...surfaceDecls]);
-}
 
 function buildAlertBlock(data, selectorPrefix = '', overrides = {}) {
   const mode = 'default';
@@ -460,19 +228,10 @@ function buildTypoToneBlocks(data) {
   return blocks;
 }
 
-function buildLightRootDecls(data) {
+function buildLightRootDeclsWithFonts(data) {
   const mode = 'default';
   return [
-    ['color-scheme', 'light'],
-    ['--sunken-bg', 'var(--gray-25)'],
-    ['--default-bg', 'var(--gray-50)'],
-    ['--raised-bg', 'var(--gray-100)'],
-    ['--surface-border-sunken', 'var(--gray-100)'],
-    ['--surface-border-default', 'var(--gray-150)'],
-    ['--surface-border-raised', 'var(--gray-200)'],
-    ['--ui-text-primary', v(data, mode, 'Typography/Black Bg/Primary/Default')],
-    ['--ui-text-secondary', v(data, mode, 'Typography/Black Bg/Secondary/Default')],
-    ['--border-brand', v(data, mode, 'Border/Brand')],
+    ...buildLightRootDecls(data),
     ...ROOT_SEMANTIC_FONT.map(({ css, figma }) => [css, v(data, mode, figma)]),
   ].filter(([, val]) => val);
 }
@@ -485,7 +244,7 @@ const lines = [
   `/* Source: figma-colors-light.json (${light.exportedAt}) */`,
   '',
   'html[data-theme="light"] {',
-  declBlock(buildLightRootDecls(light)),
+  declBlock(buildLightRootDeclsWithFonts(light)),
   '}',
   '',
   '/* Alert semantic tokens — Dark / Default elevation */',
@@ -500,7 +259,7 @@ const lines = [
 for (const mode of ['sunken', 'default', 'raised']) {
   const selector = ELEVATION_SELECTORS[mode].join(',\n');
   lines.push(`${selector} {`);
-  lines.push(buildElevationBlock(light, mode));
+  lines.push(declBlock(buildElevationDecls(light, mode)));
   lines.push('}');
   lines.push('');
 }
