@@ -115,5 +115,52 @@
   },
   "boardDownloadFailed": {
     "message": "Не удалось скачать доску"
+  },
+  "modalInstagramBody": {
+    "message": "Можно скачать эту сохранённую подборку Instagram. Каждый пост попадёт в отдельную коллекцию с именем post ID."
+  },
+  "modalArtstationBody": {
+    "message": "Скачать все изображения с этой страницы ArtStation (работа или проект) в коллекцию."
+  },
+  "downloadSavedButton": {
+    "message": "Скачать подборку"
+  },
+  "downloadPortfolioButton": {
+    "message": "Скачать портфолио"
+  },
+  "downloadAlbumButton": {
+    "message": "Скачать альбом"
+  },
+  "savedDownloadCollecting": {
+    "message": "Собираем посты из подборки…"
+  },
+  "portfolioDownloadCollecting": {
+    "message": "Собираем работы из портфолио…"
+  },
+  "albumDownloadCollecting": {
+    "message": "Собираем элементы альбома…"
+  },
+  "bulkDownloadProgress": {
+    "message": "Скачивание: $DONE$ из $TOTAL$",
+    "placeholders": {
+      "done": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "bulkDownloadDone": {
+    "message": "Готово: $COUNT$ карточек в коллекции «$NAME$»",
+    "placeholders": {
+      "count": { "content": "$1" },
+      "name": { "content": "$2" }
+    }
+  },
+  "bulkDownloadNoItems": {
+    "message": "На странице не найдено элементов для скачивания"
+  },
+  "bulkDownloadNoContent": {
+    "message": "Не удалось прочитать страницу. Обновите вкладку и попробуйте снова"
+  },
+  "bulkDownloadFailed": {
+    "message": "Не удалось выполнить массовое скачивание"
   }
 }

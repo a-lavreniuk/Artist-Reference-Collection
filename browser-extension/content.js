@@ -11,7 +11,16 @@ const {
   findPinWebsiteFromTarget,
   collectPinterestBoardPins,
   getPinterestBoardMeta,
-  isPinterestBoardUrl
+  isPinterestBoardUrl,
+  isInstagramPostUrl,
+  collectInstagramSavedPosts,
+  isInstagramSavedCollectionUrl,
+  getInstagramSavedMeta,
+  isArtstationAlbumUrl,
+  getArtstationAlbumMeta,
+  collectArtstationAlbumItems,
+  isArtstationArtworkUrl,
+  waitForArtstationArtworkMedia
 } = NS;
 
 const MIN_IMAGE_PX = 64;
@@ -207,10 +216,48 @@ async function sendSavePayload(payload) {
 }
 
 /**
+ * @param {{ ok?: boolean, code?: string }} res
+ */
+function handleInstagramSaveResult(res) {
+  if (res?.ok) {
+    showFeedback('success');
+    return;
+  }
+  if (res?.code === 'disabled') {
+    setButtonState('idle');
+    window.ArcExtPageModal?.show('disabled');
+    return;
+  }
+  showFeedback('error');
+}
+
+/**
  * @param {Element} targetEl
  * @returns {Promise<import('./lib/sites/types.js').SavePayload | null>}
  */
 async function resolveSavePayloadForClick(targetEl) {
+  if (isInstagramPostUrl(location.href)) {
+    const postUrl = location.href.split('?')[0];
+    return {
+      url: postUrl,
+      website: postUrl,
+      pageTitle: document.title,
+      mediaKind: 'image'
+    };
+  }
+
+  if (isArtstationArtworkUrl(location.href) && /artstation/i.test(location.hostname)) {
+    try {
+      const remote = await chrome.runtime.sendMessage({
+        type: 'arc:resolve-artstation-artwork-payload',
+        artworkUrl: location.href.split('?')[0]
+      });
+      if (remote?.url) return remote;
+    } catch (err) {
+      console.warn('[ARC] background artstation resolve failed:', err);
+    }
+  }
+
   const pinWebsite =
     (isPinterestPinPageUrl(location.href) ? location.href.split('?')[0] : null) ??
     findPinWebsiteFromTarget(targetEl);
@@ -254,6 +301,16 @@ async function onSaveClick(event) {
   setButtonState('loading');
 
   try {
+    if (isInstagramPostUrl(location.href)) {
+      const postUrl = location.href.split('?')[0];
+      const res = await chrome.runtime.sendMessage({
+        type: 'arc:save-instagram-post',
+        postUrl
+      });
+      handleInstagramSaveResult(res);
+      return;
+    }
+
     const payload = await resolveSavePayloadForClick(activeImage);
     if (!payload?.url) {
       showFeedback('error');
@@ -328,6 +385,66 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === 'arc:resolve-instagram-post-dom') {
+    void (NS.waitForInstagramPostMedia?.() ?? Promise.resolve(NS.resolveInstagramPostMediaFromDom?.()))
+      .then((payload) => sendResponse(payload))
+      .catch(() => sendResponse(null));
+    return true;
+  }
+
+  if (message?.type === 'arc:resolve-artstation-artwork-dom') {
+    void (NS.resolveArtstationArtworkMediaFromPage?.() ?? Promise.resolve(NS.resolveArtstationArtworkMediaFromDom?.()))
+      .then((payload) => sendResponse(payload))
+      .catch(() => sendResponse(null));
+    return true;
+  }
+
+  if (message?.type === 'arc:collect-instagram-saved') {
+    if (!isInstagramSavedCollectionUrl(location.href)) {
+      sendResponse({ ok: false, code: 'not_saved' });
+      return true;
+    }
+
+    void collectInstagramSavedPosts()
+      .then((saved) => sendResponse(saved))
+      .catch(() => sendResponse({ ok: false, code: 'collect_failed' }));
+    return true;
+  }
+
+  if (message?.type === 'arc:collect-artstation-album') {
+    if (!isArtstationAlbumUrl(location.href)) {
+      sendResponse({ ok: false, code: 'not_album' });
+      return true;
+    }
+
+    void collectArtstationAlbumItems()
+      .then((album) => sendResponse(album))
+      .catch(() => sendResponse({ ok: false, code: 'collect_failed' }));
+    return true;
+  }
+
+  if (message?.type === 'arc:instagram-page-state') {
+    const isSaved = isInstagramSavedCollectionUrl(location.href);
+    const meta = isSaved ? getInstagramSavedMeta() : null;
+    sendResponse({
+      isSaved,
+      collectionName: meta?.collectionName ?? null,
+      collectionUrl: meta?.collectionUrl ?? location.href
+    });
+    return true;
+  }
+
+  if (message?.type === 'arc:artstation-page-state') {
+    const isAlbum = isArtstationAlbumUrl(location.href);
+    const isArtwork = isArtstationArtworkUrl(location.href);
+    sendResponse({
+      isAlbum,
+      isArtwork,
+      albumName: isAlbum ? getArtstationAlbumMeta().albumName : null
+    });
+    return true;
+  }
+
   if (message?.type === 'arc:board-page-state') {
     const isBoard = isPinterestBoardUrl(location.href);
     const meta = isBoard ? getPinterestBoardMeta() : null;
@@ -368,6 +485,20 @@ document.addEventListener(
     if (!event.altKey) return;
     const found = findSaveableTarget(event.target);
     if (!found?.url) return;
+
+    if (isInstagramPostUrl(location.href)) {
+      event.preventDefault();
+      event.stopPropagation();
+      void chrome.runtime.sendMessage({
+        type: 'arc:save-instagram-post',
+        postUrl: location.href.split('?')[0]
+      }).then((res) => {
+        if (!res?.ok && res?.code === 'disabled') {
+          window.ArcExtPageModal?.show('disabled');
+        }
+      });
+      return;
+    }
 
     const payload = resolveSaveFromTarget(found.el);
     if (!payload) return;

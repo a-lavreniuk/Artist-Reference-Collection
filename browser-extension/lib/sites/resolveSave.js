@@ -28,9 +28,26 @@
   function findSaveableTarget(targetEl) {
     const handler = getSiteHandler(location.hostname);
 
-    if (handler.id === 'pinterest' || handler.id === 'youtube') {
+    if (handler.id === 'pinterest' || handler.id === 'youtube' || handler.id === 'artstation') {
       const video = handler.findVideoTarget?.(targetEl);
       if (video?.url) return video;
+    }
+
+    if (handler.id === 'instagram' && NS.isInstagramPostUrl?.(location.href)) {
+      const anchor = NS.instagramHoverAnchor?.(targetEl);
+      if (anchor instanceof Element) {
+        const image = findImageUrlFromTarget(anchor) ?? findImageUrlFromTarget(targetEl);
+        if (image?.url) return { el: anchor, url: image.url };
+        return { el: anchor, url: location.href };
+      }
+    }
+
+    if (handler.id === 'artstation') {
+      const anchor = NS.artstationHoverAnchor?.(targetEl);
+      if (anchor instanceof Element) {
+        const image = findImageUrlFromTarget(anchor) ?? findImageUrlFromTarget(targetEl);
+        if (image?.url) return { el: anchor, url: image.url };
+      }
     }
 
     const image = findImageUrlFromTarget(targetEl);

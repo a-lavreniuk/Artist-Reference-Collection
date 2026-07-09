@@ -1,24 +1,56 @@
 (() => {
 const NS = (window.__ARC__ = window.__ARC__ || {});
-const { ARC_LAUNCH_URL, ARC_WEBSITE_URL, isPinterestBoardUrl } = NS;
+const {
+  ARC_LAUNCH_URL,
+  ARC_WEBSITE_URL,
+  isPinterestBoardUrl,
+  isInstagramSavedCollectionUrl,
+  isArtstationAlbumUrl
+} = NS;
 
 const modalEl = document.querySelector('.arc-ext-modal--popup');
 const subtitleEl = document.getElementById('arc-modal-subtitle');
 const slot1El = document.getElementById('arc-slot-1');
 const slot2Wrap = document.getElementById('arc-slot-2-wrap');
 const slot2El = document.getElementById('arc-slot-2');
+const websiteBtn = document.getElementById('arc-website-btn');
+const closeBtn = document.getElementById('arc-close-btn');
+const openBtn = document.getElementById('arc-open-btn');
+
 const pinterestSection = document.getElementById('arc-pinterest-section');
 const pinterestBodyEl = document.getElementById('arc-pinterest-body');
 const downloadBoardBtn = document.getElementById('arc-download-board-btn');
 const boardProgressWrap = document.getElementById('arc-board-progress-wrap');
 const boardProgressEl = document.getElementById('arc-board-progress');
-const websiteBtn = document.getElementById('arc-website-btn');
-const closeBtn = document.getElementById('arc-close-btn');
-const openBtn = document.getElementById('arc-open-btn');
+
+const instagramSection = document.getElementById('arc-instagram-section');
+const instagramBodyEl = document.getElementById('arc-instagram-body');
+const downloadSavedBtn = document.getElementById('arc-download-saved-btn');
+const instagramProgressWrap = document.getElementById('arc-instagram-progress-wrap');
+const instagramProgressEl = document.getElementById('arc-instagram-progress');
+
+const artstationSection = document.getElementById('arc-artstation-section');
+const artstationBodyEl = document.getElementById('arc-artstation-body');
+const downloadAlbumBtn = document.getElementById('arc-download-album-btn');
+const artstationProgressWrap = document.getElementById('arc-artstation-progress-wrap');
+const artstationProgressEl = document.getElementById('arc-artstation-progress');
 
 let activeTabId = null;
-let boardDownloadInFlight = false;
 let arcConnectionReady = false;
+
+/** @type {Record<string, boolean>} */
+const bulkInFlight = {
+  'pinterest-board': false,
+  'instagram-saved': false,
+  'artstation-album': false
+};
+
+/** @type {Record<string, { progressEl: HTMLElement | null, wrapEl: HTMLElement | null }>} */
+const bulkUi = {
+  'pinterest-board': { progressEl: boardProgressEl, wrapEl: boardProgressWrap },
+  'instagram-saved': { progressEl: instagramProgressEl, wrapEl: instagramProgressWrap },
+  'artstation-album': { progressEl: artstationProgressEl, wrapEl: artstationProgressWrap }
+};
 
 function msg(key, substitutions) {
   return chrome.i18n.getMessage(key, substitutions);
@@ -62,31 +94,46 @@ function bindStaticLabels() {
   }
   if (downloadBoardBtn) {
     downloadBoardBtn.textContent = msg('downloadBoardButton');
-    downloadBoardBtn.addEventListener('click', () => void startBoardDownload());
+    downloadBoardBtn.addEventListener('click', () => void startBulkDownload('pinterest-board'));
   }
-  if (pinterestBodyEl) {
-    pinterestBodyEl.textContent = msg('modalPinterestBody');
+  if (downloadSavedBtn) {
+    downloadSavedBtn.textContent = msg('downloadSavedButton');
+    downloadSavedBtn.addEventListener('click', () => void startBulkDownload('instagram-saved'));
   }
+  if (downloadAlbumBtn) {
+    downloadAlbumBtn.textContent = msg('downloadAlbumButton');
+    downloadAlbumBtn.addEventListener('click', () => void startBulkDownload('artstation-album'));
+  }
+  if (pinterestBodyEl) pinterestBodyEl.textContent = msg('modalPinterestBody');
+  if (instagramBodyEl) instagramBodyEl.textContent = msg('modalInstagramBody');
+  if (artstationBodyEl) artstationBodyEl.textContent = msg('modalArtstationBody');
   if (modalEl?.querySelector('#arc-modal-title')) {
     modalEl.querySelector('#arc-modal-title').textContent = msg('modalTitle');
   }
 }
 
-function setBoardProgress(text, visible = true) {
-  if (!boardProgressEl || !boardProgressWrap) return;
-  boardProgressEl.textContent = text;
-  boardProgressWrap.hidden = !visible || !text;
+function setBulkProgress(kind, text, visible = true) {
+  const ui = bulkUi[kind];
+  if (!ui?.progressEl || !ui?.wrapEl) return;
+  ui.progressEl.textContent = text;
+  ui.wrapEl.hidden = !visible || !text;
 }
 
-function setBoardSlotVisible(visible) {
-  if (!pinterestSection) return;
-  pinterestSection.hidden = !visible;
-  pinterestSection.classList.toggle('is-visible', visible);
+function anyBulkInFlight() {
+  return Object.values(bulkInFlight).some(Boolean);
 }
 
-function updateBoardButtonState() {
-  if (!downloadBoardBtn) return;
-  downloadBoardBtn.disabled = boardDownloadInFlight || !arcConnectionReady;
+function updateBulkButtonStates() {
+  const disabled = anyBulkInFlight() || !arcConnectionReady;
+  if (downloadBoardBtn) downloadBoardBtn.disabled = disabled;
+  if (downloadSavedBtn) downloadSavedBtn.disabled = disabled;
+  if (downloadAlbumBtn) downloadAlbumBtn.disabled = disabled;
+}
+
+function setSectionVisible(section, visible) {
+  if (!section) return;
+  section.hidden = !visible;
+  section.classList.toggle('is-visible', visible);
 }
 
 function showConnectedLayout(pending, queueMax) {
@@ -130,79 +177,111 @@ function showDrainingLayout() {
   if (slot2Wrap) slot2Wrap.hidden = true;
 }
 
-async function detectPinterestBoard() {
+async function detectBulkSections() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   activeTabId = tab?.id ?? null;
 
   let onBoard = typeof tab?.url === 'string' && isPinterestBoardUrl(tab.url);
+  let onInstagramSaved = typeof tab?.url === 'string' && isInstagramSavedCollectionUrl(tab.url);
+  let onArtstationAlbum = typeof tab?.url === 'string' && isArtstationAlbumUrl(tab.url);
 
-  if (!onBoard && tab?.id) {
+  if (tab?.id) {
     try {
-      const state = await chrome.tabs.sendMessage(tab.id, { type: 'arc:board-page-state' });
-      onBoard = state?.isBoard === true;
+      const boardState = await chrome.tabs.sendMessage(tab.id, { type: 'arc:board-page-state' });
+      onBoard = boardState?.isBoard === true;
     } catch {
-      // Content script not ready on this tab.
+      // Content script not ready.
+    }
+
+    try {
+      const instagramState = await chrome.tabs.sendMessage(tab.id, { type: 'arc:instagram-page-state' });
+      onInstagramSaved = instagramState?.isSaved === true;
+    } catch {
+      // Content script not ready.
+    }
+
+    try {
+      const artstationState = await chrome.tabs.sendMessage(tab.id, { type: 'arc:artstation-page-state' });
+      onArtstationAlbum = artstationState?.isAlbum === true;
+    } catch {
+      // Content script not ready.
     }
   }
 
-  setBoardSlotVisible(onBoard);
-  updateBoardButtonState();
+  setSectionVisible(pinterestSection, onBoard);
+  setSectionVisible(instagramSection, onInstagramSaved);
+  setSectionVisible(artstationSection, onArtstationAlbum);
 
-  if (!onBoard) {
-    setBoardProgress('', false);
-  }
+  updateBulkButtonStates();
+
+  if (!onBoard) setBulkProgress('pinterest-board', '', false);
+  if (!onInstagramSaved) setBulkProgress('instagram-saved', '', false);
+  if (!onArtstationAlbum) setBulkProgress('artstation-album', '', false);
 }
 
-async function startBoardDownload() {
-  if (!activeTabId || boardDownloadInFlight) return;
+/**
+ * @param {'pinterest-board' | 'instagram-saved' | 'artstation-album'} kind
+ */
+async function startBulkDownload(kind) {
+  if (!activeTabId || bulkInFlight[kind]) return;
 
-  boardDownloadInFlight = true;
-  if (downloadBoardBtn) downloadBoardBtn.disabled = true;
-  setBoardProgress(msg('boardDownloadCollecting'), true);
+  const messageType = {
+    'pinterest-board': 'arc:download-pinterest-board',
+    'instagram-saved': 'arc:download-instagram-saved',
+    'artstation-album': 'arc:download-artstation-album'
+  }[kind];
+
+  const collectingMessage = {
+    'pinterest-board': msg('boardDownloadCollecting'),
+    'instagram-saved': msg('savedDownloadCollecting'),
+    'artstation-album': msg('albumDownloadCollecting')
+  }[kind];
+
+  bulkInFlight[kind] = true;
+  updateBulkButtonStates();
+  setBulkProgress(kind, collectingMessage, true);
 
   let result;
   try {
-    result = await chrome.runtime.sendMessage({
-      type: 'arc:download-pinterest-board',
-      tabId: activeTabId
-    });
+    result = await chrome.runtime.sendMessage({ type: messageType, tabId: activeTabId });
   } catch {
     result = { ok: false, code: 'error' };
   }
 
   if (result?.ok) {
-    setBoardProgress(
-      msg('boardDownloadDone', [
-        String(result.imported ?? 0),
-        result.collectionName ?? ''
-      ]),
+    setBulkProgress(
+      kind,
+      msg('bulkDownloadDone', [String(result.imported ?? 0), result.collectionName ?? '']),
       true
     );
     setSubtitle(msg('statusConnectedSubtitle'), 'success');
   } else if (result?.code === 'disabled') {
     showDisabledLayout();
-    setBoardProgress(msg('statusDisabled'), true);
+    setBulkProgress(kind, msg('statusDisabled'), true);
   } else if (result?.code === 'offline') {
     showOfflineLayout(0, 50);
-    setBoardProgress(msg('statusOffline'), true);
-  } else if (result?.code === 'no_pins') {
-    setBoardProgress(msg('boardDownloadNoPins'), true);
+    setBulkProgress(kind, msg('statusOffline'), true);
+  } else if (result?.code === 'no_pins' || result?.code === 'no_posts' || result?.code === 'no_artworks' || result?.code === 'no_items') {
+    setBulkProgress(kind, msg('bulkDownloadNoItems'), true);
   } else if (result?.code === 'no_content') {
-    setBoardProgress(msg('boardDownloadNoContent'), true);
+    setBulkProgress(kind, msg('bulkDownloadNoContent'), true);
   } else {
-    setBoardProgress(msg('boardDownloadFailed'), true);
+    setBulkProgress(kind, msg('bulkDownloadFailed'), true);
   }
 
-  boardDownloadInFlight = false;
-  updateBoardButtonState();
+  bulkInFlight[kind] = false;
+  updateBulkButtonStates();
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  if (message?.type !== 'arc:board-download-progress') return;
+  if (message?.type !== 'arc:bulk-download-progress') return;
   if (message.tabId !== activeTabId) return;
-  setBoardProgress(
-    msg('boardDownloadProgress', [String(message.done ?? 0), String(message.total ?? 0)]),
+  const kind = message.bulkKind;
+  if (!kind || !bulkUi[kind]) return;
+  setBulkProgress(
+    kind,
+    msg('bulkDownloadProgress', [String(message.done ?? 0), String(message.total ?? 0)]),
     true
   );
 });
@@ -227,27 +306,29 @@ async function refreshConnectionStatus() {
   if (!res) {
     showOfflineLayout(pending, queueMax);
     setSubtitle(msg('statusOffline'), 'danger');
-    await detectPinterestBoard();
+    await detectBulkSections();
     return;
   }
 
   if (res?.arc?.ok) {
     showConnectedLayout(pending, queueMax);
-    await detectPinterestBoard();
+    await detectBulkSections();
     return;
   }
 
   if (res?.arc?.reason === 'disabled') {
     showDisabledLayout();
-    await detectPinterestBoard();
+    await detectBulkSections();
     return;
   }
 
   showOfflineLayout(pending, queueMax);
-  await detectPinterestBoard();
+  await detectBulkSections();
 }
 
 bindStaticLabels();
-setBoardSlotVisible(false);
+setSectionVisible(pinterestSection, false);
+setSectionVisible(instagramSection, false);
+setSectionVisible(artstationSection, false);
 void refreshConnectionStatus();
 })();

@@ -3,7 +3,7 @@
   "name": "__MSG_extensionName__",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
-  "version": "0.1.7",
+  "version": "0.1.19",
   "icons": {
     "16": "icons/icon-32.png",
     "48": "icons/icon-64.png",
@@ -24,7 +24,11 @@
     "https://*.pinterest.com/*",
     "https://pinterest.com/*",
     "https://*.pinterest.ru/*",
-    "https://pinterest.ru/*"
+    "https://pinterest.ru/*",
+    "https://*.instagram.com/*",
+    "https://instagram.com/*",
+    "https://*.artstation.com/*",
+    "https://artstation.com/*"
   ],
   "content_scripts": [
     {
@@ -34,9 +38,16 @@
         "lib/sites/generic.js",
         "lib/sites/pinterest.js",
         "lib/sites/youtube.js",
+        "lib/artstation/projectParseBridge.js",
         "lib/sites/artstation.js",
+        "lib/instagram/mediaFilter.js",
+        "lib/instagram/postParseBridge.js",
+        "lib/instagram/mediaApiBridge.js",
+        "lib/sites/instagram.js",
         "lib/sites/registry.js",
         "lib/pinterest/board.js",
+        "lib/instagram/saved.js",
+        "lib/artstation/album.js",
         "lib/sites/resolveSave.js",
         "lib/constants.js",
         "lib/pageModal.js",

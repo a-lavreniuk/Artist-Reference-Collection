@@ -115,5 +115,52 @@
   },
   "boardDownloadFailed": {
     "message": "Could not download the board"
+  },
+  "modalInstagramBody": {
+    "message": "You can download this Instagram saved collection. Each post will be saved into its own collection named by post ID."
+  },
+  "modalArtstationBody": {
+    "message": "Download all images from this ArtStation artwork or project page into a collection."
+  },
+  "downloadSavedButton": {
+    "message": "Download collection"
+  },
+  "downloadPortfolioButton": {
+    "message": "Download portfolio"
+  },
+  "downloadAlbumButton": {
+    "message": "Download album"
+  },
+  "savedDownloadCollecting": {
+    "message": "Collecting posts from saved collection…"
+  },
+  "portfolioDownloadCollecting": {
+    "message": "Collecting artworks from portfolio…"
+  },
+  "albumDownloadCollecting": {
+    "message": "Collecting album items…"
+  },
+  "bulkDownloadProgress": {
+    "message": "Downloading: $DONE$ of $TOTAL$",
+    "placeholders": {
+      "done": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
+  },
+  "bulkDownloadDone": {
+    "message": "Done: $COUNT$ cards in collection \"$NAME$\"",
+    "placeholders": {
+      "count": { "content": "$1" },
+      "name": { "content": "$2" }
+    }
+  },
+  "bulkDownloadNoItems": {
+    "message": "No items found on this page"
+  },
+  "bulkDownloadNoContent": {
+    "message": "Could not read the page. Refresh the tab and try again"
+  },
+  "bulkDownloadFailed": {
+    "message": "Could not complete bulk download"
   }
 }

@@ -1,6 +1,13 @@
 (() => {
   const NS = (window.__ARC__ = window.__ARC__ || {});
-  const { genericHandler, pinterestHandler, artstationHandler, youtubeHandler, isYoutubeHost } = NS;
+  const {
+    genericHandler,
+    pinterestHandler,
+    artstationHandler,
+    instagramHandler,
+    youtubeHandler,
+    isYoutubeHost
+  } = NS;
 
   /**
    * @param {string} hostname
@@ -15,6 +22,10 @@
 
     if (host === 'pinterest.com' || host.endsWith('.pinterest.com')) {
       return pinterestHandler;
+    }
+
+    if (host === 'instagram.com' || host.endsWith('.instagram.com')) {
+      return instagramHandler;
     }
 
     if (host === 'artstation.com' || host.endsWith('.artstation.com')) {

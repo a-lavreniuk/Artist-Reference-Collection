@@ -21,6 +21,8 @@ Not in MVP: Safari/Firefox, Vimeo import, page screenshots, tags/collections at 
 - **Pinterest video pins** — mp4 or HLS (`.m3u8` → ffmpeg → mp4 in ARC), max quality from available URLs
 - **YouTube** — watch / Shorts / youtu.be URLs; ARC downloads via **yt-dlp** (lazy install to `~/.arc/bin/` on first use)
 - **Pinterest board** — mixed boards import images and videos into one collection; each pin opens in a background tab for full-resolution resolve
+- **Instagram saved collection** — each post (including carousel slides) into a collection named by post shortcode
+- **ArtStation portfolio / album** — bulk import from artist profile or multi-image project page
 - **Limits:** images — no byte cap; videos — **512 MB**; video import timeout up to **15 min**
 - **No poster fallback** for failed video downloads — user sees an error instead of a thumbnail card
 - Gated / auth-only video → error (ARC fetches without browser cookies)
@@ -40,18 +42,39 @@ Test video pin: `https://ru.pinterest.com/pin/675821487865257612/`
 
 Требования: ARC запущен, библиотека открыта, Import API включён. Импорт доски с видео-пинами заметно дольше из-за обхода каждого пина.
 
-### Pinterest / ArtStation / YouTube — одиночное сохранение
+### Instagram — saved collection
+
+На странице **сохранённой подборки** (`https://www.instagram.com/<user>/saved/<collection>/`):
+
+1. Откройте подборку в браузере (публичный контент; без логина может не сработать).
+2. Кликните иконку расширения ARC.
+3. В popup появится блок Instagram с кнопкой **«Скачать подборку»**.
+4. Расширение прокрутит страницу, соберёт URL постов и для каждого поста создаст **коллекцию с именем post ID** (shortcode). Карусель сохраняется целиком — все слайды в одной коллекции.
+
+### ArtStation — альбом
+
+На странице **работы** (`/artwork/...`) или **проекта** (`/project/...`):
+
+1. Откройте страницу в браузере.
+2. Кликните иконку расширения ARC.
+3. В popup появится кнопка **«Скачать альбом»**.
+4. Все изображения работы (или все artwork проекта) попадут в коллекцию `Художник — Название`.
+
+Массовое скачивание портфолио целиком **не поддерживается**.
+
+### Pinterest / Instagram / ArtStation / YouTube — одиночное сохранение
 
 Расширение выбирает URL и имя карточки через `browser-extension/lib/sites/`:
 
 | Сайт | Что делает handler |
 |------|-------------------|
 | **Pinterest** (`*.pinterest.com`) | Изображения: апгрейд `i.pinimg.com` до `/originals/`. Видео: `v.pinimg.com` mp4/HLS, max quality; video-пины на ленте приоритетнее постера |
+| **Instagram** (`*.instagram.com`) | Пост `/p/<shortcode>/`: все слайды карусели в коллекцию shortcode; имена карточек — подпись и `@author` |
 | **YouTube** (`*.youtube.com`, `youtu.be`) | Сохраняет canonical watch URL; ARC скачивает файл через yt-dlp |
-| **ArtStation** (`*.artstation.com`) | Полноразмерный artwork (`srcset`, `data-image`, `og:image`); имя — название работы и автор |
+| **ArtStation** (`*.artstation.com`) | Полноразмерный artwork (`srcset`, `data-image`, `og:image`); видео на artwork page; имя — название работы и автор |
 | **Остальные сайты** | Generic: `img` / `background-image` или `<video>` с прямым https URL |
 
-Ограничение: ARC скачивает URL **без cookies браузера** — gated-контент может сохраниться только в preview-качестве.
+Ограничение: ARC скачивает URL **без cookies браузера** — gated-контент и приватные Instagram-посты могут не сохраниться или сохраниться только в preview-качестве. Поддерживается **публичный** контент.
 
 ## Import API endpoints
 
@@ -145,23 +168,27 @@ Browsers cannot start arbitrary `.exe` files directly — only via a registered 
 7. **API disabled** — toggle off in Settings → extension shows **Import API disabled**.
 8. **Pinterest** — open a pin page → hover save or context menu → card uses full-resolution `pinimg` URL (check dimensions in card detail vs page thumbnail).
 9. **ArtStation** — open an artwork page → hover save or context menu → card uses full artwork asset; name includes title/author when available.
-10. **Pinterest board** — open a board URL → extension popup → **Download this board** → collection appears in ARC with board name and imported pins (images + videos); progress shown in popup.
-11. **Pinterest video pin** — `https://ru.pinterest.com/pin/675821487865257612/` → hover save → video card in gallery (not poster).
-12. **YouTube** — open a public watch page → hover on player → video card after yt-dlp download completes.
-13. **Generic video** — page with `<video src="https://...mp4">` → hover save → video card.
-14. **Generic regression** — save image from a non-Pinterest site → behavior unchanged from before site handlers.
+10. **Instagram post** — `https://www.instagram.com/p/Dagz8GXGj-Y/` → hover save → collection named by post shortcode; carousel imports all slides.
+11. **Instagram saved** — open saved collection URL → popup → **Download collection** → per-post collections with progress in popup.
+12. **ArtStation album** — artwork page (e.g. `artwork/Baorl4`) or project page → popup → **Download album** → collection `Artist — Title`.
+13. **Pinterest board** — open a board URL → extension popup → **Download this board** → collection appears in ARC with board name and imported pins (images + videos); progress shown in popup.
+14. **Pinterest video pin** — `https://ru.pinterest.com/pin/675821487865257612/` → hover save → video card in gallery (not poster).
+15. **YouTube** — open a public watch page → hover on player → video card after yt-dlp download completes.
+16. **Generic video** — page with `<video src="https://...mp4">` → hover save → video card.
+17. **Generic regression** — save image from a non-handler site → behavior unchanged from before site handlers.
 
 ## Permissions (Chrome)
 
 - `contextMenus` — save from image context menu
 - `storage` — offline queue
 - `alarms` — periodic queue drain when ARC was offline
-- `host_permissions`: `http://127.0.0.1:47896/*` — ARC Import API
-- `tabs` — Pinterest board pin resolve (background tabs)
+- `host_permissions`: `http://127.0.0.1:47896/*`, `https://*.instagram.com/*`, `https://*.artstation.com/*`, Pinterest hosts — background fetch and bulk resolve
+- `tabs` — board / post / artwork resolve (background tabs)
 - Content script + `content.css` on `<all_urls>` — hover save and Alt + right-click on any site
 
 ## Development
 
 - Main process API: `src/main/importApi/` (includes `youtubeDownload.ts`, yt-dlp lazy install)
 - Site handlers: `browser-extension/lib/sites/`
-- Unit tests: `npm test` (includes `src/main/importApi/__tests__/importApiHandlers.test.ts`)
+- Bulk collectors: `browser-extension/lib/pinterest/`, `browser-extension/lib/instagram/`, `browser-extension/lib/artstation/`
+- Unit tests: `npm test` (includes `pinParse`, `instagramParse`, `artstationParse` tests under `src/main/importApi/__tests__/`)

@@ -42,6 +42,40 @@
             <p id="arc-board-progress" class="arc-ext-modal__slot-text"></p>
           </div>
         </section>
+        <section
+          class="arc-ext-modal__section arc-ext-modal__section--instagram"
+          id="arc-instagram-section"
+          aria-label="Instagram saved collection"
+          hidden
+        >
+          <hr class="arc-ext-modal__separator" />
+          <div class="arc-ext-modal__slot">
+            <p id="arc-instagram-body" class="arc-ext-modal__slot-text"></p>
+          </div>
+          <div class="arc-ext-modal__slot arc-ext-modal__slot--action">
+            <button type="button" id="arc-download-saved-btn" class="arc-ext-btn arc-ext-btn--brand"></button>
+          </div>
+          <div class="arc-ext-modal__slot" id="arc-instagram-progress-wrap" hidden>
+            <p id="arc-instagram-progress" class="arc-ext-modal__slot-text"></p>
+          </div>
+        </section>
+        <section
+          class="arc-ext-modal__section arc-ext-modal__section--artstation"
+          id="arc-artstation-section"
+          aria-label="ArtStation album"
+          hidden
+        >
+          <hr class="arc-ext-modal__separator" />
+          <div class="arc-ext-modal__slot">
+            <p id="arc-artstation-body" class="arc-ext-modal__slot-text"></p>
+          </div>
+          <div class="arc-ext-modal__slot arc-ext-modal__slot--action">
+            <button type="button" id="arc-download-album-btn" class="arc-ext-btn arc-ext-btn--brand"></button>
+          </div>
+          <div class="arc-ext-modal__slot" id="arc-artstation-progress-wrap" hidden>
+            <p id="arc-artstation-progress" class="arc-ext-modal__slot-text"></p>
+          </div>
+        </section>
       </div>
       <footer class="arc-ext-modal__footer arc-ext-modal__footer--split" id="arc-modal-footer">
         <button type="button" id="arc-website-btn" class="arc-ext-btn arc-ext-btn--secondary"></button>
@@ -55,6 +89,8 @@
     <script src="lib/sites/generic.js"></script>
     <script src="lib/sites/pinterest.js"></script>
     <script src="lib/pinterest/board.js"></script>
+    <script src="lib/instagram/saved.js"></script>
+    <script src="lib/artstation/album.js"></script>
     <script src="lib/constants.js"></script>
     <script src="popup.js"></script>
   </body>
