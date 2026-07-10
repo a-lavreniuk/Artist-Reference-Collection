@@ -1,17 +1,23 @@
 const STORAGE_KEY = 'arc-card-detail-settings-width-v1';
 
 export const CARD_DETAIL_SETTINGS_WIDTH_DEFAULT = 600;
-/** Минимум для вмещения `.arc-card-detail-options` (см. `--arc-card-detail-settings-min-w` в index.css). */
+/** Fallback до замера тулбара в `CardDetailOverlay`. */
 export const CARD_DETAIL_SETTINGS_WIDTH_MIN = 588;
 
-export function getCardDetailSettingsWidthBounds(): { min: number; max: number } {
-  const min = CARD_DETAIL_SETTINGS_WIDTH_MIN;
+export function getCardDetailSettingsWidthBounds(measuredMin = CARD_DETAIL_SETTINGS_WIDTH_MIN): {
+  min: number;
+  max: number;
+} {
+  const min = Math.max(CARD_DETAIL_SETTINGS_WIDTH_MIN, Math.round(measuredMin));
   const max = Math.max(min, Math.floor(window.innerWidth * 0.5));
   return { min, max };
 }
 
-export function clampCardDetailSettingsWidth(px: number): number {
-  const { min, max } = getCardDetailSettingsWidthBounds();
+export function clampCardDetailSettingsWidth(
+  px: number,
+  measuredMin = CARD_DETAIL_SETTINGS_WIDTH_MIN
+): number {
+  const { min, max } = getCardDetailSettingsWidthBounds(measuredMin);
   return Math.min(max, Math.max(min, Math.round(px)));
 }
 

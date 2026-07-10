@@ -57,10 +57,12 @@ import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
 import { readGridSize } from '../../layout/gridSizePreference';
 import { loadCardDetailPalette, type PaletteSwatch } from './cardDetailPalette';
 import {
+  CARD_DETAIL_SETTINGS_WIDTH_MIN,
   clampCardDetailSettingsWidth,
   readCardDetailSettingsWidth,
   writeCardDetailSettingsWidth
 } from './cardDetailSettingsWidth';
+import { measureCardDetailToolbarMinWidth } from './measureCardDetailToolbarMinWidth';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 import CopyCardSettingsMenu from './CopyCardSettingsMenu';
 import {
@@ -116,6 +118,7 @@ export default function CardDetailOverlay({
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const settingsScrollRef = useRef<HTMLDivElement>(null);
+  const optionsLeftRef = useRef<HTMLDivElement>(null);
   const inspectVideoRef = useRef<HTMLVideoElement | null>(null);
   const descriptionSaveTimerRef = useRef<number | null>(null);
   const nameSaveTimerRef = useRef<number | null>(null);
@@ -147,6 +150,7 @@ export default function CardDetailOverlay({
   const [descriptionTab, setDescriptionTab] = useState<DescriptionTab>('description');
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
+  const [settingsMinWidth, setSettingsMinWidth] = useState(CARD_DETAIL_SETTINGS_WIDTH_MIN);
   const settingsWidthRef = useRef(settingsWidth);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -443,15 +447,44 @@ export default function CardDetailOverlay({
     [cardId, reloadCard]
   );
 
-  const clampSettingsWidth = useCallback((px: number) => clampCardDetailSettingsWidth(px), []);
+  const clampSettingsWidth = useCallback(
+    (px: number) => clampCardDetailSettingsWidth(px, settingsMinWidth),
+    [settingsMinWidth]
+  );
+
+  const remeasureToolbarMinWidth = useCallback(() => {
+    const next = measureCardDetailToolbarMinWidth(optionsLeftRef.current);
+    setSettingsMinWidth((current) => (current === next ? current : next));
+  }, []);
+
+  useLayoutEffect(() => {
+    remeasureToolbarMinWidth();
+  }, [remeasureToolbarMinWidth, inTrash, card?.id, hasSettingsClipboard]);
+
+  useLayoutEffect(() => {
+    const el = optionsLeftRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => remeasureToolbarMinWidth());
+    observer.observe(el);
+    window.addEventListener('resize', remeasureToolbarMinWidth);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', remeasureToolbarMinWidth);
+    };
+  }, [remeasureToolbarMinWidth]);
+
+  useEffect(() => {
+    setSettingsWidth((current) => clampCardDetailSettingsWidth(current, settingsMinWidth));
+  }, [settingsMinWidth]);
 
   useEffect(() => {
     const onResize = () => {
-      setSettingsWidth((current) => clampCardDetailSettingsWidth(current));
+      setSettingsWidth((current) => clampCardDetailSettingsWidth(current, settingsMinWidth));
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [settingsMinWidth]);
 
   const showCopyAlert = useCallback((message: string) => {
     setCopyAlertMessage(message);
@@ -760,6 +793,10 @@ export default function CardDetailOverlay({
       : 'arc-icon-bookmark-plus'
     : 'arc-icon-bookmark';
 
+  const overlayStyle = {
+    ['--arc-card-detail-settings-min-w']: `${settingsMinWidth}px`
+  } as CSSProperties;
+
   const mainRowStyle = {
     ['--arc-card-detail-settings-w']: `${settingsWidth}px`
   } as CSSProperties;
@@ -821,6 +858,7 @@ export default function CardDetailOverlay({
         data-elevation="sunken"
         data-input-size="l"
         data-btn-size="l"
+        style={overlayStyle}
         role="dialog"
         aria-modal="true"
         aria-labelledby="arcCardDetailHeading"
@@ -886,7 +924,7 @@ export default function CardDetailOverlay({
 
           <aside className="arc-card-detail-settings panel elevation-sunken" data-interface-tour-anchor="card-detail-fields">
             <div className="arc-card-detail-options" data-interface-tour-anchor="card-detail-toolbar">
-              <div className="arc-card-detail-options-left">
+              <div ref={optionsLeftRef} className="arc-card-detail-options-left">
                 {inTrash ? (
                   <>
                     <Tooltip content="Удалить навсегда" position="top">

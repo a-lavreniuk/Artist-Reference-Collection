@@ -2215,12 +2215,6 @@ body.arc-card-detail-open .arc-app-outlet {
   padding: 0;
 }
 
-.arc-card-detail-overlay[data-btn-size="l"] {
-  --arc-card-detail-settings-min-w: calc(
-    var(--s-4) * 2 + var(--s-3) * 3 + var(--btn-h) * 7 + min(200px, 28vw) - 4px
-  );
-}
-
 .arc-card-detail-settings {
   flex: 0 0 var(--arc-card-detail-settings-w, 600px);
   width: var(--arc-card-detail-settings-w, 600px);
