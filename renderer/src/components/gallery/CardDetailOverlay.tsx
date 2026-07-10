@@ -44,6 +44,7 @@ import {
 } from '../../services/db';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
+import { ARC_SEARCH_QUERY_TAG } from '../../search/searchUrl';
 import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import { startColorSearch } from '../../search/startColorSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
@@ -703,7 +704,23 @@ export default function CardDetailOverlay({
     return task;
   };
 
-  const removeTag = (tagId: string) => patchCardTagIds((ids) => ids.filter((id) => id !== tagId));
+  const openTagSearch = useCallback(
+    (tagId: string) => {
+      const next = new URLSearchParams();
+      next.append(ARC_SEARCH_QUERY_TAG, tagId);
+      onClose();
+      navigate({ pathname: '/gallery', search: `?${next.toString()}` });
+    },
+    [navigate, onClose]
+  );
+
+  const openCollectionPage = useCallback(
+    (collectionId: string) => {
+      onClose();
+      navigate(`/collections/${collectionId}`);
+    },
+    [navigate, onClose]
+  );
 
   const removeCollection = (collectionId: string) =>
     patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
@@ -1238,8 +1255,8 @@ export default function CardDetailOverlay({
                         <button
                           type="button"
                           className="arc-card-detail-tag-chip"
-                          onClick={() => void removeTag(tag.id)}
-                          aria-label={`Снять метку «${tag.name}»`}
+                          onClick={() => openTagSearch(tag.id)}
+                          aria-label={`Искать по метке «${tag.name}»`}
                         >
                           <span className="arc-card-detail-tag-dot" style={{ background: colorHex }} aria-hidden="true" />
                           <span className="arc-card-detail-tag-name">{tag.name}</span>
@@ -1278,7 +1295,19 @@ export default function CardDetailOverlay({
                 {collectionsResolved.length > 0 && (
                   <ul className="arc-card-detail-collections">
                     {collectionsResolved.map((col) => (
-                      <li key={col.id} className="arc-card-detail-collection-row panel elevation-sunken">
+                      <li
+                        key={col.id}
+                        className="arc-card-detail-collection-row arc-card-detail-collection-row--navigable panel elevation-sunken"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openCollectionPage(col.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openCollectionPage(col.id);
+                          }
+                        }}
+                      >
                         <CardDetailCollectionStrip
                           collectionId={col.id}
                           previews={collectionPreviews[col.id] ?? []}
@@ -1290,7 +1319,10 @@ export default function CardDetailOverlay({
                             <button
                               type="button"
                               className="text-s arc-card-detail-collection-remove"
-                              onClick={() => void removeCollection(col.id)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void removeCollection(col.id);
+                              }}
                             >
                               Снять
                             </button>

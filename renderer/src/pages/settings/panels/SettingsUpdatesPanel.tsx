@@ -75,22 +75,23 @@ export default function SettingsUpdatesPanel() {
               <SettingsSeparator />
 
               <div className="arc-settings-updates-actions">
-                {showUpdateActions ? (
-                  <div className="arc-settings-updates-actions__update-row">
-                    {checkState === 'updateAvailable' && availableVersion ? (
-                      <p className="text-m arc-settings-updates-actions__status">
-                        Доступна версия {availableVersion}
-                      </p>
-                    ) : null}
-                    {updateBusy ? (
-                      <p className="text-m arc-settings-updates-actions__status">
-                        {checkState === 'installing'
-                          ? 'Устанавливаем обновление… Приложение скоро перезапустится.'
-                          : downloadPercent != null
-                            ? `Загрузка обновления… ${Math.round(downloadPercent)}%`
-                            : 'Загрузка обновления…'}
-                      </p>
-                    ) : null}
+                {checkState === 'updateAvailable' && availableVersion ? (
+                  <p className="text-m arc-settings-updates-actions__status">
+                    Доступна версия {availableVersion}
+                  </p>
+                ) : null}
+                {updateBusy ? (
+                  <p className="text-m arc-settings-updates-actions__status">
+                    {checkState === 'installing'
+                      ? 'Устанавливаем обновление… Приложение скоро перезапустится.'
+                      : downloadPercent != null
+                        ? `Загрузка обновления… ${Math.round(downloadPercent)}%`
+                        : 'Загрузка обновления…'}
+                  </p>
+                ) : null}
+
+                <div className="arc-settings-updates-actions__buttons">
+                  {showUpdateActions ? (
                     <button
                       type="button"
                       className="btn btn-brand btn-ds"
@@ -99,17 +100,17 @@ export default function SettingsUpdatesPanel() {
                     >
                       <span className="btn-ds__value">{updateBusy ? 'Подождите…' : 'Обновить'}</span>
                     </button>
-                  </div>
-                ) : null}
+                  ) : null}
 
-                <button
-                  type="button"
-                  className="btn btn-outline btn-ds"
-                  disabled={checking || updateBusy}
-                  onClick={() => void checkUpdates()}
-                >
-                  <span className="btn-ds__value">{checking ? '…' : 'Проверить обновления'}</span>
-                </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-ds"
+                    disabled={checking || updateBusy}
+                    onClick={() => void checkUpdates()}
+                  >
+                    <span className="btn-ds__value">{checking ? '…' : 'Проверить обновления'}</span>
+                  </button>
+                </div>
               </div>
             </>
           )}

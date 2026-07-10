@@ -2530,6 +2530,15 @@ body.arc-card-detail-open .arc-app-outlet {
   background: var(--button-outline-hover);
 }
 
+.arc-card-detail-collection-row--navigable {
+  cursor: pointer;
+}
+
+.arc-card-detail-collection-row--navigable:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
 .arc-card-detail-collection-stack-box {
   flex-shrink: 0;
   width: calc(129px + 2 * var(--collection-stack-overlap-hover));
@@ -4683,12 +4692,12 @@ html.arc-onboarding-page,
   gap: var(--s-2);
 }
 
-.arc-settings-updates-actions__update-row {
+.arc-settings-updates-actions__buttons {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--s-2);
-  width: 100%;
 }
 
 .arc-settings-updates-actions__status {
