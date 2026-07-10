@@ -2678,6 +2678,140 @@ body.arc-card-detail-open .arc-app-outlet {
   object-fit: contain;
 }
 
+.arc-card-detail-image-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.arc-card-detail-image-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.arc-card-detail-image-stage--pannable {
+  cursor: grab;
+}
+
+.arc-card-detail-image-stage--pannable:active {
+  cursor: grabbing;
+}
+
+.arc-card-detail-image-stage__layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.arc-card-detail-image-stage__media {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  transform-origin: top left;
+}
+
+.arc-card-detail-preview-options {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border-top: 1px solid var(--panel-border);
+  box-sizing: border-box;
+}
+
+.arc-card-detail-preview-options__meta,
+.arc-card-detail-preview-options__zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-card-detail-preview-options__meta {
+  gap: var(--s-3);
+}
+
+.arc-card-detail-preview-options__meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-card-detail-preview-options__meta-text.text-s {
+  color: var(--typography-black-bg-primary-default);
+  white-space: nowrap;
+}
+
+.arc-card-detail-preview-options__meta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--icons-black-bg-default);
+}
+
+.arc-card-detail-preview-options__meta-icon .arc-navbar-icon-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.arc-card-detail-preview-options .btn-outline .btn-icon-only__glyph {
+  color: var(--icons-black-bg-default);
+}
+
+.arc-card-detail-preview-options .btn-outline:hover:not(:disabled) .btn-icon-only__glyph {
+  color: var(--icons-black-bg-hover);
+}
+
+.arc-card-detail-preview-options__zoom .btn-outline.is-active {
+  background: var(--btn-group-fill-focus);
+  border-color: var(--btn-group-border-focus);
+}
+
+.arc-card-detail-preview-options__slider {
+  flex: 0 0 128px;
+  width: 128px;
+}
+
+.arc-card-detail-preview-options__slider .arc-range-slider {
+  width: 100%;
+}
+
+.arc-card-detail-preview-options__pct-field {
+  flex: 0 0 auto;
+  width: fit-content;
+  min-width: 0;
+  margin: 0;
+}
+
+.arc-card-detail-preview-options__pct-field.input-live .input {
+  padding-inline: var(--s-1);
+  padding-right: var(--s-1);
+  width: 8ch;
+  min-width: 8ch;
+  text-align: center;
+}
+
+.arc-card-detail-preview-options__pct-field.input-live.has-value .input,
+.arc-card-detail-preview-options__pct-input {
+  color: var(--typography-black-bg-primary-default);
+}
+
 /* Превью и миниатюры в детальной карточке не перетаскиваются — иначе срабатывает импорт */
 .arc-card-detail-overlay img,
 .arc-card-detail-overlay video {

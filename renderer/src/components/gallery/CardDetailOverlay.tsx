@@ -17,6 +17,7 @@ import DemoAlert, { type ToastAlertVariant } from '../layout/DemoAlert';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
+import CardDetailImageViewport from './CardDetailImageViewport';
 import CardInfoModal from './CardInfoModal';
 import SimilarCardsMasonry from './SimilarCardsMasonry';
 import { useGalleryCardContextMenu } from './useGalleryCardContextMenu';
@@ -894,6 +895,13 @@ export default function CardDetailOverlay({
                 />
               </div>
             ) : src || thumbSrc ? (
+              card?.type === 'image' && card ? (
+                <CardDetailImageViewport
+                  card={card}
+                  src={src ?? thumbSrc ?? ''}
+                  onInfoClick={() => setInfoOpen(true)}
+                />
+              ) : (
               <div className="arc-card-detail-media-fit">
                 <img
                   className="arc-card-detail-media"
@@ -902,6 +910,7 @@ export default function CardDetailOverlay({
                   draggable={false}
                 />
               </div>
+              )
             ) : (
               <div
                 className="arc-gallery-skeleton arc-card-detail-skeleton"
@@ -1067,17 +1076,6 @@ export default function CardDetailOverlay({
                       aria-label="Открыть папку с файлом"
                     >
                       <span className="btn-icon-only__glyph arc-icon-folder-open" aria-hidden="true" />
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="Информация о файле" position="top">
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
-                      onClick={() => setInfoOpen(true)}
-                      disabled={!card}
-                      aria-label="Информация о файле"
-                    >
-                      <span className="btn-icon-only__glyph arc-icon-pie-chart" aria-hidden="true" />
                     </button>
                   </Tooltip>
                   <Tooltip content="Скопировать ID" position="top">

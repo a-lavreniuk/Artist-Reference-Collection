@@ -2,18 +2,12 @@ import { useLayoutEffect, useRef } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
 import { ArcAnimatedModalHost } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { formatBytes, formatResolution } from './cardFileMetaFormat';
 
 type Props = {
   card: CardRecord;
   onClose: () => void;
 };
-
-function formatBytes(bytes: number | undefined): string {
-  if (bytes === undefined || !Number.isFinite(bytes)) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Кб`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} Мб`;
-}
 
 function formatDate(iso: string | undefined): string {
   if (!iso) return '—';
@@ -26,11 +20,6 @@ function formatDate(iso: string | undefined): string {
     hour: '2-digit',
     minute: '2-digit'
   });
-}
-
-function formatResolution(card: CardRecord): string {
-  if (card.width && card.height) return `${card.width}×${card.height}`;
-  return '—';
 }
 
 type InfoRow = {
