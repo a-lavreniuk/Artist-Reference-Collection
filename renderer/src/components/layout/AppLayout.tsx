@@ -23,6 +23,9 @@ import { applyTopbarCssVars } from './navbarLayout';
 import { isLibraryConfigured } from '../../services/db';
 import { GALLERY_FEED_SETTLED_EVENT } from '../gallery/galleryFeedSettled';
 import CardSectionsShell from './CardSectionsShell';
+import { ArcHistoryNavProvider } from './useArcHistoryNav';
+import { ShortcutActionProvider } from '../shortcuts/ShortcutActionContext';
+import { AppShortcutsHost, ShortcutImportRegistrar } from '../shortcuts/ShortcutRegistrars';
 
 export default function AppLayout() {
   useUiThemeSync();
@@ -86,9 +89,12 @@ export default function AppLayout() {
     <AppUpdateProvider>
     <GalleryFilterProvider>
     <GalleryMetaProvider>
+    <ArcHistoryNavProvider>
+    <ShortcutActionProvider>
     <NotificationHost>
     <ScreenshotHost>
     <ImportHost>
+      <ShortcutImportRegistrar />
       <ExtensionImportHost>
       <McpCatalogSyncHost>
       <AutoImportHost>
@@ -111,6 +117,9 @@ export default function AppLayout() {
     </ImportHost>
     </ScreenshotHost>
     </NotificationHost>
+    <AppShortcutsHost />
+    </ShortcutActionProvider>
+    </ArcHistoryNavProvider>
     </GalleryMetaProvider>
     </GalleryFilterProvider>
     </AppUpdateProvider>

@@ -69,10 +69,14 @@ import {
 } from './applyCardSettingsClipboard';
 import {
   getCardSettingsClipboard,
+  getLastCardSettingsFieldSelection,
   setCardSettingsClipboard,
   subscribeCardSettingsClipboard,
   type CardSettingsFieldSelection
 } from './cardSettingsClipboard';
+import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
+import { isEditableTarget } from '../../shortcuts/shortcutGuards';
+import type { CardFeedNeighbors } from './cardFeedNeighbors';
 
 type Props = {
   cardId: string;
@@ -81,6 +85,7 @@ type Props = {
   onDeleted: () => void;
   onOpenCard: (id: string) => void;
   moodboardRemoveConfirm?: 'gallery' | 'moodboard';
+  neighborCardIds?: CardFeedNeighbors;
 };
 
 const DESCRIPTION_SAVE_MS = 600;
@@ -101,7 +106,8 @@ export default function CardDetailOverlay({
   onClose,
   onDeleted,
   onOpenCard,
-  moodboardRemoveConfirm = 'gallery'
+  moodboardRemoveConfirm = 'gallery',
+  neighborCardIds
 }: Props) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -593,6 +599,37 @@ export default function CardDetailOverlay({
     await reloadCard(card.id);
     showCopyAlert('Настройки применены');
   }, [card, tagsIndex, collectionsById, reloadCard, showCopyAlert]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+
+      if (matchesShortcut(e, 'detail.previous') && neighborCardIds?.prev) {
+        e.preventDefault();
+        onOpenCard(neighborCardIds.prev);
+        return;
+      }
+
+      if (matchesShortcut(e, 'detail.next') && neighborCardIds?.next) {
+        e.preventDefault();
+        onOpenCard(neighborCardIds.next);
+        return;
+      }
+
+      if (matchesShortcut(e, 'detail.copySettings')) {
+        e.preventDefault();
+        handleCopySettings(getLastCardSettingsFieldSelection());
+        return;
+      }
+
+      if (matchesShortcut(e, 'detail.pasteSettings')) {
+        e.preventDefault();
+        void applySettingsClipboard();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [applySettingsClipboard, handleCopySettings, neighborCardIds, onOpenCard]);
 
   const copyId = async () => {
     if (!card) return;

@@ -485,6 +485,26 @@ export default function MoodboardBoardView() {
       if (matchesShortcut(e, 'moodboard.pan')) {
         e.preventDefault();
         setSpaceHeld(true);
+        return;
+      }
+      if (matchesShortcut(e, 'moodboard.zoomIn')) {
+        e.preventDefault();
+        zoomCenterFactor(1.08);
+        return;
+      }
+      if (matchesShortcut(e, 'moodboard.zoomOut')) {
+        e.preventDefault();
+        zoomCenterFactor(1 / 1.08);
+        return;
+      }
+      if (matchesShortcut(e, 'moodboard.zoomReset')) {
+        e.preventDefault();
+        resetZoom100();
+        return;
+      }
+      if (matchesShortcut(e, 'moodboard.fitView')) {
+        e.preventDefault();
+        fitView();
       }
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -496,7 +516,7 @@ export default function MoodboardBoardView() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
     };
-  }, [deleteSelected, editingTextId, redo, undo]);
+  }, [deleteSelected, editingTextId, fitView, redo, resetZoom100, undo, zoomCenterFactor]);
 
   const editingText = useMemo(() => {
     if (!editingTextId || !board) return null;
@@ -778,13 +798,13 @@ export default function MoodboardBoardView() {
         }
       },
       { type: 'sep' },
-      { type: 'action', label: 'Выделить всё', shortcut: 'Ctrl+A', disabled: true },
+      { type: 'action', label: 'Выделить всё', disabled: true },
       { type: 'action', label: 'Инвертировать выделение', disabled: true },
       { type: 'sep' },
       {
         type: 'action',
         label: 'Увеличить',
-        shortcut: 'Ctrl+=',
+        shortcut: shortcutMenuLabel('moodboard.zoomIn'),
         onClick: () => {
           zoomCenterFactor(1.08);
           closeMenu();
@@ -793,7 +813,7 @@ export default function MoodboardBoardView() {
       {
         type: 'action',
         label: 'Уменьшить',
-        shortcut: 'Ctrl+-',
+        shortcut: shortcutMenuLabel('moodboard.zoomOut'),
         onClick: () => {
           zoomCenterFactor(1 / 1.08);
           closeMenu();
@@ -802,6 +822,7 @@ export default function MoodboardBoardView() {
       {
         type: 'action',
         label: 'Масштаб 100%',
+        shortcut: shortcutMenuLabel('moodboard.zoomReset'),
         onClick: () => {
           resetZoom100();
           closeMenu();
@@ -810,6 +831,7 @@ export default function MoodboardBoardView() {
       {
         type: 'action',
         label: 'Вписать в экран',
+        shortcut: shortcutMenuLabel('moodboard.fitView'),
         onClick: () => {
           fitView();
           closeMenu();

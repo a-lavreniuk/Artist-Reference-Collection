@@ -57,6 +57,7 @@ import {
   readColorSearchFormatPreference,
   writeColorSearchFormatPreference
 } from '../../../hooks/useColorFormatPreference';
+import { ARC_FOCUS_SEARCH_REQUEST_EVENT } from '../../../shortcuts/focusNavbarSearch';
 
 const COLOR_SEARCH_DEBOUNCE_MS = 280;
 const UUID_LIKE =
@@ -357,6 +358,24 @@ export function NavbarSearchProvider({
     },
     [handleModeChangeUrl, searchMode]
   );
+
+  useEffect(() => {
+    const onFocusRequest = () => {
+      handleModeChange('tags');
+      openPanel();
+      setSearchIslandWidePinned(true);
+      void loadIndex();
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          ensureInputVisible();
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        });
+      });
+    };
+    window.addEventListener(ARC_FOCUS_SEARCH_REQUEST_EVENT, onFocusRequest);
+    return () => window.removeEventListener(ARC_FOCUS_SEARCH_REQUEST_EVENT, onFocusRequest);
+  }, [ensureInputVisible, handleModeChange, loadIndex, openPanel]);
 
   const applyCardIdFilter = useCallback(
     (raw: string) => {

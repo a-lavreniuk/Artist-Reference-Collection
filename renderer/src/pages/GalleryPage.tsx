@@ -11,6 +11,7 @@ import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
 
 import CardInspectModal from '../components/gallery/CardInspectModal';
+import { resolveCardFeedNeighbors } from '../components/gallery/cardFeedNeighbors';
 
 import GalleryBottomShade from '../components/gallery/GalleryBottomShade';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
@@ -126,6 +127,12 @@ export default function GalleryPage() {
   const hasSearchFilters = hasUrlSearch || activeCategoryCount > 0;
 
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
+
+  const feedCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
+  const detailNeighborCardIds = useMemo(
+    () => (openCardId ? resolveCardFeedNeighbors(openCardId, feedCardIds) : undefined),
+    [feedCardIds, openCardId]
+  );
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const scrollRootRef = useRef<HTMLElement | null>(null);
@@ -412,6 +419,8 @@ export default function GalleryPage() {
           onOpenCard={openCard}
 
           moodboardRemoveConfirm="gallery"
+
+          neighborCardIds={detailNeighborCardIds}
 
         />
 

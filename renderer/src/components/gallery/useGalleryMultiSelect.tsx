@@ -22,7 +22,8 @@ import {
   formatRestoreToast,
   formatTrashToast
 } from './gallerySelectionCopy';
-import { isEditableTarget } from './galleryCardSelectionCore';
+import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
+import { isEditableTarget } from '../../shortcuts/shortcutGuards';
 import { useGalleryCardSelection } from './useGalleryCardSelection';
 import { useGalleryCardLongPress, useGalleryMarqueeSelection } from './useGalleryMarqueeSelection';
 
@@ -222,16 +223,17 @@ export function useGalleryMultiSelect({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) return;
+      if (document.body.classList.contains('arc-card-detail-open')) return;
 
       if (selection.selectedCount === 0 && !selection.selectionMode) return;
 
-      if (event.key === 'Escape') {
+      if (matchesShortcut(event, 'gallery.clearSelection')) {
         event.preventDefault();
         selection.clearSelection();
         return;
       }
 
-      if (event.key === 'Delete' || event.key === 'Backspace') {
+      if (matchesShortcut(event, 'gallery.deleteSelection')) {
         event.preventDefault();
         if (scope.kind === 'trash') {
           void onPermanentDelete();

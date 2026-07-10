@@ -9,6 +9,17 @@ type ParsedAccelerator = {
   key: string;
 };
 
+const ARROW_ALIASES: Record<string, string> = {
+  Left: 'ArrowLeft',
+  Right: 'ArrowRight',
+  Up: 'ArrowUp',
+  Down: 'ArrowDown'
+};
+
+function normalizeAcceleratorKey(key: string): string {
+  return ARROW_ALIASES[key] ?? key;
+}
+
 function parseAccelerator(accelerator: string): ParsedAccelerator {
   const parts = accelerator.split('+');
   const key = parts[parts.length - 1] ?? '';
@@ -34,28 +45,67 @@ function eventKeyToken(e: KeyboardEvent): string {
   return e.key;
 }
 
+function eventMatchesKey(e: KeyboardEvent, parsedKey: string): boolean {
+  const token = eventKeyToken(e);
+  const expected = normalizeAcceleratorKey(parsedKey);
+
+  if (parsedKey === 'Plus') {
+    return token === 'Plus' || (e.key === '+' && e.shiftKey) || (e.key === '=' && e.shiftKey);
+  }
+
+  if (parsedKey === 'Equal') {
+    return token === 'Equal' || token === 'Plus' || e.key === '=' || e.key === '+';
+  }
+
+  if (parsedKey === 'Minus') {
+    return token === 'Minus' || e.key === '-';
+  }
+
+  if (parsedKey.length === 1 && /^\d$/i.test(parsedKey)) {
+    const digit = parsedKey.toUpperCase();
+    return (
+      token === digit ||
+      e.key === parsedKey ||
+      e.code === `Digit${parsedKey}` ||
+      e.code === `Numpad${parsedKey}`
+    );
+  }
+
+  if (expected.startsWith('Arrow')) {
+    return token === expected || token === parsedKey;
+  }
+
+  if (parsedKey.length === 1) {
+    return token.toUpperCase() === parsedKey.toUpperCase();
+  }
+
+  return token === parsedKey || token === expected;
+}
+
 function matchesParsed(e: KeyboardEvent, parsed: ParsedAccelerator): boolean {
   const mod = e.ctrlKey || e.metaKey;
   const needsMod = parsed.ctrl || parsed.meta;
   if (needsMod && !mod) return false;
-  if (!needsMod && mod && parsed.key.length === 1) return false;
 
-  if (parsed.alt && !e.altKey) return false;
-  if (!parsed.alt && e.altKey) return false;
+  const needsAlt = parsed.alt;
+  if (needsAlt && !e.altKey) return false;
+  if (!needsAlt && e.altKey && !parsed.ctrl && !parsed.meta) {
+    // Plain key shortcuts (arrows) must not fire with Alt held.
+    if (!parsed.shift) return false;
+  }
+
   if (parsed.shift && !e.shiftKey) return false;
-  if (!parsed.shift && e.shiftKey && parsed.key !== 'Plus') return false;
+  if (!parsed.shift && e.shiftKey && parsed.key !== 'Plus' && parsed.key !== 'Equal') return false;
 
-  const token = eventKeyToken(e);
-
-  if (parsed.key === 'Plus') {
-    return token === 'Plus' || (e.key === '+' && e.shiftKey);
+  if (!needsMod && !needsAlt && !parsed.shift) {
+    if (e.ctrlKey || e.metaKey) return false;
   }
 
-  if (parsed.key.length === 1) {
-    return token.toUpperCase() === parsed.key.toUpperCase();
+  if (!needsMod && mod && parsed.key.length === 1 && /[A-Za-z0-9]/.test(parsed.key)) {
+    return false;
   }
 
-  return token === parsed.key;
+  return eventMatchesKey(e, parsed.key);
 }
 
 /** Returns true when the keyboard event matches a shortcut from the registry. */

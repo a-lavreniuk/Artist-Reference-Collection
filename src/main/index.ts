@@ -26,6 +26,7 @@ import { startImportApiServer, stopImportApiServer } from './importApi/importApi
 import { startMcpServer, stopMcpServer } from './mcp/mcpHost';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
+import { bindRendererShortcuts } from './rendererShortcuts';
 import { applyStoredLaunchAtLogin, readAppPreferences, readAppPreferencesSync, registerAppPreferencesIpc, shouldStartHiddenInTray } from './appPreferences';
 import { syncPendingHiddenAutostartMarker } from './launchAtLogin';
 import { registerAutoImportIpc, restartAutoImportWatcher } from './autoImportWatcher';
@@ -105,6 +106,8 @@ function createWindow(onboardingMode = false): BrowserWindow {
   win.once('ready-to-show', () => {
     markMainWindowReadyToShow(win, onboardingMode);
   });
+
+  bindRendererShortcuts(win);
 
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;

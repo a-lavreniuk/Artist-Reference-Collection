@@ -33,7 +33,11 @@ const KEY_LABELS: Record<string, string> = {
   Delete: 'Delete',
   Backspace: 'Backspace',
   Escape: 'Esc',
-  Space: 'Space'
+  Space: 'Space',
+  Left: '←',
+  Right: '→',
+  Up: '↑',
+  Down: '↓'
 };
 
 function formatKeyToken(token: string, platform: ShortcutPlatform): string {

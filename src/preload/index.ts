@@ -253,6 +253,13 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:maintenance', fn);
     return () => ipcRenderer.removeListener('arc:maintenance', fn);
   },
+  onRendererShortcut: (cb: (id: string) => void) => {
+    const fn = (_: unknown, id: string) => {
+      cb(id);
+    };
+    ipcRenderer.on('arc:renderer-shortcut', fn);
+    return () => ipcRenderer.removeListener('arc:renderer-shortcut', fn);
+  },
 
   getAppVersion: () => ipcRenderer.invoke('arc:get-app-version') as Promise<string>,
   getReleaseNotes: (version?: string) =>

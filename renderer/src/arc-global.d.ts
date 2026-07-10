@@ -222,6 +222,7 @@ declare global {
       maintenanceBegin: () => Promise<{ ok: true }>;
       maintenanceEnd: () => Promise<{ ok: true }>;
       onMaintenance: (cb: (locked: boolean) => void) => () => void;
+      onRendererShortcut?: (cb: (id: string) => void) => () => void;
 
       getAppVersion: () => Promise<string>;
       getReleaseNotes: (version?: string) => Promise<{ buildDate: string; changes: string[] } | null>;

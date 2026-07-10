@@ -10,6 +10,7 @@ import {
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import GalleryBoard from '../components/gallery/GalleryBoard';
 import CardInspectModal from '../components/gallery/CardInspectModal';
+import { resolveCardFeedNeighbors } from '../components/gallery/cardFeedNeighbors';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
 import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
@@ -117,6 +118,12 @@ export default function CollectionsPage() {
     mediaSection: 'collections',
     feedActive: isCollectionsRoute && Boolean(activeCollectionId)
   });
+
+  const feedCardIds = useMemo(() => feed.cards.map((card) => card.id), [feed.cards]);
+  const detailNeighborCardIds = useMemo(
+    () => (openCardId ? resolveCardFeedNeighbors(openCardId, feedCardIds) : undefined),
+    [feedCardIds, openCardId]
+  );
 
   const { isRemoteSearchFeed, feedError } = feed;
   const hasSearchFilters =
@@ -480,6 +487,7 @@ export default function CollectionsPage() {
           onDeleted={() => void feed.reloadFromStart()}
           onOpenCard={openCard}
           moodboardRemoveConfirm="gallery"
+          neighborCardIds={detailNeighborCardIds}
         />
       ) : null}
 

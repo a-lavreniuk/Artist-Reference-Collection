@@ -9,6 +9,7 @@ import { useScopedGalleryFeed } from '../gallery/useScopedGalleryFeed';
 import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import GalleryBoard from '../gallery/GalleryBoard';
 import CardInspectModal from '../gallery/CardInspectModal';
+import { resolveCardFeedNeighbors } from '../gallery/cardFeedNeighbors';
 import { useGalleryCardContextMenu } from '../gallery/useGalleryCardContextMenu';
 import { useGalleryMultiSelect } from '../gallery/useGalleryMultiSelect';
 import ScrollToTopButton from '../layout/ScrollToTopButton';
@@ -66,6 +67,12 @@ export default function MoodboardCardsView() {
     mediaSection: 'moodboard',
     feedActive: isMoodboardRoute
   });
+
+  const feedCardIds = useMemo(() => feed.cards.map((card) => card.id), [feed.cards]);
+  const detailNeighborCardIds = useMemo(
+    () => (openCardId ? resolveCardFeedNeighbors(openCardId, feedCardIds) : undefined),
+    [feedCardIds, openCardId]
+  );
 
   const { isRemoteSearchFeed, feedError } = feed;
   const hasSearchFilters =
@@ -232,6 +239,7 @@ export default function MoodboardCardsView() {
           onDeleted={() => void feed.reloadFromStart()}
           onOpenCard={openCard}
           moodboardRemoveConfirm="moodboard"
+          neighborCardIds={detailNeighborCardIds}
         />
       ) : null}
 
