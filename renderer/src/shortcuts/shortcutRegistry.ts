@@ -31,6 +31,7 @@ export type ShortcutId =
   | 'gallery.gridLarge'
   | 'gallery.gridMedium'
   | 'gallery.gridSmall'
+  | 'gallery.openInNewWindow'
   | 'detail.previous'
   | 'detail.next'
   | 'detail.copySettings'
@@ -205,6 +206,14 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'gallery',
     label: 'Сетка: маленькая',
     defaultAccelerator: 'CommandOrControl+Shift+3',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'gallery.openInNewWindow',
+    groupId: 'gallery',
+    label: 'Открыть в новом окне',
+    defaultAccelerator: 'CommandOrControl+Shift+O',
     scope: 'renderer',
     settingsVisible: true
   },

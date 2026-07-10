@@ -219,6 +219,7 @@ export default function MoodboardCardsView() {
             onCardContextMenu={onCardContextMenu}
             isCardSelected={multiSelect.isSelected}
             onCardClick={multiSelect.handleCardClick}
+            onOpenInNewWindow={multiSelect.openInNewWindowForCard}
             onCardPointerDown={multiSelect.handleCardPointerDown}
             onCardPointerMove={multiSelect.onCardPointerMove}
             onCardPointerUp={multiSelect.onCardPointerUp}
@@ -240,6 +241,7 @@ export default function MoodboardCardsView() {
           onOpenCard={openCard}
           moodboardRemoveConfirm="moodboard"
           neighborCardIds={detailNeighborCardIds}
+          viewerNavigationCardIds={feedCardIds}
         />
       ) : null}
 

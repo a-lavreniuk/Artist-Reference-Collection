@@ -464,6 +464,7 @@ export default function CollectionsPage() {
                   onCardContextMenu={onCardContextMenu}
                   isCardSelected={multiSelect.isSelected}
                   onCardClick={multiSelect.handleCardClick}
+                  onOpenInNewWindow={multiSelect.openInNewWindowForCard}
                   onCardPointerDown={multiSelect.handleCardPointerDown}
                   onCardPointerMove={multiSelect.onCardPointerMove}
                   onCardPointerUp={multiSelect.onCardPointerUp}
@@ -488,6 +489,7 @@ export default function CollectionsPage() {
           onOpenCard={openCard}
           moodboardRemoveConfirm="gallery"
           neighborCardIds={detailNeighborCardIds}
+          viewerNavigationCardIds={feedCardIds}
         />
       ) : null}
 

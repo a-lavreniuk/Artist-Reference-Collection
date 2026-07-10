@@ -13,6 +13,7 @@ type Props = {
   inMoodboard?: boolean;
   isSelected?: boolean;
   onCardClick: (cardId: string, event: React.MouseEvent<HTMLDivElement>) => void;
+  onOpenInNewWindow?: (cardId: string) => void;
   onCardPointerDown?: (cardId: string, event: React.PointerEvent<HTMLDivElement>) => void;
   onCardPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
   onCardPointerUp?: (event: React.PointerEvent<HTMLDivElement>) => void;
@@ -31,6 +32,7 @@ function GalleryCardTile({
   inMoodboard = false,
   isSelected = false,
   onCardClick,
+  onOpenInNewWindow,
   onCardPointerDown,
   onCardPointerMove,
   onCardPointerUp,
@@ -73,6 +75,13 @@ function GalleryCardTile({
       data-gallery-card-id={card.id}
       {...(interfaceTourAnchor ? { 'data-interface-tour-anchor': interfaceTourAnchor } : {})}
       onClick={(event) => onCardClick(card.id, event)}
+      onDoubleClick={(event) => {
+        if (!onOpenInNewWindow) return;
+        if (!(event.ctrlKey || event.metaKey)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onOpenInNewWindow(card.id);
+      }}
       onPointerDown={
         onCardPointerDown
           ? (event) => {
@@ -170,6 +179,7 @@ function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
     prev.moodboardEnabled === next.moodboardEnabled &&
     prev.tileClassName === next.tileClassName &&
     prev.onCardClick === next.onCardClick &&
+    prev.onOpenInNewWindow === next.onOpenInNewWindow &&
     prev.onCardPointerDown === next.onCardPointerDown &&
     prev.onCardPointerMove === next.onCardPointerMove &&
     prev.onCardPointerUp === next.onCardPointerUp &&

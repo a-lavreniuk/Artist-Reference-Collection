@@ -14,6 +14,7 @@ import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import ConfirmPermanentDeleteCardModal from './ConfirmPermanentDeleteCardModal';
 import { buildCardContextMenuRows } from './buildCardContextMenuRows';
 import type { CardContextMenuScope } from './cardContextMenuTypes';
+import { openCardInNewWindowFromScope } from '../../card-viewer/openCardsInNewWindow';
 
 type BulkHandlers = {
   onBulkSendToTrash?: (cardIds: string[]) => void | Promise<void>;
@@ -65,6 +66,7 @@ export function useGalleryCardContextMenu({
     () => (menuCardId ? cards.find((card) => card.id === menuCardId) ?? null : null),
     [cards, menuCardId]
   );
+  const orderedCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
 
   const closeMenu = useCallback(() => {
     menu.close();
@@ -130,6 +132,14 @@ export function useGalleryCardContextMenu({
           : undefined,
       actions: {
         onOpen: () => onOpenCard(menuCard.id),
+        onOpenInNewWindow: () => {
+          void openCardInNewWindowFromScope({
+            scope,
+            feedOrder: orderedCardIds,
+            cardId: menuCard.id,
+            selectedIds: bulkCount > 1 ? targetIds : undefined
+          });
+        },
         onToggleCardSelection: () => onToggleCardSelection?.(menuCard.id),
         onToggleMoodboard: () => {
           if (bulkCount > 1) {
@@ -205,6 +215,7 @@ export function useGalleryCardContextMenu({
     onCardDeleted,
     onFindSimilar,
     onOpenCard,
+    orderedCardIds,
     onStartMultiSelect,
     onToggleCardSelection,
     onToggleMoodboard,

@@ -24,6 +24,7 @@ import {
 } from './gallerySelectionCopy';
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
+import { openCardInNewWindowFromScope, resolveFocusedGalleryCardId } from '../../card-viewer/openCardsInNewWindow';
 import { useGalleryCardSelection } from './useGalleryCardSelection';
 import { useGalleryCardLongPress, useGalleryMarqueeSelection } from './useGalleryMarqueeSelection';
 
@@ -218,12 +219,40 @@ export function useGalleryMultiSelect({
     [longPress, selection]
   );
 
+  const openInNewWindowForCard = useCallback(
+    (cardId: string) => {
+      const selected = [...selectedIdsRef.current];
+      void openCardInNewWindowFromScope({
+        scope,
+        feedOrder: orderedCardIds,
+        cardId,
+        selectedIds: selection.selectionMode && selected.length > 0 ? selected : undefined
+      });
+    },
+    [orderedCardIds, scope, selection.selectionMode]
+  );
+
   useEffect(() => {
     if (!enabled) return undefined;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) return;
       if (document.body.classList.contains('arc-card-detail-open')) return;
+
+      if (matchesShortcut(event, 'gallery.openInNewWindow')) {
+        event.preventDefault();
+        const selected = [...selectedIdsRef.current];
+        const focusedId = resolveFocusedGalleryCardId();
+        const cardId = focusedId ?? selected[0];
+        if (!cardId) return;
+        void openCardInNewWindowFromScope({
+          scope,
+          feedOrder: orderedCardIds,
+          cardId,
+          selectedIds: selected.length > 0 ? selected : undefined
+        });
+        return;
+      }
 
       if (selection.selectedCount === 0 && !selection.selectionMode) return;
 
@@ -252,7 +281,8 @@ export function useGalleryMultiSelect({
     scope.kind,
     selection.clearSelection,
     selection.selectedCount,
-    selection.selectionMode
+    selection.selectionMode,
+    orderedCardIds
   ]);
 
   useEffect(() => {
@@ -328,6 +358,7 @@ export function useGalleryMultiSelect({
     isSelected: selection.isSelected,
     handleCardClick,
     handleCardPointerDown,
+    openInNewWindowForCard,
     onCardPointerMove: longPress.onPointerMove,
     onCardPointerUp: longPress.onPointerUp,
     enterSelectionWithCard: selection.enterSelectionWithCard,

@@ -5,6 +5,7 @@ import type { BuildCardContextMenuRowsInput } from './cardContextMenuTypes';
 function baseActions() {
   return {
     onOpen: vi.fn(),
+    onOpenInNewWindow: vi.fn(),
     onToggleMoodboard: vi.fn(),
     onOpenCollections: vi.fn(),
     onFindSimilar: vi.fn(),
@@ -39,6 +40,7 @@ describe('buildCardContextMenuRows — selection mode', () => {
     );
     expect(labels).toEqual([
       'Снять выбор с карточки',
+      'Открыть в новом окне',
       'Добавить в мудборд',
       'Добавить в коллекцию',
       'Отправить в корзину'
@@ -55,6 +57,7 @@ describe('buildCardContextMenuRows — selection mode', () => {
     );
     expect(labels).toEqual([
       'Выбрать карточку',
+      'Открыть в новом окне',
       'Добавить в мудборд',
       'Добавить в коллекцию',
       'Отправить в корзину'
@@ -70,7 +73,7 @@ describe('buildCardContextMenuRows — selection mode', () => {
         actions: baseActions()
       })
     );
-    expect(labels[1]).toBe('Убрать из мудборда');
+    expect(labels[2]).toBe('Убрать из мудборда');
   });
 
   it('shows trash selection menu with restore and permanent delete', () => {
@@ -103,6 +106,7 @@ describe('buildCardContextMenuRows — normal mode', () => {
       })
     );
     expect(labels).toContain('Открыть');
+    expect(labels).toContain('Открыть в новом окне');
     expect(labels).toContain('Выбрать несколько');
     expect(labels).toContain('Найти похожее');
   });

@@ -1,0 +1,139 @@
+@import url("/ui/arc-ui/arc-ui.css");
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--elevation-sunken, #121216);
+  color: var(--typo-p-m-color, #e8e8ec);
+  font-family: var(--font-family, system-ui, sans-serif);
+}
+
+body {
+  -webkit-app-region: drag;
+}
+
+.arc-card-viewer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.arc-card-viewer__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  flex-shrink: 0;
+  padding: var(--s-1) var(--s-2);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: var(--elevation-default, #1a1a1e);
+  -webkit-app-region: drag;
+}
+
+.arc-card-viewer__toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  -webkit-app-region: no-drag;
+}
+
+.arc-card-viewer__toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: var(--s-2);
+}
+
+.arc-card-viewer__title {
+  margin: 0;
+  padding: 0 var(--s-1);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--typo-p-s);
+  color: var(--typo-p-s-color);
+  -webkit-app-region: drag;
+}
+
+.arc-card-viewer__counter {
+  font: var(--typo-p-s);
+  color: var(--typo-p-s-muted, #9b9ba6);
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+
+.arc-card-viewer__opacity {
+  width: 120px;
+  -webkit-app-region: no-drag;
+}
+
+.arc-card-viewer__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: var(--s-2);
+  -webkit-app-region: no-drag;
+}
+
+.arc-card-viewer__stage--pannable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.arc-card-viewer__stage--pannable:active {
+  cursor: grabbing;
+}
+
+.arc-card-viewer__media-pan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: none;
+  max-height: none;
+}
+
+.arc-card-viewer__media-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.arc-card-viewer__media {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.arc-card-viewer__media--draggable {
+  cursor: inherit;
+}
+
+.arc-card-viewer__empty {
+  font: var(--typo-p-m);
+  color: var(--typo-p-m-muted, #9b9ba6);
+  text-align: center;
+  padding: var(--s-4);
+}
+
+.arc-card-viewer__video-note {
+  margin: 0 0 var(--s-2);
+  text-align: center;
+}
+
+.arc-card-viewer.arc-ui-kit-scope [data-btn-size="s"] {
+  --btn-size: s;
+}
+
+.arc-card-viewer.arc-ui-kit-scope [data-btn-size="m"] {
+  --btn-size: m;
+}

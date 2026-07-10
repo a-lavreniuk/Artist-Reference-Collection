@@ -34,6 +34,7 @@ import { applyStoredScreenshotShortcut, unregisterScreenshotShortcut } from './s
 import { applyStoredFeedbackShortcut, registerFeedbackIpc, unregisterFeedbackShortcut } from './feedbackShortcut';
 import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
+import { destroyCardViewerWindows, registerCardViewerIpc } from './cardViewerWindow';
 import { bindMainWindow, getMainWindow, registerWindowChromeIpc, showMainWindowFromUserAction } from './windowChrome';
 import { isScreenshotCaptureInFlight } from './screenshotSession';
 import {
@@ -189,6 +190,7 @@ app.whenReady().then(async () => {
   registerWindowChromeIpc();
   registerScreenshotIpc();
   registerScreenshotPickerIpc();
+  registerCardViewerIpc();
   registerOnboardingWindowModeIpc();
   registerFeedbackIpc();
   registerAutoImportIpc();
@@ -252,6 +254,7 @@ app.on('will-quit', () => {
   unregisterScreenshotShortcut();
   unregisterFeedbackShortcut();
   destroyScreenshotOverlay();
+  destroyCardViewerWindows();
   destroyLoadingSplash();
   shutdownAiWorker();
   void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());

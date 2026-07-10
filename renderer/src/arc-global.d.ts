@@ -258,6 +258,14 @@ declare global {
         height: number;
       }) => Promise<{ ok: boolean }>;
       screenshotPickerCancel?: () => Promise<{ ok: boolean }>;
+      openCardViewer?: (payload: { cardIds: string[]; startIndex?: number }) => Promise<{ ok: boolean }>;
+      cardViewerSetAlwaysOnTop?: (enabled: boolean) => Promise<{ ok: boolean }>;
+      cardViewerSetOpacity?: (value: number) => Promise<{ ok: boolean }>;
+      cardViewerClose?: () => Promise<{ ok: boolean }>;
+      cardViewerResolvePath?: (relativePath: string) => Promise<string | null>;
+      cardViewerStartFileDrag?: (
+        payload: string | { relativePath?: string; cardId?: string }
+      ) => Promise<{ ok: boolean }>;
       startDuplicateFileScan?: () => Promise<{ ok: true }>;
       onDuplicatesFound?: (cb: () => void) => () => void;
       checkImportDuplicates?: (

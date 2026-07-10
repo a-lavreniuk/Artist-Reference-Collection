@@ -77,6 +77,7 @@ import {
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
 import type { CardFeedNeighbors } from './cardFeedNeighbors';
+import { openCardsInNewWindow } from '../../card-viewer/openCardsInNewWindow';
 
 type Props = {
   cardId: string;
@@ -86,6 +87,7 @@ type Props = {
   onOpenCard: (id: string) => void;
   moodboardRemoveConfirm?: 'gallery' | 'moodboard';
   neighborCardIds?: CardFeedNeighbors;
+  viewerNavigationCardIds?: readonly string[];
 };
 
 const DESCRIPTION_SAVE_MS = 600;
@@ -107,7 +109,8 @@ export default function CardDetailOverlay({
   onDeleted,
   onOpenCard,
   moodboardRemoveConfirm = 'gallery',
-  neighborCardIds
+  neighborCardIds,
+  viewerNavigationCardIds
 }: Props) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -940,6 +943,22 @@ export default function CardDetailOverlay({
                     </Tooltip>
                   </div>
                 ) : null}
+                <Tooltip content="Открыть в новом окне" position="top">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-icon-only btn-ds"
+                    aria-label="Открыть в новом окне"
+                    disabled={!card}
+                    onClick={() => {
+                      if (!card) return;
+                      const ids = viewerNavigationCardIds?.length ? viewerNavigationCardIds : [card.id];
+                      const startIndex = Math.max(0, ids.indexOf(card.id));
+                      void openCardsInNewWindow(ids.length > 1 ? ids : [card.id], startIndex);
+                    }}
+                  >
+                    <span className="btn-icon-only__glyph arc-icon-arrow-up-right" aria-hidden="true" />
+                  </button>
+                </Tooltip>
                 <div className="arc-card-detail-segmented" role="group" aria-label="Действия с карточкой">
                   {!inTrash ? (
                     <Tooltip content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'} position="top">

@@ -387,6 +387,17 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:screenshot-picker-confirm', region) as Promise<{ ok: boolean }>,
   screenshotPickerCancel: () =>
     ipcRenderer.invoke('arc:screenshot-picker-cancel') as Promise<{ ok: boolean }>,
+  openCardViewer: (payload: { cardIds: string[]; startIndex?: number }) =>
+    ipcRenderer.invoke('arc:card-viewer-open', payload) as Promise<{ ok: boolean }>,
+  cardViewerSetAlwaysOnTop: (enabled: boolean) =>
+    ipcRenderer.invoke('arc:card-viewer-set-always-on-top', enabled) as Promise<{ ok: boolean }>,
+  cardViewerSetOpacity: (value: number) =>
+    ipcRenderer.invoke('arc:card-viewer-set-opacity', value) as Promise<{ ok: boolean }>,
+  cardViewerClose: () => ipcRenderer.invoke('arc:card-viewer-close') as Promise<{ ok: boolean }>,
+  cardViewerResolvePath: (relativePath: string) =>
+    ipcRenderer.invoke('arc:card-viewer-resolve-path', relativePath) as Promise<string | null>,
+  cardViewerStartFileDrag: (payload: string | { relativePath?: string; cardId?: string }) =>
+    ipcRenderer.invoke('arc:card-viewer-start-file-drag', payload) as Promise<{ ok: boolean }>,
   startDuplicateFileScan: () =>
     ipcRenderer.invoke('arc:duplicate-scan-start') as Promise<{ ok: true }>,
   onDuplicatesFound: (cb: () => void) => {

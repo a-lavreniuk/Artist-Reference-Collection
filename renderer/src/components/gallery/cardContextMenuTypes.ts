@@ -6,6 +6,7 @@ export type CardContextMenuScope =
 
 export type CardContextMenuActions = {
   onOpen: () => void;
+  onOpenInNewWindow: () => void;
   onToggleMoodboard: () => void;
   onOpenCollections: () => void;
   onFindSimilar: () => void;

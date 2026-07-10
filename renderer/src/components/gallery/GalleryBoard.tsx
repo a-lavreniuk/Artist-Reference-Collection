@@ -21,6 +21,7 @@ type Props = {
   onCardContextMenu?: (card: CardRecord, event: React.MouseEvent<HTMLDivElement>) => void;
   isCardSelected?: (cardId: string) => boolean;
   onCardClick?: (cardId: string, event: React.MouseEvent<HTMLDivElement>) => void;
+  onOpenInNewWindow?: (cardId: string) => void;
   onCardPointerDown?: (cardId: string, event: React.PointerEvent<HTMLDivElement>) => void;
   onCardPointerMove?: (event: React.PointerEvent<HTMLDivElement>) => void;
   onCardPointerUp?: (event: React.PointerEvent<HTMLDivElement>) => void;
@@ -44,6 +45,7 @@ export default function GalleryBoard({
   onCardContextMenu,
   isCardSelected,
   onCardClick,
+  onOpenInNewWindow,
   onCardPointerDown,
   onCardPointerMove,
   onCardPointerUp,
@@ -137,6 +139,7 @@ export default function GalleryBoard({
           inMoodboard={moodboardCardIds?.has(card.id) ?? false}
           isSelected={isCardSelected?.(card.id) ?? false}
           onCardClick={handleCardClick}
+          onOpenInNewWindow={onOpenInNewWindow}
           onCardPointerDown={onCardPointerDown}
           onCardPointerMove={onCardPointerMove}
           onCardPointerUp={onCardPointerUp}
@@ -164,6 +167,7 @@ export default function GalleryBoard({
       moodboardCardIds,
       moodboardEnabled,
       onCardContextMenu,
+      onOpenInNewWindow,
       onCardPointerDown,
       onCardPointerMove,
       onCardPointerUp,

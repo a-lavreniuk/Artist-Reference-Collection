@@ -35,6 +35,7 @@ function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): Conte
       () => actions.onToggleCardSelection?.()
     ),
     { type: 'separator', key: 'sep-main' },
+    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow),
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
     itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections)
   ];
@@ -82,6 +83,7 @@ function trashMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
 
   rows.push(
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
+    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow),
     itemRow('restore', 'Восстановить', 'arc-icon-undo', () => actions.onRestore?.()),
     itemRow('open-folder', 'Открыть папку исходника', 'arc-icon-folder-open', actions.onOpenSourceFolder, {
       disabled: !hasSourcePath
@@ -108,6 +110,7 @@ function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[]
 
   rows.push(
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
+    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow),
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
     itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections),
     itemRow('similar', 'Найти похожее', 'arc-icon-search', actions.onFindSimilar),

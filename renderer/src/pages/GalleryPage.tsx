@@ -382,6 +382,8 @@ export default function GalleryPage() {
 
             onCardClick={multiSelect.handleCardClick}
 
+            onOpenInNewWindow={multiSelect.openInNewWindowForCard}
+
             onCardPointerDown={multiSelect.handleCardPointerDown}
 
             onCardPointerMove={multiSelect.onCardPointerMove}
