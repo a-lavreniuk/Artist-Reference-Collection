@@ -30,5 +30,11 @@ export type MasonryLayoutState = {
 export type MasonryColumnRuleSet = Record<GridSize, number>;
 
 export const MASONRY_GAP_PX = 32;
+export const MASONRY_GAP_PX_S = 16;
+
+export function resolveMasonryGapPx(gridSize: GridSize): number {
+  return gridSize === 's' ? MASONRY_GAP_PX_S : MASONRY_GAP_PX;
+}
+
 export const MASONRY_OVERSCAN_FACTOR = 1.5;
 export const MASONRY_LOADING_SKELETON_COUNT = 6;
