@@ -7,6 +7,7 @@ import SettingsSidebarNavItem from './SettingsSidebarNavItem';
 const PRODUCT_SECTIONS = [
   { key: 'general', to: '/settings/general', label: 'Общие', iconClass: 'arc-icon-settings' },
   { key: 'screenshots', to: '/settings/screenshots', label: 'Скриншоты', iconClass: 'arc-icon-screenshot' },
+  { key: 'video-playback', to: '/settings/video-playback', label: 'Просмотр видео', iconClass: 'arc-icon-play' },
   { key: 'notifications', to: '/settings/notifications', label: 'Уведомления', iconClass: 'arc-icon-notifications' },
   { key: 'shortcuts', to: '/settings/shortcuts', label: 'Горячие клавиши', iconClass: 'arc-icon-shortcut' }
 ] as const;

@@ -18,6 +18,9 @@ import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
 import CardInfoModal from './CardInfoModal';
+import CardDetailVideoPlayer from './CardDetailVideoPlayer';
+import type { CardDetailVideoPlayerHandle } from './cardDetailVideoPlayerTypes';
+import { useCardDetailVideoShortcuts } from './useCardDetailVideoShortcuts';
 import SimilarCardsMasonry from './SimilarCardsMasonry';
 import { useGalleryCardContextMenu } from './useGalleryCardContextMenu';
 import CardDetailTagsModal from './CardDetailTagsModal';
@@ -78,6 +81,7 @@ import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
 import type { CardFeedNeighbors } from './cardFeedNeighbors';
 import { openCardsInNewWindow } from '../../card-viewer/openCardsInNewWindow';
+import { useAppPreferences } from '../../hooks/useAppPreferences';
 
 type Props = {
   cardId: string;
@@ -115,7 +119,7 @@ export default function CardDetailOverlay({
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const settingsScrollRef = useRef<HTMLDivElement>(null);
-  const inspectVideoRef = useRef<HTMLVideoElement | null>(null);
+  const videoPlayerRef = useRef<CardDetailVideoPlayerHandle | null>(null);
   const descriptionSaveTimerRef = useRef<number | null>(null);
   const nameSaveTimerRef = useRef<number | null>(null);
   const linkSaveTimerRef = useRef<number | null>(null);
@@ -603,6 +607,11 @@ export default function CardDetailOverlay({
     showCopyAlert('Настройки применены');
   }, [card, tagsIndex, collectionsById, reloadCard, showCopyAlert]);
 
+  useCardDetailVideoShortcuts({
+    enabled: card?.type === 'video',
+    playerRef: videoPlayerRef
+  });
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isEditableTarget(e.target)) return;
@@ -737,6 +746,9 @@ export default function CardDetailOverlay({
       ? getVideoPlaybackTierFromPath(card.originalRelativePath)
       : null;
 
+  const { prefs } = useAppPreferences();
+  const videoAutoplay = prefs?.videoAutoplay !== false;
+
   const bookmarkIconClass = isBookmarkHovered
     ? inMoodboard
       ? 'arc-icon-bookmark-minus'
@@ -817,28 +829,29 @@ export default function CardDetailOverlay({
           className={`arc-card-detail-shell${similar.length > 0 ? ' arc-card-detail-shell--has-similar' : ''}`}
         >
         <div className="arc-card-detail-main-row" style={mainRowStyle}>
-          <div className="arc-card-detail-preview panel elevation-sunken">
-            {card?.type === 'video' && videoTier && videoTier !== 'html5' ? (
-              <p className="text-s arc-card-detail-video-note">{videoPlaybackDescription(videoTier)}</p>
-            ) : null}
+          <div className="arc-card-detail-preview arc-card-detail-preview--video panel elevation-sunken">
             {src && card?.type === 'video' ? (
-              <div className="arc-card-detail-media-fit">
-                <video
-                  ref={inspectVideoRef}
-                  className="arc-card-detail-media"
-                  src={src}
-                  poster={thumbSrc && thumbSrc !== src ? thumbSrc : undefined}
-                  controls
-                  preload="metadata"
-                  autoPlay
-                  muted
-                  playsInline
-                  onLoadedData={() => {
-                    void inspectVideoRef.current?.play().catch(() => undefined);
-                  }}
-                />
-              </div>
-            ) : src || thumbSrc ? (
+              <CardDetailVideoPlayer
+                cardId={card.id}
+                src={src}
+                autoplay={videoAutoplay}
+                videoWidth={card.width}
+                videoHeight={card.height}
+                fileSizeBytes={card.fileSize}
+                onOpenInfo={() => setInfoOpen(true)}
+                videoNote={
+                  videoTier && videoTier !== 'html5' ? videoPlaybackDescription(videoTier) : null
+                }
+                playerRef={videoPlayerRef}
+                onCardUpdated={(updated) => {
+                  setCard(updated);
+                  cardRef.current = updated;
+                  setThumbBudgetEpoch((epoch) => epoch + 1);
+                  void reloadCard(updated.id);
+                }}
+                onToast={showCopyAlert}
+              />
+            ) : src || (thumbSrc && card?.type !== 'video') ? (
               <div className="arc-card-detail-media-fit">
                 <img
                   className="arc-card-detail-media"
@@ -1014,17 +1027,19 @@ export default function CardDetailOverlay({
                       <span className="btn-icon-only__glyph arc-icon-folder-open" aria-hidden="true" />
                     </button>
                   </Tooltip>
-                  <Tooltip content="Информация о файле" position="top">
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
-                      onClick={() => setInfoOpen(true)}
-                      disabled={!card}
-                      aria-label="Информация о файле"
-                    >
-                      <span className="btn-icon-only__glyph arc-icon-pie-chart" aria-hidden="true" />
-                    </button>
-                  </Tooltip>
+                  {card?.type !== 'video' ? (
+                    <Tooltip content="Информация о файле" position="top">
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-icon-only btn-ds arc-card-detail-segmented-btn"
+                        onClick={() => setInfoOpen(true)}
+                        disabled={!card}
+                        aria-label="Информация о файле"
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-pie-chart" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  ) : null}
                   <Tooltip content="Скопировать ID" position="top">
                     <button
                       type="button"

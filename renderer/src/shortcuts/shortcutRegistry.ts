@@ -35,7 +35,18 @@ export type ShortcutId =
   | 'detail.previous'
   | 'detail.next'
   | 'detail.copySettings'
-  | 'detail.pasteSettings';
+  | 'detail.pasteSettings'
+  | 'video.playPause'
+  | 'video.seekBack5'
+  | 'video.seekForward5'
+  | 'video.frameBack1'
+  | 'video.frameForward1'
+  | 'video.frameBack10'
+  | 'video.frameForward10'
+  | 'video.speedDown'
+  | 'video.speedUp'
+  | 'video.copyFrame'
+  | 'video.saveFrame';
 
 export type ShortcutGroupId =
   | 'global'
@@ -43,7 +54,8 @@ export type ShortcutGroupId =
   | 'devtools'
   | 'gallery'
   | 'moodboard'
-  | 'detail';
+  | 'detail'
+  | 'video';
 
 export type ShortcutDefinition = {
   id: ShortcutId;
@@ -69,7 +81,8 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroupDefinition[] = [
   { id: 'devtools', title: 'Разработка' },
   { id: 'gallery', title: 'Галерея' },
   { id: 'moodboard', title: 'Мудборд' },
-  { id: 'detail', title: 'Деталка карточки' }
+  { id: 'detail', title: 'Деталка карточки' },
+  { id: 'video', title: 'Видеоплеер' }
 ] as const;
 
 export const SHORTCUTS: readonly ShortcutDefinition[] = [
@@ -318,6 +331,94 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'detail',
     label: 'Вставить настройки',
     defaultAccelerator: 'CommandOrControl+Shift+V',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.playPause',
+    groupId: 'video',
+    label: 'Воспроизведение / пауза',
+    defaultAccelerator: 'Space',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.seekBack5',
+    groupId: 'video',
+    label: 'Назад 5 секунд',
+    defaultAccelerator: 'CommandOrControl+Left',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.seekForward5',
+    groupId: 'video',
+    label: 'Вперёд 5 секунд',
+    defaultAccelerator: 'CommandOrControl+Right',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.frameBack1',
+    groupId: 'video',
+    label: 'На 1 кадр назад',
+    defaultAccelerator: 'BracketLeft',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.frameForward1',
+    groupId: 'video',
+    label: 'На 1 кадр вперёд',
+    defaultAccelerator: 'BracketRight',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.frameBack10',
+    groupId: 'video',
+    label: 'На 10 кадров назад',
+    defaultAccelerator: 'Shift+BracketLeft',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.frameForward10',
+    groupId: 'video',
+    label: 'На 10 кадров вперёд',
+    defaultAccelerator: 'Shift+BracketRight',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.speedDown',
+    groupId: 'video',
+    label: 'Медленнее',
+    defaultAccelerator: 'Shift+Comma',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.speedUp',
+    groupId: 'video',
+    label: 'Быстрее',
+    defaultAccelerator: 'Shift+Period',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.copyFrame',
+    groupId: 'video',
+    label: 'Копировать кадр',
+    defaultAccelerator: 'Shift+C',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'video.saveFrame',
+    groupId: 'video',
+    label: 'Сохранить кадр',
+    defaultAccelerator: 'Shift+S',
     scope: 'renderer',
     settingsVisible: true
   }

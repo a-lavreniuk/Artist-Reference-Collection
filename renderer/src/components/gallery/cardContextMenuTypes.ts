@@ -1,3 +1,5 @@
+import type { CardRecord } from '../../services/arcSchema';
+
 export type CardContextMenuScope =
   | { kind: 'library' }
   | { kind: 'collection'; collectionId: string }
@@ -12,6 +14,7 @@ export type CardContextMenuActions = {
   onFindSimilar: () => void;
   onOpenSourceFolder: () => void;
   onSendToTrash: () => void;
+  onPickPreviewFrame?: () => void;
   onToggleCardSelection?: () => void;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
@@ -23,6 +26,8 @@ export type BuildCardContextMenuRowsInput = {
   scope: CardContextMenuScope;
   inMoodboard: boolean;
   hasSourcePath: boolean;
+  cardType?: CardRecord['type'];
+  cardFormat?: string;
   actions: CardContextMenuActions;
   bulkSelectionCount?: number;
   selectionModeActive?: boolean;

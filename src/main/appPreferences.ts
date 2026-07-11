@@ -61,6 +61,7 @@ export type AppPreferencesV1 = {
   galleryCollectionsStripEnabled: boolean;
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
   uiTheme: UiThemePreference;
+  videoAutoplay: boolean;
 };
 
 const FILENAME = 'arc-app-preferences.json';
@@ -118,7 +119,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiSearchStrictness: 50,
     galleryCollectionsStripEnabled: true,
     galleryCollectionsSortMode: 'chrono',
-    uiTheme: 'dark'
+    uiTheme: 'dark',
+    videoAutoplay: true
   };
 }
 
@@ -227,7 +229,8 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.onboardingTourCompleted === 'boolean'
         ? raw.onboardingTourCompleted
         : d.onboardingTourCompleted,
-    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep)
+    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep),
+    videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay
   };
 
   if (!sanitized.launchAtLogin) {
@@ -357,6 +360,9 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
+  }
+  if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
+    next.videoAutoplay = patch.videoAutoplay;
   }
 
   return next;

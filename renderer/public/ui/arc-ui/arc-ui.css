@@ -62,6 +62,22 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Google Sans Code";
+  src: url("./fonts/GoogleSansCode-VariableFont_MONO,wght.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Google Sans Code";
+  src: url("./fonts/GoogleSansCode-Italic-VariableFont_MONO,wght.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root,
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -273,6 +289,16 @@ html[data-theme="dark"] {
   --typo-p-s-size: 12px;
   --typo-p-s-line: 16px;
   --typo-p-s-weight: 400;
+  --typo-code-family: "Google Sans Code", ui-monospace, monospace;
+  --typo-code-l-size: 16px;
+  --typo-code-l-line: 24px;
+  --typo-code-l-weight: 400;
+  --typo-code-m-size: 14px;
+  --typo-code-m-line: 22px;
+  --typo-code-m-weight: 400;
+  --typo-code-s-size: 12px;
+  --typo-code-s-line: 16px;
+  --typo-code-s-weight: 400;
   --app-bg: var(--gray-1000);
   --panel-bg: var(--gray-900);
   --panel-border: var(--gray-800);
@@ -496,6 +522,33 @@ body[data-typo-role="secondary"][data-typo-state="disabled"],
   color: var(--text-elev-secondary);
 }
 
+.text-code-l {
+  margin: 0;
+  font-family: var(--typo-code-family);
+  font-size: var(--typo-code-l-size);
+  line-height: var(--typo-code-l-line);
+  font-weight: var(--typo-code-l-weight);
+  color: var(--text-elev-primary);
+}
+
+.text-code-m {
+  margin: 0;
+  font-family: var(--typo-code-family);
+  font-size: var(--typo-code-m-size);
+  line-height: var(--typo-code-m-line);
+  font-weight: var(--typo-code-m-weight);
+  color: var(--text-elev-primary);
+}
+
+.text-code-s {
+  margin: 0;
+  font-family: var(--typo-code-family);
+  font-size: var(--typo-code-s-size);
+  line-height: var(--typo-code-s-line);
+  font-weight: var(--typo-code-s-weight);
+  color: var(--text-elev-secondary);
+}
+
 .text-list {
   margin: 0;
   display: grid;
@@ -663,6 +716,9 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
 .stack > .text-l:not(.typo-preview),
 .stack > .text-m:not(.typo-preview),
 .stack > .text-s:not(.typo-preview),
+.stack > .text-code-l:not(.typo-preview),
+.stack > .text-code-m:not(.typo-preview),
+.stack > .text-code-s:not(.typo-preview),
 .stack > .text-flow-l:not(.typo-preview),
 .stack > .text-flow-m:not(.typo-preview),
 .stack > .text-flow-s:not(.typo-preview) {
@@ -2532,7 +2588,7 @@ button.input {
 
 .arc-range-slider[data-range-slider-size="m"] {
   --range-slider-h: 32px;
-  --range-slider-radius: var(--radius-m);
+  --range-slider-radius: var(--radius-s);
   --range-slider-inset: 3px;
   --range-slider-track-inner-h: 26px;
   --range-slider-fill-radius: 6px;

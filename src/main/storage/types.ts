@@ -42,6 +42,12 @@ export type CardJsonV1 = {
   phash?: ImageDupFingerprint;
   deletedAt?: string;
   durationMs?: number;
+  /** Timestamp кадра превью (мс); нет = первый кадр. */
+  previewFrameMs?: number;
+  /** Нативная ширина ролика; не меняется при смене превью. */
+  videoWidth?: number;
+  /** Нативная высота ролика; не меняется при смене превью. */
+  videoHeight?: number;
 };
 
 export type CategoryRow = {

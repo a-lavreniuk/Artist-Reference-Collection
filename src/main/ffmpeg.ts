@@ -157,12 +157,26 @@ export async function assembleHlsToMp4(
   }
 }
 
+export type ExtractVideoFrameOptions = {
+  /** Позиция кадра в миллисекундах; 0 или не задано — первый кадр. */
+  atMs?: number;
+};
+
+function buildFfmpegSeekArgs(atMs?: number): string[] {
+  if (atMs == null || !Number.isFinite(atMs) || atMs <= 0) return [];
+  const sec = Math.max(0, atMs) / 1000;
+  return ['-ss', sec.toFixed(3)];
+}
+
+export const __testOnly = { buildFfmpegSeekArgs };
+
 /**
- * Первый кадр -> JPEG (для превью карточки).
+ * Кадр видео -> JPEG (для превью карточки).
  */
 export async function extractVideoFrameToJpeg(
   inputAbs: string,
-  outputJpegAbs: string
+  outputJpegAbs: string,
+  options?: ExtractVideoFrameOptions
 ): Promise<void> {
   const ffmpeg = resolveFfmpegExecutable();
   const tmpOut = `${outputJpegAbs}.${process.pid}.tmp.jpg`;
@@ -177,6 +191,7 @@ export async function extractVideoFrameToJpeg(
     '-loglevel',
     'error',
     '-y',
+    ...buildFfmpegSeekArgs(options?.atMs),
     '-i',
     inputAbs,
     '-frames:v',
@@ -195,6 +210,54 @@ export async function extractVideoFrameToJpeg(
       throw new Error('ffmpeg не создал файл превью');
     }
     await rename(tmpOut, outputJpegAbs);
+  } catch (e) {
+    try {
+      if (fs.existsSync(tmpOut)) await unlink(tmpOut);
+    } catch {
+      /* ignore */
+    }
+    throw e;
+  }
+}
+
+/**
+ * Кадр видео -> PNG (для сохранения рядом с оригиналом).
+ */
+export async function extractVideoFrameToPng(
+  inputAbs: string,
+  outputPngAbs: string,
+  options?: ExtractVideoFrameOptions
+): Promise<void> {
+  const ffmpeg = resolveFfmpegExecutable();
+  const tmpOut = `${outputPngAbs}.${process.pid}.tmp.png`;
+  try {
+    if (fs.existsSync(tmpOut)) await unlink(tmpOut);
+  } catch {
+    /* ignore */
+  }
+
+  const args = [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    ...buildFfmpegSeekArgs(options?.atMs),
+    '-i',
+    inputAbs,
+    '-frames:v',
+    '1',
+    tmpOut
+  ];
+
+  try {
+    const { code, stderr } = await runProcess(ffmpeg, args, FRAME_TIMEOUT_MS);
+    if (code !== 0) {
+      throw new Error(stderr.trim() || `ffmpeg завершился с кодом ${code}`);
+    }
+    if (!fs.existsSync(tmpOut)) {
+      throw new Error('ffmpeg не создал файл кадра');
+    }
+    await rename(tmpOut, outputPngAbs);
   } catch (e) {
     try {
       if (fs.existsSync(tmpOut)) await unlink(tmpOut);

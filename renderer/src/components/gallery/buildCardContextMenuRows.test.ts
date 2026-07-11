@@ -110,4 +110,44 @@ describe('buildCardContextMenuRows — normal mode', () => {
     expect(labels).toContain('Выбрать несколько');
     expect(labels).toContain('Найти похожее');
   });
+
+  it('shows preview frame picker only for video cards', () => {
+    const videoLabels = rowLabels(
+      buildCardContextMenuRows({
+        scope: { kind: 'library' },
+        inMoodboard: false,
+        hasSourcePath: true,
+        cardType: 'video',
+        cardFormat: 'mp4',
+        selectionModeActive: false,
+        actions: { ...baseActions(), onPickPreviewFrame: vi.fn() }
+      })
+    );
+    expect(videoLabels).toContain('Выбрать кадр превью');
+
+    const imageLabels = rowLabels(
+      buildCardContextMenuRows({
+        scope: { kind: 'library' },
+        inMoodboard: false,
+        hasSourcePath: true,
+        cardType: 'image',
+        selectionModeActive: false,
+        actions: { ...baseActions(), onPickPreviewFrame: vi.fn() }
+      })
+    );
+    expect(imageLabels).not.toContain('Выбрать кадр превью');
+
+    const gifLabels = rowLabels(
+      buildCardContextMenuRows({
+        scope: { kind: 'library' },
+        inMoodboard: false,
+        hasSourcePath: true,
+        cardType: 'video',
+        cardFormat: 'gif',
+        selectionModeActive: false,
+        actions: { ...baseActions(), onPickPreviewFrame: vi.fn() }
+      })
+    );
+    expect(gifLabels).not.toContain('Выбрать кадр превью');
+  });
 });

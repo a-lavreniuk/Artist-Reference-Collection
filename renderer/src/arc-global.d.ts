@@ -82,6 +82,9 @@ declare global {
         sort?: GallerySortState;
       }) => Promise<CardRecord[]>;
       storageGetCard: (cardId: string) => Promise<CardRecord | null>;
+      setVideoPreviewFrame: (cardId: string, frameMs: number) => Promise<CardRecord>;
+      saveVideoFrameToCardFolder: (cardId: string, frameMs: number) => Promise<{ relativePath: string }>;
+      copyVideoFrameToClipboard: (cardId: string, frameMs: number) => Promise<{ ok: true }>;
       storageGetCardDisplayPalette: (cardId: string) => Promise<Array<{ hex: string; pct: number }>>;
       storageUpdateCard: (
         cardId: string,

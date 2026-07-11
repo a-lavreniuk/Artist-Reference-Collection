@@ -420,3 +420,15 @@ export async function deleteCard(cardId: string): Promise<void> {
   }
   return permanentDeleteCard(cardId);
 }
+
+export async function setVideoPreviewFrame(cardId: string, frameMs: number): Promise<CardRecord> {
+  const b = await resolveBackend();
+  if (b !== 'file') throw new Error('Библиотека не открыта');
+  const { clearGalleryMediaUrlCache } = await import('../../components/gallery/galleryMediaCache');
+  const { clearMeasuredMasonryHeights } = await import('../../components/masonry/masonryItemHeight');
+  const updated = await storage.storageSetVideoPreviewFrame(cardId, frameMs);
+  clearGalleryMediaUrlCache();
+  clearMeasuredMasonryHeights();
+  notifyCardsChanged();
+  return normalizeCardRecord(updated) ?? updated;
+}

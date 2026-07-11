@@ -91,6 +91,14 @@ contextBridge.exposeInMainWorld('arc', {
   aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
   aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),
   storageGetCard: (cardId: string) => ipcRenderer.invoke('arc:storage-get-card', cardId),
+  setVideoPreviewFrame: (cardId: string, frameMs: number) =>
+    ipcRenderer.invoke('arc:set-video-preview-frame', { cardId, frameMs }),
+  saveVideoFrameToCardFolder: (cardId: string, frameMs: number) =>
+    ipcRenderer.invoke('arc:save-video-frame-to-card-folder', { cardId, frameMs }) as Promise<{
+      relativePath: string;
+    }>,
+  copyVideoFrameToClipboard: (cardId: string, frameMs: number) =>
+    ipcRenderer.invoke('arc:copy-video-frame-to-clipboard', { cardId, frameMs }) as Promise<{ ok: true }>,
   storageGetCardDisplayPalette: (cardId: string) =>
     ipcRenderer.invoke('arc:storage-get-card-display-palette', cardId) as Promise<
       Array<{ hex: string; pct: number }>

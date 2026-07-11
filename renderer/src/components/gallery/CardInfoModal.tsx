@@ -29,6 +29,12 @@ function formatDate(iso: string | undefined): string {
 }
 
 function formatResolution(card: CardRecord): string {
+  if (card.type === 'video') {
+    const w = card.videoWidth ?? card.width;
+    const h = card.videoHeight ?? card.height;
+    if (w && h) return `${w}×${h}`;
+    return '—';
+  }
   if (card.width && card.height) return `${card.width}×${card.height}`;
   return '—';
 }

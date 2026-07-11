@@ -15,6 +15,11 @@ type Props = {
   showValue?: boolean;
   className?: string;
   disabled?: boolean;
+  /** false — клик по дорожке обрабатывает родитель (например таймлайн видео). */
+  seekOnTrackPointerDown?: boolean;
+  /** Hover по дорожке без нажатия (например превью на таймлайне). */
+  onTrackPointerMove?: (clientX: number) => void;
+  onTrackPointerLeave?: () => void;
 };
 
 export default function ValueSlider({
@@ -28,7 +33,10 @@ export default function ValueSlider({
   ariaLabel = 'Значение',
   showValue = true,
   className,
-  disabled = false
+  disabled = false,
+  seekOnTrackPointerDown = true,
+  onTrackPointerMove,
+  onTrackPointerLeave
 }: Props) {
   const current = snapToStep(value, min, max, step);
   const span = Math.max(max - min, step);
@@ -56,10 +64,27 @@ export default function ValueSlider({
   }, [active]);
 
   const handleTrackPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    const target = e.target as HTMLElement;
-    if (target.classList.contains('arc-range-slider__thumb')) return;
+    if (disabled || !seekOnTrackPointerDown) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setActive(true);
     onChange(readValueFromClientX(e.clientX));
+  };
+
+  const handleTrackPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    if (seekOnTrackPointerDown && e.currentTarget.hasPointerCapture(e.pointerId)) {
+      onChange(readValueFromClientX(e.clientX));
+      return;
+    }
+    if (!onTrackPointerMove || e.buttons !== 0) return;
+    onTrackPointerMove(e.clientX);
+  };
+
+  const handleTrackPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!seekOnTrackPointerDown || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    onChange(readValueFromClientX(e.clientX));
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setActive(false);
   };
 
   return (
@@ -76,7 +101,11 @@ export default function ValueSlider({
         <div
           className="arc-range-slider__track"
           ref={trackRef}
-          onPointerDown={handleTrackPointerDown}
+          onPointerDownCapture={seekOnTrackPointerDown ? handleTrackPointerDown : undefined}
+          onPointerMove={handleTrackPointerMove}
+          onPointerUp={handleTrackPointerUp}
+          onPointerCancel={handleTrackPointerUp}
+          onPointerLeave={() => onTrackPointerLeave?.()}
         >
           <div
             className="arc-range-slider__fill"

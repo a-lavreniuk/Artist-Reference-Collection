@@ -4,6 +4,7 @@ import path from 'path';
 import { app } from 'electron';
 import {
   extractVideoFrameToJpeg,
+  extractVideoFrameToPng,
   isVideoExt,
   probeVideoDimensions,
   probeVideoDurationMs
@@ -456,6 +457,8 @@ export async function importMediaFile(
     let height: number | undefined;
     let phash: ImageDupFingerprint | undefined;
     let durationMs: number | undefined;
+    let videoWidth: number | undefined;
+    let videoHeight: number | undefined;
 
     if (type === 'image') {
       const thumbRes = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
@@ -477,6 +480,8 @@ export async function importMediaFile(
         if (dims) {
           width = dims.width;
           height = dims.height;
+          videoWidth = dims.width;
+          videoHeight = dims.height;
         }
         durationMs = (await probeVideoDurationMs(originalAbs)) ?? undefined;
       } finally {
@@ -507,6 +512,8 @@ export async function importMediaFile(
       collectionIds: [],
       ...(phash ? { phash } : {}),
       ...(durationMs ? { durationMs } : {}),
+      ...(videoWidth ? { videoWidth } : {}),
+      ...(videoHeight ? { videoHeight } : {}),
       ...(linkUrlTrimmed ? { linkUrl: linkUrlTrimmed } : {}),
       ...(nameTrimmed ? { name: nameTrimmed } : {})
     };
@@ -1030,6 +1037,160 @@ export async function getSystemData(libraryRoot: string): Promise<ArcSystemV1> {
 export async function saveSystemData(libraryRoot: string, data: ArcSystemV1): Promise<void> {
   await ensureLibraryReady(libraryRoot);
   await writeSystem(libraryRoot, data);
+}
+
+function isGifVideoCard(cardJson: CardJsonV1): boolean {
+  return (cardJson.format ?? '').toLowerCase() === 'gif';
+}
+
+export async function setVideoPreviewFrame(
+  libraryRoot: string,
+  cardId: string,
+  frameMs: number
+): Promise<CardIndexRow> {
+  const root = path.resolve(libraryRoot);
+  const db = await ensureLibraryReady(root);
+  const cardJson = await readCardJson(root, cardId);
+  if (!cardJson) throw new Error('Карточка не найдена');
+  if (cardJson.type !== 'video') throw new Error('Выбор кадра доступен только для видео');
+  if (isGifVideoCard(cardJson)) throw new Error('Выбор кадра недоступен для GIF');
+
+  const row = loadCardRow(db, cardId);
+  if (!row?.originalRel) throw new Error('Карточка не найдена');
+
+  const durationMs =
+    cardJson.durationMs ?? row.durationMs ?? (await probeVideoDurationMs(path.join(root, row.originalRel.replace(/\//g, path.sep)))) ?? 0;
+  const clampedMs = Math.max(0, Math.min(Math.round(frameMs), Math.max(0, durationMs)));
+
+  if (!cardJson.videoWidth || !cardJson.videoHeight) {
+    const originalAbs = path.join(root, row.originalRel.replace(/\//g, path.sep));
+    const dims = await probeVideoDimensions(originalAbs);
+    if (dims) {
+      cardJson.videoWidth = dims.width;
+      cardJson.videoHeight = dims.height;
+    } else if (row.width && row.height) {
+      cardJson.videoWidth = row.width;
+      cardJson.videoHeight = row.height;
+    }
+  }
+
+  const dir = cardDirAbs(root, cardId);
+  const originalAbs = path.join(root, row.originalRel.replace(/\//g, path.sep));
+  const thumbSAbs = path.join(dir, 'thumb_s.webp');
+  const thumbMAbs = path.join(dir, 'thumb_m.webp');
+  const thumbLAbs = path.join(dir, 'thumb_l.webp');
+  const frameTmp = path.join(dir, '_preview_frame.jpg');
+
+  try {
+    await extractVideoFrameToJpeg(originalAbs, frameTmp, {
+      atMs: clampedMs > 0 ? clampedMs : undefined
+    });
+    const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
+    const modified = new Date().toISOString();
+
+    cardJson.previewFrameMs = clampedMs;
+    cardJson.width = thumbRes.width || cardJson.width;
+    cardJson.height = thumbRes.height || cardJson.height;
+    cardJson.dominantColorHex = thumbRes.dominantColorHex;
+    cardJson.dateModified = modified;
+
+    await writeCardJson(root, cardJson);
+
+    db.prepare(
+      `UPDATE cards SET width = ?, height = ?, dominant_color = ?, palette_json = ?, date_modified = ? WHERE id = ?`
+    ).run(
+      cardJson.width ?? null,
+      cardJson.height ?? null,
+      thumbRes.dominantColorHex,
+      JSON.stringify(thumbRes.palette),
+      modified,
+      cardId
+    );
+
+    const updated = loadCardRow(db, cardId);
+    if (!updated) throw new Error('Карточка не найдена');
+    return updated;
+  } finally {
+    try {
+      await unlink(frameTmp);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+async function clampVideoFrameMs(
+  root: string,
+  cardId: string,
+  cardJson: Awaited<ReturnType<typeof readCardJson>>,
+  row: CardIndexRow,
+  frameMs: number
+): Promise<{ clampedMs: number; originalAbs: string }> {
+  if (!cardJson || cardJson.type !== 'video') throw new Error('Кадр доступен только для видео');
+  if (isGifVideoCard(cardJson)) throw new Error('Кадр недоступен для GIF');
+  if (!row?.originalRel) throw new Error('Карточка не найдена');
+
+  const originalAbs = path.join(root, row.originalRel.replace(/\//g, path.sep));
+  const durationMs =
+    cardJson.durationMs ??
+    row.durationMs ??
+    (await probeVideoDurationMs(originalAbs)) ??
+    0;
+  const clampedMs = Math.max(0, Math.min(Math.round(frameMs), Math.max(0, durationMs)));
+  return { clampedMs, originalAbs };
+}
+
+export async function saveVideoFrameToCardFolder(
+  libraryRoot: string,
+  cardId: string,
+  frameMs: number
+): Promise<{ relativePath: string }> {
+  const root = path.resolve(libraryRoot);
+  const db = await ensureLibraryReady(root);
+  const cardJson = await readCardJson(root, cardId);
+  if (!cardJson) throw new Error('Карточка не найдена');
+  const row = loadCardRow(db, cardId);
+  if (!row?.originalRel) throw new Error('Карточка не найдена');
+
+  const { clampedMs, originalAbs } = await clampVideoFrameMs(root, cardId, cardJson, row, frameMs);
+  const framesDir = path.join(cardDirAbs(root, cardId), 'frames');
+  await mkdir(framesDir, { recursive: true });
+  const fileName = `frame-${clampedMs}.png`;
+  const outputAbs = path.join(framesDir, fileName);
+  await extractVideoFrameToPng(originalAbs, outputAbs, {
+    atMs: clampedMs > 0 ? clampedMs : undefined
+  });
+  const relativePath = `${CARDS_DIR}/${cardId}/frames/${fileName}`;
+  return { relativePath };
+}
+
+export async function copyVideoFrameToClipboard(
+  libraryRoot: string,
+  cardId: string,
+  frameMs: number,
+  writeImage: (imagePath: string) => void
+): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const db = await ensureLibraryReady(root);
+  const cardJson = await readCardJson(root, cardId);
+  if (!cardJson) throw new Error('Карточка не найдена');
+  const row = loadCardRow(db, cardId);
+  if (!row?.originalRel) throw new Error('Карточка не найдена');
+
+  const { clampedMs, originalAbs } = await clampVideoFrameMs(root, cardId, cardJson, row, frameMs);
+  const frameTmp = path.join(cardDirAbs(root, cardId), `_clipboard_frame_${process.pid}.png`);
+  try {
+    await extractVideoFrameToPng(originalAbs, frameTmp, {
+      atMs: clampedMs > 0 ? clampedMs : undefined
+    });
+    writeImage(frameTmp);
+  } finally {
+    try {
+      await unlink(frameTmp);
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export async function replaceCardOriginalFromFile(

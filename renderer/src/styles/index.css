@@ -2651,11 +2651,261 @@ body.arc-card-detail-open .arc-app-outlet {
   border-radius: var(--radius-xs);
 }
 
+.arc-card-detail-preview--video {
+  border-radius: var(--radius-l);
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  overflow: hidden;
+}
+
+.arc-card-detail-preview--video.panel {
+  padding: 0;
+}
+
 .arc-card-detail-video-note {
   flex-shrink: 0;
   margin: 0;
-  padding: var(--s-2) var(--s-2) 0;
+  padding: var(--s-1) 0 0;
   color: var(--text-elev-secondary);
+}
+
+.arc-card-detail-video-player {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+}
+
+.arc-card-detail-video-scrub-src,
+.arc-card-detail-video-scrub-canvas {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.arc-card-detail-video-controls {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-top: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+}
+
+.arc-card-detail-video-controls .btn-outline .btn-icon-only__glyph,
+.arc-card-detail-video-controls .btn-outline .btn-ds__icon {
+  color: var(--btn-secondary-icon-default);
+}
+
+.arc-card-detail-video-controls .btn-outline:hover:not(:disabled) .btn-icon-only__glyph,
+.arc-card-detail-video-controls .btn-outline:hover:not(:disabled) .btn-ds__icon,
+.arc-card-detail-video-controls .btn-outline.is-active:not(:disabled) .btn-icon-only__glyph {
+  color: var(--btn-secondary-icon-hover);
+}
+
+.arc-card-detail-video-controls .btn-outline:focus-visible:not(:disabled) .btn-icon-only__glyph,
+.arc-card-detail-video-controls .btn-outline:focus-visible:not(:disabled) .btn-ds__icon {
+  color: var(--btn-secondary-icon-focus);
+}
+
+.arc-card-detail-video-controls .btn-outline:disabled .btn-icon-only__glyph,
+.arc-card-detail-video-controls .btn-outline:disabled .btn-ds__icon {
+  color: var(--btn-secondary-icon-disabled);
+}
+
+.arc-card-detail-video-controls .btn-outline .btn-ds__value {
+  color: var(--btn-secondary-value-default);
+}
+
+.arc-card-detail-video-controls .btn-outline:hover:not(:disabled) .btn-ds__value,
+.arc-card-detail-video-controls .btn-outline.is-active:not(:disabled) .btn-ds__value {
+  color: var(--btn-secondary-value-hover);
+}
+
+.arc-card-detail-video-controls .arc-navbar-icon-svg [stroke] {
+  stroke: currentColor;
+}
+
+.arc-card-detail-video-controls .arc-navbar-icon-svg [fill]:not([fill="none"]) {
+  fill: currentColor;
+}
+
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline .btn-icon-only__glyph,
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline .btn-ds__icon {
+  color: var(--icons-black-bg-default);
+}
+
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline:hover:not(:disabled) .btn-icon-only__glyph,
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline:hover:not(:disabled) .btn-ds__icon,
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline.is-active:not(:disabled) .btn-icon-only__glyph {
+  color: var(--icons-black-bg-hover);
+}
+
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline:focus-visible:not(:disabled) .btn-icon-only__glyph,
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline:focus-visible:not(:disabled) .btn-ds__icon {
+  color: var(--icons-black-bg-default);
+}
+
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline:disabled .btn-icon-only__glyph,
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .btn-outline:disabled .btn-ds__icon {
+  color: var(--icons-black-bg-disabled);
+}
+
+html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"] .arc-card-detail-video-meta__item .btn-ds__icon {
+  color: var(--icons-black-bg-default);
+}
+
+.arc-card-detail-video-timeline {
+  position: relative;
+}
+
+.arc-card-detail-video-timeline .arc-range-slider {
+  width: 100%;
+}
+
+.arc-card-detail-video-scrub-preview {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  transform: translateX(-50%);
+  width: 128px;
+  padding: var(--s-1);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.arc-card-detail-video-scrub-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-xs);
+}
+
+.arc-card-detail-video-transport {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.arc-card-detail-video-transport__left,
+.arc-card-detail-video-transport__right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.arc-card-detail-video-skip-group {
+  display: inline-flex;
+  align-items: stretch;
+  isolation: isolate;
+}
+
+.arc-card-detail-video-skip-group > .arc-tooltip-wrapper + .arc-tooltip-wrapper {
+  margin-left: -1px;
+}
+
+.arc-card-detail-video-skip-btn {
+  position: relative;
+  border-radius: 0;
+}
+
+.arc-card-detail-video-skip-group > :first-child .arc-card-detail-video-skip-btn {
+  border-top-left-radius: var(--btn-radius);
+  border-bottom-left-radius: var(--btn-radius);
+}
+
+.arc-card-detail-video-skip-group > :last-child .arc-card-detail-video-skip-btn {
+  border-top-right-radius: var(--btn-radius);
+  border-bottom-right-radius: var(--btn-radius);
+}
+
+.arc-card-detail-video-skip-btn:focus-visible:not(:disabled) {
+  z-index: 2;
+}
+
+.arc-card-detail-video-time-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-h);
+  padding: 0 var(--s-2);
+  border: 1px solid var(--button-outline-border-default);
+  border-radius: var(--radius-s);
+  background: var(--button-outline-default);
+  color: var(--btn-secondary-value-default);
+  white-space: nowrap;
+}
+
+.arc-card-detail-video-time {
+  color: inherit;
+  white-space: nowrap;
+}
+
+.arc-card-detail-video-time__sep {
+  color: var(--text-elev-secondary);
+}
+
+.arc-card-detail-video-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.arc-card-detail-video-meta__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-card-detail-video-meta__item .text-m {
+  white-space: nowrap;
+}
+
+.arc-card-detail-video-volume {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
+.arc-card-detail-video-volume__slider {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  z-index: 2;
+  box-sizing: border-box;
+  width: calc(128px + var(--s-2));
+  padding-left: var(--s-2);
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-50%) scaleX(0.92);
+  transform-origin: left center;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.arc-card-detail-video-volume:hover .arc-card-detail-video-volume__slider,
+.arc-card-detail-video-volume:focus-within .arc-card-detail-video-volume__slider {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scaleX(1);
+}
+
+.arc-card-detail-video-volume__slider .arc-range-slider {
+  width: 128px;
 }
 
 .arc-card-detail-media-fit {
@@ -2706,6 +2956,39 @@ body.arc-card-detail-open .arc-app-outlet {
 
 .arc-card-info-modal {
   width: min(400px, calc(100vw - var(--s-4) * 2));
+}
+
+.arc-modal--video-preview-frame {
+  width: min(560px, calc(100vw - var(--s-4) * 2));
+}
+
+.arc-video-preview-frame-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.arc-video-preview-frame-modal__video-wrap {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--s-1);
+}
+
+.arc-video-preview-frame-modal__video {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  background: var(--gray-900);
+}
+
+.arc-video-preview-frame-modal__slider {
+  width: 100%;
+}
+
+.arc-video-preview-frame-modal__hint {
+  color: var(--typo-p-m-color-muted);
+  margin: 0;
 }
 
 .arc-card-info-group {
@@ -4938,6 +5221,11 @@ html.arc-onboarding-page,
 .arc-settings-desc-block__text {
   margin: 0;
   color: var(--text-elev-primary);
+}
+
+.arc-settings-mcp-json {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .arc-settings-action-row {

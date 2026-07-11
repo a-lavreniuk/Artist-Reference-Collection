@@ -3,6 +3,7 @@ import { matchesShortcut } from './matchShortcutEvent';
 
 function keyEvent(init: {
   key: string;
+  code?: string;
   ctrlKey?: boolean;
   metaKey?: boolean;
   altKey?: boolean;
@@ -14,7 +15,7 @@ function keyEvent(init: {
     metaKey: init.metaKey ?? false,
     altKey: init.altKey ?? false,
     shiftKey: init.shiftKey ?? false,
-    code: init.key === ' ' ? 'Space' : ''
+    code: init.code ?? (init.key === ' ' ? 'Space' : '')
   } as KeyboardEvent;
 }
 
@@ -46,5 +47,14 @@ describe('matchesShortcut', () => {
     expect(matchesShortcut(left, 'detail.previous')).toBe(true);
     const blocked = keyEvent({ key: 'ArrowLeft', ctrlKey: true });
     expect(matchesShortcut(blocked, 'detail.previous')).toBe(false);
+  });
+
+  it('matches video player shortcuts', () => {
+    expect(matchesShortcut(keyEvent({ key: ' ', code: 'Space' }), 'video.playPause')).toBe(true);
+    expect(
+      matchesShortcut(keyEvent({ key: 'ArrowLeft', code: 'ArrowLeft', ctrlKey: true }), 'video.seekBack5')
+    ).toBe(true);
+    expect(matchesShortcut(keyEvent({ key: '[', code: 'BracketLeft' }), 'video.frameBack1')).toBe(true);
+    expect(matchesShortcut(keyEvent({ key: ']', code: 'BracketRight' }), 'video.frameForward1')).toBe(true);
   });
 });

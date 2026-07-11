@@ -172,6 +172,9 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
   }
+  if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
+    next.videoAutoplay = patch.videoAutoplay;
+  }
 
   return next;
 }
@@ -301,6 +304,9 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
+  }
+  if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
+    next.videoAutoplay = patch.videoAutoplay;
   }
 
   if (!next.launchAtLogin) {
