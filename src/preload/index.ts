@@ -308,7 +308,6 @@ contextBridge.exposeInMainWorld('arc', {
       screenshotsEnabled: boolean;
       screenshotFormat: 'png' | 'jpg' | 'webp';
       screenshotAskSaveLocation: boolean;
-      screenshotPrefixName: boolean;
       screenshotRetina2x: boolean;
       notifyScreenshotSaved: boolean;
       notifyDuplicatesFound: boolean;
@@ -335,7 +334,6 @@ contextBridge.exposeInMainWorld('arc', {
       screenshotsEnabled: boolean;
       screenshotFormat: 'png' | 'jpg' | 'webp';
       screenshotAskSaveLocation: boolean;
-      screenshotPrefixName: boolean;
       screenshotRetina2x: boolean;
       notifyScreenshotSaved: boolean;
       notifyDuplicatesFound: boolean;
@@ -395,6 +393,15 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:screenshot-picker-confirm', region) as Promise<{ ok: boolean }>,
   screenshotPickerCancel: () =>
     ipcRenderer.invoke('arc:screenshot-picker-cancel') as Promise<{ ok: boolean }>,
+  screenshotWindowPickerAtPoint: (point: { x: number; y: number }) =>
+    ipcRenderer.invoke('arc:screenshot-window-picker-at-point', point) as Promise<{
+      ok: boolean;
+      window: { title: string; nativeId?: number; x: number; y: number; width: number; height: number } | null;
+    }>,
+  screenshotWindowPickerConfirm: (payload: { title: string; nativeId?: number }) =>
+    ipcRenderer.invoke('arc:screenshot-window-picker-confirm', payload) as Promise<{ ok: boolean }>,
+  screenshotWindowPickerCancel: () =>
+    ipcRenderer.invoke('arc:screenshot-window-picker-cancel') as Promise<{ ok: boolean }>,
   openCardViewer: (payload: { cardIds: string[]; startIndex?: number }) =>
     ipcRenderer.invoke('arc:card-viewer-open', payload) as Promise<{ ok: boolean }>,
   cardViewerSetAlwaysOnTop: (enabled: boolean) =>

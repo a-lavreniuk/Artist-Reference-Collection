@@ -31,7 +31,6 @@ export type AppPreferencesV1 = {
   screenshotsEnabled: boolean;
   screenshotFormat: ScreenshotFormat;
   screenshotAskSaveLocation: boolean;
-  screenshotPrefixName: boolean;
   screenshotRetina2x: boolean;
   notifyScreenshotSaved: boolean;
   notifyDuplicatesFound: boolean;
@@ -85,7 +84,6 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     screenshotsEnabled: true,
     screenshotFormat: 'webp',
     screenshotAskSaveLocation: false,
-    screenshotPrefixName: false,
     screenshotRetina2x: false,
     notifyScreenshotSaved: true,
     notifyDuplicatesFound: true,

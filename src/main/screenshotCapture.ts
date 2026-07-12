@@ -1,4 +1,4 @@
-import { BrowserWindow, desktopCapturer, screen } from 'electron';
+import { BrowserWindow, desktopCapturer, Display, screen } from 'electron';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
@@ -9,14 +9,24 @@ import { readAppPreferencesSync } from './appPreferences';
 import { readLibraryRootSync } from './libraryRootConfig';
 import type { ScreenshotRegion } from './screenshotOverlay';
 import { importMediaFile, updateCardInStorage } from './storage/libraryStorage';
-import { getMainWindow, showMainWindow } from './windowChrome';
 
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 
-function formatScreenshotName(): string {
+export function formatScreenshotName(windowTitle?: string): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `screenshot ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const base = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const title = sanitizeWindowTitle(windowTitle);
+  return title ? `${base} ${title}` : base;
+}
+
+export function sanitizeWindowTitle(raw: string | undefined): string {
+  if (!raw) return '';
+  return raw
+    .replace(/[\u0000-\u001f<>:"/\\|?*]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
 }
 
 function sanitizeFormat(raw: unknown): ScreenshotFormat {
@@ -28,10 +38,11 @@ function extForFormat(format: ScreenshotFormat): string {
   return format === 'jpg' ? '.jpg' : format === 'png' ? '.png' : '.webp';
 }
 
-async function capturePrimaryDisplayBuffer(): Promise<{ buffer: Buffer; scaleFactor: number }> {
-  const primary = screen.getPrimaryDisplay();
-  const { width, height } = primary.size;
-  const scaleFactor = primary.scaleFactor || 1;
+async function captureDisplayBuffer(
+  display: Display
+): Promise<{ buffer: Buffer; scaleFactor: number }> {
+  const { width, height } = display.size;
+  const scaleFactor = display.scaleFactor || 1;
   const thumbWidth = Math.max(1, Math.round(width * scaleFactor));
   const thumbHeight = Math.max(1, Math.round(height * scaleFactor));
 
@@ -40,10 +51,10 @@ async function capturePrimaryDisplayBuffer(): Promise<{ buffer: Buffer; scaleFac
     thumbnailSize: { width: thumbWidth, height: thumbHeight }
   });
 
-  const displayId = String(primary.id);
+  const displayId = String(display.id);
   const source =
     sources.find((s) => s.display_id === displayId) ??
-    sources.find((s) => /primary|screen/i.test(s.name)) ??
+    sources.find((s) => s.name.toLowerCase().includes(String(display.id))) ??
     sources[0];
 
   if (!source) {
@@ -51,6 +62,50 @@ async function capturePrimaryDisplayBuffer(): Promise<{ buffer: Buffer; scaleFac
   }
 
   return { buffer: source.thumbnail.toPNG(), scaleFactor };
+}
+
+export async function capturePrimaryDisplayBuffer(): Promise<{ buffer: Buffer; scaleFactor: number }> {
+  return captureDisplayBuffer(screen.getPrimaryDisplay());
+}
+
+export async function captureDisplayAtCursorBuffer(): Promise<{ buffer: Buffer; scaleFactor: number }> {
+  const point = screen.getCursorScreenPoint();
+  const display = screen.getDisplayNearestPoint(point);
+  return captureDisplayBuffer(display);
+}
+
+async function captureWindowBuffer(windowTitle: string, nativeId?: number): Promise<Buffer> {
+  const sources = await desktopCapturer.getSources({
+    types: ['window'],
+    thumbnailSize: { width: 4096, height: 4096 }
+  });
+
+  const matchByNativeId = (id: number) =>
+    sources.find((s) => {
+      const parts = s.id.split(':');
+      if (parts[0] !== 'window' || parts.length < 2) return false;
+      return parts.some((part) => part === String(id));
+    });
+
+  const needle = windowTitle.trim().toLowerCase();
+  const source =
+    (nativeId != null ? matchByNativeId(nativeId) : undefined) ??
+    sources.find((s) => s.name.trim().toLowerCase() === needle) ??
+    sources.find((s) => s.name.toLowerCase().includes(needle)) ??
+    sources.find((s) => needle.length > 0 && s.name.toLowerCase().includes(needle));
+
+  if (!source) {
+    throw new Error('Не удалось получить источник окна');
+  }
+
+  const meta = await sharp(source.thumbnail.toPNG()).metadata();
+  const w = meta.width ?? 0;
+  const h = meta.height ?? 0;
+  if (w < 1 || h < 1) {
+    throw new Error('Пустой кадр окна');
+  }
+
+  return source.thumbnail.toPNG();
 }
 
 async function cropScreenshotBuffer(
@@ -98,18 +153,9 @@ function broadcastScreenshotSaved(cardId: string): void {
   }
 }
 
-function restoreMainWindow(
-  mainWin: BrowserWindow | null,
-  wasVisible: boolean,
-  wasMinimized: boolean
-): void {
-  if (mainWin && !mainWin.isDestroyed() && (wasVisible || wasMinimized)) {
-    showMainWindow();
-  }
-}
-
-export async function importScreenshotFromRegion(
-  region: ScreenshotRegion
+async function importScreenshotPng(
+  pngBuffer: Buffer,
+  windowTitle?: string
 ): Promise<{ ok: true; cardId: string } | { ok: false }> {
   const prefs = readAppPreferencesSync();
   if (!prefs.screenshotsEnabled) return { ok: false };
@@ -117,23 +163,11 @@ export async function importScreenshotFromRegion(
   const libraryRoot = readLibraryRootSync();
   if (!libraryRoot) return { ok: false };
 
-  const mainWin = getMainWindow();
-  const wasVisible = mainWin?.isVisible() ?? false;
-  const wasMinimized = mainWin?.isMinimized() ?? false;
-
-  if (mainWin && !mainWin.isDestroyed()) {
-    mainWin.hide();
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 120));
-
   let tempPath: string | null = null;
 
   try {
-    const { buffer: pngBuffer, scaleFactor } = await capturePrimaryDisplayBuffer();
-    const cropped = await cropScreenshotBuffer(pngBuffer, region, scaleFactor);
     const format = sanitizeFormat(prefs.screenshotFormat);
-    const encoded = await encodeScreenshotBuffer(cropped, format, prefs.screenshotRetina2x);
+    const encoded = await encodeScreenshotBuffer(pngBuffer, format, prefs.screenshotRetina2x);
 
     const tempDir = path.join(os.tmpdir(), 'arc-screenshots');
     await mkdir(tempDir, { recursive: true });
@@ -144,11 +178,7 @@ export async function importScreenshotFromRegion(
     if (!result.ok) return { ok: false };
 
     const cardId = result.row.id;
-
-    if (prefs.screenshotPrefixName) {
-      await updateCardInStorage(libraryRoot, cardId, { name: formatScreenshotName() });
-    }
-
+    await updateCardInStorage(libraryRoot, cardId, { name: formatScreenshotName(windowTitle) });
     broadcastScreenshotSaved(cardId);
     return { ok: true, cardId };
   } catch {
@@ -161,10 +191,46 @@ export async function importScreenshotFromRegion(
         /* ignore */
       }
     }
-    restoreMainWindow(mainWin, wasVisible, wasMinimized);
+  }
+}
+
+export async function importScreenshotFromRegion(
+  region: ScreenshotRegion
+): Promise<{ ok: true; cardId: string } | { ok: false }> {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const { buffer: pngBuffer, scaleFactor } = await capturePrimaryDisplayBuffer();
+    const cropped = await cropScreenshotBuffer(pngBuffer, region, scaleFactor);
+    return importScreenshotPng(cropped);
+  } catch {
+    return { ok: false };
+  }
+}
+
+export async function importScreenshotFromFullscreen(): Promise<{ ok: true; cardId: string } | { ok: false }> {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const { buffer: pngBuffer } = await captureDisplayAtCursorBuffer();
+    return importScreenshotPng(pngBuffer);
+  } catch {
+    return { ok: false };
+  }
+}
+
+export async function importScreenshotFromWindow(
+  windowTitle: string,
+  nativeId?: number
+): Promise<{ ok: true; cardId: string } | { ok: false }> {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const pngBuffer = await captureWindowBuffer(windowTitle, nativeId);
+    const effectiveTitle = windowTitle.trim() || undefined;
+    return importScreenshotPng(pngBuffer, effectiveTitle);
+  } catch {
+    return { ok: false };
   }
 }
 
 export function registerScreenshotIpc(): void {
-  // Picker IPC is registered in screenshotOverlay.ts
+  // Picker IPC is registered in screenshotOverlay.ts / screenshotWindowPicker.ts
 }

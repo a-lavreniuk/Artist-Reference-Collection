@@ -1,14 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import ScreenshotPickerApp from './ScreenshotPickerApp';
+import ScreenshotWindowPickerApp from './ScreenshotWindowPickerApp';
 import '../styles/tokens.css';
 import '../styles/screenshot-picker.css';
 
-document.documentElement.setAttribute('data-theme', 'dark');
-document.body.setAttribute('data-btn-size', 'm');
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ScreenshotPickerApp />
+    <ScreenshotWindowPickerApp />
   </StrictMode>
 );

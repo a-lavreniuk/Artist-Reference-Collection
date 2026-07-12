@@ -1,11 +1,17 @@
 import {
   DEVTOOLS_ACCELERATORS,
   FEEDBACK_ACCELERATOR,
-  SCREENSHOT_ACCELERATOR
+  SCREENSHOT_AREA_ACCELERATOR,
+  SCREENSHOT_FULLSCREEN_ACCELERATOR,
+  SCREENSHOT_FULLSCREEN_PRTSCR_ACCELERATOR,
+  SCREENSHOT_WINDOW_ACCELERATOR,
+  SCREENSHOT_WINDOW_ALT_PRTSCR_ACCELERATOR
 } from '@arc-main-shared/shortcutAccelerators';
 
 export type ShortcutId =
-  | 'global.screenshot'
+  | 'global.screenshot.area'
+  | 'global.screenshot.fullscreen'
+  | 'global.screenshot.window'
   | 'global.feedback'
   | 'global.search'
   | 'global.import'
@@ -87,10 +93,32 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroupDefinition[] = [
 
 export const SHORTCUTS: readonly ShortcutDefinition[] = [
   {
-    id: 'global.screenshot',
+    id: 'global.screenshot.area',
     groupId: 'global',
-    label: 'Сделать скриншот',
-    defaultAccelerator: SCREENSHOT_ACCELERATOR,
+    label: 'Скриншот области',
+    defaultAccelerator: SCREENSHOT_AREA_ACCELERATOR,
+    scope: 'global',
+    settingsVisible: true
+  },
+  {
+    id: 'global.screenshot.fullscreen',
+    groupId: 'global',
+    label: 'Скриншот экрана',
+    defaultAccelerator: [
+      SCREENSHOT_FULLSCREEN_ACCELERATOR,
+      SCREENSHOT_FULLSCREEN_PRTSCR_ACCELERATOR
+    ],
+    scope: 'global',
+    settingsVisible: true
+  },
+  {
+    id: 'global.screenshot.window',
+    groupId: 'global',
+    label: 'Скриншот окна',
+    defaultAccelerator: [
+      SCREENSHOT_WINDOW_ACCELERATOR,
+      SCREENSHOT_WINDOW_ALT_PRTSCR_ACCELERATOR
+    ],
     scope: 'global',
     settingsVisible: true
   },

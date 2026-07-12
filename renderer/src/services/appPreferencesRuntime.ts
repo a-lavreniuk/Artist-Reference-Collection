@@ -76,9 +76,6 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('screenshotAskSaveLocation' in patch && typeof patch.screenshotAskSaveLocation === 'boolean') {
     next.screenshotAskSaveLocation = patch.screenshotAskSaveLocation;
   }
-  if ('screenshotPrefixName' in patch && typeof patch.screenshotPrefixName === 'boolean') {
-    next.screenshotPrefixName = patch.screenshotPrefixName;
-  }
   if ('screenshotRetina2x' in patch && typeof patch.screenshotRetina2x === 'boolean') {
     next.screenshotRetina2x = patch.screenshotRetina2x;
   }
@@ -208,9 +205,6 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('screenshotAskSaveLocation' in patch && typeof patch.screenshotAskSaveLocation === 'boolean') {
     next.screenshotAskSaveLocation = patch.screenshotAskSaveLocation;
-  }
-  if ('screenshotPrefixName' in patch && typeof patch.screenshotPrefixName === 'boolean') {
-    next.screenshotPrefixName = patch.screenshotPrefixName;
   }
   if ('screenshotRetina2x' in patch && typeof patch.screenshotRetina2x === 'boolean') {
     next.screenshotRetina2x = patch.screenshotRetina2x;
