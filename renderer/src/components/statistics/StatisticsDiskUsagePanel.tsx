@@ -1,8 +1,6 @@
 import { formatBytesRoundedMbFigma } from '../../utils/formatBytes';
 import type { DiskBarModel } from '../../utils/buildDiskBarModel';
-import { evaluateDiskSpacePressure } from '../../utils/evaluateDiskSpacePressure';
 import StatisticsDiskBar from './StatisticsDiskBar';
-import StatisticsDiskSpaceNotice from './StatisticsDiskSpaceNotice';
 import StatisticsPanelHead from './StatisticsPanelHead';
 
 type Props = {
@@ -13,28 +11,18 @@ export default function StatisticsDiskUsagePanel({ model }: Props) {
   if (!model || model.diskTotalBytes <= 0) {
     return (
       <section className="arc-stats-disk-panel panel">
-        <StatisticsPanelHead
-          icon={<span className="arc-stat-icon arc-stat-icon--hard-drive" aria-hidden="true" />}
-        >
-          <p className="text-s arc-stats-disk-panel__title">Занимаемое место</p>
+        <StatisticsPanelHead>
+          <p className="text-l arc-stats-disk-panel__title">Занимаемое место</p>
         </StatisticsPanelHead>
         <p className="hint">Данные о диске недоступны</p>
       </section>
     );
   }
 
-  const pressureAdvice = evaluateDiskSpacePressure({
-    diskTotalBytes: model.diskTotalBytes,
-    diskFreeBytes: model.diskFreeBytes,
-    libraryFolderBytes: model.libraryFolderBytes
-  });
-
   return (
     <section className="arc-stats-disk-panel panel">
-      <StatisticsPanelHead
-        icon={<span className="arc-stat-icon arc-stat-icon--hard-drive" aria-hidden="true" />}
-      >
-        <p className="text-s arc-stats-disk-panel__title">Занимаемое место</p>
+      <StatisticsPanelHead>
+        <p className="text-l arc-stats-disk-panel__title">Занимаемое место</p>
         <StatisticsDiskBar segments={model.segments} />
         <ul className="arc-stats-disk-panel__legend">
           {model.legend.map((item) => (
@@ -43,7 +31,7 @@ export default function StatisticsDiskUsagePanel({ model }: Props) {
                 className={`arc-stats-disk-panel__legend-swatch arc-stats-disk-bar__segment--${item.tone}`}
                 aria-hidden="true"
               />
-              <span className="text-m">{item.label}</span>
+              <span className="text-m arc-stats-disk-panel__legend-label">{item.label}</span>
               <span className="text-m arc-stats-disk-panel__legend-value">
                 {formatBytesRoundedMbFigma(item.bytes)}
               </span>
@@ -52,10 +40,10 @@ export default function StatisticsDiskUsagePanel({ model }: Props) {
         </ul>
       </StatisticsPanelHead>
 
-      {pressureAdvice ? <StatisticsDiskSpaceNotice advice={pressureAdvice} /> : null}
-
       <p className="arc-stats-disk-panel__footer">
-        <span className="h3">{formatBytesRoundedMbFigma(model.libraryFolderBytes)}</span>
+        <span className="h3 arc-stats-disk-panel__footer-primary">
+          {formatBytesRoundedMbFigma(model.libraryFolderBytes)}
+        </span>
         <span className="h3 arc-stats-disk-panel__footer-secondary">
           из {formatBytesRoundedMbFigma(model.diskTotalBytes)} на диске {model.driveLabel}
         </span>

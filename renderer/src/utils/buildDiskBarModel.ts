@@ -48,19 +48,26 @@ export function buildDiskBarModel(input: BuildDiskBarInput): DiskBarModel {
   const freeBytes = Math.max(0, diskFreeBytes);
 
   const segments: DiskBarSegment[] = [
-    { id: 'images', bytes: imageBytes, tone: 'images' },
-    { id: 'videos', bytes: videoBytes, tone: 'videos' },
-    { id: 'trash', bytes: trashBytes, tone: 'trash' },
     { id: 'nonArc', bytes: nonArcBytes, tone: 'nonArc' },
-    { id: 'free', bytes: freeBytes, tone: 'free' }
+    { id: 'images', bytes: imageBytes, tone: 'images' },
+    { id: 'videos', bytes: videoBytes, tone: 'videos' }
   ];
 
+  if (trashBytes > 0) {
+    segments.push({ id: 'trash', bytes: trashBytes, tone: 'trash' });
+  }
+
+  segments.push({ id: 'free', bytes: freeBytes, tone: 'free' });
+
   const legend: DiskBarLegendItem[] = [
+    { id: 'nonArc', label: 'Системные файлы', bytes: nonArcBytes, tone: 'nonArc' },
     { id: 'images', label: 'Изображения', bytes: imageBytes, tone: 'images' },
-    { id: 'videos', label: 'Видео', bytes: videoBytes, tone: 'videos' },
-    { id: 'trash', label: 'Корзина', bytes: trashBytes, tone: 'trash' },
-    { id: 'nonArc', label: 'Системные файлы', bytes: nonArcBytes, tone: 'nonArc' }
+    { id: 'videos', label: 'Видео', bytes: videoBytes, tone: 'videos' }
   ];
+
+  if (trashBytes > 0) {
+    legend.push({ id: 'trash', label: 'Корзина', bytes: trashBytes, tone: 'trash' });
+  }
 
   return {
     segments,
