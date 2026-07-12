@@ -115,7 +115,7 @@ export function useCardViewerSession(cardIds: readonly string[], startIndex: num
 
   const counterLabel = useMemo(() => {
     if (state.cardIds.length <= 1) return null;
-    return `${state.index + 1} / ${state.cardIds.length}`;
+    return `${state.index + 1} из ${state.cardIds.length}`;
   }, [state.cardIds.length, state.index]);
 
   return {

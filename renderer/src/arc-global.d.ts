@@ -267,7 +267,11 @@ declare global {
       }>;
       screenshotWindowPickerConfirm?: (payload: { title: string; nativeId?: number }) => Promise<{ ok: boolean }>;
       screenshotWindowPickerCancel?: () => Promise<{ ok: boolean }>;
-      openCardViewer?: (payload: { cardIds: string[]; startIndex?: number }) => Promise<{ ok: boolean }>;
+      openCardViewer?: (payload: {
+        cardIds: string[];
+        startIndex?: number;
+        context?: { kind: 'library' | 'moodboard' | 'collection'; name?: string };
+      }) => Promise<{ ok: boolean }>;
       cardViewerSetAlwaysOnTop?: (enabled: boolean) => Promise<{ ok: boolean }>;
       cardViewerSetOpacity?: (value: number) => Promise<{ ok: boolean }>;
       cardViewerClose?: () => Promise<{ ok: boolean }>;

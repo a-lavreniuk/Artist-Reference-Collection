@@ -42,6 +42,7 @@ type Props = {
   onStartMultiSelect?: (cardId: string) => void;
   bulkHandlers?: BulkHandlers;
   onPreviewFrameSaved?: (card: CardRecord) => void;
+  collectionName?: string;
 };
 
 export function useGalleryCardContextMenu({
@@ -58,7 +59,8 @@ export function useGalleryCardContextMenu({
   onToggleCardSelection,
   onStartMultiSelect,
   bulkHandlers,
-  onPreviewFrameSaved
+  onPreviewFrameSaved,
+  collectionName
 }: Props) {
   const menu = useContextMenuAtPointer();
   const [menuCardId, setMenuCardId] = useState<string | null>(null);
@@ -144,7 +146,8 @@ export function useGalleryCardContextMenu({
             scope,
             feedOrder: orderedCardIds,
             cardId: menuCard.id,
-            selectedIds: bulkCount > 1 ? targetIds : undefined
+            selectedIds: bulkCount > 1 ? targetIds : undefined,
+            collectionName
           });
         },
         onPickPreviewFrame: canPickVideoPreviewFrame(menuCard)

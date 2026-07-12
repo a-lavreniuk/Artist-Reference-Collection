@@ -7,6 +7,10 @@ import { getCardByIdFromDb } from './storage/libraryStorage';
 export type OpenCardViewerPayload = {
   cardIds: string[];
   startIndex?: number;
+  context?: {
+    kind: 'library' | 'moodboard' | 'collection';
+    name?: string;
+  };
 };
 
 const viewerWindows = new Set<BrowserWindow>();
@@ -21,15 +25,24 @@ function preloadPath(): string {
   return path.resolve(__dirname, '..', 'preload', 'index.js');
 }
 
-function viewerPageUrl(cardIds: string[], startIndex: number): string {
+function viewerPageUrl(cardIds: string[], startIndex: number, context?: OpenCardViewerPayload['context']): string {
   const dev = process.env.NODE_ENV === 'development';
   const query = new URLSearchParams({
     cards: cardIds.join(','),
     index: String(startIndex)
-  }).toString();
-  if (dev) return `http://localhost:5173/card-viewer.html?${query}`;
+  });
+  if (context?.kind === 'moodboard') {
+    query.set('ctx', 'moodboard');
+  } else if (context?.kind === 'collection' && context.name?.trim()) {
+    query.set('ctx', 'collection');
+    query.set('ctxName', context.name.trim());
+  } else {
+    query.set('ctx', 'library');
+  }
+  const queryString = query.toString();
+  if (dev) return `http://localhost:5173/card-viewer.html?${queryString}`;
   const filePath = path.join(__dirname, '..', 'renderer', 'dist', 'card-viewer.html');
-  return `${filePath}?${query}`;
+  return `${filePath}?${queryString}`;
 }
 
 function sanitizeCardIds(raw: unknown): string[] {
@@ -79,7 +92,8 @@ export function openCardViewerWindow(payload: OpenCardViewerPayload): void {
     minHeight: MIN_HEIGHT,
     show: false,
     frame: false,
-    backgroundColor: '#1a1a1e',
+    transparent: true,
+    backgroundColor: '#00000000',
     ...(process.platform === 'win32' ? { roundedCorners: true as const } : {}),
     webPreferences: {
       preload: preloadPath(),
@@ -102,7 +116,7 @@ export function openCardViewerWindow(payload: OpenCardViewerPayload): void {
     }
   });
 
-  const url = viewerPageUrl(cardIds, startIndex);
+  const url = viewerPageUrl(cardIds, startIndex, payload.context);
   if (url.startsWith('http')) {
     void win.loadURL(url);
   } else {
@@ -120,7 +134,19 @@ export function registerCardViewerIpc(): void {
     const raw = payload as OpenCardViewerPayload;
     openCardViewerWindow({
       cardIds: sanitizeCardIds(raw.cardIds),
-      startIndex: raw.startIndex
+      startIndex: raw.startIndex,
+      context:
+        raw.context && typeof raw.context === 'object'
+          ? {
+              kind:
+                raw.context.kind === 'moodboard' ||
+                raw.context.kind === 'collection' ||
+                raw.context.kind === 'library'
+                  ? raw.context.kind
+                  : 'library',
+              name: typeof raw.context.name === 'string' ? raw.context.name : undefined
+            }
+          : undefined
     });
     return { ok: true as const };
   });

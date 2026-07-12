@@ -402,7 +402,11 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:screenshot-window-picker-confirm', payload) as Promise<{ ok: boolean }>,
   screenshotWindowPickerCancel: () =>
     ipcRenderer.invoke('arc:screenshot-window-picker-cancel') as Promise<{ ok: boolean }>,
-  openCardViewer: (payload: { cardIds: string[]; startIndex?: number }) =>
+  openCardViewer: (payload: {
+    cardIds: string[];
+    startIndex?: number;
+    context?: { kind: 'library' | 'moodboard' | 'collection'; name?: string };
+  }) =>
     ipcRenderer.invoke('arc:card-viewer-open', payload) as Promise<{ ok: boolean }>,
   cardViewerSetAlwaysOnTop: (enabled: boolean) =>
     ipcRenderer.invoke('arc:card-viewer-set-always-on-top', enabled) as Promise<{ ok: boolean }>,

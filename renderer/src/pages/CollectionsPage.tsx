@@ -293,7 +293,8 @@ export default function CollectionsPage() {
     selectionModeActive: multiSelect.selectionMode,
     onToggleCardSelection: multiSelect.toggleCardSelection,
     onStartMultiSelect: multiSelect.enterSelectionWithCard,
-    bulkHandlers: multiSelect.bulkHandlers
+    bulkHandlers: multiSelect.bulkHandlers,
+    collectionName: activeCollection?.name
   });
 
   const handleDeleteCollection = useCallback(
@@ -490,6 +491,11 @@ export default function CollectionsPage() {
           moodboardRemoveConfirm="gallery"
           neighborCardIds={detailNeighborCardIds}
           viewerNavigationCardIds={feedCardIds}
+          viewerOpenContext={
+            activeCollection
+              ? { kind: 'collection', name: activeCollection.name }
+              : { kind: 'library' }
+          }
         />
       ) : null}
 

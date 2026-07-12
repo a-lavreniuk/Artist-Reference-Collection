@@ -80,7 +80,7 @@ import {
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
 import type { CardFeedNeighbors } from './cardFeedNeighbors';
-import { openCardsInNewWindow } from '../../card-viewer/openCardsInNewWindow';
+import { openCardsInNewWindow, type CardViewerOpenContext } from '../../card-viewer/openCardsInNewWindow';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
 
 type Props = {
@@ -92,6 +92,7 @@ type Props = {
   moodboardRemoveConfirm?: 'gallery' | 'moodboard';
   neighborCardIds?: CardFeedNeighbors;
   viewerNavigationCardIds?: readonly string[];
+  viewerOpenContext?: CardViewerOpenContext;
 };
 
 const DESCRIPTION_SAVE_MS = 600;
@@ -114,7 +115,8 @@ export default function CardDetailOverlay({
   onOpenCard,
   moodboardRemoveConfirm = 'gallery',
   neighborCardIds,
-  viewerNavigationCardIds
+  viewerNavigationCardIds,
+  viewerOpenContext
 }: Props) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -966,10 +968,14 @@ export default function CardDetailOverlay({
                       if (!card) return;
                       const ids = viewerNavigationCardIds?.length ? viewerNavigationCardIds : [card.id];
                       const startIndex = Math.max(0, ids.indexOf(card.id));
-                      void openCardsInNewWindow(ids.length > 1 ? ids : [card.id], startIndex);
+                      void openCardsInNewWindow({
+                        cardIds: ids.length > 1 ? ids : [card.id],
+                        startIndex,
+                        context: viewerOpenContext ?? { kind: 'library' }
+                      });
                     }}
                   >
-                    <span className="btn-icon-only__glyph arc-icon-arrow-up-right" aria-hidden="true" />
+                    <span className="btn-icon-only__glyph arc-icon-external-link" aria-hidden="true" />
                   </button>
                 </Tooltip>
                 <div className="arc-card-detail-segmented" role="group" aria-label="Действия с карточкой">
