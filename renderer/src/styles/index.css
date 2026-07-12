@@ -4821,6 +4821,41 @@ html.arc-onboarding-page,
   border-color: var(--gray-800);
 }
 
+/* Light (Figma 1979) — option card (checkbox/radio) */
+html[data-theme="light"] .arc-settings-option-card {
+  border-color: var(--gray-100);
+}
+
+html[data-theme="light"] .arc-settings-option-card:hover:not(:disabled):not(.is-disabled) {
+  border-color: var(--gray-150);
+}
+
+html[data-theme="light"] .arc-settings-option-card.is-selected {
+  background: var(--gray-25);
+}
+
+html[data-theme="light"] .arc-settings-option-card.is-selected:hover:not(:disabled):not(.is-disabled) {
+  border-color: var(--gray-150);
+}
+
+html[data-theme="light"] .arc-settings-option-card .arc-settings-option-card__label {
+  color: var(--typography-black-bg-primary-default);
+}
+
+html[data-theme="light"] .arc-settings-option-card .arc-settings-option-card__description {
+  color: var(--typography-black-bg-secondary-default);
+}
+
+html[data-theme="light"] .arc-settings-option-card.is-disabled .arc-settings-option-card__label,
+html[data-theme="light"] .arc-settings-option-card:disabled .arc-settings-option-card__label {
+  color: var(--typography-black-bg-primary-disabled);
+}
+
+html[data-theme="light"] .arc-settings-option-card.is-disabled .arc-settings-option-card__description,
+html[data-theme="light"] .arc-settings-option-card:disabled .arc-settings-option-card__description {
+  color: var(--typography-black-bg-secondary-disabled);
+}
+
 .arc-settings-option-card.is-disabled,
 .arc-settings-option-card:disabled {
   cursor: not-allowed;
@@ -5070,6 +5105,39 @@ html.arc-onboarding-page,
   border-color: var(--gray-800);
 }
 
+/* Light (Figma 1979:21756 / 1979:21766) — карточка модели целиком */
+html[data-theme="light"] .arc-settings-ai-model-card {
+  border-color: var(--gray-100);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card:hover:not(.is-disabled) {
+  border-color: var(--gray-150);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card.is-selected {
+  background: var(--gray-25);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card.is-selected:hover:not(.is-disabled) {
+  border-color: var(--gray-150);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card .arc-settings-option-card__label {
+  color: var(--typography-black-bg-primary-default);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card .arc-settings-option-card__description {
+  color: var(--typography-black-bg-secondary-default);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card.is-disabled .arc-settings-option-card__label {
+  color: var(--typography-black-bg-primary-disabled);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card.is-disabled .arc-settings-option-card__description {
+  color: var(--typography-black-bg-secondary-disabled);
+}
+
 .arc-settings-ai-model-card.is-disabled {
   opacity: 1;
 }
@@ -5110,6 +5178,43 @@ html.arc-onboarding-page,
 
 .arc-settings-ai-model-card__actions {
   padding-left: 22px;
+}
+
+/* Figma 1396:12591 / 1979:21821 — Group Button в карточке модели: border-only default */
+.arc-settings-ai-model-card__actions .btn-group-ds .btn {
+  background: transparent;
+}
+
+/* Dark: hover gray-850 / gray-800, текст gray-50 */
+.arc-settings-ai-model-card__actions .btn-group-ds .btn:hover:not(:disabled):not(:focus-visible),
+.arc-settings-ai-model-card__actions .btn-group-ds .btn.state-hover:not(:disabled):not(:focus-visible) {
+  background: var(--gray-850);
+  border-color: var(--gray-800);
+}
+
+.arc-settings-ai-model-card__actions .btn-group-ds .btn:hover:not(:disabled):not(:focus-visible) .btn-ds__value,
+.arc-settings-ai-model-card__actions .btn-group-ds .btn.state-hover:not(:disabled):not(:focus-visible) .btn-ds__value {
+  color: var(--gray-50);
+}
+
+/* Light (Figma 1979:21822): border gray-100, hover gray-150, текст gray-950 / gray-1000 */
+html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn {
+  border-color: var(--gray-100);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn .btn-ds__value {
+  color: var(--typography-black-bg-primary-default);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn:hover:not(:disabled):not(:focus-visible),
+html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn.state-hover:not(:disabled):not(:focus-visible) {
+  background: var(--gray-150);
+  border-color: var(--gray-150);
+}
+
+html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn:hover:not(:disabled):not(:focus-visible) .btn-ds__value,
+html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn.state-hover:not(:disabled):not(:focus-visible) .btn-ds__value {
+  color: var(--typography-black-bg-primary-hover);
 }
 
 .arc-settings-ai-panel__download-block {

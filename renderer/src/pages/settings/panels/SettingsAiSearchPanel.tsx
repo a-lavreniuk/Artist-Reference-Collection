@@ -163,7 +163,7 @@ export default function SettingsAiSearchPanel() {
                                 <div className="btn-group btn-group-ds">
                                   <button
                                     type="button"
-                                    className="btn btn-outline btn-ds"
+                                    className="btn btn-ds"
                                     disabled={disabled || Boolean(isCardDownloading) || isTesting}
                                     onClick={() => void testModel(card.tier as AiModelTier)}
                                   >
@@ -171,7 +171,7 @@ export default function SettingsAiSearchPanel() {
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn btn-outline btn-ds"
+                                    className="btn btn-ds"
                                     disabled={disabled || Boolean(isCardDownloading) || isTesting}
                                     onClick={() =>
                                       void (updateAvailable
@@ -185,7 +185,7 @@ export default function SettingsAiSearchPanel() {
                                   </button>
                                   <button
                                     type="button"
-                                    className="btn btn-outline btn-ds"
+                                    className="btn btn-ds"
                                     disabled={disabled || Boolean(isCardDownloading) || isTesting}
                                     onClick={() => void deleteModel(card.tier as AiModelTier)}
                                   >
