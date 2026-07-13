@@ -19,6 +19,20 @@ const stubCard: CardRecord = {
   collectionIds: []
 };
 
+const stubVideoCard: CardRecord = {
+  id: 'smoke-video',
+  type: 'video',
+  addedAt: '2026-01-01T00:00:00.000Z',
+  originalRelativePath: 'smoke/video.webm',
+  thumbRelativePath: 'smoke/thumbs/video_s.webp',
+  durationMs: 120_000,
+  dominantColorHex: '#c2764e',
+  width: 1920,
+  height: 256,
+  tagIds: [],
+  collectionIds: []
+};
+
 describe('renderer UI smoke', () => {
   it('MasonryGrid renders without throw', () => {
     expect(() =>
@@ -30,6 +44,35 @@ describe('renderer UI smoke', () => {
     expect(() =>
       renderToString(<GalleryCardTile card={stubCard} onCardClick={() => undefined} />)
     ).not.toThrow();
+  });
+
+  it('GalleryCardTile video card renders without throw', () => {
+    const html = renderToString(
+      <GalleryCardTile
+        card={stubVideoCard}
+        gridSize="m"
+        onCardClick={() => undefined}
+        onFindSimilar={() => undefined}
+        moodboardEnabled
+        onToggleMoodboard={() => undefined}
+      />
+    );
+    expect(html).toContain('arc-gallery-card-video-timeline');
+  });
+
+  it('GalleryCardTile in moodboard renders overlay markup', () => {
+    const html = renderToString(
+      <GalleryCardTile
+        card={stubCard}
+        inMoodboard
+        onCardClick={() => undefined}
+        moodboardEnabled
+        onToggleMoodboard={() => undefined}
+      />
+    );
+    expect(html).toContain('arc-gallery-card-selection-ring');
+    expect(html).toContain('arc-gallery-card-shade');
+    expect(html).toContain('arc-gallery-card-overlay');
   });
 
   it('ToastAlert renders without throw', () => {

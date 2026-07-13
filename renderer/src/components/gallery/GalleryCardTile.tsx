@@ -1,15 +1,27 @@
-import { memo, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { GridSize } from '../../layout/gridSizePreference';
+import { readGridSize } from '../../layout/gridSizePreference';
 import type { CardRecord } from '../../services/db';
 import { useCardOverlayStagger } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 import GalleryThumb from './GalleryThumb';
+import GalleryCardShade from './GalleryCardShade';
+import GalleryCardVideoTimeline from './GalleryCardVideoTimeline';
 import { galleryCardAspectRatio } from './gallerySkeleton';
+import {
+  galleryCardBtnSize,
+  galleryCardOverlayStyleVars,
+  minGalleryCardOverlayHeightPx
+} from './galleryCardOverlayTokens';
+import { useGalleryCardVideoHover } from './useGalleryCardVideoHover';
+import { formatVideoClock } from './cardDetailVideoTime';
 import { cardFileFormatLabel } from '../../utils/cardFileFormatLabel';
 
 type Props = {
   card: CardRecord;
   thumbSrc?: string;
+  gridSize?: GridSize;
   inMoodboard?: boolean;
   isSelected?: boolean;
   onCardClick: (cardId: string, event: React.MouseEvent<HTMLDivElement>) => void;
@@ -29,6 +41,7 @@ type Props = {
 function GalleryCardTile({
   card,
   thumbSrc,
+  gridSize: gridSizeProp,
   inMoodboard = false,
   isSelected = false,
   onCardClick,
@@ -44,35 +57,74 @@ function GalleryCardTile({
   mediaTab,
   interfaceTourAnchor
 }: Props) {
+  const gridSize = gridSizeProp ?? readGridSize();
   const rootRef = useRef<HTMLDivElement>(null);
+  const stackRef = useRef<HTMLSpanElement>(null);
   const overlayInnerRef = useRef<HTMLSpanElement>(null);
+
   const [mouseHovered, setMouseHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [hoveredBookmarkCardId, setHoveredBookmarkCardId] = useState(false);
-  const overlayActive = mouseHovered || focused || inMoodboard;
+  const [overlaySuppressed, setOverlaySuppressed] = useState(false);
+
+  const isVideo = card.type === 'video';
+  const minOverlayHeight = minGalleryCardOverlayHeightPx(gridSize, isVideo);
+  const overlayIntent = mouseHovered || focused;
+  const overlayActive = overlayIntent && !overlaySuppressed;
+
   useCardOverlayStagger(overlayActive, overlayInnerRef);
+
+  const videoHover = useGalleryCardVideoHover({
+    card,
+    active: overlayIntent,
+    suppressed: overlaySuppressed
+  });
 
   const iconClass = hoveredBookmarkCardId
     ? inMoodboard
       ? 'arc-icon-bookmark-minus'
       : 'arc-icon-bookmark-plus'
     : 'arc-icon-bookmark';
-  const mediaTypeIconClass = card.type === 'video' ? 'arc-icon-play' : 'arc-icon-image';
+  const mediaTypeIconClass = isVideo ? 'arc-icon-play' : 'arc-icon-image';
   const formatLabel = cardFileFormatLabel(card);
+  const btnSize = galleryCardBtnSize(gridSize);
+  const videoTimeCodeClass = gridSize === 's' ? 'text-code-s' : 'text-code-m';
+  const overlayStyleVars = useMemo(() => galleryCardOverlayStyleVars(gridSize), [gridSize]);
+
+  const durationMs = videoHover.durationMs || card.durationMs || 0;
+
+  useEffect(() => {
+    const stack = stackRef.current;
+    if (!stack) return;
+
+    const measure = () => {
+      const height = stack.getBoundingClientRect().height;
+      setOverlaySuppressed(height > 0 && height < minOverlayHeight);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stack);
+    return () => observer.disconnect();
+  }, [minOverlayHeight, card.id, gridSize]);
 
   useLayoutEffect(() => {
     if (rootRef.current) {
       void hydrateArcNavbarIcons(rootRef.current);
     }
-  }, [card.id, inMoodboard, hoveredBookmarkCardId, thumbSrc]);
+  }, [card.id, inMoodboard, hoveredBookmarkCardId, thumbSrc, overlayActive, formatLabel]);
 
   return (
-    <div
-      ref={rootRef}
-      role="button"
-      tabIndex={0}
-      className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}${isSelected ? ' is-selected' : ''}${tileClassName ? ` ${tileClassName}` : ''}`}
+    <div className={`arc-gallery-card-shell${isSelected ? ' is-selected' : ''}`}>
+      <span className="arc-gallery-card-selection-ring" aria-hidden="true" />
+      <div
+        ref={rootRef}
+        role="button"
+        tabIndex={0}
+        className={`arc-gallery-card-wrap panel elevation-default${inMoodboard ? ' is-in-moodboard' : ''}${overlaySuppressed ? ' arc-gallery-card-wrap--overlay-suppressed' : ''}${tileClassName ? ` ${tileClassName}` : ''}`}
       data-gallery-card-id={card.id}
+      data-grid-size={gridSize}
+      style={overlayStyleVars}
       {...(interfaceTourAnchor ? { 'data-interface-tour-anchor': interfaceTourAnchor } : {})}
       onClick={(event) => onCardClick(card.id, event)}
       onDoubleClick={(event) => {
@@ -106,65 +158,133 @@ function GalleryCardTile({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
       }}
     >
-      <span className="arc-gallery-card-stack">
+      <span ref={stackRef} className="arc-gallery-card-stack">
         <span
-          className={`arc-gallery-card-badge${formatLabel ? '' : ' arc-gallery-card-badge--icon-only'}`}
-          data-btn-size="s"
+          className={`arc-gallery-card-media${videoHover.showVideo ? ' is-video-playing' : ''}`}
+          style={{ aspectRatio: galleryCardAspectRatio(card) }}
         >
-          <span className={`tab-icon ${mediaTypeIconClass}`} data-arc-icon-size="s" aria-hidden="true" />
-          {formatLabel ? <span className="text-s arc-gallery-card-badge-label">{formatLabel}</span> : null}
+          {thumbSrc ? (
+            <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} />
+          ) : (
+            <div
+              className="arc-gallery-skeleton"
+              style={{ aspectRatio: galleryCardAspectRatio(card), background: 'var(--gray-900)' }}
+              aria-hidden
+            />
+          )}
+          {videoHover.videoSrc ? (
+            <video
+              ref={videoHover.videoRef}
+              className="arc-gallery-card-video"
+              src={videoHover.videoSrc}
+              muted
+              playsInline
+              preload="metadata"
+              aria-hidden
+              onTimeUpdate={videoHover.onTimeUpdate}
+              onLoadedMetadata={videoHover.onLoadedMetadata}
+            />
+          ) : null}
+          {!overlaySuppressed ? (
+            <GalleryCardShade tintColor={card.dominantColorHex} active={overlayIntent} />
+          ) : null}
         </span>
-        {thumbSrc ? (
-          <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} />
-        ) : (
-          <div
-            className="arc-gallery-skeleton"
-            style={{ aspectRatio: galleryCardAspectRatio(card), background: 'var(--gray-900)' }}
-            aria-hidden
-          />
-        )}
-        <span className="arc-gallery-card-overlay">
-          <span ref={overlayInnerRef} className="arc-gallery-card-overlay-inner" data-btn-size="s">
-            {onFindSimilar ? (
-              <button
-                type="button"
-                tabIndex={-1}
-                className="btn btn-secondary btn-ds arc-gallery-overlay-btn arc-card-slot-blur-btn"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onFindSimilar(card.id);
-                }}
-              >
-                <span className="btn-ds__icon arc-icon-search" aria-hidden="true" />
-                <span className="btn-ds__value">Найти похожее</span>
-              </button>
-            ) : null}
-            {moodboardEnabled && onToggleMoodboard ? (
-              <Tooltip
-                content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
-                position="top"
-              >
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="btn btn-outline btn-icon-only btn-ds arc-gallery-overlay-bookmark arc-card-slot-blur-btn"
-                  aria-label={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
-                  onMouseEnter={() => setHoveredBookmarkCardId(true)}
-                  onMouseLeave={() => setHoveredBookmarkCardId(false)}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void onToggleMoodboard(card.id);
-                  }}
-                >
-                  <span className={`btn-icon-only__glyph ${iconClass}`} aria-hidden="true" />
-                </button>
-              </Tooltip>
-            ) : null}
+
+        {!overlaySuppressed ? (
+          <span
+            className={`arc-gallery-card-overlay${overlayActive ? ' is-active' : ''}`}
+            aria-hidden={!overlayActive}
+          >
+            <span
+              ref={overlayInnerRef}
+              className="arc-gallery-card-overlay-inner arc-ui-kit-scope"
+              data-btn-size={btnSize}
+            >
+              <span className="arc-gallery-card-overlay-controls">
+                <span className="arc-gallery-card-overlay-controls__left">
+                  <span
+                    className={`btn btn-primary btn-ds arc-gallery-card-overlay-badge${formatLabel ? '' : ' arc-gallery-card-overlay-badge--icon-only'}`}
+                  >
+                    <span
+                      className={`btn-ds__icon ${mediaTypeIconClass}`}
+                      aria-hidden="true"
+                    />
+                    {formatLabel ? (
+                      <span className="btn-ds__value text-s">{formatLabel}</span>
+                    ) : null}
+                  </span>
+                  {isVideo ? (
+                    <span
+                      className="btn btn-primary btn-ds arc-gallery-card-overlay-time"
+                      aria-hidden="true"
+                    >
+                      <span className={`btn-ds__value ${videoTimeCodeClass}`}>
+                        {formatVideoClock(videoHover.currentMs / 1000)}
+                        <span className="arc-gallery-card-overlay-time__sep"> / </span>
+                        {formatVideoClock(durationMs / 1000)}
+                      </span>
+                    </span>
+                  ) : null}
+                </span>
+                <span className="arc-gallery-card-overlay-controls__right">
+                  {moodboardEnabled && onToggleMoodboard ? (
+                    <Tooltip
+                      content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
+                      position="top"
+                    >
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        className="btn btn-primary btn-icon-only btn-ds arc-gallery-card-overlay-action"
+                        aria-label={
+                          inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'
+                        }
+                        onMouseEnter={() => setHoveredBookmarkCardId(true)}
+                        onMouseLeave={() => setHoveredBookmarkCardId(false)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          void onToggleMoodboard(card.id);
+                        }}
+                      >
+                        <span className={`btn-icon-only__glyph ${iconClass}`} aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  ) : null}
+                  {onFindSimilar ? (
+                    <Tooltip content="Найти похожее" position="top">
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        className="btn btn-primary btn-icon-only btn-ds arc-gallery-card-overlay-action"
+                        aria-label="Найти похожее"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onFindSimilar(card.id);
+                        }}
+                      >
+                        <span className="btn-icon-only__glyph arc-icon-search" aria-hidden="true" />
+                      </button>
+                    </Tooltip>
+                  ) : null}
+                </span>
+              </span>
+
+              {isVideo ? (
+                <GalleryCardVideoTimeline
+                  className="arc-gallery-card-overlay-timeline"
+                  valueMs={videoHover.currentMs}
+                  durationMs={durationMs}
+                  onSeek={videoHover.seekToMs}
+                  disabled={durationMs <= 0}
+                />
+              ) : null}
+            </span>
           </span>
-        </span>
+        ) : null}
       </span>
+    </div>
     </div>
   );
 }
@@ -173,7 +293,10 @@ function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
   return (
     prev.card.id === next.card.id &&
     prev.card.type === next.card.type &&
+    prev.card.dominantColorHex === next.card.dominantColorHex &&
+    prev.card.durationMs === next.card.durationMs &&
     prev.thumbSrc === next.thumbSrc &&
+    prev.gridSize === next.gridSize &&
     prev.inMoodboard === next.inMoodboard &&
     prev.isSelected === next.isSelected &&
     prev.moodboardEnabled === next.moodboardEnabled &&
