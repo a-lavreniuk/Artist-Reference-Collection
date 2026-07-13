@@ -48,24 +48,27 @@ export default function NavbarMenu() {
       { type: 'header', key: 'theme-label', label: 'Оформление' },
       {
         type: 'item',
-        key: 'theme-light',
-        label: 'Светлая',
-        disabled: !ready,
-        selected: currentTheme === 'light',
-        onSelect: () => setTheme('light')
-      },
-      {
-        type: 'item',
         key: 'theme-dark',
-        label: 'Тёмная',
+        label: 'Тёмное',
+        iconClass: 'arc-icon-moon',
         disabled: !ready,
         selected: currentTheme === 'dark',
         onSelect: () => setTheme('dark')
       },
       {
         type: 'item',
+        key: 'theme-light',
+        label: 'Светлое',
+        iconClass: 'arc-icon-sun-medium',
+        disabled: !ready,
+        selected: currentTheme === 'light',
+        onSelect: () => setTheme('light')
+      },
+      {
+        type: 'item',
         key: 'theme-auto',
-        label: 'Автоматическая',
+        label: 'Как в системе',
+        iconClass: 'arc-icon-contrast',
         disabled: !ready,
         selected: currentTheme === 'system',
         onSelect: () => setTheme('system')

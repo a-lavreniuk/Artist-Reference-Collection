@@ -776,7 +776,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           }
           host.appendChild(alertNode);
           playToastEnter(alertNode);
-          closeTimer = window.setTimeout(closeAlert, 3200);
+          closeTimer = window.setTimeout(closeAlert, 6400);
         }
 
         buttons.forEach(function (button) {

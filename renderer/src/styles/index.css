@@ -2585,6 +2585,15 @@ body.arc-card-detail-open .arc-app-outlet {
   align-self: flex-start;
 }
 
+.arc-card-detail-description-textarea.textarea {
+  height: auto;
+  min-height: var(--textarea-h, 64px);
+  max-height: calc(var(--textarea-h, 64px) * 2);
+  overflow-y: auto;
+  resize: none;
+  transition: height var(--transition-base);
+}
+
 .arc-card-detail-section-sep {
   height: 0;
   flex-shrink: 0;
@@ -2603,7 +2612,7 @@ body.arc-card-detail-open .arc-app-outlet {
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--panel-border);
   border-radius: var(--radius-s);
   flex-shrink: 0;
   cursor: pointer;
@@ -5263,10 +5272,6 @@ html[data-theme="light"] .arc-settings-option-card:disabled .arc-settings-option
 
 .arc-settings-updates-panel__empty {
   color: var(--text-elev-secondary);
-}
-
-.arc-settings-updates-panel__intro {
-  margin-bottom: var(--s-4);
 }
 
 .arc-settings-updates-panel__head {

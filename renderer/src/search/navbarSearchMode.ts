@@ -6,7 +6,7 @@ const STORAGE_KEY = 'arc-navbar-search-mode';
 
 export function readNavbarSearchMode(): NavbarSearchMode {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (raw === 'ai' || raw === 'color' || raw === 'similar' || raw === 'tags') return raw;
   } catch {
     /* ignore */
@@ -16,7 +16,7 @@ export function readNavbarSearchMode(): NavbarSearchMode {
 
 export function writeNavbarSearchMode(mode: NavbarSearchMode): void {
   try {
-    localStorage.setItem(STORAGE_KEY, mode);
+    sessionStorage.setItem(STORAGE_KEY, mode);
   } catch {
     /* ignore */
   }

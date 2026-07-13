@@ -33,12 +33,6 @@ export default function SettingsUpdatesPanel() {
             <p className="text-m arc-settings-updates-panel__empty">История версий пока недоступна.</p>
           ) : (
             <>
-              <div className="arc-settings-desc-block arc-settings-updates-panel__intro">
-                <p className="text-m arc-settings-desc-block__text">
-                  Первый публичный билд ARC. Отсчёт версий приложения только начинается.
-                </p>
-              </div>
-
               <div className="arc-settings-updates-panel__head">
                 <div className="tabs tabs-wrap arc-settings-updates-tabs" role="tablist" aria-label="Версии приложения">
                   {versions.map((entry) => {

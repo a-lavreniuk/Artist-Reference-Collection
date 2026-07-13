@@ -128,6 +128,7 @@ export default function CardDetailOverlay({
   const optionsLeftRef = useRef<HTMLDivElement>(null);
   const videoPlayerRef = useRef<CardDetailVideoPlayerHandle | null>(null);
   const descriptionSaveTimerRef = useRef<number | null>(null);
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const nameSaveTimerRef = useRef<number | null>(null);
   const linkSaveTimerRef = useRef<number | null>(null);
   const copyAlertTimerRef = useRef<number | null>(null);
@@ -431,6 +432,29 @@ export default function CardDetailOverlay({
     },
     [cardId, reloadCard]
   );
+
+  const fitDescriptionTextarea = useCallback(() => {
+    const el = descriptionTextareaRef.current;
+    if (!el) return;
+    const styles = getComputedStyle(el);
+    const minH = Number.parseFloat(styles.minHeight) || 0;
+    const maxH = Number.parseFloat(styles.maxHeight) || Number.POSITIVE_INFINITY;
+    el.style.height = `${minH}px`;
+    const next = Math.min(Math.max(el.scrollHeight, minH), maxH);
+    el.style.height = `${next}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    fitDescriptionTextarea();
+  }, [fitDescriptionTextarea, description, descriptionTab, card?.aiCaption, hasAiCaption]);
+
+  useEffect(() => {
+    const el = descriptionTextareaRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => fitDescriptionTextarea());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fitDescriptionTextarea, hasAiCaption]);
 
   const scheduleNameSave = useCallback(
     (next: string) => {
@@ -1250,8 +1274,9 @@ export default function CardDetailOverlay({
                       </div>
                       <label className="field">
                         <textarea
+                          ref={descriptionTextareaRef}
                           id="arc-card-detail-desc-panel"
-                          className="input textarea"
+                          className="input textarea arc-card-detail-description-textarea"
                           role="tabpanel"
                           aria-labelledby={
                             descriptionTab === 'ai'
@@ -1277,7 +1302,8 @@ export default function CardDetailOverlay({
                   ) : (
                     <label className="field">
                       <textarea
-                        className="input textarea"
+                        ref={descriptionTextareaRef}
+                        className="input textarea arc-card-detail-description-textarea"
                         placeholder="Описание"
                         rows={4}
                         value={description}

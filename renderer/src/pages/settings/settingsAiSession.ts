@@ -957,30 +957,41 @@ export async function resumeAiIndex(): Promise<void> {
   await refreshAiSettings();
 }
 
+let resourcePresetRequestId = 0;
+let searchStrictnessRequestId = 0;
+
 export async function updateAiResourcePreset(resourcePreset: number): Promise<void> {
   const arc = window.arc;
   if (!arc?.aiSetEnabled) return;
 
-  patchState({ busy: true });
-  try {
-    const next = (await arc.aiSetEnabled({ resourcePreset })) as AiStatus;
-    patchState({ status: next });
-  } finally {
-    patchState({ busy: false });
+  const requestId = ++resourcePresetRequestId;
+  if (state.status) {
+    patchState({
+      status: {
+        ...state.status,
+        resourcePreset,
+        resources: { ...state.status.resources }
+      }
+    });
   }
+
+  const next = (await arc.aiSetEnabled({ resourcePreset })) as AiStatus;
+  if (requestId !== resourcePresetRequestId) return;
+  patchState({ status: next });
 }
 
 export async function updateAiSearchStrictness(searchStrictness: number): Promise<void> {
   const arc = window.arc;
   if (!arc?.aiSetEnabled) return;
 
-  patchState({ busy: true });
-  try {
-    const next = (await arc.aiSetEnabled({ searchStrictness })) as AiStatus;
-    patchState({ status: next });
-  } finally {
-    patchState({ busy: false });
+  const requestId = ++searchStrictnessRequestId;
+  if (state.status) {
+    patchState({ status: { ...state.status, searchStrictness } });
   }
+
+  const next = (await arc.aiSetEnabled({ searchStrictness })) as AiStatus;
+  if (requestId !== searchStrictnessRequestId) return;
+  patchState({ status: next });
 }
 
 export async function updateAiModel(tier: AiModelTier): Promise<void> {

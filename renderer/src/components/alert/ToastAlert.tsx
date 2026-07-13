@@ -3,8 +3,8 @@ import type { AlertVariant } from './types';
 import { playNotificationSound } from '../../services/audioNotification';
 import { useOverlayMotion } from '../../motion';
 
-/** Как в UI-kit (`setTimeout(..., 3200)`). */
-const ARC_UI_KIT_ALERT_AUTO_DISMISS_MS = 3200;
+/** Как в UI-kit (`setTimeout(..., 6400)`). */
+const ARC_UI_KIT_ALERT_AUTO_DISMISS_MS = 6400;
 
 type Props = {
   message: string;
