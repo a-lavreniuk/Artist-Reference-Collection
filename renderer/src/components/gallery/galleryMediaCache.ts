@@ -73,13 +73,21 @@ function mediaServerOrigin(): string {
   return 'arc-media://localhost';
 }
 
-export function buildLibraryMediaUrl(rel: string, sect?: MediaSectionTab): string | null {
+export function buildLibraryMediaUrl(
+  rel: string,
+  sect?: MediaSectionTab,
+  cacheVersion?: string
+): string | null {
   if (!rel || rel === 'legacy') return null;
   const relStable = rel.replace(/\\/g, '/');
   if (!LIBRARY_CARD_MEDIA_REL.test(relStable)) return null;
   const origin = mediaServerOrigin();
   const base = `${origin}/?rel=${encodeURIComponent(relStable)}`;
-  return sect ? `${base}&sect=${sect}` : base;
+  const withSect = sect ? `${base}&sect=${sect}` : base;
+  if (cacheVersion?.trim()) {
+    return `${withSect}&v=${encodeURIComponent(cacheVersion.trim())}`;
+  }
+  return withSect;
 }
 
 /** Абсолютный путь вне библиотеки — через staging-токен (?stg=), выданный main. */
@@ -141,20 +149,22 @@ export function cardOriginalRel(card: CardRecord): string | null {
   return rel;
 }
 
-/** Thumb из кэша сетки, затем полный файл (оригинал). */
+/** Thumb из кэша сетки; для видео в деталке превью не подставляется — только оригинал. */
 export async function resolveCardDetailPreviewUrls(
   card: CardRecord,
   gridSize: GridSize,
   onThumb: (url: string) => void
 ): Promise<string | null> {
-  const thumbRel = cardThumbRel(card, gridSize);
+  const thumbRel = card.type === 'video' ? null : cardThumbRel(card, gridSize);
   const originalRel = cardOriginalRel(card);
 
   if (thumbRel) {
+    const bust = card.dateModified;
     const peeked = peekMediaUrl(thumbRel);
     if (peeked) onThumb(peeked);
     else {
-      const thumbHref = await resolveMediaUrl(thumbRel);
+      const thumbHref =
+        buildLibraryMediaUrl(thumbRel, undefined, bust) ?? (await resolveMediaUrl(thumbRel));
       if (thumbHref) onThumb(thumbHref);
     }
   }
@@ -191,7 +201,8 @@ export function peekCardsSrcMap(
   for (const card of cards) {
     const rel = cardThumbRel(card, gridSize);
     if (!rel) continue;
-    const href = peekCachedMediaUrl(rel, sect) ?? buildLibraryMediaUrl(rel, sect);
+    const href =
+      peekCachedMediaUrl(rel, sect) ?? buildLibraryMediaUrl(rel, sect, card.dateModified);
     if (href) next[card.id] = href;
   }
   return next;
@@ -203,9 +214,13 @@ export async function resolveCardsSrcMap(
   sect?: MediaSectionTab
 ): Promise<Record<string, string>> {
   const relByCard = new Map<string, string>();
+  const bustByCard = new Map<string, string | undefined>();
   for (const card of cards) {
     const rel = cardThumbRel(card, gridSize);
-    if (rel) relByCard.set(card.id, rel);
+    if (rel) {
+      relByCard.set(card.id, rel);
+      bustByCard.set(card.id, card.dateModified);
+    }
   }
 
   const next: Record<string, string> = {};
@@ -217,7 +232,7 @@ export async function resolveCardsSrcMap(
       next[cardId] = cached;
       continue;
     }
-    const local = buildLibraryMediaUrl(rel, sect);
+    const local = buildLibraryMediaUrl(rel, sect, bustByCard.get(cardId));
     if (local) {
       rememberMediaUrl(rel, local, sect);
       next[cardId] = local;

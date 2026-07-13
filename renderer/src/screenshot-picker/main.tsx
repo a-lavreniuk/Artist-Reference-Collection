@@ -4,7 +4,8 @@ import ScreenshotPickerApp from './ScreenshotPickerApp';
 import '../styles/tokens.css';
 import '../styles/screenshot-picker.css';
 
-document.body.setAttribute('data-btn-size', 's');
+document.documentElement.setAttribute('data-theme', 'dark');
+document.body.setAttribute('data-btn-size', 'm');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

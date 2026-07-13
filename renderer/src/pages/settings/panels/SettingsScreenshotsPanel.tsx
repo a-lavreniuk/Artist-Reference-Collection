@@ -1,13 +1,11 @@
 import SettingsRadioInlineGroup from '../../../components/settings/SettingsRadioInlineGroup';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
+import SettingsShortcutRow from '../../../components/settings/SettingsShortcutRow';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
-import SettingsToggleShortcutRow from '../../../components/settings/SettingsToggleShortcutRow';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { ScreenshotFormat } from '../../../services/appPreferences';
-import { shortcutMenuLabel } from '../../../shortcuts/shortcutLabels';
-
-const SCREENSHOT_SHORTCUT = shortcutMenuLabel('global.screenshot');
+import { shortcutDisplayLabel } from '../../../shortcuts/shortcutLabels';
 
 const FORMAT_OPTIONS: Array<{ value: ScreenshotFormat; label: string }> = [
   { value: 'png', label: 'PNG' },
@@ -17,9 +15,13 @@ const FORMAT_OPTIONS: Array<{ value: ScreenshotFormat; label: string }> = [
 
 const LABEL_ENABLE = 'Включить скриншоты';
 const LABEL_ASK_SAVE = 'Спрашивать куда сохранять';
-const LABEL_PREFIX_NAME =
-  'Добавлять в название карточки «screenshot» к снимкам экрана';
 const LABEL_RETINA = 'Сохранять скриншоты в ×2 разрешении';
+
+const SCREENSHOT_SHORTCUT_ROWS = [
+  { label: 'Скриншот области', shortcut: shortcutDisplayLabel('global.screenshot.area') },
+  { label: 'Скриншот экрана', shortcut: shortcutDisplayLabel('global.screenshot.fullscreen') },
+  { label: 'Скриншот окна', shortcut: shortcutDisplayLabel('global.screenshot.window') }
+] as const;
 
 export default function SettingsScreenshotsPanel() {
   const { prefs, ready, update } = useAppPreferences();
@@ -28,9 +30,8 @@ export default function SettingsScreenshotsPanel() {
   return (
     <div className="arc-settings-main__scroll">
       <div className={`arc-settings-main__content${ready ? ' is-prefs-ready' : ''}`}>
-        <SettingsToggleShortcutRow
+        <SettingsToggleRow
           label={LABEL_ENABLE}
-          shortcut={SCREENSHOT_SHORTCUT}
           pressed={prefs?.screenshotsEnabled === true}
           disabled={disabled}
           onPressedChange={(screenshotsEnabled) => void update({ screenshotsEnabled })}
@@ -38,6 +39,14 @@ export default function SettingsScreenshotsPanel() {
 
         {prefs?.screenshotsEnabled ? (
           <>
+            <SettingsSeparator />
+
+            <SettingsSection title="Горячие клавиши">
+              {SCREENSHOT_SHORTCUT_ROWS.map((row) => (
+                <SettingsShortcutRow key={row.label} label={row.label} shortcut={row.shortcut} />
+              ))}
+            </SettingsSection>
+
             <SettingsSeparator />
 
             <SettingsSection title="Формат файла">
@@ -57,12 +66,6 @@ export default function SettingsScreenshotsPanel() {
                 pressed={prefs.screenshotAskSaveLocation === true}
                 disabled={disabled}
                 onPressedChange={(screenshotAskSaveLocation) => void update({ screenshotAskSaveLocation })}
-              />
-              <SettingsToggleRow
-                label={LABEL_PREFIX_NAME}
-                pressed={prefs.screenshotPrefixName === true}
-                disabled={disabled}
-                onPressedChange={(screenshotPrefixName) => void update({ screenshotPrefixName })}
               />
               <SettingsToggleRow
                 label={LABEL_RETINA}

@@ -49,6 +49,11 @@ const SettingsMcpServerPanel = lazy(() =>
 const SettingsAiSearchPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAiSearchPanel }))
 );
+const SettingsVideoPlaybackPanel = lazy(() =>
+  import('./pages/settings/panels/settingsProductPanels').then((m) => ({
+    default: m.SettingsVideoPlaybackPanelRoute
+  }))
+);
 const SettingsUpdatesPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsUpdatesPanel }))
 );
@@ -84,6 +89,7 @@ export default function App() {
             <Route index element={<Navigate to="general" replace />} />
             <Route path="general" element={<SettingsGeneralPanel />} />
             <Route path="screenshots" element={<SettingsScreenshotsPanel />} />
+            <Route path="video-playback" element={<SettingsVideoPlaybackPanel />} />
             <Route path="notifications" element={<SettingsNotificationsPanel />} />
             <Route path="shortcuts" element={<SettingsShortcutsPanel />} />
             <Route path="library" element={<SettingsLibraryPanel />} />

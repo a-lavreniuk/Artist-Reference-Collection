@@ -129,6 +129,14 @@ export function normalizeCardRecord(item: unknown): CardRecord | null {
     typeof r.fileCreatedAt === 'string' && r.fileCreatedAt.trim() ? r.fileCreatedAt : undefined;
   const width = typeof r.width === 'number' && Number.isFinite(r.width) ? r.width : undefined;
   const height = typeof r.height === 'number' && Number.isFinite(r.height) ? r.height : undefined;
+  const videoWidth =
+    typeof r.videoWidth === 'number' && Number.isFinite(r.videoWidth) ? r.videoWidth : undefined;
+  const videoHeight =
+    typeof r.videoHeight === 'number' && Number.isFinite(r.videoHeight) ? r.videoHeight : undefined;
+  const durationMs =
+    typeof r.durationMs === 'number' && Number.isFinite(r.durationMs) ? r.durationMs : undefined;
+  const previewFrameMs =
+    typeof r.previewFrameMs === 'number' && Number.isFinite(r.previewFrameMs) ? r.previewFrameMs : undefined;
   const description =
     typeof r.description === 'string' && r.description.trim() ? String(r.description).trim() : undefined;
   const name = typeof r.name === 'string' && r.name.trim() ? String(r.name).trim() : undefined;
@@ -150,6 +158,10 @@ export function normalizeCardRecord(item: unknown): CardRecord | null {
     ...(fileCreatedAt ? { fileCreatedAt } : {}),
     ...(width !== undefined ? { width } : {}),
     ...(height !== undefined ? { height } : {}),
+    ...(videoWidth !== undefined ? { videoWidth } : {}),
+    ...(videoHeight !== undefined ? { videoHeight } : {}),
+    ...(durationMs !== undefined ? { durationMs } : {}),
+    ...(previewFrameMs !== undefined ? { previewFrameMs } : {}),
     ...(description ? { description } : {}),
     ...(name ? { name } : {}),
     ...(linkUrl ? { linkUrl } : {}),

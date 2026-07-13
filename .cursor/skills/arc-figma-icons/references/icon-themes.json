@@ -1,0 +1,66 @@
+{
+  "fileKey": "5JAgNwVUnPOVXLfewWMbGP",
+  "updatedAt": "2026-07-12T10:45:00.000Z",
+  "discoveryNote": "MCP get_metadata без nodeId может вернуть не все страницы. При промахе поиска — обновить themes через get_metadata по каждой page и дочерним canvas.",
+  "pages": [
+    {
+      "name": "Cursor",
+      "nodeId": "872:263"
+    }
+  ],
+  "themes": [
+    {
+      "name": "Edit",
+      "nodeId": "872:65",
+      "keywords": [
+        "edit",
+        "edit-2",
+        "edit-3",
+        "pencil",
+        "eraser",
+        "highlighter",
+        "flip-horizontal",
+        "flip-vertical"
+      ],
+      "variantFrames": [
+        { "name": "edit", "nodeId": "381:54" },
+        { "name": "edit-2", "nodeId": "378:54" },
+        { "name": "edit-3", "nodeId": "378:2" },
+        { "name": "pencil", "nodeId": "380:2" },
+        { "name": "highlighter", "nodeId": "532:463" },
+        { "name": "eraser", "nodeId": "532:458" },
+        { "name": "flip-vertical", "nodeId": "1230:2" },
+        { "name": "flip-horizontal", "nodeId": "1230:115" }
+      ]
+    },
+    {
+      "name": "Cursor",
+      "nodeId": "872:263",
+      "keywords": [
+        "hand",
+        "mouse-pointer-2",
+        "mouse-pointer",
+        "grab",
+        "pointer"
+      ],
+      "variantFrames": [
+        { "name": "mouse-pointer-2", "nodeId": "966:2" },
+        { "name": "hand", "nodeId": "966:49" }
+      ]
+    },
+    {
+      "name": "Other",
+      "nodeId": "0:1",
+      "keywords": [],
+      "variantFrames": [],
+      "note": "Преимущественно single-symbol иконки без variant — не использовать по правилам skill."
+    }
+  ],
+  "orphanVariantFrames": [
+    {
+      "name": "arrow-up",
+      "nodeId": "112:8",
+      "note": "Variant-frame вне проиндексированного canvas; при поиске arrow-* — get_metadata по nodeId."
+    }
+  ]
+}

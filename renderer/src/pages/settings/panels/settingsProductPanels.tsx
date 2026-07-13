@@ -3,6 +3,7 @@ import SettingsGeneralPanel from './SettingsGeneralPanel';
 import SettingsNotificationsPanel from './SettingsNotificationsPanel';
 import SettingsScreenshotsPanel from './SettingsScreenshotsPanel';
 import SettingsShortcutsPanel from './SettingsShortcutsPanel';
+import SettingsVideoPlaybackPanel from './SettingsVideoPlaybackPanel';
 
 export { SettingsGeneralPanel };
 
@@ -32,3 +33,9 @@ export function SettingsAiSearchPanelRoute() {
 }
 
 export { SettingsAiSearchPanelRoute as SettingsAiSearchPanel };
+
+export { default as SettingsVideoPlaybackPanel } from './SettingsVideoPlaybackPanel';
+
+export function SettingsVideoPlaybackPanelRoute() {
+  return <SettingsVideoPlaybackPanel />;
+}

@@ -32,7 +32,7 @@ const KEY_LABELS: Record<string, string> = {
   Backquote: '`',
   Delete: 'Delete',
   Backspace: 'Backspace',
-  Escape: 'Esc',
+  PrintScreen: 'PrtScr',
   Space: 'Space',
   Left: '←',
   Right: '→',

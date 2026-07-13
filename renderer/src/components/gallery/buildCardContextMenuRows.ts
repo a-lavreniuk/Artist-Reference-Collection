@@ -1,8 +1,21 @@
 import type { ContextMenuRow } from '../context-menu';
 import { DEFAULT_CONTEXT_MENU_SLOT_ORDER } from '../context-menu';
 import type { BuildCardContextMenuRowsInput } from './cardContextMenuTypes';
+import { canPickVideoPreviewFrame } from './videoPreviewFrame';
+import type { CardRecord } from '../../services/arcSchema';
 
 const ITEM_SLOTS = DEFAULT_CONTEXT_MENU_SLOT_ORDER;
+
+function canShowPreviewFramePicker(input: BuildCardContextMenuRowsInput): boolean {
+  if (!input.actions.onPickPreviewFrame) return false;
+  if (input.scope.kind === 'trash') return false;
+  if ((input.bulkSelectionCount ?? 0) > 1) return false;
+  const pseudoCard = {
+    type: input.cardType ?? 'image',
+    format: input.cardFormat
+  } as CardRecord;
+  return canPickVideoPreviewFrame(pseudoCard);
+}
 
 function itemRow(
   key: string,
@@ -110,7 +123,16 @@ function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[]
 
   rows.push(
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
-    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow),
+    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow)
+  );
+
+  if (canShowPreviewFramePicker(input)) {
+    rows.push(
+      itemRow('pick-preview-frame', 'Выбрать кадр превью', 'arc-icon-image', actions.onPickPreviewFrame!)
+    );
+  }
+
+  rows.push(
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
     itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections),
     itemRow('similar', 'Найти похожее', 'arc-icon-search', actions.onFindSimilar),

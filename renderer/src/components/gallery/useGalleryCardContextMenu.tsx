@@ -15,6 +15,8 @@ import ConfirmPermanentDeleteCardModal from './ConfirmPermanentDeleteCardModal';
 import { buildCardContextMenuRows } from './buildCardContextMenuRows';
 import type { CardContextMenuScope } from './cardContextMenuTypes';
 import { openCardInNewWindowFromScope } from '../../card-viewer/openCardsInNewWindow';
+import VideoPreviewFrameModal from './VideoPreviewFrameModal';
+import { canPickVideoPreviewFrame } from './videoPreviewFrame';
 
 type BulkHandlers = {
   onBulkSendToTrash?: (cardIds: string[]) => void | Promise<void>;
@@ -39,6 +41,8 @@ type Props = {
   onToggleCardSelection?: (cardId: string) => void;
   onStartMultiSelect?: (cardId: string) => void;
   bulkHandlers?: BulkHandlers;
+  onPreviewFrameSaved?: (card: CardRecord) => void;
+  collectionName?: string;
 };
 
 export function useGalleryCardContextMenu({
@@ -54,10 +58,13 @@ export function useGalleryCardContextMenu({
   selectionModeActive = false,
   onToggleCardSelection,
   onStartMultiSelect,
-  bulkHandlers
+  bulkHandlers,
+  onPreviewFrameSaved,
+  collectionName
 }: Props) {
   const menu = useContextMenuAtPointer();
   const [menuCardId, setMenuCardId] = useState<string | null>(null);
+  const [previewFrameCard, setPreviewFrameCard] = useState<CardRecord | null>(null);
   const [collectionsCardId, setCollectionsCardId] = useState<string | null>(null);
   const [collectionsCard, setCollectionsCard] = useState<CardRecord | null>(null);
   const [permanentDeleteCardId, setPermanentDeleteCardId] = useState<string | null>(null);
@@ -123,6 +130,8 @@ export function useGalleryCardContextMenu({
       scope,
       inMoodboard,
       hasSourcePath,
+      cardType: menuCard.type,
+      cardFormat: menuCard.format,
       bulkSelectionCount: bulkCount,
       selectionModeActive,
       menuCardIsSelected: isCardSelected(menuCard.id),
@@ -137,9 +146,19 @@ export function useGalleryCardContextMenu({
             scope,
             feedOrder: orderedCardIds,
             cardId: menuCard.id,
-            selectedIds: bulkCount > 1 ? targetIds : undefined
+            selectedIds: bulkCount > 1 ? targetIds : undefined,
+            collectionName
           });
         },
+        onPickPreviewFrame: canPickVideoPreviewFrame(menuCard)
+          ? () => {
+              closeMenu();
+              void (async () => {
+                const fresh = await getCardById(menuCard.id);
+                if (fresh && canPickVideoPreviewFrame(fresh)) setPreviewFrameCard(fresh);
+              })();
+            }
+          : undefined,
         onToggleCardSelection: () => onToggleCardSelection?.(menuCard.id),
         onToggleMoodboard: () => {
           if (bulkCount > 1) {
@@ -224,8 +243,17 @@ export function useGalleryCardContextMenu({
     selectionModeActive,
     scope,
     scopeCollectionId,
+    closeMenu,
     isCardSelected
   ]);
+
+  const openPreviewFramePicker = useCallback((card: CardRecord) => {
+    if (!canPickVideoPreviewFrame(card)) return;
+    void (async () => {
+      const fresh = await getCardById(card.id);
+      if (fresh && canPickVideoPreviewFrame(fresh)) setPreviewFrameCard(fresh);
+    })();
+  }, []);
 
   const contextMenuLayer = (
     <>
@@ -279,11 +307,23 @@ export function useGalleryCardContextMenu({
           }}
         />
       ) : null}
+
+      {previewFrameCard ? (
+        <VideoPreviewFrameModal
+          card={previewFrameCard}
+          onClose={() => setPreviewFrameCard(null)}
+          onSaved={(updated) => {
+            onPreviewFrameSaved?.(updated);
+            void onCardDeleted();
+          }}
+        />
+      ) : null}
     </>
   );
 
   return {
     onCardContextMenu: openAtCard,
+    openPreviewFramePicker,
     contextMenuLayer
   };
 }

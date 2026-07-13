@@ -91,6 +91,14 @@ contextBridge.exposeInMainWorld('arc', {
   aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
   aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),
   storageGetCard: (cardId: string) => ipcRenderer.invoke('arc:storage-get-card', cardId),
+  setVideoPreviewFrame: (cardId: string, frameMs: number) =>
+    ipcRenderer.invoke('arc:set-video-preview-frame', { cardId, frameMs }),
+  saveVideoFrameToCardFolder: (cardId: string, frameMs: number) =>
+    ipcRenderer.invoke('arc:save-video-frame-to-card-folder', { cardId, frameMs }) as Promise<{
+      relativePath: string;
+    }>,
+  copyVideoFrameToClipboard: (cardId: string, frameMs: number) =>
+    ipcRenderer.invoke('arc:copy-video-frame-to-clipboard', { cardId, frameMs }) as Promise<{ ok: true }>,
   storageGetCardDisplayPalette: (cardId: string) =>
     ipcRenderer.invoke('arc:storage-get-card-display-palette', cardId) as Promise<
       Array<{ hex: string; pct: number }>
@@ -300,7 +308,6 @@ contextBridge.exposeInMainWorld('arc', {
       screenshotsEnabled: boolean;
       screenshotFormat: 'png' | 'jpg' | 'webp';
       screenshotAskSaveLocation: boolean;
-      screenshotPrefixName: boolean;
       screenshotRetina2x: boolean;
       notifyScreenshotSaved: boolean;
       notifyDuplicatesFound: boolean;
@@ -327,7 +334,6 @@ contextBridge.exposeInMainWorld('arc', {
       screenshotsEnabled: boolean;
       screenshotFormat: 'png' | 'jpg' | 'webp';
       screenshotAskSaveLocation: boolean;
-      screenshotPrefixName: boolean;
       screenshotRetina2x: boolean;
       notifyScreenshotSaved: boolean;
       notifyDuplicatesFound: boolean;
@@ -387,7 +393,20 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:screenshot-picker-confirm', region) as Promise<{ ok: boolean }>,
   screenshotPickerCancel: () =>
     ipcRenderer.invoke('arc:screenshot-picker-cancel') as Promise<{ ok: boolean }>,
-  openCardViewer: (payload: { cardIds: string[]; startIndex?: number }) =>
+  screenshotWindowPickerAtPoint: (point: { x: number; y: number }) =>
+    ipcRenderer.invoke('arc:screenshot-window-picker-at-point', point) as Promise<{
+      ok: boolean;
+      window: { title: string; nativeId?: number; x: number; y: number; width: number; height: number } | null;
+    }>,
+  screenshotWindowPickerConfirm: (payload: { title: string; nativeId?: number }) =>
+    ipcRenderer.invoke('arc:screenshot-window-picker-confirm', payload) as Promise<{ ok: boolean }>,
+  screenshotWindowPickerCancel: () =>
+    ipcRenderer.invoke('arc:screenshot-window-picker-cancel') as Promise<{ ok: boolean }>,
+  openCardViewer: (payload: {
+    cardIds: string[];
+    startIndex?: number;
+    context?: { kind: 'library' | 'moodboard' | 'collection'; name?: string };
+  }) =>
     ipcRenderer.invoke('arc:card-viewer-open', payload) as Promise<{ ok: boolean }>,
   cardViewerSetAlwaysOnTop: (enabled: boolean) =>
     ipcRenderer.invoke('arc:card-viewer-set-always-on-top', enabled) as Promise<{ ok: boolean }>,

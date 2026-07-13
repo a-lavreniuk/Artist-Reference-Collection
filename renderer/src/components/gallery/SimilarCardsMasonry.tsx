@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import type { CardRecord } from '../../services/db';
-import { MasonryGrid, MASONRY_GAP_PX, resolveMasonryColumnCount } from '../masonry';
+import { MasonryGrid, resolveMasonryColumnCount, resolveMasonryGapPx } from '../masonry';
 import { computeMasonryColumnWidth } from '../masonry/masonryColumnRules';
 import { galleryMasonryItemHeight } from '../masonry/masonryItemHeight';
 import { useContainerWidth } from '../masonry/useMasonryColumnCount';
@@ -35,7 +35,8 @@ export default function SimilarCardsMasonry({
   const containerWidth = useContainerWidth(measureRef);
   const gridSize = readGridSize();
   const columnCount = resolveMasonryColumnCount(containerWidth, gridSize, 'similar');
-  const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, MASONRY_GAP_PX);
+  const masonryGap = resolveMasonryGapPx(gridSize);
+  const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, masonryGap);
 
   useEffect(() => {
     setGalleryThumbPixelBudget(columnWidth);
@@ -53,9 +54,9 @@ export default function SimilarCardsMasonry({
     () =>
       cards.map((card) => ({
         id: card.id,
-        height: galleryMasonryItemHeight(card, containerWidth, columnCount, MASONRY_GAP_PX)
+        height: galleryMasonryItemHeight(card, containerWidth, columnCount, masonryGap)
       })),
-    [cards, columnCount, containerWidth]
+    [cards, columnCount, containerWidth, masonryGap]
   );
 
   const cardById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
@@ -66,7 +67,7 @@ export default function SimilarCardsMasonry({
         items={masonryItems}
         variant="similar"
         scrollRootRef={scrollRootRef}
-        gap={MASONRY_GAP_PX}
+        gap={masonryGap}
         virtualize={cards.length > 12}
         className="arc-card-similar-masonry-grid"
         renderItem={(id) => {

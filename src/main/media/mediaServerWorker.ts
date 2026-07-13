@@ -6,6 +6,7 @@ import {
   mimeForMediaExt,
   resolveMediaAbsFromParams
 } from './arcMediaPath';
+import { parseSingleByteRange } from './mediaServerRange';
 
 type MediaSectionTab = 'gallery' | 'collections' | 'moodboard';
 
@@ -25,9 +26,80 @@ function isSectionAllowed(sect: string | null): boolean {
   return activeTab === sect;
 }
 
-function reject(res: http.ServerResponse, code: number): void {
-  res.writeHead(code);
+function reject(res: http.ServerResponse, code: number, headers?: http.OutgoingHttpHeaders): void {
+  res.writeHead(code, headers);
   res.end();
+}
+
+function mediaResponseHeaders(
+  ext: string,
+  extra: http.OutgoingHttpHeaders = {}
+): http.OutgoingHttpHeaders {
+  return {
+    'Content-Type': mimeForMediaExt(ext),
+    'Cache-Control': 'private, max-age=86400',
+    'Accept-Ranges': 'bytes',
+    'Access-Control-Allow-Origin': '*',
+    ...extra
+  };
+}
+
+function pipeReadStream(
+  res: http.ServerResponse,
+  abs: string,
+  start: number,
+  end: number
+): void {
+  const stream = fs.createReadStream(abs, { start, end });
+  stream.on('error', () => {
+    if (!res.headersSent) reject(res, 500);
+    else res.destroy();
+  });
+  stream.pipe(res);
+}
+
+function sendFile(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  abs: string,
+  ext: string,
+  fileSize: number
+): void {
+  const baseHeaders = mediaResponseHeaders(ext);
+  const range = parseSingleByteRange(req.headers.range, fileSize);
+
+  if (range === 'unsatisfiable') {
+    reject(res, 416, {
+      ...baseHeaders,
+      'Content-Range': `bytes */${fileSize}`
+    });
+    return;
+  }
+
+  if (range) {
+    const chunkSize = range.end - range.start + 1;
+    const headers = mediaResponseHeaders(ext, {
+      'Content-Length': chunkSize,
+      'Content-Range': `bytes ${range.start}-${range.end}/${fileSize}`
+    });
+    res.writeHead(206, headers);
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
+    pipeReadStream(res, abs, range.start, range.end);
+    return;
+  }
+
+  const headers = mediaResponseHeaders(ext, {
+    'Content-Length': fileSize
+  });
+  res.writeHead(200, headers);
+  if (req.method === 'HEAD') {
+    res.end();
+    return;
+  }
+  pipeReadStream(res, abs, 0, fileSize - 1);
 }
 
 function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
@@ -79,25 +151,7 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
       return;
     }
 
-    const headers: http.OutgoingHttpHeaders = {
-      'Content-Type': mimeForMediaExt(ext),
-      'Content-Length': st.size,
-      'Cache-Control': 'private, max-age=86400'
-    };
-
-    if (req.method === 'HEAD') {
-      res.writeHead(200, headers);
-      res.end();
-      return;
-    }
-
-    res.writeHead(200, headers);
-    const stream = fs.createReadStream(abs);
-    stream.on('error', () => {
-      if (!res.headersSent) reject(res, 500);
-      else res.destroy();
-    });
-    stream.pipe(res);
+    sendFile(req, res, abs, ext, st.size);
   });
 }
 

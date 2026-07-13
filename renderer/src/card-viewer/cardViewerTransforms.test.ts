@@ -3,6 +3,7 @@ import {
   DEFAULT_VIEWER_TRANSFORM,
   rotateViewerTransform,
   toggleViewerFlipH,
+  toggleViewerFlipV,
   toggleViewerGrayscale,
   viewerTransformStyle
 } from './cardViewerTransforms';
@@ -15,12 +16,13 @@ describe('cardViewerTransforms', () => {
 
   it('toggles flip and grayscale', () => {
     expect(toggleViewerFlipH(DEFAULT_VIEWER_TRANSFORM).flipH).toBe(true);
+    expect(toggleViewerFlipV(DEFAULT_VIEWER_TRANSFORM).flipV).toBe(true);
     expect(toggleViewerGrayscale(DEFAULT_VIEWER_TRANSFORM).grayscale).toBe(true);
   });
 
   it('builds css transform and filter', () => {
-    expect(viewerTransformStyle({ rotateDeg: 90, flipH: true, grayscale: true })).toEqual({
-      transform: 'rotate(90deg) scaleX(-1)',
+    expect(viewerTransformStyle({ rotateDeg: 90, flipH: true, flipV: true, grayscale: true })).toEqual({
+      transform: 'rotate(90deg) scaleX(-1) scaleY(-1)',
       filter: 'grayscale(1)'
     });
   });

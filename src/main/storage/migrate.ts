@@ -213,6 +213,8 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
     let width = card.width;
     let height = card.height;
     let phash: ImageDupFingerprint | undefined;
+    let videoWidth: number | undefined;
+    let videoHeight: number | undefined;
 
     if (card.type === 'image' || isImageExt(ext)) {
       const res = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
@@ -232,6 +234,8 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
         if (dims) {
           width = dims.width;
           height = dims.height;
+          videoWidth = dims.width;
+          videoHeight = dims.height;
         }
       } finally {
         try {
@@ -257,7 +261,9 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
       description: card.description,
       tagIds: card.tagIds ?? [],
       collectionIds: card.collectionIds ?? [],
-      ...(phash ? { phash } : {})
+      ...(phash ? { phash } : {}),
+      ...(videoWidth ? { videoWidth } : {}),
+      ...(videoHeight ? { videoHeight } : {})
     };
     await writeCardJson(root, cardJson);
 

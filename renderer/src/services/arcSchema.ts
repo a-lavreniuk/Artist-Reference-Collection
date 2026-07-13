@@ -19,6 +19,14 @@ export type CardRecord = {
   format?: string;
   width?: number;
   height?: number;
+  /** Нативная ширина видео (для информации о файле). */
+  videoWidth?: number;
+  /** Нативная высота видео (для информации о файле). */
+  videoHeight?: number;
+  /** Длительность видео в миллисекундах. */
+  durationMs?: number;
+  /** Timestamp кастомного кадра превью. */
+  previewFrameMs?: number;
   tagIds: string[];
   collectionIds: string[];
   description?: string;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 
 type Point = { x: number; y: number };
 
@@ -48,6 +49,10 @@ export default function ScreenshotPickerApp() {
     if (!canSave || !selection) return;
     void window.arc?.screenshotPickerConfirm?.(selection);
   }, [canSave, selection]);
+
+  useEffect(() => {
+    if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
+  }, [canSave]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -101,7 +106,7 @@ export default function ScreenshotPickerApp() {
 
   const toolbarStyle = useMemo(() => {
     if (!selection) return undefined;
-    const toolbarHeight = 48;
+    const toolbarHeight = 40;
     const centerX = selection.x + selection.width / 2;
     const top = clampToolbarTop(selection.y + selection.height, toolbarHeight);
     return {
@@ -114,7 +119,9 @@ export default function ScreenshotPickerApp() {
   return (
     <div
       ref={rootRef}
-      className="arc-screenshot-picker"
+      className="arc-screenshot-picker arc-ui-kit-scope"
+      data-elevation="sunken"
+      data-btn-size="m"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={finishDrag}
@@ -136,11 +143,12 @@ export default function ScreenshotPickerApp() {
 
       {canSave && toolbarStyle ? (
         <div className="arc-screenshot-picker__toolbar" style={toolbarStyle}>
-          <button type="button" className="btn btn-outline btn-ds btn-s" onClick={cancel}>
+          <button type="button" className="btn btn-secondary btn-ds btn-m" onClick={cancel}>
             <span className="btn-ds__value">Отмена</span>
           </button>
-          <button type="button" className="btn btn-brand btn-ds btn-s" onClick={save}>
+          <button type="button" className="btn btn-brand btn-ds btn-m" onClick={save}>
             <span className="btn-ds__value">Сохранить скриншот</span>
+            <span className="btn-ds__icon arc-icon-save" aria-hidden="true" />
           </button>
         </div>
       ) : null}

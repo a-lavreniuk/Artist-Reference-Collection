@@ -13,7 +13,7 @@ import {
 
 export type ContextMenuPosition = { x: number; y: number };
 export type ContextMenuAnchorAlign = 'start' | 'end';
-export type ContextMenuAnchorPlacement = 'belowAnchor' | 'belowIsland';
+export type ContextMenuAnchorPlacement = 'belowAnchor' | 'belowIsland' | 'aboveAnchor';
 
 type Props = {
   open: boolean;
@@ -28,7 +28,7 @@ type Props = {
   menuWidth?: number;
   /** Горизонтальное выравнивание относительно якоря. */
   anchorAlign?: ContextMenuAnchorAlign;
-  /** belowAnchor — под якорем; belowIsland — под navbar-island (как у фильтров). */
+  /** belowAnchor — под якорем; belowIsland — под navbar-island; aboveAnchor — над якорем. */
   anchorPlacement?: ContextMenuAnchorPlacement;
   panelClassName?: string;
 };
@@ -109,32 +109,71 @@ export default function ContextMenu({
       return;
     }
 
-    const menuHeight = panelRef.current?.offsetHeight ?? 0;
+    const updateLayout = () => {
+      const menuHeight = panelRef.current?.offsetHeight ?? 0;
 
-    if (position) {
-      const nextLayout = clampMenuPosition(position.y, position.x, menuHeight, menuWidth);
+      if (position) {
+        const nextLayout = clampMenuPosition(position.y, position.x, menuHeight, menuWidth);
+        setLayout((prev) =>
+          prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
+        );
+        return;
+      }
+
+      if (!anchorRef?.current) {
+        setLayout((prev) => (prev === null ? prev : null));
+        return;
+      }
+
+      const rect = anchorRef.current.getBoundingClientRect();
+      const rawTop =
+        anchorPlacement === 'aboveAnchor'
+          ? rect.top - CONTEXT_MENU_ANCHOR_GAP - menuHeight
+          : anchorPlacement === 'belowAnchor'
+            ? rect.bottom + CONTEXT_MENU_ANCHOR_GAP
+            : resolveAnchorTop(anchorRef.current);
+      const rawLeft = anchorAlign === 'start' ? rect.left : rect.right - menuWidth;
+      const nextLayout = clampMenuPosition(rawTop, rawLeft, menuHeight, menuWidth);
       setLayout((prev) =>
         prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
       );
-      return;
-    }
+    };
 
-    if (!anchorRef?.current) {
-      setLayout((prev) => (prev === null ? prev : null));
-      return;
-    }
-
-    const rect = anchorRef.current.getBoundingClientRect();
-    const rawTop =
-      anchorPlacement === 'belowAnchor'
-        ? rect.bottom + CONTEXT_MENU_ANCHOR_GAP
-        : resolveAnchorTop(anchorRef.current);
-    const rawLeft = anchorAlign === 'start' ? rect.left : rect.right - menuWidth;
-    const nextLayout = clampMenuPosition(rawTop, rawLeft, menuHeight, menuWidth);
-    setLayout((prev) =>
-      prev?.top === nextLayout.top && prev?.left === nextLayout.left ? prev : nextLayout
-    );
+    updateLayout();
   }, [open, ariaLabel, anchorRef, position, rows, children, menuWidth, anchorAlign, anchorPlacement]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onReflow = () => {
+      if (!panelRef.current) return;
+      const menuHeight = panelRef.current.offsetHeight;
+      if (menuHeight <= 0) return;
+
+      if (position) {
+        const nextLayout = clampMenuPosition(position.y, position.x, menuHeight, menuWidth);
+        setLayout(nextLayout);
+        return;
+      }
+      if (!anchorRef?.current) return;
+
+      const rect = anchorRef.current.getBoundingClientRect();
+      const rawTop =
+        anchorPlacement === 'aboveAnchor'
+          ? rect.top - CONTEXT_MENU_ANCHOR_GAP - menuHeight
+          : anchorPlacement === 'belowAnchor'
+            ? rect.bottom + CONTEXT_MENU_ANCHOR_GAP
+            : resolveAnchorTop(anchorRef.current);
+      const rawLeft = anchorAlign === 'start' ? rect.left : rect.right - menuWidth;
+      setLayout(clampMenuPosition(rawTop, rawLeft, menuHeight, menuWidth));
+    };
+
+    window.addEventListener('resize', onReflow);
+    window.addEventListener('scroll', onReflow, true);
+    return () => {
+      window.removeEventListener('resize', onReflow);
+      window.removeEventListener('scroll', onReflow, true);
+    };
+  }, [open, anchorAlign, anchorPlacement, anchorRef, menuWidth, position]);
 
   useLayoutEffect(() => {
     if (!open || !panelRef.current || !layout) return;
@@ -168,7 +207,11 @@ export default function ContextMenu({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  if (!open || !layout) return null;
+  if (!open) return null;
+
+  const isPositioned = layout !== null;
+  const panelTop = isPositioned ? layout.top : -10000;
+  const panelLeft = isPositioned ? layout.left : -10000;
 
   const backdropClass = ['context-menu-backdrop', dragClass].filter(Boolean).join(' ');
   const panelClass = [
@@ -184,7 +227,9 @@ export default function ContextMenu({
 
   return createPortal(
     <>
-      <button type="button" className={backdropClass} aria-label="Закрыть меню" onClick={onClose} />
+      {isPositioned ? (
+        <button type="button" className={backdropClass} aria-label="Закрыть меню" onClick={onClose} />
+      ) : null}
       <div
         ref={panelRef}
         id={menuId}
@@ -195,7 +240,13 @@ export default function ContextMenu({
         data-typo-tone="white"
         data-input-size="s"
         data-btn-size="m"
-        style={{ top: layout.top, left: layout.left, width: menuWidth }}
+        style={{
+          top: panelTop,
+          left: panelLeft,
+          width: menuWidth,
+          visibility: isPositioned ? 'visible' : 'hidden',
+          pointerEvents: isPositioned ? undefined : 'none'
+        }}
       >
         <div className="context-menu__list">
           {rows?.map((row) => renderRow(row, onClose))}

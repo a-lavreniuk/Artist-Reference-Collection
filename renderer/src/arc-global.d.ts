@@ -82,6 +82,9 @@ declare global {
         sort?: GallerySortState;
       }) => Promise<CardRecord[]>;
       storageGetCard: (cardId: string) => Promise<CardRecord | null>;
+      setVideoPreviewFrame: (cardId: string, frameMs: number) => Promise<CardRecord>;
+      saveVideoFrameToCardFolder: (cardId: string, frameMs: number) => Promise<{ relativePath: string }>;
+      copyVideoFrameToClipboard: (cardId: string, frameMs: number) => Promise<{ ok: true }>;
       storageGetCardDisplayPalette: (cardId: string) => Promise<Array<{ hex: string; pct: number }>>;
       storageUpdateCard: (
         cardId: string,
@@ -258,7 +261,17 @@ declare global {
         height: number;
       }) => Promise<{ ok: boolean }>;
       screenshotPickerCancel?: () => Promise<{ ok: boolean }>;
-      openCardViewer?: (payload: { cardIds: string[]; startIndex?: number }) => Promise<{ ok: boolean }>;
+      screenshotWindowPickerAtPoint?: (point: { x: number; y: number }) => Promise<{
+        ok: boolean;
+        window: { title: string; nativeId?: number; x: number; y: number; width: number; height: number } | null;
+      }>;
+      screenshotWindowPickerConfirm?: (payload: { title: string; nativeId?: number }) => Promise<{ ok: boolean }>;
+      screenshotWindowPickerCancel?: () => Promise<{ ok: boolean }>;
+      openCardViewer?: (payload: {
+        cardIds: string[];
+        startIndex?: number;
+        context?: { kind: 'library' | 'moodboard' | 'collection'; name?: string };
+      }) => Promise<{ ok: boolean }>;
       cardViewerSetAlwaysOnTop?: (enabled: boolean) => Promise<{ ok: boolean }>;
       cardViewerSetOpacity?: (value: number) => Promise<{ ok: boolean }>;
       cardViewerClose?: () => Promise<{ ok: boolean }>;

@@ -5,7 +5,8 @@ import {
   readCardJson,
   thumbLRelPath,
   thumbMRelPath,
-  thumbSRelPath
+  thumbSRelPath,
+  writeCardJson
 } from './cardFolder';
 import { openLibraryDb } from './db';
 import { extractVideoFrameToJpeg, isVideoExt } from '../ffmpeg';
@@ -60,10 +61,36 @@ export async function backfillThumbGeneration(
       if (row.type === 'image') {
         await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, false);
       } else {
+        const cardJson = await readCardJson(root, row.id);
+        const previewFrameMs =
+          cardJson?.previewFrameMs && cardJson.previewFrameMs > 0 ? cardJson.previewFrameMs : undefined;
         const frameTmp = path.join(dir, '_thumb_backfill_frame.jpg');
         try {
-          await extractVideoFrameToJpeg(originalAbs, frameTmp);
-          await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
+          await extractVideoFrameToJpeg(originalAbs, frameTmp, {
+            atMs: previewFrameMs
+          });
+          const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
+          if (cardJson && previewFrameMs != null) {
+            cardJson.width = thumbRes.width || cardJson.width;
+            cardJson.height = thumbRes.height || cardJson.height;
+            cardJson.dominantColorHex = thumbRes.dominantColorHex;
+            await writeCardJson(root, cardJson);
+            db.prepare(
+              `UPDATE cards SET width = ?, height = ?, dominant_color = ?, palette_json = ?, thumb_s_rel = ?, thumb_m_rel = ?, thumb_l_rel = ? WHERE id = ?`
+            ).run(
+              cardJson.width ?? null,
+              cardJson.height ?? null,
+              thumbRes.dominantColorHex,
+              JSON.stringify(thumbRes.palette),
+              thumbSRelPath(row.id),
+              thumbMRelPath(row.id),
+              thumbLRelPath(row.id),
+              row.id
+            );
+            updated++;
+            await yieldToEventLoop();
+            continue;
+          }
         } finally {
           try {
             await unlink(frameTmp);

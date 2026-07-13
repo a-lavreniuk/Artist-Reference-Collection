@@ -125,6 +125,13 @@ export function showMainWindowFromUserAction(): void {
   showMainWindow({ maximize: shouldMaximizeOnShow(win.isResizable()) });
 }
 
+/** После скриншота / отмены overlay — maximize как при показе из трея, иначе layout ломается. */
+export function showMainWindowAfterScreenshot(): void {
+  const win = resolveTargetWindow();
+  if (!win) return;
+  showMainWindow({ maximize: shouldMaximizeOnShow(win.isResizable()) });
+}
+
 export function registerWindowChromeIpc(): void {
   ipcMain.handle('arc:window-minimize-to-tray', () => {
     const win = resolveTargetWindow();

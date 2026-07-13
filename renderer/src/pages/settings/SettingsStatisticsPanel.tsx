@@ -112,7 +112,7 @@ export default function SettingsStatisticsPanel() {
         });
         if (pressure && sessionStorage.getItem(DISK_PRESSURE_NOTIFY_SESSION_KEY) !== pressure.level) {
           showAppNotification({
-            message: pressure.title,
+            message: pressure.message,
             variant: pressure.level === 'critical' ? 'danger' : 'warning',
             skipPrefCheck: true
           });
@@ -157,15 +157,8 @@ export default function SettingsStatisticsPanel() {
 
       <div className="arc-stats-tags-grid">
         <section className="arc-stats-tags-panel panel">
-          <StatisticsPanelHead
-            icon={
-              <span
-                className="arc-stat-icon arc-stat-icon--arrow-up-right arc-stat-icon--success"
-                aria-hidden="true"
-              />
-            }
-          >
-            <p className="text-s arc-stats-tags-panel__title">Популярные метки</p>
+          <StatisticsPanelHead>
+            <p className="text-l arc-stats-tags-panel__title">Популярные метки</p>
             <div className="arc-category-tag-cloud">
               {topTags.length === 0 ? (
                 <p className="hint">Нет популярных меток</p>
@@ -193,15 +186,8 @@ export default function SettingsStatisticsPanel() {
         </section>
 
         <section className="arc-stats-tags-panel panel">
-          <StatisticsPanelHead
-            icon={
-              <span
-                className="arc-stat-icon arc-stat-icon--arrow-down-left arc-stat-icon--danger"
-                aria-hidden="true"
-              />
-            }
-          >
-            <p className="text-s arc-stats-tags-panel__title">Малоиспользуемые метки</p>
+          <StatisticsPanelHead>
+            <p className="text-l arc-stats-tags-panel__title">Малоиспользуемые метки</p>
             <div className="arc-category-tag-cloud">
               {lowTags.length === 0 ? (
                 <p className="hint">Нет малоиспользуемых меток</p>

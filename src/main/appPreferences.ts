@@ -36,7 +36,6 @@ export type AppPreferencesV1 = {
   screenshotsEnabled: boolean;
   screenshotFormat: ScreenshotFormat;
   screenshotAskSaveLocation: boolean;
-  screenshotPrefixName: boolean;
   screenshotRetina2x: boolean;
   notifyScreenshotSaved: boolean;
   notifyDuplicatesFound: boolean;
@@ -61,6 +60,7 @@ export type AppPreferencesV1 = {
   galleryCollectionsStripEnabled: boolean;
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
   uiTheme: UiThemePreference;
+  videoAutoplay: boolean;
 };
 
 const FILENAME = 'arc-app-preferences.json';
@@ -94,7 +94,6 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     screenshotsEnabled: true,
     screenshotFormat: 'webp',
     screenshotAskSaveLocation: false,
-    screenshotPrefixName: false,
     screenshotRetina2x: false,
     notifyScreenshotSaved: true,
     notifyDuplicatesFound: true,
@@ -118,7 +117,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiSearchStrictness: 50,
     galleryCollectionsStripEnabled: true,
     galleryCollectionsSortMode: 'chrono',
-    uiTheme: 'dark'
+    uiTheme: 'dark',
+    videoAutoplay: true
   };
 }
 
@@ -172,8 +172,6 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     screenshotFormat: sanitizeScreenshotFormat(raw.screenshotFormat),
     screenshotAskSaveLocation:
       typeof raw.screenshotAskSaveLocation === 'boolean' ? raw.screenshotAskSaveLocation : d.screenshotAskSaveLocation,
-    screenshotPrefixName:
-      typeof raw.screenshotPrefixName === 'boolean' ? raw.screenshotPrefixName : d.screenshotPrefixName,
     screenshotRetina2x: typeof raw.screenshotRetina2x === 'boolean' ? raw.screenshotRetina2x : d.screenshotRetina2x,
     notifyScreenshotSaved:
       typeof raw.notifyScreenshotSaved === 'boolean' ? raw.notifyScreenshotSaved : d.notifyScreenshotSaved,
@@ -227,7 +225,8 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.onboardingTourCompleted === 'boolean'
         ? raw.onboardingTourCompleted
         : d.onboardingTourCompleted,
-    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep)
+    onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep),
+    videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay
   };
 
   if (!sanitized.launchAtLogin) {
@@ -266,9 +265,6 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('screenshotAskSaveLocation' in patch && typeof patch.screenshotAskSaveLocation === 'boolean') {
     next.screenshotAskSaveLocation = patch.screenshotAskSaveLocation;
-  }
-  if ('screenshotPrefixName' in patch && typeof patch.screenshotPrefixName === 'boolean') {
-    next.screenshotPrefixName = patch.screenshotPrefixName;
   }
   if ('screenshotRetina2x' in patch && typeof patch.screenshotRetina2x === 'boolean') {
     next.screenshotRetina2x = patch.screenshotRetina2x;
@@ -358,6 +354,9 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
   }
+  if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
+    next.videoAutoplay = patch.videoAutoplay;
+  }
 
   return next;
 }
@@ -415,7 +414,6 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
     'screenshotsEnabled' in patch ||
     'screenshotFormat' in patch ||
     'screenshotAskSaveLocation' in patch ||
-    'screenshotPrefixName' in patch ||
     'screenshotRetina2x' in patch
   ) {
     registerScreenshotShortcut();

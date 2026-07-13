@@ -242,6 +242,7 @@ export default function MoodboardCardsView() {
           moodboardRemoveConfirm="moodboard"
           neighborCardIds={detailNeighborCardIds}
           viewerNavigationCardIds={feedCardIds}
+          viewerOpenContext={{ kind: 'moodboard' }}
         />
       ) : null}
 

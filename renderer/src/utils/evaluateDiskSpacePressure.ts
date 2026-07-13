@@ -1,9 +1,8 @@
 export type DiskSpacePressureLevel = 'none' | 'warning' | 'critical';
 
 export type DiskSpacePressureAdvice = {
-  level: DiskSpacePressureLevel;
-  title: string;
-  body: string;
+  level: Exclude<DiskSpacePressureLevel, 'none'>;
+  message: string;
 };
 
 const FREE_CRITICAL_RATIO = 0.05;
@@ -12,6 +11,12 @@ const LIBRARY_WARNING_RATIO = 0.5;
 const LIBRARY_CRITICAL_RATIO = 0.75;
 const FREE_VS_LIBRARY_WARNING = 0.5;
 const FREE_VS_LIBRARY_CRITICAL = 0.2;
+
+const DISK_PRESSURE_WARNING_MESSAGE =
+  'Места на диске может не хватать для импорта и резервных копий. Очистите корзину, удалите ненужные файлы или перенесите библиотеку на более вместительный носитель.';
+
+const DISK_PRESSURE_CRITICAL_MESSAGE =
+  'На диске почти не осталось места. Срочно освободите место на носителе, очистите корзину ARC или перенесите библиотеку на более вместительный диск.';
 
 export function evaluateDiskSpacePressure(input: {
   diskTotalBytes: number;
@@ -40,16 +45,14 @@ export function evaluateDiskSpacePressure(input: {
   if (critical) {
     return {
       level: 'critical',
-      title: 'На диске почти не осталось места',
-      body: 'Библиотека ARC занимает заметную долю диска. Освободите место на носителе, очистите корзину ARC или перенесите библиотеку на диск с большим запасом'
+      message: DISK_PRESSURE_CRITICAL_MESSAGE
     };
   }
 
   if (warning) {
     return {
       level: 'warning',
-      title: 'Библиотека активно растёт',
-      body: 'Свободного места на диске может не хватить для импорта и резервных копий. Рекомендуем очистить корзину, удалить лишние файлы с диска или перенести библиотеку'
+      message: DISK_PRESSURE_WARNING_MESSAGE
     };
   }
 

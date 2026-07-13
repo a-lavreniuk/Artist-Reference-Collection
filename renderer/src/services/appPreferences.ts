@@ -31,7 +31,6 @@ export type AppPreferencesV1 = {
   screenshotsEnabled: boolean;
   screenshotFormat: ScreenshotFormat;
   screenshotAskSaveLocation: boolean;
-  screenshotPrefixName: boolean;
   screenshotRetina2x: boolean;
   notifyScreenshotSaved: boolean;
   notifyDuplicatesFound: boolean;
@@ -56,6 +55,7 @@ export type AppPreferencesV1 = {
   galleryCollectionsStripEnabled: boolean;
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
   uiTheme: UiThemePreference;
+  videoAutoplay: boolean;
 };
 
 function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
@@ -84,7 +84,6 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     screenshotsEnabled: true,
     screenshotFormat: 'webp',
     screenshotAskSaveLocation: false,
-    screenshotPrefixName: false,
     screenshotRetina2x: false,
     notifyScreenshotSaved: true,
     notifyDuplicatesFound: true,
@@ -108,7 +107,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiSearchStrictness: 50,
     galleryCollectionsStripEnabled: true,
     galleryCollectionsSortMode: 'chrono',
-    uiTheme: 'dark'
+    uiTheme: 'dark',
+    videoAutoplay: true
   };
 }
 
@@ -175,7 +175,8 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
       typeof raw.importApiPrefixText === 'string' ? raw.importApiPrefixText.trim().slice(0, 64) : d.importApiPrefixText,
     mcpServerEnabled:
       typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
-    mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled)
+    mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
+    videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay
   };
 }
 

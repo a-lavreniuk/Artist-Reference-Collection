@@ -19,6 +19,9 @@ import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
 import CardDetailImageViewport from './CardDetailImageViewport';
 import CardInfoModal from './CardInfoModal';
+import CardDetailVideoPlayer from './CardDetailVideoPlayer';
+import type { CardDetailVideoPlayerHandle } from './cardDetailVideoPlayerTypes';
+import { useCardDetailVideoShortcuts } from './useCardDetailVideoShortcuts';
 import SimilarCardsMasonry from './SimilarCardsMasonry';
 import { useGalleryCardContextMenu } from './useGalleryCardContextMenu';
 import CardDetailTagsModal from './CardDetailTagsModal';
@@ -81,7 +84,8 @@ import {
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
 import type { CardFeedNeighbors } from './cardFeedNeighbors';
-import { openCardsInNewWindow } from '../../card-viewer/openCardsInNewWindow';
+import { openCardsInNewWindow, type CardViewerOpenContext } from '../../card-viewer/openCardsInNewWindow';
+import { useAppPreferences } from '../../hooks/useAppPreferences';
 
 type Props = {
   cardId: string;
@@ -92,6 +96,7 @@ type Props = {
   moodboardRemoveConfirm?: 'gallery' | 'moodboard';
   neighborCardIds?: CardFeedNeighbors;
   viewerNavigationCardIds?: readonly string[];
+  viewerOpenContext?: CardViewerOpenContext;
 };
 
 const DESCRIPTION_SAVE_MS = 600;
@@ -114,13 +119,14 @@ export default function CardDetailOverlay({
   onOpenCard,
   moodboardRemoveConfirm = 'gallery',
   neighborCardIds,
-  viewerNavigationCardIds
+  viewerNavigationCardIds,
+  viewerOpenContext
 }: Props) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const settingsScrollRef = useRef<HTMLDivElement>(null);
   const optionsLeftRef = useRef<HTMLDivElement>(null);
-  const inspectVideoRef = useRef<HTMLVideoElement | null>(null);
+  const videoPlayerRef = useRef<CardDetailVideoPlayerHandle | null>(null);
   const descriptionSaveTimerRef = useRef<number | null>(null);
   const nameSaveTimerRef = useRef<number | null>(null);
   const linkSaveTimerRef = useRef<number | null>(null);
@@ -638,6 +644,11 @@ export default function CardDetailOverlay({
     showCopyAlert('Настройки применены');
   }, [card, tagsIndex, collectionsById, reloadCard, showCopyAlert]);
 
+  useCardDetailVideoShortcuts({
+    enabled: card?.type === 'video',
+    playerRef: videoPlayerRef
+  });
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isEditableTarget(e.target)) return;
@@ -788,6 +799,9 @@ export default function CardDetailOverlay({
       ? getVideoPlaybackTierFromPath(card.originalRelativePath)
       : null;
 
+  const { prefs } = useAppPreferences();
+  const videoAutoplay = prefs?.videoAutoplay !== false;
+
   const bookmarkIconClass = isBookmarkHovered
     ? inMoodboard
       ? 'arc-icon-bookmark-minus'
@@ -873,28 +887,29 @@ export default function CardDetailOverlay({
           className={`arc-card-detail-shell${similar.length > 0 ? ' arc-card-detail-shell--has-similar' : ''}`}
         >
         <div className="arc-card-detail-main-row" style={mainRowStyle}>
-          <div className="arc-card-detail-preview panel elevation-sunken">
-            {card?.type === 'video' && videoTier && videoTier !== 'html5' ? (
-              <p className="text-s arc-card-detail-video-note">{videoPlaybackDescription(videoTier)}</p>
-            ) : null}
+          <div className="arc-card-detail-preview arc-card-detail-preview--video panel elevation-sunken">
             {src && card?.type === 'video' ? (
-              <div className="arc-card-detail-media-fit">
-                <video
-                  ref={inspectVideoRef}
-                  className="arc-card-detail-media"
-                  src={src}
-                  poster={thumbSrc && thumbSrc !== src ? thumbSrc : undefined}
-                  controls
-                  preload="metadata"
-                  autoPlay
-                  muted
-                  playsInline
-                  onLoadedData={() => {
-                    void inspectVideoRef.current?.play().catch(() => undefined);
-                  }}
-                />
-              </div>
-            ) : src || thumbSrc ? (
+              <CardDetailVideoPlayer
+                cardId={card.id}
+                src={src}
+                autoplay={videoAutoplay}
+                videoWidth={card.width}
+                videoHeight={card.height}
+                fileSizeBytes={card.fileSize}
+                onOpenInfo={() => setInfoOpen(true)}
+                videoNote={
+                  videoTier && videoTier !== 'html5' ? videoPlaybackDescription(videoTier) : null
+                }
+                playerRef={videoPlayerRef}
+                onCardUpdated={(updated) => {
+                  setCard(updated);
+                  cardRef.current = updated;
+                  setThumbBudgetEpoch((epoch) => epoch + 1);
+                  void reloadCard(updated.id);
+                }}
+                onToast={showCopyAlert}
+              />
+            ) : src || (thumbSrc && card?.type !== 'video') ? (
               card?.type === 'image' && card ? (
                 <CardDetailImageViewport
                   card={card}
@@ -902,14 +917,14 @@ export default function CardDetailOverlay({
                   onInfoClick={() => setInfoOpen(true)}
                 />
               ) : (
-              <div className="arc-card-detail-media-fit">
-                <img
-                  className="arc-card-detail-media"
-                  src={src ?? thumbSrc ?? ''}
-                  alt=""
-                  draggable={false}
-                />
-              </div>
+                <div className="arc-card-detail-media-fit">
+                  <img
+                    className="arc-card-detail-media"
+                    src={src ?? thumbSrc ?? ''}
+                    alt=""
+                    draggable={false}
+                  />
+                </div>
               )
             ) : (
               <div
@@ -1017,10 +1032,14 @@ export default function CardDetailOverlay({
                       if (!card) return;
                       const ids = viewerNavigationCardIds?.length ? viewerNavigationCardIds : [card.id];
                       const startIndex = Math.max(0, ids.indexOf(card.id));
-                      void openCardsInNewWindow(ids.length > 1 ? ids : [card.id], startIndex);
+                      void openCardsInNewWindow({
+                        cardIds: ids.length > 1 ? ids : [card.id],
+                        startIndex,
+                        context: viewerOpenContext ?? { kind: 'library' }
+                      });
                     }}
                   >
-                    <span className="btn-icon-only__glyph arc-icon-arrow-up-right" aria-hidden="true" />
+                    <span className="btn-icon-only__glyph arc-icon-external-link" aria-hidden="true" />
                   </button>
                 </Tooltip>
                 <div className="arc-card-detail-segmented" role="group" aria-label="Действия с карточкой">

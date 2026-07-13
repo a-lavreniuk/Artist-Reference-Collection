@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, clipboard, ipcMain, nativeImage } from 'electron';
 import path from 'path';
 import { readdir, stat, unlink } from 'fs/promises';
 import {
@@ -51,7 +51,10 @@ import {
   FilterStatsAborted,
   getGalleryFilterStatsAsync,
   backfillVideoDurationMs,
-  upsertTag
+  upsertTag,
+  setVideoPreviewFrame,
+  saveVideoFrameToCardFolder,
+  copyVideoFrameToClipboard
 } from './storage/libraryStorage';
 import {
   buildGalleryFilterStatsCacheKey,
@@ -71,7 +74,7 @@ import {
   CARDS_DIR,
   LIBRARY_META_DIR
 } from './libraryFilenames';
-import type { ArcMoodboardV1, ArcSystemV1, CategoryRow, CollectionRow, ListCardsParams, LibraryScope, TagRow } from './storage/types';
+import type { ArcMoodboardV1, ArcSystemV1, CardJsonV1, CategoryRow, CollectionRow, ListCardsParams, LibraryScope, TagRow } from './storage/types';
 import { readLibraryRootSync } from './libraryRootConfig';
 
 const MAX_LIST_CARDS_SYNC_LIMIT = 500;
@@ -142,6 +145,29 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
     name: row.name,
     linkUrl: row.linkUrl,
     durationMs: row.durationMs
+  };
+}
+
+function enrichCardFromJson<T extends Record<string, unknown>>(
+  base: T,
+  cardJson: CardJsonV1 | null
+): T & {
+  fileCreatedAt?: string;
+  name?: string;
+  linkUrl?: string;
+  videoWidth?: number;
+  videoHeight?: number;
+  previewFrameMs?: number;
+} {
+  if (!cardJson) return base;
+  return {
+    ...base,
+    ...(cardJson.fileCreatedAt ? { fileCreatedAt: cardJson.fileCreatedAt } : {}),
+    ...(cardJson.name ? { name: cardJson.name } : {}),
+    ...(cardJson.linkUrl ? { linkUrl: cardJson.linkUrl } : {}),
+    ...(typeof cardJson.videoWidth === 'number' ? { videoWidth: cardJson.videoWidth } : {}),
+    ...(typeof cardJson.videoHeight === 'number' ? { videoHeight: cardJson.videoHeight } : {}),
+    ...(typeof cardJson.previewFrameMs === 'number' ? { previewFrameMs: cardJson.previewFrameMs } : {})
   };
 }
 
@@ -286,13 +312,48 @@ export function registerStorageIpc(
     if (!row) return null;
     const base = cardIndexToRenderer(rowToCardRecord(row));
     const cardJson = await readCardJson(root, cardId);
-    if (!cardJson) return base;
-    return {
-      ...base,
-      ...(cardJson.fileCreatedAt ? { fileCreatedAt: cardJson.fileCreatedAt } : {}),
-      ...(cardJson.name ? { name: cardJson.name } : {}),
-      ...(cardJson.linkUrl ? { linkUrl: cardJson.linkUrl } : {})
-    };
+    return enrichCardFromJson(base, cardJson);
+  });
+
+  ipcMain.handle('arc:set-video-preview-frame', async (_e, payload: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не открыта');
+    const p = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
+    const cardId = typeof p.cardId === 'string' ? p.cardId : '';
+    const frameMs = typeof p.frameMs === 'number' && Number.isFinite(p.frameMs) ? p.frameMs : NaN;
+    if (!cardId || !Number.isFinite(frameMs)) throw new Error('Некорректные параметры');
+    await ensureLibraryReady(root);
+    const row = await setVideoPreviewFrame(root, cardId, frameMs);
+    const base = cardIndexToRenderer(rowToCardRecord(row));
+    const cardJson = await readCardJson(root, cardId);
+    return enrichCardFromJson(base, cardJson);
+  });
+
+  ipcMain.handle('arc:save-video-frame-to-card-folder', async (_e, payload: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не открыта');
+    const p = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
+    const cardId = typeof p.cardId === 'string' ? p.cardId : '';
+    const frameMs = typeof p.frameMs === 'number' && Number.isFinite(p.frameMs) ? p.frameMs : NaN;
+    if (!cardId || !Number.isFinite(frameMs)) throw new Error('Некорректные параметры');
+    await ensureLibraryReady(root);
+    return saveVideoFrameToCardFolder(root, cardId, frameMs);
+  });
+
+  ipcMain.handle('arc:copy-video-frame-to-clipboard', async (_e, payload: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не открыта');
+    const p = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
+    const cardId = typeof p.cardId === 'string' ? p.cardId : '';
+    const frameMs = typeof p.frameMs === 'number' && Number.isFinite(p.frameMs) ? p.frameMs : NaN;
+    if (!cardId || !Number.isFinite(frameMs)) throw new Error('Некорректные параметры');
+    await ensureLibraryReady(root);
+    await copyVideoFrameToClipboard(root, cardId, frameMs, (imagePath) => {
+      const image = nativeImage.createFromPath(imagePath);
+      if (!image.isEmpty()) clipboard.writeImage(image);
+      else throw new Error('Не удалось создать изображение кадра');
+    });
+    return { ok: true as const };
   });
 
   ipcMain.handle('arc:storage-get-card-display-palette', async (_e, cardId: unknown) => {

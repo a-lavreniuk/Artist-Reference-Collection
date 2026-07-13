@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { CardRecord } from '../../services/db';
-import { MasonryGrid, MASONRY_GAP_PX, resolveMasonryColumnCount, type MasonryVariant } from '../masonry';
+import {
+  MasonryGrid,
+  resolveMasonryColumnCount,
+  resolveMasonryGapPx,
+  type MasonryVariant
+} from '../masonry';
 import { computeMasonryColumnWidth } from '../masonry/masonryColumnRules';
 import { galleryMasonryItemHeight } from '../masonry/masonryItemHeight';
 import { useContainerWidth } from '../masonry/useMasonryColumnCount';
@@ -77,7 +82,8 @@ export default function GalleryBoard({
   }, []);
 
   const columnCount = resolveMasonryColumnCount(containerWidth, gridSize, variant);
-  const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, MASONRY_GAP_PX);
+  const masonryGap = resolveMasonryGapPx(gridSize);
+  const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, masonryGap);
 
   useEffect(() => {
     setGalleryThumbPixelBudget(columnWidth);
@@ -104,9 +110,9 @@ export default function GalleryBoard({
     () =>
       cards.map((card) => ({
         id: card.id,
-        height: galleryMasonryItemHeight(card, containerWidth, columnCount, MASONRY_GAP_PX)
+        height: galleryMasonryItemHeight(card, containerWidth, columnCount, masonryGap)
       })),
-    [cards, columnCount, containerWidth, gridSizeVersion]
+    [cards, columnCount, containerWidth, gridSize, gridSizeVersion, masonryGap]
   );
 
   const cardById = useMemo(() => {
@@ -198,7 +204,7 @@ export default function GalleryBoard({
         items={masonryItems}
         variant={variant}
         scrollRootRef={scrollRootRef}
-        gap={MASONRY_GAP_PX}
+        gap={masonryGap}
         layoutEpoch={gridSizeVersion}
         revealResetKey={revealResetKey}
         loadingMore={loadingMore}

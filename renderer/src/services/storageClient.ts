@@ -48,6 +48,21 @@ export async function storageGetCard(cardId: string): Promise<CardRecord | null>
   return arc().storageGetCard(cardId);
 }
 
+export async function storageSetVideoPreviewFrame(cardId: string, frameMs: number): Promise<CardRecord> {
+  return arc().setVideoPreviewFrame(cardId, frameMs);
+}
+
+export async function copyVideoFrameToClipboard(cardId: string, frameMs: number): Promise<void> {
+  await arc().copyVideoFrameToClipboard(cardId, frameMs);
+}
+
+export async function saveVideoFrameToCardFolder(
+  cardId: string,
+  frameMs: number
+): Promise<{ relativePath: string }> {
+  return arc().saveVideoFrameToCardFolder(cardId, frameMs);
+}
+
 export async function storageUpdateCard(
   cardId: string,
   patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }

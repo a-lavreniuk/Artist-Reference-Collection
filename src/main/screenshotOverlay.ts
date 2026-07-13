@@ -87,6 +87,7 @@ export function openScreenshotAreaPicker(): Promise<ScreenshotPickerResult> {
     const { x, y, width, height } = display.bounds;
 
     const win = new BrowserWindow({
+      title: 'ARC screenshot area picker',
       x,
       y,
       width,

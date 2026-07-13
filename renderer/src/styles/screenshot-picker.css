@@ -21,7 +21,8 @@ body,
 .arc-screenshot-picker__selection {
   position: absolute;
   box-sizing: border-box;
-  border: 2px solid var(--brand-400, #6b8afd);
+  border: 2px solid var(--brand-500, #ff5a29);
+  border-radius: var(--s-1, 8px);
   background: transparent;
   box-shadow: 0 0 0 9999px rgba(10, 10, 12, 0.52);
   pointer-events: none;
@@ -33,11 +34,37 @@ body,
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--s-2, 8px);
-  padding: var(--s-2, 8px);
-  border-radius: var(--radius-s, 6px);
-  background: var(--gray-900, #2a2a30);
-  border: 1px solid var(--gray-800, #35353d);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  gap: var(--s-1, 8px);
   pointer-events: auto;
+}
+
+.arc-screenshot-window-picker {
+  position: fixed;
+  inset: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.arc-screenshot-window-picker__highlight {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--brand-500, #ff5a29);
+  border-radius: var(--s-1, 8px);
+  background: rgba(255, 90, 41, 0.08);
+  box-shadow: 0 0 0 9999px rgba(10, 10, 12, 0.42);
+  pointer-events: none;
+}
+
+.arc-screenshot-window-picker__hint {
+  position: fixed;
+  left: 50%;
+  bottom: var(--s-4, 32px);
+  transform: translateX(-50%);
+  padding: var(--s-1, 8px) var(--s-2, 16px);
+  border-radius: var(--s-1, 8px);
+  background: var(--gray-900, #2a2a30);
+  color: var(--brand-100, #e8e9ed);
+  font-size: var(--typo-p-m-size, 14px);
+  line-height: var(--typo-p-m-line, 22px);
+  pointer-events: none;
 }

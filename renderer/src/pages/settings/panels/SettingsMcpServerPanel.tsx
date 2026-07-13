@@ -102,10 +102,10 @@ export default function SettingsMcpServerPanel() {
             <>
               <SettingsSeparator />
               <p className="text-m arc-settings-desc-block__text">
-                Порт: <span className="typo-p-m">{MCP_PORT}</span>
+                Порт: <span className="text-code-m">{MCP_PORT}</span>
               </p>
               <p className="text-m arc-settings-desc-block__text">Конфигурация (mcp.json):</p>
-              <pre className="text-m arc-settings-desc-block__text arc-settings-mcp-json">{mcpJson}</pre>
+              <pre className="text-code-m arc-settings-desc-block__text arc-settings-mcp-json">{mcpJson}</pre>
               <div className="arc-ui-kit-scope" data-btn-size="s">
                 <button
                   type="button"

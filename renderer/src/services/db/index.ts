@@ -83,7 +83,8 @@ export {
   restoreCard,
   permanentDeleteCard,
   emptyTrash,
-  deleteCard
+  deleteCard,
+  setVideoPreviewFrame
 } from './cards';
 
 export { LIST_CARDS_PAGE_SIZE, listAllCardsPaginated } from './listAllCardsPaginated';

@@ -41,6 +41,10 @@ function eventKeyToken(e: KeyboardEvent): string {
   if (e.key === 'Backspace') return 'Backspace';
   if (e.key === 'Escape') return 'Escape';
   if (e.code === 'Space' || e.key === ' ') return 'Space';
+  if (e.code === 'BracketLeft') return 'BracketLeft';
+  if (e.code === 'BracketRight') return 'BracketRight';
+  if (e.key === ',') return 'Comma';
+  if (e.key === '.') return 'Period';
   if (e.key.length === 1) return e.key.toUpperCase();
   return e.key;
 }
@@ -77,6 +81,10 @@ function eventMatchesKey(e: KeyboardEvent, parsedKey: string): boolean {
 
   if (parsedKey.length === 1) {
     return token.toUpperCase() === parsedKey.toUpperCase();
+  }
+
+  if (parsedKey === 'BracketLeft' || parsedKey === 'BracketRight' || parsedKey === 'Comma' || parsedKey === 'Period') {
+    return token === parsedKey;
   }
 
   return token === parsedKey || token === expected;
