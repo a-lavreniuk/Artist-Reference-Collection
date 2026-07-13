@@ -142,6 +142,7 @@ export default function GalleryBoard({
         <GalleryCardTile
           card={card}
           thumbSrc={srcMap[card.id]}
+          gridSize={gridSize}
           inMoodboard={moodboardCardIds?.has(card.id) ?? false}
           isSelected={isCardSelected?.(card.id) ?? false}
           onCardClick={handleCardClick}
@@ -167,6 +168,7 @@ export default function GalleryBoard({
     [
       cardById,
       cards,
+      gridSize,
       handleCardClick,
       isCardSelected,
       mediaTab,

@@ -1080,6 +1080,12 @@ html[data-theme="light"] .arc-gallery-collection-card__pic--empty {
   opacity: 0;
 }
 
+.arc-masonry-grid .arc-gallery-card-shell {
+  margin-bottom: 0;
+  width: 100%;
+  break-inside: auto;
+}
+
 .arc-masonry-grid .arc-gallery-card-wrap {
   margin-bottom: 0;
   width: 100%;
@@ -1090,27 +1096,49 @@ html[data-theme="light"] .arc-gallery-collection-card__pic--empty {
   border-radius: var(--radius-m);
 }
 
+.arc-gallery-card-shell {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0 0 var(--s-4);
+  break-inside: avoid;
+  --arc-gallery-card-clip-radius: var(--radius-m);
+}
+
+.arc-gallery-card-selection-ring {
+  position: absolute;
+  inset: -4px;
+  z-index: 0;
+  border: 2px solid var(--input-border-focus);
+  border-radius: calc(var(--arc-gallery-card-clip-radius, var(--radius-m)) + 4px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.arc-gallery-card-shell.is-selected .arc-gallery-card-selection-ring,
+.arc-gallery-card-shell:focus-within .arc-gallery-card-selection-ring {
+  opacity: 1;
+}
+
 .arc-gallery-card-wrap {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   padding: 0;
-  margin: 0 0 var(--s-4);
+  margin: 0;
   border: none;
   cursor: pointer;
   text-align: left;
-  break-inside: avoid;
-  border-radius: var(--radius-m);
+  --arc-gallery-card-clip-radius: var(--radius-m);
+  border-radius: var(--arc-gallery-card-clip-radius);
   overflow: hidden;
+  contain: paint;
 }
 
 .arc-gallery-card-wrap:focus-visible {
-  outline: 2px solid var(--input-border-focus);
-  outline-offset: 2px;
-}
-
-.arc-gallery-card-wrap.is-selected {
-  outline: 2px solid var(--input-border-focus);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .arc-gallery-selection-bar {
@@ -1572,118 +1600,139 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   border: 0;
 }
 
-/* Галерея (Figma 56:11799): hover — затемнение, «Найти похожее», закладка */
+/* Галерея (Figma 829:7274): hover — shade, бейдж, кнопки, таймлайн видео */
 .arc-gallery-card-stack {
   position: relative;
   display: block;
   width: 100%;
+  overflow: hidden;
+  border-radius: var(--arc-gallery-card-clip-radius, var(--radius-m));
 }
 
-.arc-gallery-card-badge {
-  --btn-h: 24px;
-  --btn-radius: 8px;
-  --btn-pad-x: 8px;
-  --btn-gap: 6px;
-  --btn-font-size: var(--typo-p-s-size);
-  --btn-line-height: var(--typo-p-s-line);
-  --btn-font-weight: var(--typo-p-s-weight);
-  --btn-icon-size: 12px;
-  --tab-icon-size: 12px;
+.arc-gallery-card-media {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.arc-gallery-card-media .arc-gallery-thumb-wrap {
+  display: block;
+  width: 100%;
+}
+
+.arc-gallery-card-video {
   position: absolute;
-  top: var(--s-3);
-  left: var(--s-3);
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--btn-gap);
-  height: var(--btn-h);
-  padding: 0 var(--btn-pad-x);
-  border-radius: var(--btn-radius);
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   pointer-events: none;
 }
 
-.arc-gallery-card-badge .tab-icon {
-  flex-shrink: 0;
-  width: var(--btn-icon-size);
-  min-width: var(--btn-icon-size);
-  height: var(--btn-icon-size);
+.arc-gallery-card-media.is-video-playing .arc-gallery-thumb {
+  opacity: 0;
 }
 
-.arc-gallery-card-badge-label {
-  color: var(--gray-50);
-  white-space: nowrap;
+.arc-gallery-card-shade {
+  --arc-gallery-card-shade-color: var(--gray-1000);
+  --arc-gallery-card-shade-bottom-radius: 0 0 var(--arc-gallery-card-clip-radius, var(--radius-m))
+    var(--arc-gallery-card-clip-radius, var(--radius-m));
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
-.arc-gallery-card-badge--icon-only {
-  width: var(--btn-h);
-  padding: 0;
+.arc-gallery-card-shade__bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--arc-card-shade-h, 96px);
+  overflow: hidden;
+  border-radius: var(--arc-gallery-card-shade-bottom-radius);
 }
 
-/* Единый blur/fill для бейджа и overlay-кнопок карточки */
-.arc-gallery-card-badge,
-.arc-card-slot-blur-btn {
-  background: var(--Blur-Default, rgba(26, 26, 29, 0.2));
-  -webkit-backdrop-filter: blur(64px);
-  backdrop-filter: blur(64px);
-  color: var(--gray-50) !important;
+.arc-gallery-card-wrap[data-grid-size="l"] .arc-gallery-card-shade__bottom {
+  height: 128px;
 }
 
-.arc-card-slot-blur-btn {
-  border: 0 !important;
-  box-shadow: none !important;
+.arc-gallery-card-wrap[data-grid-size="m"] .arc-gallery-card-shade__bottom {
+  height: 96px;
 }
 
-.arc-card-slot-blur-btn:hover,
-.arc-card-slot-blur-btn:focus-visible {
-  background: rgba(26, 26, 29, 0.5) !important;
+.arc-gallery-card-wrap[data-grid-size="s"] .arc-gallery-card-shade__bottom {
+  height: 64px;
 }
 
-.arc-gallery-card-badge .arc-navbar-icon-svg [stroke],
-.arc-card-slot-blur-btn .arc-navbar-icon-svg [stroke] {
-  stroke: currentColor !important;
-  transition: stroke var(--transition-fast) !important;
+.arc-gallery-card-shade__blur {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: 0;
 }
 
-.arc-gallery-card-badge .arc-navbar-icon-svg [fill]:not([fill="none"]),
-.arc-card-slot-blur-btn .arc-navbar-icon-svg [fill]:not([fill="none"]) {
-  fill: currentColor !important;
-  transition: fill var(--transition-fast) !important;
+.arc-gallery-card-shade.is-active .arc-gallery-card-shade__blur {
+  opacity: 1;
 }
 
-.arc-card-slot-blur-btn .btn-ds__icon,
-.arc-card-slot-blur-btn .btn-icon-only__glyph {
-  color: currentColor !important;
+.arc-gallery-card-shade__blur-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
 }
 
-.arc-card-slot-blur-btn .btn-ds__value {
-  color: currentColor !important;
+.arc-gallery-card-shade__tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: inherit;
+  transition: opacity var(--transition-base);
+  background: linear-gradient(
+    0deg,
+    var(--arc-gallery-card-shade-color) 0%,
+    transparent 100%
+  );
 }
 
-.arc-card-slot-blur-btn .btn-ds__icon [stroke],
-.arc-card-slot-blur-btn .btn-icon-only__glyph [stroke] {
-  stroke: currentColor !important;
-  transition: stroke var(--transition-fast) !important;
+.arc-gallery-card-shade.is-active .arc-gallery-card-shade__tint {
+  opacity: 0.6;
 }
 
-.arc-card-slot-blur-btn .btn-ds__icon [fill]:not([fill="none"]),
-.arc-card-slot-blur-btn .btn-icon-only__glyph [fill]:not([fill="none"]) {
-  fill: currentColor !important;
-  transition: fill var(--transition-fast) !important;
+@media (prefers-reduced-motion: reduce) {
+  .arc-gallery-card-shade__tint {
+    transition: none;
+  }
+}
+
+html[data-theme="light"] .arc-gallery-card-shade:not([style*="--arc-gallery-card-shade-color"]) {
+  --arc-gallery-card-shade-color: var(--shade-tint-from, var(--app-bg));
 }
 
 .arc-gallery-card-overlay {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  padding: var(--s-3);
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--arc-card-overlay-gap, var(--s-3));
+  padding: var(--arc-card-overlay-pad, var(--s-3));
   background: transparent;
   opacity: 0;
-  transition: opacity var(--transition-fast);
   pointer-events: none;
+  transition: opacity var(--transition-fast);
 }
 
 .arc-gallery-card-wrap:hover .arc-gallery-card-overlay,
@@ -1692,40 +1741,181 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   pointer-events: auto;
 }
 
-.arc-gallery-card-wrap.is-in-moodboard .arc-gallery-card-overlay {
+.arc-gallery-card-overlay.is-active {
   opacity: 1;
   pointer-events: auto;
 }
 
 .arc-gallery-card-overlay-inner {
-  --btn-h: 24px;
-  --btn-radius: 8px;
-  --btn-pad-x: 8px;
-  --btn-gap: 6px;
-  --btn-font-size: var(--typo-p-s-size);
-  --btn-line-height: var(--typo-p-s-line);
-  --btn-font-weight: var(--typo-p-s-weight);
-  --btn-icon-size: 12px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--arc-card-overlay-gap, var(--s-3));
+  width: 100%;
+}
+
+.arc-gallery-card-overlay-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--s-2);
   width: 100%;
+  min-width: 0;
 }
 
-.arc-gallery-overlay-btn {
-  flex: 0 1 auto;
+.arc-gallery-card-overlay-controls__left,
+.arc-gallery-card-overlay-controls__right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.arc-gallery-card-overlay-controls__right {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.arc-gallery-card-overlay-badge,
+.arc-gallery-card-overlay-time {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.arc-gallery-card-overlay-badge--icon-only {
+  min-width: var(--btn-h);
+  padding-inline: 0;
+}
+
+.arc-gallery-card-overlay-badge .btn-ds__icon {
+  flex-shrink: 0;
+}
+
+.arc-gallery-card-overlay-time__sep {
+  color: var(--text-elev-secondary);
+}
+
+.arc-gallery-card-overlay-time .btn-ds__value.text-code-m,
+.arc-gallery-card-overlay-time .btn-ds__value.text-code-s {
+  font-family: var(--typo-code-family);
+  color: var(--btn-primary-value-default);
+}
+
+.arc-gallery-card-overlay-time .btn-ds__value.text-code-m {
+  font-size: var(--typo-code-m-size);
+  line-height: var(--typo-code-m-line);
+  font-weight: var(--typo-code-m-weight);
+}
+
+.arc-gallery-card-overlay-time .btn-ds__value.text-code-s {
+  font-size: var(--typo-code-s-size);
+  line-height: var(--typo-code-s-line);
+  font-weight: var(--typo-code-s-weight);
+}
+
+.arc-gallery-card-overlay-inner .btn-primary:hover:not(:disabled):not(:focus-visible)
+  .arc-gallery-card-overlay-time
+  .btn-ds__value.text-code-m,
+.arc-gallery-card-overlay-inner .btn-primary:hover:not(:disabled):not(:focus-visible)
+  .arc-gallery-card-overlay-time
+  .btn-ds__value.text-code-s {
+  color: var(--btn-primary-value-hover);
+}
+
+.arc-gallery-card-overlay-inner .btn-primary:focus-visible:not(:disabled)
+  .arc-gallery-card-overlay-time
+  .btn-ds__value.text-code-m,
+.arc-gallery-card-overlay-inner .btn-primary:focus-visible:not(:disabled)
+  .arc-gallery-card-overlay-time
+  .btn-ds__value.text-code-s {
+  color: var(--btn-primary-value-focus);
+}
+
+.arc-gallery-card-overlay-timeline {
+  width: 100%;
+}
+
+/* Figma 1987:23138 — Slider: rail 6px / radius s-2, fill brand / radius s-1 */
+.arc-gallery-card-video-timeline {
+  width: 100%;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.arc-gallery-card-video-timeline[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.5;
   pointer-events: none;
 }
 
-.arc-gallery-card-wrap:hover .arc-gallery-overlay-btn,
-.arc-gallery-card-wrap:focus-within .arc-gallery-overlay-btn {
+.arc-gallery-card-video-timeline__rail {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--s-2);
+  background: var(--btn-primary-fill-default);
+  overflow: hidden;
+}
+
+.arc-gallery-card-video-timeline__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  min-width: 0;
+  border-radius: var(--s-1);
+  background: var(--background-brand-default);
+  pointer-events: none;
+}
+
+.arc-gallery-card-overlay-action {
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.arc-gallery-card-wrap:hover .arc-gallery-card-overlay-action,
+.arc-gallery-card-wrap:focus-within .arc-gallery-card-overlay-action,
+.arc-gallery-card-overlay.is-active .arc-gallery-card-overlay-action {
   pointer-events: auto;
 }
 
-.arc-gallery-overlay-bookmark {
-  flex-shrink: 0;
-  margin-left: auto;
+.arc-gallery-card-wrap--overlay-suppressed .arc-gallery-card-overlay {
+  display: none;
+}
+
+.arc-gallery-card-wrap--overlay-suppressed .arc-gallery-card-shade {
+  display: none;
+}
+
+/* Primary-кнопки overlay: токены иконок на hydrated SVG */
+.arc-gallery-card-overlay-inner .btn-primary .btn-ds__icon,
+.arc-gallery-card-overlay-inner .btn-primary .btn-icon-only__glyph {
+  color: var(--btn-primary-icon-default);
+}
+
+.arc-gallery-card-overlay-inner .btn-primary:hover:not(:disabled):not(:focus-visible) .btn-ds__icon,
+.arc-gallery-card-overlay-inner .btn-primary:hover:not(:disabled):not(:focus-visible) .btn-icon-only__glyph {
+  color: var(--btn-primary-icon-hover);
+}
+
+.arc-gallery-card-overlay-inner .btn-primary:focus-visible:not(:disabled) .btn-ds__icon,
+.arc-gallery-card-overlay-inner .btn-primary:focus-visible:not(:disabled) .btn-icon-only__glyph {
+  color: var(--btn-primary-icon-focus);
+}
+
+.arc-gallery-card-overlay-inner .btn-primary .arc-navbar-icon-svg [stroke],
+.arc-gallery-card-overlay-inner .btn-primary .btn-ds__icon [stroke],
+.arc-gallery-card-overlay-inner .btn-primary .btn-icon-only__glyph [stroke] {
+  stroke: currentColor !important;
+  transition: stroke var(--transition-fast) !important;
+}
+
+.arc-gallery-card-overlay-inner .btn-primary .arc-navbar-icon-svg [fill]:not([fill="none"]),
+.arc-gallery-card-overlay-inner .btn-primary .btn-ds__icon [fill]:not([fill="none"]),
+.arc-gallery-card-overlay-inner .btn-primary .btn-icon-only__glyph [fill]:not([fill="none"]) {
+  fill: currentColor !important;
+  transition: fill var(--transition-fast) !important;
 }
 
 /* Детальная карточка — fullscreen overlay (Figma 60:8370, 897:11015, 897:11016, 927:10609) */
