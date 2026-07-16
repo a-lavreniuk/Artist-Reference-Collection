@@ -1,5 +1,6 @@
-import { mkdir, writeFile, open } from 'fs/promises';
+import { writeFile, open } from 'fs/promises';
 import path from 'path';
+import { ensureParentDir } from './zipStore';
 
 const EOCD_SIG = 0x06054b50;
 const LOCAL_SIG = 0x04034b50;
@@ -66,7 +67,7 @@ export async function extractZipStore(zipAbs: string, destRoot: string): Promise
       const exLen = lh.readUInt16LE(28);
       const dataStart = ent.localOffset + 30 + fnLen + exLen;
       const outAbs = path.join(destRoot, ent.name.split('/').join(path.sep));
-      await mkdir(path.dirname(outAbs), { recursive: true });
+      await ensureParentDir(outAbs);
       const dataBuf = Buffer.allocUnsafe(ent.uncompressedSize);
       await fh.read(dataBuf, 0, ent.uncompressedSize, dataStart);
       await writeFile(outAbs, dataBuf);

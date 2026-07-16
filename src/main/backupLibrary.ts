@@ -1,9 +1,18 @@
 import { readdir, stat } from 'fs/promises';
 import path from 'path';
-import { createHash } from 'crypto';
 import { ZipStoreWriter } from './zipStore';
 import { appendHistory } from './libraryHistory';
-import { ensureLibraryFilenamesMigrated, METADATA_FILENAME, resolveLegacyMetadataAbsPath } from './libraryFilenames';
+import {
+  CARDS_DIR,
+  ensureLibraryFilenamesMigrated,
+  fileExists,
+  INDEX_DB_FILENAME,
+  LIBRARY_META_DIR,
+  libraryMetaFileAbs,
+  METADATA_FILENAME,
+  resolveLegacyMetadataAbsPath
+} from './libraryFilenames';
+import { closeLibraryDb } from './storage/db';
 
 export type BackupProgress = {
   phase: 'scan' | 'pack' | 'hash' | 'done' | 'error';
@@ -49,22 +58,57 @@ async function walkFiles(root: string, sub: string): Promise<FileEntry[]> {
   return out;
 }
 
-async function collectBackupFiles(libraryRoot: string): Promise<FileEntry[]> {
+function addUnique(map: Map<string, FileEntry>, entries: FileEntry[]): void {
+  for (const entry of entries) {
+    if (!map.has(entry.rel)) map.set(entry.rel, entry);
+  }
+}
+
+async function fileEntryForAbs(root: string, abs: string, fallbackRel: string): Promise<FileEntry | null> {
+  try {
+    const st = await stat(abs);
+    if (!st.isFile()) return null;
+    const rel = abs.startsWith(root)
+      ? abs.slice(root.length + 1).replace(/\\/g, '/')
+      : fallbackRel;
+    return { rel, abs, size: st.size };
+  } catch {
+    return null;
+  }
+}
+
+/** Собирает файлы современной (meta/ + cards/) и legacy (media/ + arc-metadata.json) библиотеки. */
+export async function collectBackupFiles(libraryRoot: string): Promise<FileEntry[]> {
   const root = path.resolve(libraryRoot);
   await ensureLibraryFilenamesMigrated(root);
-  const metaAbs = await resolveLegacyMetadataAbsPath(root);
-  const list: FileEntry[] = [];
-  if (metaAbs) {
-    const st = await stat(metaAbs);
-    const rel = metaAbs.startsWith(root)
-      ? metaAbs.slice(root.length + 1).replace(/\\/g, '/')
-      : METADATA_FILENAME;
-    list.push({ rel, abs: metaAbs, size: st.size });
-  } else {
-    throw new Error('Нет файла arc-metadata.json в библиотеке.');
+
+  const byRel = new Map<string, FileEntry>();
+  addUnique(byRel, await walkFiles(root, LIBRARY_META_DIR));
+  addUnique(byRel, await walkFiles(root, CARDS_DIR));
+  addUnique(byRel, await walkFiles(root, 'media'));
+
+  const legacyMetaAbs = await resolveLegacyMetadataAbsPath(root);
+  if (legacyMetaAbs) {
+    const entry = await fileEntryForAbs(root, legacyMetaAbs, METADATA_FILENAME);
+    if (entry) addUnique(byRel, [entry]);
   }
-  list.push(...(await walkFiles(root, 'media')));
-  return list;
+
+  const flatIndexAbs = path.join(root, INDEX_DB_FILENAME);
+  if (await fileExists(flatIndexAbs)) {
+    const entry = await fileEntryForAbs(root, flatIndexAbs, INDEX_DB_FILENAME);
+    if (entry) addUnique(byRel, [entry]);
+  }
+
+  const hasIndexDb =
+    (await fileExists(libraryMetaFileAbs(root, INDEX_DB_FILENAME))) || (await fileExists(flatIndexAbs));
+  const hasCardsContent = [...byRel.keys()].some((rel) => rel === CARDS_DIR || rel.startsWith(`${CARDS_DIR}/`));
+  const hasLegacyMeta = legacyMetaAbs !== null;
+
+  if (!hasIndexDb && !hasCardsContent && !hasLegacyMeta) {
+    throw new Error('Не удалось найти данные библиотеки для резервной копии.');
+  }
+
+  return [...byRel.values()];
 }
 
 function partitionByParts(files: FileEntry[], partCount: number): FileEntry[][] {
@@ -100,12 +144,14 @@ export async function runBackup(opts: BackupOptions): Promise<{ ok: true } | { o
 
   try {
     onProgress({ phase: 'scan', percent: 0 });
+    closeLibraryDb();
     const files = await collectBackupFiles(root);
     if (signal.aborted) throw new Error('Отменено');
 
     const totalBytes = files.reduce((s, f) => s + f.size, 0);
     const freeCheck = totalBytes * 1.1;
     /* точная проверка свободного места — упрощённо через statvfs нет в fs; пропускаем или пишем при ENOSPC */
+    void freeCheck;
 
     const dateStr = localDateYmd(new Date());
     const baseName = `ARC_${dateStr}`;
@@ -162,7 +208,6 @@ export async function runBackup(opts: BackupOptions): Promise<{ ok: true } | { o
 
       await zip.finalize();
       await import('fs/promises').then(({ rename }) => rename(tmpPath, finalPath));
-
     }
 
     onProgress({ phase: 'done', percent: 100 });

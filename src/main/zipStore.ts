@@ -71,13 +71,26 @@ function buildLocalHeader(name: string, crc: number, size: number): Buffer {
   return local;
 }
 
+/** Корень диска/ФС (`D:\`, `/`) — mkdir на него на Windows даёт EPERM. */
+export function isFilesystemRoot(absDir: string, pathApi: path.PlatformPath = path): boolean {
+  const resolved = pathApi.resolve(absDir);
+  return resolved === pathApi.parse(resolved).root;
+}
+
+/** Создаёт родительскую папку файла; пропускает корень диска. */
+export async function ensureParentDir(filePath: string): Promise<void> {
+  const dir = path.dirname(path.resolve(filePath));
+  if (isFilesystemRoot(dir)) return;
+  await mkdir(dir, { recursive: true });
+}
+
 export class ZipStoreWriter {
   private fh: FileHandle | null = null;
   private pos = 0;
   private readonly entries: EntryMeta[] = [];
 
   static async create(absOutPath: string): Promise<ZipStoreWriter> {
-    await mkdir(path.dirname(absOutPath), { recursive: true });
+    await ensureParentDir(absOutPath);
     const w = new ZipStoreWriter();
     w.fh = await open(absOutPath, 'w');
     return w;
@@ -204,6 +217,3 @@ export class ZipStoreWriter {
   }
 }
 
-export async function ensureParentDir(filePath: string): Promise<void> {
-  await mkdir(path.dirname(filePath), { recursive: true });
-}
