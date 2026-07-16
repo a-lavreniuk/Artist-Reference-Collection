@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import { ArcAnimatedModalHost } from '../../motion';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { processTagTooltipImageFile } from './tagTooltipImage';
 
@@ -219,8 +220,9 @@ export default function TagSettingsModal({
     <>
       <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
         {({ requestClose }) => (
-          <section
+          <FloatingModalPanel
             ref={hostRef}
+            panelId="tag-settings-modal"
             className="arc-modal"
             data-elevation="raised"
             data-input-size="m"
@@ -486,7 +488,7 @@ export default function TagSettingsModal({
               </button>
             </div>
           </footer>
-          </section>
+          </FloatingModalPanel>
         )}
       </ArcAnimatedModalHost>
 

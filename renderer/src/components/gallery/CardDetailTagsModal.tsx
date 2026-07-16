@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArcAnimatedModalHost } from '../../motion';
+import { useFloatingPanelGeometry } from '../../hooks/useFloatingPanelGeometry';
 import { ContextMenuSeparator } from '../context-menu';
 import TagChipToggleWithTooltip from '../tags/TagChipToggleWithTooltip';
 import CategorySettingsModal, {
@@ -25,6 +26,19 @@ import {
   filterSidebarCategories,
   normalizeSearchQuery
 } from './tagPickerFilter';
+
+const TAGS_PICKER_PANEL_ID = 'card-detail-tags-picker';
+const TAGS_PICKER_MIN_WIDTH = 690;
+const TAGS_PICKER_MIN_HEIGHT = 400;
+const TAGS_PICKER_MOVE_ALLOW = [
+  '.arc-add-tags-picker__sidebar-head',
+  '.arc-add-tags-picker__sidebar-foot',
+  '.arc-add-tags-picker__content-fixed'
+];
+const TAGS_PICKER_SCROLL_BLOCK = [
+  '.arc-add-tags-picker__tags-scroll',
+  '.arc-add-tags-picker__sidebar-scroll'
+];
 
 type Props = {
   selectedTagIds: string[];
@@ -61,8 +75,25 @@ function PickerCategoryItem({
 }
 
 export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleTag }: Props) {
-  const hostRef = useRef<HTMLDivElement>(null);
   const tagSearchInputRef = useRef<HTMLInputElement>(null);
+  const {
+    panelRef,
+    style: panelStyle,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
+    onPointerLeave
+  } = useFloatingPanelGeometry({
+    panelId: TAGS_PICKER_PANEL_ID,
+    defaultWidth: TAGS_PICKER_MIN_WIDTH,
+    defaultHeight: TAGS_PICKER_MIN_HEIGHT,
+    minWidth: TAGS_PICKER_MIN_WIDTH,
+    minHeight: TAGS_PICKER_MIN_HEIGHT,
+    resizable: true,
+    moveAllowSelectors: TAGS_PICKER_MOVE_ALLOW,
+    scrollBlockSelectors: TAGS_PICKER_SCROLL_BLOCK
+  });
   const [tagSearch, setTagSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
@@ -143,8 +174,9 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
   };
 
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
+    if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
   }, [
+    panelRef,
     categories,
     localSelectedTagIds,
     tagSearch,
@@ -167,12 +199,18 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
       {() => (
         <>
           <div
-            ref={hostRef}
+            ref={panelRef}
             className="arc-add-tags-picker"
             role="dialog"
             aria-modal="true"
             aria-label="Добавить метки"
+            style={panelStyle}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onPointerLeave={onPointerLeave}
           >
         <aside
           className="arc-add-tags-picker__sidebar context-menu panel elevation-raised context-menu--static arc-ui-kit-scope"

@@ -2154,10 +2154,17 @@ body.arc-card-detail-open .arc-app-outlet {
   position: fixed;
   inset: 0;
   z-index: 10060;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--s-4);
+  display: block;
+  padding: 0;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+/* Shared host layout for floating (draggable) modal panels — geometry on the panel, not the host. */
+.arc-modal-host.arc-floating-modal-host {
+  display: block;
+  padding: 0;
+  overflow: hidden;
   pointer-events: auto;
 }
 
@@ -2166,13 +2173,12 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-direction: row;
   width: 690px;
   height: 400px;
-  max-width: calc(100vw - var(--s-4) * 2);
-  max-height: calc(100vh - var(--s-4) * 2);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-l);
   overflow: hidden;
   flex-shrink: 0;
   box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .arc-add-tags-picker__sidebar {
@@ -6550,11 +6556,11 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   position: fixed;
   inset: 0;
   z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--s-4);
+  display: block;
+  padding: 0;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
 }
 
 .arc-duplicates-import-modal.arc-modal {

@@ -14,7 +14,7 @@ type Props = {
 export default function ArcAnimatedModalHost({
   onClose,
   closeDisabled = false,
-  className = 'arc-modal-host',
+  className = 'arc-modal-host arc-floating-modal-host',
   hostClassName = '',
   children
 }: Props) {

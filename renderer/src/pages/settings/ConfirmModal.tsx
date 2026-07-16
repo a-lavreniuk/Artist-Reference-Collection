@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../../components/layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../../components/layout/navbarIconHydrate';
 
 type Props = {
@@ -32,8 +33,9 @@ export default function ConfirmModal({
   return (
     <ArcAnimatedModalHost onClose={onCancel}>
       {({ requestClose }) => (
-        <section
-          ref={hostRef as React.RefObject<HTMLElement>}
+        <FloatingModalPanel
+          ref={hostRef}
+          panelId="settings-confirm-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -64,7 +66,7 @@ export default function ConfirmModal({
               <span className="btn-ds__value">{confirmLabel}</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

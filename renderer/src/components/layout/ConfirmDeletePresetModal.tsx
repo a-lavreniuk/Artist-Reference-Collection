@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 type Props = {
@@ -32,8 +33,9 @@ export default function ConfirmDeletePresetModal({ presetName, onClose, onConfir
   return (
     <ArcAnimatedModalHost onClose={onClose} hostClassName="arc-navbar-no-drag">
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="confirm-delete-preset-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="s"
@@ -73,7 +75,7 @@ export default function ConfirmDeletePresetModal({ presetName, onClose, onConfir
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 type Props = {
@@ -19,7 +20,7 @@ export default function MessageModal({
   closeLabel = 'Понятно',
   hostClassName = ''
 }: Props) {
-  const hostRef = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
     if (hostRef.current) {
@@ -30,8 +31,9 @@ export default function MessageModal({
   return (
     <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="message-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -59,7 +61,7 @@ export default function MessageModal({
               <span className="btn-ds__value">{closeLabel}</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

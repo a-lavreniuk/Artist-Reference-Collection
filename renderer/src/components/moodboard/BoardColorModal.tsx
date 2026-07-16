@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import ModalCategoryColorPicker from '../layout/ModalCategoryColorPicker';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { normalizeHex } from '../../utils/colorPicker';
@@ -35,8 +36,9 @@ export default function BoardColorModal({
   return (
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="board-color-modal"
           className="arc-modal arc-modal--board-color"
           data-elevation="raised"
           data-input-size="m"
@@ -65,7 +67,7 @@ export default function BoardColorModal({
               <span className="btn-ds__value">Готово</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

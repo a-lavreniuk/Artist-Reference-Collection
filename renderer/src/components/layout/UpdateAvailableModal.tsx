@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 export type UpdateModalPhase = 'prompt' | 'downloading' | 'installing';
@@ -38,8 +39,9 @@ export default function UpdateAvailableModal({
   return (
     <ArcAnimatedModalHost onClose={onLater} closeDisabled={busy}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="update-available-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -80,7 +82,7 @@ export default function UpdateAvailableModal({
               </button>
             </footer>
           )}
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

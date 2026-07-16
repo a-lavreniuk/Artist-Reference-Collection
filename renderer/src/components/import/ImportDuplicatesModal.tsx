@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
 import { addSkippedDuplicatePair } from '../../services/db';
 import { buildAbsMediaUrl } from '../gallery/galleryMediaCache';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { cardPreviewRel, formatFileMeta } from '../duplicates/duplicateCompareUtils';
 import type { IncomingFileMeta } from '../duplicates/duplicateCompareTypes';
@@ -127,14 +128,17 @@ export default function ImportDuplicatesModal({
         if (!busy) onClose();
       }}
     >
-      <section
+      <FloatingModalPanel
         ref={modalRef}
+        panelId="import-duplicates-modal"
         className="arc-modal arc-duplicates-import-modal arc-ui-kit-scope"
         role="dialog"
         aria-modal="true"
         aria-labelledby="arcImportDupTitle"
         data-elevation="raised"
         data-btn-size="m"
+        defaultWidth={720}
+        defaultHeight={520}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="arc-modal__header arc-modal__header--title">
@@ -222,7 +226,7 @@ export default function ImportDuplicatesModal({
             </button>
           </div>
         </footer>
-      </section>
+      </FloatingModalPanel>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, CategoryStats, CategoryWeight } from '../../services/db';
 import { ArcAnimatedModalHost } from '../../motion';
 import ConfirmDeleteCategoryModal from '../layout/ConfirmDeleteCategoryModal';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import ModalCategoryColorPicker from '../layout/ModalCategoryColorPicker';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
@@ -207,8 +208,9 @@ export default function CategorySettingsModal({
     <>
       <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
         {({ requestClose }) => (
-          <section
+          <FloatingModalPanel
             ref={hostRef}
+            panelId="category-settings-modal"
             className="arc-modal"
             data-elevation="raised"
             data-input-size="m"
@@ -411,7 +413,7 @@ export default function CategorySettingsModal({
               </button>
             </footer>
           )}
-          </section>
+          </FloatingModalPanel>
         )}
       </ArcAnimatedModalHost>
 

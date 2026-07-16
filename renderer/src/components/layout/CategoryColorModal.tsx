@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import ModalCategoryColorPicker from './ModalCategoryColorPicker';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { normalizeHex } from '../../utils/colorPicker';
@@ -41,8 +42,9 @@ export default function CategoryColorModal({ initialHex, onClose, onSave }: Prop
   return (
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="category-color-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -76,7 +78,7 @@ export default function CategoryColorModal({ initialHex, onClose, onSave }: Prop
               <span className="btn-ds__value">{isSaving ? 'Сохранение…' : 'Сохранить'}</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

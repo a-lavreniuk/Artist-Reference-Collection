@@ -3,6 +3,7 @@ import type { CardRecord } from '../../services/arcSchema';
 import { setVideoPreviewFrame } from '../../services/db';
 import { ArcAnimatedModalHost } from '../../motion';
 import ValueSlider from '../range-slider/ValueSlider';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { resolveMediaUrl, cardOriginalRel } from './galleryMediaCache';
 import {
@@ -82,8 +83,9 @@ export default function VideoPreviewFrameModal({ card, onClose, onSaved }: Props
   return (
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="video-preview-frame-modal"
           className="arc-modal arc-modal--video-preview-frame"
           data-elevation="raised"
           data-input-size="m"
@@ -160,7 +162,7 @@ export default function VideoPreviewFrameModal({ card, onClose, onSaved }: Props
               <span className="btn-ds__value">{busy ? 'Сохранение…' : 'Сохранить'}</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

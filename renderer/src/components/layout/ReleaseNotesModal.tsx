@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import ReleaseNotesContent from './ReleaseNotesContent';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import { getReleaseNotesPreviewChanges, hasMoreReleaseNotes } from './releaseNotesConstants';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
@@ -28,8 +29,9 @@ export default function ReleaseNotesModal({ data, onClose, onDetails }: Props) {
   return (
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="release-notes-modal"
           className="arc-modal arc-release-notes-modal"
         data-elevation="raised"
         data-input-size="m"
@@ -72,7 +74,7 @@ export default function ReleaseNotesModal({ data, onClose, onDetails }: Props) {
             </button>
           </footer>
         )}
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

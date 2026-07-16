@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 export type ConfirmTypeToDeleteModalProps = {
@@ -10,6 +11,7 @@ export type ConfirmTypeToDeleteModalProps = {
   confirmLabel?: string;
   busyConfirmLabel?: string;
   titleId: string;
+  panelId: string;
   hostClassName?: string;
   onClose: () => void;
   onConfirm: () => Promise<void>;
@@ -23,11 +25,12 @@ export default function ConfirmTypeToDeleteModal({
   confirmLabel = 'Удалить',
   busyConfirmLabel,
   titleId,
+  panelId,
   hostClassName,
   onClose,
   onConfirm
 }: ConfirmTypeToDeleteModalProps) {
-  const hostRef = useRef<HTMLDivElement>(null);
+  const hostRef = useRef<HTMLElement>(null);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [mismatchSubmitted, setMismatchSubmitted] = useState(false);
@@ -60,8 +63,9 @@ export default function ConfirmTypeToDeleteModal({
   return (
     <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId={panelId}
           className="arc-modal"
           data-elevation="raised"
           data-input-size="s"
@@ -137,7 +141,7 @@ export default function ConfirmTypeToDeleteModal({
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

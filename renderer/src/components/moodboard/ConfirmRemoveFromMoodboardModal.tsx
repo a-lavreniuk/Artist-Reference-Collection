@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 type Props = {
@@ -38,8 +39,9 @@ export default function ConfirmRemoveFromMoodboardModal({ cardOnBoard, onClose, 
   return (
     <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="confirm-remove-from-moodboard-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="s"
@@ -77,7 +79,7 @@ export default function ConfirmRemoveFromMoodboardModal({ cardOnBoard, onClose, 
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

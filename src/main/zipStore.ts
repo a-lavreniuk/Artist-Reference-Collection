@@ -72,7 +72,7 @@ function buildLocalHeader(name: string, crc: number, size: number): Buffer {
 }
 
 /** Корень диска/ФС (`D:\`, `/`) — mkdir на него на Windows даёт EPERM. */
-export function isFilesystemRoot(absDir: string, pathApi: path.PlatformPath = path): boolean {
+export function isFilesystemRoot(absDir: string, pathApi: typeof path = path): boolean {
   const resolved = pathApi.resolve(absDir);
   return resolved === pathApi.parse(resolved).root;
 }

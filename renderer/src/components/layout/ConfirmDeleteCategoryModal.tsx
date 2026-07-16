@@ -13,6 +13,7 @@ export default function ConfirmDeleteCategoryModal({ categoryName, onClose, onCo
       message="Удаление категории приведёт к удалению всех привязанных к ней меток. Это действие не обратимо. Пожалуйста, введите название категории, чтобы подтвердить удаление."
       confirmName={categoryName}
       titleId="arcDeleteCategoryTitle"
+      panelId="confirm-delete-category-modal"
       onClose={onClose}
       onConfirm={onConfirm}
     />

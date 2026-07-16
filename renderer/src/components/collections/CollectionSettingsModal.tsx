@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CollectionRecord, CollectionStats } from '../../services/db';
 import { ArcAnimatedModalHost } from '../../motion';
 import ConfirmCollectionDeleteModal from '../layout/ConfirmCollectionDeleteModal';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 
@@ -177,8 +178,9 @@ export default function CollectionSettingsModal({
     <>
       <ArcAnimatedModalHost onClose={onClose} hostClassName={hostClassName}>
         {({ requestClose }) => (
-          <section
+          <FloatingModalPanel
             ref={hostRef}
+            panelId="collection-settings-modal"
             className="arc-modal"
             data-elevation="raised"
             data-input-size="m"
@@ -317,7 +319,7 @@ export default function CollectionSettingsModal({
               </button>
             </div>
           </footer>
-          </section>
+          </FloatingModalPanel>
         )}
       </ArcAnimatedModalHost>
 

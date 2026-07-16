@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArcAnimatedModalHost } from '../../motion';
+import { useFloatingPanelGeometry } from '../../hooks/useFloatingPanelGeometry';
 import {
   ARC_COLLECTIONS_CHANGED_EVENT,
   getAllCollections,
@@ -12,6 +13,15 @@ import {
 import CollectionSettingsModal from '../collections/CollectionSettingsModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import CollectionPickerRow from './CollectionPickerRow';
+
+const COLLECTIONS_PICKER_PANEL_ID = 'card-detail-collections-picker';
+/** Fallback when CSS size cannot be measured yet (matches --arc-collections-picker-size max). */
+const COLLECTIONS_PICKER_DEFAULT_SIZE = 560;
+const COLLECTIONS_PICKER_MOVE_ALLOW = [
+  '.arc-card-detail-collections-picker__fixed',
+  '.arc-card-detail-collections-picker__footer'
+];
+const COLLECTIONS_PICKER_SCROLL_BLOCK = ['.arc-card-detail-collections-picker__scroll'];
 
 type Props = {
   selectedCollectionIds: string[];
@@ -26,8 +36,23 @@ export default function CardDetailCollectionsModal({
   onToggleCollection,
   onCreateAndAssign
 }: Props) {
-  const hostRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const {
+    panelRef,
+    style: panelStyle,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
+    onPointerLeave
+  } = useFloatingPanelGeometry({
+    panelId: COLLECTIONS_PICKER_PANEL_ID,
+    defaultWidth: COLLECTIONS_PICKER_DEFAULT_SIZE,
+    defaultHeight: COLLECTIONS_PICKER_DEFAULT_SIZE,
+    resizable: false,
+    moveAllowSelectors: COLLECTIONS_PICKER_MOVE_ALLOW,
+    scrollBlockSelectors: COLLECTIONS_PICKER_SCROLL_BLOCK
+  });
   const [colSearch, setColSearch] = useState('');
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [collCounts, setCollCounts] = useState<Record<string, number>>({});
@@ -59,8 +84,15 @@ export default function CardDetailCollectionsModal({
   }, []);
 
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [collections, localSelectedCollectionIds, colSearch, collectionPreviews, newCollectionOpen]);
+    if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
+  }, [
+    panelRef,
+    collections,
+    localSelectedCollectionIds,
+    colSearch,
+    collectionPreviews,
+    newCollectionOpen
+  ]);
 
   const filteredCols = useMemo(() => {
     const q = colSearch.trim().toLowerCase();
@@ -91,12 +123,13 @@ export default function CardDetailCollectionsModal({
     <ArcAnimatedModalHost
       onClose={onClose}
       closeDisabled={newCollectionOpen}
+      className="arc-modal-host arc-floating-modal-host"
       hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
     >
       {() => (
         <>
           <div
-            ref={hostRef}
+            ref={panelRef}
             className="arc-card-detail-collections-picker panel elevation-raised arc-ui-kit-scope"
             data-elevation="raised"
             data-input-size="m"
@@ -104,73 +137,79 @@ export default function CardDetailCollectionsModal({
             role="dialog"
             aria-modal="true"
             aria-label="Коллекции"
+            style={panelStyle}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onPointerLeave={onPointerLeave}
           >
-        <div className="arc-card-detail-collections-picker__fixed">
-          <div className="arc-card-detail-collections-picker__inset">
-            <div
-              className={`field field-full search-live arc-card-detail-collections-picker__search${colSearch.length > 0 ? ' has-value' : ''}`}
-            >
-              <div className="input search-field input-slots">
-                <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
-                <input
-                  ref={searchInputRef}
-                  className="search-inner slot-value"
-                  placeholder="Поиск по коллекциям"
-                  value={colSearch}
-                  onChange={(e) => setColSearch(e.target.value)}
-                  aria-label="Поиск по коллекциям"
-                />
+            <div className="arc-card-detail-collections-picker__fixed">
+              <div className="arc-card-detail-collections-picker__inset">
+                <div
+                  className={`field field-full search-live arc-card-detail-collections-picker__search${colSearch.length > 0 ? ' has-value' : ''}`}
+                >
+                  <div className="input search-field input-slots">
+                    <span className="search-icon slot-leading arc-icon-search" aria-hidden="true" />
+                    <input
+                      ref={searchInputRef}
+                      className="search-inner slot-value"
+                      placeholder="Поиск по коллекциям"
+                      value={colSearch}
+                      onChange={(e) => setColSearch(e.target.value)}
+                      aria-label="Поиск по коллекциям"
+                    />
+                    <button
+                      type="button"
+                      className="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing arc-icon-close"
+                      aria-label="Очистить"
+                      onClick={() => {
+                        setColSearch('');
+                        searchInputRef.current?.focus();
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="context-menu__sep" role="separator" aria-hidden="true" />
+            </div>
+
+            <div className="arc-card-detail-collections-picker__scroll">
+              {showEmptyCatalog ? (
+                <p className="text-s arc-card-detail-collections-picker__empty">Коллекций пока нет.</p>
+              ) : showEmptySearch ? (
+                <p className="text-s arc-card-detail-collections-picker__empty">Нет совпадений по запросу.</p>
+              ) : (
+                <div className="arc-card-detail-collections-picker__list">
+                  {filteredCols.map((collection) => (
+                    <CollectionPickerRow
+                      key={collection.id}
+                      collection={collection}
+                      previews={collectionPreviews[collection.id] ?? []}
+                      count={collCounts[collection.id] ?? 0}
+                      selected={localSelectedCollectionIds.includes(collection.id)}
+                      disabled={pendingCollectionId !== null}
+                      onToggle={() => void handleToggle(collection.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="arc-card-detail-collections-picker__footer">
+              <div className="context-menu__sep" role="separator" aria-hidden="true" />
+              <div className="arc-card-detail-collections-picker__inset">
                 <button
                   type="button"
-                  className="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing arc-icon-close"
-                  aria-label="Очистить"
-                  onClick={() => {
-                    setColSearch('');
-                    searchInputRef.current?.focus();
-                  }}
-                />
+                  className="btn btn-outline btn-ds arc-card-detail-collections-picker__new"
+                  onClick={() => setNewCollectionOpen(true)}
+                >
+                  <span className="btn-ds__value">Новая коллекция</span>
+                  <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+                </button>
               </div>
             </div>
-          </div>
-          <div className="context-menu__sep" role="separator" aria-hidden="true" />
-        </div>
-
-        <div className="arc-card-detail-collections-picker__scroll">
-          {showEmptyCatalog ? (
-            <p className="text-s arc-card-detail-collections-picker__empty">Коллекций пока нет.</p>
-          ) : showEmptySearch ? (
-            <p className="text-s arc-card-detail-collections-picker__empty">Нет совпадений по запросу.</p>
-          ) : (
-            <div className="arc-card-detail-collections-picker__list">
-              {filteredCols.map((collection) => (
-                <CollectionPickerRow
-                  key={collection.id}
-                  collection={collection}
-                  previews={collectionPreviews[collection.id] ?? []}
-                  count={collCounts[collection.id] ?? 0}
-                  selected={localSelectedCollectionIds.includes(collection.id)}
-                  disabled={pendingCollectionId !== null}
-                  onToggle={() => void handleToggle(collection.id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="arc-card-detail-collections-picker__footer">
-          <div className="context-menu__sep" role="separator" aria-hidden="true" />
-          <div className="arc-card-detail-collections-picker__inset">
-            <button
-              type="button"
-              className="btn btn-outline btn-ds arc-card-detail-collections-picker__new"
-              onClick={() => setNewCollectionOpen(true)}
-            >
-              <span className="btn-ds__value">Новая коллекция</span>
-              <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
           </div>
 
           {newCollectionOpen ? (

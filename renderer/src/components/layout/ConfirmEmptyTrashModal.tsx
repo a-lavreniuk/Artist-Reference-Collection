@@ -16,6 +16,7 @@ export default function ConfirmEmptyTrashModal({ onClose, onConfirm }: Props) {
       confirmLabel="Очистить"
       busyConfirmLabel="Очистка…"
       titleId="arcEmptyTrashTitle"
+      panelId="confirm-empty-trash-modal"
       hostClassName="arc-navbar-no-drag"
       onClose={onClose}
       onConfirm={onConfirm}

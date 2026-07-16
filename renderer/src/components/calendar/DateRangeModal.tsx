@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { DatepickerMode } from '../datepicker/dateRangeText';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import Calendar, { type CalendarSelection } from './Calendar';
 
@@ -53,8 +54,9 @@ export default function DateRangeModal({ open, mode, value, onClose, onApply }: 
   return createPortal(
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="date-range-modal"
           className="arc-modal arc-modal--calendar"
           data-elevation="raised"
           data-input-size="m"
@@ -62,6 +64,8 @@ export default function DateRangeModal({ open, mode, value, onClose, onApply }: 
           role="dialog"
           aria-modal="true"
           aria-label="Выбор даты"
+          moveAllowSelectors={['.arc-modal__footer']}
+          scrollBlockSelectors={['.arc-modal__body']}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="arc-modal__body">
@@ -92,7 +96,7 @@ export default function DateRangeModal({ open, mode, value, onClose, onApply }: 
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>,
     document.body

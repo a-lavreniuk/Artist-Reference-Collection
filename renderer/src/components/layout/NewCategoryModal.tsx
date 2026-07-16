@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import ModalCategoryColorPicker from './ModalCategoryColorPicker';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { normalizeHex } from '../../utils/colorPicker';
@@ -51,8 +52,9 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
   return (
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="new-category-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -150,7 +152,7 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

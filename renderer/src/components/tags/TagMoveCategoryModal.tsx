@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
 import type { CategoryRecord } from '../../services/db';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 type Props = {
@@ -25,8 +26,9 @@ export default function TagMoveCategoryModal({
   return (
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="tag-move-category-modal"
           className="arc-modal arc-ui-kit-scope"
           data-elevation="raised"
           data-input-size="m"
@@ -80,7 +82,7 @@ export default function TagMoveCategoryModal({
               <span className="btn-ds__value">Отмена</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

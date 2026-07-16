@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import ConfirmDeletePresetModal from '../ConfirmDeletePresetModal';
 import { ArcAnimatedModalHost } from '../../../motion';
+import FloatingModalPanel from '../FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
 
 type BaseProps = {
@@ -63,8 +64,9 @@ export default function FilterPresetModal(props: Props) {
     <>
       <ArcAnimatedModalHost onClose={onClose} hostClassName="arc-navbar-no-drag">
         {({ requestClose }) => (
-          <section
+          <FloatingModalPanel
             ref={hostRef}
+            panelId="filter-preset-modal"
             className="arc-modal"
             data-elevation="raised"
             data-input-size="m"
@@ -142,7 +144,7 @@ export default function FilterPresetModal(props: Props) {
               </button>
             </footer>
           )}
-          </section>
+          </FloatingModalPanel>
         )}
       </ArcAnimatedModalHost>
 

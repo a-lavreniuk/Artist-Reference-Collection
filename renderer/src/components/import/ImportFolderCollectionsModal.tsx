@@ -11,6 +11,7 @@ import {
   type CollectionRecord
 } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import CollectionSettingsModal from '../collections/CollectionSettingsModal';
 import CollectionPickerRow from '../gallery/CollectionPickerRow';
 import SettingsRadioRow from '../settings/SettingsRadioRow';
@@ -103,8 +104,9 @@ export default function ImportFolderCollectionsModal({ drop, onClose, onConfirm 
     >
       {({ requestClose }) => (
         <>
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="import-folder-collections-modal"
           className="arc-modal arc-ui-kit-scope"
           data-elevation="raised"
           data-input-size="m"
@@ -285,7 +287,7 @@ export default function ImportFolderCollectionsModal({ drop, onClose, onConfirm 
               <span className="btn-ds__value">Импортировать</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
 
         {newCollectionOpen ? (
           <CollectionSettingsModal

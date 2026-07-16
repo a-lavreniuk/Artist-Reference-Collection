@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../../components/layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../../components/layout/navbarIconHydrate';
 
 type Props = {
@@ -19,8 +20,9 @@ export default function OldFolderModal({ pathLabel, onLeave, onTrash, onOpenInEx
   return (
     <ArcAnimatedModalHost onClose={onLeave}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="old-folder-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -59,7 +61,7 @@ export default function OldFolderModal({ pathLabel, onLeave, onTrash, onOpenInEx
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

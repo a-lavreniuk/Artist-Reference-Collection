@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArcAnimatedModalHost } from '../../motion';
+import { useFloatingPanelGeometry } from '../../hooks/useFloatingPanelGeometry';
 import {
   ARC_COLLECTIONS_CHANGED_EVENT,
   getAllCollections,
@@ -13,6 +14,14 @@ import CollectionSettingsModal from '../collections/CollectionSettingsModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import CollectionPickerRow from './CollectionPickerRow';
 import { resolveBulkCollectionState } from './galleryBulkActions';
+
+const BULK_COLLECTIONS_PICKER_PANEL_ID = 'bulk-card-collections-picker';
+const COLLECTIONS_PICKER_DEFAULT_SIZE = 560;
+const COLLECTIONS_PICKER_MOVE_ALLOW = [
+  '.arc-card-detail-collections-picker__fixed',
+  '.arc-card-detail-collections-picker__footer'
+];
+const COLLECTIONS_PICKER_SCROLL_BLOCK = ['.arc-card-detail-collections-picker__scroll'];
 
 type Props = {
   cardIds: readonly string[];
@@ -31,8 +40,23 @@ export default function BulkCardCollectionsModal({
   onCreateAndAssign,
   onApplied
 }: Props) {
-  const hostRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const {
+    panelRef,
+    style: panelStyle,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onPointerCancel,
+    onPointerLeave
+  } = useFloatingPanelGeometry({
+    panelId: BULK_COLLECTIONS_PICKER_PANEL_ID,
+    defaultWidth: COLLECTIONS_PICKER_DEFAULT_SIZE,
+    defaultHeight: COLLECTIONS_PICKER_DEFAULT_SIZE,
+    resizable: false,
+    moveAllowSelectors: COLLECTIONS_PICKER_MOVE_ALLOW,
+    scrollBlockSelectors: COLLECTIONS_PICKER_SCROLL_BLOCK
+  });
   const [colSearch, setColSearch] = useState('');
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [collCounts, setCollCounts] = useState<Record<string, number>>({});
@@ -65,8 +89,15 @@ export default function BulkCardCollectionsModal({
   }, [cardIds, cardsById]);
 
   useLayoutEffect(() => {
-    if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [collections, localStates, colSearch, collectionPreviews, newCollectionOpen]);
+    if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
+  }, [
+    panelRef,
+    collections,
+    localStates,
+    colSearch,
+    collectionPreviews,
+    newCollectionOpen
+  ]);
 
   const filteredCols = useMemo(() => {
     const q = colSearch.trim().toLowerCase();
@@ -101,7 +132,7 @@ export default function BulkCardCollectionsModal({
       {() => (
         <>
           <div
-            ref={hostRef}
+            ref={panelRef}
             className="arc-card-detail-collections-picker panel elevation-raised arc-ui-kit-scope"
             data-elevation="raised"
             data-input-size="m"
@@ -109,7 +140,13 @@ export default function BulkCardCollectionsModal({
             role="dialog"
             aria-modal="true"
             aria-label="Коллекции"
+            style={panelStyle}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onPointerLeave={onPointerLeave}
           >
             <div className="arc-card-detail-collections-picker__fixed">
               <div className="arc-card-detail-collections-picker__inset">

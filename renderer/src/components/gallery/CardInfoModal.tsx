@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { formatBytes, formatResolution } from './cardFileMetaFormat';
 
@@ -65,8 +66,9 @@ export default function CardInfoModal({ card, onClose }: Props) {
       hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
     >
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="card-info-modal"
           className="arc-modal arc-card-info-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -95,7 +97,7 @@ export default function CardInfoModal({ card, onClose }: Props) {
               <InfoRows rows={dateRows} />
             </div>
           </div>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 type Props = {
@@ -18,8 +19,9 @@ export default function SourceFilesModal({ fileCount, onKeep, onTrashSources }: 
   return (
     <ArcAnimatedModalHost onClose={onKeep} hostClassName="arc-modal-host--nested">
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="source-files-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="s"
@@ -56,7 +58,7 @@ export default function SourceFilesModal({ fileCount, onKeep, onTrashSources }: 
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from '../../components/layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../../components/layout/navbarIconHydrate';
 
 type Props = {
@@ -31,8 +32,9 @@ export default function ConfirmClearHistoryModal({ onClose, onConfirm }: Props) 
   return (
     <ArcAnimatedModalHost onClose={onClose} hostClassName="arc-navbar-no-drag">
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="confirm-clear-history-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="s"
@@ -72,7 +74,7 @@ export default function ConfirmClearHistoryModal({ onClose, onConfirm }: Props) 
               </button>
             </div>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );

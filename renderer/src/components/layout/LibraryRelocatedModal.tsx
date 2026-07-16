@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
+import FloatingModalPanel from './FloatingModalPanel';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { invalidateLibraryCache } from '../../services/db';
 
@@ -45,8 +46,9 @@ export default function LibraryRelocatedModal({ onClose }: Props) {
   return (
     <ArcAnimatedModalHost onClose={onClose}>
       {({ requestClose }) => (
-        <section
+        <FloatingModalPanel
           ref={hostRef}
+          panelId="library-relocated-modal"
           className="arc-modal"
           data-elevation="raised"
           data-input-size="m"
@@ -95,7 +97,7 @@ export default function LibraryRelocatedModal({ onClose }: Props) {
               <span className="btn-ds__value">{busy ? '…' : 'Указать папку'}</span>
             </button>
           </footer>
-        </section>
+        </FloatingModalPanel>
       )}
     </ArcAnimatedModalHost>
   );
