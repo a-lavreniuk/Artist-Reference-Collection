@@ -1,5 +1,6 @@
 import { writeFile, open } from 'fs/promises';
 import path from 'path';
+import { isInsideLibrary } from './media/arcMediaPath';
 import { ensureParentDir } from './zipStore';
 
 const EOCD_SIG = 0x06054b50;
@@ -11,6 +12,24 @@ type ZipEntry = {
   uncompressedSize: number;
   method: number;
 };
+
+/** Разобрать имя записи ZIP в путь строго внутри destRoot (защита от Zip Slip). */
+export function resolveZipEntryAbs(destRoot: string, entryName: string): string {
+  const destResolved = path.resolve(destRoot);
+  const normalized = entryName.replace(/\\/g, '/');
+  if (!normalized || normalized.startsWith('/') || /^[a-zA-Z]:/.test(normalized)) {
+    throw new Error(`Небезопасный путь в архиве: ${entryName}`);
+  }
+  const segments = normalized.split('/').filter((s) => s.length > 0);
+  if (segments.some((s) => s === '..')) {
+    throw new Error(`Небезопасный путь в архиве: ${entryName}`);
+  }
+  const outAbs = path.resolve(destResolved, ...segments);
+  if (!isInsideLibrary(destResolved, outAbs)) {
+    throw new Error(`Небезопасный путь в архиве: ${entryName}`);
+  }
+  return outAbs;
+}
 
 /** Распаковать только Store (method 0) ZIP в destRoot. */
 export async function extractZipStore(zipAbs: string, destRoot: string): Promise<void> {
@@ -58,6 +77,7 @@ export async function extractZipStore(zipAbs: string, destRoot: string): Promise
       p += 46 + nameLen + extraLen + commentLen;
     }
 
+    const destResolved = path.resolve(destRoot);
     for (const ent of entries) {
       if (ent.method !== 0) throw new Error(`Неподдерживаемое сжатие в ZIP: ${ent.name}`);
       const lh = Buffer.allocUnsafe(30);
@@ -66,7 +86,7 @@ export async function extractZipStore(zipAbs: string, destRoot: string): Promise
       const fnLen = lh.readUInt16LE(26);
       const exLen = lh.readUInt16LE(28);
       const dataStart = ent.localOffset + 30 + fnLen + exLen;
-      const outAbs = path.join(destRoot, ent.name.split('/').join(path.sep));
+      const outAbs = resolveZipEntryAbs(destResolved, ent.name);
       await ensureParentDir(outAbs);
       const dataBuf = Buffer.allocUnsafe(ent.uncompressedSize);
       await fh.read(dataBuf, 0, ent.uncompressedSize, dataStart);
