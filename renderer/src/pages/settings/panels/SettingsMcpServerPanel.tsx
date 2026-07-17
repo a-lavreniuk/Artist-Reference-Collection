@@ -22,9 +22,14 @@ const HINT_TAGS =
 const HINT_RESOURCES =
   'Медиа-ресурсы карточек, такие как превью и оригиналы, доступны MCP-клиентам по адресам arc://card/{id}/thumb и /original. Это возможно, если переключатель в группе «Карточки — чтение» активирован.';
 const HINT_PRIVACY =
-  'При использовании облачной модели информация о файлах, метках и результатах поиска может попадать в контекст LLM-провайдера. Чтобы защитить чувствительные данные, рекомендуется использовать локальную модель или ограничить доступ только чтением.';
+  'При использовании облачной модели информация о файлах, метках и результатах поиска может попадать в контекст LLM-провайдера. Чтобы защитить чувствительные данные, рекомендуется использовать локальную модель или режим только чтения.';
 const HINT_TOOLS =
   'Отключённые инструменты недоступны MCP-клиентам до переподключения.';
+const HINT_CONNECT_TITLE = 'Как подключить ARC-MCP для вашего агента:';
+const HINT_CONNECT_1 = 'Включите агента.';
+const HINT_CONNECT_2 = 'Нажмите «Копировать».';
+const HINT_CONNECT_3 =
+  'В чате агента попросите его установить сервер и вставьте содержимое буфера.';
 const COPY_SUCCESS_MESSAGE = 'Конфигурация MCP сервера скопирована в буфер';
 
 const MCP_PORT = 47897;
@@ -47,33 +52,22 @@ export default function SettingsMcpServerPanel() {
     []
   );
 
-  const mcpJson = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          mcpServers: {
-            'arc-mcp': {
-              transport: 'http',
-              type: 'streamable-http',
-              streamable: true,
-              url: `http://127.0.0.1:${MCP_PORT}/mcp`
-            }
-          }
-        },
-        null,
-        2
-      ),
-    []
-  );
-
-  const copyMcpJson = useCallback(() => {
-    void navigator.clipboard
-      .writeText(mcpJson)
-      .then(() => setCopyAlertKey((key) => key + 1))
+  const copyMcpPackage = useCallback(() => {
+    const getPackage = window.arc?.getMcpSetupPackage;
+    if (!getPackage) return;
+    void getPackage()
+      .then(async (result) => {
+        if (!result?.ok || !result.text) return false;
+        await navigator.clipboard.writeText(result.text);
+        return true;
+      })
+      .then((ok) => {
+        if (ok) setCopyAlertKey((key) => key + 1);
+      })
       .catch(() => {
-        /* clipboard unavailable */
+        /* clipboard / IPC unavailable */
       });
-  }, [mcpJson]);
+  }, []);
 
   const setToolEnabled = (toolId: McpToolId, pressed: boolean) => {
     void update({
@@ -85,82 +79,84 @@ export default function SettingsMcpServerPanel() {
 
   return (
     <>
-    <div className="arc-settings-main__scroll arc-settings-shortcuts-panel">
-      <div className="arc-settings-main__content arc-ui-kit-scope" data-btn-size="m">
-        <div className="arc-settings-desc-block">
-          <p className="text-m arc-settings-desc-block__text">{HINT_INTRO}</p>
-          <p className="text-m arc-settings-desc-block__text">{HINT_TAGS}</p>
-          <p className="text-m arc-settings-desc-block__text">{HINT_RESOURCES}</p>
-          <p className="text-m arc-settings-desc-block__text">{HINT_PRIVACY}</p>
-          <SettingsToggleRow
-            label={LABEL_ENABLE}
-            pressed={mcpEnabled}
-            disabled={disabled}
-            onPressedChange={(mcpServerEnabled) => void update({ mcpServerEnabled })}
-          />
-          {mcpEnabled ? (
-            <>
-              <SettingsSeparator />
-              <p className="text-m arc-settings-desc-block__text">
-                Порт: <span className="text-code-m">{MCP_PORT}</span>
-              </p>
-              <p className="text-m arc-settings-desc-block__text">Конфигурация (mcp.json):</p>
-              <pre className="text-code-m arc-settings-desc-block__text arc-settings-mcp-json">{mcpJson}</pre>
-              <div className="arc-ui-kit-scope" data-btn-size="s">
-                <button
-                  type="button"
-                  className="btn btn-outline btn-ds btn-s"
-                  disabled={disabled}
-                  onClick={copyMcpJson}
-                >
-                  <span className="btn-ds__value">Копировать</span>
-                </button>
-              </div>
-              <SettingsSeparator className="arc-settings-separator--flush-bottom" />
-            </>
-          ) : null}
-        </div>
-      </div>
-
-      {mcpEnabled ? (
-        <div
-          className={`arc-settings-shortcuts-panel__list arc-settings-shortcuts-panel__list--compact-top arc-ui-kit-scope${ready ? ' is-prefs-ready' : ''}`}
-          data-btn-size="m"
-        >
-          <div className="arc-settings-shortcuts-panel__group">
-            <SettingsSection title="Инструменты MCP">
-              <p className="text-m arc-settings-desc-block__text">{HINT_TOOLS}</p>
-            </SettingsSection>
-          </div>
-          {toolGroups.map((entry) => (
-            <div key={entry.group.id} className="arc-settings-shortcuts-panel__group">
-              <SettingsSeparator />
-              <SettingsSection title={`${entry.group.title} (${entry.tools.length})`}>
-                {entry.tools.map((tool) => (
-                  <SettingsMcpToolRow
-                    key={tool.id}
-                    label={tool.label}
-                    toolId={tool.id}
-                    pressed={toolsEnabled[tool.id]}
+      <div className="arc-settings-main__scroll arc-settings-shortcuts-panel">
+        <div className="arc-settings-main__content arc-ui-kit-scope" data-btn-size="m">
+          <div className="arc-settings-desc-block">
+            <p className="text-m arc-settings-desc-block__text">{HINT_INTRO}</p>
+            <p className="text-m arc-settings-desc-block__text">{HINT_TAGS}</p>
+            <p className="text-m arc-settings-desc-block__text">{HINT_RESOURCES}</p>
+            <p className="text-m arc-settings-desc-block__text">{HINT_PRIVACY}</p>
+            <SettingsToggleRow
+              label={LABEL_ENABLE}
+              pressed={mcpEnabled}
+              disabled={disabled}
+              onPressedChange={(mcpServerEnabled) => void update({ mcpServerEnabled })}
+            />
+            {mcpEnabled ? (
+              <>
+                <SettingsSeparator />
+                <p className="text-m arc-settings-desc-block__text">
+                  Порт: <span className="text-code-m">{MCP_PORT}</span>
+                </p>
+                <p className="text-m arc-settings-desc-block__text">{HINT_CONNECT_TITLE}</p>
+                <p className="text-m arc-settings-desc-block__text">1. {HINT_CONNECT_1}</p>
+                <p className="text-m arc-settings-desc-block__text">2. {HINT_CONNECT_2}</p>
+                <p className="text-m arc-settings-desc-block__text">3. {HINT_CONNECT_3}</p>
+                <div className="arc-ui-kit-scope arc-settings-mcp-actions" data-btn-size="s">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-ds btn-s"
                     disabled={disabled}
-                    onPressedChange={(pressed) => setToolEnabled(tool.id, pressed)}
-                  />
-                ))}
+                    onClick={copyMcpPackage}
+                  >
+                    <span className="btn-ds__value">Копировать</span>
+                  </button>
+                </div>
+                <SettingsSeparator className="arc-settings-separator--flush-bottom" />
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        {mcpEnabled ? (
+          <div
+            className={`arc-settings-shortcuts-panel__list arc-settings-shortcuts-panel__list--compact-top arc-ui-kit-scope${ready ? ' is-prefs-ready' : ''}`}
+            data-btn-size="m"
+          >
+            <div className="arc-settings-shortcuts-panel__group">
+              <SettingsSection title="Инструменты MCP">
+                <p className="text-m arc-settings-desc-block__text">{HINT_TOOLS}</p>
               </SettingsSection>
             </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
+            {toolGroups.map((entry) => (
+              <div key={entry.group.id} className="arc-settings-shortcuts-panel__group">
+                <SettingsSeparator />
+                <SettingsSection title={`${entry.group.title} (${entry.tools.length})`}>
+                  {entry.tools.map((tool) => (
+                    <SettingsMcpToolRow
+                      key={tool.id}
+                      label={tool.label}
+                      toolId={tool.id}
+                      pressed={toolsEnabled[tool.id]}
+                      disabled={disabled}
+                      onPressedChange={(pressed) => setToolEnabled(tool.id, pressed)}
+                    />
+                  ))}
+                </SettingsSection>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
-    {copyAlertKey > 0 ? (
-      <DemoAlert
-        key={copyAlertKey}
-        message={COPY_SUCCESS_MESSAGE}
-        variant="success"
-        onClose={() => setCopyAlertKey(0)}
-      />
-    ) : null}
+      {copyAlertKey > 0 ? (
+        <DemoAlert
+          key={`copy-${copyAlertKey}`}
+          message={COPY_SUCCESS_MESSAGE}
+          variant="success"
+          onClose={() => setCopyAlertKey(0)}
+        />
+      ) : null}
     </>
   );
 }

@@ -349,6 +349,8 @@ contextBridge.exposeInMainWorld('arc', {
       aiGpuLayers: number;
       aiMaxRamMb: number;
     }>,
+  getMcpSetupPackage: () =>
+    ipcRenderer.invoke('arc:get-mcp-setup-package') as Promise<{ ok: true; text: string }>,
   autoImportRescan: () => ipcRenderer.invoke('arc:auto-import-rescan') as Promise<{ ok: true }>,
   onAutoImportProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => {
     const fn = (_: unknown, payload: { current: number; total: number; message?: string }) => cb(payload);

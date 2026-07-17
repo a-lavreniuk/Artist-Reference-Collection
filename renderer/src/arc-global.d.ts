@@ -246,6 +246,7 @@ declare global {
       windowCloseToTray: () => Promise<{ ok: boolean }>;
       getAppPreferences: () => Promise<import('./services/appPreferences').AppPreferencesV1>;
       setAppPreferences: (patch: Partial<import('./services/appPreferences').AppPreferencesV1>) => Promise<import('./services/appPreferences').AppPreferencesV1>;
+      getMcpSetupPackage?: () => Promise<{ ok: true; text: string }>;
       onScreenshotSaved: (cb: (detail: { cardId: string }) => void) => () => void;
       onExtensionImportSaved?: (cb: (detail: { cardIds: string[]; collectionId?: string; quiet?: boolean }) => void) => () => void;
       onMcpTagCatalogChanged?: (cb: () => void) => () => void;

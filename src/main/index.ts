@@ -7,11 +7,19 @@ import {
   consumePendingDeepLink,
   registerArcProtocolClient
 } from './deepLink';
+import { isMcpStdioArgv } from './mcp/mcpStdioArgv';
+import { runMcpStdioHost, silenceStdoutLogging } from './mcp/mcpStdioHost';
 
 configureAppProfile();
-registerArcProtocolClient();
-if (!bindDeepLinkSingleInstance()) {
-  process.exit(0);
+
+const mcpStdioMode = isMcpStdioArgv();
+if (mcpStdioMode) {
+  silenceStdoutLogging();
+} else {
+  registerArcProtocolClient();
+  if (!bindDeepLinkSingleInstance()) {
+    process.exit(0);
+  }
 }
 
 import { appIconPath } from './appIcon';
@@ -24,6 +32,7 @@ import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServer
 import { clearMediaStagingTokens, registerMediaStagingToken } from './media/mediaStagingTokens';
 import { startImportApiServer, stopImportApiServer } from './importApi/importApiHost';
 import { startMcpServer, stopMcpServer } from './mcp/mcpHost';
+import { registerMcpSetupIpc } from './mcp/mcpSetupClipboard';
 import { createAppTray, destroyAppTray } from './tray';
 import { bindFileDropGuards } from './fileDropGuards';
 import { bindRendererShortcuts } from './rendererShortcuts';
@@ -134,11 +143,23 @@ function createWindow(onboardingMode = false): BrowserWindow {
   return win;
 }
 
-app.on('web-contents-created', (_event, contents) => {
-  bindFileDropGuards(contents);
-});
+if (!mcpStdioMode) {
+  app.on('web-contents-created', (_event, contents) => {
+    bindFileDropGuards(contents);
+  });
+}
 
 app.whenReady().then(async () => {
+  if (mcpStdioMode) {
+    try {
+      await runMcpStdioHost();
+    } catch (err) {
+      console.error('[ARC MCP stdio]', err instanceof Error ? err.message : err);
+      app.exit(1);
+    }
+    return;
+  }
+
   Menu.setApplicationMenu(null);
   nativeTheme.themeSource = 'system';
 
@@ -188,6 +209,7 @@ app.whenReady().then(async () => {
   await refreshBrandingIconIfNeeded();
   registerArcIpc();
   registerAppPreferencesIpc();
+  registerMcpSetupIpc();
   registerWindowChromeIpc();
   registerScreenshotIpc();
   registerScreenshotPickerIpc();
@@ -238,27 +260,29 @@ app.whenReady().then(async () => {
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+if (!mcpStdioMode) {
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
 
-app.on('will-quit', () => {
-  syncPendingHiddenAutostartMarker(readAppPreferencesSync());
-  void refreshLibrarySessionSnapshotFromDisk();
-  shutdownArcMediaServer();
-  clearMediaStagingTokens();
-  stopImportApiServer();
-  void stopMcpServer();
-  destroyAppTray();
-  unregisterDevToolsShortcuts();
-  unregisterScreenshotShortcuts();
-  unregisterFeedbackShortcut();
-  destroyScreenshotOverlay();
-  destroyScreenshotWindowPicker();
-  destroyCardViewerWindows();
-  destroyLoadingSplash();
-  shutdownAiWorker();
-  void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());
-});
+  app.on('will-quit', () => {
+    syncPendingHiddenAutostartMarker(readAppPreferencesSync());
+    void refreshLibrarySessionSnapshotFromDisk();
+    shutdownArcMediaServer();
+    clearMediaStagingTokens();
+    stopImportApiServer();
+    void stopMcpServer();
+    destroyAppTray();
+    unregisterDevToolsShortcuts();
+    unregisterScreenshotShortcuts();
+    unregisterFeedbackShortcut();
+    destroyScreenshotOverlay();
+    destroyScreenshotWindowPicker();
+    destroyCardViewerWindows();
+    destroyLoadingSplash();
+    shutdownAiWorker();
+    void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());
+  });
+}

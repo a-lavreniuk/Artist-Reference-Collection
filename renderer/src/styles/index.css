@@ -5671,6 +5671,13 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   word-break: break-word;
 }
 
+.arc-settings-mcp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1);
+}
+
 .arc-settings-action-row {
   display: flex;
   flex-direction: row;
