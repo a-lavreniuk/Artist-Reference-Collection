@@ -65,6 +65,7 @@ export default function LibraryCollectionsStrip({ items, onCollectionContextMenu
                 collection={item.collection}
                 previews={item.previews}
                 count={item.count}
+                mediaTab="gallery"
                 onOpen={() => {
                   if (shouldSuppressChildClick()) return;
                   navigate(`/collections/${item.collection.id}`);

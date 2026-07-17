@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import type { CardRecord, CollectionRecord } from '../../services/db';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 import { useCardSectionMediaActive } from '../layout/cardSectionMedia';
-import { peekCardsSrcMap, resolveCardsSrcMap } from '../gallery/galleryMediaCache';
+import {
+  peekCardsSrcMap,
+  resolveCardsSrcMap,
+  type MediaSectionTab
+} from '../gallery/galleryMediaCache';
 
 const PREVIEW_SLOTS = 4;
 
@@ -12,11 +16,20 @@ type Props = {
   count: number;
   onOpen: () => void;
   onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  /** Должен совпадать с активной вкладкой CardSectionsShell (`?sect=` на media-server). */
+  mediaTab?: MediaSectionTab;
 };
 
-export default function CollectionGalleryCard({ collection, previews, count, onOpen, onContextMenu }: Props) {
+export default function CollectionGalleryCard({
+  collection,
+  previews,
+  count,
+  onOpen,
+  onContextMenu,
+  mediaTab = 'gallery'
+}: Props) {
   const [srcMap, setSrcMap] = useState<Record<string, string>>({});
-  const stripMediaActive = useCardSectionMediaActive('gallery');
+  const stripMediaActive = useCardSectionMediaActive(mediaTab);
 
   useEffect(() => {
     const cards = previews.slice(0, PREVIEW_SLOTS);
@@ -24,17 +37,17 @@ export default function CollectionGalleryCard({ collection, previews, count, onO
       setSrcMap({});
       return;
     }
-    const peek = peekCardsSrcMap(cards, 's', 'gallery');
+    const peek = peekCardsSrcMap(cards, 's', mediaTab);
     setSrcMap(peek);
     if (!stripMediaActive) return;
     let cancelled = false;
-    void resolveCardsSrcMap(cards, 's', 'gallery').then((next) => {
+    void resolveCardsSrcMap(cards, 's', mediaTab).then((next) => {
       if (!cancelled) setSrcMap((prev) => ({ ...prev, ...next }));
     });
     return () => {
       cancelled = true;
     };
-  }, [previews, collection.id, stripMediaActive]);
+  }, [previews, collection.id, stripMediaActive, mediaTab]);
 
   return (
     <button

@@ -54,23 +54,55 @@ const MAX_MEDIA_URL_CACHE_ENTRIES = 1024;
 
 const urlByRel = new Map<string, string>();
 
-let cachedMediaServerOrigin: string | null | undefined;
+/** Только валидный HTTP(S) origin; `undefined` = ещё не удалось получить (не кэшируем null). */
+let cachedMediaServerOrigin: string | undefined;
+
+const FALLBACK_MEDIA_ORIGIN = 'arc-media://localhost';
 
 function mediaCacheKey(rel: string, sect?: MediaSectionTab): string {
   return sect ? `${sect}\0${rel}` : rel;
 }
 
-function mediaServerOrigin(): string {
-  if (cachedMediaServerOrigin !== undefined) {
-    return cachedMediaServerOrigin ?? 'arc-media://localhost';
+function isUsableMediaOrigin(origin: string | null | undefined): origin is string {
+  if (!origin) return false;
+  const normalized = origin.replace(/\/$/, '');
+  return normalized.startsWith('http://') || normalized.startsWith('https://');
+}
+
+function purgeFallbackOriginUrls(): void {
+  for (const [key, href] of [...urlByRel.entries()]) {
+    if (href.includes(FALLBACK_MEDIA_ORIGIN)) {
+      urlByRel.delete(key);
+    }
   }
+}
+
+function mediaServerOrigin(): string {
+  if (isUsableMediaOrigin(cachedMediaServerOrigin)) {
+    return cachedMediaServerOrigin.replace(/\/$/, '');
+  }
+
   if (typeof window !== 'undefined' && window.arc?.getMediaServerOrigin) {
     const origin = window.arc.getMediaServerOrigin();
-    cachedMediaServerOrigin = origin ?? null;
-    if (origin) return origin.replace(/\/$/, '');
+    if (isUsableMediaOrigin(origin)) {
+      const normalized = origin.replace(/\/$/, '');
+      const hadFallbackUrls = [...urlByRel.values()].some((href) =>
+        href.includes(FALLBACK_MEDIA_ORIGIN)
+      );
+      cachedMediaServerOrigin = normalized;
+      if (hadFallbackUrls) purgeFallbackOriginUrls();
+      return normalized;
+    }
   }
-  cachedMediaServerOrigin = null;
-  return 'arc-media://localhost';
+
+  // Не закрепляем null: следующий вызов снова спросит getMediaServerOrigin.
+  return FALLBACK_MEDIA_ORIGIN;
+}
+
+/** Сбросить sticky origin и перечитать с main (после ошибки загрузки превью). */
+export function refreshMediaServerOrigin(): string {
+  cachedMediaServerOrigin = undefined;
+  return mediaServerOrigin();
 }
 
 export function buildLibraryMediaUrl(
@@ -112,6 +144,8 @@ function setMediaUrlCache(key: string, href: string): void {
 }
 
 function rememberMediaUrl(rel: string, href: string, sect?: MediaSectionTab): void {
+  // Не кэшируем битые URL с fallback-origin — иначе они залипнут после появления реального origin.
+  if (href.includes(FALLBACK_MEDIA_ORIGIN)) return;
   const key = mediaCacheKey(rel, sect);
   setMediaUrlCache(key, href);
   const stable = rel.replace(/\\/g, '/');
@@ -295,5 +329,10 @@ export async function preloadDecodedImages(
 
 export function clearGalleryMediaUrlCache(): void {
   urlByRel.clear();
+  cachedMediaServerOrigin = undefined;
+}
+
+/** Для тестов: сброс модуля без полного clear URL-кэша по желанию. */
+export function __resetMediaServerOriginForTests(): void {
   cachedMediaServerOrigin = undefined;
 }
