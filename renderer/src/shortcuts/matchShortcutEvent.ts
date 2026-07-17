@@ -33,7 +33,16 @@ function parseAccelerator(accelerator: string): ParsedAccelerator {
   };
 }
 
+/** Physical letter from KeyboardEvent.code — layout-independent (EN/RU/…). */
+export function physicalLetterFromCode(code: string): string | null {
+  const match = /^Key([A-Z])$/.exec(code);
+  return match?.[1] ?? null;
+}
+
 function eventKeyToken(e: KeyboardEvent): string {
+  const physicalLetter = physicalLetterFromCode(e.code);
+  if (physicalLetter) return physicalLetter;
+
   if (e.key === '+' || e.key === '=') return e.shiftKey && e.key === '=' ? 'Plus' : 'Equal';
   if (e.key === '-') return 'Minus';
   if (e.key === '`') return 'Backquote';
@@ -43,8 +52,10 @@ function eventKeyToken(e: KeyboardEvent): string {
   if (e.code === 'Space' || e.key === ' ') return 'Space';
   if (e.code === 'BracketLeft') return 'BracketLeft';
   if (e.code === 'BracketRight') return 'BracketRight';
-  if (e.key === ',') return 'Comma';
-  if (e.key === '.') return 'Period';
+  if (e.code === 'Comma' || e.key === ',') return 'Comma';
+  if (e.code === 'Period' || e.key === '.') return 'Period';
+  if (e.code.startsWith('Digit')) return e.code.slice(5);
+  if (e.code.startsWith('Numpad') && /^\d$/.test(e.code.slice(6))) return e.code.slice(6);
   if (e.key.length === 1) return e.key.toUpperCase();
   return e.key;
 }
@@ -76,15 +87,18 @@ function eventMatchesKey(e: KeyboardEvent, parsedKey: string): boolean {
   }
 
   if (expected.startsWith('Arrow')) {
-    return token === expected || token === parsedKey;
+    return token === expected || token === parsedKey || e.key === expected || e.code === expected;
   }
 
-  if (parsedKey.length === 1) {
+  // Single Latin letter in accelerator: match physical key so RU layout works (KeyR → "к").
+  if (parsedKey.length === 1 && /[A-Za-z]/.test(parsedKey)) {
+    const physical = physicalLetterFromCode(e.code);
+    if (physical) return physical === parsedKey.toUpperCase();
     return token.toUpperCase() === parsedKey.toUpperCase();
   }
 
   if (parsedKey === 'BracketLeft' || parsedKey === 'BracketRight' || parsedKey === 'Comma' || parsedKey === 'Period') {
-    return token === parsedKey;
+    return token === parsedKey || e.code === parsedKey;
   }
 
   return token === parsedKey || token === expected;
@@ -128,16 +142,22 @@ export function matchesShortcut(e: KeyboardEvent, id: ShortcutId): boolean {
   return list.some((acc) => matchesParsed(e, parseAccelerator(acc)));
 }
 
-/** Undo: mod+Z without shift (shift+Z is redo). */
+function eventMatchesPhysicalLetter(e: KeyboardEvent, letter: string): boolean {
+  const physical = physicalLetterFromCode(e.code);
+  if (physical) return physical === letter.toUpperCase();
+  return e.key.toLowerCase() === letter.toLowerCase();
+}
+
+/** Undo: mod+Z without shift (shift+Z is redo). Layout-independent via KeyZ. */
 export function matchesMoodboardUndo(e: KeyboardEvent): boolean {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return false;
-  if (e.key.toLowerCase() !== 'z') return false;
+  if (!eventMatchesPhysicalLetter(e, 'Z')) return false;
   return !e.shiftKey;
 }
 
-/** Redo: mod+Y or mod+Shift+Z. */
+/** Redo: mod+Y or mod+Shift+Z. Layout-independent via KeyY / KeyZ. */
 export function matchesMoodboardRedo(e: KeyboardEvent): boolean {
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return false;
-  if (e.key.toLowerCase() === 'y') return true;
-  return e.shiftKey && e.key.toLowerCase() === 'z';
+  if (eventMatchesPhysicalLetter(e, 'Y')) return true;
+  return e.shiftKey && eventMatchesPhysicalLetter(e, 'Z');
 }

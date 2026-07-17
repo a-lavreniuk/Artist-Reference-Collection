@@ -52,7 +52,12 @@ export type ShortcutId =
   | 'video.speedDown'
   | 'video.speedUp'
   | 'video.copyFrame'
-  | 'video.saveFrame';
+  | 'video.saveFrame'
+  | 'viewer.rotateCw'
+  | 'viewer.rotateCcw'
+  | 'viewer.undo'
+  | 'viewer.redo'
+  | 'viewer.reset';
 
 export type ShortcutGroupId =
   | 'global'
@@ -61,7 +66,8 @@ export type ShortcutGroupId =
   | 'gallery'
   | 'moodboard'
   | 'detail'
-  | 'video';
+  | 'video'
+  | 'viewer';
 
 export type ShortcutDefinition = {
   id: ShortcutId;
@@ -88,7 +94,8 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroupDefinition[] = [
   { id: 'gallery', title: 'Галерея' },
   { id: 'moodboard', title: 'Мудборд' },
   { id: 'detail', title: 'Деталка карточки' },
-  { id: 'video', title: 'Видеоплеер' }
+  { id: 'video', title: 'Видеоплеер' },
+  { id: 'viewer', title: 'Окно карточки' }
 ] as const;
 
 export const SHORTCUTS: readonly ShortcutDefinition[] = [
@@ -447,6 +454,46 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'video',
     label: 'Сохранить кадр',
     defaultAccelerator: 'Shift+S',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'viewer.rotateCw',
+    groupId: 'viewer',
+    label: 'Повернуть вправо',
+    defaultAccelerator: 'R',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'viewer.rotateCcw',
+    groupId: 'viewer',
+    label: 'Повернуть влево',
+    defaultAccelerator: 'Shift+R',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'viewer.undo',
+    groupId: 'viewer',
+    label: 'Отменить',
+    defaultAccelerator: 'CommandOrControl+Z',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'viewer.redo',
+    groupId: 'viewer',
+    label: 'Вернуть',
+    defaultAccelerator: ['CommandOrControl+Y', 'CommandOrControl+Shift+Z'],
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'viewer.reset',
+    groupId: 'viewer',
+    label: 'Сбросить вид',
+    defaultAccelerator: 'CommandOrControl+0',
     scope: 'renderer',
     settingsVisible: true
   }

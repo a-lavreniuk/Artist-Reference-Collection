@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
-type PanOffset = { x: number; y: number };
+export type CardViewerPanOffset = { x: number; y: number };
 
 type PanDragState = {
   pointerId: number;
@@ -11,13 +11,13 @@ type PanDragState = {
 };
 
 export function useCardViewerPan(enabled: boolean, resetKey: string) {
-  const [offset, setOffset] = useState<PanOffset>({ x: 0, y: 0 });
+  const [offset, setOffset] = useState<CardViewerPanOffset>({ x: 0, y: 0 });
   const dragRef = useRef<PanDragState | null>(null);
 
   useEffect(() => {
     setOffset({ x: 0, y: 0 });
     dragRef.current = null;
-  }, [enabled, resetKey]);
+  }, [resetKey]);
 
   const finishPan = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const drag = dragRef.current;
@@ -57,6 +57,7 @@ export function useCardViewerPan(enabled: boolean, resetKey: string) {
 
   return {
     offset,
+    setOffset,
     panHandlers: {
       onPointerDown,
       onPointerMove,

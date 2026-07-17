@@ -14,8 +14,15 @@ export const DEFAULT_VIEWER_TRANSFORM: ViewerTransform = {
   grayscale: false
 };
 
+/** Поворот по часовой стрелке на 90°. */
 export function rotateViewerTransform(transform: ViewerTransform): ViewerTransform {
   const next = ((transform.rotateDeg + 90) % 360) as ViewerTransform['rotateDeg'];
+  return { ...transform, rotateDeg: next };
+}
+
+/** Поворот против часовой стрелки на 90°. */
+export function rotateViewerTransformCcw(transform: ViewerTransform): ViewerTransform {
+  const next = ((transform.rotateDeg + 270) % 360) as ViewerTransform['rotateDeg'];
   return { ...transform, rotateDeg: next };
 }
 

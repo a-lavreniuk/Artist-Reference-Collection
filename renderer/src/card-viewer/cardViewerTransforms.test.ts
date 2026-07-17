@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_VIEWER_TRANSFORM,
   rotateViewerTransform,
+  rotateViewerTransformCcw,
   toggleViewerFlipH,
   toggleViewerFlipV,
   toggleViewerGrayscale,
@@ -9,9 +10,14 @@ import {
 } from './cardViewerTransforms';
 
 describe('cardViewerTransforms', () => {
-  it('rotates in 90 degree steps', () => {
+  it('rotates clockwise in 90 degree steps', () => {
     expect(rotateViewerTransform(DEFAULT_VIEWER_TRANSFORM).rotateDeg).toBe(90);
     expect(rotateViewerTransform({ ...DEFAULT_VIEWER_TRANSFORM, rotateDeg: 270 }).rotateDeg).toBe(0);
+  });
+
+  it('rotates counter-clockwise in 90 degree steps', () => {
+    expect(rotateViewerTransformCcw(DEFAULT_VIEWER_TRANSFORM).rotateDeg).toBe(270);
+    expect(rotateViewerTransformCcw({ ...DEFAULT_VIEWER_TRANSFORM, rotateDeg: 90 }).rotateDeg).toBe(0);
   });
 
   it('toggles flip and grayscale', () => {

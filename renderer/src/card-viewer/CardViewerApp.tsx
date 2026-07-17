@@ -5,24 +5,39 @@ import {
   useMemo,
   useRef,
   useState,
-  type PointerEvent as ReactPointerEvent
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent
 } from 'react';
 import { ContextMenu } from '../components/context-menu';
 import type { ContextMenuRow } from '../components/context-menu';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import ValueSlider from '../components/range-slider/ValueSlider';
 import { Tooltip } from '../components/tooltip/Tooltip';
+import { matchesShortcut } from '../shortcuts/matchShortcutEvent';
+import { isEditableTarget } from '../shortcuts/shortcutGuards';
+import { shortcutMenuLabel } from '../shortcuts/shortcutLabels';
+import {
+  canRedoCardViewerHistory,
+  canUndoCardViewerHistory,
+  createCardViewerHistory,
+  pushCardViewerHistory,
+  redoCardViewerHistory,
+  undoCardViewerHistory,
+  type CardViewerHistoryState,
+  type CardViewerViewState
+} from './cardViewerHistory';
 import {
   DEFAULT_VIEWER_TRANSFORM,
   rotateViewerTransform,
+  rotateViewerTransformCcw,
   toggleViewerFlipH,
   toggleViewerFlipV,
   toggleViewerGrayscale,
   viewerTransformStyle,
   type ViewerTransform
 } from './cardViewerTransforms';
+import { applyViewerWheelZoom } from './cardViewerWheelZoom';
 import {
-  VIEWER_ZOOM_PRESETS,
   viewerZoomMediaStyle,
   type ViewerZoomMode
 } from './cardViewerZoom';
@@ -34,6 +49,8 @@ import type { CardViewerOpenContext } from './openCardsInNewWindow';
 
 const OPACITY_MIN = 20;
 const OPACITY_MAX = 100;
+const WHEEL_HISTORY_BATCH_MS = 350;
+const MENU_SLOT_ORDER = ['label', 'shortcut'] as const;
 
 function clampOpacityPct(value: number): number {
   if (!Number.isFinite(value)) return OPACITY_MAX;
@@ -52,13 +69,27 @@ function cardViewerContextAllowsNavigation(context: CardViewerOpenContext): bool
   return context.kind === 'collection' || context.kind === 'moodboard';
 }
 
+function defaultViewState(): CardViewerViewState {
+  return {
+    transform: DEFAULT_VIEWER_TRANSFORM,
+    zoomMode: { kind: 'fit' },
+    pan: { x: 0, y: 0 }
+  };
+}
+
 export default function CardViewerApp() {
   const launch = useMemo(() => parseCardViewerLaunch(window.location.search), []);
   const session = useCardViewerSession(launch.cardIds, launch.startIndex);
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
   const menuAnchorRef = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const historyRef = useRef<CardViewerHistoryState>(createCardViewerHistory(defaultViewState()));
+  const viewRef = useRef<CardViewerViewState>(defaultViewState());
+  const wheelBatchActiveRef = useRef(false);
+  const wheelBatchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [zoomMode, setZoomMode] = useState<ViewerZoomMode>({ kind: 'fit' });
   const [transform, setTransform] = useState<ViewerTransform>(DEFAULT_VIEWER_TRANSFORM);
   const [alwaysOnTop, setAlwaysOnTop] = useState(false);
@@ -66,12 +97,15 @@ export default function CardViewerApp() {
   const [opacityInput, setOpacityInput] = useState(`${OPACITY_MAX}%`);
   const [menuOpen, setMenuOpen] = useState(false);
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
+  const [historyTick, setHistoryTick] = useState(0);
 
   const panEnabled = zoomMode.kind !== 'fit';
-  const { offset: panOffset, panHandlers } = useCardViewerPan(
+  const { offset: panOffset, setOffset: setPanOffset, panHandlers } = useCardViewerPan(
     panEnabled,
-    `${session.card?.id ?? ''}:${zoomMode.kind}${zoomMode.kind === 'scale' ? zoomMode.factor : ''}`
+    session.card?.id ?? ''
   );
+
+  viewRef.current = { transform, zoomMode, pan: panOffset };
 
   const showNavigation =
     cardViewerContextAllowsNavigation(launch.context) && session.cardIds.length > 1;
@@ -92,18 +126,100 @@ export default function CardViewerApp() {
     ? `${breadcrumb.prefix} / ${breadcrumb.cardName}`
     : breadcrumb.cardName;
 
+  const canUndo = canUndoCardViewerHistory(historyRef.current);
+  const canRedo = canRedoCardViewerHistory(historyRef.current);
+  void historyTick;
+
+  const applyViewState = useCallback(
+    (next: CardViewerViewState) => {
+      setTransform(next.transform);
+      setZoomMode(next.zoomMode);
+      setPanOffset(next.pan);
+      viewRef.current = next;
+    },
+    [setPanOffset]
+  );
+
+  const bumpHistory = useCallback(() => {
+    setHistoryTick((tick) => tick + 1);
+  }, []);
+
+  const endWheelBatch = useCallback(() => {
+    wheelBatchActiveRef.current = false;
+    if (wheelBatchTimerRef.current) {
+      clearTimeout(wheelBatchTimerRef.current);
+      wheelBatchTimerRef.current = null;
+    }
+  }, []);
+
+  const commitViewState = useCallback(
+    (next: CardViewerViewState) => {
+      endWheelBatch();
+      // Keep present in sync with live pan/zoom before recording (drag pan is not pushed alone).
+      historyRef.current = { ...historyRef.current, present: viewRef.current };
+      historyRef.current = pushCardViewerHistory(historyRef.current, next);
+      applyViewState(next);
+      bumpHistory();
+    },
+    [applyViewState, bumpHistory, endWheelBatch]
+  );
+
+  const mutateView = useCallback(
+    (mutator: (prev: CardViewerViewState) => CardViewerViewState) => {
+      const next = mutator(viewRef.current);
+      commitViewState(next);
+    },
+    [commitViewState]
+  );
+
+  const undoView = useCallback(() => {
+    endWheelBatch();
+    const nextHistory = undoCardViewerHistory(historyRef.current);
+    if (nextHistory === historyRef.current) return;
+    historyRef.current = nextHistory;
+    applyViewState(nextHistory.present);
+    bumpHistory();
+  }, [applyViewState, bumpHistory, endWheelBatch]);
+
+  const redoView = useCallback(() => {
+    endWheelBatch();
+    const nextHistory = redoCardViewerHistory(historyRef.current);
+    if (nextHistory === historyRef.current) return;
+    historyRef.current = nextHistory;
+    applyViewState(nextHistory.present);
+    bumpHistory();
+  }, [applyViewState, bumpHistory, endWheelBatch]);
+
+  const resetView = useCallback(() => {
+    commitViewState(defaultViewState());
+  }, [commitViewState]);
+
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [alwaysOnTop, zoomMode, session.card?.id, menuOpen, showNavigation, opacityPct]);
+  }, [alwaysOnTop, zoomMode, transform, session.card?.id, menuOpen, showNavigation, opacityPct, canUndo, canRedo]);
 
   useEffect(() => {
-    setTransform(DEFAULT_VIEWER_TRANSFORM);
+    const initial = defaultViewState();
+    historyRef.current = createCardViewerHistory(initial);
+    applyViewState(initial);
     setNaturalSize({ width: 0, height: 0 });
-  }, [session.card?.id]);
+    wheelBatchActiveRef.current = false;
+    if (wheelBatchTimerRef.current) {
+      clearTimeout(wheelBatchTimerRef.current);
+      wheelBatchTimerRef.current = null;
+    }
+    bumpHistory();
+  }, [session.card?.id, applyViewState, bumpHistory]);
 
   useEffect(() => {
     setOpacityInput(`${opacityPct}%`);
   }, [opacityPct]);
+
+  useEffect(() => {
+    return () => {
+      if (wheelBatchTimerRef.current) clearTimeout(wheelBatchTimerRef.current);
+    };
+  }, []);
 
   const closeViewer = useCallback(() => {
     void window.arc?.cardViewerClose?.();
@@ -127,13 +243,97 @@ export default function CardViewerApp() {
     [session.card?.id, session.mediaRel]
   );
 
+  const onStageWheel = useCallback(
+    (event: ReactWheelEvent<HTMLElement>) => {
+      if (!session.mediaSrc || naturalSize.width <= 0 || naturalSize.height <= 0) return;
+      event.preventDefault();
+      const stage = stageRef.current;
+      if (!stage) return;
+      const rect = stage.getBoundingClientRect();
+      const stageSize = { width: rect.width, height: rect.height };
+      const focalX = event.clientX - rect.left;
+      const focalY = event.clientY - rect.top;
+      const prev = viewRef.current;
+      const result = applyViewerWheelZoom({
+        zoomMode: prev.zoomMode,
+        pan: prev.pan,
+        stage: stageSize,
+        natural: naturalSize,
+        focalX,
+        focalY,
+        deltaY: event.deltaY
+      });
+      const next: CardViewerViewState = {
+        transform: prev.transform,
+        zoomMode: result.zoomMode,
+        pan: result.pan
+      };
+
+      if (!wheelBatchActiveRef.current) {
+        historyRef.current = { ...historyRef.current, present: prev };
+        historyRef.current = pushCardViewerHistory(historyRef.current, next);
+        wheelBatchActiveRef.current = true;
+      } else {
+        historyRef.current = { ...historyRef.current, present: next };
+      }
+      applyViewState(next);
+      bumpHistory();
+
+      if (wheelBatchTimerRef.current) clearTimeout(wheelBatchTimerRef.current);
+      wheelBatchTimerRef.current = setTimeout(() => {
+        wheelBatchActiveRef.current = false;
+        wheelBatchTimerRef.current = null;
+      }, WHEEL_HISTORY_BATCH_MS);
+    },
+    [applyViewState, bumpHistory, naturalSize, session.mediaSrc]
+  );
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
+        if (menuOpen) {
+          setMenuOpen(false);
+          return;
+        }
         closeViewer();
         return;
       }
+
+      if (isEditableTarget(event.target)) return;
+
+      if (matchesShortcut(event, 'viewer.redo')) {
+        event.preventDefault();
+        redoView();
+        return;
+      }
+      if (matchesShortcut(event, 'viewer.undo')) {
+        event.preventDefault();
+        undoView();
+        return;
+      }
+      if (matchesShortcut(event, 'viewer.reset')) {
+        event.preventDefault();
+        resetView();
+        return;
+      }
+      if (matchesShortcut(event, 'viewer.rotateCcw')) {
+        event.preventDefault();
+        mutateView((prev) => ({
+          ...prev,
+          transform: rotateViewerTransformCcw(prev.transform)
+        }));
+        return;
+      }
+      if (matchesShortcut(event, 'viewer.rotateCw')) {
+        event.preventDefault();
+        mutateView((prev) => ({
+          ...prev,
+          transform: rotateViewerTransform(prev.transform)
+        }));
+        return;
+      }
+
       if (event.key === 'ArrowLeft') {
         if (!session.canGoPrev) return;
         event.preventDefault();
@@ -148,71 +348,96 @@ export default function CardViewerApp() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [closeViewer, session]);
+  }, [closeViewer, menuOpen, mutateView, redoView, resetView, session, undoView]);
 
   const menuRows = useMemo<ContextMenuRow[]>(() => {
-    const rows: ContextMenuRow[] = [
-      {
+    const withKeepOpen = (
+      row: Extract<ContextMenuRow, { type: 'item' }>
+    ): Extract<ContextMenuRow, { type: 'item' }> => ({
+      ...row,
+      closeOnSelect: false,
+      slotOrder: [...MENU_SLOT_ORDER]
+    });
+
+    return [
+      withKeepOpen({
         type: 'item',
-        key: 'fit',
-        label: 'Вписать в окно',
-        iconClass: 'arc-icon-minimize-2',
-        selected: zoomMode.kind === 'fit',
-        onSelect: () => setZoomMode({ kind: 'fit' })
-      },
-      {
+        key: 'undo',
+        label: 'Отменить',
+        shortcut: shortcutMenuLabel('viewer.undo'),
+        disabled: !canUndo,
+        onSelect: undoView
+      }),
+      withKeepOpen({
         type: 'item',
-        key: 'actual',
-        label: 'Реальный размер',
-        iconClass: 'arc-icon-maximize-2',
-        selected: zoomMode.kind === 'actual',
-        onSelect: () => setZoomMode({ kind: 'actual' })
-      },
-      { type: 'separator', key: 'sep-presets' },
-      { type: 'header', key: 'hdr-scale', label: 'Масштаб' }
-    ];
-    for (const factor of VIEWER_ZOOM_PRESETS) {
-      rows.push({
+        key: 'redo',
+        label: 'Вернуть',
+        shortcut: shortcutMenuLabel('viewer.redo'),
+        disabled: !canRedo,
+        onSelect: redoView
+      }),
+      withKeepOpen({
         type: 'item',
-        key: `scale-${factor}`,
-        label: `${Math.round(factor * 100)} %`,
-        selected: zoomMode.kind === 'scale' && zoomMode.factor === factor,
-        onSelect: () => setZoomMode({ kind: 'scale', factor })
-      });
-    }
-    rows.push(
+        key: 'reset',
+        label: 'Сбросить вид',
+        shortcut: shortcutMenuLabel('viewer.reset'),
+        onSelect: resetView
+      }),
       { type: 'separator', key: 'sep-transforms' },
-      {
+      withKeepOpen({
         type: 'item',
-        key: 'rotate',
-        label: 'Повернуть на 90°',
-        iconClass: 'arc-icon-reuse',
-        onSelect: () => setTransform((prev) => rotateViewerTransform(prev))
-      },
-      {
+        key: 'rotate-cw',
+        label: 'Повернуть вправо',
+        shortcut: shortcutMenuLabel('viewer.rotateCw'),
+        onSelect: () =>
+          mutateView((prev) => ({
+            ...prev,
+            transform: rotateViewerTransform(prev.transform)
+          }))
+      }),
+      withKeepOpen({
+        type: 'item',
+        key: 'rotate-ccw',
+        label: 'Повернуть влево',
+        shortcut: shortcutMenuLabel('viewer.rotateCcw'),
+        onSelect: () =>
+          mutateView((prev) => ({
+            ...prev,
+            transform: rotateViewerTransformCcw(prev.transform)
+          }))
+      }),
+      withKeepOpen({
         type: 'item',
         key: 'flip-h',
         label: 'Отразить по горизонтали',
-        iconClass: 'arc-icon-flip-horizontal',
-        onSelect: () => setTransform((prev) => toggleViewerFlipH(prev))
-      },
-      {
+        onSelect: () =>
+          mutateView((prev) => ({
+            ...prev,
+            transform: toggleViewerFlipH(prev.transform)
+          }))
+      }),
+      withKeepOpen({
         type: 'item',
         key: 'flip-v',
         label: 'Отразить по вертикали',
-        iconClass: 'arc-icon-flip-vertical',
-        onSelect: () => setTransform((prev) => toggleViewerFlipV(prev))
-      },
-      {
+        onSelect: () =>
+          mutateView((prev) => ({
+            ...prev,
+            transform: toggleViewerFlipV(prev.transform)
+          }))
+      }),
+      withKeepOpen({
         type: 'item',
         key: 'grayscale',
         label: transform.grayscale ? 'Цветное изображение' : 'Чёрно-белое',
-        iconClass: 'arc-icon-image',
-        onSelect: () => setTransform((prev) => toggleViewerGrayscale(prev))
-      }
-    );
-    return rows;
-  }, [transform.grayscale, zoomMode]);
+        onSelect: () =>
+          mutateView((prev) => ({
+            ...prev,
+            transform: toggleViewerGrayscale(prev.transform)
+          }))
+      })
+    ];
+  }, [canRedo, canUndo, mutateView, redoView, resetView, transform.grayscale, undoView]);
 
   const mediaStyle = {
     ...viewerZoomMediaStyle(zoomMode, naturalSize.width, naturalSize.height),
@@ -277,7 +502,6 @@ export default function CardViewerApp() {
             {fullTitle}
           </p>
         </div>
-
         <div className="arc-card-viewer__toolbar-right">
           {showNavigation ? (
             <div className="arc-card-viewer__slides">
@@ -362,8 +586,10 @@ export default function CardViewerApp() {
       </header>
 
       <main
+        ref={stageRef}
         className={`arc-card-viewer__stage${panEnabled ? ' arc-card-viewer__stage--pannable' : ''}`}
         style={{ opacity: stageOpacity }}
+        onWheel={onStageWheel}
         {...(panEnabled ? panHandlers : undefined)}
       >
         {session.loading ? <p className="arc-card-viewer__empty">Загрузка…</p> : null}
