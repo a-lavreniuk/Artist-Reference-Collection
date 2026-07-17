@@ -5,7 +5,7 @@ import { computeMasonryColumnWidth } from '../masonry/masonryColumnRules';
 import { galleryMasonryItemHeight } from '../masonry/masonryItemHeight';
 import { useContainerWidth } from '../masonry/useMasonryColumnCount';
 import { readGridSize } from '../../layout/gridSizePreference';
-import CardDetailSimilarThumb from './CardDetailSimilarThumb';
+import GalleryCardTile from './GalleryCardTile';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import { setGalleryThumbPixelBudget } from './galleryThumbBudget';
 
@@ -37,6 +37,7 @@ export default function SimilarCardsMasonry({
   const columnCount = resolveMasonryColumnCount(containerWidth, gridSize, 'similar');
   const masonryGap = resolveMasonryGapPx(gridSize);
   const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, masonryGap);
+  const moodboardEnabled = Boolean(onToggleMoodboard) && !inTrash;
 
   useEffect(() => {
     setGalleryThumbPixelBudget(columnWidth);
@@ -74,13 +75,15 @@ export default function SimilarCardsMasonry({
           const card = cardById.get(id);
           if (!card) return null;
           return (
-            <CardDetailSimilarThumb
+            <GalleryCardTile
               card={card}
-              src={srcMap[card.id]}
-              onPick={() => onOpenCard(card.id)}
-              onFindSimilar={onFindSimilar}
+              thumbSrc={srcMap[card.id]}
+              gridSize={gridSize}
               inMoodboard={moodboardCardIds.has(card.id)}
-              onToggleMoodboard={inTrash ? undefined : onToggleMoodboard}
+              onCardClick={(cardId) => onOpenCard(cardId)}
+              onFindSimilar={onFindSimilar}
+              onToggleMoodboard={moodboardEnabled ? onToggleMoodboard : undefined}
+              moodboardEnabled={moodboardEnabled}
               onContextMenu={
                 onCardContextMenu ? (event) => onCardContextMenu(card, event) : undefined
               }

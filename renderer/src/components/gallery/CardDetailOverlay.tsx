@@ -1421,8 +1421,8 @@ export default function CardDetailOverlay({
         {similar.length > 0 ? (
           <section className="arc-card-detail-similar" data-interface-tour-anchor="card-detail-similar">
             <div className="arc-card-detail-similar-head">
-              <p className="text-l">Похожие изображения</p>
-              <span className="text-s arc-card-detail-section-count">{similar.length}</span>
+              <h2 className="h1">Похожие изображения</h2>
+              <span className="h1 arc-card-detail-similar-count">{similar.length}</span>
             </div>
             <SimilarCardsMasonry
               cards={similar}

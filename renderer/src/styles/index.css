@@ -1948,7 +1948,7 @@ body.arc-card-detail-open .arc-app-outlet {
     100vh - var(--arc-chrome-top-height, calc(var(--arc-topbar-height, 24px) + var(--arc-layout-gutter) * 2 + 56px)) - var(--s-4)
   );
   --arc-card-detail-main-h: var(--arc-card-detail-viewport-h);
-  --arc-card-detail-similar-peek-ratio: 0.24;
+  --arc-card-detail-similar-peek-ratio: 0.12;
 }
 
 .arc-card-detail-scroll {
@@ -1970,7 +1970,7 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-card-detail-shell {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-4);
   padding: 0 var(--s-4) var(--s-4);
   min-height: var(--arc-card-detail-viewport-h);
 }
@@ -3285,7 +3285,7 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
+  gap: var(--s-4);
 }
 
 .arc-card-detail-similar-head {
@@ -3294,6 +3294,10 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   align-items: baseline;
   gap: var(--s-1);
   flex-shrink: 0;
+}
+
+.arc-card-detail-similar-count {
+  color: var(--text-elev-secondary);
 }
 
 .arc-card-info-modal {
@@ -3412,11 +3416,6 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   .arc-card-detail-splitter {
     display: none;
   }
-}
-
-.arc-card-similar-tile.arc-gallery-card-wrap {
-  margin-bottom: 0;
-  border-radius: var(--radius-s);
 }
 
 /* Separator alias (NavbarSearch panel) */
