@@ -150,6 +150,21 @@ export function canPan(stage: StageSize, natural: NaturalSize, scale: number, fi
   return natural.width * scale > stage.width + 1 || natural.height * scale > stage.height + 1;
 }
 
+/** Clamp scale and pan; zero pan at fit scale (avoids stuck offset when pan is locked). */
+export function normalizeViewport(
+  stage: StageSize,
+  natural: NaturalSize,
+  viewport: ViewportPan,
+  fitScale: number
+): ViewportPan {
+  const scale = clampScale(viewport.scale, fitScale);
+  if (scale <= fitScale + 1e-6) {
+    return { scale, panX: 0, panY: 0 };
+  }
+  const clampedPan = clampPan(viewport.panX, viewport.panY, stage, natural, scale);
+  return { scale, panX: clampedPan.panX, panY: clampedPan.panY };
+}
+
 export function isViewportAtFit(viewport: ViewportPan, fitScale: number): boolean {
   return (
     Math.abs(viewport.scale - fitScale) < 1e-4 &&
@@ -165,12 +180,11 @@ export function isViewportAtActual(viewport: ViewportPan): boolean {
 export function viewportAtActualSize(
   stage: StageSize,
   natural: NaturalSize,
-  viewport: ViewportPan,
+  _viewport: ViewportPan,
   fitScale: number
 ): ViewportPan {
-  const next = setScaleAtCenter(stage, natural, viewport, fitScale, 1);
-  const clampedPan = clampPan(next.panX, next.panY, stage, natural, next.scale);
-  return { scale: next.scale, panX: clampedPan.panX, panY: clampedPan.panY };
+  const scale = clampScale(1, fitScale);
+  return normalizeViewport(stage, natural, { scale, panX: 0, panY: 0 }, fitScale);
 }
 
 function clamp(value: number, min: number, max: number): number {

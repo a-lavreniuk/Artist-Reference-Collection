@@ -7,8 +7,10 @@ import {
   displayPctToScale,
   isViewportAtActual,
   isViewportAtFit,
+  normalizeViewport,
   scaleToDisplayPct,
   setDisplayPctAtCenter,
+  setScaleAtCenter,
   viewportAtActualSize,
   zoomAtPoint
 } from '../hooks/imageViewportZoomMath';
@@ -70,5 +72,41 @@ describe('imageViewportZoomMath', () => {
     const clamped = clampPan(5000, 5000, stage, natural, scale);
     expect(clamped.panX).toBeLessThan(5000);
     expect(clamped.panY).toBeLessThan(5000);
+  });
+
+  it('recenters after zoom+pan when switching to actual size', () => {
+    const fitScale = computeFitScale(stage, natural);
+    const zoomed = zoomAtPoint(stage, natural, { scale: fitScale, panX: 0, panY: 0 }, fitScale, 400, 300, 4);
+    const panned = { ...zoomed, panX: zoomed.panX + 120, panY: zoomed.panY - 80 };
+    const actual = viewportAtActualSize(stage, natural, panned, fitScale);
+    expect(actual.scale).toBeCloseTo(1);
+    expect(actual.panX).toBe(0);
+    expect(actual.panY).toBe(0);
+  });
+
+  it('zeros pan when normalizing back to fit after zoom+pan', () => {
+    const fitScale = computeFitScale(stage, natural);
+    const zoomed = setScaleAtCenter(
+      stage,
+      natural,
+      { scale: fitScale, panX: 0, panY: 0 },
+      fitScale,
+      fitScale * 3
+    );
+    const panned = { ...zoomed, panX: zoomed.panX + 90, panY: zoomed.panY + 60 };
+    const backToFit = setScaleAtCenter(stage, natural, panned, fitScale, fitScale);
+    const normalized = normalizeViewport(stage, natural, backToFit, fitScale);
+    expect(normalized.scale).toBeCloseTo(fitScale);
+    expect(normalized.panX).toBe(0);
+    expect(normalized.panY).toBe(0);
+  });
+
+  it('keeps focal pan offset for micro-zoom above fit', () => {
+    const fitScale = computeFitScale(stage, natural);
+    const start = { scale: fitScale, panX: 0, panY: 0 };
+    const zoomed = zoomAtPoint(stage, natural, start, fitScale, 100, 80, 1.02);
+    const normalized = normalizeViewport(stage, natural, zoomed, fitScale);
+    expect(normalized.scale).toBeGreaterThan(fitScale);
+    expect(Math.abs(normalized.panX) + Math.abs(normalized.panY)).toBeGreaterThan(0);
   });
 });

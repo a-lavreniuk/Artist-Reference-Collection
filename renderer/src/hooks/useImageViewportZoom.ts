@@ -9,10 +9,10 @@ import {
 import {
   ZOOM_WHEEL_FACTOR,
   canPan,
-  clampPan,
   computeFitScale,
   isViewportAtActual,
   isViewportAtFit,
+  normalizeViewport,
   scaleToDisplayPct,
   setDisplayPctAtCenter,
   setScaleAtCenter,
@@ -69,14 +69,9 @@ export function useImageViewportZoom(resetKey: string) {
 
   const applyViewport = useCallback(
     (next: ViewportPan) => {
-      const clampedPan = clampPan(next.panX, next.panY, stageSize, naturalSize, next.scale);
-      setViewport({
-        scale: next.scale,
-        panX: clampedPan.panX,
-        panY: clampedPan.panY
-      });
+      setViewport(normalizeViewport(stageSize, naturalSize, next, fitScale));
     },
-    [naturalSize, stageSize]
+    [fitScale, naturalSize, stageSize]
   );
 
   const resetToFit = useCallback(() => {
@@ -114,8 +109,7 @@ export function useImageViewportZoom(resetKey: string) {
     setViewport((current) => {
       const displayPct = scaleToDisplayPct(current.scale, computeFitScale(stageSize, naturalSize));
       const next = setDisplayPctAtCenter(stageSize, naturalSize, current, fitScale, displayPct);
-      const clampedPan = clampPan(next.panX, next.panY, stageSize, naturalSize, next.scale);
-      return { scale: next.scale, panX: clampedPan.panX, panY: clampedPan.panY };
+      return normalizeViewport(stageSize, naturalSize, next, fitScale);
     });
   }, [fitScale, naturalSize.height, naturalSize.width, stageSize.height, stageSize.width]);
 
@@ -149,8 +143,7 @@ export function useImageViewportZoom(resetKey: string) {
       const focal = focalFromStage(clientX, clientY);
       setViewport((current) => {
         const next = zoomAtPoint(stageSize, naturalSize, current, fitScale, focal.x, focal.y, factor);
-        const clampedPan = clampPan(next.panX, next.panY, stageSize, naturalSize, next.scale);
-        return { scale: next.scale, panX: clampedPan.panX, panY: clampedPan.panY };
+        return normalizeViewport(stageSize, naturalSize, next, fitScale);
       });
     },
     [fitScale, focalFromStage, naturalSize, stageSize]
@@ -161,8 +154,7 @@ export function useImageViewportZoom(resetKey: string) {
       setViewport((current) => {
         const nextScale = current.scale * factor;
         const next = setScaleAtCenter(stageSize, naturalSize, current, fitScale, nextScale);
-        const clampedPan = clampPan(next.panX, next.panY, stageSize, naturalSize, next.scale);
-        return { scale: next.scale, panX: clampedPan.panX, panY: clampedPan.panY };
+        return normalizeViewport(stageSize, naturalSize, next, fitScale);
       });
     },
     [fitScale, naturalSize, stageSize]
@@ -172,8 +164,7 @@ export function useImageViewportZoom(resetKey: string) {
     (displayPct: number) => {
       setViewport((current) => {
         const next = setDisplayPctAtCenter(stageSize, naturalSize, current, fitScale, displayPct);
-        const clampedPan = clampPan(next.panX, next.panY, stageSize, naturalSize, next.scale);
-        return { scale: next.scale, panX: clampedPan.panX, panY: clampedPan.panY };
+        return normalizeViewport(stageSize, naturalSize, next, fitScale);
       });
     },
     [fitScale, naturalSize, stageSize]
