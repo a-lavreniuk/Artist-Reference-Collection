@@ -1,8 +1,13 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 
 import { getCloseToTrayOnWindowClose } from './appPreferences';
 import { isScreenshotCaptureInFlight } from './screenshotSession';
-import { applySessionWindowSize, getSessionWindowSize } from './windowSize';
+import {
+  applySessionWindowSize,
+  getSessionWindowSize,
+  WINDOW_MIN_HEIGHT,
+  WINDOW_MIN_WIDTH
+} from './windowSize';
 
 let mainWindowRef: BrowserWindow | null = null;
 let appQuitting = false;
@@ -18,6 +23,41 @@ export function isAppQuitting(): boolean {
 /** Maximize при показе только в обычном режиме (не onboarding). */
 export function shouldMaximizeOnShow(isResizable: boolean): boolean {
   return isResizable;
+}
+
+/** На darwin nudge/setContentSize ломает frameless maximize — не трогаем maximized. */
+export function shouldApplyDarwinLayoutNudge(isMaximized: boolean): boolean {
+  return !isMaximized;
+}
+
+export type RectLike = { x: number; y: number; width: number; height: number };
+
+/** Сравнение bounds с work area (fallback maximize без isMaximized). */
+export function boundsMatchWorkArea(bounds: RectLike, workArea: RectLike, tolerance = 2): boolean {
+  return (
+    Math.abs(bounds.x - workArea.x) <= tolerance &&
+    Math.abs(bounds.y - workArea.y) <= tolerance &&
+    Math.abs(bounds.width - workArea.width) <= tolerance &&
+    Math.abs(bounds.height - workArea.height) <= tolerance
+  );
+}
+
+/**
+ * Windowed-размер после darwin work-area fallback: всегда меньше work area,
+ * иначе «Развернуть» снова считает окно maximized.
+ */
+export function windowedBoundsInWorkArea(workArea: RectLike): RectLike {
+  const inset = 48;
+  const maxW = Math.max(1, workArea.width - inset);
+  const maxH = Math.max(1, workArea.height - inset);
+  const width = Math.min(WINDOW_MIN_WIDTH, maxW);
+  const height = Math.min(WINDOW_MIN_HEIGHT, maxH);
+  return {
+    x: workArea.x + Math.max(0, Math.floor((workArea.width - width) / 2)),
+    y: workArea.y + Math.max(0, Math.floor((workArea.height - height) / 2)),
+    width,
+    height
+  };
 }
 
 function nudgeWindowBoundsOnDarwin(win: BrowserWindow): void {
@@ -40,6 +80,11 @@ export function forceWebContentsLayoutSync(win: BrowserWindow): void {
   if (win.isDestroyed()) return;
   const wc = win.webContents;
   if (!wc || wc.isDestroyed()) return;
+
+  if (process.platform === 'darwin' && !shouldApplyDarwinLayoutNudge(isMainWindowMaximized(win))) {
+    return;
+  }
+
   const [width, height] = win.getContentSize();
   if (width < 1 || height < 1) return;
   win.setContentSize(width, height);
@@ -48,10 +93,57 @@ export function forceWebContentsLayoutSync(win: BrowserWindow): void {
     nudgeWindowBoundsOnDarwin(win);
     setTimeout(() => {
       if (win.isDestroyed()) return;
+      if (!shouldApplyDarwinLayoutNudge(isMainWindowMaximized(win))) return;
       const [w, h] = win.getContentSize();
       if (w < 1 || h < 1) return;
       win.setContentSize(w, h);
     }, 0);
+  }
+}
+
+/** Maximized native или darwin work-area fallback. */
+export function isMainWindowMaximized(win: BrowserWindow): boolean {
+  if (win.isDestroyed()) return false;
+  if (win.isMaximized()) return true;
+  if (process.platform !== 'darwin') return false;
+  const bounds = win.getBounds();
+  const workArea = screen.getDisplayMatching(bounds).workArea;
+  return boundsMatchWorkArea(bounds, workArea);
+}
+
+/** Maximize: на darwin — maximize() с fallback на workArea (frameless). */
+export function maximizeMainWindow(win: BrowserWindow): void {
+  if (win.isDestroyed() || !win.isResizable()) return;
+  if (isMainWindowMaximized(win)) return;
+
+  if (process.platform === 'darwin') {
+    win.maximize();
+    if (!win.isMaximized()) {
+      const workArea = screen.getDisplayMatching(win.getBounds()).workArea;
+      win.setBounds(workArea);
+    }
+    return;
+  }
+
+  win.maximize();
+}
+
+export function unmaximizeMainWindow(win: BrowserWindow): void {
+  if (win.isDestroyed()) return;
+
+  if (win.isMaximized()) {
+    win.unmaximize();
+    return;
+  }
+
+  if (process.platform === 'darwin' && isMainWindowMaximized(win)) {
+    const workArea = screen.getDisplayMatching(win.getBounds()).workArea;
+    const session = getSessionWindowSize();
+    if (session && !boundsMatchWorkArea({ ...session, x: workArea.x, y: workArea.y }, workArea)) {
+      applySessionWindowSize(win);
+      if (!isMainWindowMaximized(win)) return;
+    }
+    win.setBounds(windowedBoundsInWorkArea(workArea));
   }
 }
 
@@ -109,8 +201,8 @@ export function showMainWindow(options?: ShowMainWindowOptions): void {
   if (!win.isVisible()) win.show();
   if (win.isMinimized()) win.restore();
 
-  if (maximize && win.isResizable() && !win.isMaximized()) {
-    win.maximize();
+  if (maximize && win.isResizable() && !isMainWindowMaximized(win)) {
+    maximizeMainWindow(win);
   }
 
   scheduleWebContentsLayoutSync(win);
@@ -143,13 +235,13 @@ export function registerWindowChromeIpc(): void {
   ipcMain.handle('arc:window-toggle-maximize', () => {
     const win = resolveTargetWindow();
     if (!win) return { ok: false };
-    if (win.isMaximized()) {
-      win.unmaximize();
+    if (isMainWindowMaximized(win)) {
+      unmaximizeMainWindow(win);
     } else {
-      win.maximize();
+      maximizeMainWindow(win);
     }
     scheduleWebContentsLayoutSync(win);
-    return { ok: true, maximized: win.isMaximized() };
+    return { ok: true, maximized: isMainWindowMaximized(win) };
   });
 
   ipcMain.handle('arc:window-close-to-tray', () => {

@@ -4,6 +4,7 @@ import path from 'path';
 import {
   applyMainWindowOnboardingMode
 } from './onboardingWindowMode';
+import { maximizeMainWindow } from './windowChrome';
 
 export const LOADING_SPLASH_SIZE = 512;
 const MIN_SPLASH_MS = 1000;
@@ -237,8 +238,8 @@ async function tryFinishStartup(): Promise<void> {
 
   if (onboardingMode) {
     applyMainWindowOnboardingMode(win);
-  } else if (!win.isMaximized()) {
-    win.maximize();
+  } else {
+    maximizeMainWindow(win);
   }
   win.show();
 }

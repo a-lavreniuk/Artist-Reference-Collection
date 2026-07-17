@@ -45,7 +45,14 @@ import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
 import { destroyScreenshotWindowPicker, registerScreenshotWindowPickerIpc } from './screenshotWindowPicker';
 import { destroyCardViewerWindows, registerCardViewerIpc } from './cardViewerWindow';
-import { bindMainWindow, getMainWindow, registerWindowChromeIpc, showMainWindowFromUserAction } from './windowChrome';
+import {
+  bindMainWindow,
+  getMainWindow,
+  isMainWindowMaximized,
+  registerWindowChromeIpc,
+  setAppQuitting,
+  showMainWindowFromUserAction
+} from './windowChrome';
 import { isScreenshotCaptureInFlight } from './screenshotSession';
 import {
   needsOnboardingSetup,
@@ -105,10 +112,10 @@ function createWindow(onboardingMode = false): BrowserWindow {
   let resizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   win.on('resize', () => {
-    if (win.isMaximized()) return;
+    if (win.isMaximized() || isMainWindowMaximized(win)) return;
     if (resizeSaveTimer) clearTimeout(resizeSaveTimer);
     resizeSaveTimer = setTimeout(() => {
-      if (win.isDestroyed() || win.isMaximized()) return;
+      if (win.isDestroyed() || win.isMaximized() || isMainWindowMaximized(win)) return;
       const [width, height] = win.getSize();
       setSessionWindowSize(width, height);
     }, 300);
@@ -261,6 +268,10 @@ app.whenReady().then(async () => {
 });
 
 if (!mcpStdioMode) {
+  app.on('before-quit', () => {
+    setAppQuitting();
+  });
+
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
       app.quit();
