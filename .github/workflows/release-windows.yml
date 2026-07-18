@@ -60,7 +60,8 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists"
           else
-            gh release create "$TAG" --title "$VERSION" --notes "ARC $VERSION" --latest
+            # Bind to this commit explicitly — avoids untagged drafts when only tag 0.1.x (no v) exists.
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$VERSION" --notes "ARC $VERSION" --latest
           fi
 
           gh release upload "$TAG" \
