@@ -56,16 +56,9 @@ nsis:
   differentialPackage: true
   deleteAppDataOnUninstall: true
   include: uninstaller.nsh
-# Primary feed is the first provider (written into app-update.yml).
-# GitLab is a release-artifacts mirror; client falls back via setFeedURL in updater.ts.
+# Primary auto-update feed (app-update.yml). GitLab mirror is published in CI after GitHub.
 publish:
-  - provider: github
-    owner: a-lavreniuk
-    repo: Artist-Reference-Collection
-    releaseType: release
-  - provider: gitlab
-    projectId: 84578247
-    host: gitlab.com
-    vPrefixedTagName: false
-    # /uploads rejects large NSIS installers (413); packages support big binaries.
-    uploadTarget: generic_package
+  provider: github
+  owner: a-lavreniuk
+  repo: Artist-Reference-Collection
+  releaseType: release

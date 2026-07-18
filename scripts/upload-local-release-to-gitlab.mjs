@@ -85,13 +85,18 @@ try {
   });
 }
 
-// Existing links (avoid duplicates on re-run)
-let existingNames = new Set();
+// Existing links — delete then recreate so re-runs replace incomplete mirrors
 try {
   const release = await gitlab(`/projects/${encodeURIComponent(PROJECT_ID)}/releases/${encodeURIComponent(TAG)}`);
-  existingNames = new Set((release.assets?.links || []).map((l) => l.name));
+  for (const link of release.assets?.links || []) {
+    console.log(`Removing old link ${link.name} (id ${link.id})…`);
+    await gitlab(
+      `/projects/${encodeURIComponent(PROJECT_ID)}/releases/${encodeURIComponent(TAG)}/assets/links/${link.id}`,
+      { method: 'DELETE' }
+    );
+  }
 } catch {
-  /* ignore */
+  /* no release yet */
 }
 
 const names = (await readdir(workDir)).sort();
@@ -101,10 +106,6 @@ for (const name of names) {
   if (!s.isFile()) continue;
   console.log(`Uploading ${name} (${s.size} bytes) via generic package…`);
   const assetUrl = uploadViaCurl(filePath, name);
-  if (existingNames.has(name)) {
-    console.log(`  link ${name} already present, skip`);
-    continue;
-  }
   await gitlab(`/projects/${encodeURIComponent(PROJECT_ID)}/releases/${encodeURIComponent(TAG)}/assets/links`, {
     method: 'POST',
     body: { name, url: assetUrl, link_type: 'package' }

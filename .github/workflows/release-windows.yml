@@ -29,15 +29,29 @@ jobs:
           BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: node scripts/stamp-release-notes.mjs
 
-      - name: Build and publish
+      # GitHub only — GitLab dual-publish in electron-builder fails on empty mirror repo
+      # ("Target main is invalid") and aborts the whole publish job.
+      - name: Build and publish to GitHub
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Publishes the same artifacts to the public GitLab releases mirror.
-          # Create token (api scope) and add as repo secret — see docs/release-mirror-gitlab.md
-          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
         run: npm run publish:win
 
       - name: Update GitHub release description
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/update-github-release-body.mjs
+
+      - name: Mirror release assets to GitLab
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          ARC_RELEASE_VERSION: ${{ github.ref_name }}
+          ARC_GITLAB_PROJECT_ID: '84578247'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-electron/_gitlab-mirror
+          # electron-builder publishes GitHub release under v-prefixed tag
+          gh release download "v${ARC_RELEASE_VERSION}" --dir dist-electron/_gitlab-mirror --clobber
+          ls -la dist-electron/_gitlab-mirror
+          node scripts/upload-local-release-to-gitlab.mjs
