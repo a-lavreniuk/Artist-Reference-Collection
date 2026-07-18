@@ -1,5 +1,5 @@
-export const TAG_TOOLTIP_IMAGE_MAX_W = 368;
-export const TAG_TOOLTIP_IMAGE_MAX_H = 207;
+export const TAG_TOOLTIP_IMAGE_MAX_W = 192;
+export const TAG_TOOLTIP_IMAGE_MAX_H = 108;
 export const TAG_TOOLTIP_IMAGE_ASPECT = TAG_TOOLTIP_IMAGE_MAX_W / TAG_TOOLTIP_IMAGE_MAX_H;
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -14,7 +14,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-/** Уменьшает изображение, если оно больше 368×207, сохраняя пропорции. */
+/** Уменьшает изображение, если оно больше 192×108, сохраняя пропорции. */
 export function resizeTagTooltipImageDataUrl(dataUrl: string, mimeType = 'image/png'): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();

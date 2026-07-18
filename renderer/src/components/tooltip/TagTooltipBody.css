@@ -6,11 +6,6 @@
   min-width: 0;
 }
 
-.arc-tag-tooltip--row {
-  flex-direction: row;
-  align-items: flex-start;
-}
-
 .arc-tag-tooltip__text {
   flex: 1 1 auto;
   min-width: 0;

@@ -815,10 +815,13 @@ button.color-swatch-inline:disabled {
   display: block;
 }
 
+/* Rich-tooltip метки: Figma 146:5400 — 192×108, radius 4px, без обводки */
 .arc-tag-preview-frame--thumb {
-  width: 64px;
-  height: 64px;
+  width: 192px;
+  height: 108px;
   aspect-ratio: auto;
+  border: none;
+  border-radius: 4px;
 }
 
 /* Шеврон в React-селекторе: chevron_m.svg уже «вниз», как в pseudo-select — без доп. поворота */

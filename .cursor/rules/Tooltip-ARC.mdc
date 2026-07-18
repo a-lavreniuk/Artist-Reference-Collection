@@ -34,7 +34,8 @@ alwaysApply: true
 ## Визуал (сверка с Figma)
 
 - Фон и стрелка: `--brand-550`; текст: `--brand-100` (Paragraph/S, `--typo-p-s-*`).
-- `max-width`: `192px` (`default`), `256px` (`rich`); padding `--s-1` (6px); radius `--s-1` (6px по макету).
+- `max-width`: `192px` (`default`), `204px` (`rich`, Figma 146:5400 — картинка 192 + padding 6+6); padding `--s-1` (6px); radius `--s-1` (6px по макету).
+- Rich-метка с картинкой: текст сверху, изображение снизу **192×108** (`TagTooltipBody`, `object-fit: cover`, radius 4px, без обводки).
 - Стрелка на стороне, противоположной якорю (`top` / `bottom` / `left` / `right`).
 - Без border и тени; fade-in через `--transition-fast`.
 

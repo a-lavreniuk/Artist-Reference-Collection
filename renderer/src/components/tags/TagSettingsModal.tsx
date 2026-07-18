@@ -4,7 +4,7 @@ import { ArcAnimatedModalHost } from '../../motion';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
 import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import { processTagTooltipImageFile } from './tagTooltipImage';
+import { processTagTooltipImageFile, resizeTagTooltipImageDataUrl } from './tagTooltipImage';
 
 const MAX_IMAGE_BYTES = 1_200_000;
 
@@ -99,11 +99,29 @@ export default function TagSettingsModal({
     setCategoryId(state.mode === 'create' ? state.categoryId : state.tag.categoryId);
     setName(state.mode === 'edit' ? state.tag.name : state.mode === 'create' ? (state.initialName ?? '') : '');
     setDescription(state.mode === 'edit' ? (state.tag.description ?? '') : '');
-    setTooltipImageDataUrl(state.mode === 'edit' ? state.tag.tooltipImageDataUrl : undefined);
+    const initialImage =
+      state.mode === 'edit' ? state.tag.tooltipImageDataUrl : undefined;
+    setTooltipImageDataUrl(initialImage);
     setImageFileName(state.mode === 'edit' && state.tag.tooltipImageDataUrl ? 'Изображение метки' : '');
     setError(null);
     setCategoryMenuOpen(false);
     lastNonEmptyCreateNameRef.current = '';
+
+    if (!initialImage?.startsWith('data:image/')) return;
+    let cancelled = false;
+    const mimeMatch = /^data:(image\/[a-zA-Z0-9.+-]+);/.exec(initialImage);
+    const mimeType =
+      mimeMatch?.[1] === 'image/jpeg' || mimeMatch?.[1] === 'image/webp'
+        ? mimeMatch[1]
+        : 'image/png';
+    void resizeTagTooltipImageDataUrl(initialImage, mimeType).then((next) => {
+      if (cancelled) return;
+      // Не затирать очистку или новый файл, если resize ещё не успел завершиться
+      setTooltipImageDataUrl((current) => (current === initialImage ? next : current));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [state]);
 
   useLayoutEffect(() => {
@@ -393,7 +411,7 @@ export default function TagSettingsModal({
                 <div className="arc-modal__slot">
                   <p className="arc-modal__slot-text">
                     Загрузите опциональное поясняющее изображение. Оно будет отображаться при наведении
-                    курсора на метку. Максимальное разрешение изображения 368×207 пикселей.
+                    курсора на метку. Максимальное разрешение изображения 192×108 пикселей.
                   </p>
                 </div>
                 <div className="arc-modal__slot">

@@ -26,7 +26,8 @@
 }
 
 .arc-tooltip--variant-rich {
-  max-width: 256px;
+  /* Figma 146:5400 — 192×108 + padding 6+6 */
+  max-width: 204px;
 }
 
 .arc-tooltip__inner {
