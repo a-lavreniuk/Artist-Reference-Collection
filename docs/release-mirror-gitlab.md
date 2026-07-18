@@ -58,11 +58,12 @@ Publish: [`electron-builder.yml`](../electron-builder.yml) (второй provide
 | Файл | Изменение |
 |------|-----------|
 | `package.json` | `electron-updater` ^6.8.9, `electron-builder` ^26.15.3 (GitLab provider) |
-| `electron-builder.yml` | dual-publish: github + gitlab (`uploadTarget: generic_package`) |
-| `.github/workflows/release-windows.yml` | env `GITLAB_TOKEN` |
+| `electron-builder.yml` | publish GitHub (primary feed) |
+| `.github/workflows/release-windows.yml` | после GitHub — mirror assets на GitLab |
 | `src/main/updateFeedGitlab.ts` | host / projectId |
 | `src/main/updater.ts` | fallback GitHub → GitLab при ошибке check |
 | `scripts/create-gitlab-releases-mirror.mjs` | создание публичного проекта |
+| `scripts/upload-local-release-to-gitlab.mjs` | заливка assets через Generic Packages |
 
 macOS publish на зеркало — позже (сейчас workflow только artifacts).
 

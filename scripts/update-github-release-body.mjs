@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { formatGithubReleaseBody } from './format-github-release-body.mjs';
@@ -21,15 +20,32 @@ async function main() {
   }
 
   const body = formatGithubReleaseBody(entry, version);
-  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'arc-release-'));
-  const notesPath = path.join(tmpDir, 'release-body.md');
-  await writeFile(notesPath, body, 'utf8');
+  const tag = `v${version}`;
 
-  execFileSync('gh', ['release', 'edit', `v${version}`, '--notes-file', notesPath], {
-    stdio: 'inherit'
+  // Prefer API patch — `gh release edit` can 422 when duplicate tags exist (0.1.x and v0.1.x).
+  const metaRaw = execFileSync('gh', ['release', 'view', tag, '--json', 'databaseId'], {
+    encoding: 'utf8'
   });
+  const meta = JSON.parse(metaRaw);
+  const releaseId = meta.databaseId;
+  if (releaseId == null) {
+    throw new Error(`Cannot resolve release id for ${tag}`);
+  }
 
-  console.log(`GitHub Release v${version}: описание обновлено`);
+  execFileSync(
+    'gh',
+    [
+      'api',
+      '-X',
+      'PATCH',
+      `repos/a-lavreniuk/Artist-Reference-Collection/releases/${releaseId}`,
+      '-f',
+      `body=${body}`
+    ],
+    { stdio: 'inherit' }
+  );
+
+  console.log(`GitHub Release ${tag}: описание обновлено`);
 }
 
 main().catch((err) => {

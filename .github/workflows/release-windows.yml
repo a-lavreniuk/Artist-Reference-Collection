@@ -29,21 +29,47 @@ jobs:
           BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: node scripts/stamp-release-notes.mjs
 
-      # GitHub only — GitLab dual-publish in electron-builder fails on empty mirror repo
-      # ("Target main is invalid") and aborts the whole publish job.
-      - name: Build and publish to GitHub
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run publish:win
+      - name: Build Windows installer
+        run: npm run dist:win
 
-      - name: Update GitHub release description
+      - name: Publish to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/update-github-release-body.mjs
+          VERSION: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+          SRC_EXE="dist-electron/ARC Setup ${VERSION}.exe"
+          SRC_MAP="dist-electron/ARC Setup ${VERSION}.exe.blockmap"
+          SRC_YML="dist-electron/latest.yml"
+          OUT_DIR="dist-electron/release-assets"
+          mkdir -p "$OUT_DIR"
+          test -f "$SRC_EXE"
+          test -f "$SRC_MAP"
+          test -f "$SRC_YML"
+
+          cp "$SRC_EXE" "$OUT_DIR/ARC-Setup-${VERSION}.exe"
+          cp "$SRC_MAP" "$OUT_DIR/ARC-Setup-${VERSION}.exe.blockmap"
+          # Keep updater channel file in sync with hyphenated asset names
+          sed "s/ARC Setup ${VERSION}\\.exe/ARC-Setup-${VERSION}.exe/g" "$SRC_YML" > "$OUT_DIR/latest.yml"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists"
+          else
+            gh release create "$TAG" --title "$VERSION" --notes "ARC $VERSION" --latest
+          fi
+
+          gh release upload "$TAG" \
+            "$OUT_DIR/ARC-Setup-${VERSION}.exe" \
+            "$OUT_DIR/ARC-Setup-${VERSION}.exe.blockmap" \
+            "$OUT_DIR/latest.yml" \
+            --clobber
+
+          node scripts/update-github-release-body.mjs "$VERSION"
 
       - name: Mirror release assets to GitLab
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           ARC_RELEASE_VERSION: ${{ github.ref_name }}
           ARC_GITLAB_PROJECT_ID: '84578247'
@@ -51,7 +77,6 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist-electron/_gitlab-mirror
-          # electron-builder publishes GitHub release under v-prefixed tag
-          gh release download "v${ARC_RELEASE_VERSION}" --dir dist-electron/_gitlab-mirror --clobber
+          cp "dist-electron/release-assets/"* "dist-electron/_gitlab-mirror/"
           ls -la dist-electron/_gitlab-mirror
           node scripts/upload-local-release-to-gitlab.mjs
