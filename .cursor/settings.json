@@ -5,6 +5,9 @@
     },
     "gsap-skills": {
       "enabled": true
+    },
+    "gitlab": {
+      "enabled": true
     }
   },
   "mcpServers": {

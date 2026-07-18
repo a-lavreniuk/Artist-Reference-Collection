@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
 import { getReleaseNotesForVersion, listReleaseNotes } from './releaseNotes';
+import { arcGitlabReleaseFeedOptions } from './updateFeedGitlab';
 
 const DISMISSED_FILENAME = 'update-dismissed-version.json';
 const LAST_SEEN_FILENAME = 'last-seen-release-version.json';
@@ -61,6 +62,25 @@ async function writeLastSeenVersion(version: string): Promise<void> {
 }
 
 let pendingInstall = false;
+/** Once GitHub check fails, stay on GitLab for this process (download uses same feed). */
+let usingGitlabFallback = false;
+
+function switchToGitlabFeed(): void {
+  console.log('[updater] fallback to gitlab');
+  autoUpdater.setFeedURL(arcGitlabReleaseFeedOptions());
+  usingGitlabFallback = true;
+}
+
+async function checkForUpdatesWithFallback(): Promise<Awaited<ReturnType<typeof autoUpdater.checkForUpdates>>> {
+  try {
+    return await autoUpdater.checkForUpdates();
+  } catch (err) {
+    if (usingGitlabFallback) throw err;
+    console.error('[updater] primary feed failed, trying gitlab', err);
+    switchToGitlabFeed();
+    return await autoUpdater.checkForUpdates();
+  }
+}
 
 export function registerArcUpdaterIpc(): void {
   ipcMain.handle('arc:get-app-version', () => app.getVersion());
@@ -92,7 +112,7 @@ export function registerArcUpdaterIpc(): void {
   ipcMain.handle('arc:check-for-updates', async () => {
     if (!app.isPackaged) return { ok: false as const, reason: 'dev' as const };
     try {
-      const result = await autoUpdater.checkForUpdates();
+      const result = await checkForUpdatesWithFallback();
       return { ok: true as const, updateInfo: result?.updateInfo ?? null };
     } catch (err) {
       console.error('[updater] checkForUpdates failed', err);
@@ -162,7 +182,7 @@ export function initArcUpdater(): void {
 
   const delayMs = 4000;
   setTimeout(() => {
-    void autoUpdater.checkForUpdates().catch((err) => {
+    void checkForUpdatesWithFallback().catch((err) => {
       console.error('[updater] startup check failed', err);
     });
   }, delayMs);

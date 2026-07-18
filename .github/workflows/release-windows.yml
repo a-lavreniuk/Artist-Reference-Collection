@@ -32,6 +32,9 @@ jobs:
       - name: Build and publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Publishes the same artifacts to the public GitLab releases mirror.
+          # Create token (api scope) and add as repo secret — see docs/release-mirror-gitlab.md
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
         run: npm run publish:win
 
       - name: Update GitHub release description
