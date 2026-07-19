@@ -421,6 +421,26 @@ declare global {
       aiReindex?: () => Promise<{ ok: true }>;
       aiPauseIndex?: () => Promise<{ ok: true }>;
       aiResumeIndex?: () => Promise<{ ok: true }>;
+      aiSuggestTags?: (cardId: string) => Promise<
+        | {
+            ok: true;
+            cardId: string;
+            candidates: string[];
+            matched: Array<{
+              tagId: string;
+              name: string;
+              score: number;
+              via: 'exact' | 'embedding' | 'created';
+            }>;
+            tagIds: string[];
+            createdCount: number;
+            proposedNew: string[];
+          }
+        | { ok: false; error: string }
+      >;
+      onAutoTagApplied?: (
+        cb: (detail: { cards: number; tags: number; created: number }) => void
+      ) => () => void;
       aiSetEnabled?: (payload: Record<string, unknown>) => Promise<import('./services/aiTypes').AiStatus>;
       aiDeleteModel?: (tier: 'light' | 'heavy') => Promise<import('./services/aiTypes').AiStatus>;
       aiUpdateModel?: (

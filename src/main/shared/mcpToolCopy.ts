@@ -274,6 +274,12 @@ export const MCP_TOOL_COPY = {
     label: 'Семантический AI-поиск',
     description: 'Поиск карточек по смыслу запроса (нужны модель и индексация).'
   },
+  arc_suggest_card_tags: {
+    groupId: 'ai',
+    label: 'Предложить метки для карточки',
+    description:
+      'Read-only: JoyCaption + сопоставление с каталогом (изображение или кадры видео). Не меняет карточку — применение через arc_set_card_tags после подтверждения.'
+  },
   arc_trigger_reindex: {
     groupId: 'ai',
     label: 'Переиндексировать библиотеку',

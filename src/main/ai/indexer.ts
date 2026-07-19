@@ -364,6 +364,9 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
       let total = countIndexableImageCards(db);
       let indexed = countIndexedForModel(db, activeModelId, tier);
       let didWork = false;
+      let autoTagCards = 0;
+      let autoTagTags = 0;
+      let autoTagCreated = 0;
       lastIndexed = indexed;
       lastTotal = total;
       logAiIndexer('Старт цикла индексации', { tier, indexed, total });
@@ -387,6 +390,20 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
           const ok = await indexCardById(cardId);
           if (ok) {
             didWork = true;
+            try {
+              const { applyAutoTagsAfterIndex } = await import('./suggestTags');
+              const auto = await applyAutoTagsAfterIndex(cardId);
+              if (auto && (auto.added > 0 || auto.created > 0)) {
+                autoTagCards += auto.added > 0 ? 1 : 0;
+                autoTagTags += auto.added;
+                autoTagCreated += auto.created;
+              }
+            } catch (err) {
+              logAiIndexerWarn('Автотегирование после индексации не выполнено', {
+                cardId,
+                error: err instanceof Error ? err.message : String(err)
+              });
+            }
           } else {
             skippedCardIds.add(cardId);
             logAiIndexerWarn('Карточка пропущена до конца сессии индексации', {
@@ -411,6 +428,14 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
       lastTotal = total;
       if (didWork) {
         broadcastComplete(indexed, total);
+        if (autoTagCards > 0 || autoTagCreated > 0) {
+          const { broadcastAutoTagApplied } = await import('./suggestTags');
+          broadcastAutoTagApplied({
+            cards: autoTagCards,
+            tags: autoTagTags,
+            created: autoTagCreated
+          });
+        }
       }
     } finally {
       indexRunning = false;
@@ -488,8 +513,27 @@ export function cancelIdleIndexing(): void {
 
 export async function queueCardsForIndexing(cardIds: string[]): Promise<void> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiSemanticSearchEnabled || cardIds.length === 0) return;
+  if (cardIds.length === 0) return;
+  const ids = cardIds.filter(Boolean);
   const userData = app.getPath('userData');
-  if (!(await hasAnyInstalledModel(userData))) return;
-  await runIndexingLoop(cardIds.filter(Boolean));
+
+  if (prefs.aiSemanticSearchEnabled && (await hasAnyInstalledModel(userData))) {
+    await runIndexingLoop(ids);
+  }
+
+  // Видео не индексируются heavy-pipeline — автотег и AI-описание после импорта отдельно
+  // (и при выключенном AI Поиске, если включены соответствующие prefs).
+  try {
+    const { applyAutoTagsForImportedVideos, broadcastAutoTagApplied } = await import('./suggestTags');
+    const auto = await applyAutoTagsForImportedVideos(ids);
+    broadcastAutoTagApplied(auto);
+  } catch {
+    /* ignore */
+  }
+  try {
+    const { applyVideoCaptionsAfterImport } = await import('./videoAiCaption');
+    await applyVideoCaptionsAfterImport(ids);
+  } catch {
+    /* ignore */
+  }
 }

@@ -65,6 +65,10 @@ export type AiStatus = {
   resources: { threads: number; gpuLayers: number; maxRamMb: number };
   resourcePreset: number;
   searchStrictness: number;
+  autoTagEnabled: boolean;
+  autoTagVolume: number;
+  autoTagCatalogMode: 'reuse' | 'reuse_create';
+  autoTagOnImport: boolean;
   index: AiIndexStatus;
   models: AiModelInstallStatus[];
   llamaRuntime: AiLlamaRuntimeStatus;

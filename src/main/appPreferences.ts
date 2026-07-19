@@ -11,12 +11,21 @@ import {
   sanitizeMcpToolsEnabled,
   type McpToolsEnabledMap
 } from './shared/mcpToolCatalog';
+import {
+  sanitizeJoyCaptionExtraIds,
+  sanitizeJoyCaptionLengthLevel,
+  sanitizeJoyCaptionType,
+  type JoyCaptionExtraId,
+  type JoyCaptionLengthLevel,
+  type JoyCaptionTypeId
+} from './ai/joyCaptionPrompt';
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 export type UiThemePreference = 'dark' | 'light' | 'system';
+export type { JoyCaptionTypeId, JoyCaptionExtraId, JoyCaptionLengthLevel };
 
 export type OnboardingSetupStep = 0 | 1 | 2;
 
@@ -57,6 +66,18 @@ export type AppPreferencesV1 = {
   aiMaxRamMb: number;
   aiResourcePreset: number;
   aiSearchStrictness: number;
+  aiAutoTagEnabled: boolean;
+  aiAutoTagVolume: number;
+  aiAutoTagCatalogMode: 'reuse' | 'reuse_create';
+  aiAutoTagOnImport: boolean;
+  /** AI-описание видео после импорта (сумма подписей с до 3 кадров). */
+  aiVideoCaptionOnImport: boolean;
+  /** JoyCaption: тип описания для индексации / AI-описаний. */
+  aiCaptionType: JoyCaptionTypeId;
+  /** JoyCaption: длина (0|20|40|60|80|100). */
+  aiCaptionLengthLevel: JoyCaptionLengthLevel;
+  /** JoyCaption: доп. опции (whitelist ids). */
+  aiCaptionExtraIds: JoyCaptionExtraId[];
   galleryCollectionsStripEnabled: boolean;
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
   uiTheme: UiThemePreference;
@@ -115,6 +136,14 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiMaxRamMb: 4096,
     aiResourcePreset: 50,
     aiSearchStrictness: 50,
+    aiAutoTagEnabled: false,
+    aiAutoTagVolume: 50,
+    aiAutoTagCatalogMode: 'reuse',
+    aiAutoTagOnImport: false,
+    aiVideoCaptionOnImport: false,
+    aiCaptionType: 'descriptive_casual',
+    aiCaptionLengthLevel: 80,
+    aiCaptionExtraIds: [],
     galleryCollectionsStripEnabled: true,
     galleryCollectionsSortMode: 'chrono',
     uiTheme: 'dark',
@@ -208,6 +237,18 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.aiSearchStrictness === 'number'
         ? Math.max(0, Math.min(100, Math.round(raw.aiSearchStrictness / 5) * 5))
         : d.aiSearchStrictness,
+    aiAutoTagEnabled: typeof raw.aiAutoTagEnabled === 'boolean' ? raw.aiAutoTagEnabled : d.aiAutoTagEnabled,
+    aiAutoTagVolume:
+      typeof raw.aiAutoTagVolume === 'number'
+        ? Math.max(0, Math.min(100, Math.round(raw.aiAutoTagVolume / 5) * 5))
+        : d.aiAutoTagVolume,
+    aiAutoTagCatalogMode: raw.aiAutoTagCatalogMode === 'reuse_create' ? 'reuse_create' : 'reuse',
+    aiAutoTagOnImport: typeof raw.aiAutoTagOnImport === 'boolean' ? raw.aiAutoTagOnImport : d.aiAutoTagOnImport,
+    aiVideoCaptionOnImport:
+      typeof raw.aiVideoCaptionOnImport === 'boolean' ? raw.aiVideoCaptionOnImport : d.aiVideoCaptionOnImport,
+    aiCaptionType: sanitizeJoyCaptionType(raw.aiCaptionType ?? d.aiCaptionType),
+    aiCaptionLengthLevel: sanitizeJoyCaptionLengthLevel(raw.aiCaptionLengthLevel ?? d.aiCaptionLengthLevel),
+    aiCaptionExtraIds: sanitizeJoyCaptionExtraIds(raw.aiCaptionExtraIds ?? d.aiCaptionExtraIds),
     galleryCollectionsStripEnabled:
       typeof raw.galleryCollectionsStripEnabled === 'boolean'
         ? raw.galleryCollectionsStripEnabled
@@ -332,6 +373,30 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('aiSearchStrictness' in patch && typeof patch.aiSearchStrictness === 'number') {
     next.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(patch.aiSearchStrictness / 5) * 5));
+  }
+  if ('aiAutoTagEnabled' in patch && typeof patch.aiAutoTagEnabled === 'boolean') {
+    next.aiAutoTagEnabled = patch.aiAutoTagEnabled;
+  }
+  if ('aiAutoTagVolume' in patch && typeof patch.aiAutoTagVolume === 'number') {
+    next.aiAutoTagVolume = Math.max(0, Math.min(100, Math.round(patch.aiAutoTagVolume / 5) * 5));
+  }
+  if ('aiAutoTagCatalogMode' in patch) {
+    next.aiAutoTagCatalogMode = patch.aiAutoTagCatalogMode === 'reuse_create' ? 'reuse_create' : 'reuse';
+  }
+  if ('aiAutoTagOnImport' in patch && typeof patch.aiAutoTagOnImport === 'boolean') {
+    next.aiAutoTagOnImport = patch.aiAutoTagOnImport;
+  }
+  if ('aiVideoCaptionOnImport' in patch && typeof patch.aiVideoCaptionOnImport === 'boolean') {
+    next.aiVideoCaptionOnImport = patch.aiVideoCaptionOnImport;
+  }
+  if ('aiCaptionType' in patch) {
+    next.aiCaptionType = sanitizeJoyCaptionType(patch.aiCaptionType);
+  }
+  if ('aiCaptionLengthLevel' in patch) {
+    next.aiCaptionLengthLevel = sanitizeJoyCaptionLengthLevel(patch.aiCaptionLengthLevel);
+  }
+  if ('aiCaptionExtraIds' in patch) {
+    next.aiCaptionExtraIds = sanitizeJoyCaptionExtraIds(patch.aiCaptionExtraIds);
   }
   if ('galleryCollectionsStripEnabled' in patch && typeof patch.galleryCollectionsStripEnabled === 'boolean') {
     next.galleryCollectionsStripEnabled = patch.galleryCollectionsStripEnabled;

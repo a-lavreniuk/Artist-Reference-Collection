@@ -5,20 +5,29 @@ import { useAccordionMotion } from '../../motion';
 
 type Props = {
   title: string;
+  /** Классы заголовка; по умолчанию как в детальной карточке (`text-l`). */
+  titleClassName?: string;
   count?: number;
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /**
+   * GSAP height-анимация. В настройках с длинными списками лучше `false`:
+   * иначе фиксированная высота после tween может блокировать клики по карточкам.
+   */
+  animated?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 };
 
 export default function CollapsibleSection({
   title,
+  titleClassName = 'text-l',
   count,
   defaultOpen = true,
   open: openProp,
   onOpenChange,
+  animated = true,
   children,
   footer
 }: Props) {
@@ -35,7 +44,7 @@ export default function CollapsibleSection({
   const toggleScopeRef = useRef<HTMLSpanElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  useAccordionMotion(open, bodyRef);
+  useAccordionMotion(animated ? open : true, animated ? bodyRef : { current: null });
 
   useLayoutEffect(() => {
     if (toggleScopeRef.current) void hydrateArcNavbarIcons(toggleScopeRef.current);
@@ -45,7 +54,7 @@ export default function CollapsibleSection({
     <section className="arc-card-detail-section" aria-labelledby={headId}>
       <div className="arc-card-detail-section-head" id={headId}>
         <div className="arc-card-detail-section-label">
-          <p className="text-l">{title}</p>
+          <p className={titleClassName}>{title}</p>
           {count !== undefined ? <span className="text-s arc-card-detail-section-count">{count}</span> : null}
         </div>
         <Tooltip content={open ? 'Свернуть' : 'Развернуть'} position="top">
@@ -69,16 +78,23 @@ export default function CollapsibleSection({
           </span>
         </Tooltip>
       </div>
-      <div
-        id={panelId}
-        ref={bodyRef}
-        className="arc-card-detail-section-body"
-        style={open ? undefined : { height: 0, overflow: 'hidden', opacity: 0 }}
-        aria-hidden={!open}
-      >
-        {children}
-        {footer ? <div className="arc-card-detail-section-footer">{footer}</div> : null}
-      </div>
+      {animated ? (
+        <div
+          id={panelId}
+          ref={bodyRef}
+          className="arc-card-detail-section-body"
+          style={open ? undefined : { height: 0, overflow: 'hidden', opacity: 0 }}
+          aria-hidden={!open}
+        >
+          {children}
+          {footer ? <div className="arc-card-detail-section-footer">{footer}</div> : null}
+        </div>
+      ) : open ? (
+        <div id={panelId} className="arc-card-detail-section-body">
+          {children}
+          {footer ? <div className="arc-card-detail-section-footer">{footer}</div> : null}
+        </div>
+      ) : null}
     </section>
   );
 }

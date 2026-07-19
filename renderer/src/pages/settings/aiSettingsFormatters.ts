@@ -66,6 +66,14 @@ export function strictnessHint(value: number): string {
   return 'Максимальная строгость, часто пустая выдача';
 }
 
+export function autoTagVolumeHint(value: number): string {
+  if (value <= 33) return 'Меньше меток, чаще совпадение с уже существующими';
+  if (value <= 66) return 'Баланс числа меток и точности сопоставления';
+  return 'Больше предложений, порог совпадения ниже';
+}
+
+export { captionLengthHint, captionLengthLabel } from './joyCaptionSettingsCopy';
+
 export function isIndexComplete(status: AiStatus): boolean {
   const index = status.index;
   return Boolean(index.total > 0 && index.indexed >= index.total && !index.running);

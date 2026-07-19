@@ -7,6 +7,7 @@ import { embedImageInWorker, embedTextInWorker, getModelsDir, initAiWorker, down
 import { isModelInstalled, hasModelArtifactsOnDisk } from './modelManager';
 import { recordInstalledModel } from './modelManifest';
 import { generateJoyCaption } from './joyCaption';
+import { buildIndexCaptionPrompt } from './joyCaptionPrompt';
 import { prepareSearchQuery } from './queryPrep';
 
 async function readResources(): Promise<AiResourceSettings> {
@@ -101,8 +102,10 @@ export async function captionForHeavyIndex(
   onStatus?: (message: string) => void
 ): Promise<string> {
   const userData = app.getPath('userData');
+  const prefs = await readAppPreferences();
   const resources = await readResources();
-  return generateJoyCaption(userData, imagePath, resources, { onStatus });
+  const prompt = buildIndexCaptionPrompt(prefs);
+  return generateJoyCaption(userData, imagePath, resources, { onStatus }, prompt);
 }
 
 export function clipModelId(): string {

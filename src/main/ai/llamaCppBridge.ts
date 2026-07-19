@@ -44,6 +44,18 @@ const JOYCAPTION_INDEX_PROMPT =
 
 const JOYCAPTION_MAX_TOKENS = 1024;
 
+/** Сериализация caption-запросов: suggest и indexer не бьют llama-server параллельно. */
+let captionQueue: Promise<unknown> = Promise.resolve();
+
+function enqueueCaption<T>(task: () => Promise<T>): Promise<T> {
+  const run = captionQueue.then(task, task);
+  captionQueue = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
+
 async function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const srv = createServer();
@@ -287,53 +299,55 @@ export async function captionImageViaServer(
   prompt = JOYCAPTION_INDEX_PROMPT,
   hooks?: LlamaServerHooks
 ): Promise<string> {
-  const session = await ensureLlamaServer(userDataPath, weightsPath, mmprojPath, resources, 'chat', hooks);
-  const vision = await ensureVisionSafeImagePath(imagePath);
-  try {
-    const dataUrl = await imageToDataUrl(vision.path);
-    logAiIndexer('JoyCaption: запрос подписи', {
-      image: path.basename(imagePath),
-      vision: path.basename(vision.path)
-    });
-    hooks?.onStatus?.('Генерация подписи к изображению…');
+  return enqueueCaption(async () => {
+    const session = await ensureLlamaServer(userDataPath, weightsPath, mmprojPath, resources, 'chat', hooks);
+    const vision = await ensureVisionSafeImagePath(imagePath);
+    try {
+      const dataUrl = await imageToDataUrl(vision.path);
+      logAiIndexer('JoyCaption: запрос подписи', {
+        image: path.basename(imagePath),
+        vision: path.basename(vision.path)
+      });
+      hooks?.onStatus?.('Генерация подписи к изображению…');
 
-    const res = await fetch(`${session.baseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'joycaption',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: dataUrl } }
-            ]
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: JOYCAPTION_MAX_TOKENS
-      })
-    });
+      const res = await fetch(`${session.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'joycaption',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: dataUrl } }
+              ]
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: JOYCAPTION_MAX_TOKENS
+        })
+      });
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`caption failed: ${res.status} ${body.slice(0, 200)}`);
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`caption failed: ${res.status} ${body.slice(0, 200)}`);
+      }
+
+      const json = (await res.json()) as {
+        choices?: Array<{ message?: { content?: string | Array<{ text?: string }> } }>;
+      };
+      const content = json.choices?.[0]?.message?.content;
+      if (typeof content === 'string' && content.trim()) return content.trim();
+      if (Array.isArray(content)) {
+        const text = content.map((part) => part.text ?? '').join(' ').trim();
+        if (text) return text;
+      }
+      throw new Error('JoyCaption вернул пустой ответ');
+    } finally {
+      await vision.dispose();
     }
-
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string | Array<{ text?: string }> } }>;
-    };
-    const content = json.choices?.[0]?.message?.content;
-    if (typeof content === 'string' && content.trim()) return content.trim();
-    if (Array.isArray(content)) {
-      const text = content.map((part) => part.text ?? '').join(' ').trim();
-      if (text) return text;
-    }
-    throw new Error('JoyCaption вернул пустой ответ');
-  } finally {
-    await vision.dispose();
-  }
+  });
 }
 
 export async function shutdownLlamaBridge(): Promise<void> {

@@ -491,6 +491,28 @@ contextBridge.exposeInMainWorld('arc', {
   aiReindex: () => ipcRenderer.invoke('arc:ai-reindex') as Promise<{ ok: true }>,
   aiPauseIndex: () => ipcRenderer.invoke('arc:ai-pause-index') as Promise<{ ok: true }>,
   aiResumeIndex: () => ipcRenderer.invoke('arc:ai-resume-index') as Promise<{ ok: true }>,
+  aiSuggestTags: (cardId: string) =>
+    ipcRenderer.invoke('arc:ai-suggest-tags', { cardId }) as Promise<
+      | {
+          ok: true;
+          cardId: string;
+          candidates: string[];
+          matched: Array<{
+            tagId: string;
+            name: string;
+            score: number;
+            via: 'exact' | 'embedding' | 'created';
+          }>;
+          tagIds: string[];
+          createdCount: number;
+        }
+      | { ok: false; error: string }
+    >,
+  onAutoTagApplied: (cb: (detail: { cards: number; tags: number; created: number }) => void) => {
+    const fn = (_: unknown, payload: { cards: number; tags: number; created: number }) => cb(payload);
+    ipcRenderer.on('arc:auto-tag-applied', fn);
+    return () => ipcRenderer.removeListener('arc:auto-tag-applied', fn);
+  },
   aiSetEnabled: (payload: Record<string, unknown>) => ipcRenderer.invoke('arc:ai-set-enabled', payload),
   onAiDownloadProgress: (cb: (detail: {
     tier: string;

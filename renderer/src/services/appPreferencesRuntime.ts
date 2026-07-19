@@ -3,6 +3,9 @@ import {
   defaultAppPreferences,
   getAppPreferences,
   setAppPreferences,
+  sanitizeJoyCaptionExtraIds,
+  sanitizeJoyCaptionLengthLevel,
+  sanitizeJoyCaptionType,
   type AppPreferencesV1,
   type OnboardingSetupStep,
   type GalleryCollectionsSortMode,
@@ -148,6 +151,30 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('aiSearchStrictness' in patch && typeof patch.aiSearchStrictness === 'number') {
     next.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(patch.aiSearchStrictness / 5) * 5));
   }
+  if ('aiAutoTagEnabled' in patch && typeof patch.aiAutoTagEnabled === 'boolean') {
+    next.aiAutoTagEnabled = patch.aiAutoTagEnabled;
+  }
+  if ('aiAutoTagVolume' in patch && typeof patch.aiAutoTagVolume === 'number') {
+    next.aiAutoTagVolume = Math.max(0, Math.min(100, Math.round(patch.aiAutoTagVolume / 5) * 5));
+  }
+  if ('aiAutoTagCatalogMode' in patch) {
+    next.aiAutoTagCatalogMode = patch.aiAutoTagCatalogMode === 'reuse_create' ? 'reuse_create' : 'reuse';
+  }
+  if ('aiAutoTagOnImport' in patch && typeof patch.aiAutoTagOnImport === 'boolean') {
+    next.aiAutoTagOnImport = patch.aiAutoTagOnImport;
+  }
+  if ('aiVideoCaptionOnImport' in patch && typeof patch.aiVideoCaptionOnImport === 'boolean') {
+    next.aiVideoCaptionOnImport = patch.aiVideoCaptionOnImport;
+  }
+  if ('aiCaptionType' in patch) {
+    next.aiCaptionType = sanitizeJoyCaptionType(patch.aiCaptionType);
+  }
+  if ('aiCaptionLengthLevel' in patch) {
+    next.aiCaptionLengthLevel = sanitizeJoyCaptionLengthLevel(patch.aiCaptionLengthLevel);
+  }
+  if ('aiCaptionExtraIds' in patch) {
+    next.aiCaptionExtraIds = sanitizeJoyCaptionExtraIds(patch.aiCaptionExtraIds);
+  }
   if ('galleryCollectionsStripEnabled' in patch && typeof patch.galleryCollectionsStripEnabled === 'boolean') {
     next.galleryCollectionsStripEnabled = patch.galleryCollectionsStripEnabled;
   }
@@ -278,6 +305,30 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   if ('aiSearchStrictness' in patch && typeof patch.aiSearchStrictness === 'number') {
     next.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(patch.aiSearchStrictness / 5) * 5));
   }
+  if ('aiAutoTagEnabled' in patch && typeof patch.aiAutoTagEnabled === 'boolean') {
+    next.aiAutoTagEnabled = patch.aiAutoTagEnabled;
+  }
+  if ('aiAutoTagVolume' in patch && typeof patch.aiAutoTagVolume === 'number') {
+    next.aiAutoTagVolume = Math.max(0, Math.min(100, Math.round(patch.aiAutoTagVolume / 5) * 5));
+  }
+  if ('aiAutoTagCatalogMode' in patch) {
+    next.aiAutoTagCatalogMode = patch.aiAutoTagCatalogMode === 'reuse_create' ? 'reuse_create' : 'reuse';
+  }
+  if ('aiAutoTagOnImport' in patch && typeof patch.aiAutoTagOnImport === 'boolean') {
+    next.aiAutoTagOnImport = patch.aiAutoTagOnImport;
+  }
+  if ('aiVideoCaptionOnImport' in patch && typeof patch.aiVideoCaptionOnImport === 'boolean') {
+    next.aiVideoCaptionOnImport = patch.aiVideoCaptionOnImport;
+  }
+  if ('aiCaptionType' in patch) {
+    next.aiCaptionType = sanitizeJoyCaptionType(patch.aiCaptionType);
+  }
+  if ('aiCaptionLengthLevel' in patch) {
+    next.aiCaptionLengthLevel = sanitizeJoyCaptionLengthLevel(patch.aiCaptionLengthLevel);
+  }
+  if ('aiCaptionExtraIds' in patch) {
+    next.aiCaptionExtraIds = sanitizeJoyCaptionExtraIds(patch.aiCaptionExtraIds);
+  }
   if ('galleryCollectionsStripEnabled' in patch && typeof patch.galleryCollectionsStripEnabled === 'boolean') {
     next.galleryCollectionsStripEnabled = patch.galleryCollectionsStripEnabled;
   }
@@ -349,17 +400,61 @@ export async function patchAppPreferences(patch: Partial<AppPreferencesV1>): Pro
     return getAppPreferencesSync();
   }
 
+  const previous = getAppPreferencesSync();
+  const optimistic = applyPatchLocal(previous, normalized);
+  cache = optimistic;
+  notify();
+
+  const captionKeys = ['aiCaptionType', 'aiCaptionLengthLevel', 'aiCaptionExtraIds'] as const;
+  const touchesCaption = captionKeys.some((key) => key in normalized);
+
   const run = async (): Promise<AppPreferencesV1> => {
     try {
-      const next = coerceAppPreferences(await setAppPreferences(normalized));
+      const cacheNow = getAppPreferencesSync();
+      // Если патч трогает JoyCaption — на момент записи подставляем актуальные
+      // type/length/extras из кэша (не устаревший снимок из очереди writeChain).
+      const toSend: Partial<AppPreferencesV1> = touchesCaption
+        ? {
+            ...normalized,
+            aiCaptionType: cacheNow.aiCaptionType,
+            aiCaptionLengthLevel: cacheNow.aiCaptionLengthLevel,
+            aiCaptionExtraIds: cacheNow.aiCaptionExtraIds
+          }
+        : normalized;
+
+      const remote = await setAppPreferences(toSend);
+      const cacheAfter = getAppPreferencesSync();
+      const next = coerceAppPreferences(
+        touchesCaption
+          ? {
+              ...remote,
+              ...toSend,
+              aiCaptionType: cacheAfter.aiCaptionType,
+              aiCaptionLengthLevel: cacheAfter.aiCaptionLengthLevel,
+              aiCaptionExtraIds: cacheAfter.aiCaptionExtraIds
+            }
+          : { ...remote, ...normalized }
+      );
       cache = next;
       notify();
       return next;
     } catch {
-      const next = applyPatchLocal(getAppPreferencesSync(), normalized);
-      cache = next;
+      // Откат только ключей этого патча — не затираем более новые optimistic prefs.
+      const now = getAppPreferencesSync();
+      const rolled: AppPreferencesV1 = { ...now };
+      for (const key of Object.keys(normalized) as (keyof AppPreferencesV1)[]) {
+        (rolled as Record<string, unknown>)[key as string] = (previous as Record<string, unknown>)[
+          key as string
+        ];
+      }
+      if (touchesCaption) {
+        rolled.aiCaptionType = previous.aiCaptionType;
+        rolled.aiCaptionLengthLevel = previous.aiCaptionLengthLevel;
+        rolled.aiCaptionExtraIds = previous.aiCaptionExtraIds;
+      }
+      cache = coerceAppPreferences(rolled);
       notify();
-      return next;
+      return cache;
     }
   };
 

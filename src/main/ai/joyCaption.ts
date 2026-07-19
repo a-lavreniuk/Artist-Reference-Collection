@@ -7,7 +7,8 @@ export async function generateJoyCaption(
   userDataPath: string,
   imagePath: string,
   resources: AiResourceSettings,
-  hooks?: LlamaServerHooks
+  hooks?: LlamaServerHooks,
+  prompt?: string
 ): Promise<string> {
   const entry = MODEL_CATALOG.heavy;
   const { weightsPath, mmprojPath } = resolveModelFilePaths(userDataPath, entry);
@@ -19,7 +20,15 @@ export async function generateJoyCaption(
       'Для JoyCaption нужен llama-server. Переустановите heavy модель в настройках AI Поиска.'
     );
   }
-  return captionImageViaServer(userDataPath, weightsPath, mmprojPath, imagePath, resources, undefined, hooks);
+  return captionImageViaServer(
+    userDataPath,
+    weightsPath,
+    mmprojPath,
+    imagePath,
+    resources,
+    prompt,
+    hooks
+  );
 }
 
 export async function testJoyCaptionLoad(

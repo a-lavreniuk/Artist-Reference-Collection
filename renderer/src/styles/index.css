@@ -2675,6 +2675,13 @@ body.arc-card-detail-open .arc-app-outlet {
   outline-offset: 2px;
 }
 
+.arc-card-detail-tag-chip--search-pending {
+  background: var(--tag-fill-hover);
+  color: var(--tag-text-hover);
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 1px;
+}
+
 .arc-card-detail-tag-chip--readonly {
   cursor: default;
 }
@@ -2699,6 +2706,30 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-card-detail-add-row {
   width: 100%;
   margin: 0;
+}
+
+.arc-card-detail-tag-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--s-2);
+  width: 100%;
+}
+
+.arc-card-detail-tag-actions > .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  margin: 0;
+}
+
+.arc-card-detail-tag-actions--busy > .btn {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.arc-card-detail-tag-actions .btn-ds__icon .loader {
+  display: block;
 }
 
 .arc-card-detail-collections {
@@ -5378,6 +5409,30 @@ html[data-theme="light"] .arc-settings-option-card:disabled .arc-settings-option
   gap: var(--s-2);
 }
 
+/* Эффективный зазор s-4: section gap s-2 + доп. margin. */
+.arc-settings-ai-panel__section-lead + .arc-settings-ai-slider-col,
+.arc-settings-ai-panel__section > .arc-settings-ai-slider-col + .arc-settings-section__title,
+.arc-settings-ai-panel__section > .arc-settings-ai-option-stack + .arc-settings-section__title,
+.arc-settings-ai-panel__section > .arc-settings-ai-model-cards + .arc-settings-section__title {
+  margin-top: calc(var(--s-4) - var(--s-2));
+}
+
+.arc-settings-ai-option-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  width: 100%;
+}
+
+.arc-settings-ai-option-stack .arc-settings-option-card {
+  max-width: none;
+  width: 100%;
+}
+
+.arc-settings-desc-block > .arc-settings-ai-slider-col + .arc-settings-ai-option-stack {
+  margin-top: calc(var(--s-4) - var(--s-2));
+}
+
 .arc-settings-hardware-row {
   display: flex;
   flex-direction: row;
@@ -5410,6 +5465,17 @@ html[data-theme="light"] .arc-settings-option-card:disabled .arc-settings-option
   flex-direction: row;
   gap: var(--s-3);
   align-items: stretch;
+  width: 100%;
+}
+
+/* Вертикальный список option-карточек (JoyCaption type / extra). */
+.arc-settings-ai-model-cards--stack {
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.arc-settings-ai-model-cards--stack .arc-settings-ai-model-card {
+  flex: 0 0 auto;
   width: 100%;
 }
 
@@ -5589,18 +5655,19 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
 
 .arc-settings-ai-sliders-row {
   display: flex;
-  flex-direction: row;
-  gap: var(--s-3);
-  align-items: flex-start;
+  flex-direction: column;
+  gap: var(--s-4);
+  align-items: stretch;
   width: 100%;
 }
 
 .arc-settings-ai-slider-col {
   display: flex;
-  flex: 1 1 0;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: var(--s-2);
   min-width: 0;
+  width: 100%;
 }
 
 .arc-settings-ai-slider-col__hint {

@@ -252,6 +252,14 @@ export type AiStatus = {
 
   searchStrictness: number;
 
+  autoTagEnabled: boolean;
+
+  autoTagVolume: number;
+
+  autoTagCatalogMode: 'reuse' | 'reuse_create';
+
+  autoTagOnImport: boolean;
+
   index: IndexStatus;
 
   models: ModelInstallStatus[];

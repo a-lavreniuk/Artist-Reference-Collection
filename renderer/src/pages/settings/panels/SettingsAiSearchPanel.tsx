@@ -1,14 +1,19 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import DemoAlert from '../../../components/layout/DemoAlert';
 import ValueSlider from '../../../components/range-slider/ValueSlider';
 import { Loader } from '../../../components/loader';
 import AiModelCard from '../../../components/settings/AiModelCard';
 import SettingsHardwareRow from '../../../components/settings/SettingsHardwareRow';
+import SettingsOptionCard from '../../../components/settings/SettingsOptionCard';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
+import { useAppPreferences } from '../../../hooks/useAppPreferences';
+import type { JoyCaptionExtraId, JoyCaptionTypeId } from '../../../services/appPreferences';
 import ConfirmModal from '../ConfirmModal';
 import {
   AI_INTRO_TEXT,
+  captionLengthHint,
+  captionLengthLabel,
   formatCpuLabel,
   formatGpuLabel,
   formatRamGb,
@@ -17,6 +22,10 @@ import {
   strictnessHint,
   tierShortLabel
 } from '../aiSettingsFormatters';
+import {
+  JOY_CAPTION_EXTRA_OPTIONS,
+  JOY_CAPTION_TYPE_OPTIONS
+} from '../joyCaptionSettingsCopy';
 import {
   isActiveModelInstalled,
   isAiDownloading,
@@ -35,6 +44,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 /** Figma 1036:38165–1036:39527 — AI Поиск */
 export default function SettingsAiSearchPanel() {
   const arcHint = useSettingsArcHint();
+  const { prefs, ready: prefsReady, update: updatePrefs } = useAppPreferences();
   const {
     snapshot,
     loading,
@@ -76,6 +86,73 @@ export default function SettingsAiSearchPanel() {
   const minRamMb = status?.activeTier
     ? status.modelCards.find((c) => c.tier === status.activeTier)?.minRamMb ?? 2048
     : 2048;
+
+  const [captionType, setCaptionTypeState] = useState<JoyCaptionTypeId>(
+    () => prefs?.aiCaptionType ?? 'descriptive_casual'
+  );
+  const [captionLengthLevel, setCaptionLengthState] = useState(
+    () => prefs?.aiCaptionLengthLevel ?? 80
+  );
+  const [captionExtraIds, setCaptionExtraIdsState] = useState<JoyCaptionExtraId[]>(
+    () => prefs?.aiCaptionExtraIds ?? []
+  );
+  const captionRef = useRef({
+    type: captionType,
+    length: captionLengthLevel,
+    extras: captionExtraIds
+  });
+  captionRef.current = {
+    type: captionType,
+    length: captionLengthLevel,
+    extras: captionExtraIds
+  };
+
+  useEffect(() => {
+    if (!prefs) return;
+    setCaptionTypeState(prefs.aiCaptionType);
+    setCaptionLengthState(prefs.aiCaptionLengthLevel);
+    setCaptionExtraIdsState(prefs.aiCaptionExtraIds);
+  }, [prefs]);
+
+  const captionExtraSet = new Set(captionExtraIds);
+  const captionControlsDisabled = !prefsReady;
+
+  /** Пишем тип + длину + extras одним патчем — иначе очередь IPC затирает соседние поля. */
+  const persistCaption = (partial: {
+    type?: JoyCaptionTypeId;
+    length?: number;
+    extras?: JoyCaptionExtraId[];
+  }) => {
+    const next = {
+      type: partial.type ?? captionRef.current.type,
+      length: partial.length ?? captionRef.current.length,
+      extras: partial.extras ?? captionRef.current.extras
+    };
+    captionRef.current = next;
+    setCaptionTypeState(next.type);
+    setCaptionLengthState(next.length);
+    setCaptionExtraIdsState(next.extras);
+    void updatePrefs({
+      aiCaptionType: next.type,
+      aiCaptionLengthLevel: next.length,
+      aiCaptionExtraIds: next.extras
+    });
+  };
+
+  const setCaptionType = (id: JoyCaptionTypeId) => {
+    persistCaption({ type: id });
+  };
+
+  const setCaptionLengthLevel = (value: number) => {
+    persistCaption({ length: value });
+  };
+
+  const toggleCaptionExtra = (id: JoyCaptionExtraId, checked: boolean) => {
+    const extras = checked
+      ? [...captionRef.current.extras.filter((x) => x !== id), id]
+      : captionRef.current.extras.filter((x) => x !== id);
+    persistCaption({ extras });
+  };
 
   return (
     <>
@@ -125,7 +202,7 @@ export default function SettingsAiSearchPanel() {
 
                   <div className="arc-settings-ai-panel__section">
                     <SectionLabel>Модели</SectionLabel>
-                    <div className="arc-settings-ai-model-cards">
+                    <div className="arc-settings-ai-model-cards arc-settings-ai-model-cards--stack">
                       {status.modelCards.map((card) => {
                         const install = status.models.find((m) => m.tier === card.tier);
                         const isCardDownloading =
@@ -295,6 +372,71 @@ export default function SettingsAiSearchPanel() {
                         Доступно {formatRamGb(status.hardware.totalMemoryMb)}. Минимум для модели{' '}
                         {formatRamGb(minRamMb)}
                       </p>
+                    </div>
+                  </div>
+
+                  <SettingsSeparator />
+
+                  <div className="arc-settings-ai-panel__section">
+                    <SectionLabel>Детализация AI описания</SectionLabel>
+                    <p className="text-m arc-settings-ai-slider-col__hint arc-settings-ai-panel__section-lead">
+                      Настройки влияют на индексацию и AI-описания карточек. Автотеги используют отдельный
+                      промпт.
+                    </p>
+
+                    <div className="arc-settings-ai-slider-col">
+                      <SectionLabel>
+                        Длина описания — {captionLengthLabel(captionLengthLevel)}
+                      </SectionLabel>
+                      <ValueSlider
+                        size="s"
+                        min={0}
+                        max={100}
+                        step={20}
+                        value={captionLengthLevel}
+                        showValue={false}
+                        disabled={captionControlsDisabled}
+                        formatValue={(v) => `${v}`}
+                        onChange={setCaptionLengthLevel}
+                        ariaLabel="Длина описания"
+                      />
+                      <p className="text-m arc-settings-ai-slider-col__hint">
+                        {captionLengthHint(captionLengthLevel)}
+                      </p>
+                    </div>
+
+                    <SectionLabel>Тип описания</SectionLabel>
+                    <div
+                      className="arc-settings-ai-option-stack"
+                      role="radiogroup"
+                      aria-label="Тип описания"
+                    >
+                      {JOY_CAPTION_TYPE_OPTIONS.map((opt) => (
+                        <SettingsOptionCard
+                          key={opt.id}
+                          variant="radio"
+                          label={opt.label}
+                          description={opt.description}
+                          checked={captionType === opt.id}
+                          disabled={captionControlsDisabled}
+                          onCheckedChange={() => setCaptionType(opt.id)}
+                        />
+                      ))}
+                    </div>
+
+                    <SectionLabel>Дополнительные настройки</SectionLabel>
+                    <div className="arc-settings-ai-option-stack">
+                      {JOY_CAPTION_EXTRA_OPTIONS.map((opt) => (
+                        <SettingsOptionCard
+                          key={opt.id}
+                          variant="toggle"
+                          label={opt.label}
+                          description={opt.description}
+                          checked={captionExtraSet.has(opt.id)}
+                          disabled={captionControlsDisabled}
+                          onCheckedChange={(checked) => toggleCaptionExtra(opt.id, checked)}
+                        />
+                      ))}
                     </div>
                   </div>
 

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { AppPreferencesV1 } from '../services/appPreferences';
 import {
-  applyAppPreferencesPatch,
   getAppPreferencesSync,
   initAppPreferencesRuntime,
   isAppPreferencesCacheReady,
@@ -14,11 +13,6 @@ export function useAppPreferences() {
     isAppPreferencesCacheReady() ? getAppPreferencesSync() : null
   );
   const [loading, setLoading] = useState(() => !isAppPreferencesCacheReady());
-  const prefsRef = useRef<AppPreferencesV1 | null>(null);
-
-  useEffect(() => {
-    prefsRef.current = prefs;
-  }, [prefs]);
 
   useEffect(() => {
     let active = true;
@@ -37,14 +31,11 @@ export function useAppPreferences() {
   }, []);
 
   const update = useCallback(async (patch: Partial<AppPreferencesV1>) => {
-    const rollback = prefsRef.current ?? getAppPreferencesSync();
-    setPrefs((current) => applyAppPreferencesPatch(current ?? rollback, patch));
-
     try {
       const next = await patchAppPreferences(patch);
       setPrefs(next);
     } catch {
-      setPrefs(rollback);
+      setPrefs(getAppPreferencesSync());
     }
   }, []);
 

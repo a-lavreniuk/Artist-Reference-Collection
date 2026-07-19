@@ -303,6 +303,10 @@ export async function buildAiStatus(): Promise<AiStatus> {
     },
     resourcePreset: prefs.aiResourcePreset,
     searchStrictness: prefs.aiSearchStrictness,
+    autoTagEnabled: prefs.aiAutoTagEnabled,
+    autoTagVolume: prefs.aiAutoTagVolume,
+    autoTagCatalogMode: prefs.aiAutoTagCatalogMode,
+    autoTagOnImport: prefs.aiAutoTagOnImport,
     index,
     models,
     llamaRuntime,
@@ -711,6 +715,18 @@ export function registerAiIpc(): void {
     return { ok: true as const };
   });
 
+  ipcMain.handle('arc:ai-suggest-tags', async (_e, payload: unknown) => {
+    const cardId =
+      typeof payload === 'string'
+        ? payload.trim()
+        : typeof (payload as { cardId?: unknown })?.cardId === 'string'
+          ? String((payload as { cardId: string }).cardId).trim()
+          : '';
+    if (!cardId) return { ok: false as const, error: 'Не указана карточка.' };
+    const { suggestTagsForCard } = await import('./ai/suggestTags');
+    return suggestTagsForCard(cardId);
+  });
+
   ipcMain.handle('arc:ai-set-enabled', async (_e, payload: unknown) => {
     const p = payload as {
       enabled?: boolean;
@@ -720,6 +736,10 @@ export function registerAiIpc(): void {
       maxRamMb?: number;
       resourcePreset?: number;
       searchStrictness?: number;
+      autoTagEnabled?: boolean;
+      autoTagVolume?: number;
+      autoTagCatalogMode?: 'reuse' | 'reuse_create';
+      autoTagOnImport?: boolean;
     };
     const patch: Record<string, unknown> = {};
     if (typeof p.enabled === 'boolean') patch.aiSemanticSearchEnabled = p.enabled;
@@ -735,6 +755,14 @@ export function registerAiIpc(): void {
     if (typeof p.searchStrictness === 'number') {
       patch.aiSearchStrictness = Math.max(0, Math.min(100, Math.round(p.searchStrictness / 5) * 5));
     }
+    if (typeof p.autoTagEnabled === 'boolean') patch.aiAutoTagEnabled = p.autoTagEnabled;
+    if (typeof p.autoTagVolume === 'number') {
+      patch.aiAutoTagVolume = Math.max(0, Math.min(100, Math.round(p.autoTagVolume / 5) * 5));
+    }
+    if (p.autoTagCatalogMode === 'reuse' || p.autoTagCatalogMode === 'reuse_create') {
+      patch.aiAutoTagCatalogMode = p.autoTagCatalogMode;
+    }
+    if (typeof p.autoTagOnImport === 'boolean') patch.aiAutoTagOnImport = p.autoTagOnImport;
     if (typeof p.threads === 'number') patch.aiThreads = Math.max(1, Math.min(32, Math.round(p.threads)));
     if (typeof p.gpuLayers === 'number') patch.aiGpuLayers = Math.max(0, Math.min(128, Math.round(p.gpuLayers)));
     if (typeof p.maxRamMb === 'number') patch.aiMaxRamMb = Math.max(512, Math.min(65536, Math.round(p.maxRamMb)));

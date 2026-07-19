@@ -7,6 +7,67 @@ export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 export type UiThemePreference = 'dark' | 'light' | 'system';
 
+export const JOY_CAPTION_TYPE_IDS = [
+  'descriptive_casual',
+  'straightforward',
+  'stable_diffusion',
+  'midjourney',
+  'art_critic',
+  'product_listing',
+  'social_media',
+  'danbooru'
+] as const;
+export type JoyCaptionTypeId = (typeof JOY_CAPTION_TYPE_IDS)[number];
+
+export const JOY_CAPTION_LENGTH_LEVELS = [0, 20, 40, 60, 80, 100] as const;
+export type JoyCaptionLengthLevel = (typeof JOY_CAPTION_LENGTH_LEVELS)[number];
+
+export const JOY_CAPTION_EXTRA_IDS = [
+  'lighting',
+  'camera_angle',
+  'aesthetic_quality',
+  'composition',
+  'no_text',
+  'depth_of_field',
+  'lighting_sources',
+  'sfw_rating',
+  'only_important',
+  'no_artist_title',
+  'orientation',
+  'vulgar_slang',
+  'ages',
+  'shot_type',
+  'vantage_height'
+] as const;
+export type JoyCaptionExtraId = (typeof JOY_CAPTION_EXTRA_IDS)[number];
+
+const JOY_CAPTION_TYPE_SET = new Set<string>(JOY_CAPTION_TYPE_IDS);
+const JOY_CAPTION_EXTRA_SET = new Set<string>(JOY_CAPTION_EXTRA_IDS);
+
+export function sanitizeJoyCaptionType(raw: unknown): JoyCaptionTypeId {
+  if (typeof raw === 'string' && JOY_CAPTION_TYPE_SET.has(raw)) return raw as JoyCaptionTypeId;
+  return 'descriptive_casual';
+}
+
+export function sanitizeJoyCaptionLengthLevel(raw: unknown): JoyCaptionLengthLevel {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 80;
+  const stepped = Math.round(raw / 20) * 20;
+  const clamped = Math.max(0, Math.min(100, stepped)) as JoyCaptionLengthLevel;
+  return (JOY_CAPTION_LENGTH_LEVELS as readonly number[]).includes(clamped) ? clamped : 80;
+}
+
+export function sanitizeJoyCaptionExtraIds(raw: unknown): JoyCaptionExtraId[] {
+  if (!Array.isArray(raw)) return [];
+  const out: JoyCaptionExtraId[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (typeof item !== 'string' || !JOY_CAPTION_EXTRA_SET.has(item) || seen.has(item)) continue;
+    seen.add(item);
+    out.push(item as JoyCaptionExtraId);
+  }
+  return out;
+}
+
 export type NotificationPrefKey =
   | 'notifyScreenshotSaved'
   | 'notifyDuplicatesFound'
@@ -52,6 +113,14 @@ export type AppPreferencesV1 = {
   aiMaxRamMb: number;
   aiResourcePreset: number;
   aiSearchStrictness: number;
+  aiAutoTagEnabled: boolean;
+  aiAutoTagVolume: number;
+  aiAutoTagCatalogMode: 'reuse' | 'reuse_create';
+  aiAutoTagOnImport: boolean;
+  aiVideoCaptionOnImport: boolean;
+  aiCaptionType: JoyCaptionTypeId;
+  aiCaptionLengthLevel: JoyCaptionLengthLevel;
+  aiCaptionExtraIds: JoyCaptionExtraId[];
   galleryCollectionsStripEnabled: boolean;
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
   uiTheme: UiThemePreference;
@@ -105,6 +174,14 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiMaxRamMb: 4096,
     aiResourcePreset: 50,
     aiSearchStrictness: 50,
+    aiAutoTagEnabled: false,
+    aiAutoTagVolume: 50,
+    aiAutoTagCatalogMode: 'reuse',
+    aiAutoTagOnImport: false,
+    aiVideoCaptionOnImport: false,
+    aiCaptionType: 'descriptive_casual',
+    aiCaptionLengthLevel: 80,
+    aiCaptionExtraIds: [],
     galleryCollectionsStripEnabled: true,
     galleryCollectionsSortMode: 'chrono',
     uiTheme: 'dark',
@@ -176,6 +253,22 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     mcpServerEnabled:
       typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
     mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
+    aiAutoTagEnabled:
+      typeof raw.aiAutoTagEnabled === 'boolean' ? raw.aiAutoTagEnabled : d.aiAutoTagEnabled,
+    aiAutoTagVolume:
+      typeof raw.aiAutoTagVolume === 'number'
+        ? Math.max(0, Math.min(100, Math.round(raw.aiAutoTagVolume / 5) * 5))
+        : d.aiAutoTagVolume,
+    aiAutoTagCatalogMode: raw.aiAutoTagCatalogMode === 'reuse_create' ? 'reuse_create' : 'reuse',
+    aiAutoTagOnImport:
+      typeof raw.aiAutoTagOnImport === 'boolean' ? raw.aiAutoTagOnImport : d.aiAutoTagOnImport,
+    aiVideoCaptionOnImport:
+      typeof raw.aiVideoCaptionOnImport === 'boolean'
+        ? raw.aiVideoCaptionOnImport
+        : d.aiVideoCaptionOnImport,
+    aiCaptionType: sanitizeJoyCaptionType(raw.aiCaptionType ?? d.aiCaptionType),
+    aiCaptionLengthLevel: sanitizeJoyCaptionLengthLevel(raw.aiCaptionLengthLevel ?? d.aiCaptionLengthLevel),
+    aiCaptionExtraIds: sanitizeJoyCaptionExtraIds(raw.aiCaptionExtraIds ?? d.aiCaptionExtraIds),
     videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay
   };
 }

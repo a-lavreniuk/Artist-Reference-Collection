@@ -34,6 +34,8 @@ export function SettingsAiSearchPanelRoute() {
 
 export { SettingsAiSearchPanelRoute as SettingsAiSearchPanel };
 
+export { default as SettingsAutoTagPanel } from './SettingsAutoTagPanel';
+
 export { default as SettingsVideoPlaybackPanel } from './SettingsVideoPlaybackPanel';
 
 export function SettingsVideoPlaybackPanelRoute() {

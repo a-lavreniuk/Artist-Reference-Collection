@@ -8,11 +8,13 @@ import {
   useState,
   useSyncExternalStore,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { Loader } from '../loader';
 import DemoAlert, { type ToastAlertVariant } from '../layout/DemoAlert';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
@@ -67,6 +69,7 @@ import {
   writeCardDetailSettingsWidth
 } from './cardDetailSettingsWidth';
 import { measureCardDetailToolbarMinWidth } from './measureCardDetailToolbarMinWidth';
+import { getAppPreferences } from '../../services/appPreferences';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 import CopyCardSettingsMenu from './CopyCardSettingsMenu';
 import {
@@ -165,6 +168,11 @@ export default function CardDetailOverlay({
   const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
+  const [suggestTagsBusy, setSuggestTagsBusy] = useState(false);
+  const [autoTagEnabled, setAutoTagEnabled] = useState(false);
+  const [pendingTagSearchIds, setPendingTagSearchIds] = useState<string[]>([]);
+  const pendingTagSearchIdsRef = useRef<string[]>([]);
+  pendingTagSearchIdsRef.current = pendingTagSearchIds;
   const [collectionsModalOpen, setCollectionsModalOpen] = useState(false);
   const [actionAlert, setActionAlert] = useState<{ message: string; variant: ToastAlertVariant } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -188,7 +196,9 @@ export default function CardDetailOverlay({
 
   const libraryScope = parseLibraryScope(searchParams);
   const inTrash = libraryScope === 'trash';
-  const hasAiCaption = Boolean(card?.type === 'image' && card.aiCaption?.trim());
+  const hasAiCaption = Boolean(
+    (card?.type === 'image' || card?.type === 'video') && card.aiCaption?.trim()
+  );
 
   const reloadCard = useCallback(async (id: string) => {
     let c = await getCardById(id);
@@ -223,7 +233,18 @@ export default function CardDetailOverlay({
 
   useEffect(() => {
     setDescriptionTab('description');
+    setPendingTagSearchIds([]);
   }, [cardId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getAppPreferences().then((prefs) => {
+      if (!cancelled) setAutoTagEnabled(Boolean(prefs.aiAutoTagEnabled));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasAiCaption && descriptionTab === 'ai') {
@@ -240,9 +261,15 @@ export default function CardDetailOverlay({
     const onComplete = window.arc?.onAiIndexComplete?.(() => {
       void refreshAiCaption(cardId);
     });
+    // Видео-caption после импорта шлёт quiet extension-import — подтянуть aiCaption в открытой деталке.
+    const onImportSaved = window.arc?.onExtensionImportSaved?.(({ cardIds }) => {
+      if (!cardIds.includes(cardId)) return;
+      void refreshAiCaption(cardId);
+    });
     return () => {
       onProgress?.();
       onComplete?.();
+      onImportSaved?.();
     };
   }, [cardId, refreshAiCaption]);
 
@@ -261,6 +288,8 @@ export default function CardDetailOverlay({
     actionAlert,
     tagsModalOpen,
     collectionsModalOpen,
+    autoTagEnabled,
+    suggestTagsBusy,
     palette,
     settingsWidth,
     thumbSrc,
@@ -389,6 +418,10 @@ export default function CardDetailOverlay({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (pendingTagSearchIdsRef.current.length > 0) {
+        setPendingTagSearchIds([]);
+        return;
+      }
       if (actionAlert) setActionAlert(null);
       else if (copySettingsMenuOpen) setCopySettingsMenuOpen(false);
       else if (collectionsModalOpen) setCollectionsModalOpen(false);
@@ -774,14 +807,67 @@ export default function CardDetailOverlay({
   };
 
   const openTagSearch = useCallback(
-    (tagId: string) => {
+    (tagIds: string | string[]) => {
+      const ids = (Array.isArray(tagIds) ? tagIds : [tagIds]).filter((id) => id.trim().length > 0);
+      if (ids.length === 0) return;
       const next = new URLSearchParams();
-      next.append(ARC_SEARCH_QUERY_TAG, tagId);
+      for (const id of ids) next.append(ARC_SEARCH_QUERY_TAG, id);
       onClose();
       navigate({ pathname: '/gallery', search: `?${next.toString()}` });
     },
     [navigate, onClose]
   );
+
+  useEffect(() => {
+    const flushPendingTagSearch = () => {
+      const ids = pendingTagSearchIdsRef.current;
+      if (ids.length === 0) return;
+      setPendingTagSearchIds([]);
+      openTagSearch(ids);
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Control' || event.key === 'Meta') {
+        flushPendingTagSearch();
+      }
+    };
+    const onBlur = () => {
+      if (pendingTagSearchIdsRef.current.length > 0) {
+        flushPendingTagSearch();
+      }
+    };
+
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, [openTagSearch]);
+
+  const handleDetailTagClick = (event: ReactMouseEvent<HTMLButtonElement>, tagId: string) => {
+    if (event.altKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      void patchCardTagIds((ids) => ids.filter((id) => id !== tagId));
+      setPendingTagSearchIds((prev) => prev.filter((id) => id !== tagId));
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      setPendingTagSearchIds((prev) =>
+        prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+      );
+      return;
+    }
+
+    if (pendingTagSearchIds.length > 0) {
+      setPendingTagSearchIds([]);
+    }
+    openTagSearch(tagId);
+  };
 
   const openCollectionPage = useCallback(
     (collectionId: string) => {
@@ -885,6 +971,98 @@ export default function CardDetailOverlay({
         <span className="btn-ds__value">{label}</span>
         <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
       </button>
+    </div>
+  );
+
+  const handleSuggestTags = async () => {
+    if (!card || suggestTagsBusy) return;
+    if (!window.arc?.aiSuggestTags) {
+      setActionAlert({ message: 'Автотегирование недоступно', variant: 'danger' });
+      return;
+    }
+    setSuggestTagsBusy(true);
+    try {
+      const result = await window.arc.aiSuggestTags(card.id);
+      if (!result.ok) {
+        setActionAlert({ message: result.error, variant: 'danger' });
+        return;
+      }
+      if (result.tagIds.length === 0) {
+        const proposed = result.proposedNew?.length ?? 0;
+        setActionAlert({
+          message:
+            proposed > 0
+              ? 'Модель предложила метки, но ни одна не совпала с каталогом. Включите «Создавать новые метки» в настройках автотегирования или добавьте метки вручную'
+              : 'Не удалось сопоставить предложения с каталогом меток',
+          variant: 'warning'
+        });
+        setTagsModalOpen(true);
+        return;
+      }
+      const existing = new Set(card.tagIds);
+      const toAdd = result.tagIds.filter((id) => !existing.has(id));
+      if (toAdd.length > 0) {
+        await patchCardTagIds((prev) => [...new Set([...prev, ...toAdd])]);
+      }
+      const createdNote =
+        result.createdCount > 0 ? ` (новых в каталоге: ${result.createdCount})` : '';
+      setActionAlert({
+        message:
+          toAdd.length > 0
+            ? `Добавлено меток: ${toAdd.length}${createdNote}. Проверьте и при необходимости снимите лишние`
+            : `Подходящие метки уже были на карточке${createdNote}`,
+        variant: 'brand'
+      });
+      setTagsModalOpen(true);
+    } catch (err) {
+      setActionAlert({
+        message: err instanceof Error ? err.message : 'Не удалось предложить метки',
+        variant: 'danger'
+      });
+    } finally {
+      setSuggestTagsBusy(false);
+    }
+  };
+
+  const tagsSectionFooter = (
+    <div
+      className={[
+        'arc-card-detail-tag-actions',
+        'arc-ui-kit-scope',
+        suggestTagsBusy ? 'arc-card-detail-tag-actions--busy' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      data-btn-size="m"
+    >
+      {autoTagEnabled && (card?.type === 'image' || card?.type === 'video') ? (
+        <button
+          type="button"
+          className="btn btn-outline btn-ds arc-card-detail-add-row"
+          onClick={() => void handleSuggestTags()}
+          disabled={busy || suggestTagsBusy}
+        >
+          <span className="btn-ds__value">{suggestTagsBusy ? 'Предлагаю…' : 'Предложить метки'}</span>
+          {suggestTagsBusy ? (
+            <span className="btn-ds__icon" aria-hidden="true">
+              <Loader decorative />
+            </span>
+          ) : (
+            <span className="btn-ds__icon arc-icon-ai" aria-hidden="true" />
+          )}
+        </button>
+      ) : null}
+      {!suggestTagsBusy ? (
+        <button
+          type="button"
+          className="btn btn-outline btn-ds arc-card-detail-add-row"
+          onClick={() => setTagsModalOpen(true)}
+          disabled={busy}
+        >
+          <span className="btn-ds__value">Добавить метку</span>
+          <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+        </button>
+      ) : null}
     </div>
   );
 
@@ -1323,7 +1501,7 @@ export default function CardDetailOverlay({
               <CollapsibleSection
                 title="Метки"
                 count={tagsSorted.length}
-                footer={addRowButton('Добавить метку', () => setTagsModalOpen(true))}
+                footer={tagsSectionFooter}
               >
                 {tagsSorted.length > 0 && (
                   <div className="arc-card-detail-tags">
@@ -1331,20 +1509,27 @@ export default function CardDetailOverlay({
                       const hasTipText = Boolean(tag.description?.trim());
                       const hasTipImage = Boolean(tag.tooltipImageDataUrl?.startsWith('data:image/'));
                       const canShowTooltip = hasTipText || hasTipImage;
+                      const searchPending = pendingTagSearchIds.includes(tag.id);
 
                       const chipButton = (
                         <button
                           type="button"
-                          className="arc-card-detail-tag-chip"
-                          onClick={() => openTagSearch(tag.id)}
-                          aria-label={`Искать по метке «${tag.name}»`}
+                          className={[
+                            'arc-card-detail-tag-chip',
+                            searchPending ? 'arc-card-detail-tag-chip--search-pending' : ''
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          onClick={(event) => handleDetailTagClick(event, tag.id)}
+                          aria-label={`Метка «${tag.name}». Клик — поиск, Ctrl+клик — выбрать несколько, Alt+клик — снять`}
+                          aria-pressed={searchPending || undefined}
                         >
                           <span className="arc-card-detail-tag-dot" style={{ background: colorHex }} aria-hidden="true" />
                           <span className="arc-card-detail-tag-name">{tag.name}</span>
                         </button>
                       );
 
-                      if (!canShowTooltip) {
+                      if (!canShowTooltip || searchPending) {
                         return <Fragment key={tag.id}>{chipButton}</Fragment>;
                       }
 

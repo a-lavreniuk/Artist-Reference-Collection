@@ -62,6 +62,34 @@ export default function NotificationHost({ children }: { children: React.ReactNo
     });
   }, []);
 
+  useEffect(() => {
+    if (!window.arc?.onAutoTagApplied) return undefined;
+    return window.arc.onAutoTagApplied((detail) => {
+      const parts: string[] = [];
+      if (detail.tags > 0) {
+        parts.push(
+          detail.cards === 1
+            ? `добавлено меток: ${detail.tags}`
+            : `меток на ${detail.cards} карт.: ${detail.tags}`
+        );
+      }
+      if (detail.created > 0) {
+        parts.push(`создано новых: ${detail.created}`);
+      }
+      if (parts.length === 0) return;
+      window.dispatchEvent(
+        new CustomEvent(APP_NOTIFICATION_EVENT, {
+          detail: {
+            message: `Автотегирование: ${parts.join(', ')}`,
+            variant: 'brand',
+            skipPrefCheck: true,
+            autoDismissMs: 8000
+          } satisfies AppNotificationPayload
+        })
+      );
+    });
+  }, []);
+
   const onActivate = useCallback(() => {
     if (!active?.navigateTo) return;
     navigate(active.navigateTo);

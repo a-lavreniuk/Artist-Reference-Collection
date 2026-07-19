@@ -37,7 +37,7 @@ export function useAccordionMotion(
           duration,
           ease: arcMotionTokens.ease,
           onComplete: () => {
-            gsap.set(body, { height: 'auto' });
+            gsap.set(body, { height: 'auto', overflow: 'visible' });
           }
         }
       );
