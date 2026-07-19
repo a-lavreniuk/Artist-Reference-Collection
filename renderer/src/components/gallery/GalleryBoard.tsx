@@ -10,10 +10,18 @@ import { computeMasonryColumnWidth } from '../masonry/masonryColumnRules';
 import { galleryMasonryItemHeight } from '../masonry/masonryItemHeight';
 import { useContainerWidth } from '../masonry/useMasonryColumnCount';
 import { ARC_GRID_SIZE_CHANGED_EVENT, readGridSize } from '../../layout/gridSizePreference';
+import {
+  ARC_GALLERY_LAYOUT_CHANGED_EVENT,
+  readGalleryLayoutMode,
+  type GalleryLayoutMode
+} from '../../layout/galleryLayoutPreference';
 import { useCardSectionMediaActive } from '../layout/cardSectionMedia';
 import { mergeCardsSrcMap, peekCardsSrcMap } from './galleryMediaCache';
 import { setGalleryThumbPixelBudget } from './galleryThumbBudget';
 import GalleryCardTile from './GalleryCardTile';
+import GalleryList from './GalleryList';
+import GalleryListRow from './GalleryListRow';
+import UniformGrid from './UniformGrid';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 
 type Props = {
@@ -38,6 +46,8 @@ type Props = {
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
   /** Меняется при фильтрах / сортировке — перезапускает reveal карточек. */
   revealResetKey?: string;
+  /** Принудительный режим (например similar — только masonry). */
+  forceLayoutMode?: GalleryLayoutMode;
 };
 
 export default function GalleryBoard({
@@ -60,10 +70,12 @@ export default function GalleryBoard({
   loadingMore = false,
   busy = false,
   mediaTab,
-  revealResetKey = ''
+  revealResetKey = '',
+  forceLayoutMode
 }: Props) {
   const [tierSrcMap, setTierSrcMap] = useState<Record<string, string>>({});
   const [gridSizeVersion, setGridSizeVersion] = useState(0);
+  const [layoutModeVersion, setLayoutModeVersion] = useState(0);
   const internalBoardRef = useRef<HTMLDivElement>(null);
   const boardRef = boardRefProp ?? internalBoardRef;
   const srcMap = useMemo(
@@ -72,6 +84,7 @@ export default function GalleryBoard({
   );
   const containerWidth = useContainerWidth(boardRef);
   const gridSize = readGridSize();
+  const layoutMode = forceLayoutMode ?? readGalleryLayoutMode();
   const tabMediaActive = useCardSectionMediaActive(mediaTab ?? 'gallery');
   const thumbsActive = mediaTab === undefined ? true : tabMediaActive;
 
@@ -81,14 +94,25 @@ export default function GalleryBoard({
     return () => window.removeEventListener(ARC_GRID_SIZE_CHANGED_EVENT, onGridSizeChanged);
   }, []);
 
+  useEffect(() => {
+    const onLayoutChanged = () => setLayoutModeVersion((v) => v + 1);
+    window.addEventListener(ARC_GALLERY_LAYOUT_CHANGED_EVENT, onLayoutChanged);
+    return () => window.removeEventListener(ARC_GALLERY_LAYOUT_CHANGED_EVENT, onLayoutChanged);
+  }, []);
+
+  // layoutModeVersion keeps prefer-read in sync with events when forceLayoutMode is unset
+  void layoutModeVersion;
+
   const columnCount = resolveMasonryColumnCount(containerWidth, gridSize, variant);
   const masonryGap = resolveMasonryGapPx(gridSize);
   const columnWidth = computeMasonryColumnWidth(containerWidth, columnCount, masonryGap);
+  const thumbBudget =
+    layoutMode === 'list' ? Math.max(columnWidth, 64) : columnWidth;
 
   useEffect(() => {
-    setGalleryThumbPixelBudget(columnWidth);
+    setGalleryThumbPixelBudget(thumbBudget);
     return () => setGalleryThumbPixelBudget(0);
-  }, [columnWidth]);
+  }, [thumbBudget]);
 
   useEffect(() => {
     if (!thumbsActive) return;
@@ -104,7 +128,7 @@ export default function GalleryBoard({
     return () => {
       cancelled = true;
     };
-  }, [cards, srcMapProp, gridSizeVersion, thumbsActive, columnWidth, mediaTab]);
+  }, [cards, srcMapProp, gridSizeVersion, thumbsActive, thumbBudget, mediaTab]);
 
   const masonryItems = useMemo(
     () =>
@@ -114,6 +138,9 @@ export default function GalleryBoard({
       })),
     [cards, columnCount, containerWidth, gridSize, gridSizeVersion, masonryGap]
   );
+
+  const gridItems = useMemo(() => cards.map((card) => ({ id: card.id })), [cards]);
+  const listItems = gridItems;
 
   const cardById = useMemo(() => {
     const map = new Map<string, CardRecord>();
@@ -134,8 +161,8 @@ export default function GalleryBoard({
     [onCardClick, onOpenCard]
   );
 
-  const renderItem = useCallback(
-    (id: string) => {
+  const renderTile = useCallback(
+    (id: string, thumbFit: 'natural' | 'cover' = 'natural') => {
       const card = cardById.get(id);
       if (!card) return null;
       return (
@@ -143,6 +170,7 @@ export default function GalleryBoard({
           card={card}
           thumbSrc={srcMap[card.id]}
           gridSize={gridSize}
+          thumbFit={thumbFit}
           inMoodboard={moodboardCardIds?.has(card.id) ?? false}
           isSelected={isCardSelected?.(card.id) ?? false}
           onCardClick={handleCardClick}
@@ -185,6 +213,58 @@ export default function GalleryBoard({
     ]
   );
 
+  const renderMasonryItem = useCallback((id: string) => renderTile(id, 'natural'), [renderTile]);
+  const renderGridItem = useCallback((id: string) => renderTile(id, 'cover'), [renderTile]);
+
+  const renderListItem = useCallback(
+    (id: string) => {
+      const card = cardById.get(id);
+      if (!card) return null;
+      return (
+        <GalleryListRow
+          card={card}
+          thumbSrc={srcMap[card.id]}
+          isSelected={isCardSelected?.(card.id) ?? false}
+          inMoodboard={moodboardCardIds?.has(card.id) ?? false}
+          moodboardEnabled={moodboardEnabled}
+          onCardClick={handleCardClick}
+          onOpenInNewWindow={onOpenInNewWindow}
+          onCardPointerDown={onCardPointerDown}
+          onCardPointerMove={onCardPointerMove}
+          onCardPointerUp={onCardPointerUp}
+          onFindSimilar={onFindSimilar}
+          onToggleMoodboard={onToggleMoodboard}
+          interfaceTourAnchor={cards[0]?.id === card.id ? 'gallery-first-card' : undefined}
+          onContextMenu={
+            onCardContextMenu
+              ? (event) => {
+                  onCardContextMenu(card, event);
+                }
+              : undefined
+          }
+          mediaTab={mediaTab}
+        />
+      );
+    },
+    [
+      cardById,
+      cards,
+      handleCardClick,
+      isCardSelected,
+      mediaTab,
+      moodboardCardIds,
+      moodboardEnabled,
+      onCardContextMenu,
+      onFindSimilar,
+      onOpenInNewWindow,
+      onCardPointerDown,
+      onCardPointerMove,
+      onCardPointerUp,
+      onToggleMoodboard,
+      srcMap
+    ]
+  );
+
   const renderSkeleton = useCallback(
     (_: string, layout: { height: number }) => {
       const card = cards[cards.length - 1];
@@ -200,21 +280,54 @@ export default function GalleryBoard({
     [cards]
   );
 
+  const boardClass =
+    layoutMode === 'list'
+      ? 'arc-gallery-board arc-gallery-board--list'
+      : layoutMode === 'grid'
+        ? 'arc-gallery-board arc-gallery-board--grid'
+        : 'arc-gallery-board arc-gallery-masonry';
+
   return (
-    <div ref={boardRef} className="arc-gallery-masonry" data-interface-tour-anchor="gallery-grid">
-      <MasonryGrid
-        items={masonryItems}
-        variant={variant}
-        scrollRootRef={scrollRootRef}
-        gap={masonryGap}
-        layoutEpoch={gridSizeVersion}
-        revealResetKey={revealResetKey}
-        loadingMore={loadingMore}
-        busy={busy}
-        className="arc-gallery-masonry-grid"
-        renderSkeleton={renderSkeleton}
-        renderItem={renderItem}
-      />
+    <div ref={boardRef} className={boardClass} data-interface-tour-anchor="gallery-grid">
+      {layoutMode === 'list' ? (
+        <GalleryList
+          items={listItems}
+          scrollRootRef={scrollRootRef}
+          loadingMore={loadingMore}
+          busy={busy}
+          className="arc-gallery-list-view"
+          renderItem={renderListItem}
+        />
+      ) : null}
+      {layoutMode === 'grid' ? (
+        <UniformGrid
+          items={gridItems}
+          variant={variant}
+          scrollRootRef={scrollRootRef}
+          gap={masonryGap}
+          layoutEpoch={gridSizeVersion}
+          loadingMore={loadingMore}
+          busy={busy}
+          className="arc-gallery-uniform-grid"
+          renderSkeleton={renderSkeleton}
+          renderItem={renderGridItem}
+        />
+      ) : null}
+      {layoutMode === 'masonry' ? (
+        <MasonryGrid
+          items={masonryItems}
+          variant={variant}
+          scrollRootRef={scrollRootRef}
+          gap={masonryGap}
+          layoutEpoch={gridSizeVersion}
+          revealResetKey={revealResetKey}
+          loadingMore={loadingMore}
+          busy={busy}
+          className="arc-gallery-masonry-grid"
+          renderSkeleton={renderSkeleton}
+          renderItem={renderMasonryItem}
+        />
+      ) : null}
     </div>
   );
 }

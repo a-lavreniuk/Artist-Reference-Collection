@@ -3,19 +3,11 @@ import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import { useNavigateToAppSection } from '../../search/openCardUrl';
 import { openBugReportForm } from '../../services/bugReportService';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
-import { useGridSize, type GridSize } from '../../layout/gridSizePreference';
 import type { UiThemePreference } from '../../services/appPreferences';
-
-const GRID_OPTIONS: { key: GridSize; label: string; iconClass: string }[] = [
-  { key: 'l', label: 'Большая', iconClass: 'arc-icon-grid-l' },
-  { key: 'm', label: 'Средняя', iconClass: 'arc-icon-grid-m' },
-  { key: 's', label: 'Маленькая', iconClass: 'arc-icon-grid-s' }
-];
 
 export default function NavbarMenu() {
   const navigateToSection = useNavigateToAppSection();
   const { prefs, ready, update } = useAppPreferences();
-  const [gridSize, setGridSize] = useGridSize();
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
@@ -34,16 +26,6 @@ export default function NavbarMenu() {
       { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigateToSection('/settings/general') },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigateToSection('/duplicates') },
-      { type: 'separator', key: 'sep-grid' },
-      { type: 'header', key: 'grid-size-title', label: 'Размер сетки' },
-      ...GRID_OPTIONS.map((opt) => ({
-        type: 'item' as const,
-        key: `grid-${opt.key}`,
-        label: opt.label,
-        iconClass: opt.iconClass,
-        selected: gridSize === opt.key,
-        onSelect: () => setGridSize(opt.key)
-      })),
       { type: 'separator', key: 'sep2' },
       { type: 'header', key: 'theme-label', label: 'Оформление' },
       {
@@ -77,7 +59,7 @@ export default function NavbarMenu() {
       { type: 'item', key: 'feedback', label: 'Сообщить о проблеме', iconClass: 'arc-icon-bug-s', onSelect: () => { setOpen(false); void openBugReportForm(); } },
       { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigateToSection('/ui-kit') }
     ],
-    [gridSize, navigateToSection, ready, currentTheme, setGridSize]
+    [navigateToSection, ready, currentTheme]
   );
 
   return (

@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import NavbarFiltersMenu from './navbar-filters/GalleryNavbarFilters';
 import NavbarLibrarySwitcher from './NavbarLibrarySwitcher';
 import { useImportContext } from '../import/ImportContext';
+import NavbarGalleryLayoutMenu from './NavbarGalleryLayoutMenu';
 import NavbarMenu from './NavbarMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
@@ -142,6 +143,7 @@ export default function TopNavbar() {
               <div data-interface-tour-anchor="navbar-sort-filters" className="arc-navbar-sort-filters-anchor">
                 <NavbarSortMenu disabled={maintenanceLocked} />
                 <NavbarFiltersMenu />
+                <NavbarGalleryLayoutMenu disabled={maintenanceLocked} />
               </div>
             ) : null}
             <NavbarLibrarySwitcher disabled={maintenanceLocked} />

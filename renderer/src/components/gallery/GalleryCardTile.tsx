@@ -36,6 +36,8 @@ type Props = {
   tileClassName?: string;
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
   interfaceTourAnchor?: string;
+  /** cover — квадратное превью с обрезкой (режим Grid). */
+  thumbFit?: 'natural' | 'cover';
 };
 
 function GalleryCardTile({
@@ -55,7 +57,8 @@ function GalleryCardTile({
   moodboardEnabled = false,
   tileClassName = '',
   mediaTab,
-  interfaceTourAnchor
+  interfaceTourAnchor,
+  thumbFit = 'natural'
 }: Props) {
   const gridSize = gridSizeProp ?? readGridSize();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -160,15 +163,23 @@ function GalleryCardTile({
     >
       <span ref={stackRef} className="arc-gallery-card-stack">
         <span
-          className={`arc-gallery-card-media${videoHover.showVideo ? ' is-video-playing' : ''}`}
-          style={{ aspectRatio: galleryCardAspectRatio(card) }}
+          className={`arc-gallery-card-media${videoHover.showVideo ? ' is-video-playing' : ''}${
+            thumbFit === 'cover' ? ' arc-gallery-card-media--cover' : ''
+          }`}
+          style={
+            thumbFit === 'cover' ? { aspectRatio: '4 / 3' } : { aspectRatio: galleryCardAspectRatio(card) }
+          }
         >
           {thumbSrc ? (
-            <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} />
+            <GalleryThumb card={card} src={thumbSrc} mediaTab={mediaTab} fit={thumbFit} />
           ) : (
             <div
               className="arc-gallery-skeleton"
-              style={{ aspectRatio: galleryCardAspectRatio(card), background: 'var(--gray-900)' }}
+              style={
+                thumbFit === 'cover'
+                  ? { aspectRatio: '4 / 3', background: 'var(--gray-900)' }
+                  : { aspectRatio: galleryCardAspectRatio(card), background: 'var(--gray-900)' }
+              }
               aria-hidden
             />
           )}
@@ -309,7 +320,8 @@ function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
     prev.onFindSimilar === next.onFindSimilar &&
     prev.onToggleMoodboard === next.onToggleMoodboard &&
     prev.onContextMenu === next.onContextMenu &&
-    prev.mediaTab === next.mediaTab
+    prev.mediaTab === next.mediaTab &&
+    prev.thumbFit === next.thumbFit
   );
 }
 

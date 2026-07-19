@@ -18,6 +18,8 @@ type Props = {
   src: string;
   /** Если задан — превью грузится только когда секция видима (не блокирует IPC на main). */
   mediaTab?: 'gallery' | 'collections' | 'moodboard';
+  /** natural — высота по пропорциям карточки; cover — квадрат + object-fit: cover. */
+  fit?: 'natural' | 'cover';
 };
 
 function rebuildThumbSrc(
@@ -35,13 +37,14 @@ function rebuildThumbSrc(
   return buildLibraryMediaUrl(thumbRel, mediaTab, card.dateModified);
 }
 
-export default function GalleryThumb({ card, src, mediaTab }: Props) {
+export default function GalleryThumb({ card, src, mediaTab, fit = 'natural' }: Props) {
   const retryRef = useRef(0);
   const usedOriginalFallbackRef = useRef(false);
   const retryTimerRef = useRef(0);
   const [retryTick, setRetryTick] = useState(0);
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null);
-  const aspectRatio = galleryCardAspectRatio(card);
+  /** cover — заполняет родителя (ячейка 4:3 или квадрат списка); natural — по пропорциям файла. */
+  const aspectRatio = fit === 'cover' ? undefined : galleryCardAspectRatio(card);
   const tabActive = useCardSectionMediaActive(mediaTab ?? 'gallery');
   const mediaActive = mediaTab === undefined ? true : tabActive;
   const displaySrc = overrideSrc ?? src;
@@ -93,8 +96,12 @@ export default function GalleryThumb({ card, src, mediaTab }: Props) {
 
   return (
     <span
-      className="arc-gallery-thumb-wrap"
-      style={{ aspectRatio, background: 'var(--gray-900)' }}
+      className={`arc-gallery-thumb-wrap${fit === 'cover' ? ' arc-gallery-thumb-wrap--cover' : ''}`}
+      style={
+        fit === 'cover'
+          ? { background: 'var(--gray-900)' }
+          : { aspectRatio, background: 'var(--gray-900)' }
+      }
     >
       {mediaActive && effectiveSrc ? (
         <img

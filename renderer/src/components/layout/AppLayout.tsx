@@ -19,6 +19,10 @@ import { GalleryMetaProvider } from '../../context/GalleryMetaContext';
 import { initAppPreferencesRuntime } from '../../services/appPreferencesRuntime';
 import { useUiThemeSync } from '../../hooks/useUiThemeSync';
 import { applyGridSizeToDocument, readGridSize } from '../../layout/gridSizePreference';
+import {
+  applyGalleryLayoutToDocument,
+  readGalleryLayoutMode
+} from '../../layout/galleryLayoutPreference';
 import { applyTopbarCssVars } from './navbarLayout';
 import { isLibraryConfigured } from '../../services/db';
 import { GALLERY_FEED_SETTLED_EVENT } from '../gallery/galleryFeedSettled';
@@ -72,10 +76,12 @@ export default function AppLayout() {
     body.setAttribute('data-btn-size', 'l');
     body.setAttribute('data-input-size', 'l');
     applyGridSizeToDocument(readGridSize());
+    applyGalleryLayoutToDocument(readGalleryLayoutMode());
     applyTopbarCssVars();
 
     return () => {
       body.removeAttribute('data-grid-size');
+      body.removeAttribute('data-gallery-layout');
       body.classList.remove('arc-navbar-page');
       body.removeAttribute('data-elevation');
       body.removeAttribute('data-typo-role');
