@@ -100,7 +100,7 @@ export default function CardDetailPreviewOptionsBar({
             aria-hidden="true"
           />
           <span className="text-s arc-card-detail-preview-options__meta-text">
-            {formatResolution(card, naturalSize)}
+            {formatResolution(card, naturalSize) ?? '—'}
           </span>
         </div>
         <div className="arc-card-detail-preview-options__meta-item">
@@ -110,7 +110,7 @@ export default function CardDetailPreviewOptionsBar({
             aria-hidden="true"
           />
           <span className="text-s arc-card-detail-preview-options__meta-text">
-            {formatBytes(card.fileSize)}
+            {formatBytes(card.fileSize) ?? '—'}
           </span>
         </div>
       </div>

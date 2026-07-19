@@ -1,34 +1,16 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
 import { ArcAnimatedModalHost } from '../../motion';
 import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import { formatBytes, formatResolution } from './cardFileMetaFormat';
+import { buildCardInfoSections, type CardInfoRow } from './cardFileMetaFormat';
 
 type Props = {
   card: CardRecord;
   onClose: () => void;
 };
 
-function formatDate(iso: string | undefined): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-type InfoRow = {
-  label: string;
-  value: string;
-};
-
-function InfoRows({ rows }: { rows: InfoRow[] }) {
+function InfoRows({ rows }: { rows: CardInfoRow[] }) {
   return (
     <div className="arc-card-info-group">
       {rows.map((row) => (
@@ -43,22 +25,47 @@ function InfoRows({ rows }: { rows: InfoRow[] }) {
 
 export default function CardInfoModal({ card, onClose }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const [displayCard, setDisplayCard] = useState(card);
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [card.id]);
+  }, [displayCard.id, displayCard.mediaMeta?.probedAt]);
 
-  const fileRows: InfoRow[] = [
-    { label: 'Разрешение', value: formatResolution(card) },
-    { label: 'Вес', value: formatBytes(card.fileSize) },
-    { label: 'Тип', value: card.format?.toUpperCase() ?? '—' }
-  ];
+  useEffect(() => {
+    setDisplayCard((prev) => {
+      if (card.id !== prev.id) return card;
+      if (card.mediaMeta?.probedAt) return card;
+      if (prev.mediaMeta?.probedAt) return { ...card, mediaMeta: prev.mediaMeta };
+      return card;
+    });
+  }, [card]);
 
-  const dateRows: InfoRow[] = [
-    { label: 'Дата создания', value: formatDate(card.fileCreatedAt) },
-    { label: 'Дата добавления', value: formatDate(card.addedAt) },
-    { label: 'Дата изменения', value: formatDate(card.dateModified) }
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    const ensure = window.arc?.storageEnsureCardMediaMeta;
+    if (!ensure) return;
+    if (displayCard.mediaMeta?.probedAt) return;
+
+    void (async () => {
+      try {
+        const enriched = await ensure(card.id);
+        if (!cancelled && enriched) {
+          setDisplayCard((prev) => {
+            if (prev.id !== card.id) return prev;
+            return { ...prev, ...enriched, mediaMeta: enriched.mediaMeta ?? prev.mediaMeta };
+          });
+        }
+      } catch {
+        /* ignore: show base fields */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [card.id, displayCard.mediaMeta?.probedAt]);
+
+  const sections = buildCardInfoSections(displayCard);
 
   return (
     <ArcAnimatedModalHost
@@ -87,15 +94,18 @@ export default function CardInfoModal({ card, onClose }: Props) {
             </button>
           </header>
           <div className="arc-modal__body">
-            <div className="arc-modal__slot">
-              <InfoRows rows={fileRows} />
-            </div>
-            <div className="arc-modal__slot">
-              <hr className="arc-modal__separator" />
-            </div>
-            <div className="arc-modal__slot">
-              <InfoRows rows={dateRows} />
-            </div>
+            {sections.map((rows, idx) => (
+              <div key={rows[0]?.label ?? idx}>
+                {idx > 0 ? (
+                  <div className="arc-modal__slot">
+                    <hr className="arc-modal__separator" />
+                  </div>
+                ) : null}
+                <div className="arc-modal__slot">
+                  <InfoRows rows={rows} />
+                </div>
+              </div>
+            ))}
           </div>
         </FloatingModalPanel>
       )}

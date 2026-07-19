@@ -54,7 +54,8 @@ import {
   upsertTag,
   setVideoPreviewFrame,
   saveVideoFrameToCardFolder,
-  copyVideoFrameToClipboard
+  copyVideoFrameToClipboard,
+  ensureCardMediaMeta
 } from './storage/libraryStorage';
 import {
   buildGalleryFilterStatsCacheKey,
@@ -158,6 +159,7 @@ function enrichCardFromJson<T extends Record<string, unknown>>(
   videoWidth?: number;
   videoHeight?: number;
   previewFrameMs?: number;
+  mediaMeta?: CardJsonV1['mediaMeta'];
 } {
   if (!cardJson) return base;
   return {
@@ -167,7 +169,8 @@ function enrichCardFromJson<T extends Record<string, unknown>>(
     ...(cardJson.linkUrl ? { linkUrl: cardJson.linkUrl } : {}),
     ...(typeof cardJson.videoWidth === 'number' ? { videoWidth: cardJson.videoWidth } : {}),
     ...(typeof cardJson.videoHeight === 'number' ? { videoHeight: cardJson.videoHeight } : {}),
-    ...(typeof cardJson.previewFrameMs === 'number' ? { previewFrameMs: cardJson.previewFrameMs } : {})
+    ...(typeof cardJson.previewFrameMs === 'number' ? { previewFrameMs: cardJson.previewFrameMs } : {}),
+    ...(cardJson.mediaMeta ? { mediaMeta: cardJson.mediaMeta } : {})
   };
 }
 
@@ -312,6 +315,18 @@ export function registerStorageIpc(
     if (!row) return null;
     const base = cardIndexToRenderer(rowToCardRecord(row));
     const cardJson = await readCardJson(root, cardId);
+    return enrichCardFromJson(base, cardJson);
+  });
+
+  ipcMain.handle('arc:storage-ensure-card-media-meta', async (_e, cardId: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root || typeof cardId !== 'string') return null;
+    await ensureLibraryReady(root);
+    const row = getCardByIdFromDb(root, cardId);
+    if (!row) return null;
+    const cardJson = await ensureCardMediaMeta(root, cardId);
+    const base = cardIndexToRenderer(rowToCardRecord(row));
     return enrichCardFromJson(base, cardJson);
   });
 

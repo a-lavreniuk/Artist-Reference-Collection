@@ -1,5 +1,24 @@
 /** Контракт файла arc-metadata.json в корне библиотеки */
 
+/** Расширенные метаданные файла (EXIF / sharp / ffprobe). */
+export type CardMediaMetaV1 = {
+  version: 1;
+  probedAt: string;
+  colorDepth?: string;
+  colorSpace?: string;
+  densityDpi?: number;
+  camera?: string;
+  lens?: string;
+  iso?: number;
+  aperture?: string;
+  shutterSpeed?: string;
+  focalLength?: string;
+  dateTaken?: string;
+  videoCodec?: string;
+  frameRate?: number;
+  bitrate?: number;
+};
+
 export type CardRecord = {
   id: string;
   type: 'image' | 'video';
@@ -38,6 +57,8 @@ export type CardRecord = {
   linkUrl?: string;
   fileSize?: number;
   fileSizeMb?: number;
+  /** Расширенные метаданные для окна «Информация о файле». */
+  mediaMeta?: CardMediaMetaV1;
 };
 
 export type CollectionRecord = {

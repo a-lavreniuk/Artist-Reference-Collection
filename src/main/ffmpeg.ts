@@ -296,6 +296,40 @@ export async function probeVideoDurationMs(inputAbs: string): Promise<number | n
 export async function probeVideoDimensions(
   inputAbs: string
 ): Promise<{ width: number; height: number } | null> {
+  const tech = await probeVideoTechnicalMeta(inputAbs);
+  if (!tech?.width || !tech?.height) return null;
+  return { width: tech.width, height: tech.height };
+}
+
+function parseFrameRate(raw: unknown): number | undefined {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) return Math.round(raw * 1000) / 1000;
+  if (typeof raw !== 'string') return undefined;
+  const s = raw.trim();
+  if (!s || s === '0/0') return undefined;
+  if (s.includes('/')) {
+    const [a, b] = s.split('/');
+    const num = Number(a);
+    const den = Number(b);
+    if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0) return undefined;
+    const fps = num / den;
+    if (!Number.isFinite(fps) || fps <= 0) return undefined;
+    return Math.round(fps * 1000) / 1000;
+  }
+  const n = Number(s);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.round(n * 1000) / 1000;
+}
+
+export type VideoTechnicalMeta = {
+  width?: number;
+  height?: number;
+  codec?: string;
+  frameRate?: number;
+  bitrate?: number;
+};
+
+/** Ширина/высота + кодек / fps / битрейт через ffprobe JSON. */
+export async function probeVideoTechnicalMeta(inputAbs: string): Promise<VideoTechnicalMeta | null> {
   const ffprobe = resolveFfprobeExecutable();
   const args = [
     '-v',
@@ -303,7 +337,7 @@ export async function probeVideoDimensions(
     '-select_streams',
     'v:0',
     '-show_entries',
-    'stream=width,height',
+    'stream=width,height,codec_name,avg_frame_rate,r_frame_rate:format=bit_rate',
     '-of',
     'json',
     inputAbs
@@ -315,20 +349,37 @@ export async function probeVideoDimensions(
       maxBuffer: 5 * 1024 * 1024
     });
     const j = JSON.parse(String(stdout)) as {
-      streams?: Array<{ width?: number; height?: number }>;
+      streams?: Array<{
+        width?: number;
+        height?: number;
+        codec_name?: string;
+        avg_frame_rate?: string;
+        r_frame_rate?: string;
+      }>;
+      format?: { bit_rate?: string | number };
     };
     const s = j.streams?.[0];
+    if (!s) return null;
+    const out: VideoTechnicalMeta = {};
     if (
-      s &&
       typeof s.width === 'number' &&
       typeof s.height === 'number' &&
       Number.isFinite(s.width) &&
       Number.isFinite(s.height)
     ) {
-      return { width: Math.round(s.width), height: Math.round(s.height) };
+      out.width = Math.round(s.width);
+      out.height = Math.round(s.height);
     }
+    if (typeof s.codec_name === 'string' && s.codec_name.trim()) {
+      out.codec = s.codec_name.trim().toUpperCase();
+    }
+    const fps = parseFrameRate(s.avg_frame_rate) ?? parseFrameRate(s.r_frame_rate);
+    if (fps !== undefined) out.frameRate = fps;
+    const brRaw = j.format?.bit_rate;
+    const br = typeof brRaw === 'number' ? brRaw : Number(brRaw);
+    if (Number.isFinite(br) && br > 0) out.bitrate = Math.round(br);
+    return out.width || out.height || out.codec || out.frameRate || out.bitrate ? out : null;
   } catch {
     return null;
   }
-  return null;
 }

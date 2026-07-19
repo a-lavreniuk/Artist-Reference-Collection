@@ -21,6 +21,25 @@ export type ImageDupFingerprint = {
   hist: number[];
 };
 
+/** Расширенные метаданные файла (EXIF / sharp / ffprobe), только card.json. */
+export type CardMediaMetaV1 = {
+  version: 1;
+  probedAt: string;
+  colorDepth?: string;
+  colorSpace?: string;
+  densityDpi?: number;
+  camera?: string;
+  lens?: string;
+  iso?: number;
+  aperture?: string;
+  shutterSpeed?: string;
+  focalLength?: string;
+  dateTaken?: string;
+  videoCodec?: string;
+  frameRate?: number;
+  bitrate?: number;
+};
+
 export type CardJsonV1 = {
   version: 1;
   id: string;
@@ -48,6 +67,8 @@ export type CardJsonV1 = {
   videoWidth?: number;
   /** Нативная высота ролика; не меняется при смене превью. */
   videoHeight?: number;
+  /** Расширенные метаданные для окна «Информация о файле». */
+  mediaMeta?: CardMediaMetaV1;
 };
 
 export type CategoryRow = {

@@ -54,10 +54,12 @@ import { invalidateScoredSearchCache } from './scoredSearchCache';
 import { clearAiResultsCache } from '../ai/aiResultsCache';
 import { ensureDimensionsBackfill, ensureVideoDurationBackfill } from './galleryFilterBackfill';
 import { ensureThumbGenerationBackfill } from './thumbBackfill';
+import { extractMediaFileMeta, isMediaMetaProbed } from './mediaFileMeta';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
   CardIndexRow,
+  CardMediaMetaV1,
   CardJsonV1,
   CardType,
   CategoryRow,
@@ -496,6 +498,13 @@ export async function importMediaFile(
     const linkUrlTrimmed = options?.linkUrl?.trim();
     const nameTrimmed = options?.name?.trim();
 
+    let mediaMeta: CardMediaMetaV1 | undefined;
+    try {
+      mediaMeta = await extractMediaFileMeta(originalAbs, type);
+    } catch {
+      mediaMeta = undefined;
+    }
+
     const cardJson: CardJsonV1 = {
       version: 1,
       id: cardId,
@@ -514,6 +523,7 @@ export async function importMediaFile(
       ...(durationMs ? { durationMs } : {}),
       ...(videoWidth ? { videoWidth } : {}),
       ...(videoHeight ? { videoHeight } : {}),
+      ...(mediaMeta ? { mediaMeta } : {}),
       ...(linkUrlTrimmed ? { linkUrl: linkUrlTrimmed } : {}),
       ...(nameTrimmed ? { name: nameTrimmed } : {})
     };
@@ -614,6 +624,48 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
 export function getCardByIdFromDb(libraryRoot: string, cardId: string): CardIndexRow | null {
   const db = openLibraryDb(libraryRoot);
   return loadCardRow(db, cardId);
+}
+
+/**
+ * Ленивый backfill расширенных метаданных при открытии «Информация о файле».
+ * Если mediaMeta уже probed — возвращает карточку без повторного чтения файла.
+ * После долгого probe перечитывает card.json, чтобы не затереть параллельные правки.
+ */
+export async function ensureCardMediaMeta(
+  libraryRoot: string,
+  cardId: string
+): Promise<CardJsonV1 | null> {
+  const root = path.resolve(libraryRoot);
+  await ensureLibraryReady(root);
+  const cardJson = await readCardJson(root, cardId);
+  if (!cardJson) return null;
+  if (isMediaMetaProbed(cardJson.mediaMeta)) return cardJson;
+
+  const row = getCardByIdFromDb(root, cardId);
+  let mediaMeta: CardMediaMetaV1;
+  if (!row?.originalRel) {
+    mediaMeta = {
+      version: 1,
+      probedAt: new Date().toISOString()
+    };
+  } else {
+    const originalAbs = path.join(root, row.originalRel.replace(/\//g, path.sep));
+    try {
+      mediaMeta = await extractMediaFileMeta(originalAbs, cardJson.type);
+    } catch {
+      mediaMeta = {
+        version: 1,
+        probedAt: new Date().toISOString()
+      };
+    }
+  }
+
+  const latest = await readCardJson(root, cardId);
+  if (!latest) return null;
+  if (isMediaMetaProbed(latest.mediaMeta)) return latest;
+  latest.mediaMeta = mediaMeta;
+  await writeCardJson(root, latest);
+  return latest;
 }
 
 export function countCards(
@@ -1245,6 +1297,12 @@ export async function replaceCardOriginalFromFile(
   if (thumbRes.phash) cardJson.phash = thumbRes.phash;
   else delete cardJson.phash;
   if (thumbRes.dominantColorHex) cardJson.dominantColorHex = thumbRes.dominantColorHex;
+
+  try {
+    cardJson.mediaMeta = await extractMediaFileMeta(originalAbs, 'image');
+  } catch {
+    delete cardJson.mediaMeta;
+  }
 
   await writeCardJson(root, cardJson);
 
