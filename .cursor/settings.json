@@ -8,6 +8,9 @@
     },
     "gitlab": {
       "enabled": true
+    },
+    "mintlify-cursor-plugin": {
+      "enabled": true
     }
   },
   "mcpServers": {
