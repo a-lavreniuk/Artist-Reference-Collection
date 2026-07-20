@@ -12,6 +12,11 @@ const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']);
 
 const HLS_CONTENT_TYPES = new Set(['application/vnd.apple.mpegurl', 'application/x-mpegurl']);
 
+const DOWNLOAD_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
+const DOWNLOAD_RETRY_ATTEMPTS = 3;
+
 /** HLS-плейлист определяем по расширению `.m3u8` или по Content-Type. */
 export function isHlsUrl(url: string, contentType?: string | null): boolean {
   try {
@@ -21,6 +26,67 @@ export function isHlsUrl(url: string, contentType?: string | null): boolean {
   }
   const ct = contentType?.split(';')[0]?.trim().toLowerCase();
   return ct ? HLS_CONTENT_TYPES.has(ct) : false;
+}
+
+function buildDownloadHeaders(url: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'User-Agent': DOWNLOAD_USER_AGENT,
+    Accept: '*/*',
+    'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8'
+  };
+
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (
+      host === 'pinimg.com' ||
+      host.endsWith('.pinimg.com') ||
+      host === 'pinterest.com' ||
+      host.endsWith('.pinterest.com')
+    ) {
+      headers.Referer = 'https://www.pinterest.com/';
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return headers;
+}
+
+function errorCause(err: Error): unknown {
+  // TS lib < ES2022 не знает Error.cause; в runtime поле есть.
+  return (err as Error & { cause?: unknown }).cause;
+}
+
+export function isRetryableDownloadError(err: unknown): boolean {
+  const parts: string[] = [];
+  if (err instanceof Error) {
+    parts.push(err.message);
+    const cause = errorCause(err);
+    if (cause instanceof Error) parts.push(cause.message);
+    else if (cause != null) parts.push(String(cause));
+  } else {
+    parts.push(String(err));
+  }
+  return /fetch failed|timeout|econnreset|econnrefused|enotfound|enetunreach|epipe|socket|und_err|network/i.test(
+    parts.join(' ')
+  );
+}
+
+async function fetchWithRetry(url: string, attempts = DOWNLOAD_RETRY_ATTEMPTS): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fetch(url, {
+        redirect: 'follow',
+        headers: buildDownloadHeaders(url)
+      });
+    } catch (err) {
+      lastErr = err;
+      if (!isRetryableDownloadError(err) || attempt === attempts - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 async function downloadHlsToTempFile(
@@ -95,7 +161,7 @@ export async function downloadUrlToTempFile(
     return downloadHlsToTempFile(url, hlsLimit);
   }
 
-  const res = await fetch(url, { redirect: 'follow' });
+  const res = await fetchWithRetry(url);
   if (!res.ok) {
     throw new Error(`Download failed: HTTP ${res.status}`);
   }
