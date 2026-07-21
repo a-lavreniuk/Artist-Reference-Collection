@@ -1,6 +1,6 @@
 # Table of contents
 
-* [Главная](README.md)
+* [Добро пожаловать в ARC Knowledge Base](README.md)
 
 ## О проекте
 
