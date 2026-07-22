@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import TagCategoryDropSurface from './TagCategoryDropSurface';
 import TagsCategorySidebarGhost from './TagsCategorySidebarGhost';
 import TagsSidebarPickerItem from './TagsSidebarPickerItem';
@@ -166,7 +167,10 @@ export default function TagsPageSidebar({
                       onClick={() => onSelectCategory(category.id)}
                     >
                       <span className="context-menu__item-label-cluster">
-                        <span className="context-menu__item-label">{category.name}</span>
+                        <TruncatedTextWithTooltip
+                          text={category.name}
+                          className="context-menu__item-label"
+                        />
                       </span>
                       <span className="context-menu__item-counter">{count}</span>
                     </button>

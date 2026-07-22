@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CollectionRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import CollectionsSidebarGhost from './CollectionsSidebarGhost';
 import { useCollectionsDrag } from './useCollectionsDrag';
 
@@ -135,7 +136,10 @@ export default function CollectionsPageSidebar({
                       onClick={() => onSelectCollection(collection.id)}
                     >
                       <span className="context-menu__item-label-cluster">
-                        <span className="context-menu__item-label">{collection.name}</span>
+                        <TruncatedTextWithTooltip
+                          text={collection.name}
+                          className="context-menu__item-label"
+                        />
                       </span>
                       <span className="context-menu__item-counter">{count}</span>
                     </button>

@@ -503,7 +503,7 @@ html[data-theme="light"] .arc-app-outlet {
 .arc-tags-category-section {
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: 0;
 }
 
 .arc-tags-category-section__header {
@@ -511,6 +511,7 @@ html[data-theme="light"] .arc-app-outlet {
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
+  min-width: 0;
 }
 
 .arc-tags-category-section__title {
@@ -518,11 +519,16 @@ html[data-theme="light"] .arc-app-outlet {
   align-items: baseline;
   gap: var(--s-2);
   margin: 0;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
 
 .arc-tags-category-section__name-btn {
+  flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: 0;
   border: 0;
   background: transparent;
@@ -539,6 +545,9 @@ html[data-theme="light"] .arc-app-outlet {
 }
 
 .arc-tags-category-section__name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   color: var(--typo-tone-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -562,12 +571,58 @@ html[data-theme="light"] .arc-app-outlet {
   color: var(--typo-tone-secondary);
 }
 
+.arc-tags-category-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
 .arc-tags-category-section__tags,
 .arc-tags-category-section__drop {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2);
   align-items: flex-start;
+  /* Внутри body: клипуется вместе с height-анимацией (вместо gap секции) */
+  padding-top: var(--s-3);
+}
+
+/* Tooltip вокруг обрезанного label: не ломать flex/ellipsis (wrapper по умолчанию inline-block) */
+.arc-tooltip-wrapper.arc-truncated-tooltip-wrap {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Внутри flex-строки сайдбара / menu — wrap занимает место label */
+.context-menu__item-label-cluster > .arc-tooltip-wrapper.arc-truncated-tooltip-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Span с текстом должен быть block, иначе ellipsis и scrollWidth не работают в flex */
+.arc-truncated-tooltip-wrap > span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arc-tags-category-section__name-btn > .arc-tooltip-wrapper.arc-truncated-tooltip-wrap {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.arc-add-tags-picker__group-title > .arc-tooltip-wrapper.arc-truncated-tooltip-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .arc-tags-category-section__drop.arc-category-panel-tags--drop-target {
@@ -2631,6 +2686,7 @@ body.arc-card-detail-open .arc-app-outlet {
   align-items: center;
   gap: var(--s-2);
   margin: 0;
+  min-width: 0;
 }
 
 .arc-add-tags-picker__group-inset .tags-row {
@@ -2638,7 +2694,12 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-add-tags-picker__group-name {
+  display: block;
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--typo-p-s-size);
   line-height: var(--typo-p-s-line);
   font-weight: var(--typo-p-s-weight);
@@ -2646,6 +2707,7 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-add-tags-picker__group-count {
+  flex-shrink: 0;
   margin: 0;
   font-size: var(--typo-p-s-size);
   line-height: var(--typo-p-s-line);
@@ -7854,6 +7916,6 @@ html[data-theme="light"] .arc-stats-disk-bar__segment--nonArc {
 }
 
 .arc-bug-report-widget .arc-tooltip {
-  z-index: 10101;
+  z-index: 10201;
 }
 

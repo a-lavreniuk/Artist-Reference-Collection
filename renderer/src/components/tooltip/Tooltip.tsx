@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { arcMotionTokens, ensureGsapSetup, getPrefersReducedMotion, motionDuration } from '../../motion';
 import './Tooltip.css';
 
@@ -42,6 +43,11 @@ export interface TooltipProps {
   className?: string;
   variant?: TooltipVariant;
   showArrow?: boolean;
+  /**
+   * Обёртка якоря. Для текста внутри `<button>` нужен `span`
+   * (div внутри button браузер «чинит» и ломает hover).
+   */
+  as?: 'div' | 'span';
 }
 
 export function Tooltip({
@@ -51,7 +57,8 @@ export function Tooltip({
   position = 'top',
   className = '',
   variant = 'default',
-  showArrow = true
+  showArrow = true,
+  as: Wrapper = 'div'
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [layout, setLayout] = useState<{
@@ -62,7 +69,7 @@ export function Tooltip({
   const showTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isVisibleRef = useRef(false);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const wrapperRef = useRef<HTMLElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const fadePlayedRef = useRef(false);
 
@@ -273,33 +280,36 @@ export function Tooltip({
 
   const arrowEdge = layout?.arrowEdge ?? arrowEdgeForPosition(position);
 
+  const tip =
+    isVisible && content !== null && content !== undefined ? (
+      <div
+        ref={tooltipRef}
+        className={`arc-tooltip arc-tooltip--variant-${variant} arc-tooltip--arrow-edge-${arrowEdge}${showArrow ? '' : ' arc-tooltip--no-arrow'}${layout ? ' arc-tooltip--placed' : ''}`}
+        style={{
+          position: 'fixed',
+          top: layout ? `${layout.top}px` : '-9999px',
+          left: layout ? `${layout.left}px` : '-9999px',
+          visibility: layout ? 'visible' : 'hidden'
+        }}
+      >
+        <div className="arc-tooltip__inner">{content}</div>
+        {showArrow && (
+          <svg className="arc-tooltip__arrow" width="12" height="6" viewBox="0 0 12 6" aria-hidden>
+            <polygon points="0,0 12,0 6,6" className="arc-tooltip__arrow-fill" />
+          </svg>
+        )}
+      </div>
+    ) : null;
+
   return (
-    <div
-      ref={wrapperRef}
+    <Wrapper
+      ref={wrapperRef as React.RefObject<HTMLDivElement & HTMLSpanElement>}
       className={`arc-tooltip-wrapper ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       {children}
-      {isVisible && content !== null && content !== undefined && (
-        <div
-          ref={tooltipRef}
-          className={`arc-tooltip arc-tooltip--variant-${variant} arc-tooltip--arrow-edge-${arrowEdge}${showArrow ? '' : ' arc-tooltip--no-arrow'}${layout ? ' arc-tooltip--placed' : ''}`}
-          style={{
-            position: 'fixed',
-            top: layout ? `${layout.top}px` : '-9999px',
-            left: layout ? `${layout.left}px` : '-9999px',
-            visibility: layout ? 'visible' : 'hidden'
-          }}
-        >
-          <div className="arc-tooltip__inner">{content}</div>
-          {showArrow && (
-            <svg className="arc-tooltip__arrow" width="12" height="6" viewBox="0 0 12 6" aria-hidden>
-              <polygon points="0,0 12,0 6,6" className="arc-tooltip__arrow-fill" />
-            </svg>
-          )}
-        </div>
-      )}
-    </div>
+      {tip ? createPortal(tip, document.body) : null}
+    </Wrapper>
   );
 }
