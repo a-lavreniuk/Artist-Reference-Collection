@@ -56,7 +56,13 @@ import { startColorSearch } from '../../search/startColorSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
-import { useOverlayMotionPair } from '../../motion';
+import {
+  arcMotionTokens,
+  ensureGsapSetup,
+  getPrefersReducedMotion,
+  motionDuration,
+  useOverlayMotionPair
+} from '../../motion';
 import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDetailPreviewUrls } from './galleryMediaCache';
 import { ARC_THUMB_BUDGET_CHANGED_EVENT } from './galleryThumbBudget';
 import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
@@ -132,6 +138,7 @@ export default function CardDetailOverlay({
   const videoPlayerRef = useRef<CardDetailVideoPlayerHandle | null>(null);
   const descriptionSaveTimerRef = useRef<number | null>(null);
   const descriptionTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const descriptionFitLockRef = useRef(false);
   const nameSaveTimerRef = useRef<number | null>(null);
   const linkSaveTimerRef = useRef<number | null>(null);
   const copyAlertTimerRef = useRef<number | null>(null);
@@ -159,6 +166,7 @@ export default function CardDetailOverlay({
   const [draftLink, setDraftLink] = useState('');
   const [description, setDescription] = useState('');
   const [descriptionTab, setDescriptionTab] = useState<DescriptionTab>('description');
+  const descriptionTabPrevRef = useRef<DescriptionTab>('description');
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
   const [settingsMinWidth, setSettingsMinWidth] = useState(CARD_DETAIL_SETTINGS_WIDTH_MIN);
@@ -466,27 +474,76 @@ export default function CardDetailOverlay({
     [cardId, reloadCard]
   );
 
-  const fitDescriptionTextarea = useCallback(() => {
+  const fitDescriptionTextarea = useCallback((opts?: { animate?: boolean }) => {
     const el = descriptionTextareaRef.current;
     if (!el) return;
+    const animate = Boolean(opts?.animate);
+    // ResizeObserver во время tween не должен срывать анимацию вкладок.
+    if (descriptionFitLockRef.current && !animate) return;
+
+    const gsap = ensureGsapSetup();
+    gsap.killTweensOf(el);
+    descriptionFitLockRef.current = false;
+
     const styles = getComputedStyle(el);
     const minH = Number.parseFloat(styles.minHeight) || 0;
     const maxH = Number.parseFloat(styles.maxHeight) || Number.POSITIVE_INFINITY;
+    const from = el.getBoundingClientRect().height;
+
+    descriptionFitLockRef.current = true;
     el.style.height = `${minH}px`;
     const next = Math.min(Math.max(el.scrollHeight, minH), maxH);
-    el.style.height = `${next}px`;
+    el.style.height = `${from}px`;
+    descriptionFitLockRef.current = false;
+
+    if (Math.abs(from - next) < 1) {
+      el.style.height = `${next}px`;
+      return;
+    }
+
+    const reduced = getPrefersReducedMotion();
+    const duration = motionDuration('base', reduced);
+    const shouldAnimate = animate && duration > 0;
+
+    if (!shouldAnimate) {
+      el.style.height = `${next}px`;
+      return;
+    }
+
+    descriptionFitLockRef.current = true;
+    gsap.fromTo(
+      el,
+      { height: from },
+      {
+        height: next,
+        duration,
+        ease: arcMotionTokens.ease,
+        onComplete: () => {
+          descriptionFitLockRef.current = false;
+          // Контент/ширина могли измениться за время tween — добить без анимации.
+          fitDescriptionTextarea({ animate: false });
+        }
+      }
+    );
   }, []);
 
   useLayoutEffect(() => {
-    fitDescriptionTextarea();
+    const tabChanged = descriptionTabPrevRef.current !== descriptionTab;
+    descriptionTabPrevRef.current = descriptionTab;
+    fitDescriptionTextarea({ animate: tabChanged });
   }, [fitDescriptionTextarea, description, descriptionTab, card?.aiCaption, hasAiCaption]);
 
   useEffect(() => {
     const el = descriptionTextareaRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => fitDescriptionTextarea());
+    const gsap = ensureGsapSetup();
+    const ro = new ResizeObserver(() => fitDescriptionTextarea({ animate: false }));
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      gsap.killTweensOf(el);
+      descriptionFitLockRef.current = false;
+    };
   }, [fitDescriptionTextarea, hasAiCaption]);
 
   const scheduleNameSave = useCallback(

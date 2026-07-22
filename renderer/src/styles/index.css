@@ -2957,7 +2957,6 @@ body.arc-card-detail-open .arc-app-outlet {
   max-height: calc(var(--textarea-h, 64px) * 2);
   overflow-y: auto;
   resize: none;
-  transition: height var(--transition-base);
 }
 
 .arc-card-detail-section-sep {
