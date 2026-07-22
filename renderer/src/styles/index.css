@@ -6971,6 +6971,18 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   min-width: 0;
 }
 
+/* Paired section height sync: measure natural content; fill grows with min-height spacer below. */
+.arc-duplicates-details__section-fill {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.arc-duplicates-details__section-measure {
+  display: block;
+  flex: 0 0 auto;
+}
+
 .arc-duplicates-details__tag-group {
   display: flex;
   flex-direction: column;
