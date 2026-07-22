@@ -6900,6 +6900,14 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   user-select: none;
 }
 
+/* Half-width cap so left/right meta plates cannot overlap (unlike side-by-side, parent is full stage). */
+.arc-duplicates-wipe .arc-duplicates-meta-overlay {
+  max-width: calc(50% - var(--s-3) - var(--s-1));
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
 .arc-duplicates-wipe__img {
   position: absolute;
   inset: 0;
