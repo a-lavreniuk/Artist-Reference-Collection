@@ -2068,6 +2068,7 @@ html[data-theme="light"] .arc-gallery-card-shade:not([style*="--arc-gallery-card
   gap: var(--s-2);
   width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .arc-gallery-card-overlay-controls__left,
@@ -2083,10 +2084,27 @@ html[data-theme="light"] .arc-gallery-card-shade:not([style*="--arc-gallery-card
   margin-left: auto;
 }
 
+/* Метки (формат / время): визуал primary default, без hover/focus — не кнопки. */
 .arc-gallery-card-overlay-badge,
 .arc-gallery-card-overlay-time {
   flex-shrink: 0;
   max-width: 100%;
+  cursor: default;
+  pointer-events: none;
+  background: var(--btn-primary-fill-default);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary:hover,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary:focus,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary:focus-visible,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary:hover,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary:focus,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary:focus-visible {
+  background: var(--btn-primary-fill-default);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .arc-gallery-card-overlay-badge--icon-only {
@@ -2098,12 +2116,28 @@ html[data-theme="light"] .arc-gallery-card-shade:not([style*="--arc-gallery-card
   flex-shrink: 0;
 }
 
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary .btn-ds__value,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary:hover .btn-ds__value,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary:focus-visible .btn-ds__value {
+  color: var(--btn-primary-value-default);
+}
+
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary .btn-ds__icon,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary:hover:not(:disabled):not(:focus-visible) .btn-ds__icon,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-badge.btn-primary:focus-visible:not(:disabled) .btn-ds__icon {
+  color: var(--btn-primary-icon-default);
+}
+
 .arc-gallery-card-overlay-time__sep {
   color: var(--text-elev-secondary);
 }
 
-.arc-gallery-card-overlay-time .btn-ds__value.text-code-m,
-.arc-gallery-card-overlay-time .btn-ds__value.text-code-s {
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary .btn-ds__value.text-code-m,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary .btn-ds__value.text-code-s,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary:hover .btn-ds__value.text-code-m,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary:hover .btn-ds__value.text-code-s,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary:focus-visible .btn-ds__value.text-code-m,
+.arc-gallery-card-overlay-inner .arc-gallery-card-overlay-time.btn-primary:focus-visible .btn-ds__value.text-code-s {
   font-family: var(--typo-code-family);
   color: var(--btn-primary-value-default);
 }
@@ -2118,24 +2152,6 @@ html[data-theme="light"] .arc-gallery-card-shade:not([style*="--arc-gallery-card
   font-size: var(--typo-code-s-size);
   line-height: var(--typo-code-s-line);
   font-weight: var(--typo-code-s-weight);
-}
-
-.arc-gallery-card-overlay-inner .btn-primary:hover:not(:disabled):not(:focus-visible)
-  .arc-gallery-card-overlay-time
-  .btn-ds__value.text-code-m,
-.arc-gallery-card-overlay-inner .btn-primary:hover:not(:disabled):not(:focus-visible)
-  .arc-gallery-card-overlay-time
-  .btn-ds__value.text-code-s {
-  color: var(--btn-primary-value-hover);
-}
-
-.arc-gallery-card-overlay-inner .btn-primary:focus-visible:not(:disabled)
-  .arc-gallery-card-overlay-time
-  .btn-ds__value.text-code-m,
-.arc-gallery-card-overlay-inner .btn-primary:focus-visible:not(:disabled)
-  .arc-gallery-card-overlay-time
-  .btn-ds__value.text-code-s {
-  color: var(--btn-primary-value-focus);
 }
 
 .arc-gallery-card-overlay-timeline {

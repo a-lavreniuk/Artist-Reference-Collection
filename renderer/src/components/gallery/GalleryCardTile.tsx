@@ -15,6 +15,7 @@ import {
   minGalleryCardOverlayHeightPx
 } from './galleryCardOverlayTokens';
 import { useGalleryCardVideoHover } from './useGalleryCardVideoHover';
+import { useGalleryCardOverlayTimeFit } from './useGalleryCardOverlayTimeFit';
 import { formatVideoClock } from './cardDetailVideoTime';
 import { cardFileFormatLabel } from '../../utils/cardFileFormatLabel';
 
@@ -64,6 +65,10 @@ function GalleryCardTile({
   const rootRef = useRef<HTMLDivElement>(null);
   const stackRef = useRef<HTMLSpanElement>(null);
   const overlayInnerRef = useRef<HTMLSpanElement>(null);
+  const overlayControlsRef = useRef<HTMLSpanElement>(null);
+  const overlayBadgeRef = useRef<HTMLSpanElement>(null);
+  const overlayTimeRef = useRef<HTMLSpanElement>(null);
+  const overlayRightRef = useRef<HTMLSpanElement>(null);
 
   const [mouseHovered, setMouseHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -95,6 +100,26 @@ function GalleryCardTile({
   const overlayStyleVars = useMemo(() => galleryCardOverlayStyleVars(gridSize), [gridSize]);
 
   const durationMs = videoHover.durationMs || card.durationMs || 0;
+  const videoTimeLabel = isVideo
+    ? `${formatVideoClock(videoHover.currentMs / 1000)} / ${formatVideoClock(durationMs / 1000)}`
+    : '';
+  const showMoodboardAction = Boolean(moodboardEnabled && onToggleMoodboard);
+  const showSimilarAction = Boolean(onFindSimilar);
+  const hideOverlayTime = useGalleryCardOverlayTimeFit({
+    enabled: isVideo && !overlaySuppressed,
+    controlsRef: overlayControlsRef,
+    badgeRef: overlayBadgeRef,
+    timeRef: overlayTimeRef,
+    rightRef: overlayRightRef,
+    layoutKey: [
+      gridSize,
+      formatLabel ?? '',
+      videoTimeLabel.length,
+      showMoodboardAction ? '1' : '0',
+      showSimilarAction ? '1' : '0',
+      card.id
+    ].join('|')
+  });
 
   useEffect(() => {
     const stack = stackRef.current;
@@ -211,9 +236,10 @@ function GalleryCardTile({
               className="arc-gallery-card-overlay-inner arc-ui-kit-scope"
               data-btn-size={btnSize}
             >
-              <span className="arc-gallery-card-overlay-controls">
+              <span ref={overlayControlsRef} className="arc-gallery-card-overlay-controls">
                 <span className="arc-gallery-card-overlay-controls__left">
                   <span
+                    ref={overlayBadgeRef}
                     className={`btn btn-primary btn-ds arc-gallery-card-overlay-badge${formatLabel ? '' : ' arc-gallery-card-overlay-badge--icon-only'}`}
                   >
                     <span
@@ -224,8 +250,9 @@ function GalleryCardTile({
                       <span className="btn-ds__value text-s">{formatLabel}</span>
                     ) : null}
                   </span>
-                  {isVideo ? (
+                  {isVideo && !hideOverlayTime ? (
                     <span
+                      ref={overlayTimeRef}
                       className="btn btn-primary btn-ds arc-gallery-card-overlay-time"
                       aria-hidden="true"
                     >
@@ -237,8 +264,8 @@ function GalleryCardTile({
                     </span>
                   ) : null}
                 </span>
-                <span className="arc-gallery-card-overlay-controls__right">
-                  {moodboardEnabled && onToggleMoodboard ? (
+                <span ref={overlayRightRef} className="arc-gallery-card-overlay-controls__right">
+                  {showMoodboardAction ? (
                     <Tooltip
                       content={inMoodboard ? 'Убрать из мудборда' : 'Добавить в мудборд'}
                       position="top"
@@ -255,14 +282,14 @@ function GalleryCardTile({
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          void onToggleMoodboard(card.id);
+                          void onToggleMoodboard?.(card.id);
                         }}
                       >
                         <span className={`btn-icon-only__glyph ${iconClass}`} aria-hidden="true" />
                       </button>
                     </Tooltip>
                   ) : null}
-                  {onFindSimilar ? (
+                  {showSimilarAction ? (
                     <Tooltip content="Найти похожее" position="top">
                       <button
                         type="button"
@@ -272,7 +299,7 @@ function GalleryCardTile({
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          onFindSimilar(card.id);
+                          onFindSimilar?.(card.id);
                         }}
                       >
                         <span className="btn-icon-only__glyph arc-icon-search" aria-hidden="true" />
