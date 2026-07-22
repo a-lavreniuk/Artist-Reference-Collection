@@ -39,7 +39,11 @@ function isDragLeavingWindow(e: DragEvent): boolean {
   );
 }
 
-const SUPPRESSED_NATIVE_MEDIA_DRAG_ROOTS = ['.arc-modal-host', '.arc-card-detail-overlay'] as const;
+const SUPPRESSED_NATIVE_MEDIA_DRAG_ROOTS = [
+  '.arc-modal-host',
+  '.arc-card-detail-overlay',
+  '.arc-gallery-collections-strip'
+] as const;
 
 function isSuppressedNativeMediaDragTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;

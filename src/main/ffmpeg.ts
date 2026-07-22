@@ -37,34 +37,74 @@ export function isVideoExt(ext: string): boolean {
   return VIDEO_EXT.has(ext.toLowerCase());
 }
 
-export function resolveFfmpegExecutable(): string {
-  const fromEnv = process.env.FFMPEG_BIN || process.env.ARC_FFMPEG_PATH;
-  if (typeof fromEnv === 'string' && fromEnv.trim() && fs.existsSync(fromEnv.trim())) {
-    return path.resolve(fromEnv.trim());
+/**
+ * Бинарники из asarUnpack лежат в `app.asar.unpacked`, а `require('*-static')`
+ * часто возвращает путь внутри `app.asar`. Electron может считать файл в asar
+ * существующим, но `spawn` по такому пути падает с ENOENT.
+ */
+export function preferUnpackedAsarPath(candidate: string): string | null {
+  if (!candidate?.trim()) return null;
+
+  const resolved = path.resolve(candidate.trim());
+  const asarSeg = `${path.sep}app.asar${path.sep}`;
+  const unpackedSeg = `${path.sep}app.asar.unpacked${path.sep}`;
+
+  if (resolved.includes(asarSeg) && !resolved.includes(unpackedSeg)) {
+    const unpacked = resolved.replace(asarSeg, unpackedSeg);
+    if (fs.existsSync(unpacked)) return unpacked;
+    // Исполняемый файл из asar запустить нельзя — не возвращаем asar-путь.
+    return null;
   }
+
+  if (fs.existsSync(resolved)) return resolved;
+  return null;
+}
+
+function resolveBundledBinary(
+  envKeys: Array<string | undefined>,
+  fromModule: () => string | null | undefined,
+  fallbackName: string
+): string {
+  for (const raw of envKeys) {
+    if (typeof raw !== 'string' || !raw.trim()) continue;
+    const preferred = preferUnpackedAsarPath(raw);
+    if (preferred) return preferred;
+  }
+
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const p = require('ffmpeg-static') as string | null;
-    if (p && fs.existsSync(p)) return p;
+    const fromPkg = fromModule();
+    if (typeof fromPkg === 'string' && fromPkg.trim()) {
+      const preferred = preferUnpackedAsarPath(fromPkg);
+      if (preferred) return preferred;
+    }
   } catch {
     /* optional dependency resolution */
   }
-  return 'ffmpeg';
+
+  return fallbackName;
+}
+
+export function resolveFfmpegExecutable(): string {
+  return resolveBundledBinary(
+    [process.env.FFMPEG_BIN, process.env.ARC_FFMPEG_PATH],
+    () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('ffmpeg-static') as string | null;
+    },
+    'ffmpeg'
+  );
 }
 
 export function resolveFfprobeExecutable(): string {
-  const fromEnv = process.env.FFPROBE_BIN || process.env.ARC_FFPROBE_PATH;
-  if (typeof fromEnv === 'string' && fromEnv.trim() && fs.existsSync(fromEnv.trim())) {
-    return path.resolve(fromEnv.trim());
-  }
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('ffprobe-static') as { path: string };
-    if (mod?.path && fs.existsSync(mod.path)) return mod.path;
-  } catch {
-    /* optional */
-  }
-  return 'ffprobe';
+  return resolveBundledBinary(
+    [process.env.FFPROBE_BIN, process.env.ARC_FFPROBE_PATH],
+    () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mod = require('ffprobe-static') as { path: string };
+      return mod?.path ?? null;
+    },
+    'ffprobe'
+  );
 }
 
 function runProcess(
@@ -168,7 +208,7 @@ function buildFfmpegSeekArgs(atMs?: number): string[] {
   return ['-ss', sec.toFixed(3)];
 }
 
-export const __testOnly = { buildFfmpegSeekArgs };
+export const __testOnly = { buildFfmpegSeekArgs, preferUnpackedAsarPath };
 
 /**
  * Кадр видео -> JPEG (для превью карточки).

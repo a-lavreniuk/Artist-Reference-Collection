@@ -117,6 +117,7 @@ Skill для разработки и ревью UI в репозитории **A
 - [ ] Context menu: portal, backdrop, Escape, ширина 250px
 - [ ] Empty state: без точки в заголовке/подзаголовке, copy из emptyStates.ts
 - [ ] Нет локальных стилей, дублирующих arc-ui
+- [ ] Внутренний скролл panel/sidebar/modal: `Scroll-clip-ARC.mdc` (overflow без padding; sep flush)
 - [ ] Нет title= на кнопках вместо Tooltip
 - [ ] Нет hint-error под полем при field-level валидации
 - [ ] Отчёт: что изменилось в UI → технические детали → сверка с макетом

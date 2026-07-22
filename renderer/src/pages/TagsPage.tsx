@@ -466,7 +466,8 @@ export default function TagsPage() {
                 <EmptyState {...EMPTY_STATE_COPY.tagsSearchNoResults} fill />
               )
             ) : (
-              mainSections.map(({ cat, tags }, index) => (
+              <div className="arc-tags-page-main__scroll-pad">
+              {mainSections.map(({ cat, tags }, index) => (
                 <div key={cat.id} className="arc-tags-page-section-block">
                   {index > 0 ? <div className="context-menu__sep" role="separator" aria-hidden="true" /> : null}
                   <div className="arc-tags-page-section-block__inset">
@@ -491,7 +492,8 @@ export default function TagsPage() {
                   />
                   </div>
                 </div>
-              ))
+              ))}
+              </div>
             )}
           </div>
         </main>

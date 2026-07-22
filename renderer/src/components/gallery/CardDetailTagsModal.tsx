@@ -9,6 +9,7 @@ import CategorySettingsModal, {
 } from '../tags/CategorySettingsModal';
 import TagSettingsModal, { type TagSettingsModalState } from '../tags/TagSettingsModal';
 import { Tooltip } from '../tooltip/Tooltip';
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import {
   ARC_CATEGORIES_CHANGED_EVENT,
   addCategory,
@@ -65,9 +66,7 @@ function PickerCategoryItem({
     >
       <span className="context-menu__item-inner">
         <span className="context-menu__item-label-cluster">
-          <span className="context-menu__item-label" title={label}>
-            {label}
-          </span>
+          <TruncatedTextWithTooltip text={label} className="context-menu__item-label" />
         </span>
       </span>
     </button>
@@ -296,6 +295,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
           </div>
 
           <div className="arc-add-tags-picker__tags-scroll">
+            <div className="arc-add-tags-picker__tags-pad">
             {showEmptyCatalog ? (
               <p className="text-s arc-add-tags-picker__empty-catalog">Категорий пока нет.</p>
             ) : showEmptyTags ? (
@@ -318,7 +318,10 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                   {index > 0 ? <div className="context-menu__sep" role="separator" aria-hidden="true" /> : null}
                   <div className="arc-add-tags-picker__group-inset">
                   <div className="arc-add-tags-picker__group-title">
-                    <span className="arc-add-tags-picker__group-name">{cat.name}</span>
+                    <TruncatedTextWithTooltip
+                      text={cat.name}
+                      className="arc-add-tags-picker__group-name"
+                    />
                     <span className="arc-add-tags-picker__group-count">{tags.length}</span>
                   </div>
                   <div className="tags-row arc-add-tag-chips--with-add">
@@ -348,6 +351,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                 </div>
               ))
             )}
+            </div>
           </div>
         </div>
           </div>

@@ -7,7 +7,8 @@
 
 .arc-tooltip {
   position: fixed;
-  z-index: 10040;
+  /* Выше модалок (10060–10070), тура (10080) и bug-report (10100) */
+  z-index: 10200;
   font-family: "Google Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: var(--typo-p-s-size);
   line-height: var(--typo-p-s-line);

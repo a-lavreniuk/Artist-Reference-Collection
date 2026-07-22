@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { MAX_IMPORT_VIDEO_BYTES } from '../constants';
-import { isHlsUrl } from '../importFromRemote';
+import { isHlsUrl, isRetryableDownloadError } from '../importFromRemote';
 import {
   isImageImportUrl,
   isVideoImportUrl,
@@ -29,6 +29,20 @@ describe('isHlsUrl', () => {
 
   it('handles invalid URLs without throwing', () => {
     expect(isHlsUrl('not a url')).toBe(false);
+  });
+});
+
+describe('isRetryableDownloadError', () => {
+  it('retries on fetch failed and timeout causes', () => {
+    expect(isRetryableDownloadError(new Error('fetch failed'))).toBe(true);
+    const timedOut = new Error('fetch failed') as Error & { cause?: unknown };
+    timedOut.cause = new Error('Connect Timeout Error');
+    expect(isRetryableDownloadError(timedOut)).toBe(true);
+  });
+
+  it('does not retry on HTTP-style application errors', () => {
+    expect(isRetryableDownloadError(new Error('Download failed: HTTP 404'))).toBe(false);
+    expect(isRetryableDownloadError(new Error('File too large'))).toBe(false);
   });
 });
 

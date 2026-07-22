@@ -79,6 +79,7 @@ export default function CollectionGalleryCard({
                   className="arc-gallery-collection-card__img"
                   src={href}
                   alt=""
+                  draggable={false}
                   loading="lazy"
                   decoding="async"
                 />

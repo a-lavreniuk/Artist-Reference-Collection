@@ -1,7 +1,9 @@
-import { type MutableRefObject, useLayoutEffect, useRef } from 'react';
+import { type MutableRefObject, useId, useLayoutEffect, useRef } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
+import { useAccordionMotion } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import TagCategoryDropSurface from './TagCategoryDropSurface';
 import TagManageChip from './TagManageChip';
 
@@ -45,6 +47,11 @@ export default function TagsCategorySection({
   onEditCategory
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const panelId = useId();
+  const open = !collapsed;
+
+  useAccordionMotion(open, bodyRef);
 
   useLayoutEffect(() => {
     if (rootRef.current) {
@@ -98,7 +105,10 @@ export default function TagsCategorySection({
             className="arc-tags-category-section__name-btn"
             onClick={onEditCategory}
           >
-            <span className="arc-tags-category-section__name">{category.name}</span>
+            <TruncatedTextWithTooltip
+              text={category.name}
+              className="arc-tags-category-section__name"
+            />
           </button>
           <span className="arc-tags-category-section__count">{tags.length}</span>
         </h2>
@@ -111,7 +121,8 @@ export default function TagsCategorySection({
               <button
                 type="button"
                 className="btn btn-outline btn-icon-only btn-ds arc-card-detail-section-toggle"
-                aria-expanded={!collapsed}
+                aria-expanded={open}
+                aria-controls={panelId}
                 aria-label={collapsed ? 'Показать метки категории' : 'Скрыть метки категории'}
                 onClick={onToggleCollapse}
               >
@@ -124,8 +135,14 @@ export default function TagsCategorySection({
           </Tooltip>
         </div>
       </div>
-      {!collapsed ? (
-        mainDropEnabled ? (
+      <div
+        id={panelId}
+        ref={bodyRef}
+        className="arc-tags-category-section__body"
+        style={open ? undefined : { height: 0, overflow: 'hidden', opacity: 0 }}
+        aria-hidden={!open}
+      >
+        {mainDropEnabled ? (
           <TagCategoryDropSurface
             className="arc-tags-category-section__drop"
             categoryId={category.id}
@@ -138,8 +155,8 @@ export default function TagsCategorySection({
           </TagCategoryDropSurface>
         ) : (
           tagCloud
-        )
-      ) : null}
+        )}
+      </div>
     </section>
   );
 }

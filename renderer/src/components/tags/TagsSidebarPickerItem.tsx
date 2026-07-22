@@ -1,3 +1,5 @@
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
+
 type Props = {
   label: string;
   count?: number;
@@ -17,7 +19,7 @@ export default function TagsSidebarPickerItem({ label, count, active, onSelect }
     >
       <span className="context-menu__item-inner">
         <span className="context-menu__item-label-cluster">
-          <span className="context-menu__item-label">{label}</span>
+          <TruncatedTextWithTooltip text={label} className="context-menu__item-label" />
         </span>
         {count !== undefined ? <span className="context-menu__item-counter">{count}</span> : null}
       </span>
