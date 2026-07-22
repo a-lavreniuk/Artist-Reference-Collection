@@ -223,9 +223,9 @@ declare global {
           }
         | { ok: false; error: string }
       >;
-      maintenanceBegin: () => Promise<{ ok: true }>;
+      maintenanceBegin: (opts?: { silentUi?: boolean }) => Promise<{ ok: true }>;
       maintenanceEnd: () => Promise<{ ok: true }>;
-      onMaintenance: (cb: (locked: boolean) => void) => () => void;
+      onMaintenance: (cb: (locked: boolean, meta?: { silentUi?: boolean }) => void) => () => void;
       onRendererShortcut?: (cb: (id: string) => void) => () => void;
 
       getAppVersion: () => Promise<string>;

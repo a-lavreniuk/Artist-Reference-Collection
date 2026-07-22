@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } 
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../components/empty-state';
 import DuplicatesReadyState from '../components/duplicates/DuplicatesReadyState';
-import DuplicatesScanningState from '../components/duplicates/DuplicatesScanningState';
 import DuplicatesSidebar from '../components/duplicates/DuplicatesSidebar';
 import DuplicatesResultsView from '../components/duplicates/DuplicatesResultsView';
 import {
@@ -58,7 +57,6 @@ export default function DuplicatesPage() {
   const [urlA, setUrlA] = useState<string | null>(null);
   const [urlB, setUrlB] = useState<string | null>(null);
 
-  const cancelRef = useRef(false);
   const alertHandledRef = useRef(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => readDuplicatesSidebarWidth());
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
@@ -131,7 +129,6 @@ export default function DuplicatesPage() {
     async (resetSession: boolean) => {
       const arc = window.arc;
       if (!arc?.runDuplicateScan) return;
-      cancelRef.current = false;
       setNoResultsNotice(false);
       setProgress({ scannedCards: 0, totalCards: 0, duplicatesFound: 0, etaMs: null });
       setPhase('scanning');
@@ -141,10 +138,11 @@ export default function DuplicatesPage() {
           setProgress(p);
         }) ?? (() => {});
 
-      await arc.maintenanceBegin?.();
+      // Lock без плашки «Идёт операция…» — статус поиска на кнопке страницы.
+      await arc.maintenanceBegin?.({ silentUi: true });
       try {
         const res = await arc.runDuplicateScan({ thresholdPct: threshold, resetSession });
-        if (cancelRef.current || res.cancelled) {
+        if (res.cancelled) {
           setPhase('ready');
           return;
         }
@@ -173,11 +171,6 @@ export default function DuplicatesPage() {
     alertHandledRef.current = true;
     void startScan(false);
   }, [searchParams, startScan]);
-
-  const stopScan = useCallback(() => {
-    cancelRef.current = true;
-    void window.arc?.cancelDuplicateScan?.();
-  }, []);
 
   const currentPair = pairs[selectedIndex] ?? null;
 
@@ -309,23 +302,14 @@ export default function DuplicatesPage() {
       data-interface-tour-anchor="duplicates-page"
       style={{ ['--arc-duplicates-sidebar-w' as string]: `${sidebarWidth}px` }}
     >
-      {phase === 'ready' ? (
+      {phase === 'ready' || phase === 'scanning' ? (
         <DuplicatesReadyState
           threshold={threshold}
           onThresholdChange={onThresholdChange}
           onScan={() => void startScan(true)}
-          busy={busy}
+          scanning={phase === 'scanning'}
           noResultsNotice={noResultsNotice}
-        />
-      ) : null}
-
-      {phase === 'scanning' ? (
-        <DuplicatesScanningState
-          scannedCards={progress.scannedCards}
-          totalCards={progress.totalCards}
-          duplicatesFound={progress.duplicatesFound}
-          etaMs={progress.etaMs}
-          onStop={stopScan}
+          progress={phase === 'scanning' ? progress : null}
         />
       ) : null}
 

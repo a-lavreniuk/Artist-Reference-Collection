@@ -8,19 +8,24 @@ import { useEffect, useState } from 'react';
  * `arc:maintenance` (см. `src/main/maintenanceLock.ts`).
  * Renderer подписывается через `window.arc.onMaintenance(locked => …)`.
  *
- * Пока `locked === true` поверх всего приложения отображается полупрозрачный
- * оверлей с надписью «Идёт операция…». Алерты `DemoAlert` имеют более высокий
- * `z-index` и остаются видимыми — пользователь видит прогресс/успех/ошибку.
+ * Пока `locked === true` и не `silentUi` — поверх всего приложения отображается
+ * полупрозрачный оверлей с надписью «Идёт операция…». Алерты `DemoAlert` имеют
+ * более высокий `z-index` и остаются видимыми — пользователь видит прогресс/успех/ошибку.
+ * `silentUi` — lock без плашки (например, поиск дублей: статус в кнопке на странице).
  */
 export default function MaintenanceBanner() {
   const [locked, setLocked] = useState(false);
+  const [silentUi, setSilentUi] = useState(false);
 
   useEffect(() => {
     if (!window.arc?.onMaintenance) return undefined;
-    return window.arc.onMaintenance((v) => setLocked(v));
+    return window.arc.onMaintenance((v, meta) => {
+      setLocked(v);
+      setSilentUi(Boolean(meta?.silentUi));
+    });
   }, []);
 
-  if (!locked) return null;
+  if (!locked || silentUi) return null;
 
   return (
     <div className="arc-maintenance-banner" role="status" aria-live="polite" aria-busy="true">

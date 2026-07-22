@@ -37,9 +37,9 @@ const SECTION_KEYS: DuplicatesDetailSectionKey[] = [
 
 const DEFAULT_SECTIONS_OPEN: SectionsOpen = {
   details: true,
-  description: true,
-  tags: true,
-  collections: true
+  description: false,
+  tags: false,
+  collections: false
 };
 
 const ZERO_MIN_HEIGHTS: SectionMinHeights = {
@@ -48,6 +48,40 @@ const ZERO_MIN_HEIGHTS: SectionMinHeights = {
   tags: 0,
   collections: 0
 };
+
+function normText(value?: string | null): string {
+  return (value ?? '').trim();
+}
+
+function sortedIdsKey(ids: string[] | undefined): string {
+  return [...(ids ?? [])].map(String).sort().join('\0');
+}
+
+/** Какие панели открыть по умолчанию: метаданные всегда; остальные — только при любом расхождении. AI-описание не участвует. */
+export function sectionsOpenForPair(
+  cardA: CardRecord | null,
+  cardB: CardRecord | null
+): SectionsOpen {
+  if (!cardA || !cardB) {
+    return { ...DEFAULT_SECTIONS_OPEN };
+  }
+
+  const descriptionDiffers =
+    normText(cardA.name) !== normText(cardB.name) ||
+    normText(cardA.linkUrl) !== normText(cardB.linkUrl) ||
+    normText(cardA.description) !== normText(cardB.description);
+
+  const tagsDiffer = sortedIdsKey(cardA.tagIds) !== sortedIdsKey(cardB.tagIds);
+  const collectionsDiffer =
+    sortedIdsKey(cardA.collectionIds) !== sortedIdsKey(cardB.collectionIds);
+
+  return {
+    details: true,
+    description: descriptionDiffers,
+    tags: tagsDiffer,
+    collections: collectionsDiffer
+  };
+}
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -309,7 +343,9 @@ function heightsEqual(a: SectionMinHeights, b: SectionMinHeights): boolean {
 
 export function DuplicatesDetailsPanels({ cardA, cardB, libraryRootAbs }: Props) {
   const { categories, tagsByCategory, collectionsById } = useDuplicatePairDetails(cardA, cardB);
-  const [sectionsOpen, setSectionsOpen] = useState<SectionsOpen>(DEFAULT_SECTIONS_OPEN);
+  const [sectionsOpen, setSectionsOpen] = useState<SectionsOpen>(() =>
+    sectionsOpenForPair(cardA, cardB)
+  );
   const [minHeights, setMinHeights] = useState<SectionMinHeights>(ZERO_MIN_HEIGHTS);
 
   const scrollARef = useRef<HTMLDivElement>(null);
@@ -317,6 +353,10 @@ export function DuplicatesDetailsPanels({ cardA, cardB, libraryRootAbs }: Props)
   const syncingScrollRef = useRef(false);
   const measureARefs = useRef<SectionMeasureRefs>({});
   const measureBRefs = useRef<SectionMeasureRefs>({});
+
+  useLayoutEffect(() => {
+    setSectionsOpen(sectionsOpenForPair(cardA, cardB));
+  }, [cardA?.id, cardB?.id]);
 
   const onSectionOpenChange = (key: DuplicatesDetailSectionKey, open: boolean) => {
     setSectionsOpen((prev) => ({ ...prev, [key]: open }));

@@ -16,6 +16,11 @@ type Props = {
    * иначе фиксированная высота после tween может блокировать клики по карточкам.
    */
   animated?: boolean;
+  /**
+   * Если `false` — панель всегда открыта, кнопка свернуть/развернуть скрыта
+   * (пустые «Метки» / «Коллекции», чтобы не прятать кнопки добавления).
+   */
+  collapsible?: boolean;
   children: ReactNode;
   footer?: ReactNode;
 };
@@ -28,13 +33,15 @@ export default function CollapsibleSection({
   open: openProp,
   onOpenChange,
   animated = true,
+  collapsible = true,
   children,
   footer
 }: Props) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
-  const open = openProp ?? uncontrolledOpen;
+  const open = collapsible ? (openProp ?? uncontrolledOpen) : true;
 
   const toggleOpen = () => {
+    if (!collapsible) return;
     const next = !open;
     if (openProp === undefined) setUncontrolledOpen(next);
     onOpenChange?.(next);
@@ -47,36 +54,47 @@ export default function CollapsibleSection({
   useAccordionMotion(animated ? open : true, animated ? bodyRef : { current: null });
 
   useLayoutEffect(() => {
+    if (!collapsible && openProp === undefined) {
+      setUncontrolledOpen(true);
+    }
+  }, [collapsible, openProp]);
+
+  useLayoutEffect(() => {
     if (toggleScopeRef.current) void hydrateArcNavbarIcons(toggleScopeRef.current);
-  }, [open]);
+  }, [open, collapsible]);
 
   return (
-    <section className="arc-card-detail-section" aria-labelledby={headId}>
+    <section
+      className={`arc-card-detail-section${open ? '' : ' is-collapsed'}`}
+      aria-labelledby={headId}
+    >
       <div className="arc-card-detail-section-head" id={headId}>
         <div className="arc-card-detail-section-label">
           <p className={titleClassName}>{title}</p>
           {count !== undefined ? <span className="text-s arc-card-detail-section-count">{count}</span> : null}
         </div>
-        <Tooltip content={open ? 'Свернуть' : 'Развернуть'} position="top">
-          <span
-            ref={toggleScopeRef}
-            className="arc-card-detail-section-toggle-scope arc-ui-kit-scope"
-            data-btn-size="s"
-          >
-            <button
-              type="button"
-              className="btn btn-outline btn-icon-only btn-ds arc-card-detail-section-toggle"
-              aria-expanded={open}
-              aria-controls={panelId}
-              onClick={toggleOpen}
+        {collapsible ? (
+          <Tooltip content={open ? 'Свернуть' : 'Развернуть'} position="top">
+            <span
+              ref={toggleScopeRef}
+              className="arc-card-detail-section-toggle-scope arc-ui-kit-scope"
+              data-btn-size="s"
             >
-              <span
-                className={`btn-icon-only__glyph ${open ? 'arc-icon-chevron-peak' : 'arc-icon-chevron-bottom'}`}
-                aria-hidden="true"
-              />
-            </button>
-          </span>
-        </Tooltip>
+              <button
+                type="button"
+                className="btn btn-outline btn-icon-only btn-ds arc-card-detail-section-toggle"
+                aria-expanded={open}
+                aria-controls={panelId}
+                onClick={toggleOpen}
+              >
+                <span
+                  className={`btn-icon-only__glyph ${open ? 'arc-icon-chevron-peak' : 'arc-icon-chevron-bottom'}`}
+                  aria-hidden="true"
+                />
+              </button>
+            </span>
+          </Tooltip>
+        ) : null}
       </div>
       {animated ? (
         <div

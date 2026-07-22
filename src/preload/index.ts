@@ -254,11 +254,12 @@ contextBridge.exposeInMainWorld('arc', {
         }
       | { ok: false; error: string }
     >,
-  maintenanceBegin: () => ipcRenderer.invoke('arc:maintenance-begin') as Promise<{ ok: true }>,
+  maintenanceBegin: (opts?: { silentUi?: boolean }) =>
+    ipcRenderer.invoke('arc:maintenance-begin', opts) as Promise<{ ok: true }>,
   maintenanceEnd: () => ipcRenderer.invoke('arc:maintenance-end') as Promise<{ ok: true }>,
-  onMaintenance: (cb: (locked: boolean) => void) => {
-    const fn = (_: unknown, payload: { locked?: boolean }) => {
-      cb(Boolean(payload?.locked));
+  onMaintenance: (cb: (locked: boolean, meta?: { silentUi?: boolean }) => void) => {
+    const fn = (_: unknown, payload: { locked?: boolean; silentUi?: boolean }) => {
+      cb(Boolean(payload?.locked), { silentUi: Boolean(payload?.silentUi) });
     };
     ipcRenderer.on('arc:maintenance', fn);
     return () => ipcRenderer.removeListener('arc:maintenance', fn);

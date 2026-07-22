@@ -1042,7 +1042,7 @@ export default function CardDetailOverlay({
           onClick={() => void handleSuggestTags()}
           disabled={busy || suggestTagsBusy}
         >
-          <span className="btn-ds__value">{suggestTagsBusy ? 'Предлагаю…' : 'Предложить метки'}</span>
+          <span className="btn-ds__value">{suggestTagsBusy ? 'Предлагаю…' : 'Предложить'}</span>
           {suggestTagsBusy ? (
             <span className="btn-ds__icon" aria-hidden="true">
               <Loader decorative />
@@ -1059,7 +1059,7 @@ export default function CardDetailOverlay({
           onClick={() => setTagsModalOpen(true)}
           disabled={busy}
         >
-          <span className="btn-ds__value">Добавить метку</span>
+          <span className="btn-ds__value">Добавить</span>
           <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
         </button>
       ) : null}
@@ -1502,6 +1502,7 @@ export default function CardDetailOverlay({
               <CollapsibleSection
                 title="Метки"
                 count={tagsSorted.length}
+                collapsible={tagsSorted.length > 0}
                 footer={tagsSectionFooter}
               >
                 {tagsSorted.length > 0 && (
@@ -1557,6 +1558,7 @@ export default function CardDetailOverlay({
               <CollapsibleSection
                 title="Коллекции"
                 count={collectionsResolved.length}
+                collapsible={collectionsResolved.length > 0}
                 footer={addRowButton('Добавить в коллекцию', () => setCollectionsModalOpen(true))}
               >
                 {collectionsResolved.length > 0 && (

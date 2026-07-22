@@ -208,8 +208,8 @@ export function registerArcIpc(): void {
   registerStorageIpc(readLibraryRootFromDisk, assertNotMaintenance);
   registerDuplicateIpc(readLibraryRootFromDisk, assertNotMaintenance);
 
-  ipcMain.handle('arc:maintenance-begin', async () => {
-    acquireMaintenanceLock();
+  ipcMain.handle('arc:maintenance-begin', async (_e, opts?: { silentUi?: boolean }) => {
+    acquireMaintenanceLock({ silentUi: Boolean(opts?.silentUi) });
     return { ok: true as const };
   });
 

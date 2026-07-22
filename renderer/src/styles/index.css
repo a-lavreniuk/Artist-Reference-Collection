@@ -2875,6 +2875,10 @@ body.arc-card-detail-open .arc-app-outlet {
   gap: var(--s-3);
 }
 
+.arc-card-detail-section.is-collapsed {
+  gap: 0;
+}
+
 .arc-card-detail-section-head {
   display: flex;
   flex-direction: row;
@@ -3709,17 +3713,15 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 }
 
 .arc-card-info-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--s-4);
+  row-gap: var(--s-2);
   width: 100%;
 }
 
 .arc-card-info-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  gap: var(--s-4);
+  display: contents;
 }
 
 .arc-card-info-row__label {
@@ -3729,6 +3731,7 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 .arc-card-info-row__value {
   text-align: right;
   color: var(--text-elev-primary);
+  min-width: 0;
 }
 
 .arc-modal-host.arc-modal-host--card-detail-nested {
@@ -6520,7 +6523,17 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   text-align: center;
 }
 
-/* Scanning: title + stats (centered group) */
+.arc-duplicates-ready__spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Scanning: stats under title */
 .arc-duplicates-scanning__head {
   display: flex;
   flex-direction: column;
@@ -6999,6 +7012,13 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   align-items: center;
   gap: var(--s-1);
   color: var(--text-elev-secondary);
+}
+
+/* Счётчик у категории: paragraph (text-s), не heading как у секции деталки */
+.arc-duplicates-details__tag-cat .arc-card-detail-section-count {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
 }
 
 /* --- Action bar (Figma 1830:1950) --- */
