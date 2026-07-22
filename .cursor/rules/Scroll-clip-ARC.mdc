@@ -1,0 +1,74 @@
+---
+description: Internal scroll clip ARC — overflow без padding; inset на child; sep flush к scroll (panel/sidebar/modal)
+alwaysApply: true
+---
+
+# Internal scroll clip (ARC)
+
+Эталон: сайдбар и main настроек (`.arc-settings-page-sidebar` / `.arc-settings-main__scroll`), история (`.arc-history-container`), страница меток / коллекций, модалка меток, сайдбар дубликатов.
+
+Цель: при прокрутке контент обрезается **ровно по краю scroll-зоны** (у линии sep или рамки panel), а не по «невидимой» границе padding.
+
+## Правило
+
+| Слой | Делать | Не делать |
+|------|--------|-----------|
+| Panel / fixed head / foot | `padding: 0` на оболочке; inset только на `__pad` / `__content` | `padding` + `overflow` на одном узле |
+| Scroll (`overflow-y: auto`) | **Без** `padding` / `margin` | `padding` на том же элементе, что и `overflow-y` |
+| Отступы контента | На **дочернем** (`__pad`, `__content`, `__list-pad`) — уезжают вместе со скроллом | Постоянная «мёртвая» полоса у края viewport |
+| Sep между fixed и scroll | `margin` только **с противоположной** стороны от scroll (`head` sep: `margin: … 0 0`; `foot` sep: `margin: 0`) | `margin` со стороны scroll → зазор вне overflow = обрезка «с отступом» |
+| Sep full-bleed | Прямой потомок panel / head / foot **вне** `__pad` (как в сайдбаре настроек) | Sep внутри padded-блока (линия короче ширины panel) |
+
+Строки меню / hover: горизонтальный inset через `__pad` или padding на `item` / `item-inner`, **не** растягивать active-fill на всю ширину panel, если эталон — inset (метки, коллекции).
+
+## Два допустимых каркаса
+
+### A — весь контент в одном scroll (сайдбар настроек)
+
+```
+panel (overflow: hidden, padding: 0)
+  └── __scroll (overflow-y: auto, без padding)
+        ├── __pad (--head)     ← пункты
+        ├── sep                ← full-bleed, margin block
+        ├── __pad              ← пункты
+        └── …
+```
+
+### B — fixed head / foot + scroll между ними (метки, коллекции, дубликаты, модалка меток)
+
+```
+panel (overflow: hidden, padding: 0)
+  ├── __head
+  │     ├── __pad / __head-pad   ← контент с inset
+  │     └── sep                  ← margin только сверху; низ flush к scroll
+  ├── __scroll (overflow-y: auto, без padding)
+  │     └── __pad                ← padding-top + padding-bottom (отдых у краёв; при скролле клип flush)
+  └── __foot
+        ├── sep                  ← margin: 0 (flush к scroll)
+        └── __pad / __foot-pad   ← padding вокруг кнопки
+```
+
+## Эталоны в коде
+
+| Паттерн | Файлы |
+|---------|--------|
+| A — сайдбар настроек | `SettingsPageSidebar.tsx`, `.arc-settings-page-sidebar*` |
+| A/B — main настроек / история | `.arc-settings-main__scroll` + `__content`; `.arc-history-*` |
+| B — метки / коллекции | `TagsPageSidebar.tsx`, `CollectionsPageSidebar.tsx` |
+| B — модалка меток | `CardDetailTagsModal.tsx`, `.arc-add-tags-picker__*` |
+| B — дубликаты | `DuplicatesSidebar.tsx`, `.arc-duplicates-sidebar*` |
+
+## Новый раздел — чеклист
+
+1. Panel: `overflow: hidden`, `padding: 0` (сброс `.panel`, если нужно).
+2. Scroll без padding; inset только на child-pad.
+3. Sep у границы scroll — без margin со стороны overflow.
+4. Sep на всю ширину panel (вне horizontal pad).
+5. Прокрутить до упора вверх и вниз: обрезка у линии/рамки, без «мёртвой» полоски.
+6. Не копировать старые антипаттерны (`padding` на `__scroll`, negative margin «компенсации»).
+
+## Вне scope
+
+- Корневой скролл приложения (`.arc-app-outlet`, chrome / navbar offset).
+- Textarea, onboarding, одноразовые слоты без panel-списка.
+- Скрытие scrollbar — по эталону экрана (`scrollbar-width: none` vs thin).

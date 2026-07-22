@@ -113,46 +113,51 @@ export default function DuplicatesSidebar({
       data-elevation="sunken"
       data-btn-size="m"
     >
-      <div className="arc-duplicates-sidebar__scanned">
-        <div className="arc-duplicates-sidebar__stat">
-          <span className="text-m arc-duplicates-sidebar__stat-label">Карточек просканировано</span>
-          <span className="text-m arc-duplicates-sidebar__stat-value">
-            {scannedCards.toLocaleString('ru-RU')}
-          </span>
-        </div>
-        <div className="arc-duplicates-sidebar__stat">
-          <span className="text-m arc-duplicates-sidebar__stat-label">Дублей найдено</span>
-          <span className="text-m arc-duplicates-sidebar__stat-value">
-            {duplicatesFound.toLocaleString('ru-RU')}
-          </span>
-        </div>
-        <div className="arc-duplicates-sidebar__stat">
-          <span className="text-m arc-duplicates-sidebar__stat-label">Слияние сэкономит</span>
-          <span className="text-m arc-duplicates-sidebar__stat-value">{formatBytes(spaceSavedBytes)}</span>
-        </div>
-      </div>
+      <div className="arc-duplicates-sidebar__head">
+        <div className="arc-duplicates-sidebar__head-pad">
+          <div className="arc-duplicates-sidebar__scanned">
+            <div className="arc-duplicates-sidebar__stat">
+              <span className="text-m arc-duplicates-sidebar__stat-label">Карточек просканировано</span>
+              <span className="text-m arc-duplicates-sidebar__stat-value">
+                {scannedCards.toLocaleString('ru-RU')}
+              </span>
+            </div>
+            <div className="arc-duplicates-sidebar__stat">
+              <span className="text-m arc-duplicates-sidebar__stat-label">Дублей найдено</span>
+              <span className="text-m arc-duplicates-sidebar__stat-value">
+                {duplicatesFound.toLocaleString('ru-RU')}
+              </span>
+            </div>
+            <div className="arc-duplicates-sidebar__stat">
+              <span className="text-m arc-duplicates-sidebar__stat-label">Слияние сэкономит</span>
+              <span className="text-m arc-duplicates-sidebar__stat-value">{formatBytes(spaceSavedBytes)}</span>
+            </div>
+          </div>
 
-      <div className="arc-duplicates-sidebar__modes-block">
-        <span className="text-s arc-duplicates-sidebar__modes-label">Режим сравнения</span>
-        <div className="tabs arc-duplicates-modes" role="tablist" aria-label="Режим сравнения">
-          {MODE_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={mode === tab.id}
-              className={`tab-button${mode === tab.id ? ' is-active' : ''}`}
-              onClick={() => onModeChange(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
+          <div className="arc-duplicates-sidebar__modes-block">
+            <span className="text-s arc-duplicates-sidebar__modes-label">Режим сравнения</span>
+            <div className="tabs arc-duplicates-modes" role="tablist" aria-label="Режим сравнения">
+              {MODE_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === tab.id}
+                  className={`tab-button${mode === tab.id ? ' is-active' : ''}`}
+                  onClick={() => onModeChange(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div className="context-menu__sep" role="separator" aria-hidden="true" />
+        <div className="context-menu__sep" role="separator" aria-hidden="true" />
+      </div>
 
       <div className="arc-duplicates-sidebar__list">
+        <div className="arc-duplicates-sidebar__list-pad">
         {pairs.map((pair, index) => {
           const key = pairKey(pair);
           const status = statuses[key] ?? 'queued';
@@ -205,14 +210,17 @@ export default function DuplicatesSidebar({
             </div>
           );
         })}
+        </div>
       </div>
 
       <div className="arc-duplicates-sidebar__foot">
         <div className="context-menu__sep" role="separator" aria-hidden="true" />
-        <button type="button" className="btn btn-outline btn-ds arc-duplicates-sidebar__rescan" onClick={onRescan}>
-          <span className="btn-ds__icon arc-icon-reuse" aria-hidden="true" />
-          <span className="btn-ds__value">Повторить сканирование</span>
-        </button>
+        <div className="arc-duplicates-sidebar__foot-pad">
+          <button type="button" className="btn btn-outline btn-ds arc-duplicates-sidebar__rescan" onClick={onRescan}>
+            <span className="btn-ds__icon arc-icon-reuse" aria-hidden="true" />
+            <span className="btn-ds__value">Повторить сканирование</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

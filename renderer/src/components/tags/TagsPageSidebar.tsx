@@ -96,9 +96,6 @@ export default function TagsPageSidebar({
           />
         </div>
         <ContextMenuSeparator />
-        <div className="arc-tags-page-sidebar__pad">
-          <p className="context-menu__header">Категории</p>
-        </div>
       </div>
 
       <div

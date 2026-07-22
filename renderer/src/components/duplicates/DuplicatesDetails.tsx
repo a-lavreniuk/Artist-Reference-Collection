@@ -89,6 +89,7 @@ function DetailColumn({
 
   return (
     <div className="arc-duplicates-details__col arc-card-detail-settings-scroll">
+      <div className="arc-card-detail-settings-scroll__pad">
       <CollapsibleSection
         title="Детали"
         open={sectionsOpen.details}
@@ -205,6 +206,7 @@ function DetailColumn({
           </ul>
         ) : null}
       </CollapsibleSection>
+      </div>
     </div>
   );
 }

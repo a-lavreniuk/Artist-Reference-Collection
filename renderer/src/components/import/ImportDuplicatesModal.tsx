@@ -165,6 +165,7 @@ export default function ImportDuplicatesModal({
         </header>
 
         <div className="arc-modal__body arc-duplicates-import-modal__body">
+          <div className="arc-duplicates-import-modal__body-pad">
           <p className="arc-duplicates-import-modal__sim">{Math.round(conflict.similarity)}% схожести</p>
 
           <div className="arc-duplicates-import-modal__pair">
@@ -213,6 +214,7 @@ export default function ImportDuplicatesModal({
             <button type="button" className="btn btn-primary btn-ds" disabled={busy} onClick={() => void handleKeepBoth()}>
               <span className="btn-ds__value">Сохранить оба</span>
             </button>
+          </div>
           </div>
         </div>
 

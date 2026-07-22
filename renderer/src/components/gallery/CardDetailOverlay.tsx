@@ -1327,6 +1327,7 @@ export default function CardDetailOverlay({
             </div>
 
             <div ref={settingsScrollRef} className="arc-card-detail-settings-scroll">
+              <div className="arc-card-detail-settings-scroll__pad">
               <CollapsibleSection title="Описание">
                 <div
                   className="arc-card-detail-description-fields arc-ui-kit-scope"
@@ -1599,6 +1600,7 @@ export default function CardDetailOverlay({
                   </ul>
                 )}
               </CollapsibleSection>
+              </div>
             </div>
           </aside>
         </div>

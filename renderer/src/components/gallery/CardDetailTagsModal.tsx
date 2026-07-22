@@ -296,6 +296,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
           </div>
 
           <div className="arc-add-tags-picker__tags-scroll">
+            <div className="arc-add-tags-picker__tags-pad">
             {showEmptyCatalog ? (
               <p className="text-s arc-add-tags-picker__empty-catalog">Категорий пока нет.</p>
             ) : showEmptyTags ? (
@@ -348,6 +349,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                 </div>
               ))
             )}
+            </div>
           </div>
         </div>
           </div>

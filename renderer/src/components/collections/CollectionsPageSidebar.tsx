@@ -76,7 +76,7 @@ export default function CollectionsPageSidebar({
         ref={listRef}
         className={`arc-collections-page-sidebar__scroll context-menu__list${showDropEnd ? ' is-drop-end' : ''}`}
       >
-        <div className="arc-collections-page-sidebar__pad arc-collections-page-sidebar__pad--head">
+        <div className="arc-collections-page-sidebar__pad">
           {collections.map((collection, rowIndex) => {
             const count = counts[collection.id] ?? 0;
             const isActive = selectedCollectionId === collection.id;

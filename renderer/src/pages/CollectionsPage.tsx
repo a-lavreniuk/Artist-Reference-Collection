@@ -435,12 +435,6 @@ export default function CollectionsPage() {
           data-typo-tone="white"
         >
           <div className="arc-collections-page-main__scroll">
-            {feed.booting && !isRemoteSearchFeed && !feed.shuffleReloading ? (
-              <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
-                <span className="loader" aria-hidden="true" />
-              </div>
-            ) : null}
-
             {emptyState ? (
               <EmptyState
                 {...emptyState.copy}
@@ -449,32 +443,40 @@ export default function CollectionsPage() {
                 onSecondaryAction={emptyState.onSecondaryAction}
               />
             ) : (
-              <div className="arc-gallery-page arc-collections-gallery">
-                <GalleryBoard
-                  cards={feed.cards}
-                  srcMap={feed.srcMap}
-                  mediaTab="collections"
-                  variant="collections"
-                  scrollRootRef={scrollRootRef}
-                  boardRef={boardRef}
-                  loadingMore={feed.loading && feed.hasMore}
-                  busy={feed.booting || feed.loading || feed.shuffleReloading}
-                  revealResetKey={galleryRevealResetKey(scopedFeedQuery)}
-                  onOpenCard={openCard}
-                  moodboardCardIds={moodboardCardIds}
-                  onCardContextMenu={onCardContextMenu}
-                  isCardSelected={multiSelect.isSelected}
-                  onCardClick={multiSelect.handleCardClick}
-                  onOpenInNewWindow={multiSelect.openInNewWindowForCard}
-                  onCardPointerDown={multiSelect.handleCardPointerDown}
-                  onCardPointerMove={multiSelect.onCardPointerMove}
-                  onCardPointerUp={multiSelect.onCardPointerUp}
-                  onToggleMoodboard={handleToggleMoodboard}
-                  onFindSimilar={(id) => {
-                    void startFindSimilarSearch(navigate, searchParams, id);
-                  }}
-                />
-                <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
+              <div className="arc-collections-page-main__scroll-pad">
+                {feed.booting && !isRemoteSearchFeed && !feed.shuffleReloading ? (
+                  <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
+                    <span className="loader" aria-hidden="true" />
+                  </div>
+                ) : null}
+
+                <div className="arc-gallery-page arc-collections-gallery">
+                  <GalleryBoard
+                    cards={feed.cards}
+                    srcMap={feed.srcMap}
+                    mediaTab="collections"
+                    variant="collections"
+                    scrollRootRef={scrollRootRef}
+                    boardRef={boardRef}
+                    loadingMore={feed.loading && feed.hasMore}
+                    busy={feed.booting || feed.loading || feed.shuffleReloading}
+                    revealResetKey={galleryRevealResetKey(scopedFeedQuery)}
+                    onOpenCard={openCard}
+                    moodboardCardIds={moodboardCardIds}
+                    onCardContextMenu={onCardContextMenu}
+                    isCardSelected={multiSelect.isSelected}
+                    onCardClick={multiSelect.handleCardClick}
+                    onOpenInNewWindow={multiSelect.openInNewWindowForCard}
+                    onCardPointerDown={multiSelect.handleCardPointerDown}
+                    onCardPointerMove={multiSelect.onCardPointerMove}
+                    onCardPointerUp={multiSelect.onCardPointerUp}
+                    onToggleMoodboard={handleToggleMoodboard}
+                    onFindSimilar={(id) => {
+                      void startFindSimilarSearch(navigate, searchParams, id);
+                    }}
+                  />
+                  <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
+                </div>
               </div>
             )}
           </div>
