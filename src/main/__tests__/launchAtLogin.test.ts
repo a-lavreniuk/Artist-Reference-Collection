@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  approximateWindowsBootIdForTest,
   buildWindowsRunValueForTest,
   getLaunchAtLoginCliArgs,
   LAUNCH_AT_LOGIN_ARG,
   LAUNCH_AT_LOGIN_HIDDEN_ARG,
+  resolveWindowsHiddenAutostart,
   shouldStartHiddenInTrayFromLaunch,
   wasLaunchedAtLoginFromArgv,
   wasLaunchedHiddenAtLoginFromArgv
@@ -33,10 +35,67 @@ describe('launchAtLogin argv helpers', () => {
       '"C:\\Program Files\\ARC\\ARC.exe" --arc-launched-at-login-hidden'
     );
   });
+
+  it('builds a stable boot id from now and uptime', () => {
+    expect(approximateWindowsBootIdForTest(1_700_000_123_456, 45.7)).toBe('1700000077');
+  });
+});
+
+describe('resolveWindowsHiddenAutostart', () => {
+  it('returns true when hidden argv flag is present', () => {
+    expect(
+      resolveWindowsHiddenAutostart({
+        argv: ['electron', '.', LAUNCH_AT_LOGIN_HIDDEN_ARG],
+        wasOpenedAtLogin: false,
+        pendingMarkerActive: false
+      })
+    ).toBe(true);
+  });
+
+  it('returns true when only the visible login argv flag is present', () => {
+    expect(
+      resolveWindowsHiddenAutostart({
+        argv: ['electron', '.', LAUNCH_AT_LOGIN_ARG],
+        wasOpenedAtLogin: false,
+        pendingMarkerActive: false
+      })
+    ).toBe(true);
+  });
+
+  it('returns true when Electron reports wasOpenedAtLogin', () => {
+    expect(
+      resolveWindowsHiddenAutostart({
+        argv: ['electron', '.'],
+        wasOpenedAtLogin: true,
+        pendingMarkerActive: false
+      })
+    ).toBe(true);
+  });
+
+  it('returns true from pending marker when launch signals are missing', () => {
+    expect(
+      resolveWindowsHiddenAutostart({
+        argv: ['electron', '.'],
+        wasOpenedAtLogin: false,
+        pendingMarkerActive: true
+      })
+    ).toBe(true);
+  });
+
+  it('returns false for a manual launch with no login signals', () => {
+    expect(
+      resolveWindowsHiddenAutostart({
+        argv: ['electron', '.'],
+        wasOpenedAtLogin: false,
+        pendingMarkerActive: false
+      })
+    ).toBe(false);
+  });
 });
 
 describe('shouldStartHiddenInTrayFromLaunch', () => {
   const loginAtBoot = { wasOpenedAtLogin: true, wasOpenedAsHidden: true } as Electron.LoginItemSettings;
+  const manualLaunch = { wasOpenedAtLogin: false, wasOpenedAsHidden: false } as Electron.LoginItemSettings;
 
   it('returns false when autostart is disabled in prefs', () => {
     expect(
@@ -44,13 +103,11 @@ describe('shouldStartHiddenInTrayFromLaunch', () => {
     ).toBe(false);
   });
 
-  it('returns false on Windows when hidden argv flag is missing and no pending marker', () => {
+  it('returns false on Windows for a manual launch without login signals', () => {
     const originalPlatform = process.platform;
     Object.defineProperty(process, 'platform', { value: 'win32' });
 
-    expect(
-      shouldStartHiddenInTrayFromLaunch(true, true, false, ['electron', '.', LAUNCH_AT_LOGIN_ARG], loginAtBoot)
-    ).toBe(false);
+    expect(shouldStartHiddenInTrayFromLaunch(true, true, false, ['electron', '.'], manualLaunch)).toBe(false);
 
     Object.defineProperty(process, 'platform', { value: originalPlatform });
   });
@@ -60,8 +117,28 @@ describe('shouldStartHiddenInTrayFromLaunch', () => {
     Object.defineProperty(process, 'platform', { value: 'win32' });
 
     expect(
-      shouldStartHiddenInTrayFromLaunch(true, true, false, ['electron', '.', LAUNCH_AT_LOGIN_HIDDEN_ARG], loginAtBoot)
+      shouldStartHiddenInTrayFromLaunch(true, true, false, ['electron', '.', LAUNCH_AT_LOGIN_HIDDEN_ARG], manualLaunch)
     ).toBe(true);
+
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
+  });
+
+  it('returns true on Windows when only the visible login argv flag is present', () => {
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+
+    expect(
+      shouldStartHiddenInTrayFromLaunch(true, true, false, ['electron', '.', LAUNCH_AT_LOGIN_ARG], manualLaunch)
+    ).toBe(true);
+
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
+  });
+
+  it('returns true on Windows when Electron reports wasOpenedAtLogin', () => {
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+
+    expect(shouldStartHiddenInTrayFromLaunch(true, true, false, ['electron', '.'], loginAtBoot)).toBe(true);
 
     Object.defineProperty(process, 'platform', { value: originalPlatform });
   });

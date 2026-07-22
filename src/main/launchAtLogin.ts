@@ -10,7 +10,9 @@ export const LAUNCH_AT_LOGIN_HIDDEN_ARG = '--arc-launched-at-login-hidden';
 
 const WINDOWS_RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const PENDING_HIDDEN_AUTOSTART_FILE = 'pending-hidden-autostart';
-const WINDOWS_BOOT_WINDOW_MS = 180_000;
+const PENDING_HIDDEN_AUTOSTART_CONSUMED_BOOT_FILE = 'pending-hidden-autostart-consumed-boot';
+/** Slow logon / Defender can delay Run entries past 3 minutes. */
+const WINDOWS_BOOT_WINDOW_MS = 600_000;
 
 export function getLaunchAtLoginCliArgs(hidden: boolean): string[] {
   return hidden ? [LAUNCH_AT_LOGIN_HIDDEN_ARG] : [LAUNCH_AT_LOGIN_ARG];
@@ -70,6 +72,19 @@ function pendingHiddenAutostartPath(): string {
   return path.join(app.getPath('userData'), PENDING_HIDDEN_AUTOSTART_FILE);
 }
 
+function pendingHiddenAutostartConsumedBootPath(): string {
+  return path.join(app.getPath('userData'), PENDING_HIDDEN_AUTOSTART_CONSUMED_BOOT_FILE);
+}
+
+/** Stable id for the current Windows boot (second precision). */
+export function approximateWindowsBootIdForTest(nowMs: number, uptimeSec: number): string {
+  return String(Math.floor((nowMs - uptimeSec * 1000) / 1000));
+}
+
+function approximateWindowsBootId(): string {
+  return approximateWindowsBootIdForTest(Date.now(), os.uptime());
+}
+
 export function markPendingHiddenAutostart(): void {
   if (process.platform !== 'win32') return;
   fs.writeFileSync(pendingHiddenAutostartPath(), String(Date.now()), 'utf8');
@@ -82,15 +97,35 @@ export function clearPendingHiddenAutostart(): void {
   } catch {
     // Missing marker is fine.
   }
+  try {
+    fs.unlinkSync(pendingHiddenAutostartConsumedBootPath());
+  } catch {
+    // Missing consumed-boot marker is fine.
+  }
 }
 
+/**
+ * One-shot per boot: if the pending marker exists and the machine recently
+ * booted, treat this start as hidden autostart. Keeps the pending marker for
+ * the next reboot; records the boot id so a later manual launch in the same
+ * session does not hide again.
+ */
 export function consumePendingHiddenAutostart(maxBootAgeMs = WINDOWS_BOOT_WINDOW_MS): boolean {
   if (process.platform !== 'win32') return false;
   try {
     fs.statSync(pendingHiddenAutostartPath());
     const bootAgeMs = os.uptime() * 1000;
     if (bootAgeMs > maxBootAgeMs) return false;
-    clearPendingHiddenAutostart();
+
+    const bootId = approximateWindowsBootId();
+    const consumedPath = pendingHiddenAutostartConsumedBootPath();
+    try {
+      if (fs.readFileSync(consumedPath, 'utf8').trim() === bootId) return false;
+    } catch {
+      // Not consumed for this boot yet.
+    }
+
+    fs.writeFileSync(consumedPath, bootId, 'utf8');
     return true;
   } catch {
     return false;
@@ -148,6 +183,14 @@ function applyWindowsLaunchAtLogin(open: boolean, hidden: boolean): void {
     // Electron writes the Run key without args — restore the command line last.
     writeWindowsRunValue(regName, regValue);
   }
+
+  // Keep the marker armed while hidden autostart is on so the next boot still
+  // has a fallback after argv loss or a force-killed session (no will-quit).
+  if (hidden) {
+    markPendingHiddenAutostart();
+  } else {
+    clearPendingHiddenAutostart();
+  }
 }
 
 export function applyLaunchAtLogin(open: boolean, hidden = false): void {
@@ -164,8 +207,44 @@ export function applyLaunchAtLogin(open: boolean, hidden = false): void {
   });
 }
 
-function wasLaunchedHiddenAtLoginOnWindows(argv: readonly string[]): boolean {
-  if (wasLaunchedHiddenAtLoginFromArgv(argv)) return true;
+/**
+ * Prefs already require launchAtLoginHidden. Decide whether *this* process
+ * start is a login autostart (vs a manual launch).
+ */
+export function resolveWindowsHiddenAutostart(input: {
+  argv: readonly string[];
+  wasOpenedAtLogin: boolean;
+  pendingMarkerActive: boolean;
+}): boolean {
+  if (wasLaunchedHiddenAtLoginFromArgv(input.argv)) return true;
+  // Registry / updater sometimes keep only the visible login flag.
+  if (wasLaunchedAtLoginFromArgv(input.argv)) return true;
+  if (input.wasOpenedAtLogin) return true;
+  return input.pendingMarkerActive;
+}
+
+export function markHiddenAutostartConsumedForCurrentBoot(): void {
+  if (process.platform !== 'win32') return;
+  try {
+    fs.writeFileSync(pendingHiddenAutostartConsumedBootPath(), approximateWindowsBootId(), 'utf8');
+  } catch {
+    // Best-effort; missing userData is unlikely after app ready.
+  }
+}
+
+function wasLaunchedHiddenAtLoginOnWindows(
+  argv: readonly string[],
+  loginItemSettings: Electron.LoginItemSettings
+): boolean {
+  const fromLaunchSignals = resolveWindowsHiddenAutostart({
+    argv,
+    wasOpenedAtLogin: loginItemSettings.wasOpenedAtLogin === true,
+    pendingMarkerActive: false
+  });
+  if (fromLaunchSignals) {
+    markHiddenAutostartConsumedForCurrentBoot();
+    return true;
+  }
   return consumePendingHiddenAutostart();
 }
 
@@ -180,7 +259,7 @@ export function shouldStartHiddenInTrayFromLaunch(
   if (!launchAtLogin || !launchAtLoginHidden) return false;
 
   if (process.platform === 'win32') {
-    return wasLaunchedHiddenAtLoginOnWindows(argv);
+    return wasLaunchedHiddenAtLoginOnWindows(argv, loginItemSettings);
   }
 
   if (!loginItemSettings.wasOpenedAtLogin) return false;
