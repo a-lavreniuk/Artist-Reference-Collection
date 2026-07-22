@@ -1804,10 +1804,6 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   min-height: 0;
 }
 
-.arc-page-empty {
-  padding: var(--s-4);
-}
-
 /* Empty state (Figma 1414:13470, 1414:14572) */
 .arc-empty-state {
   display: flex;
@@ -1862,7 +1858,8 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
 }
 
 .arc-tags-page-main__scroll > .arc-empty-state,
-.arc-collections-page-main__scroll > .arc-empty-state {
+.arc-collections-page-main__scroll > .arc-empty-state,
+.arc-history-scroll > .arc-empty-state {
   margin: 0 auto;
   width: 100%;
   border: none;
@@ -2156,6 +2153,23 @@ html[data-theme="light"] .arc-gallery-card-shade:not([style*="--arc-gallery-card
 
 .arc-gallery-card-overlay-timeline {
   width: 100%;
+}
+
+/* Hidden until GSAP stagger (useCardOverlayStagger); prevents flash when parent overlay fades in. */
+.arc-gallery-card-overlay-timeline,
+.arc-gallery-card-overlay-badge,
+.arc-gallery-card-overlay-time,
+.arc-gallery-card-overlay-action {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arc-gallery-card-overlay-timeline,
+  .arc-gallery-card-overlay-badge,
+  .arc-gallery-card-overlay-time,
+  .arc-gallery-card-overlay-action {
+    opacity: 1;
+  }
 }
 
 /* Figma 1987:23138 — Slider: rail 6px / radius s-2, fill brand / radius s-1 */
@@ -6269,6 +6283,8 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  display: flex;
+  flex-direction: column;
 }
 
 .arc-history-scroll::-webkit-scrollbar {

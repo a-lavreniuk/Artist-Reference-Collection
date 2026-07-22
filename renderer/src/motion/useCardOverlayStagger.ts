@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { ensureGsapSetup } from './gsapSetup';
 import { arcMotionTokens } from './arcMotionTokens';
 import { getPrefersReducedMotion } from './prefersReducedMotion';
@@ -30,7 +30,8 @@ export function useCardOverlayStagger(
 ): void {
   const wasActive = useRef(false);
 
-  useEffect(() => {
+  // useLayoutEffect: set opacity 0 before paint so CSS parent fade does not flash children.
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -48,19 +49,17 @@ export function useCardOverlayStagger(
       if (reduced) {
         gsap.set(elements, { opacity: 1, y: 0 });
       } else {
-        gsap.fromTo(
-          elements,
-          { opacity: 0, y: 4 },
-          {
-            opacity: 1,
-            y: 0,
-            duration,
-            delay: CARD_OVERLAY_INITIAL_DELAY_S,
-            ease: arcMotionTokens.ease,
-            stagger: CARD_OVERLAY_STAGGER_S,
-            overwrite: 'auto'
-          }
-        );
+        gsap.killTweensOf(elements);
+        gsap.set(elements, { opacity: 0, y: 4 });
+        gsap.to(elements, {
+          opacity: 1,
+          y: 0,
+          duration,
+          delay: CARD_OVERLAY_INITIAL_DELAY_S,
+          ease: arcMotionTokens.ease,
+          stagger: CARD_OVERLAY_STAGGER_S,
+          overwrite: 'auto'
+        });
       }
     } else if (!active && wasActive.current) {
       gsap.killTweensOf(elements);

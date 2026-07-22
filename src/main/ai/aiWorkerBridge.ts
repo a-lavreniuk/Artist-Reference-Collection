@@ -16,6 +16,8 @@ let requestSeq = 0;
 const pending = new Map<number, PendingRequest>();
 let restartAttempts = 0;
 const MAX_RESTARTS = 3;
+/** When true, exit handler must not respawn (user/settings shutdown). */
+let intentionalShutdown = false;
 
 function workerScriptPath(): string {
   return path.join(__dirname, 'aiWorkerProcess.js');
@@ -29,6 +31,7 @@ function rejectAllPending(message: string): void {
 }
 
 function spawnWorker(): UtilityProcess {
+  intentionalShutdown = false;
   const child = utilityProcess.fork(workerScriptPath(), [], {
     serviceName: 'arc-ai-worker',
     stdio: 'pipe'
@@ -43,6 +46,10 @@ function spawnWorker(): UtilityProcess {
     workerReady = false;
     worker = null;
     rejectAllPending(`AI worker завершился (код ${code ?? 'unknown'})`);
+    if (intentionalShutdown) {
+      intentionalShutdown = false;
+      return;
+    }
     if (restartAttempts < MAX_RESTARTS) {
       restartAttempts += 1;
       worker = spawnWorker();
@@ -81,6 +88,8 @@ export function ensureAiWorker(): UtilityProcess {
 }
 
 export function shutdownAiWorker(): void {
+  intentionalShutdown = true;
+  restartAttempts = MAX_RESTARTS;
   if (worker) {
     try {
       worker.kill();

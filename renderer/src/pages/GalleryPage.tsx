@@ -424,6 +424,8 @@ export default function GalleryPage() {
 
           neighborCardIds={detailNeighborCardIds}
 
+          viewerNavigationCardIds={feedCardIds}
+
         />
 
       ) : null}

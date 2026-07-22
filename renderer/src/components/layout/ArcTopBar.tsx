@@ -3,6 +3,7 @@ import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { useArcHistoryNav } from './useArcHistoryNav';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
 import { useChromeTitle } from '../../hooks/useChromeTitle';
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 
 export default function ArcTopBar() {
   const ref = useRef<HTMLElement>(null);
@@ -56,9 +57,11 @@ export default function ArcTopBar() {
             aria-hidden="true"
           />
         </button>
-        <p className="arc-topbar__title text-s" title={chromeTitle}>
-          {chromeTitle}
-        </p>
+        <TruncatedTextWithTooltip
+          text={chromeTitle}
+          className="arc-topbar__title text-s"
+          wrapClassName="arc-topbar__title-wrap arc-truncated-tooltip-wrap"
+        />
       </div>
 
       <div className="arc-topbar__window arc-navbar-no-drag">

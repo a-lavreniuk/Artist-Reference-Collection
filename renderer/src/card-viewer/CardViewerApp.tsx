@@ -13,6 +13,7 @@ import type { ContextMenuRow } from '../components/context-menu';
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import ValueSlider from '../components/range-slider/ValueSlider';
 import { Tooltip } from '../components/tooltip/Tooltip';
+import { TruncatedTextWithTooltip } from '../components/tooltip/TruncatedTextWithTooltip';
 import { matchesShortcut } from '../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../shortcuts/shortcutGuards';
 import { shortcutMenuLabel } from '../shortcuts/shortcutLabels';
@@ -498,9 +499,11 @@ export default function CardViewerApp() {
             </button>
           </Tooltip>
 
-          <p className="arc-card-viewer__title text-m" data-typo-role="secondary" title={fullTitle}>
-            {fullTitle}
-          </p>
+          <TruncatedTextWithTooltip
+            text={fullTitle}
+            className="arc-card-viewer__title text-m"
+            wrapClassName="arc-card-viewer__title-wrap arc-truncated-tooltip-wrap"
+          />
         </div>
         <div className="arc-card-viewer__toolbar-right">
           {showNavigation ? (

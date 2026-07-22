@@ -11,5 +11,5 @@ export const MAX_IMPORT_BODY_BYTES = 32 * 1024 * 1024;
 /** Remote video downloads (mp4, webm, HLS, YouTube via yt-dlp). */
 export const MAX_IMPORT_VIDEO_BYTES = 512 * 1024 * 1024;
 
-/** No byte cap for remote image downloads. */
-export const MAX_IMPORT_IMAGE_BYTES = Number.POSITIVE_INFINITY;
+/** Remote image downloads (also caps Import API image size). */
+export const MAX_IMPORT_IMAGE_BYTES = 100 * 1024 * 1024;

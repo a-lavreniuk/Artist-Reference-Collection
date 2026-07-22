@@ -26,7 +26,13 @@ export function formatSearchQuery(searchParams: URLSearchParams): string {
 
 export function stripOpenCardFromParams(searchParams: URLSearchParams): URLSearchParams {
   const next = new URLSearchParams(searchParams);
+  const detailId = parseDetailCardId(next);
+  const filterId = parseSearchCardId(next);
   next.delete(ARC_DETAIL_QUERY_CARD);
+  // UUID-search opens both card= (feed filter) and detail=; closing detail should restore the feed.
+  if (detailId && filterId && detailId === filterId) {
+    next.delete(ARC_SEARCH_QUERY_CARD);
+  }
   return next;
 }
 

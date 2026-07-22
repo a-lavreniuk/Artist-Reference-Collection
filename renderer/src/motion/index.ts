@@ -3,7 +3,6 @@ export { getPrefersReducedMotion, subscribePrefersReducedMotion } from './prefer
 export { ensureGsapSetup, gsap, ScrollTrigger } from './gsapSetup';
 export { useGsapContext } from './useGsapContext';
 export { useOverlayMotion, useOverlayMotionPair } from './useOverlayMotion';
-export { default as ModalMotionHost } from './ModalMotionHost';
 export { useMasonryReveal, resetMasonryRevealCache, isMasonryItemRevealed } from './useMasonryReveal';
 export { galleryRevealResetKey } from './galleryRevealEpoch';
 export { useSkeletonCrossfade } from './useSkeletonCrossfade';

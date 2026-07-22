@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { DemoAlertVariant } from '../../../components/layout/DemoAlert';
+import type { ToastAlertVariant } from '../../../components/alert/ToastAlert';
 import { listAllCardsPaginated } from '../../../services/db';
 import { formatBytesRoundedToMb } from '../../../utils/formatBytes';
 import { computeLibraryMediaBytesFromCards } from '../../../utils/computeLibraryMediaBytesFromCards';
 import { type BackupPart } from './settingsLibraryTypes';
 
-type BackupAlert = { variant: DemoAlertVariant; message: string };
+type BackupAlert = { variant: ToastAlertVariant; message: string };
 
 export function useSettingsLibraryBackup() {
   const [bytesTotal, setBytesTotal] = useState(0);

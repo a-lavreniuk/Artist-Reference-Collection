@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { DemoAlertVariant } from '../../../components/layout/DemoAlert';
+import type { ToastAlertVariant } from '../../../components/alert/ToastAlert';
 
 export type ReleaseNotesVersion = {
   version: string;
@@ -17,7 +17,7 @@ export type UpdatesCheckState =
 
 type AlertState = {
   message: string;
-  variant: DemoAlertVariant;
+  variant: ToastAlertVariant;
 } | null;
 
 function compareSemver(a: string, b: string): number {

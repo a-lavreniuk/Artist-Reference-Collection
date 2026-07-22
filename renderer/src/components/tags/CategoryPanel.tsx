@@ -242,7 +242,7 @@ export default function CategoryPanel({
             <div className="arc-category-rank-buttons">
               <button
                 type="button"
-                className="btn btn-outline btn-icon-only arc-category-rank-btn"
+                className="btn btn-outline btn-icon-only btn-ds arc-category-rank-btn"
                 aria-label="Выше"
                 disabled={!canMoveUp || busy}
                 onClick={() => void onMoveUp()}
@@ -251,7 +251,7 @@ export default function CategoryPanel({
               </button>
               <button
                 type="button"
-                className="btn btn-outline btn-icon-only arc-category-rank-btn"
+                className="btn btn-outline btn-icon-only btn-ds arc-category-rank-btn"
                 aria-label="Ниже"
                 disabled={!canMoveDown || busy}
                 onClick={() => void onMoveDown()}
@@ -261,7 +261,7 @@ export default function CategoryPanel({
             </div>
             <button
               type="button"
-              className="btn btn-danger btn-icon-only"
+              className="btn btn-danger btn-icon-only btn-ds"
               aria-label="Удалить категорию"
               disabled={busy}
               onClick={() => setDeleteConfirmOpen(true)}

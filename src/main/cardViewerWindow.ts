@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, nativeImage } from 'electron';
 import path from 'path';
 
 import { readLibraryRootSync } from './libraryRootConfig';
+import { isInsideLibrary } from './media/arcMediaPath';
 import { getCardByIdFromDb } from './storage/libraryStorage';
 
 export type OpenCardViewerPayload = {
@@ -59,7 +60,9 @@ function clampOpacity(value: unknown): number {
 function resolveLibraryAbsPath(relativePath: string): string | null {
   const root = readLibraryRootSync();
   if (!root || !relativePath.trim()) return null;
-  return path.join(root, relativePath.replace(/\//g, path.sep));
+  const abs = path.resolve(root, relativePath.replace(/\//g, path.sep));
+  if (!isInsideLibrary(root, abs)) return null;
+  return abs;
 }
 
 function cardOriginalRel(cardId: string): string | null {

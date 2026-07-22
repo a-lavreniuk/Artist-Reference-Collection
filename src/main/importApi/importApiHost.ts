@@ -5,6 +5,7 @@ import { app } from 'electron';
 
 import { readAppPreferencesSync } from '../appPreferences';
 import { readLibraryRootSync } from '../libraryRootConfig';
+import { isMaintenanceLocked } from '../maintenanceLock';
 import { addCardsToCollection, ensureCollectionRecord } from '../mcp/collectionService';
 import { importMediaFile } from '../storage/libraryStorage';
 import { refreshLibrarySessionSnapshotFromDisk } from '../librarySessionSnapshot';
@@ -81,8 +82,12 @@ function buildDeps(): ImportApiHandlerDeps {
       website,
       name,
       collectionId,
-      quiet
+      quiet,
+      force
     }) => {
+      if (isMaintenanceLocked()) {
+        return { ok: false, error: 'Library is under maintenance', statusHint: 503 as const };
+      }
       let cleanup: (() => Promise<void>) | null = null;
       try {
         const kind = resolveImportMediaKind(url, mediaKind);
@@ -113,6 +118,24 @@ function buildDeps(): ImportApiHandlerDeps {
 
         const { tempPath, cleanup: rm } = downloaded;
         cleanup = rm;
+        if (isMaintenanceLocked()) {
+          return { ok: false, error: 'Library is under maintenance', statusHint: 503 as const };
+        }
+
+        if (!force && kind === 'image') {
+          const { checkImportDuplicates } = await import('../duplicateScanService');
+          const matches = await checkImportDuplicates(libraryRoot, [tempPath]);
+          if (matches.length > 0) {
+            const best = matches[0];
+            return {
+              ok: false,
+              error: `Duplicate of existing card (${best.existingCardId})`,
+              existingId: best.existingCardId,
+              statusHint: 409 as const
+            };
+          }
+        }
+
         const result = await importMediaFile(libraryRoot, tempPath, {
           linkUrl: website,
           name
@@ -141,6 +164,9 @@ function buildDeps(): ImportApiHandlerDeps {
       }
     },
     ensureCollection: async ({ libraryRoot, name, description }) => {
+      if (isMaintenanceLocked()) {
+        return { ok: false, error: 'Library is under maintenance' };
+      }
       try {
         const { collection, created } = ensureCollectionRecord(libraryRoot, { name, description });
         return { ok: true, id: collection.id, name: collection.name, created };

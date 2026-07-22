@@ -244,6 +244,31 @@ function startOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Custom dateAdded bounds in local calendar days → ISO (same convention as presets). */
+export function customDateAddedBounds(fromRaw: string, toRaw: string): { from: string; to: string } {
+  const parseStart = (raw: string): Date => {
+    const s = raw.trim();
+    if (DATE_ONLY_RE.test(s)) {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
+    }
+    const parsed = new Date(s);
+    return Number.isNaN(parsed.getTime()) ? startOfLocalDay(new Date()) : parsed;
+  };
+  const parseEnd = (raw: string): Date => {
+    const s = raw.trim();
+    if (DATE_ONLY_RE.test(s)) {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d, 23, 59, 59, 999);
+    }
+    const parsed = new Date(s);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+  return { from: parseStart(fromRaw).toISOString(), to: parseEnd(toRaw).toISOString() };
+}
+
 export function dateRangeForPreset(preset: DateAddedPreset, now = new Date()): { from: Date; to: Date } {
   const today = startOfLocalDay(now);
   const end = new Date(today);
@@ -391,10 +416,11 @@ export function buildGalleryFilterWhere(
     const dateParts: string[] = [];
     for (const d of f.dateAdded) {
       if (d.preset === 'custom') {
-        const from = d.from;
-        const to = d.to ?? d.from;
+        const fromRaw = d.from;
+        const toRaw = d.to ?? d.from;
+        const { from, to } = customDateAddedBounds(fromRaw, toRaw);
         dateParts.push(`(${alias}.added_at >= ? AND ${alias}.added_at <= ?)`);
-        binds.push(from, to.length === 10 ? `${to}T23:59:59.999Z` : to);
+        binds.push(from, to);
       } else {
         const { from, to } = dateRangeForPreset(d.preset);
         dateParts.push(`(${alias}.added_at >= ? AND ${alias}.added_at <= ?)`);

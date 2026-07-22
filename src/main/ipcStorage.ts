@@ -270,6 +270,8 @@ export function registerStorageIpc(
     if (!root) throw new Error('Библиотека не выбрана');
     await ensureLibraryReady(root);
     const paths = absolutePaths as string[];
+    const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
+    allowMediaStagingPaths(paths);
     const total = paths.length;
     const results = [];
     for (let i = 0; i < paths.length; i++) {

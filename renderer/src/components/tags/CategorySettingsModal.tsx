@@ -244,7 +244,7 @@ export default function CategorySettingsModal({
                 </div>
                 <div className="arc-modal__slot">
                   <label
-                    className={`field input-live${name.trim() ? ' has-value' : ''}${hasDuplicateNameError ? ' field-error' : ''}`}
+                    className={`field input-live${name.trim() ? ' has-value' : ''}${error ? ' field-error' : ''}`}
                     data-live-input
                   >
                     <input
@@ -252,7 +252,7 @@ export default function CategorySettingsModal({
                       placeholder="Введите название…"
                       value={name}
                       autoFocus
-                      aria-invalid={hasDuplicateNameError || undefined}
+                      aria-invalid={error ? true : undefined}
                       onChange={(event) => {
                         const nextValue = event.target.value;
                         setName(nextValue);
@@ -358,10 +358,6 @@ export default function CategorySettingsModal({
                   ))}
                 </div>
               </div>
-            ) : null}
-
-            {error && !hasDuplicateNameError ? (
-              <p className="hint-error arc-category-modal-error">{error}</p>
             ) : null}
           </div>
 

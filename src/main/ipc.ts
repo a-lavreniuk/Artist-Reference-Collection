@@ -9,7 +9,7 @@ import {
   setActiveMediaTabAndSync,
   syncArcMediaServerLibraryRoot
 } from './media/mediaServerHost';
-import { registerMediaStagingToken } from './media/mediaStagingTokens';
+import { allowMediaStagingPaths, registerMediaStagingToken } from './media/mediaStagingTokens';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
 import { migrateLibraryToFolder } from './libraryMigrate';
 import { appendHistory, clearHistory, readHistory, type HistorySegment } from './libraryHistory';
@@ -209,12 +209,12 @@ export function registerArcIpc(): void {
   registerDuplicateIpc(readLibraryRootFromDisk, assertNotMaintenance);
 
   ipcMain.handle('arc:maintenance-begin', async (_e, opts?: { silentUi?: boolean }) => {
-    acquireMaintenanceLock({ silentUi: Boolean(opts?.silentUi) });
-    return { ok: true as const };
+    const token = acquireMaintenanceLock({ silentUi: Boolean(opts?.silentUi) });
+    return { ok: true as const, token };
   });
 
-  ipcMain.handle('arc:maintenance-end', async () => {
-    releaseMaintenanceLock();
+  ipcMain.handle('arc:maintenance-end', async (_e, token?: unknown) => {
+    releaseMaintenanceLock(typeof token === 'string' ? token : undefined);
     return { ok: true as const };
   });
 
@@ -350,6 +350,7 @@ export function registerArcIpc(): void {
       filters: [{ name: 'Изображения', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'] }]
     });
     if (res.canceled) return [];
+    allowMediaStagingPaths(res.filePaths);
     return res.filePaths;
   });
 
@@ -371,6 +372,7 @@ export function registerArcIpc(): void {
       ]
     });
     if (res.canceled) return [];
+    allowMediaStagingPaths(res.filePaths);
     return res.filePaths;
   });
 
@@ -378,8 +380,10 @@ export function registerArcIpc(): void {
     if (!Array.isArray(absolutePaths) || !absolutePaths.every((x) => typeof x === 'string')) {
       throw new Error('Неверный список путей');
     }
+    const paths = absolutePaths as string[];
+    allowMediaStagingPaths(paths);
     const { classifyDroppedPaths } = await import('./importPathUtils');
-    return classifyDroppedPaths(absolutePaths as string[]);
+    return classifyDroppedPaths(paths);
   });
 
   ipcMain.handle('arc:list-importable-files-in-directory', async (_e, folderPath: unknown) => {
@@ -387,7 +391,9 @@ export function registerArcIpc(): void {
       throw new Error('Неверный путь к папке');
     }
     const { listImportableFilesInDirectoryRoot } = await import('./importPathUtils');
-    return listImportableFilesInDirectoryRoot(folderPath.trim());
+    const files = await listImportableFilesInDirectoryRoot(folderPath.trim());
+    allowMediaStagingPaths(files);
+    return files;
   });
 
   ipcMain.handle('arc:to-file-url', async (_e, relativePath: unknown) => {
@@ -405,7 +411,7 @@ export function registerArcIpc(): void {
 
   ipcMain.handle('arc:register-media-staging-token', async (_e, absPath: unknown) => {
     if (typeof absPath !== 'string' || !absPath.trim()) return null;
-    return registerMediaStagingToken(absPath.trim());
+    return registerMediaStagingToken(absPath.trim(), readLibraryRootSync());
   });
 
   ipcMain.handle('arc:delete-file-if-inside-library', async (_e, relativePath: unknown) => {

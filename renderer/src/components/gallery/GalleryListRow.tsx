@@ -9,6 +9,7 @@ import { galleryCardDisplayName } from './galleryCardDisplayName';
 import GalleryThumb from './GalleryThumb';
 import { GALLERY_LIST_ROW_HEIGHT_PX, GALLERY_LIST_THUMB_SIZE_PX } from './galleryListConstants';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 
 type Props = {
   card: CardRecord;
@@ -110,9 +111,11 @@ function GalleryListRow({
           <span className="arc-gallery-list-row__thumb-empty" aria-hidden />
         )}
       </span>
-      <span className="arc-gallery-list-row__name text-m" title={name}>
-        {name}
-      </span>
+      <TruncatedTextWithTooltip
+        text={name}
+        className="arc-gallery-list-row__name text-m"
+        wrapClassName="arc-gallery-list-row__name-wrap arc-truncated-tooltip-wrap"
+      />
       <span className="arc-gallery-list-row__meta text-m">{resolution}</span>
       <span className="arc-gallery-list-row__meta text-m">{size}</span>
       <span className="arc-gallery-list-row__meta text-m">{format}</span>

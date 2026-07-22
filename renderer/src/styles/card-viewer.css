@@ -60,14 +60,18 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.arc-card-viewer__title-wrap.arc-truncated-tooltip-wrap {
+  min-width: 0;
+  flex: 1 1 auto;
+  -webkit-app-region: drag;
+}
+
 .arc-card-viewer__title {
   margin: 0;
   min-width: 0;
-  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  -webkit-app-region: drag;
 }
 
 .arc-card-viewer__slides {

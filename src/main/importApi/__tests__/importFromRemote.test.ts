@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { MAX_IMPORT_VIDEO_BYTES } from '../constants';
+import { MAX_IMPORT_IMAGE_BYTES, MAX_IMPORT_VIDEO_BYTES } from '../constants';
 import { isHlsUrl, isRetryableDownloadError } from '../importFromRemote';
 import {
   isImageImportUrl,
@@ -59,8 +59,8 @@ describe('importMediaKind', () => {
     expect(resolveImportMediaKind('https://example.com/photo.jpg', 'image')).toBe('image');
   });
 
-  it('applies unlimited image cap and 512MB video cap', () => {
-    expect(resolveImportMaxBytes('https://example.com/photo.jpg')).toBe(Number.POSITIVE_INFINITY);
+  it('applies 100MB image cap and 512MB video cap', () => {
+    expect(resolveImportMaxBytes('https://example.com/photo.jpg')).toBe(MAX_IMPORT_IMAGE_BYTES);
     expect(resolveImportMaxBytes('https://example.com/clip.mp4')).toBe(MAX_IMPORT_VIDEO_BYTES);
     expect(resolveImportMaxBytes('https://www.youtube.com/watch?v=abc')).toBe(MAX_IMPORT_VIDEO_BYTES);
   });

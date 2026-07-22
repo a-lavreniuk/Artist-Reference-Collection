@@ -37,6 +37,7 @@ function parseItemAddBody(raw: unknown): ItemAddRequestBody | null {
   if (typeof o.name === 'string') body.name = o.name;
   if (typeof o.collectionId === 'string') body.collectionId = o.collectionId;
   if (o.quiet === true) body.quiet = true;
+  if (o.force === true) body.force = true;
   return body;
 }
 
@@ -58,7 +59,7 @@ export function validateItemUrl(url: string): boolean {
   }
 }
 
-export type ItemAddHttpStatus = 200 | 400 | 403 | 503 | 500;
+export type ItemAddHttpStatus = 200 | 400 | 403 | 409 | 503 | 500;
 
 export type ItemAddResult = {
   status: ItemAddHttpStatus;
@@ -117,11 +118,19 @@ export async function handleItemAdd(deps: ImportApiHandlerDeps, rawBody: unknown
     website,
     name,
     collectionId,
-    quiet: body.quiet === true
+    quiet: body.quiet === true,
+    force: body.force === true
   });
 
   if (!result.ok) {
-    return { status: 500, body: { status: 'error', message: result.error } };
+    const maintenance = /maintenance/i.test(result.error);
+    const status =
+      result.statusHint ??
+      (maintenance ? 503 : /duplicate/i.test(result.error) ? 409 : 500);
+    return {
+      status,
+      body: { status: 'error', message: result.error }
+    };
   }
 
   return { status: 200, body: { status: 'success', data: { id: result.id } } };
@@ -157,7 +166,11 @@ export async function handleCollectionEnsure(
   });
 
   if (!result.ok) {
-    return { status: 500, body: { status: 'error', message: result.error } };
+    const maintenance = /maintenance/i.test(result.error);
+    return {
+      status: maintenance ? 503 : 500,
+      body: { status: 'error', message: result.error }
+    };
   }
 
   return {

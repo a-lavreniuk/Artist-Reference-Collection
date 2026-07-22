@@ -113,8 +113,6 @@ export const EMPTY_STATE_COPY = {
   },
   historyFilterEmpty: {
     title: 'Нет записей за этот период',
-    subtitle: 'Выберите другой период или откройте всю историю',
-    primaryActionLabel: 'Вся история',
-    primaryActionVariant: 'outline'
+    subtitle: 'Выберите другой период или откройте всю историю'
   }
 } as const satisfies Record<string, EmptyStateCopy>;

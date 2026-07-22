@@ -3,7 +3,7 @@ import { ARC_CARDS_CHANGED_EVENT } from '../../services/db';
 import { getAutoImportSourceFilesAction } from '../../import/importDefaults';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
 import { showAppNotification } from '../../services/notificationService';
-import DemoAlert from '../layout/DemoAlert';
+import ToastAlert from '../alert/ToastAlert';
 import SourceFilesModal from './SourceFilesModal';
 
 function formatImportedMessage(imported: number, attempted: number): string {
@@ -105,7 +105,7 @@ export default function AutoImportHost({ children }: { children: ReactNode }) {
     <>
       {children}
       {showProgress ? (
-        <DemoAlert
+        <ToastAlert
           message={progressMessage}
           variant="info"
           autoDismissMs={0}

@@ -80,7 +80,7 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
             </div>
             <div className="arc-modal__slot">
               <label
-                className={`field input-live${newCategoryName.trim() ? ' has-value' : ''}${hasDuplicateNameError ? ' field-error' : ''}`}
+                className={`field input-live${newCategoryName.trim() ? ' has-value' : ''}${error ? ' field-error' : ''}`}
                 data-live-input
               >
                 <input
@@ -132,7 +132,6 @@ export default function NewCategoryModal({ onClose, onSubmit }: Props) {
               <hr className="arc-modal__separator" />
             </div>
             <ModalCategoryColorPicker value={normalized} onChange={(hex) => setColorHex(hex)} />
-            {error && !hasDuplicateNameError ? <p className="hint-error arc-category-modal-error">{error}</p> : null}
           </div>
           <footer className="arc-modal__footer arc-modal__footer--actions-3">
             <button type="button" className="btn btn-outline btn-ds btn-s" disabled aria-disabled="true">

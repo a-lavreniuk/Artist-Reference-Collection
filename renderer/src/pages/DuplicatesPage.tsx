@@ -139,7 +139,8 @@ export default function DuplicatesPage() {
         }) ?? (() => {});
 
       // Lock без плашки «Идёт операция…» — статус поиска на кнопке страницы.
-      await arc.maintenanceBegin?.({ silentUi: true });
+      const began = await arc.maintenanceBegin?.({ silentUi: true });
+      const lockToken = began && 'token' in began ? began.token : undefined;
       try {
         const res = await arc.runDuplicateScan({ thresholdPct: threshold, resetSession });
         if (res.cancelled) {
@@ -159,7 +160,7 @@ export default function DuplicatesPage() {
         setPhase('ready');
       } finally {
         unsub();
-        await arc.maintenanceEnd?.();
+        await arc.maintenanceEnd?.(lockToken);
       }
     },
     [threshold, applyResults]
@@ -244,12 +245,34 @@ export default function DuplicatesPage() {
     resolvePair('replaced', async () => {
       await softDeleteCard(cardId);
       await window.arc?.duplicateSessionSkipPair?.(currentPair.cardIdA, currentPair.cardIdB);
+      const key = pairKey(currentPair);
+      setPairs((prev) =>
+        prev.map((p) => {
+          if (pairKey(p) !== key) return p;
+          return {
+            ...p,
+            cardA: p.cardIdA === cardId ? null : p.cardA,
+            cardB: p.cardIdB === cardId ? null : p.cardB
+          };
+        })
+      );
     });
 
   const handleMerge = (primaryId: string, secondaryId: string) =>
     currentPair &&
     resolvePair('replaced', async () => {
       await window.arc?.mergeDuplicateCards?.(primaryId, secondaryId);
+      const key = pairKey(currentPair);
+      setPairs((prev) =>
+        prev.map((p) => {
+          if (pairKey(p) !== key) return p;
+          return {
+            ...p,
+            cardA: p.cardIdA === secondaryId ? null : p.cardA,
+            cardB: p.cardIdB === secondaryId ? null : p.cardB
+          };
+        })
+      );
     });
 
   const dismissPair = useCallback(

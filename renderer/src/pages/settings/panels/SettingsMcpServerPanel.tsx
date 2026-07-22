@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import DemoAlert from '../../../components/layout/DemoAlert';
+import ToastAlert from '../../../components/alert/ToastAlert';
 import SettingsMcpToolRow from '../../../components/settings/SettingsMcpToolRow';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
@@ -150,7 +150,7 @@ export default function SettingsMcpServerPanel() {
       </div>
 
       {copyAlertKey > 0 ? (
-        <DemoAlert
+        <ToastAlert
           key={`copy-${copyAlertKey}`}
           message={COPY_SUCCESS_MESSAGE}
           variant="success"

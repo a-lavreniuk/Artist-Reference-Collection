@@ -1,4 +1,4 @@
-import DemoAlert from '../../../components/layout/DemoAlert';
+import ToastAlert from '../../../components/alert/ToastAlert';
 import ReleaseNotesContent from '../../../components/layout/ReleaseNotesContent';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import { useSettingsUpdates } from '../hooks/useSettingsUpdates';
@@ -112,7 +112,7 @@ export default function SettingsUpdatesPanel() {
       </div>
 
       {alert ? (
-        <DemoAlert message={alert.message} variant={alert.variant} onClose={dismissAlert} />
+        <ToastAlert message={alert.message} variant={alert.variant} onClose={dismissAlert} />
       ) : null}
     </>
   );

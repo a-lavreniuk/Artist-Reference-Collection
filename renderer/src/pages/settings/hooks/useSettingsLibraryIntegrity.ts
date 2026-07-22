@@ -46,11 +46,12 @@ async function scanLibrary(): Promise<IntegrityReport | null> {
 async function withMaintenance<T>(fn: () => Promise<T>): Promise<T> {
   const arc = window.arc;
   if (!arc?.maintenanceBegin) return fn();
-  await arc.maintenanceBegin();
+  const began = await arc.maintenanceBegin();
+  const token = began && 'token' in began ? began.token : undefined;
   try {
     return await fn();
   } finally {
-    await arc.maintenanceEnd();
+    await arc.maintenanceEnd?.(token);
   }
 }
 

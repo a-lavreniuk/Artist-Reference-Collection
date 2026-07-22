@@ -14,6 +14,8 @@ export type ItemAddRequestBody = {
   name?: string;
   collectionId?: string;
   quiet?: boolean;
+  /** When true, skip near/exact duplicate rejection and import anyway. */
+  force?: boolean;
 };
 
 export type CollectionEnsureRequestBody = {
@@ -44,7 +46,11 @@ export type ImportApiHandlerDeps = {
     name?: string;
     collectionId?: string;
     quiet?: boolean;
-  }) => Promise<{ ok: true; id: string } | { ok: false; error: string }>;
+    force?: boolean;
+  }) => Promise<
+    | { ok: true; id: string }
+    | { ok: false; error: string; existingId?: string; statusHint?: 409 | 503 }
+  >;
   ensureCollection: (args: {
     libraryRoot: string;
     name: string;

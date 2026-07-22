@@ -62,6 +62,7 @@ import {
   stageSimilarQueryFile,
   type NormalizedCropRect
 } from './ai/similarImageSearch';
+import { allowMediaStagingPaths } from './media/mediaStagingTokens';
 import type { ListCardsParams } from './storage/types';
 import type { AiSearchResult, AiStatus, ModelTier } from './ai/types';
 import { MODEL_CATALOG } from './ai/types';
@@ -789,6 +790,8 @@ export function registerAiIpc(): void {
     const source = typeof sourcePath === 'string' ? sourcePath.trim() : '';
     if (!source) return { ok: false as const, error: 'Путь к файлу не указан.' };
     try {
+      // Drop / global file-drop pass paths here without pick/classify allowlist.
+      allowMediaStagingPaths([source]);
       const stagedPath = await stageSimilarQueryFile(source);
       return { ok: true as const, stagedPath };
     } catch (err) {

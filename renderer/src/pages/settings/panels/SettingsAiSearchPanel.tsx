@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import DemoAlert from '../../../components/layout/DemoAlert';
+import ToastAlert from '../../../components/alert/ToastAlert';
 import ValueSlider from '../../../components/range-slider/ValueSlider';
 import { Loader } from '../../../components/loader';
 import AiModelCard from '../../../components/settings/AiModelCard';
@@ -514,7 +514,7 @@ export default function SettingsAiSearchPanel() {
         </div>
       </div>
 
-      {alert ? <DemoAlert message={alert.message} variant={alert.variant} onClose={dismissAlert} /> : null}
+      {alert ? <ToastAlert message={alert.message} variant={alert.variant} onClose={dismissAlert} /> : null}
 
       {cudaPrompt ? (
         <ConfirmModal

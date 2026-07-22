@@ -29,7 +29,7 @@ import { readLibraryRootSync, reconcileLibraryRootConfig } from './libraryRootCo
 import { refreshBrandingIconIfNeeded } from './libraryFolderIcon';
 import { refreshLibrarySessionSnapshotFromDisk } from './librarySessionSnapshot';
 import { shutdownArcMediaServer, startArcMediaServer } from './media/mediaServerHost';
-import { clearMediaStagingTokens, registerMediaStagingToken } from './media/mediaStagingTokens';
+import { clearMediaStagingTokens } from './media/mediaStagingTokens';
 import { startImportApiServer, stopImportApiServer } from './importApi/importApiHost';
 import { startMcpServer, stopMcpServer } from './mcp/mcpHost';
 import { registerMcpSetupIpc } from './mcp/mcpSetupClipboard';

@@ -28,6 +28,7 @@ import {
   removeCardFromMoodboard,
   saveMoodboardBoard
 } from '../../services/db';
+import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import { normalizeHex } from '../../utils/colorPicker';
 import {
   matchesMoodboardRedo,
@@ -37,6 +38,7 @@ import {
 import { shortcutMenuLabel } from '../../shortcuts/shortcutLabels';
 
 const MIME_CARD = 'application/x-arc-card-id';
+const BOARD_MENU_SLOT_ORDER = ['label', 'shortcut'] as const;
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!t || !(t instanceof HTMLElement)) return false;
@@ -45,14 +47,10 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return Boolean(t.isContentEditable);
 }
 
-type BoardMenuItem =
-  | { type: 'sep' }
-  | { type: 'action'; label: string; shortcut?: string; disabled?: boolean; onClick?: () => void };
-
 export default function MoodboardBoardView() {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
-  const boardMenuRef = useRef<HTMLDivElement>(null);
+  const boardMenuButtonRef = useRef<HTMLButtonElement>(null);
   const boardRef = useRef<MoodboardBoardV1 | null>(null);
 
   const [board, setBoard] = useState<MoodboardBoardV1 | null>(null);
@@ -142,23 +140,6 @@ export default function MoodboardBoardView() {
   useEffect(() => {
     void reloadQueue();
   }, [reloadQueue]);
-
-  useEffect(() => {
-    if (!boardMenuOpen) return;
-    const onDocMouseDown = (event: MouseEvent) => {
-      const host = boardMenuRef.current;
-      if (host && !host.contains(event.target as Node)) setBoardMenuOpen(false);
-    };
-    const onDocKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setBoardMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onDocMouseDown);
-    document.addEventListener('keydown', onDocKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onDocMouseDown);
-      document.removeEventListener('keydown', onDocKeyDown);
-    };
-  }, [boardMenuOpen]);
 
   useLayoutEffect(() => {
     if (toolbarRef.current) void hydrateArcNavbarIcons(toolbarRef.current);
@@ -756,136 +737,82 @@ export default function MoodboardBoardView() {
   const zoomPct = board ? Math.round(board.viewport.scale * 100) : 100;
   const onBoardCardIds = useMemo(() => new Set((board?.imageInstances ?? []).map((x) => x.cardId)), [board]);
 
-  const boardMenuItems = useMemo((): BoardMenuItem[] => {
+  const boardMenuRows = useMemo((): ContextMenuRow[] => {
     const hasSelection = Boolean(selected);
-    const closeMenu = () => setBoardMenuOpen(false);
+    const item = (
+      key: string,
+      label: string,
+      opts?: { shortcut?: string; disabled?: boolean; onSelect?: () => void }
+    ): ContextMenuRow => ({
+      type: 'item',
+      key,
+      label,
+      shortcut: opts?.shortcut,
+      disabled: opts?.disabled,
+      slotOrder: [...BOARD_MENU_SLOT_ORDER],
+      onSelect: opts?.onSelect
+    });
+
     return [
-      {
-        type: 'action',
-        label: showGrid ? 'Скрыть сетку' : 'Показать сетку',
-        onClick: () => {
-          setShowGrid((v) => !v);
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: snapToGrid ? 'Отключить привязку к сетке' : 'Привязка к сетке',
-        onClick: () => {
-          setSnapToGrid((v) => !v);
-          closeMenu();
-        }
-      },
-      { type: 'sep' },
-      {
-        type: 'action',
-        label: 'Отменить',
+      item('grid', showGrid ? 'Скрыть сетку' : 'Показать сетку', {
+        onSelect: () => setShowGrid((v) => !v)
+      }),
+      item('snap', snapToGrid ? 'Отключить привязку к сетке' : 'Привязка к сетке', {
+        onSelect: () => setSnapToGrid((v) => !v)
+      }),
+      { type: 'separator', key: 'sep-grid' },
+      item('undo', 'Отменить', {
         shortcut: shortcutMenuLabel('moodboard.undo'),
         disabled: undoStack.length === 0,
-        onClick: () => {
-          undo();
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: 'Вернуть',
+        onSelect: () => undo()
+      }),
+      item('redo', 'Вернуть', {
         shortcut: shortcutMenuLabel('moodboard.redo'),
         disabled: redoStack.length === 0,
-        onClick: () => {
-          redo();
-          closeMenu();
-        }
-      },
-      { type: 'sep' },
-      { type: 'action', label: 'Выделить всё', disabled: true },
-      { type: 'action', label: 'Инвертировать выделение', disabled: true },
-      { type: 'sep' },
-      {
-        type: 'action',
-        label: 'Увеличить',
+        onSelect: () => redo()
+      }),
+      { type: 'separator', key: 'sep-history' },
+      item('select-all', 'Выделить всё', { disabled: true }),
+      item('invert', 'Инвертировать выделение', { disabled: true }),
+      { type: 'separator', key: 'sep-select' },
+      item('zoom-in', 'Увеличить', {
         shortcut: shortcutMenuLabel('moodboard.zoomIn'),
-        onClick: () => {
-          zoomCenterFactor(1.08);
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: 'Уменьшить',
+        onSelect: () => zoomCenterFactor(1.08)
+      }),
+      item('zoom-out', 'Уменьшить', {
         shortcut: shortcutMenuLabel('moodboard.zoomOut'),
-        onClick: () => {
-          zoomCenterFactor(1 / 1.08);
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: 'Масштаб 100%',
+        onSelect: () => zoomCenterFactor(1 / 1.08)
+      }),
+      item('zoom-100', 'Масштаб 100%', {
         shortcut: shortcutMenuLabel('moodboard.zoomReset'),
-        onClick: () => {
-          resetZoom100();
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: 'Вписать в экран',
+        onSelect: () => resetZoom100()
+      }),
+      item('fit', 'Вписать в экран', {
         shortcut: shortcutMenuLabel('moodboard.fitView'),
-        onClick: () => {
-          fitView();
-          closeMenu();
-        }
-      },
-      { type: 'sep' },
-      {
-        type: 'action',
-        label: 'На передний план',
+        onSelect: () => fitView()
+      }),
+      { type: 'separator', key: 'sep-zoom' },
+      item('z-front', 'На передний план', {
         disabled: !hasSelection,
-        onClick: () => {
-          updateSelectedZIndex('front');
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: 'Вперёд',
+        onSelect: () => updateSelectedZIndex('front')
+      }),
+      item('z-forward', 'Вперёд', {
         disabled: !hasSelection,
-        onClick: () => {
-          updateSelectedZIndex('forward');
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: 'Назад',
+        onSelect: () => updateSelectedZIndex('forward')
+      }),
+      item('z-backward', 'Назад', {
         disabled: !hasSelection,
-        onClick: () => {
-          updateSelectedZIndex('backward');
-          closeMenu();
-        }
-      },
-      {
-        type: 'action',
-        label: 'На задний план',
+        onSelect: () => updateSelectedZIndex('backward')
+      }),
+      item('z-back', 'На задний план', {
         disabled: !hasSelection,
-        onClick: () => {
-          updateSelectedZIndex('back');
-          closeMenu();
-        }
-      },
-      { type: 'sep' },
-      { type: 'action', label: 'Отразить по горизонтали', disabled: true },
-      { type: 'action', label: 'Отразить по вертикали', disabled: true },
-      { type: 'sep' },
-      {
-        type: 'action',
-        label: 'Очистить доску',
-        onClick: () => {
-          closeMenu();
-          clearBoardContent();
-        }
-      }
+        onSelect: () => updateSelectedZIndex('back')
+      }),
+      { type: 'separator', key: 'sep-z' },
+      item('flip-h', 'Отразить по горизонтали', { disabled: true }),
+      item('flip-v', 'Отразить по вертикали', { disabled: true }),
+      { type: 'separator', key: 'sep-flip' },
+      item('clear', 'Очистить доску', { onSelect: () => clearBoardContent() })
     ];
   }, [
     clearBoardContent,
@@ -977,10 +904,11 @@ export default function MoodboardBoardView() {
           }}
           onDrop={(e) => void onDropOnCanvas(e)}
         >
-          <div ref={boardMenuRef} className="arc-moodboard-menu" data-btn-size="s">
+          <div className="arc-moodboard-menu" data-btn-size="s">
             <button
+              ref={boardMenuButtonRef}
               type="button"
-              className={`btn btn-outline btn-icon-only${boardMenuOpen ? ' is-active' : ''}`}
+              className={`btn btn-outline btn-icon-only btn-ds${boardMenuOpen ? ' is-active' : ''}`}
               aria-label="Дополнительные действия доски"
               aria-expanded={boardMenuOpen}
               aria-haspopup="menu"
@@ -988,29 +916,13 @@ export default function MoodboardBoardView() {
             >
               <span className="arc-moodboard-menu-burger" aria-hidden="true" />
             </button>
-            {boardMenuOpen ? (
-              <div className="selector-dropdown arc-moodboard-menu-dropdown" role="menu">
-                <div className="dropdown-list">
-                  {boardMenuItems.map((item, index) =>
-                    item.type === 'sep' ? (
-                      <div key={`sep-${index}`} className="arc-moodboard-menu-sep" role="separator" />
-                    ) : (
-                      <button
-                        key={item.label}
-                        type="button"
-                        role="menuitem"
-                        className={`dropdown-item arc-moodboard-menu-row${item.disabled ? ' is-disabled' : ''}`}
-                        disabled={item.disabled}
-                        onClick={() => item.onClick?.()}
-                      >
-                        <span>{item.label}</span>
-                        {item.shortcut ? <span className="arc-moodboard-menu-shortcut">{item.shortcut}</span> : null}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-            ) : null}
+            <ContextMenu
+              open={boardMenuOpen}
+              anchorRef={boardMenuButtonRef}
+              onClose={() => setBoardMenuOpen(false)}
+              rows={boardMenuRows}
+              ariaLabel="Дополнительные действия доски"
+            />
           </div>
 
           <div
@@ -1023,7 +935,7 @@ export default function MoodboardBoardView() {
               <div className="btn-group btn-group-ds">
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only"
+                  className="btn btn-outline btn-icon-only btn-ds"
                   aria-label="Отменить"
                   disabled={undoStack.length === 0}
                   onClick={() => undo()}
@@ -1032,7 +944,7 @@ export default function MoodboardBoardView() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only arc-moodboard-history-redo"
+                  className="btn btn-outline btn-icon-only btn-ds arc-moodboard-history-redo"
                   aria-label="Вернуть"
                   disabled={redoStack.length === 0}
                   onClick={() => redo()}
@@ -1046,7 +958,7 @@ export default function MoodboardBoardView() {
               <div className="btn-group btn-group-ds">
                 <button
                   type="button"
-                  className={`btn btn-outline btn-icon-only${mainTool === 'select' ? ' is-active' : ''}`}
+                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'select' ? ' is-active' : ''}`}
                   aria-label="Выделение"
                   aria-pressed={mainTool === 'select'}
                   onClick={() => setMainTool('select')}
@@ -1055,7 +967,7 @@ export default function MoodboardBoardView() {
                 </button>
                 <button
                   type="button"
-                  className={`btn btn-outline btn-icon-only${mainTool === 'pan' ? ' is-active' : ''}`}
+                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'pan' ? ' is-active' : ''}`}
                   aria-label="Панорама"
                   aria-pressed={mainTool === 'pan'}
                   onClick={() => setMainTool('pan')}
@@ -1064,7 +976,7 @@ export default function MoodboardBoardView() {
                 </button>
                 <button
                   type="button"
-                  className={`btn btn-outline btn-icon-only${mainTool === 'draw' && drawTool !== 'eraser' ? ' is-active' : ''}`}
+                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'draw' && drawTool !== 'eraser' ? ' is-active' : ''}`}
                   aria-label="Нарисовать"
                   aria-pressed={mainTool === 'draw' && drawTool !== 'eraser'}
                   onClick={() => {
@@ -1076,7 +988,7 @@ export default function MoodboardBoardView() {
                 </button>
                 <button
                   type="button"
-                  className={`btn btn-outline btn-icon-only${mainTool === 'text' ? ' is-active' : ''}`}
+                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'text' ? ' is-active' : ''}`}
                   aria-label="Написать"
                   aria-pressed={mainTool === 'text'}
                   onClick={() => setMainTool('text')}
@@ -1085,7 +997,7 @@ export default function MoodboardBoardView() {
                 </button>
                 <button
                   type="button"
-                  className={`btn btn-outline btn-icon-only${mainTool === 'draw' && drawTool === 'eraser' ? ' is-active' : ''}`}
+                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'draw' && drawTool === 'eraser' ? ' is-active' : ''}`}
                   aria-label="Ластик"
                   aria-pressed={mainTool === 'draw' && drawTool === 'eraser'}
                   onClick={() => {
@@ -1103,7 +1015,7 @@ export default function MoodboardBoardView() {
                 <div className="btn-group btn-group-ds">
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${drawTool === 'brush' ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'brush' ? ' is-active' : ''}`}
                     aria-label="Кисть"
                     aria-pressed={drawTool === 'brush'}
                     onClick={() => setDrawTool('brush')}
@@ -1112,7 +1024,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${drawTool === 'rect' ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'rect' ? ' is-active' : ''}`}
                     aria-label="Прямоугольник"
                     aria-pressed={drawTool === 'rect'}
                     onClick={() => setDrawTool('rect')}
@@ -1121,7 +1033,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${drawTool === 'ellipse' ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'ellipse' ? ' is-active' : ''}`}
                     aria-label="Эллипс"
                     aria-pressed={drawTool === 'ellipse'}
                     onClick={() => setDrawTool('ellipse')}
@@ -1130,7 +1042,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${drawTool === 'line' ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'line' ? ' is-active' : ''}`}
                     aria-label="Линия"
                     aria-pressed={drawTool === 'line'}
                     onClick={() => setDrawTool('line')}
@@ -1139,7 +1051,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${strokeWidthPx <= 4 ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${strokeWidthPx <= 4 ? ' is-active' : ''}`}
                     aria-label="Тонкая линия"
                     onClick={() => setStrokeWidthPx(3)}
                   >
@@ -1147,7 +1059,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${strokeWidthPx > 4 ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${strokeWidthPx > 4 ? ' is-active' : ''}`}
                     aria-label="Толстая линия"
                     onClick={() => setStrokeWidthPx(10)}
                   >
@@ -1155,7 +1067,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-outline btn-icon-only"
+                    className="btn btn-outline btn-icon-only btn-ds"
                     aria-label="Цвет линии"
                     onClick={() => setColorModal('stroke')}
                   >
@@ -1200,7 +1112,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${textAlign === 'left' ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'left' ? ' is-active' : ''}`}
                     aria-label="По левому краю"
                     aria-pressed={textAlign === 'left'}
                     onClick={() => {
@@ -1212,7 +1124,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${textAlign === 'center' ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'center' ? ' is-active' : ''}`}
                     aria-label="По центру"
                     aria-pressed={textAlign === 'center'}
                     onClick={() => {
@@ -1224,7 +1136,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className={`btn btn-outline btn-icon-only${textAlign === 'right' ? ' is-active' : ''}`}
+                    className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'right' ? ' is-active' : ''}`}
                     aria-label="По правому краю"
                     aria-pressed={textAlign === 'right'}
                     onClick={() => {
@@ -1236,7 +1148,7 @@ export default function MoodboardBoardView() {
                   </button>
                   <button
                     type="button"
-                    className="btn btn-outline btn-icon-only"
+                    className="btn btn-outline btn-icon-only btn-ds"
                     aria-label="Цвет текста"
                     onClick={() => setColorModal('text')}
                   >
@@ -1250,7 +1162,7 @@ export default function MoodboardBoardView() {
               <div className="btn-group btn-group-ds">
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only"
+                  className="btn btn-outline btn-icon-only btn-ds"
                   aria-label="Уменьшить"
                   onClick={() => zoomCenterFactor(1 / 1.08)}
                 >
@@ -1258,7 +1170,7 @@ export default function MoodboardBoardView() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only"
+                  className="btn btn-outline btn-icon-only btn-ds"
                   aria-label="Увеличить"
                   onClick={() => zoomCenterFactor(1.08)}
                 >
@@ -1269,7 +1181,7 @@ export default function MoodboardBoardView() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-outline btn-icon-only"
+                  className="btn btn-outline btn-icon-only btn-ds"
                   aria-label="Вписать в экран"
                   onClick={() => fitView()}
                 >

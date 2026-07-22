@@ -15,7 +15,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Loader } from '../loader';
-import DemoAlert, { type ToastAlertVariant } from '../layout/DemoAlert';
+import ToastAlert, { type ToastAlertVariant } from '../alert/ToastAlert';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
@@ -1296,6 +1296,7 @@ export default function CardDetailOverlay({
                         startIndex,
                         context: viewerOpenContext ?? { kind: 'library' }
                       });
+                      requestClose();
                     }}
                   >
                     <span className="btn-icon-only__glyph arc-icon-external-link" aria-hidden="true" />
@@ -1842,7 +1843,7 @@ export default function CardDetailOverlay({
       </div>
 
       {actionAlert ? (
-        <DemoAlert
+        <ToastAlert
           message={actionAlert.message}
           variant={actionAlert.variant}
           hostClassName="arc-card-detail-alert-host"
@@ -1860,7 +1861,7 @@ export default function CardDetailOverlay({
       ) : null}
 
       {copyAlertMessage ? (
-        <DemoAlert
+        <ToastAlert
           message={copyAlertMessage}
           variant="success"
           hostClassName="arc-card-detail-alert-host"

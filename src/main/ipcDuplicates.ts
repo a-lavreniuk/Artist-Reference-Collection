@@ -92,7 +92,10 @@ export function registerDuplicateIpc(
     const root = await readLibraryRoot();
     if (!root) return [];
     await ensureLibraryReady(root);
-    const matches = await checkImportDuplicates(root, absolutePaths as string[]);
+    const paths = absolutePaths as string[];
+    const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
+    allowMediaStagingPaths(paths);
+    const matches = await checkImportDuplicates(root, paths);
     const out = [];
     for (const m of matches) {
       const row = getCardByIdFromDb(root, m.existingCardId);
@@ -109,11 +112,15 @@ export function registerDuplicateIpc(
     const root = await readLibraryRoot();
     if (!root) return false;
     await ensureLibraryReady(root);
+    const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
+    allowMediaStagingPaths([absolutePath]);
     return isExactDuplicateIncomingFile(root, absolutePath);
   });
 
   ipcMain.handle('arc:probe-incoming-file', async (_e, absolutePath: unknown) => {
     if (typeof absolutePath !== 'string') return null;
+    const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
+    allowMediaStagingPaths([absolutePath]);
     return probeIncomingFileMetadata(absolutePath);
   });
 
@@ -179,6 +186,8 @@ export function registerDuplicateIpc(
     }
     await ensureLibraryReady(root);
     await mergeDuplicateCards(root, p.primaryId, p.secondaryId);
+    const { queueCardsForIndexing } = await import('./ipcAi');
+    void queueCardsForIndexing([p.primaryId]);
     const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
     void refreshLibrarySessionSnapshotFromDisk();
   });

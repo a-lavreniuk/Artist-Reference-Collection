@@ -21,6 +21,8 @@ import { shuffleCardIds } from '../shared/shuffleCardIds';
 import { openLibraryDb } from '../storage/db';
 import { indexCardRowsFromDb } from '../storage/libraryStorage';
 import type { CardIndexRow, LibraryScope } from '../storage/types';
+import { readLibraryRootSync } from '../libraryRootConfig';
+import { isAllowedStagingAbsPath } from '../media/mediaStagingTokens';
 
 export type NormalizedCropRect = {
   x: number;
@@ -75,6 +77,10 @@ const ALLOWED_STAGE_IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp
 
 export async function stageSimilarQueryFile(sourceAbsPath: string): Promise<string> {
   const resolved = path.resolve(sourceAbsPath.trim());
+  const libraryRoot = readLibraryRootSync();
+  if (!isAllowedStagingAbsPath(resolved, libraryRoot)) {
+    throw new Error('Файл недоступен для поиска похожих.');
+  }
   let fileStat;
   try {
     fileStat = await stat(resolved);

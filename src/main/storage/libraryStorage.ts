@@ -1357,17 +1357,27 @@ export async function mergeDuplicateCards(
   await writeCardJson(root, primaryJson);
 
   const db = openLibraryDb(root);
-  db.prepare('UPDATE cards SET name = ?, link_url = ?, description = ?, date_modified = ? WHERE id = ?').run(
-    primaryJson.name ?? null,
-    primaryJson.linkUrl ?? null,
-    primaryJson.description ?? null,
-    modified,
-    primaryId
-  );
-  syncCardRelations(db, primaryId, primaryJson.tagIds, primaryJson.collectionIds);
-  recomputeTagUsage(db);
+  const applyPrimaryDb = db.transaction(() => {
+    db.prepare(
+      'UPDATE cards SET name = ?, link_url = ?, description = ?, date_modified = ? WHERE id = ?'
+    ).run(
+      primaryJson.name ?? null,
+      primaryJson.linkUrl ?? null,
+      primaryJson.description ?? null,
+      modified,
+      primaryId
+    );
+    syncCardRelations(db, primaryId, primaryJson.tagIds, primaryJson.collectionIds);
+    recomputeTagUsage(db);
+    const minId = primaryId < secondaryId ? primaryId : secondaryId;
+    const maxId = primaryId < secondaryId ? secondaryId : primaryId;
+    db.prepare('INSERT OR IGNORE INTO skipped_duplicate_pairs (min_id, max_id) VALUES (?, ?)').run(
+      minId,
+      maxId
+    );
+  });
+  applyPrimaryDb();
 
-  addSkippedDuplicatePair(root, primaryId, secondaryId);
   await softDeleteCardFromStorage(root, secondaryId);
 }
 

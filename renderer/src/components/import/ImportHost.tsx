@@ -3,7 +3,7 @@ import { ARC_CARDS_CHANGED_EVENT, isLibraryConfigured, addCollection, getAllColl
 import { isImportableMediaPath } from '../../media/allowedImportExtensions';
 import { getImportSourceFilesAction } from '../../import/importDefaults';
 import { showAppNotification } from '../../services/notificationService';
-import DemoAlert from '../layout/DemoAlert';
+import ToastAlert from '../alert/ToastAlert';
 import SourceFilesModal from './SourceFilesModal';
 import ImportDuplicatesModal, { type ImportDuplicateConflict } from './ImportDuplicatesModal';
 import ImportFolderCollectionsModal, {
@@ -529,7 +529,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       ) : null}
 
       {progressMessage ? (
-        <DemoAlert message={progressMessage} variant="info" autoDismissMs={0} withSound={false} onClose={() => {}} />
+        <ToastAlert message={progressMessage} variant="info" autoDismissMs={0} withSound={false} onClose={() => {}} />
       ) : null}
 
       {sourceModalPaths && sourceModalPaths.length > 0 ? (

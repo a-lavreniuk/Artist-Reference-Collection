@@ -294,7 +294,7 @@ export default function TagSettingsModal({
                 </div>
                 <div className="arc-modal__slot">
                   <label
-                    className={`field input-live${name.trim() ? ' has-value' : ''}${hasDuplicateNameError ? ' field-error' : ''}`}
+                    className={`field input-live${name.trim() ? ' has-value' : ''}${error ? ' field-error' : ''}`}
                     data-live-input
                   >
                     <input
@@ -466,7 +466,6 @@ export default function TagSettingsModal({
                 </div>
               </div>
             )}
-            {error && !hasDuplicateNameError ? <p className="hint-error arc-category-modal-error">{error}</p> : null}
           </div>
 
           <footer className="arc-modal__footer arc-modal__footer--actions-3">

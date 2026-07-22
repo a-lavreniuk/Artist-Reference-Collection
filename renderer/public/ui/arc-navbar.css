@@ -321,9 +321,15 @@ html[data-theme="light"] .arc-navbar-island {
   overflow: hidden;
 }
 
+.arc-topbar__title-wrap.arc-truncated-tooltip-wrap {
+  max-width: min(480px, 40vw);
+  padding: 0 var(--s-1);
+  -webkit-app-region: no-drag;
+}
+
 .arc-topbar__title {
   margin: 0;
-  padding: 0 var(--s-1);
+  padding: 0;
   color: var(--typography-black-bg-secondary-default);
   font-size: var(--typo-p-s-size);
   line-height: var(--typo-p-s-line);
@@ -331,8 +337,6 @@ html[data-theme="light"] .arc-navbar-island {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: min(480px, 40vw);
-  -webkit-app-region: no-drag;
 }
 
 .arc-navbar {

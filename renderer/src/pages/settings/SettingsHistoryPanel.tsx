@@ -42,24 +42,31 @@ function startOfMonth(): Date {
   return d;
 }
 
+/** От большего периода к меньшему: вся история → месяц → неделя → сегодня. */
 const FILTER_TABS: { key: FilterKey; label: string }[] = [
-  { key: 'today', label: 'Сегодня' },
-  { key: 'week', label: 'За неделю' },
+  { key: 'all', label: 'Вся история' },
   { key: 'month', label: 'За месяц' },
-  { key: 'all', label: 'Вся история' }
+  { key: 'week', label: 'За неделю' },
+  { key: 'today', label: 'Сегодня' }
 ];
 
 export default function SettingsHistoryPanel() {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
-  const [filter, setFilter] = useState<FilterKey>('today');
+  const [filter, setFilter] = useState<FilterKey>('all');
   const [clearOpen, setClearOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const loadHistory = useCallback(async () => {
-    if (!window.arc?.readHistory) {
-      setEntries([]);
-      return;
+    setLoading(true);
+    try {
+      if (!window.arc?.readHistory) {
+        setEntries([]);
+        return;
+      }
+      setEntries(await window.arc.readHistory());
+    } finally {
+      setLoading(false);
     }
-    setEntries(await window.arc.readHistory());
   }, []);
 
   useEffect(() => {
@@ -88,50 +95,56 @@ export default function SettingsHistoryPanel() {
   const handleClear = async () => {
     await window.arc?.clearHistory?.();
     setEntries([]);
+    setFilter('all');
   };
 
   const isJournalEmpty = entries.length === 0;
   const isFilterEmpty = !isJournalEmpty && filtered.length === 0;
-  const showEmptySection = isJournalEmpty || isFilterEmpty;
 
-  const emptyCopy = isJournalEmpty ? EMPTY_STATE_COPY.historyEmpty : EMPTY_STATE_COPY.historyFilterEmpty;
+  if (loading) {
+    return <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main" />;
+  }
+
+  if (isJournalEmpty) {
+    return (
+      <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main">
+        <div className="arc-history-empty-host">
+          <EmptyState {...EMPTY_STATE_COPY.historyEmpty} fill />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main">
-        {showEmptySection ? (
-          <div className="arc-history-empty-host">
-            <EmptyState
-              {...emptyCopy}
-              fill
-              onPrimaryAction={isFilterEmpty ? () => setFilter('all') : undefined}
-            />
-          </div>
-        ) : (
-          <section className="panel elevation-sunken arc-history-container" aria-label="История действий">
-            <div className="arc-history-toolbar">
-              <div className="tabs arc-history-tabs" role="tablist" aria-label="Период истории">
-                {FILTER_TABS.map((t) => (
-                  <button
-                    key={t.key}
-                    type="button"
-                    className={`tab-button${filter === t.key ? ' is-active' : ''}`}
-                    role="tab"
-                    aria-selected={filter === t.key}
-                    onClick={() => setFilter(t.key)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="btn btn-danger btn-ds" onClick={() => setClearOpen(true)}>
-                <span className="btn-ds__value">Очистить</span>
-              </button>
+        <section className="panel elevation-sunken arc-history-container" aria-label="История действий">
+          <div className="arc-history-toolbar">
+            <div className="tabs arc-history-tabs" role="tablist" aria-label="Период истории">
+              {FILTER_TABS.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={`tab-button${filter === t.key ? ' is-active' : ''}`}
+                  role="tab"
+                  aria-selected={filter === t.key}
+                  onClick={() => setFilter(t.key)}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
+            <button type="button" className="btn btn-danger btn-ds" onClick={() => setClearOpen(true)}>
+              <span className="btn-ds__value">Очистить</span>
+            </button>
+          </div>
 
-            <div className="arc-history-fullbleed-sep" role="separator" />
+          <div className="arc-history-fullbleed-sep" role="separator" />
 
-            <div className="arc-history-scroll">
+          <div className="arc-history-scroll">
+            {isFilterEmpty ? (
+              <EmptyState {...EMPTY_STATE_COPY.historyFilterEmpty} fill />
+            ) : (
               <ul className="arc-history-list" aria-live="polite">
                 {filtered.map((e, i) => (
                   <li key={`${e.time}-${i}`} className="arc-history-list__item">
@@ -143,9 +156,9 @@ export default function SettingsHistoryPanel() {
                   </li>
                 ))}
               </ul>
-            </div>
-          </section>
-        )}
+            )}
+          </div>
+        </section>
       </div>
 
       {clearOpen ? (

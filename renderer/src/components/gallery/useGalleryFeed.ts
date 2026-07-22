@@ -436,10 +436,8 @@ export function useGalleryFeed(
 
   useEffect(() => {
     if (!feedActive || !libraryReady || !staleAfterCardsChangedRef.current) return;
-    if (loading || booting) {
-      staleAfterCardsChangedRef.current = false;
-      return;
-    }
+    // Keep stale flag while boot/load runs; effect re-runs when they clear.
+    if (loading || booting) return;
     staleAfterCardsChangedRef.current = false;
     const seq = ++loadSeqRef.current;
     setLoading(true);
@@ -470,11 +468,14 @@ export function useGalleryFeed(
       })();
     };
     const onLibraryChanged = () => {
-      if (!feedActive) return;
       clearGalleryMediaUrlCache();
       clearMeasuredMasonryHeights();
       invalidatePrefetch();
       invalidateAllGallerySnapshots();
+      if (!feedActive) {
+        staleAfterCardsChangedRef.current = true;
+        return;
+      }
       void reloadFromStart({ showBoot: true, clearDisplay: true });
     };
     const unsubCards = subscribeGalleryCardsChanged(onCardsChangedFlush);
@@ -487,11 +488,14 @@ export function useGalleryFeed(
 
   useEffect(() => {
     const onGridSizeChanged = () => {
-      if (!feedActive || !libraryReady) return;
       clearGalleryMediaUrlCache();
       clearMeasuredMasonryHeights();
       invalidatePrefetch();
       invalidateAllGallerySnapshots();
+      if (!feedActive || !libraryReady) {
+        staleAfterCardsChangedRef.current = true;
+        return;
+      }
       const seq = ++loadSeqRef.current;
       setLoading(true);
       void (async () => {
@@ -516,6 +520,9 @@ export function useGalleryFeed(
     try {
       if (prefetched && prefetched.forOffset === currentOffset) {
         prefetchRef.current = null;
+        if (seq !== loadSeqRef.current) {
+          return;
+        }
         const nextCards = [...cardsRef.current, ...prefetched.cards];
         const nextSrc = { ...srcMapRef.current, ...prefetched.srcMapPartial };
         persistSnapshot({

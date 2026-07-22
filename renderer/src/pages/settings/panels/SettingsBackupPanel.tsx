@@ -1,4 +1,4 @@
-import DemoAlert from '../../../components/layout/DemoAlert';
+import ToastAlert from '../../../components/alert/ToastAlert';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import ConfirmModal from '../ConfirmModal';
 import { BACKUP_PARTS } from '../hooks/settingsLibraryTypes';
@@ -84,7 +84,7 @@ export default function SettingsBackupPanel() {
       ) : null}
 
       {backupAlert ? (
-        <DemoAlert
+        <ToastAlert
           message={backupAlert.message}
           variant={backupAlert.variant}
           onClose={() => setBackupAlert(null)}

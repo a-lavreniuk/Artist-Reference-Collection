@@ -1,10 +1,10 @@
-import type { DemoAlertVariant } from '../../components/layout/DemoAlert';
+import type { ToastAlertVariant } from '../../components/alert/ToastAlert';
 import { dispatchAiSetupChanged } from '../../search/aiSearchEvents';
 import type { AiModelTier } from '../../services/appPreferences';
 import { patchAppPreferences } from '../../services/appPreferencesRuntime';
 import type { AiIndexStatus, AiStatus } from '../../services/aiTypes';
 
-type AlertState = { message: string; variant: DemoAlertVariant } | null;
+type AlertState = { message: string; variant: ToastAlertVariant } | null;
 export type DownloadPhase = 'runtime' | 'model' | 'finalize' | null;
 export type AiSetupPhase = 'off' | 'analyzing' | 'models' | 'ready';
 export type AiDownloadOperation = 'install' | 'update' | null;
@@ -728,10 +728,10 @@ export function initAiSettingsSession(): void {
   if (!arc) return;
 
   arc.onAiDownloadProgress?.(({ tier, percent, phase, bytesReceived, bytesTotal }) => {
-    if (!state.busy && !state.downloadTier) return;
-
+    // Progress from main can arrive before renderer sets busy/downloadTier.
     updateDownloadSpeed(bytesReceived);
     patchState({
+      busy: true,
       downloadTier: tier as AiModelTier,
       downloadPercent: clampPercent(percent),
       downloadPhase: phase ?? state.downloadPhase ?? 'model',

@@ -103,7 +103,8 @@ describe('handleItemAdd', () => {
       website: 'https://example.com/page',
       name: 'prefix Title',
       collectionId: undefined,
-      quiet: false
+      quiet: false,
+      force: false
     });
   });
 
@@ -156,6 +157,33 @@ describe('handleItemAdd', () => {
     if (res.body.status === 'error') {
       expect(res.body.message).toBe('Download failed');
     }
+  });
+
+  it('returns 503 when library is under maintenance', async () => {
+    const res = await handleItemAdd(
+      makeDeps({
+        importFromUrl: vi.fn(async () => ({
+          ok: false,
+          error: 'Library is under maintenance'
+        }))
+      }),
+      { url: 'https://example.com/a.png' }
+    );
+    expect(res.status).toBe(503);
+  });
+
+  it('returns 409 when import reports a duplicate', async () => {
+    const res = await handleItemAdd(
+      makeDeps({
+        importFromUrl: vi.fn(async () => ({
+          ok: false,
+          error: 'Duplicate of existing card (card-9)',
+          statusHint: 409 as const
+        }))
+      }),
+      { url: 'https://example.com/a.png' }
+    );
+    expect(res.status).toBe(409);
   });
 });
 

@@ -36,7 +36,7 @@ export async function resolvePathToMediaUrl(
       if (!st.isFile()) return null;
       const ext = path.extname(abs);
       if (!isAllowedLibraryMediaExt(ext, isVideoExt)) return null;
-      const token = await registerMediaStagingToken(abs);
+      const token = await registerMediaStagingToken(abs, libraryRoot);
       if (!token) return null;
       return buildMediaServerUrl(origin, { stg: token });
     } catch {

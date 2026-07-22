@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DemoAlert, { type DemoAlertVariant } from '../layout/DemoAlert';
+import ToastAlert, { type ToastAlertVariant } from '../alert/ToastAlert';
 import type { NotificationPrefKey } from '../../services/appPreferences';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
 import { APP_NOTIFICATION_EVENT, type AppNotificationPayload } from '../../services/notificationService';
 
 type ActiveAlert = {
   message: string;
-  variant: DemoAlertVariant;
+  variant: ToastAlertVariant;
   autoDismissMs?: number;
   withSound?: boolean;
   navigateTo?: string;
@@ -100,7 +100,7 @@ export default function NotificationHost({ children }: { children: React.ReactNo
     <>
       {children}
       {active ? (
-        <DemoAlert
+        <ToastAlert
           message={active.message}
           variant={active.variant}
           autoDismissMs={active.autoDismissMs}
