@@ -287,14 +287,33 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:sum-library-files-bytes', relativePaths) as Promise<
       { ok: true; totalBytes: number } | { ok: false; error: string }
     >,
-  getLibraryDiskStats: () =>
-    ipcRenderer.invoke('arc:get-library-disk-stats') as Promise<
+  getLibraryDiskStats: (payload?: { libraryId?: string }) =>
+    ipcRenderer.invoke('arc:get-library-disk-stats', payload) as Promise<
       | {
           ok: true;
           driveLabel: string;
           diskTotalBytes: number;
           diskFreeBytes: number;
           libraryFolderBytes: number;
+        }
+      | { ok: false; error: string }
+    >,
+  getLibraryStatistics: (payload?: { scope?: string }) =>
+    ipcRenderer.invoke('arc:get-library-statistics', payload) as Promise<
+      | {
+          ok: true;
+          totalCards: number;
+          imageCards: number;
+          videoCards: number;
+          totalCollections: number;
+          imageBytes: number;
+          videoBytes: number;
+          trashBytes: number;
+          libraryFolderBytes: number;
+          diskTotalBytes: number;
+          diskFreeBytes: number;
+          driveLabel: string;
+          tagUsage: Record<string, number>;
         }
       | { ok: false; error: string }
     >,

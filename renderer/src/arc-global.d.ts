@@ -239,13 +239,31 @@ declare global {
       sumLibraryFilesBytes: (
         relativePaths: string[]
       ) => Promise<{ ok: true; totalBytes: number } | { ok: false; error: string }>;
-      getLibraryDiskStats: () => Promise<
+      getLibraryDiskStats: (payload?: { libraryId?: string }) => Promise<
         | {
             ok: true;
             driveLabel: string;
             diskTotalBytes: number;
             diskFreeBytes: number;
             libraryFolderBytes: number;
+          }
+        | { ok: false; error: string }
+      >;
+      getLibraryStatistics: (payload?: { scope?: string }) => Promise<
+        | {
+            ok: true;
+            totalCards: number;
+            imageCards: number;
+            videoCards: number;
+            totalCollections: number;
+            imageBytes: number;
+            videoBytes: number;
+            trashBytes: number;
+            libraryFolderBytes: number;
+            diskTotalBytes: number;
+            diskFreeBytes: number;
+            driveLabel: string;
+            tagUsage: Record<string, number>;
           }
         | { ok: false; error: string }
       >;

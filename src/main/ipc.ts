@@ -23,6 +23,7 @@ import { registerStorageIpc } from './ipcStorage';
 import { registerDuplicateIpc } from './ipcDuplicates';
 import { resetLibraryStorageCache } from './storage/libraryStorage';
 import { readLibraryDiskStats } from './libraryDiskStats';
+import { getLibraryStatistics } from './libraryStatistics';
 import {
   readLibraryRootFromDisk,
   readLibraryRootSync,
@@ -35,7 +36,8 @@ import { isValidArcLibraryFolder } from './libraryValidate';
 import { getDefaultLibraryFolderName } from './appProfile';
 import { countCards, countCardsReadonly, ensureLibraryReady } from './storage/libraryStorage';
 import {
-  updateLibrarySessionSnapshot
+  updateLibrarySessionSnapshot,
+  readLibraryRootConfigSync
 } from './librarySessionSnapshot';
 import {
   completeWrapMigration,
@@ -715,14 +717,37 @@ export function registerArcIpc(): void {
     return { ok: true as const, totalBytes };
   });
 
-  ipcMain.handle('arc:get-library-disk-stats', async () => {
-    const root = await readLibraryRootFromDisk();
+  ipcMain.handle('arc:get-library-disk-stats', async (_e, payload?: unknown) => {
+    const body = payload as { libraryId?: unknown } | null;
+    const libraryId = typeof body?.libraryId === 'string' && body.libraryId.trim() ? body.libraryId.trim() : null;
+
+    let root: string | null = null;
+    if (libraryId) {
+      const cfg = readLibraryRootConfigSync();
+      const entry = (cfg.libraries ?? []).find((l) => l.id === libraryId);
+      root = entry?.path ?? null;
+    } else {
+      root = await readLibraryRootFromDisk();
+    }
     if (!root) return { ok: false as const, error: 'Библиотека не выбрана' };
     try {
       const stats = await readLibraryDiskStats(root);
       return { ok: true as const, ...stats };
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Не удалось прочитать данные диска';
+      return { ok: false as const, error: message };
+    }
+  });
+
+  ipcMain.handle('arc:get-library-statistics', async (_e, payload?: unknown) => {
+    const body = payload as { scope?: unknown } | null;
+    const scopeRaw = typeof body?.scope === 'string' ? body.scope.trim() : 'all';
+    const scope = scopeRaw || 'all';
+    try {
+      const stats = await getLibraryStatistics(scope);
+      return { ok: true as const, ...stats };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Не удалось прочитать статистику';
       return { ok: false as const, error: message };
     }
   });
