@@ -13,6 +13,7 @@ import {
   similarityCombined
 } from './duplicateMatch';
 import { readAppPreferencesSync } from './appPreferences';
+import { isVideoExt } from './ffmpeg';
 import { readLibraryRootSync } from './libraryRootConfig';
 import { openLibraryDb } from './storage/db';
 import {
@@ -92,6 +93,47 @@ export async function sha256File(absPath: string): Promise<string | null> {
 
 function isImagePath(absPath: string): boolean {
   return IMAGE_EXT.has(path.extname(absPath).toLowerCase());
+}
+
+function isVideoMediaPath(absPath: string): boolean {
+  return isVideoExt(path.extname(absPath));
+}
+
+async function buildLibraryVideoIndex(
+  libraryRoot: string
+): Promise<Array<{ id: string; originalAbs: string }>> {
+  const db = openLibraryDb(libraryRoot);
+  const rows = db
+    .prepare(
+      `SELECT id, original_rel AS originalRel
+       FROM cards WHERE type = 'video' AND COALESCE(is_deleted, 0) = 0`
+    )
+    .all() as Array<{ id: string; originalRel: string }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    originalAbs: path.join(libraryRoot, row.originalRel.replace(/\//g, path.sep))
+  }));
+}
+
+/**
+ * Точный дубль видео/GIF по SHA-256 оригинала среди карточек type=video.
+ * Визуальную «похожесть» для видео не считаем — только идентичный файл.
+ */
+export async function findExactDuplicateVideoCard(
+  libraryRoot: string,
+  absolutePath: string
+): Promise<string | null> {
+  if (!isVideoMediaPath(absolutePath)) return null;
+  const incomingSha = await sha256File(absolutePath);
+  if (!incomingSha) return null;
+
+  const index = await buildLibraryVideoIndex(libraryRoot);
+  for (const card of index) {
+    const cardSha = await sha256File(card.originalAbs);
+    if (cardSha && cardSha === incomingSha) return card.id;
+  }
+  return null;
 }
 
 function isPairSkipped(
@@ -249,6 +291,9 @@ export async function isExactDuplicateIncomingFile(
   libraryRoot: string,
   absolutePath: string
 ): Promise<boolean> {
+  if (isVideoMediaPath(absolutePath)) {
+    return (await findExactDuplicateVideoCard(libraryRoot, absolutePath)) != null;
+  }
   if (!isImagePath(absolutePath)) return false;
   const incomingSha = await sha256File(absolutePath);
   if (!incomingSha) return false;

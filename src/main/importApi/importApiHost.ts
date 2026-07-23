@@ -136,6 +136,19 @@ function buildDeps(): ImportApiHandlerDeps {
           }
         }
 
+        if (!force && kind === 'video') {
+          const { findExactDuplicateVideoCard } = await import('../duplicateScanService');
+          const existingId = await findExactDuplicateVideoCard(libraryRoot, tempPath);
+          if (existingId) {
+            return {
+              ok: false,
+              error: `Duplicate of existing card (${existingId})`,
+              existingId,
+              statusHint: 409 as const
+            };
+          }
+        }
+
         const result = await importMediaFile(libraryRoot, tempPath, {
           linkUrl: website,
           name
