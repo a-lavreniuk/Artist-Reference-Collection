@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import CreateLibraryModal from '../onboarding/CreateLibraryModal';
@@ -31,6 +31,10 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
   useLayoutEffect(() => {
     if (anchorRef.current) void hydrateArcNavbarIcons(anchorRef.current);
   }, [open, activeLabel, libraries.length, disabled]);
+
+  useEffect(() => {
+    if (open) void refresh();
+  }, [open, refresh]);
 
   const applyLibrarySwitch = useCallback(async () => {
     invalidateLibraryCache();

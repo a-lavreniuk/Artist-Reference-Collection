@@ -67,6 +67,24 @@ export default function SettingsStatisticsPanel() {
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [diskModel, setDiskModel] = useState<DiskBarModel | null>(null);
   const [tagModal, setTagModal] = useState<TagSettingsModalState | null>(null);
+  const librariesRef = useRef<LibraryListItem[]>([]);
+
+  const refreshLibraries = useCallback(async (): Promise<LibraryListItem[]> => {
+    if (!window.arc?.listLibraries) {
+      librariesRef.current = [];
+      setLibraries([]);
+      return [];
+    }
+    const res = await window.arc.listLibraries();
+    const libs = res.libraries ?? [];
+    // Не затирать уже известный multi-list одним «укороченным» ответом (гонка repair/конфига).
+    if (libs.length < librariesRef.current.length && librariesRef.current.length > 1 && libs.length <= 1) {
+      return librariesRef.current;
+    }
+    librariesRef.current = libs;
+    setLibraries(libs);
+    return libs;
+  }, []);
 
   const refreshTagsData = useCallback(async (scope: StatsScope, libs: LibraryListItem[]) => {
     const cats = await getAllCategories();
@@ -100,13 +118,8 @@ export default function SettingsStatisticsPanel() {
 
   useEffect(() => {
     void (async () => {
-      let libs: LibraryListItem[] = libraries;
-      if (window.arc?.listLibraries) {
-        const res = await window.arc.listLibraries();
-        libs = res.libraries ?? [];
-        setLibraries(libs);
-      }
-
+      // Табы меняют только scope: не дергаем listLibraries/repair на каждый клик.
+      const libs = librariesRef.current.length > 0 ? librariesRef.current : await refreshLibraries();
       const m = await getNavbarMetrics();
       setMetrics(m);
       await refreshTagsData(statsScope, libs);
@@ -116,12 +129,11 @@ export default function SettingsStatisticsPanel() {
         return;
       }
 
-      const viewingActive =
+      const viewingActiveLibraryTab =
         libs.length <= 1 ||
-        statsScope === 'all' ||
-        libs.find((l) => l.id === statsScope)?.active === true;
+        (statsScope !== 'all' && libs.find((l) => l.id === statsScope)?.active === true);
 
-      if (!viewingActive || (statsScope === 'all' && libs.length > 1)) {
+      if (!viewingActiveLibraryTab || (statsScope === 'all' && libs.length > 1)) {
         setDiskModel(null);
         return;
       }
@@ -168,28 +180,23 @@ export default function SettingsStatisticsPanel() {
         setDiskModel(null);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh on scope; libraries refreshed inside
-  }, [refreshTagsData, statsScope]);
+  }, [refreshLibraries, refreshTagsData, statsScope]);
 
   useEffect(() => {
     void (async () => {
-      if (!window.arc?.listLibraries) return;
-      const res = await window.arc.listLibraries();
-      const libs = res.libraries ?? [];
-      setLibraries(libs);
+      const libs = await refreshLibraries();
       if (libs.length <= 1) {
         setStatsScope(libs.find((l) => l.active)?.id ?? 'all');
+      } else {
+        setStatsScope('all');
       }
     })();
-  }, []);
+  }, [refreshLibraries]);
 
   useEffect(() => {
     const onLibraryChanged = () => {
       void (async () => {
-        if (!window.arc?.listLibraries) return;
-        const res = await window.arc.listLibraries();
-        const libs = res.libraries ?? [];
-        setLibraries(libs);
+        const libs = await refreshLibraries();
         if (libs.length <= 1) {
           setStatsScope(libs.find((l) => l.active)?.id ?? 'all');
         }
@@ -198,7 +205,7 @@ export default function SettingsStatisticsPanel() {
     };
     window.addEventListener('arc:library-changed', onLibraryChanged);
     return () => window.removeEventListener('arc:library-changed', onLibraryChanged);
-  }, [refreshTagsData, statsScope]);
+  }, [refreshLibraries, refreshTagsData, statsScope]);
 
   const categoryColorById = categories.reduce<Record<string, string>>((acc, category) => {
     acc[category.id] = category.colorHex;
@@ -207,14 +214,15 @@ export default function SettingsStatisticsPanel() {
 
   const selectedLibrary = statsScope === 'all' ? null : libraries.find((l) => l.id === statsScope) ?? null;
   const activeLibrary = libraries.find((l) => l.active) ?? null;
-  const viewingActive =
-    libraries.length <= 1 ||
-    statsScope === 'all' ||
-    selectedLibrary?.active === true ||
-    (activeLibrary != null && statsScope === activeLibrary.id);
-  /** Disk / media breakdown — only for active library (no hot-switch). */
-  const showDetailedMedia = viewingActive && (statsScope !== 'all' || libraries.length <= 1);
+  /** Подробные медиа/диск — только вкладка активной библиотеки (без hot-switch). */
+  const viewingActiveLibraryTab =
+    selectedLibrary != null &&
+    (selectedLibrary.active === true || (activeLibrary != null && selectedLibrary.id === activeLibrary.id));
+  const showDetailedMedia =
+    viewingActiveLibraryTab || (libraries.length <= 1 && statsScope !== 'all');
   const showAllLibrariesCardsOnly = statsScope === 'all' && libraries.length > 1;
+  const showInactiveLibrarySummary =
+    selectedLibrary != null && !viewingActiveLibraryTab && libraries.length > 1;
   /** Tags catalog: full on «Все», visible-only on a library tab. */
   const showTagsStats = true;
 
@@ -233,17 +241,11 @@ export default function SettingsStatisticsPanel() {
         { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' },
         { id: 'collections-count', label: 'Коллекций', value: metrics?.totalCollections ?? 0, icon: 'layers' }
       ]
-    : showAllLibrariesCardsOnly
-      ? [
-          { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
-          { id: 'categories-count', label: 'Категорий', value: totalCategories, icon: 'folder-open' },
-          { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' }
-        ]
-      : [
-          { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
-          { id: 'categories-count', label: 'Категорий', value: totalCategories, icon: 'folder-open' },
-          { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' }
-        ];
+    : [
+        { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
+        { id: 'categories-count', label: 'Категорий', value: totalCategories, icon: 'folder-open' },
+        { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' }
+      ];
 
   return (
     <div className="arc-stats-dashboard" data-interface-tour-anchor="statistics-main">
@@ -286,11 +288,13 @@ export default function SettingsStatisticsPanel() {
         ))}
       </div>
 
-      {showAllLibrariesCardsOnly || !showDetailedMedia ? (
+      {showAllLibrariesCardsOnly || showInactiveLibrarySummary || !showDetailedMedia ? (
         <p className="text-s hint arc-stats-library-hint">
           {showAllLibrariesCardsOnly
             ? 'Сводка по всем библиотекам: общий каталог меток и суммарный счётчик карточек. Подробная статистика медиа и диск — у активной библиотеки.'
-            : 'Подробная статистика медиа и использование диска доступны для активной библиотеки. Переключите её в верхней панели. Метки ниже — видимые в выбранной библиотеке.'}
+            : showInactiveLibrarySummary
+              ? 'Подробная статистика медиа и использование диска доступны для активной библиотеки. Переключите её в верхней панели. Метки ниже — видимые в выбранной библиотеке.'
+              : 'Подробная статистика медиа и использование диска доступны для активной библиотеки.'}
         </p>
       ) : null}
 

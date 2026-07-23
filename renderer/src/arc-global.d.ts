@@ -67,9 +67,6 @@ declare global {
       deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink' }) => Promise<
         { ok: true; switchedToId: string | null } | { ok: false; error: string }
       >;
-      migrateParentContainer: (destParentDir: string) => Promise<
-        { ok: true; parentPath: string } | { ok: false; error: string }
-      >;
       getLibraryContainerName: () => Promise<string>;
       getParentLibraryPath: () => Promise<string | null>;
       setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => void;
@@ -79,11 +76,7 @@ declare global {
         | { ok: true; absPath: string; folderName: string; existingArcLibrary: boolean }
         | { ok: false; error: string }
       >;
-      checkLibraryRelocateModal: () => Promise<
-        { show: false } | { show: true; reason: 'path_missing' | 'empty_library' }
-      >;
       validateLibraryFolder: (absPath: string) => Promise<{ ok: boolean; valid: boolean }>;
-      relinkLibraryFolder: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
       pickLibraryFolder: () => Promise<string | null>;
       getDefaultLibraryParent: () => Promise<string>;
       getDefaultLibraryFolderName: () => Promise<string>;

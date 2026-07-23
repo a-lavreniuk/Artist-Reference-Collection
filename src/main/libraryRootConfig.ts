@@ -4,6 +4,7 @@ import path from 'path';
 import {
   readLibraryRootConfigSync,
   writeLibraryRootConfig,
+  replaceLibraryRootConfig,
   getActiveLibraryEntry,
   isMultiLibraryConfig,
   type LibraryRootConfig
@@ -46,12 +47,7 @@ export async function reconcileLibraryRootConfig(): Promise<void> {
     }
   }
 
-  await writeLibraryRootConfig({
-    path: undefined,
-    parentPath: undefined,
-    activeLibraryId: undefined,
-    libraries: undefined,
-    pendingWrapMigrationPath: undefined,
+  await replaceLibraryRootConfig({
     lastKnownCardCount: cfg.lastKnownCardCount,
     snapshotAt: cfg.snapshotAt
   });

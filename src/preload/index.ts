@@ -52,10 +52,6 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:delete-library', payload) as Promise<
       { ok: true; switchedToId: string | null } | { ok: false; error: string }
     >,
-  migrateParentContainer: (destParentDir: string) =>
-    ipcRenderer.invoke('arc:migrate-parent-container', destParentDir) as Promise<
-      { ok: true; parentPath: string } | { ok: false; error: string }
-    >,
   getLibraryContainerName: () =>
     ipcRenderer.invoke('arc:get-library-container-name') as Promise<string>,
   getParentLibraryPath: () => ipcRenderer.invoke('arc:get-parent-library-path') as Promise<string | null>,
@@ -76,14 +72,8 @@ contextBridge.exposeInMainWorld('arc', {
         }
       | { ok: false; error: string }
     >,
-  checkLibraryRelocateModal: () =>
-    ipcRenderer.invoke('arc:check-library-relocate-modal') as Promise<
-      { show: false } | { show: true; reason: 'path_missing' | 'empty_library' }
-    >,
   validateLibraryFolder: (absPath: string) =>
     ipcRenderer.invoke('arc:validate-library-folder', absPath) as Promise<{ ok: boolean; valid: boolean }>,
-  relinkLibraryFolder: (absPath: string) =>
-    ipcRenderer.invoke('arc:relink-library-folder', absPath) as Promise<{ ok: boolean; error?: string }>,
   pickLibraryFolder: () => ipcRenderer.invoke('arc:pick-library-folder') as Promise<string | null>,
   getDefaultLibraryParent: () =>
     ipcRenderer.invoke('arc:get-default-library-parent') as Promise<string>,

@@ -328,6 +328,16 @@ function emitMigration(p: MigrationProgress): void {
 
 export async function ensureLibraryReady(libraryRoot: string): Promise<Database.Database> {
   const root = path.resolve(libraryRoot);
+  try {
+    const { readLibraryRootConfigSync } = await import('../librarySessionSnapshot');
+    const pending = readLibraryRootConfigSync().pendingWrapMigrationPath?.trim();
+    if (pending && path.resolve(pending) === root) {
+      throw new Error('Сначала укажите имя библиотеки в диалоге переноса');
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('укажите имя библиотеки')) throw err;
+    /* config read best-effort */
+  }
   const inFlight = readyPromises.get(root);
   if (inFlight) return inFlight;
 

@@ -32,10 +32,16 @@ import {
   deleteLibrary,
   listLibrariesFromConfig,
   renameLibrary,
+  repairLibraryRegistryIfNeeded,
   switchActiveLibrary
 } from '../multiLibrary';
 import { LIBRARY_CONTAINER_FOLDER_NAME } from '../libraryContainer';
-import { replaceLibraryRootConfig, readLibraryRootConfigSync } from '../librarySessionSnapshot';
+import {
+  replaceLibraryRootConfig,
+  readLibraryRootConfigSync,
+  updateLibrarySessionSnapshot,
+  writeLibraryRootConfig
+} from '../librarySessionSnapshot';
 
 describe('multiLibrary manage', () => {
   beforeEach(() => {
@@ -58,6 +64,11 @@ describe('multiLibrary manage', () => {
     const b = await createLibraryInContainer('Бета', parentHint);
     expect(b.ok).toBe(true);
     if (!b.ok) return;
+
+    // Новая библиотека не должна становиться активной сама — иначе галерея «пустая».
+    const afterCreate = readLibraryRootConfigSync();
+    expect(afterCreate.activeLibraryId).toBe(a.library.id);
+    expect(afterCreate.libraries).toHaveLength(2);
 
     const container = path.join(parentHint, LIBRARY_CONTAINER_FOLDER_NAME);
     expect(fs.existsSync(path.join(container, 'Альфа'))).toBe(true);
@@ -109,5 +120,134 @@ describe('multiLibrary manage', () => {
     expect(fs.existsSync(cfgPath)).toBe(true);
     const parsed = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) as { activeLibraryId?: string };
     expect(parsed.activeLibraryId).toBe('1');
+  });
+
+  it('updateLibrarySessionSnapshot does not wipe libraries registry', async () => {
+    const parent = path.join(tmpRoot, 'Snap', LIBRARY_CONTAINER_FOLDER_NAME);
+    const libA = path.join(parent, 'A');
+    const libB = path.join(parent, 'B');
+    fs.mkdirSync(libA, { recursive: true });
+    fs.mkdirSync(libB, { recursive: true });
+    await replaceLibraryRootConfig({
+      parentPath: parent,
+      libraries: [
+        { id: 'a', name: 'A', path: libA },
+        { id: 'b', name: 'B', path: libB }
+      ],
+      activeLibraryId: 'a',
+      path: libA,
+      lastKnownCardCount: 10
+    });
+
+    await updateLibrarySessionSnapshot(libA, 42);
+    const cfg = readLibraryRootConfigSync();
+    expect(cfg.libraries).toHaveLength(2);
+    expect(cfg.activeLibraryId).toBe('a');
+    expect(cfg.lastKnownCardCount).toBe(42);
+    expect(cfg.parentPath).toBe(path.resolve(parent));
+  });
+
+  it('writeLibraryRootConfig ignores undefined keys (does not clear libraries)', async () => {
+    const parent = path.join(tmpRoot, 'Und', LIBRARY_CONTAINER_FOLDER_NAME);
+    const libA = path.join(parent, 'A');
+    fs.mkdirSync(libA, { recursive: true });
+    await replaceLibraryRootConfig({
+      parentPath: parent,
+      libraries: [{ id: 'a', name: 'A', path: libA }],
+      activeLibraryId: 'a',
+      path: libA
+    });
+
+    await writeLibraryRootConfig({
+      path: libA,
+      libraries: undefined,
+      parentPath: undefined,
+      activeLibraryId: undefined
+    });
+    const cfg = readLibraryRootConfigSync();
+    expect(cfg.libraries).toHaveLength(1);
+    expect(cfg.parentPath).toBe(path.resolve(parent));
+    expect(cfg.activeLibraryId).toBe('a');
+  });
+
+  it('repair keeps registered folder even without arc-index.db', async () => {
+    const parent = path.join(tmpRoot, 'Keep', LIBRARY_CONTAINER_FOLDER_NAME);
+    const libA = path.join(parent, 'Основная');
+    const libB = path.join(parent, 'Новая');
+    fs.mkdirSync(path.join(libA, 'meta'), { recursive: true });
+    fs.writeFileSync(path.join(libA, 'meta', 'arc-index.db'), '');
+    fs.mkdirSync(libB, { recursive: true }); // ещё без index
+
+    await replaceLibraryRootConfig({
+      parentPath: parent,
+      libraries: [
+        { id: 'a', name: 'Основная', path: libA },
+        { id: 'b', name: 'Новая', path: libB }
+      ],
+      activeLibraryId: 'a',
+      path: libA
+    });
+
+    const repaired = await repairLibraryRegistryIfNeeded();
+    expect(repaired).toBe(false); // уже полный набор
+    const cfg = readLibraryRootConfigSync();
+    expect(cfg.libraries).toHaveLength(2);
+    expect(cfg.libraries?.map((l) => l.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('repairLibraryRegistryIfNeeded restores missing libraries from disk', async () => {
+    const parent = path.join(tmpRoot, 'Repair', LIBRARY_CONTAINER_FOLDER_NAME);
+    const libA = path.join(parent, 'Основная');
+    const libB = path.join(parent, 'Запасная');
+    fs.mkdirSync(libA, { recursive: true });
+    fs.mkdirSync(libB, { recursive: true });
+    for (const lib of [libA, libB]) {
+      fs.mkdirSync(path.join(lib, 'meta'), { recursive: true });
+      fs.writeFileSync(path.join(lib, 'meta', 'arc-index.db'), '');
+    }
+
+    await replaceLibraryRootConfig({
+      parentPath: parent,
+      libraries: [],
+      activeLibraryId: undefined,
+      path: libA,
+      lastKnownCardCount: 5
+    });
+
+    const repaired = await repairLibraryRegistryIfNeeded();
+    expect(repaired).toBe(true);
+    const cfg = readLibraryRootConfigSync();
+    expect(cfg.libraries?.length).toBeGreaterThanOrEqual(2);
+    expect(cfg.parentPath).toBe(path.resolve(parent));
+  });
+
+  it('concurrent snapshot and replace do not wipe libraries', async () => {
+    const parent = path.join(tmpRoot, 'Race', LIBRARY_CONTAINER_FOLDER_NAME);
+    const libA = path.join(parent, 'A');
+    const libB = path.join(parent, 'B');
+    fs.mkdirSync(libA, { recursive: true });
+    fs.mkdirSync(libB, { recursive: true });
+    await replaceLibraryRootConfig({
+      parentPath: parent,
+      libraries: [
+        { id: 'a', name: 'A', path: libA },
+        { id: 'b', name: 'B', path: libB }
+      ],
+      activeLibraryId: 'a',
+      path: libA,
+      lastKnownCardCount: 1
+    });
+
+    await Promise.all([
+      updateLibrarySessionSnapshot(libA, 10),
+      updateLibrarySessionSnapshot(libA, 20),
+      writeLibraryRootConfig({ lastKnownCardCount: 30 }),
+      updateLibrarySessionSnapshot(libA, 40)
+    ]);
+
+    const cfg = readLibraryRootConfigSync();
+    expect(cfg.libraries).toHaveLength(2);
+    expect(cfg.activeLibraryId).toBe('a');
+    expect(cfg.parentPath).toBe(path.resolve(parent));
   });
 });

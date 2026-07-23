@@ -203,13 +203,16 @@ app.whenReady().then(async () => {
 
   setLoadingSplashMilestone(15, 'Инициализация модулей…');
   await reconcileLibraryRootConfig();
+  let migrationStatus: { status: string } = { status: 'ok' };
   try {
     const { getMigrationStatus } = await import('./multiLibrary');
-    await getMigrationStatus();
+    migrationStatus = await getMigrationStatus();
   } catch (err) {
     console.error('[ARC] library migration check:', err);
   }
-  const libraryRootEarly = readLibraryRootSync();
+  // Self-named wrap locks the folder on Windows if SQLite stays open — wait until the user finishes the modal.
+  const deferLibraryOpen = migrationStatus.status === 'needs_wrap_name';
+  const libraryRootEarly = deferLibraryOpen ? null : readLibraryRootSync();
   if (libraryRootEarly) {
     try {
       await ensureLibraryReady(libraryRootEarly);
@@ -218,7 +221,7 @@ app.whenReady().then(async () => {
       console.error('[ARC] ensureLibraryReady at startup:', err);
     }
   }
-  await startArcMediaServer(readLibraryRootSync());
+  await startArcMediaServer(libraryRootEarly);
   await refreshBrandingIconIfNeeded();
   registerArcIpc();
   registerAppPreferencesIpc();

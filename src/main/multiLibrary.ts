@@ -169,6 +169,16 @@ export async function completeWrapMigration(childNameRaw: string): Promise<{ ok:
     return { ok: false, error: 'Исходная библиотека не найдена' };
   }
 
+  // Release SQLite / catalog handles before renaming the folder (Windows EBUSY otherwise).
+  const { resetLibraryStorageCache } = await import('./storage/libraryStorage');
+  resetLibraryStorageCache();
+  try {
+    const { syncArcMediaServerLibraryRoot } = await import('./media/mediaServerHost');
+    syncArcMediaServerLibraryRoot(null);
+  } catch {
+    /* optional at early startup */
+  }
+
   const parentDir = path.dirname(legacyPath);
   const tempName = `${LIBRARY_CONTAINER_FOLDER_NAME}__migrating_${Date.now()}`;
   const tempPath = path.join(parentDir, tempName);
@@ -234,27 +244,152 @@ export async function createLibraryInContainer(
   }
   await ensureDir(libPath);
 
+  // Подтянуть с диска уже существующие библиотеки, если реестр пуст или устарел.
+  const existing = await mergeRegistryWithDisk(parentPath, cfg);
+  if (existing.some((l) => l.name.toLowerCase() === validated.name.toLowerCase())) {
+    return { ok: false, error: 'Библиотека с таким именем уже есть', fieldError: true };
+  }
+
   const entry = newLibraryEntry(validated.name, libPath);
-  const existing = cfg.libraries ?? [];
   const nextLibs = [...existing, entry];
+  const previousActiveId = getActiveLibraryEntry(cfg)?.id ?? existing[0]?.id ?? entry.id;
+
   await replaceLibraryRootConfig(
-    buildConfigWithActive(parentPath, nextLibs, entry.id, {
-      lastKnownCardCount: 0,
-      snapshotAt: new Date().toISOString(),
+    buildConfigWithActive(parentPath, nextLibs, previousActiveId, {
+      lastKnownCardCount: cfg.lastKnownCardCount,
+      snapshotAt: cfg.snapshotAt ?? new Date().toISOString(),
       pendingWrapMigrationPath: undefined
     })
   );
   invalidateLibraryRootCache();
+
+  try {
+    const { ensureLibraryReady } = await import('./storage/libraryStorage');
+    await ensureLibraryReady(libPath);
+  } catch (err) {
+    console.error('[ARC] ensureLibraryReady for new library:', err);
+  }
+
   void applyLibraryFolderIcon(parentPath);
   return { ok: true, library: entry };
+}
+
+/**
+ * Сверить libraries с диском: добавить найденные папки, сохранить id из конфига.
+ * Не выкидывать запись, если папка ещё есть (даже без arc-index — только что созданная).
+ */
+async function mergeRegistryWithDisk(
+  parentPath: string,
+  cfg: LibraryRootConfig
+): Promise<LibraryRegistryEntry[]> {
+  const scanned = await scanContainerLibraries(parentPath);
+  const cfgLibs = cfg.libraries ?? [];
+  const byResolved = new Map<string, LibraryRegistryEntry>();
+  const parentResolved = path.resolve(parentPath);
+
+  for (const lib of scanned) {
+    byResolved.set(path.resolve(lib.path), lib);
+  }
+
+  for (const lib of cfgLibs) {
+    const resolved = path.resolve(lib.path);
+    if (!(await pathExists(resolved))) continue;
+    if (path.dirname(resolved) !== parentResolved) continue;
+    const disk = byResolved.get(resolved);
+    if (disk) {
+      byResolved.set(resolved, { ...disk, id: lib.id, name: lib.name || disk.name });
+    } else {
+      // Папка есть, но scan не признал «валидной» — всё равно держим в реестре.
+      byResolved.set(resolved, { ...lib, path: resolved, name: lib.name || path.basename(resolved) });
+    }
+  }
+
+  // path активной библиотеки может ещё не попасть в scan (пустая только что созданная).
+  if (cfg.path?.trim()) {
+    const resolved = path.resolve(cfg.path.trim());
+    if (path.dirname(resolved) === parentResolved && (await pathExists(resolved)) && !byResolved.has(resolved)) {
+      const fromCfg = cfgLibs.find((l) => path.resolve(l.path) === resolved);
+      byResolved.set(resolved, fromCfg ?? newLibraryEntry(path.basename(resolved), resolved));
+    }
+  }
+
+  return [...byResolved.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+}
+
+function registryPathsEqual(a: LibraryRegistryEntry[], b: LibraryRegistryEntry[]): boolean {
+  if (a.length !== b.length) return false;
+  const aPaths = new Set(a.map((l) => path.resolve(l.path)));
+  const bPaths = new Set(b.map((l) => path.resolve(l.path)));
+  if (aPaths.size !== bPaths.size) return false;
+  for (const p of aPaths) {
+    if (!bPaths.has(p)) return false;
+  }
+  return true;
+}
+
+function registryIdsMatchByPath(cfgLibs: LibraryRegistryEntry[], merged: LibraryRegistryEntry[]): boolean {
+  const byPath = new Map(cfgLibs.map((l) => [path.resolve(l.path), l.id]));
+  for (const lib of merged) {
+    const prev = byPath.get(path.resolve(lib.path));
+    if (prev && prev !== lib.id) return false;
+  }
+  return true;
+}
+
+/**
+ * Если реестр пуст/неполный, а контейнер на диске есть — дописать папки.
+ * Не переписывает конфиг, если набор путей и id уже совпадает (без лишней смены id).
+ */
+export async function repairLibraryRegistryIfNeeded(): Promise<boolean> {
+  const cfg = readLibraryRootConfigSync();
+  if (!cfg.parentPath?.trim() || !(await pathExists(cfg.parentPath))) return false;
+
+  const parentPath = path.resolve(cfg.parentPath);
+  const merged = await mergeRegistryWithDisk(parentPath, cfg);
+  if (merged.length === 0) return false;
+
+  const cfgLibs = cfg.libraries ?? [];
+  if (
+    cfgLibs.length > 0 &&
+    registryPathsEqual(cfgLibs, merged) &&
+    registryIdsMatchByPath(cfgLibs, merged) &&
+    Boolean(cfg.activeLibraryId && merged.some((l) => l.id === cfg.activeLibraryId))
+  ) {
+    return false;
+  }
+
+  const preferredId =
+    (cfg.activeLibraryId && merged.some((l) => l.id === cfg.activeLibraryId) && cfg.activeLibraryId) ||
+    (cfg.path && merged.find((l) => path.resolve(l.path) === path.resolve(cfg.path!))?.id) ||
+    merged[0]!.id;
+
+  await replaceLibraryRootConfig(
+    buildConfigWithActive(parentPath, merged, preferredId, {
+      lastKnownCardCount: cfg.lastKnownCardCount,
+      snapshotAt: cfg.snapshotAt,
+      pendingWrapMigrationPath: undefined
+    })
+  );
+  invalidateLibraryRootCache();
+  return true;
 }
 
 export async function switchActiveLibrary(
   libraryId: string
 ): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
-  const cfg = readLibraryRootConfigSync();
-  const libs = cfg.libraries ?? [];
-  const target = libs.find((l) => l.id === libraryId);
+  let cfg = readLibraryRootConfigSync();
+  let libs = cfg.libraries ?? [];
+  let target = libs.find((l) => l.id === libraryId);
+  if (!target) {
+    try {
+      await repairLibraryRegistryIfNeeded();
+    } catch {
+      /* ignore */
+    }
+    cfg = readLibraryRootConfigSync();
+    libs = cfg.libraries ?? [];
+    target = libs.find((l) => l.id === libraryId);
+  }
   if (!target) return { ok: false, error: 'Библиотека не найдена' };
   if (!(await pathExists(target.path))) {
     return { ok: false, error: 'Папка библиотеки не найдена' };
@@ -276,40 +411,61 @@ export type OpenLibraryResult =
   | { ok: true; path: string }
   | { ok: false; error: string };
 
-/** Open container or a child library inside container. */
+/** Open container, a child library, or a folder that contains «Библиотека ARC». */
 export async function openLibraryOrContainer(pickedAbs: string): Promise<OpenLibraryResult> {
   const resolved = path.resolve(pickedAbs);
   if (!(await pathExists(resolved))) {
     return { ok: false, error: 'Папка не найдена' };
   }
 
+  // Parent of container: Documents/… → Documents/Библиотека ARC
+  if (!looksLikeContainerPath(resolved)) {
+    const nestedContainer = path.join(resolved, LIBRARY_CONTAINER_FOLDER_NAME);
+    if (await pathExists(nestedContainer) && looksLikeContainerPath(nestedContainer)) {
+      return openLibraryOrContainer(nestedContainer);
+    }
+  }
+
   if (looksLikeContainerPath(resolved)) {
-    const libs = await scanContainerLibraries(resolved);
+    const prev = readLibraryRootConfigSync();
+    const libs = await mergeRegistryWithDisk(resolved, {
+      ...prev,
+      parentPath: resolved,
+      libraries: prev.parentPath && path.resolve(prev.parentPath) === resolved ? prev.libraries : []
+    });
     if (libs.length === 0) {
       return { ok: false, error: 'В «Библиотека ARC» нет библиотек' };
     }
-    const active = libs[0]!; // already sorted А→Я
+    const preferredId =
+      (prev.activeLibraryId && libs.some((l) => l.id === prev.activeLibraryId) && prev.activeLibraryId) ||
+      libs[0]!.id;
     await replaceLibraryRootConfig(
-      buildConfigWithActive(resolved, libs, active.id, {
-        lastKnownCardCount: 0,
+      buildConfigWithActive(resolved, libs, preferredId, {
+        lastKnownCardCount: prev.lastKnownCardCount ?? 0,
         snapshotAt: new Date().toISOString(),
         pendingWrapMigrationPath: undefined
       })
     );
     invalidateLibraryRootCache();
     void applyLibraryFolderIcon(resolved);
+    const active = libs.find((l) => l.id === preferredId) ?? libs[0]!;
     return { ok: true, path: active.path };
   }
 
   const parent = path.dirname(resolved);
   if (!looksLikeContainerPath(parent)) {
-    return { ok: false, error: 'Библиотека должна находиться внутри папки «Библиотека ARC»' };
+    return { ok: false, error: 'Укажите папку «Библиотека ARC» или одну из библиотек внутри неё' };
   }
   if (!(await isValidArcLibraryFolder(resolved))) {
     return { ok: false, error: 'Выбранная папка не является библиотекой ARC' };
   }
 
-  const libs = await scanContainerLibraries(parent);
+  const prev = readLibraryRootConfigSync();
+  const libs = await mergeRegistryWithDisk(parent, {
+    ...prev,
+    parentPath: parent,
+    libraries: prev.parentPath && path.resolve(prev.parentPath) === path.resolve(parent) ? prev.libraries : []
+  });
   let active = libs.find((l) => path.resolve(l.path) === resolved);
   if (!active) {
     active = newLibraryEntry(path.basename(resolved), resolved);
@@ -317,7 +473,7 @@ export async function openLibraryOrContainer(pickedAbs: string): Promise<OpenLib
   }
   await replaceLibraryRootConfig(
     buildConfigWithActive(parent, libs, active.id, {
-      lastKnownCardCount: 0,
+      lastKnownCardCount: prev.lastKnownCardCount ?? 0,
       snapshotAt: new Date().toISOString(),
       pendingWrapMigrationPath: undefined
     })
@@ -442,45 +598,6 @@ export async function deleteLibrary(
   }
 
   return { ok: true, switchedToId: wasActive ? nextActive.id : null };
-}
-
-export async function migrateParentContainer(
-  destParentDir: string
-): Promise<{ ok: true; parentPath: string } | { ok: false; error: string }> {
-  const cfg = readLibraryRootConfigSync();
-  if (!cfg.parentPath || !(cfg.libraries?.length)) {
-    return { ok: false, error: 'Контейнер не настроен' };
-  }
-  const src = path.resolve(cfg.parentPath);
-  const destContainer = path.join(path.resolve(destParentDir), LIBRARY_CONTAINER_FOLDER_NAME);
-  if (path.resolve(destContainer) === src) {
-    return { ok: true, parentPath: src };
-  }
-  if (await pathExists(destContainer)) {
-    const entries = await readdir(destContainer);
-    if (entries.length > 0) {
-      return { ok: false, error: 'В выбранном месте уже есть «Библиотека ARC»' };
-    }
-  }
-  await ensureDir(path.dirname(destContainer));
-  await rename(src, destContainer);
-
-  const libs = (cfg.libraries ?? []).map((l) => ({
-    ...l,
-    path: path.join(destContainer, l.name)
-  }));
-  const active = getActiveLibraryEntry({ ...cfg, libraries: libs, parentPath: destContainer });
-  if (!active) return { ok: false, error: 'Нет активной библиотеки' };
-
-  await replaceLibraryRootConfig(
-    buildConfigWithActive(destContainer, libs, active.id, {
-      lastKnownCardCount: cfg.lastKnownCardCount,
-      snapshotAt: cfg.snapshotAt
-    })
-  );
-  invalidateLibraryRootCache();
-  void applyLibraryFolderIcon(destContainer);
-  return { ok: true, parentPath: destContainer };
 }
 
 export function getLibraryConfigSnapshot(): LibraryRootConfig {

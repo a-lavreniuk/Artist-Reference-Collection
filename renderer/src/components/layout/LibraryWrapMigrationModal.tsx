@@ -8,16 +8,27 @@ type Props = {
   onComplete: () => void;
 };
 
+function isNameFieldError(message: string | undefined): boolean {
+  if (!message) return false;
+  return (
+    message.includes('Некорректное имя') ||
+    message.includes('таким именем уже есть') ||
+    message.includes('Некорректное имя библиотеки')
+  );
+}
+
 export default function LibraryWrapMigrationModal({ onComplete }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('Основная');
   const [busy, setBusy] = useState(false);
   const [emptySubmitted, setEmptySubmitted] = useState(false);
   const [fieldError, setFieldError] = useState(false);
+  /** Ошибки миграции/диска — не валидация имени. */
+  const [systemError, setSystemError] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [name, busy, emptySubmitted, fieldError]);
+  }, [name, busy, emptySubmitted, fieldError, systemError]);
 
   const submit = async () => {
     if (!window.arc?.completeLibraryWrapMigration || busy) return;
@@ -25,14 +36,20 @@ export default function LibraryWrapMigrationModal({ onComplete }: Props) {
     if (!trimmed) {
       setEmptySubmitted(true);
       setFieldError(true);
+      setSystemError(null);
       return;
     }
     setBusy(true);
     setFieldError(false);
+    setSystemError(null);
     try {
       const res = await window.arc.completeLibraryWrapMigration(trimmed);
       if (!res.ok) {
-        setFieldError(true);
+        if (isNameFieldError(res.error)) {
+          setFieldError(true);
+        } else {
+          setSystemError(res.error?.trim() || 'Не удалось выполнить миграцию');
+        }
         return;
       }
       invalidateLibraryCache();
@@ -88,6 +105,7 @@ export default function LibraryWrapMigrationModal({ onComplete }: Props) {
                     setName(event.target.value);
                     setEmptySubmitted(false);
                     setFieldError(false);
+                    setSystemError(null);
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
@@ -98,6 +116,13 @@ export default function LibraryWrapMigrationModal({ onComplete }: Props) {
                 />
               </label>
             </div>
+            {systemError ? (
+              <div className="arc-modal__slot">
+                <p className="text-s hint" role="alert">
+                  {systemError}
+                </p>
+              </div>
+            ) : null}
           </div>
           <footer className="arc-modal__footer arc-modal__footer--actions-1">
             <div className="arc-modal__footer-right">

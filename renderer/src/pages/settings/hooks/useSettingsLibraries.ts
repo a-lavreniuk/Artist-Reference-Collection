@@ -12,7 +12,6 @@ export function useSettingsLibraries() {
   const [parentPath, setParentPath] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<LibraryManageModalState>(null);
-  const [migrateConfirm, setMigrateConfirm] = useState(false);
   const [infoModal, setInfoModal] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -73,18 +72,18 @@ export function useSettingsLibraries() {
     [notifyLibraryChanged]
   );
 
-  const migrateContainer = useCallback(async () => {
-    if (!window.arc?.migrateParentContainer || !window.arc.pickLibraryFolder) return;
-    const dest = await window.arc.pickLibraryFolder();
-    if (!dest) return;
+  /** Указать путь: контейнер, дочерняя библиотека или папка, в которой лежит «Библиотека ARC». */
+  const pickLibraryLocation = useCallback(async () => {
+    if (!window.arc?.pickLibraryFolder || !window.arc.openLibraryOrContainer) return;
+    const picked = await window.arc.pickLibraryFolder();
+    if (!picked) return;
     setBusy(true);
     try {
-      const res = await window.arc.migrateParentContainer(dest);
+      const res = await window.arc.openLibraryOrContainer(picked);
       if (!res.ok) {
-        setInfoModal(res.error?.trim() || 'Не удалось перенести папку');
+        setInfoModal(res.error?.trim() || 'Не удалось открыть выбранную папку');
         return;
       }
-      setMigrateConfirm(false);
       await notifyLibraryChanged();
     } finally {
       setBusy(false);
@@ -98,13 +97,11 @@ export function useSettingsLibraries() {
     busy,
     modal,
     setModal,
-    migrateConfirm,
-    setMigrateConfirm,
     infoModal,
     setInfoModal,
     renameLibrary,
     deleteLibrary,
-    migrateContainer,
+    pickLibraryLocation,
     refresh
   };
 }

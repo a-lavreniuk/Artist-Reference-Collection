@@ -35,7 +35,6 @@ import { isValidArcLibraryFolder } from './libraryValidate';
 import { getDefaultLibraryFolderName } from './appProfile';
 import { countCards, countCardsReadonly, ensureLibraryReady } from './storage/libraryStorage';
 import {
-  checkShouldOfferRelocateModal,
   updateLibrarySessionSnapshot
 } from './librarySessionSnapshot';
 import {
@@ -44,9 +43,9 @@ import {
   deleteLibrary,
   getMigrationStatus,
   listLibrariesFromConfig,
-  migrateParentContainer,
   openLibraryOrContainer,
   renameLibrary,
+  repairLibraryRegistryIfNeeded,
   switchActiveLibrary
 } from './multiLibrary';
 import { LIBRARY_CONTAINER_FOLDER_NAME } from './libraryContainer';
@@ -206,6 +205,11 @@ export function registerArcIpc(): void {
   ipcMain.handle('arc:get-library-path', async () => readLibraryRootFromDisk());
 
   ipcMain.handle('arc:list-libraries', async () => {
+    try {
+      await repairLibraryRegistryIfNeeded();
+    } catch (err) {
+      console.error('[ARC] repairLibraryRegistryIfNeeded:', err);
+    }
     const items = listLibrariesFromConfig();
     const withCounts = items.map((item) => {
       let cardCount = 0;
@@ -242,7 +246,14 @@ export function registerArcIpc(): void {
     const parentHint = typeof body?.parentHint === 'string' ? body.parentHint : null;
     const created = await createLibraryInContainer(name, parentHint);
     if (!created.ok) return created;
-    await finalizeLibraryPathChange(created.library.path, true);
+    // Новую папку готовим, а snapshot/active оставляем на текущей активной — иначе path уезжает на пустую.
+    try {
+      await ensureLibraryReady(created.library.path);
+    } catch (err) {
+      console.error('[ARC] ensureLibraryReady new library:', err);
+    }
+    const activeRoot = readLibraryRootSync();
+    if (activeRoot) await finalizeLibraryPathChange(activeRoot, true);
     return { ok: true as const, library: created.library };
   });
 
@@ -292,18 +303,6 @@ export function registerArcIpc(): void {
     return { ok: true as const, switchedToId: deleted.switchedToId };
   });
 
-  ipcMain.handle('arc:migrate-parent-container', async (_e, destParentDir: unknown) => {
-    assertNotMaintenance();
-    if (typeof destParentDir !== 'string' || !destParentDir.trim()) {
-      return { ok: false as const, error: 'Пустой путь' };
-    }
-    const migrated = await migrateParentContainer(destParentDir.trim());
-    if (!migrated.ok) return migrated;
-    const root = readLibraryRootSync();
-    if (root) await finalizeLibraryPathChange(root, true);
-    return { ok: true as const, parentPath: migrated.parentPath };
-  });
-
   ipcMain.handle('arc:get-library-container-name', async () => LIBRARY_CONTAINER_FOLDER_NAME);
 
   ipcMain.handle('arc:get-parent-library-path', async () => readParentLibraryPathSync());
@@ -340,7 +339,13 @@ export function registerArcIpc(): void {
       return { ok: false as const, error: created.error };
     }
     try {
-      await finalizeLibraryPathChange(created.library.path, true);
+      try {
+        await ensureLibraryReady(created.library.path);
+      } catch (err) {
+        console.error('[ARC] ensureLibraryReady new library:', err);
+      }
+      const activeRoot = readLibraryRootSync();
+      if (activeRoot) await finalizeLibraryPathChange(activeRoot, true);
       return {
         ok: true as const,
         absPath: created.library.path,
@@ -355,34 +360,25 @@ export function registerArcIpc(): void {
     }
   });
 
-  ipcMain.handle('arc:check-library-relocate-modal', async () => checkShouldOfferRelocateModal());
-
   ipcMain.handle('arc:validate-library-folder', async (_e, absPath: unknown) => {
     if (typeof absPath !== 'string' || !absPath.trim()) {
       return { ok: false as const, valid: false as const };
     }
-    const valid = await isValidArcLibraryFolder(path.resolve(absPath.trim()));
-    return { ok: true as const, valid };
-  });
-
-  ipcMain.handle('arc:relink-library-folder', async (_e, absPath: unknown) => {
-    assertNotMaintenance();
-    if (typeof absPath !== 'string' || !absPath.trim()) {
-      return { ok: false as const, error: 'Пустой путь' };
-    }
     const resolved = path.resolve(absPath.trim());
-    const opened = await openLibraryOrContainer(resolved);
-    if (!opened.ok) {
-      return { ok: false as const, error: opened.error };
+    if (path.basename(resolved) === LIBRARY_CONTAINER_FOLDER_NAME) {
+      return { ok: true as const, valid: true as const };
     }
+    const parent = path.dirname(resolved);
+    if (path.basename(parent) === LIBRARY_CONTAINER_FOLDER_NAME) {
+      const valid = await isValidArcLibraryFolder(resolved);
+      return { ok: true as const, valid };
+    }
+    const nested = path.join(resolved, LIBRARY_CONTAINER_FOLDER_NAME);
     try {
-      await finalizeLibraryPathChange(opened.path, true);
-      return { ok: true as const };
-    } catch (err) {
-      return {
-        ok: false as const,
-        error: err instanceof Error ? err.message : 'Не удалось подключить библиотеку'
-      };
+      await stat(nested);
+      return { ok: true as const, valid: true as const };
+    } catch {
+      return { ok: true as const, valid: false as const };
     }
   });
 
@@ -628,35 +624,12 @@ export function registerArcIpc(): void {
 
   ipcMain.handle(
     'arc:migrate-library',
-    async (_e, targetPath: unknown): Promise<{ ok: true; oldLibraryPath: string } | { ok: false; error: string }> => {
-      if (isMaintenanceLocked()) {
-        return { ok: false, error: 'Идёт операция…' };
-      }
-      if (typeof targetPath !== 'string' || !targetPath.trim()) {
-        return { ok: false, error: 'Пустой путь' };
-      }
-      const oldParent = readParentLibraryPathSync();
-      if (!oldParent) {
-        return {
-          ok: false,
-          error: 'Перенос доступен только для папки «Библиотека ARC». Используйте Настройки → Библиотека.'
-        };
-      }
-      acquireMaintenanceLock();
-      try {
-        const migrated = await migrateParentContainer(path.resolve(targetPath.trim()));
-        if (!migrated.ok) return migrated;
-        const root = readLibraryRootSync();
-        if (root) await finalizeLibraryPathChange(root, true);
-        try {
-          if (root) await appendHistory(root, 'Перенос папки «Библиотека ARC» завершён');
-        } catch {
-          /* ignore */
-        }
-        return { ok: true, oldLibraryPath: oldParent };
-      } finally {
-        releaseMaintenanceLock();
-      }
+    async (): Promise<{ ok: false; error: string }> => {
+      return {
+        ok: false,
+        error:
+          'Перенос папки через ARC отключён. Перенесите «Библиотека ARC» средствами системы, затем укажите путь в Настройки → Библиотека.'
+      };
     }
   );
 

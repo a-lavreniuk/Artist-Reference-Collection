@@ -4,7 +4,6 @@ import ArcTopBar from './ArcTopBar';
 import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
 import { AppUpdateProvider } from './appUpdateContext';
-import LibraryRelocatedHost from './LibraryRelocatedHost';
 import LibraryWrapMigrationHost from './LibraryWrapMigrationHost';
 import { LibrarySwitchDimProvider } from './LibrarySwitchDimOverlay';
 import ImportHost from '../import/ImportHost';
@@ -114,7 +113,6 @@ export default function AppLayout() {
           <CardSectionsShell />
           <Outlet />
         </div>
-        <LibraryRelocatedHost />
         <LibraryWrapMigrationHost />
         <BugReportWidget />
         <InterfaceTourHost />

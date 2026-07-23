@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
 import MessageModal from '../../../components/layout/MessageModal';
-import ConfirmModal from '../ConfirmModal';
 import LibraryManageModal from '../LibraryManageModal';
 import { useSettingsLibraries } from '../hooks/useSettingsLibraries';
 import { TruncatedTextWithTooltip } from '../../../components/tooltip/TruncatedTextWithTooltip';
@@ -16,18 +15,16 @@ export default function SettingsLibraryPanel() {
     busy,
     modal,
     setModal,
-    migrateConfirm,
-    setMigrateConfirm,
     infoModal,
     setInfoModal,
     renameLibrary,
     deleteLibrary,
-    migrateContainer
+    pickLibraryLocation
   } = useSettingsLibraries();
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [libraries, modal, migrateConfirm]);
+  }, [libraries, modal]);
 
   const canDelete = libraries.length > 1;
 
@@ -42,7 +39,8 @@ export default function SettingsLibraryPanel() {
           <div className="arc-settings-desc-block">
             <p className="text-m arc-settings-desc-block__text">
               Библиотеки хранятся в папке «{containerName}». Можно создать несколько библиотек и переключаться между
-              ними в верхней панели.
+              ними в верхней панели. Чтобы подключить уже существующие данные, укажите папку «{containerName}» или
+              любую библиотеку внутри неё — файлы переносите средствами системы.
             </p>
             {parentPath ? (
               <p className="text-s hint" title={parentPath}>
@@ -101,9 +99,9 @@ export default function SettingsLibraryPanel() {
               type="button"
               className="btn btn-secondary btn-ds"
               disabled={busy || !window.arc}
-              onClick={() => setMigrateConfirm(true)}
+              onClick={() => void pickLibraryLocation()}
             >
-              <span className="btn-ds__value">Перенести «{containerName}»</span>
+              <span className="btn-ds__value">Указать папку</span>
             </button>
           </div>
         </div>
@@ -117,16 +115,6 @@ export default function SettingsLibraryPanel() {
           onClose={() => setModal(null)}
           onRename={renameLibrary}
           onDelete={deleteLibrary}
-        />
-      ) : null}
-
-      {migrateConfirm ? (
-        <ConfirmModal
-          title={`Перенос «${containerName}»`}
-          message={`Папка «${containerName}» со всеми библиотеками будет перенесена в выбранное место. Продолжить?`}
-          confirmLabel="Выбрать папку"
-          onCancel={() => setMigrateConfirm(false)}
-          onConfirm={() => void migrateContainer()}
         />
       ) : null}
 
