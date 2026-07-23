@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import { appIconPath } from '../appIcon';
-import { readLibraryRootSync } from '../libraryRootConfig';
+import { readLibraryRootSync, readParentLibraryPathSync } from '../libraryRootConfig';
 import { applyLibraryFolderIconWin32, notifyFolderIconChanged } from './win32';
 
 function iconsDir(): string {
@@ -65,7 +65,7 @@ export async function refreshBrandingIconIfNeeded(): Promise<void> {
   const prev = await readStoredIconHash();
   if (prev === hash) return;
 
-  const root = readLibraryRootSync();
+  const root = readParentLibraryPathSync() ?? readLibraryRootSync();
   if (!root) {
     await writeStoredIconHash(hash);
     return;

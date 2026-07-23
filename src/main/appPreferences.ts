@@ -27,6 +27,12 @@ export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 export type UiThemePreference = 'dark' | 'light' | 'system';
 export type { JoyCaptionTypeId, JoyCaptionExtraId, JoyCaptionLengthLevel };
 
+export type AutoImportLibrarySettings = {
+  enabled: boolean;
+  folderPath: string | null;
+  sourceFilesAction: ImportSourceFilesAction;
+};
+
 export type OnboardingSetupStep = 0 | 1 | 2;
 
 export type OnboardingTourStep = number;
@@ -54,6 +60,8 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  /** Настройки автоимпорта по id библиотеки (п.18C). */
+  autoImportByLibraryId: Record<string, AutoImportLibrarySettings>;
   importApiEnabled: boolean;
   importApiPrefixEnabled: boolean;
   importApiPrefixText: string;
@@ -124,6 +132,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     autoImportEnabled: false,
     autoImportFolderPath: null,
     autoImportSourceFilesAction: 'ask',
+    autoImportByLibraryId: {},
     importApiEnabled: true,
     importApiPrefixEnabled: false,
     importApiPrefixText: '',
@@ -163,6 +172,39 @@ function prefsPath(): string {
 function sanitizeImportAction(raw: unknown): ImportSourceFilesAction {
   if (raw === 'trash') return 'trash';
   return 'ask';
+}
+
+function sanitizeAutoImportByLibraryId(raw: unknown): Record<string, AutoImportLibrarySettings> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, AutoImportLibrarySettings> = {};
+  for (const [id, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!id.trim() || !value || typeof value !== 'object') continue;
+    const row = value as Record<string, unknown>;
+    out[id] = {
+      enabled: typeof row.enabled === 'boolean' ? row.enabled : false,
+      folderPath:
+        typeof row.folderPath === 'string' && row.folderPath.trim()
+          ? path.resolve(row.folderPath.trim())
+          : null,
+      sourceFilesAction: sanitizeImportAction(row.sourceFilesAction)
+    };
+  }
+  return out;
+}
+
+/** Настройки автоимпорта для активной библиотеки (с fallback на legacy global). */
+export function resolveAutoImportForLibraryId(
+  prefs: AppPreferencesV1,
+  libraryId: string | null | undefined
+): AutoImportLibrarySettings {
+  if (libraryId && prefs.autoImportByLibraryId[libraryId]) {
+    return prefs.autoImportByLibraryId[libraryId]!;
+  }
+  return {
+    enabled: prefs.autoImportEnabled,
+    folderPath: prefs.autoImportFolderPath,
+    sourceFilesAction: prefs.autoImportSourceFilesAction
+  };
 }
 
 function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
@@ -215,6 +257,7 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         ? path.resolve(raw.autoImportFolderPath.trim())
         : d.autoImportFolderPath,
     autoImportSourceFilesAction: sanitizeImportAction(raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction),
+    autoImportByLibraryId: sanitizeAutoImportByLibraryId(raw.autoImportByLibraryId),
     importApiEnabled: typeof raw.importApiEnabled === 'boolean' ? raw.importApiEnabled : d.importApiEnabled,
     importApiPrefixEnabled:
       typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
@@ -337,6 +380,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = sanitizeImportAction(patch.autoImportSourceFilesAction);
+  }
+  if ('autoImportByLibraryId' in patch && patch.autoImportByLibraryId && typeof patch.autoImportByLibraryId === 'object') {
+    next.autoImportByLibraryId = sanitizeAutoImportByLibraryId({
+      ...current.autoImportByLibraryId,
+      ...patch.autoImportByLibraryId
+    });
   }
   if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
     next.importApiEnabled = patch.importApiEnabled;
@@ -483,7 +532,12 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
   ) {
     registerScreenshotShortcut();
   }
-  if ('autoImportEnabled' in patch || 'autoImportFolderPath' in patch) {
+  if (
+    'autoImportEnabled' in patch ||
+    'autoImportFolderPath' in patch ||
+    'autoImportSourceFilesAction' in patch ||
+    'autoImportByLibraryId' in patch
+  ) {
     const { restartAutoImportWatcher } = await import('./autoImportWatcher');
     restartAutoImportWatcher();
   }

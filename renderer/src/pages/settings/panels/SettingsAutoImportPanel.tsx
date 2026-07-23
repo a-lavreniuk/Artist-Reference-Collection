@@ -33,6 +33,7 @@ export default function SettingsAutoImportPanel() {
     folderPath,
 
     trashSourcesEnabled,
+    activeLibraryName,
 
     setEnabled,
 
@@ -53,6 +54,9 @@ export default function SettingsAutoImportPanel() {
         <div className="arc-settings-desc-block">
 
           <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+          {activeLibraryName ? (
+            <p className="text-s hint">Настройки для библиотеки «{activeLibraryName}»</p>
+          ) : null}
 
           <SettingsToggleRow
 

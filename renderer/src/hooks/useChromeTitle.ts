@@ -10,7 +10,6 @@ const SETTINGS_TITLES: Record<string, string> = {
   '/settings/notifications': 'Уведомления',
   '/settings/shortcuts': 'Горячие клавиши',
   '/settings/library': 'Библиотека',
-  '/settings/backup': 'Резервная копия',
   '/settings/integrity': 'Проверка целостности',
   '/settings/auto-import': 'Автоимпорт',
   '/settings/browser-extension': 'Расширение браузера',

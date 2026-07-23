@@ -1,10 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import ConfirmModal from '../../pages/settings/ConfirmModal';
 import MessageModal from '../layout/MessageModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import CreateLibraryModal from './CreateLibraryModal';
 import OnboardingLibraryPreview from './OnboardingLibraryPreview';
-import { runOnboardingOpenLibraryFlow, runOnboardingRestoreFlow, useCreateLibraryModal } from '../../hooks/useCreateLibraryModal';
+import { runOnboardingOpenLibraryFlow, useCreateLibraryModal } from '../../hooks/useCreateLibraryModal';
 
 type Props = {
   revealed?: boolean;
@@ -16,13 +15,12 @@ export default function OnboardingLibraryScreen({ revealed = true, animateEnter 
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(!animateEnter && revealed);
   const [actionBusy, setActionBusy] = useState(false);
-  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
   const [infoModal, setInfoModal] = useState<string | null>(null);
   const libraryModal = useCreateLibraryModal(onComplete);
 
   useLayoutEffect(() => {
     if (ref.current) void hydrateArcNavbarIcons(ref.current);
-  }, [libraryModal.open, libraryModal.state.showExistingConfirm, showRestoreConfirm]);
+  }, [libraryModal.open]);
 
   useLayoutEffect(() => {
     if (!revealed) {
@@ -38,21 +36,6 @@ export default function OnboardingLibraryScreen({ revealed = true, animateEnter 
     });
     return () => cancelAnimationFrame(frame);
   }, [revealed, animateEnter]);
-
-  const runRestore = async () => {
-    setShowRestoreConfirm(false);
-    setActionBusy(true);
-    try {
-      const res = await runOnboardingRestoreFlow();
-      if (res.ok) {
-        onComplete();
-      } else if (res.message) {
-        setInfoModal(res.message);
-      }
-    } finally {
-      setActionBusy(false);
-    }
-  };
 
   const runOpenLibrary = async () => {
     setActionBusy(true);
@@ -108,18 +91,6 @@ export default function OnboardingLibraryScreen({ revealed = true, animateEnter 
                 aria-hidden="true"
               />
             </button>
-            <button
-              type="button"
-              className="btn btn-outline btn-ds"
-              onClick={() => setShowRestoreConfirm(true)}
-              disabled={actionBusy || !window.arc}
-            >
-              <span className="btn-ds__value">Восстановить</span>
-              <span
-                className="btn-ds__icon arc-onboarding-library-btn__icon arc-onboarding-library-btn__icon--restore"
-                aria-hidden="true"
-              />
-            </button>
           </div>
           <p className="text-s arc-onboarding-library-note">
             Библиотека будет сохранена на вашем устройстве, пожалуйста, резервируйте его регулярно
@@ -140,25 +111,6 @@ export default function OnboardingLibraryScreen({ revealed = true, animateEnter 
         />
       ) : null}
 
-      {libraryModal.state.showExistingConfirm ? (
-        <ConfirmModal
-          title="Открыть библиотеку?"
-          message="В выбранной папке уже есть библиотека ARC. Открыть её?"
-          confirmLabel="Открыть"
-          onCancel={libraryModal.cancelExistingLibrary}
-          onConfirm={() => void libraryModal.confirmExistingLibrary()}
-        />
-      ) : null}
-
-      {showRestoreConfirm ? (
-        <ConfirmModal
-          title="Восстановление"
-          message="Восстановление заменит текущую библиотеку. Приложение перезапустится после завершения. Продолжить?"
-          confirmLabel="Продолжить"
-          onCancel={() => setShowRestoreConfirm(false)}
-          onConfirm={() => void runRestore()}
-        />
-      ) : null}
       {infoModal ? (
         <MessageModal title="Сообщение" message={infoModal} onClose={() => setInfoModal(null)} closeLabel="Понятно" />
       ) : null}

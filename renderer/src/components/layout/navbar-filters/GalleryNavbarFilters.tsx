@@ -422,6 +422,43 @@ export default function NavbarFiltersMenu() {
     return rows;
   };
 
+  const buildTagPresenceMenu = () => (
+    <>
+      <ContextMenuItem
+        label="Всё"
+        slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+        selected={filters.tagPresence === null}
+        onSelect={() => patchFilters({ tagPresence: null })}
+      />
+      <ContextMenuItem
+        label="С метками"
+        counter={stats?.tagPresence.tagged}
+        slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+        selected={filters.tagPresence === 'tagged'}
+        onSelect={() => {
+          if (filters.tagPresence === 'tagged') {
+            patchFilters({ tagPresence: null });
+            return;
+          }
+          patchFilters({ tagPresence: 'tagged' });
+        }}
+      />
+      <ContextMenuItem
+        label="Без меток"
+        counter={stats?.tagPresence.untagged}
+        slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+        selected={filters.tagPresence === 'untagged'}
+        onSelect={() => {
+          if (filters.tagPresence === 'untagged') {
+            patchFilters({ tagPresence: null });
+            return;
+          }
+          patchFilters({ tagPresence: 'untagged' });
+        }}
+      />
+    </>
+  );
+
   const buildDescriptionMenu = () => {
     const keywordsEnabled = filters.description?.mode === 'has';
     return (
@@ -708,6 +745,9 @@ export default function NavbarFiltersMenu() {
         break;
       case 'fileType':
         rows = buildFileTypeRows();
+        break;
+      case 'tagPresence':
+        children = buildTagPresenceMenu();
         break;
       case 'description':
         children = buildDescriptionMenu();

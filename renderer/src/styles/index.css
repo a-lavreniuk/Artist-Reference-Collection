@@ -1,7 +1,7 @@
 @import url("/ui/arc-navbar.css");
 @import url("./arc-moodboard.css");
 @import url("./color-format-input.css");
-@import url("./pantone-matches.css");
+@import url("./multi-library.css");
 
 /* Inline SVG из `hydrateArcNavbarIcons`: stroke/fill → currentColor, размер с родителя */
 .btn-ds__icon > .arc-navbar-icon-svg,

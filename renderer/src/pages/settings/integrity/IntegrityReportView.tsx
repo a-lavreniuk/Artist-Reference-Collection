@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import type { IntegrityReport } from '../../../services/libraryIntegrity';
 import IntegritySummaryBar from './IntegritySummaryBar';
 import IntegrityIssueRow from './IntegrityIssueRow';
@@ -203,10 +203,8 @@ export default function IntegrityReportView({
               <header className="arc-integrity-section__head">
                 <h2 className="text-m arc-integrity-section__title">Критические ошибки</h2>
                 <p className="text-m arc-integrity-section__hint">
-                  Повторяющиеся id в метаданных — автоматически не исправляется. Попробуйте{' '}
-                  <Link to="/settings/backup" className="arc-integrity-section__link">
-                    восстановить из резервной копии
-                  </Link>
+                  Повторяющиеся id в метаданных — автоматически не исправляется. Обратитесь в поддержку, если
+                  проблема сохраняется.
                 </p>
               </header>
               <ul className="arc-integrity-section__list">

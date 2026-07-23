@@ -4,7 +4,8 @@ export type LibraryScope = 'all' | 'untagged' | 'trash';
 
 export function parseLibraryScope(searchParams: URLSearchParams): LibraryScope {
   const raw = searchParams.get(ARC_LIBRARY_SCOPE_PARAM);
-  if (raw === 'untagged' || raw === 'trash') return raw;
+  if (raw === 'trash') return 'trash';
+  // legacy lib=untagged → фильтр tagPresence в advanced filters
   return 'all';
 }
 

@@ -4,6 +4,8 @@ import path from 'path';
 import {
   readLibraryRootConfigSync,
   writeLibraryRootConfig,
+  getActiveLibraryEntry,
+  isMultiLibraryConfig,
   type LibraryRootConfig
 } from './librarySessionSnapshot';
 import { writeAppPreferences } from './appPreferences';
@@ -15,6 +17,8 @@ export function invalidateLibraryRootCache(): void {
 }
 
 function configuredLibraryPath(cfg: LibraryRootConfig = readLibraryRootConfigSync()): string | null {
+  const active = getActiveLibraryEntry(cfg);
+  if (active?.path) return path.resolve(active.path);
   if (typeof cfg.path !== 'string' || !cfg.path.trim()) return null;
   return path.resolve(cfg.path.trim());
 }
@@ -25,8 +29,32 @@ export async function reconcileLibraryRootConfig(): Promise<void> {
   const configured = configuredLibraryPath(cfg);
   if (!configured || fs.existsSync(configured)) return;
 
-  const { path: _removed, ...rest } = cfg;
-  await writeLibraryRootConfig(rest);
+  if (isMultiLibraryConfig(cfg) && cfg.parentPath && fs.existsSync(cfg.parentPath)) {
+    const remaining = (cfg.libraries ?? []).filter((l) => fs.existsSync(l.path));
+    if (remaining.length > 0) {
+      const sorted = [...remaining].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+      const nextActive = sorted[0]!;
+      await writeLibraryRootConfig({
+        ...cfg,
+        libraries: sorted,
+        activeLibraryId: nextActive.id,
+        path: nextActive.path,
+        pendingWrapMigrationPath: undefined
+      });
+      invalidateLibraryRootCache();
+      return;
+    }
+  }
+
+  await writeLibraryRootConfig({
+    path: undefined,
+    parentPath: undefined,
+    activeLibraryId: undefined,
+    libraries: undefined,
+    pendingWrapMigrationPath: undefined,
+    lastKnownCardCount: cfg.lastKnownCardCount,
+    snapshotAt: cfg.snapshotAt
+  });
   invalidateLibraryRootCache();
 
   await writeAppPreferences({
@@ -78,4 +106,12 @@ export async function writeLibraryRootToDisk(abs: string, extra?: Partial<Librar
 
 export function libraryConfigPath(): string {
   return path.join(app.getPath('userData'), 'library-root.json');
+}
+
+export function readParentLibraryPathSync(): string | null {
+  const cfg = readLibraryRootConfigSync();
+  if (cfg.parentPath?.trim() && fs.existsSync(cfg.parentPath)) {
+    return path.resolve(cfg.parentPath);
+  }
+  return null;
 }

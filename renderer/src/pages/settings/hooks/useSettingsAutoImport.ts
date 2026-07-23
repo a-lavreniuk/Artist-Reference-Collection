@@ -1,9 +1,30 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
+import { useLibraries } from '../../../hooks/useLibraries';
 import { isLibraryConfigured } from '../../../services/db';
+import {
+  resolveAutoImportForLibraryId,
+  type AutoImportLibrarySettings
+} from '../../../services/appPreferences';
+
+function mergeAutoImportPatch(
+  current: Record<string, AutoImportLibrarySettings>,
+  libraryId: string,
+  patch: AutoImportLibrarySettings
+): Record<string, AutoImportLibrarySettings> {
+  return {
+    ...current,
+    [libraryId]: {
+      ...current[libraryId],
+      ...patch
+    }
+  };
+}
 
 export function useSettingsAutoImport() {
   const { prefs, ready, update } = useAppPreferences();
+  const { activeLibrary } = useLibraries();
+  const libraryId = activeLibrary?.id ?? null;
   const [libraryReady, setLibraryReady] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -18,11 +39,28 @@ export function useSettingsAutoImport() {
     return () => window.removeEventListener('arc:library-changed', onLibraryChanged);
   }, []);
 
-  const disabled = !ready || !libraryReady || !window.arc || busy;
-  const controlsDisabled = !ready || !libraryReady || !window.arc;
-  const enabled = prefs?.autoImportEnabled === true;
-  const folderPath = prefs?.autoImportFolderPath ?? null;
-  const trashSourcesEnabled = prefs?.autoImportSourceFilesAction === 'trash';
+  const activeAutoImport = useMemo(() => {
+    if (!prefs || !libraryId) {
+      return { enabled: false, folderPath: null as string | null, sourceFilesAction: 'ask' as const };
+    }
+    return resolveAutoImportForLibraryId(prefs, libraryId);
+  }, [libraryId, prefs]);
+
+  const patchActiveAutoImport = useCallback(
+    async (patch: AutoImportLibrarySettings) => {
+      if (!libraryId || !prefs) return;
+      await update({
+        autoImportByLibraryId: mergeAutoImportPatch(prefs.autoImportByLibraryId ?? {}, libraryId, patch)
+      });
+    },
+    [libraryId, prefs, update]
+  );
+
+  const disabled = !ready || !libraryReady || !window.arc || busy || !libraryId;
+  const controlsDisabled = !ready || !libraryReady || !window.arc || !libraryId;
+  const enabled = activeAutoImport.enabled === true;
+  const folderPath = activeAutoImport.folderPath ?? null;
+  const trashSourcesEnabled = activeAutoImport.sourceFilesAction === 'trash';
 
   const pickFolder = useCallback(async (): Promise<string | null> => {
     if (!window.arc) return null;
@@ -33,12 +71,12 @@ export function useSettingsAutoImport() {
     async (path: string) => {
       setBusy(true);
       try {
-        await update({ autoImportFolderPath: path });
+        await patchActiveAutoImport({ folderPath: path });
       } finally {
         setBusy(false);
       }
     },
-    [update]
+    [patchActiveAutoImport]
   );
 
   const chooseFolder = useCallback(async () => {
@@ -53,7 +91,7 @@ export function useSettingsAutoImport() {
       if (disabled && nextEnabled) return;
 
       if (!nextEnabled) {
-        await update({ autoImportEnabled: false });
+        await patchActiveAutoImport({ enabled: false });
         return;
       }
 
@@ -62,23 +100,23 @@ export function useSettingsAutoImport() {
         if (!picked) return;
         setBusy(true);
         try {
-          await update({ autoImportEnabled: true, autoImportFolderPath: picked });
+          await patchActiveAutoImport({ enabled: true, folderPath: picked });
         } finally {
           setBusy(false);
         }
         return;
       }
 
-      await update({ autoImportEnabled: true });
+      await patchActiveAutoImport({ enabled: true });
     },
-    [disabled, folderPath, pickFolder, update]
+    [disabled, folderPath, patchActiveAutoImport, pickFolder]
   );
 
   const setTrashSourcesEnabled = useCallback(
     async (on: boolean) => {
-      await update({ autoImportSourceFilesAction: on ? 'trash' : 'ask' });
+      await patchActiveAutoImport({ sourceFilesAction: on ? 'trash' : 'ask' });
     },
-    [update]
+    [patchActiveAutoImport]
   );
 
   return {
@@ -90,6 +128,7 @@ export function useSettingsAutoImport() {
     enabled,
     folderPath,
     trashSourcesEnabled,
+    activeLibraryName: activeLibrary?.name ?? null,
     setEnabled,
     chooseFolder,
     setTrashSourcesEnabled

@@ -10,6 +10,8 @@ type Props = {
   onFolderNameChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
+  /** Без подсказки про выбор папки (создание в контейнере ARC). */
+  inContainer?: boolean;
 };
 
 export default function CreateLibraryModal({
@@ -18,7 +20,8 @@ export default function CreateLibraryModal({
   emptySubmitted,
   onFolderNameChange,
   onClose,
-  onSubmit
+  onSubmit,
+  inContainer = false
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const nameInvalid = emptySubmitted && !folderName.trim();
@@ -61,7 +64,9 @@ export default function CreateLibraryModal({
         <div className="arc-modal__body">
           <div className="arc-modal__slot">
             <p className="arc-modal__slot-text">
-              Придумайте библиотеке название (например, «Сохранёнки») и выберите место на диске для её хранения
+              {inContainer
+                ? 'Придумайте название новой библиотеки в папке «Библиотека ARC»'
+                : 'Придумайте библиотеке название (например, «Сохранёнки») и выберите место на диске для её хранения'}
             </p>
           </div>
           <div className="arc-modal__slot">

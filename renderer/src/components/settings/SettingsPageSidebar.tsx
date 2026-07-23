@@ -14,7 +14,6 @@ const PRODUCT_SECTIONS = [
 
 const LIBRARY_SECTIONS = [
   { key: 'library', to: '/settings/library', label: 'Библиотека', iconClass: 'arc-icon-library' },
-  { key: 'backup', to: '/settings/backup', label: 'Резервная копия', iconClass: 'arc-icon-copy-s' },
   { key: 'integrity', to: '/settings/integrity', label: 'Проверка целостности', iconClass: 'arc-icon-integrity-check' }
 ] as const;
 

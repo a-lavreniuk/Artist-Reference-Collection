@@ -1,121 +1,132 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
-import {
-  libraryScopeLabel,
-  parseLibraryScope,
-  setLibraryScopeInParams,
-  type LibraryScope
-} from '../../search/libraryScopeUrl';
-import { useTrashCardCount } from '../../hooks/useTrashCardCount';
-import { emptyTrash } from '../../services/db';
-import { showAppNotification } from '../../services/notificationService';
-import ConfirmEmptyTrashModal from './ConfirmEmptyTrashModal';
-
-const LIBRARY_OPTIONS: { key: LibraryScope; label: string; iconClass: string }[] = [
-  { key: 'all', label: 'Вся библиотека', iconClass: 'arc-icon-folder-open' },
-  { key: 'untagged', label: 'Без меток', iconClass: 'arc-icon-tag' },
-  { key: 'trash', label: 'Корзина', iconClass: 'arc-icon-trash' }
-];
+import CreateLibraryModal from '../onboarding/CreateLibraryModal';
+import { useLibraries } from '../../hooks/useLibraries';
+import { useLibrarySwitchDim } from './LibrarySwitchDimOverlay';
+import { getNavbarMetrics, invalidateLibraryCache } from '../../services/db';
+import { ONBOARDING_DEFAULT_LIBRARY_NAME } from '../../content/onboarding';
 
 type Props = {
   disabled?: boolean;
 };
 
 export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
   const anchorRef = useRef<HTMLButtonElement>(null);
-  const clearRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState(ONBOARDING_DEFAULT_LIBRARY_NAME);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createEmptySubmitted, setCreateEmptySubmitted] = useState(false);
+  const [createFieldError, setCreateFieldError] = useState(false);
+  const switchingRef = useRef(false);
 
-  const activeScope = parseLibraryScope(searchParams);
-  const activeLabel = libraryScopeLabel(activeScope);
-  const { count: trashCount } = useTrashCardCount();
-  const isGalleryPage = location.pathname === '/gallery';
-  const isTrashScope = isGalleryPage && activeScope === 'trash';
-  const showClearTrash = isTrashScope && trashCount > 0;
+  const { libraries, activeLibrary, refresh } = useLibraries();
+  const { flashLibrarySwitchDim } = useLibrarySwitchDim();
+
+  const activeLabel = activeLibrary?.name ?? 'Библиотека';
 
   useLayoutEffect(() => {
-    const nodes = [anchorRef.current, clearRef.current].filter(Boolean);
-    for (const node of nodes) {
-      void hydrateArcNavbarIcons(node);
-    }
-  }, [isTrashScope, showClearTrash, activeScope, activeLabel, trashCount, disabled]);
+    if (anchorRef.current) void hydrateArcNavbarIcons(anchorRef.current);
+  }, [open, activeLabel, libraries.length, disabled]);
 
-  const selectScope = (scope: LibraryScope) => {
+  const applyLibrarySwitch = useCallback(async () => {
+    invalidateLibraryCache();
+    await getNavbarMetrics();
+    window.dispatchEvent(new CustomEvent('arc:library-changed'));
+    flashLibrarySwitchDim();
+    await refresh();
+  }, [flashLibrarySwitchDim, refresh]);
+
+  const switchLibrary = useCallback(
+    async (libraryId: string) => {
+      if (!window.arc?.switchActiveLibrary || switchingRef.current || disabled) return;
+      if (activeLibrary?.id === libraryId) {
+        setOpen(false);
+        return;
+      }
+      setOpen(false);
+      switchingRef.current = true;
+      try {
+        const res = await window.arc.switchActiveLibrary(libraryId);
+        if (!res.ok) return;
+        await applyLibrarySwitch();
+      } finally {
+        switchingRef.current = false;
+      }
+    },
+    [activeLibrary?.id, applyLibrarySwitch, disabled]
+  );
+
+  const openCreateModal = useCallback(() => {
     setOpen(false);
-    const nextParams = setLibraryScopeInParams(searchParams, scope);
-    const search = nextParams.toString();
-    const suffix = search ? `?${search}` : '';
-    if (location.pathname === '/gallery' || location.pathname.startsWith('/gallery/')) {
-      navigate({ pathname: '/gallery', search: suffix }, { replace: true });
+    setCreateName(ONBOARDING_DEFAULT_LIBRARY_NAME);
+    setCreateEmptySubmitted(false);
+    setCreateFieldError(false);
+    setCreateOpen(true);
+  }, []);
+
+  const submitCreate = useCallback(async () => {
+    if (!window.arc?.createLibraryInContainer || createBusy) return;
+    const name = createName.trim();
+    if (!name) {
+      setCreateEmptySubmitted(true);
+      setCreateFieldError(true);
       return;
     }
-    navigate(`/gallery${suffix}`);
-  };
+    setCreateBusy(true);
+    setCreateFieldError(false);
+    try {
+      const res = await window.arc.createLibraryInContainer({ name });
+      if (!res.ok) {
+        if (res.fieldError) setCreateFieldError(true);
+        return;
+      }
+      setCreateOpen(false);
+      await applyLibrarySwitch();
+    } finally {
+      setCreateBusy(false);
+    }
+  }, [applyLibrarySwitch, createBusy, createName]);
 
-  const rows = useMemo<ContextMenuRow[]>(
-    () =>
-      LIBRARY_OPTIONS.map((opt) => ({
-        type: 'item' as const,
-        key: opt.key,
-        label: opt.label,
-        iconClass: opt.iconClass,
-        onSelect: () => selectScope(opt.key)
-      })),
-    [activeScope, searchParams, location.pathname]
-  );
-
-  const libraryMenuButton = isTrashScope ? (
-    <button
-      ref={anchorRef}
-      type="button"
-      className={`btn btn-ghost btn-ds btn-m arc-navbar-library-btn arc-navbar-no-drag${open ? ' is-active' : ''}`}
-      aria-label="Библиотека: Корзина"
-      aria-expanded={open}
-      aria-haspopup="menu"
-      disabled={disabled}
-      onClick={() => setOpen((v) => !v)}
-    >
-      <span className="btn-ds__icon arc-icon-trash" aria-hidden="true" />
-      <span className="btn-ds__value arc-navbar-library-btn__value">Корзина</span>
-    </button>
-  ) : (
-    <button
-      ref={anchorRef}
-      type="button"
-      className={`btn btn-ghost btn-ds btn-m arc-navbar-library-btn arc-navbar-no-drag${open ? ' is-active' : ''}`}
-      aria-label={`Библиотека: ${activeLabel}`}
-      aria-expanded={open}
-      aria-haspopup="menu"
-      disabled={disabled}
-      onClick={() => setOpen((v) => !v)}
-    >
-      <span className="btn-ds__icon arc-icon-folder-open" aria-hidden="true" />
-      <span className="btn-ds__value arc-navbar-library-btn__value">{activeLabel}</span>
-    </button>
-  );
+  const rows = useMemo<ContextMenuRow[]>(() => {
+    const libRows: ContextMenuRow[] = libraries.map((lib) => ({
+      type: 'item' as const,
+      key: lib.id,
+      label: lib.name,
+      iconClass: 'arc-icon-folder-open',
+      counter: lib.cardCount,
+      selected: lib.active,
+      onSelect: () => void switchLibrary(lib.id)
+    }));
+    if (libRows.length > 0) {
+      libRows.push({ type: 'separator', key: 'sep-create' });
+    }
+    libRows.push({
+      type: 'item',
+      key: 'create-library',
+      label: 'Создать новую библиотеку',
+      iconClass: 'arc-icon-plus',
+      onSelect: openCreateModal
+    });
+    return libRows;
+  }, [libraries, openCreateModal, switchLibrary]);
 
   return (
     <>
-      {libraryMenuButton}
-      {showClearTrash ? (
-        <button
-          ref={clearRef}
-          type="button"
-          className="btn btn-ghost btn-ds btn-m arc-navbar-no-drag"
-          aria-label="Очистить корзину"
-          disabled={disabled}
-          onClick={() => setEmptyTrashConfirm(true)}
-        >
-          <span className="btn-ds__icon arc-icon-broom" aria-hidden="true" />
-          <span className="btn-ds__value">Очистить</span>
-        </button>
-      ) : null}
+      <button
+        ref={anchorRef}
+        type="button"
+        className={`btn btn-ghost btn-ds btn-m arc-navbar-library-btn arc-navbar-no-drag${open ? ' is-active' : ''}`}
+        aria-label={`Библиотека: ${activeLabel}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="btn-ds__icon arc-icon-folder-open" aria-hidden="true" />
+        <span className="btn-ds__value arc-navbar-library-btn__value">{activeLabel}</span>
+      </button>
       <ContextMenu
         open={open}
         anchorRef={anchorRef}
@@ -124,17 +135,21 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
         ariaLabel="Переключение библиотек"
         noDragClassName="arc-navbar-no-drag"
       />
-      {emptyTrashConfirm ? (
-        <ConfirmEmptyTrashModal
-          onClose={() => setEmptyTrashConfirm(false)}
-          onConfirm={async () => {
-            await emptyTrash();
-            showAppNotification({
-              message: 'Корзина очищена',
-              variant: 'success',
-              skipPrefCheck: true
-            });
+      {createOpen ? (
+        <CreateLibraryModal
+          folderName={createName}
+          busy={createBusy}
+          emptySubmitted={createEmptySubmitted || createFieldError}
+          onFolderNameChange={(value) => {
+            setCreateName(value);
+            setCreateEmptySubmitted(false);
+            setCreateFieldError(false);
           }}
+          onClose={() => {
+            if (!createBusy) setCreateOpen(false);
+          }}
+          onSubmit={() => void submitCreate()}
+          inContainer
         />
       ) : null}
     </>

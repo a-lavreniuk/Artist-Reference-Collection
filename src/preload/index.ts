@@ -8,6 +8,57 @@ type HistorySegmentPayload =
 
 contextBridge.exposeInMainWorld('arc', {
   getLibraryPath: () => ipcRenderer.invoke('arc:get-library-path') as Promise<string | null>,
+  listLibraries: () =>
+    ipcRenderer.invoke('arc:list-libraries') as Promise<{
+      ok: true;
+      libraries: Array<{
+        id: string;
+        name: string;
+        path: string;
+        active: boolean;
+        cardCount?: number;
+      }>;
+    }>,
+  getLibraryMigrationStatus: () =>
+    ipcRenderer.invoke('arc:get-library-migration-status') as Promise<
+      { status: 'ok' } | { status: 'needs_wrap_name'; legacyPath: string }
+    >,
+  completeLibraryWrapMigration: (name: string) =>
+    ipcRenderer.invoke('arc:complete-library-wrap-migration', name) as Promise<{ ok: boolean; error?: string }>,
+  createLibraryInContainer: (payload: { name: string; parentHint?: string | null }) =>
+    ipcRenderer.invoke('arc:create-library-in-container', payload) as Promise<
+      | {
+          ok: true;
+          library: { id: string; name: string; path: string; active?: boolean; cardCount?: number };
+        }
+      | { ok: false; error: string; fieldError?: boolean }
+    >,
+  switchActiveLibrary: (libraryId: string) =>
+    ipcRenderer.invoke('arc:switch-active-library', libraryId) as Promise<
+      { ok: true; path: string } | { ok: false; error: string }
+    >,
+  openLibraryOrContainer: (absPath: string) =>
+    ipcRenderer.invoke('arc:open-library-or-container', absPath) as Promise<{
+      ok: boolean;
+      path?: string;
+      error?: string;
+    }>,
+  renameLibrary: (payload: { id: string; name: string }) =>
+    ipcRenderer.invoke('arc:rename-library', payload) as Promise<
+      | { ok: true; library: { id: string; name: string; path: string } }
+      | { ok: false; error: string; fieldError?: boolean }
+    >,
+  deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink' }) =>
+    ipcRenderer.invoke('arc:delete-library', payload) as Promise<
+      { ok: true; switchedToId: string | null } | { ok: false; error: string }
+    >,
+  migrateParentContainer: (destParentDir: string) =>
+    ipcRenderer.invoke('arc:migrate-parent-container', destParentDir) as Promise<
+      { ok: true; parentPath: string } | { ok: false; error: string }
+    >,
+  getLibraryContainerName: () =>
+    ipcRenderer.invoke('arc:get-library-container-name') as Promise<string>,
+  getParentLibraryPath: () => ipcRenderer.invoke('arc:get-parent-library-path') as Promise<string | null>,
   setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => {
     ipcRenderer.sendSync('arc:set-active-media-tab', tab);
   },
@@ -220,21 +271,6 @@ contextBridge.exposeInMainWorld('arc', {
   appendHistoryLine: (message: string, segments?: HistorySegmentPayload[]) =>
     ipcRenderer.invoke('arc:append-history-line', message, segments) as Promise<void>,
   clearHistory: () => ipcRenderer.invoke('arc:clear-history') as Promise<void>,
-  pickBackupArchive: () => ipcRenderer.invoke('arc:pick-backup-archive') as Promise<string | null>,
-  backupStart: (opts: { destDir: string; partCount: 1 | 2 | 4 | 8 }) =>
-    ipcRenderer.invoke('arc:backup-start', opts) as Promise<{ ok: true } | { ok: false; error: string }>,
-  backupCancel: () => ipcRenderer.invoke('arc:backup-cancel') as Promise<{ ok: true }>,
-  onBackupProgress: (cb: (p: unknown) => void) => {
-    const fn = (_: unknown, payload: unknown) => cb(payload);
-    ipcRenderer.on('arc:backup-progress', fn);
-    return () => ipcRenderer.removeListener('arc:backup-progress', fn);
-  },
-  restoreLibrary: (payload: { firstPartPath: string; destDir: string }) =>
-    ipcRenderer.invoke('arc:restore-library', payload) as Promise<
-      { ok: true; restart: true } | { ok: false; error: string }
-    >,
-  consumePendingRestoreModal: () =>
-    ipcRenderer.invoke('arc:consume-pending-restore-modal') as Promise<{ message: string } | null>,
   verifyLibraryPaths: (relativePaths: string[]) =>
     ipcRenderer.invoke('arc:verify-library-paths', relativePaths) as Promise<{ missing: string[] }>,
   scanLibraryOrphanFiles: (input: string[] | { paths: string[]; cardIds: string[] }) =>

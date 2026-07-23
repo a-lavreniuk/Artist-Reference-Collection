@@ -29,18 +29,49 @@ export type ArcImportedMediaRow = {
 
 export type ArcImportFileResult = { ok: true; row: ArcImportedMediaRow } | { ok: false; error: string };
 
-export type ArcBackupProgress = {
-  phase?: string;
-  percent?: number;
-  bytesPerSecond?: number;
-  etaSeconds?: number;
-  message?: string;
+export type ArcLibraryListItem = {
+  id: string;
+  name: string;
+  path: string;
+  active: boolean;
+  cardCount?: number;
+};
+
+export type AutoImportLibrarySettings = {
+  enabled?: boolean;
+  folderPath?: string | null;
+  sourceFilesAction?: import('./services/appPreferences').ImportSourceFilesAction;
 };
 
 declare global {
   interface Window {
     arc?: {
       getLibraryPath: () => Promise<string | null>;
+      listLibraries: () => Promise<{ ok: true; libraries: ArcLibraryListItem[] }>;
+      getLibraryMigrationStatus: () => Promise<
+        { status: 'ok' } | { status: 'needs_wrap_name'; legacyPath: string }
+      >;
+      completeLibraryWrapMigration: (name: string) => Promise<{ ok: boolean; error?: string }>;
+      createLibraryInContainer: (payload: { name: string; parentHint?: string | null }) => Promise<
+        | { ok: true; library: ArcLibraryListItem }
+        | { ok: false; error: string; fieldError?: boolean }
+      >;
+      switchActiveLibrary: (libraryId: string) => Promise<
+        { ok: true; path: string } | { ok: false; error: string }
+      >;
+      openLibraryOrContainer: (absPath: string) => Promise<{ ok: boolean; path?: string; error?: string }>;
+      renameLibrary: (payload: { id: string; name: string }) => Promise<
+        | { ok: true; library: ArcLibraryListItem }
+        | { ok: false; error: string; fieldError?: boolean }
+      >;
+      deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink' }) => Promise<
+        { ok: true; switchedToId: string | null } | { ok: false; error: string }
+      >;
+      migrateParentContainer: (destParentDir: string) => Promise<
+        { ok: true; parentPath: string } | { ok: false; error: string }
+      >;
+      getLibraryContainerName: () => Promise<string>;
+      getParentLibraryPath: () => Promise<string | null>;
       setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => void;
       getMediaServerOrigin: () => string | null;
       setLibraryPath: (absPath: string) => Promise<{ ok: boolean; error?: string }>;
@@ -197,15 +228,6 @@ declare global {
       readHistory: () => Promise<HistoryEntry[]>;
       appendHistoryLine: (message: string, segments?: HistorySegment[]) => Promise<void>;
       clearHistory: () => Promise<void>;
-      pickBackupArchive: () => Promise<string | null>;
-      backupStart: (opts: { destDir: string; partCount: 1 | 2 | 4 | 8 }) => Promise<{ ok: true } | { ok: false; error: string }>;
-      backupCancel: () => Promise<{ ok: true }>;
-      onBackupProgress: (cb: (p: ArcBackupProgress) => void) => () => void;
-      restoreLibrary: (payload: {
-        firstPartPath: string;
-        destDir: string;
-      }) => Promise<{ ok: true; restart: true } | { ok: false; error: string }>;
-      consumePendingRestoreModal: () => Promise<{ message: string } | null>;
       verifyLibraryPaths: (relativePaths: string[]) => Promise<{ missing: string[] }>;
       scanLibraryOrphanFiles: (
         input: string[] | { paths: string[]; cardIds: string[] }

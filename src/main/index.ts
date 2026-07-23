@@ -203,6 +203,12 @@ app.whenReady().then(async () => {
 
   setLoadingSplashMilestone(15, 'Инициализация модулей…');
   await reconcileLibraryRootConfig();
+  try {
+    const { getMigrationStatus } = await import('./multiLibrary');
+    await getMigrationStatus();
+  } catch (err) {
+    console.error('[ARC] library migration check:', err);
+  }
   const libraryRootEarly = readLibraryRootSync();
   if (libraryRootEarly) {
     try {

@@ -15,6 +15,7 @@ export type {
   GallerySortDirection,
   GallerySortState,
   AspectRatioFilterValue,
+  TagPresenceFilterValue,
   DescriptionFilterValue,
   LinkFilterValue,
   DateAddedPreset,
@@ -81,6 +82,7 @@ export type GalleryFilterStats = {
   fileExtensions: Record<string, number>;
   description: { has: number; missing: number };
   link: { has: number; missing: number };
+  tagPresence: { tagged: number; untagged: number };
   dateAdded: Record<string, number>;
   fileWeight: Record<string, number>;
   resolution: Record<string, number>;
@@ -134,6 +136,7 @@ function migrateResolutionFilterValue(r: ResolutionFilterValue): ResolutionFilte
 export function migrateGalleryAdvancedFilters(filters: GalleryAdvancedFilters): GalleryAdvancedFilters {
   return {
     ...filters,
+    tagPresence: filters.tagPresence ?? null,
     duration: filters.duration.map(migrateDurationFilterValue),
     resolution: filters.resolution
       .map(migrateResolutionFilterValue)
@@ -182,6 +185,7 @@ export const FILTER_CHIP_META: Record<
 > = {
   aspectRatio: { label: 'Соотношение сторон', iconClass: 'arc-icon-aspect-ratio' },
   fileType: { label: 'Тип файла', iconClass: 'arc-icon-file-type' },
+  tagPresence: { label: 'Метки', iconClass: 'arc-icon-tag' },
   description: { label: 'Описание', iconClass: 'arc-icon-description' },
   link: { label: 'Ссылка', iconClass: 'arc-icon-link' },
   dateAdded: { label: 'Дата добавления', iconClass: 'arc-icon-calendar' },
@@ -256,6 +260,8 @@ export function countFilterCategorySelections(
       return filters.aspectRatios.length;
     case 'fileType':
       return filters.fileExtensions.length;
+    case 'tagPresence':
+      return filters.tagPresence ? 1 : 0;
     case 'description': {
       if (!filters.description) return 0;
       let n = 1;

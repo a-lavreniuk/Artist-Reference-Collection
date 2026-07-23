@@ -26,6 +26,7 @@ export type GalleryFilterStats = {
   fileExtensions: Record<string, number>;
   description: { has: number; missing: number };
   link: { has: number; missing: number };
+  tagPresence: { tagged: number; untagged: number };
   dateAdded: Record<string, number>;
   fileWeight: Record<string, number>;
   resolution: Record<string, number>;
@@ -195,6 +196,22 @@ export function getGalleryFilterStats(
     has: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') != '')`], [], boundaries),
     missing: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') = '')`], [], boundaries)
   };
+  const tagPresence = {
+    tagged: countWithExtra(
+      db,
+      ctx,
+      [`EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = c.id)`],
+      [],
+      boundaries
+    ),
+    untagged: countWithExtra(
+      db,
+      ctx,
+      [`NOT EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = c.id)`],
+      [],
+      boundaries
+    )
+  };
 
   const dateKeys = ['today', 'yesterday', 'week', 'month', 'threeMonths', 'year'] as const;
   const dateAdded: Record<string, number> = {};
@@ -233,6 +250,7 @@ export function getGalleryFilterStats(
     fileExtensions,
     description,
     link,
+    tagPresence,
     dateAdded,
     fileWeight,
     resolution,
@@ -309,6 +327,23 @@ export async function getGalleryFilterStatsAsync(
     missing: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') = '')`], [], boundaries)
   };
   await cooperativeYield(shouldAbort);
+  const tagPresence = {
+    tagged: countWithExtra(
+      db,
+      ctx,
+      [`EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = c.id)`],
+      [],
+      boundaries
+    ),
+    untagged: countWithExtra(
+      db,
+      ctx,
+      [`NOT EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = c.id)`],
+      [],
+      boundaries
+    )
+  };
+  await cooperativeYield(shouldAbort);
   const dateKeys = ['today', 'yesterday', 'week', 'month', 'threeMonths', 'year'] as const;
   const dateAdded: Record<string, number> = {};
   for (const preset of dateKeys) {
@@ -345,6 +380,7 @@ export async function getGalleryFilterStatsAsync(
     fileExtensions,
     description,
     link,
+    tagPresence,
     dateAdded,
     fileWeight,
     resolution,

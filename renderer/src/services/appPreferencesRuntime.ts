@@ -110,6 +110,9 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
   }
+  if ('autoImportByLibraryId' in patch && patch.autoImportByLibraryId && typeof patch.autoImportByLibraryId === 'object') {
+    next.autoImportByLibraryId = { ...current.autoImportByLibraryId, ...patch.autoImportByLibraryId };
+  }
   if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
     next.importApiEnabled = patch.importApiEnabled;
   }
@@ -263,6 +266,9 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('autoImportSourceFilesAction' in patch) {
     next.autoImportSourceFilesAction = patch.autoImportSourceFilesAction === 'trash' ? 'trash' : 'ask';
+  }
+  if ('autoImportByLibraryId' in patch && patch.autoImportByLibraryId && typeof patch.autoImportByLibraryId === 'object') {
+    next.autoImportByLibraryId = { ...current.autoImportByLibraryId, ...patch.autoImportByLibraryId };
   }
   if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
     next.importApiEnabled = patch.importApiEnabled;

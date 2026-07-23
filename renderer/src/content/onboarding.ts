@@ -18,7 +18,7 @@ export const ONBOARDING_EXIT_MS = 3000;
 /** Старт fade-in следующего шага — на половине exit transform */
 export const ONBOARDING_ENTER_START_MS = ONBOARDING_EXIT_MS / 2;
 
-export const ONBOARDING_DEFAULT_LIBRARY_NAME = 'Библиотека ARC';
+export const ONBOARDING_DEFAULT_LIBRARY_NAME = 'Основная';
 
 export type OnboardingFeature = {
   iconClass: string;

@@ -33,6 +33,7 @@ export type {
   GallerySortDirection,
   GallerySortState,
   AspectRatioFilterValue,
+  TagPresenceFilterValue,
   DescriptionFilterValue,
   LinkFilterValue,
   DateAddedPreset,
@@ -345,6 +346,12 @@ export function buildGalleryFilterWhere(
 
   appendLibraryScopeSql(ctx.libraryScope, wh, alias);
 
+  if (f.tagPresence === 'untagged') {
+    wh.push(`NOT EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = ${alias}.id)`);
+  } else if (f.tagPresence === 'tagged') {
+    wh.push(`EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = ${alias}.id)`);
+  }
+
   const tagIds = (ctx.selectedTagIds ?? []).filter((t) => t.trim());
   if (tagIds.length) {
     wh.push(
@@ -559,6 +566,7 @@ function appendLibraryScopeSql(scope: LibraryScope | undefined, wh: string[], al
     return;
   }
   wh.push(`COALESCE(${alias}.is_deleted, 0) = 0`);
+  // legacy URL/scope — предпочтительно filters.tagPresence
   if (s === 'untagged') {
     wh.push(`NOT EXISTS (SELECT 1 FROM card_tags ct WHERE ct.card_id = ${alias}.id)`);
   }

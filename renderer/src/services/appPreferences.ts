@@ -78,6 +78,12 @@ export type OnboardingSetupStep = 0 | 1 | 2;
 
 export type OnboardingTourStep = number;
 
+export type AutoImportLibrarySettings = {
+  enabled?: boolean;
+  folderPath?: string | null;
+  sourceFilesAction?: ImportSourceFilesAction;
+};
+
 export type AppPreferencesV1 = {
   version: 1;
   onboardingSetupCompleted: boolean;
@@ -101,6 +107,7 @@ export type AppPreferencesV1 = {
   autoImportEnabled: boolean;
   autoImportFolderPath: string | null;
   autoImportSourceFilesAction: ImportSourceFilesAction;
+  autoImportByLibraryId: Record<string, AutoImportLibrarySettings>;
   importApiEnabled: boolean;
   importApiPrefixEnabled: boolean;
   importApiPrefixText: string;
@@ -162,6 +169,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     autoImportEnabled: false,
     autoImportFolderPath: null,
     autoImportSourceFilesAction: 'ask',
+    autoImportByLibraryId: {},
     importApiEnabled: true,
     importApiPrefixEnabled: false,
     importApiPrefixText: '',
@@ -198,6 +206,43 @@ function sanitizeImportAction(raw: unknown): ImportSourceFilesAction {
   return raw === 'trash' ? 'trash' : 'ask';
 }
 
+function sanitizeAutoImportByLibraryId(
+  raw: unknown
+): Record<string, AutoImportLibrarySettings> {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, AutoImportLibrarySettings> = {};
+  for (const [id, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!id.trim() || !value || typeof value !== 'object') continue;
+    const row = value as Record<string, unknown>;
+    out[id] = {
+      enabled: typeof row.enabled === 'boolean' ? row.enabled : false,
+      folderPath:
+        typeof row.folderPath === 'string' && row.folderPath.trim() ? row.folderPath.trim() : null,
+      sourceFilesAction: sanitizeImportAction(row.sourceFilesAction)
+    };
+  }
+  return out;
+}
+
+export function resolveAutoImportForLibraryId(
+  prefs: AppPreferencesV1,
+  libraryId: string | null | undefined
+): Required<AutoImportLibrarySettings> {
+  if (libraryId && prefs.autoImportByLibraryId[libraryId]) {
+    const row = prefs.autoImportByLibraryId[libraryId]!;
+    return {
+      enabled: row.enabled === true,
+      folderPath: row.folderPath ?? null,
+      sourceFilesAction: sanitizeImportAction(row.sourceFilesAction)
+    };
+  }
+  return {
+    enabled: prefs.autoImportEnabled,
+    folderPath: prefs.autoImportFolderPath,
+    sourceFilesAction: prefs.autoImportSourceFilesAction
+  };
+}
+
 function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
   if (raw === 'png' || raw === 'jpg' || raw === 'webp') return raw;
   return 'webp';
@@ -226,6 +271,7 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
       typeof raw.autoImportFolderPath === 'string' && raw.autoImportFolderPath.trim()
         ? raw.autoImportFolderPath.trim()
         : null,
+    autoImportByLibraryId: sanitizeAutoImportByLibraryId(raw.autoImportByLibraryId),
     galleryCollectionsStripEnabled:
       typeof raw.galleryCollectionsStripEnabled === 'boolean'
         ? raw.galleryCollectionsStripEnabled

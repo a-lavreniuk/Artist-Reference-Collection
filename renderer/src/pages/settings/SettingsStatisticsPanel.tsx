@@ -22,8 +22,11 @@ import {
 } from '../../utils/evaluateDiskSpacePressure';
 import { showAppNotification } from '../../services/notificationService';
 import { useCountUp } from '../../motion';
+import type { LibraryListItem } from '../../hooks/useLibraries';
 
 const TAG_LIMIT = 20;
+
+type StatsScope = 'all' | string;
 
 type SummaryItem = {
   id: string;
@@ -43,6 +46,8 @@ function SummaryStatValue({ value, enabled }: { value: number; enabled: boolean 
 }
 
 export default function SettingsStatisticsPanel() {
+  const [libraries, setLibraries] = useState<LibraryListItem[]>([]);
+  const [statsScope, setStatsScope] = useState<StatsScope>('all');
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getNavbarMetrics>> | null>(null);
   const [totalTags, setTotalTags] = useState(0);
   const [topTags, setTopTags] = useState<TagRecord[]>([]);
@@ -71,6 +76,11 @@ export default function SettingsStatisticsPanel() {
 
   useEffect(() => {
     void (async () => {
+      if (window.arc?.listLibraries) {
+        const res = await window.arc.listLibraries();
+        setLibraries(res.libraries ?? []);
+      }
+
       const m = await getNavbarMetrics();
       setMetrics(m);
       await refreshTagsData();
@@ -80,6 +90,8 @@ export default function SettingsStatisticsPanel() {
         return;
       }
 
+      // Диск и метки — по активной библиотеке; вкладки других библиотек
+      // показывают счётчики из реестра без hot-switch всего приложения.
       const cards = await listAllCardsPaginated({ libraryScope: 'all' });
       const trashCards = await listAllCardsPaginated({ libraryScope: 'trash' });
 
@@ -122,15 +134,35 @@ export default function SettingsStatisticsPanel() {
         setDiskModel(null);
       }
     })();
-  }, [refreshTagsData]);
+  }, [refreshTagsData, statsScope]);
+
+  useEffect(() => {
+    void (async () => {
+      if (!window.arc?.listLibraries) return;
+      const res = await window.arc.listLibraries();
+      const libs = res.libraries ?? [];
+      setLibraries(libs);
+      if (libs.length <= 1) {
+        setStatsScope(libs.find((l) => l.active)?.id ?? 'all');
+      }
+    })();
+  }, []);
 
   const categoryColorById = categories.reduce<Record<string, string>>((acc, category) => {
     acc[category.id] = category.colorHex;
     return acc;
   }, {});
 
+  const selectedLibrary = statsScope === 'all' ? null : libraries.find((l) => l.id === statsScope) ?? null;
+  const aggregatedCards =
+    statsScope === 'all' && libraries.length > 1
+      ? libraries.reduce((sum, lib) => sum + (lib.cardCount ?? 0), 0)
+      : selectedLibrary && !selectedLibrary.active
+        ? (selectedLibrary.cardCount ?? 0)
+        : (metrics?.totalCards ?? 0);
+
   const summaryStats: SummaryItem[] = [
-    { id: 'total-cards', label: 'Карточек', value: metrics?.totalCards ?? 0, icon: 'sticky-note' },
+    { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
     { id: 'image-count', label: 'Изображений', value: metrics?.imageCards ?? 0, icon: 'image' },
     { id: 'video-count', label: 'Видео', value: metrics?.videoCards ?? 0, icon: 'play-circle' },
     { id: 'categories-count', label: 'Категорий', value: metrics?.totalCategories ?? 0, icon: 'folder-open' },
@@ -140,6 +172,32 @@ export default function SettingsStatisticsPanel() {
 
   return (
     <div className="arc-stats-dashboard" data-interface-tour-anchor="statistics-main">
+      {libraries.length > 1 ? (
+        <div className="tabs arc-stats-library-tabs arc-ui-kit-scope" data-btn-size="m" role="tablist" aria-label="Библиотеки">
+          <button
+            type="button"
+            role="tab"
+            className={`tab-button${statsScope === 'all' ? ' is-active' : ''}`}
+            aria-selected={statsScope === 'all'}
+            onClick={() => setStatsScope('all')}
+          >
+            <span className="tab-button__label">Все библиотеки</span>
+          </button>
+          {libraries.map((lib) => (
+            <button
+              key={lib.id}
+              type="button"
+              role="tab"
+              className={`tab-button${statsScope === lib.id ? ' is-active' : ''}`}
+              aria-selected={statsScope === lib.id}
+              onClick={() => setStatsScope(lib.id)}
+            >
+              <span className="tab-button__label">{lib.name}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="arc-stats-summary-grid">
         {summaryStats.map((item) => (
           <section key={item.id} className="arc-stats-summary-card panel">

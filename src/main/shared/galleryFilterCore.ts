@@ -3,6 +3,7 @@
 export const GALLERY_FILTER_IDS = [
   'aspectRatio',
   'fileType',
+  'tagPresence',
   'description',
   'link',
   'dateAdded',
@@ -34,6 +35,8 @@ export type GallerySortState = {
 export type AspectRatioFilterValue = 'horizontal' | 'vertical' | 'square' | 'panoramic';
 export type DescriptionFilterValue = { mode: 'has' | 'missing'; keywords?: string };
 export type LinkFilterValue = { mode: 'has' | 'missing'; keywords?: string };
+/** Наличие любых меток на карточке (≥1). */
+export type TagPresenceFilterValue = 'tagged' | 'untagged';
 export type DateAddedPreset =
   | 'today'
   | 'yesterday'
@@ -65,6 +68,7 @@ export type DurationFilterValue =
 export type GalleryAdvancedFilters = {
   aspectRatios: AspectRatioFilterValue[];
   fileExtensions: string[];
+  tagPresence: TagPresenceFilterValue | null;
   description: DescriptionFilterValue | null;
   link: LinkFilterValue | null;
   dateAdded: DateAddedFilterValue[];
@@ -96,6 +100,7 @@ export function emptyGalleryAdvancedFilters(): GalleryAdvancedFilters {
   return {
     aspectRatios: [],
     fileExtensions: [],
+    tagPresence: null,
     description: null,
     link: null,
     dateAdded: [],
@@ -117,6 +122,7 @@ export function countActiveFilterCategories(filters: GalleryAdvancedFilters): nu
   let n = 0;
   if (filters.aspectRatios.length) n++;
   if (filters.fileExtensions.length) n++;
+  if (filters.tagPresence) n++;
   if (filters.description) n++;
   if (filters.link) n++;
   if (filters.dateAdded.length) n++;

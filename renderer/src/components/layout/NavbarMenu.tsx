@@ -4,6 +4,7 @@ import { useNavigateToAppSection } from '../../search/openCardUrl';
 import { openBugReportForm } from '../../services/bugReportService';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
 import type { UiThemePreference } from '../../services/appPreferences';
+import { useGlobalTrashCardCount, useNavigateToTrashGallery } from '../gallery/GalleryTrashToolbar';
 
 export default function NavbarMenu() {
   const navigateToSection = useNavigateToAppSection();
@@ -12,6 +13,8 @@ export default function NavbarMenu() {
   const [open, setOpen] = useState(false);
 
   const currentTheme = prefs?.uiTheme ?? 'dark';
+  const trashCount = useGlobalTrashCardCount();
+  const navigateToTrash = useNavigateToTrashGallery();
 
   const setTheme = (uiTheme: UiThemePreference) => {
     void update({ uiTheme });
@@ -26,6 +29,17 @@ export default function NavbarMenu() {
       { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-edit', onSelect: () => navigateToSection('/settings/general') },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigateToSection('/duplicates') },
+      {
+        type: 'item',
+        key: 'trash',
+        label: 'Корзина',
+        iconClass: 'arc-icon-trash',
+        counter: trashCount > 0 ? trashCount : undefined,
+        onSelect: () => {
+          setOpen(false);
+          navigateToTrash();
+        }
+      },
       { type: 'separator', key: 'sep2' },
       { type: 'header', key: 'theme-label', label: 'Оформление' },
       {
@@ -59,7 +73,7 @@ export default function NavbarMenu() {
       { type: 'item', key: 'feedback', label: 'Сообщить о проблеме', iconClass: 'arc-icon-bug-s', onSelect: () => { setOpen(false); void openBugReportForm(); } },
       { type: 'item', key: 'uikit', label: 'UI-Kit', onSelect: () => navigateToSection('/ui-kit') }
     ],
-    [navigateToSection, ready, currentTheme]
+    [navigateToSection, navigateToTrash, ready, currentTheme, trashCount]
   );
 
   return (

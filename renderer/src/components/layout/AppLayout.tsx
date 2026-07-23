@@ -4,8 +4,9 @@ import ArcTopBar from './ArcTopBar';
 import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
 import { AppUpdateProvider } from './appUpdateContext';
-import PendingRestoreModal from './PendingRestoreModal';
 import LibraryRelocatedHost from './LibraryRelocatedHost';
+import LibraryWrapMigrationHost from './LibraryWrapMigrationHost';
+import { LibrarySwitchDimProvider } from './LibrarySwitchDimOverlay';
 import ImportHost from '../import/ImportHost';
 import AutoImportHost from '../import/AutoImportHost';
 import ExtensionImportHost from '../import/ExtensionImportHost';
@@ -93,6 +94,7 @@ export default function AppLayout() {
 
   return (
     <AppUpdateProvider>
+    <LibrarySwitchDimProvider>
     <GalleryFilterProvider>
     <GalleryMetaProvider>
     <ArcHistoryNavProvider>
@@ -112,8 +114,8 @@ export default function AppLayout() {
           <CardSectionsShell />
           <Outlet />
         </div>
-        <PendingRestoreModal />
         <LibraryRelocatedHost />
+        <LibraryWrapMigrationHost />
         <BugReportWidget />
         <InterfaceTourHost />
       </main>
@@ -128,6 +130,7 @@ export default function AppLayout() {
     </ArcHistoryNavProvider>
     </GalleryMetaProvider>
     </GalleryFilterProvider>
+    </LibrarySwitchDimProvider>
     </AppUpdateProvider>
   );
 }

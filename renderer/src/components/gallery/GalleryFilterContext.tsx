@@ -98,6 +98,9 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
         case 'fileType':
           patchFilters({ fileExtensions: [] });
           break;
+        case 'tagPresence':
+          patchFilters({ tagPresence: null });
+          break;
         case 'description':
           patchFilters({ description: null });
           break;

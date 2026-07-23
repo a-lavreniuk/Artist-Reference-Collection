@@ -36,7 +36,7 @@ import {
 import { useGalleryMeta } from '../context/GalleryMetaContext';
 import { useLibraryConfigured } from '../hooks/useLibraryConfigured';
 
-import { parseLibraryScope } from '../search/libraryScopeUrl';
+import { parseLibraryScope, ARC_LIBRARY_SCOPE_PARAM } from '../search/libraryScopeUrl';
 
 import { useOpenCardUrl } from '../search/openCardUrl';
 
@@ -45,6 +45,7 @@ import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedE
 import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 
 import { EmptyState } from '../components/empty-state';
+import GalleryTrashToolbar from '../components/gallery/GalleryTrashToolbar';
 import { useImportContext } from '../components/import/ImportContext';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
@@ -69,7 +70,13 @@ export default function GalleryPage() {
 
   const isGalleryRoute = resolveMainTab(location.pathname) === 'gallery';
 
-  const { filters, sort, activeCategoryCount } = useGalleryFilters();
+  const { filters, sort, activeCategoryCount, patchFilters } = useGalleryFilters();
+
+  useEffect(() => {
+    if (searchParams.get(ARC_LIBRARY_SCOPE_PARAM) !== 'untagged') return;
+    if (filters.tagPresence === 'untagged') return;
+    patchFilters({ tagPresence: 'untagged' });
+  }, [searchParams, filters.tagPresence, patchFilters]);
 
   const feedQuery = useMemo<GalleryFeedQuery>(
     () => ({
@@ -326,6 +333,7 @@ export default function GalleryPage() {
   return (
 
     <div className="arc-gallery-page" data-interface-tour-anchor="gallery-page">
+      <GalleryTrashToolbar />
 
       {booting && !isRemoteSearchFeed && !shuffleReloading ? (
 

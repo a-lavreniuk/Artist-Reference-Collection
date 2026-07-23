@@ -31,12 +31,12 @@ import { readLibraryDiskStats } from './libraryDiskStats';
 import {
   readLibraryRootFromDisk,
   readLibraryRootSync,
+  readParentLibraryPathSync,
   writeLibraryRootToDisk
 } from './libraryRootConfig';
 import { resolvePathToMediaUrl, resolvePathsToMediaUrls } from './toFileUrlHelper';
 import { beginNavigationEpoch, endNavigationEpoch } from './ipcNavigationPriority';
 import { applyLibraryFolderIcon } from './libraryFolderIcon';
-import { createDefaultLibraryFolder } from './createLibraryFolder';
 import {
   checkShouldOfferRelocateModal,
   refreshLibrarySessionSnapshotFromDisk,
@@ -45,6 +45,18 @@ import {
 import { isValidArcLibraryFolder } from './libraryValidate';
 import { getDefaultLibraryFolderName } from './appProfile';
 import { countCards, ensureLibraryReady } from './storage/libraryStorage';
+import {
+  completeWrapMigration,
+  createLibraryInContainer,
+  deleteLibrary,
+  getMigrationStatus,
+  listLibrariesFromConfig,
+  migrateParentContainer,
+  openLibraryOrContainer,
+  renameLibrary,
+  switchActiveLibrary
+} from './multiLibrary';
+import { LIBRARY_CONTAINER_FOLDER_NAME } from './libraryContainer';
 
 async function metadataPath(root: string): Promise<string | null> {
   return resolveLegacyMetadataAbsPath(root);
@@ -57,13 +69,13 @@ function assertNotMaintenance(): void {
 }
 
 async function finalizeLibraryPathChange(resolved: string, applyIcon: boolean): Promise<void> {
-  await writeLibraryRootToDisk(resolved);
   syncArcMediaServerLibraryRoot(readLibraryRootSync());
   resetLibraryStorageCache();
   const { restartAutoImportWatcher } = await import('./autoImportWatcher');
   restartAutoImportWatcher();
   if (applyIcon) {
-    void applyLibraryFolderIcon(resolved);
+    const parent = readParentLibraryPathSync();
+    void applyLibraryFolderIcon(parent ?? resolved);
   }
   try {
     await ensureLibraryReady(resolved);
@@ -220,6 +232,120 @@ export function registerArcIpc(): void {
 
   ipcMain.handle('arc:get-library-path', async () => readLibraryRootFromDisk());
 
+  ipcMain.handle('arc:list-libraries', async () => {
+    const activeRoot = readLibraryRootSync();
+    const items = listLibrariesFromConfig();
+    const withCounts = [];
+    for (const item of items) {
+      let cardCount = 0;
+      try {
+        if (fs.existsSync(item.path)) {
+          await ensureLibraryReady(item.path);
+          cardCount = countCards(item.path, 'all', 'all');
+        }
+      } catch {
+        cardCount = 0;
+      }
+      withCounts.push({ ...item, cardCount });
+    }
+    // countCards переключает activeDb — вернуть активную библиотеку
+    if (activeRoot && fs.existsSync(activeRoot)) {
+      try {
+        await ensureLibraryReady(activeRoot);
+      } catch {
+        /* best-effort */
+      }
+    }
+    return { ok: true as const, libraries: withCounts };
+  });
+
+  ipcMain.handle('arc:get-library-migration-status', async () => getMigrationStatus());
+
+  ipcMain.handle('arc:complete-library-wrap-migration', async (_e, name: unknown) => {
+    assertNotMaintenance();
+    if (typeof name !== 'string') {
+      return { ok: false as const, error: 'Некорректное имя' };
+    }
+    const res = await completeWrapMigration(name);
+    if (!res.ok) return res;
+    const root = readLibraryRootSync();
+    if (root) await finalizeLibraryPathChange(root, true);
+    return { ok: true as const };
+  });
+
+  ipcMain.handle('arc:create-library-in-container', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const body = payload as { name?: unknown; parentHint?: unknown } | null;
+    const name = typeof body?.name === 'string' ? body.name : '';
+    const parentHint = typeof body?.parentHint === 'string' ? body.parentHint : null;
+    const created = await createLibraryInContainer(name, parentHint);
+    if (!created.ok) return created;
+    await finalizeLibraryPathChange(created.library.path, true);
+    return { ok: true as const, library: created.library };
+  });
+
+  ipcMain.handle('arc:switch-active-library', async (_e, libraryId: unknown) => {
+    assertNotMaintenance();
+    if (typeof libraryId !== 'string' || !libraryId.trim()) {
+      return { ok: false as const, error: 'Некорректный id' };
+    }
+    const switched = await switchActiveLibrary(libraryId.trim());
+    if (!switched.ok) return switched;
+    await finalizeLibraryPathChange(switched.path, false);
+    return { ok: true as const, path: switched.path };
+  });
+
+  ipcMain.handle('arc:open-library-or-container', async (_e, absPath: unknown) => {
+    assertNotMaintenance();
+    if (typeof absPath !== 'string' || !absPath.trim()) {
+      return { ok: false as const, error: 'Пустой путь' };
+    }
+    const opened = await openLibraryOrContainer(absPath.trim());
+    if (!opened.ok) return opened;
+    await finalizeLibraryPathChange(opened.path, true);
+    return { ok: true as const, path: opened.path };
+  });
+
+  ipcMain.handle('arc:rename-library', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const body = payload as { id?: unknown; name?: unknown } | null;
+    const id = typeof body?.id === 'string' ? body.id : '';
+    const name = typeof body?.name === 'string' ? body.name : '';
+    const renamed = await renameLibrary(id, name);
+    if (!renamed.ok) return renamed;
+    const root = readLibraryRootSync();
+    if (root) await finalizeLibraryPathChange(root, false);
+    return { ok: true as const, library: renamed.library };
+  });
+
+  ipcMain.handle('arc:delete-library', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const body = payload as { id?: unknown; mode?: unknown } | null;
+    const id = typeof body?.id === 'string' ? body.id : '';
+    const mode = body?.mode === 'disk' ? 'disk' : 'unlink';
+    const deleted = await deleteLibrary(id, mode);
+    if (!deleted.ok) return deleted;
+    const root = readLibraryRootSync();
+    if (root) await finalizeLibraryPathChange(root, true);
+    return { ok: true as const, switchedToId: deleted.switchedToId };
+  });
+
+  ipcMain.handle('arc:migrate-parent-container', async (_e, destParentDir: unknown) => {
+    assertNotMaintenance();
+    if (typeof destParentDir !== 'string' || !destParentDir.trim()) {
+      return { ok: false as const, error: 'Пустой путь' };
+    }
+    const migrated = await migrateParentContainer(destParentDir.trim());
+    if (!migrated.ok) return migrated;
+    const root = readLibraryRootSync();
+    if (root) await finalizeLibraryPathChange(root, true);
+    return { ok: true as const, parentPath: migrated.parentPath };
+  });
+
+  ipcMain.handle('arc:get-library-container-name', async () => LIBRARY_CONTAINER_FOLDER_NAME);
+
+  ipcMain.handle('arc:get-parent-library-path', async () => readParentLibraryPathSync());
+
   ipcMain.handle('arc:set-library-path', async (_e, absPath: unknown) => {
     assertNotMaintenance();
     if (typeof absPath !== 'string' || !absPath.trim()) {
@@ -227,8 +353,20 @@ export function registerArcIpc(): void {
     }
     const resolved = path.resolve(absPath.trim());
     try {
-      await mkdir(resolved, { recursive: true });
-      await finalizeLibraryPathChange(resolved, true);
+      // Prefer multi-lib open when path is container or child
+      const opened = await openLibraryOrContainer(resolved);
+      if (opened.ok) {
+        await finalizeLibraryPathChange(opened.path, true);
+        return { ok: true as const };
+      }
+      // Creating a new empty library folder: treat dirname as container parent hint
+      const name = path.basename(resolved);
+      const parentHint = path.dirname(resolved);
+      const created = await createLibraryInContainer(name, parentHint);
+      if (!created.ok) {
+        return { ok: false as const, error: created.error };
+      }
+      await finalizeLibraryPathChange(created.library.path, true);
       return { ok: true as const };
     } catch (err) {
       return {
@@ -240,24 +378,20 @@ export function registerArcIpc(): void {
 
   ipcMain.handle('arc:create-library-folder', async () => {
     assertNotMaintenance();
-    const created = await createDefaultLibraryFolder();
+    // Dev/prod quick-create: Documents / Библиотека ARC / default child name
+    const parent = app.getPath('documents');
+    const folderName = getDefaultLibraryFolderName().replace(/\s*\(Dev\)\s*$/i, '').trim() || 'Основная';
+    const childName = folderName === LIBRARY_CONTAINER_FOLDER_NAME ? 'Основная' : folderName;
+    const created = await createLibraryInContainer(childName, parent);
     if (!created.ok) {
       return { ok: false as const, error: created.error };
     }
-    if (created.existingArcLibrary) {
-      return {
-        ok: true as const,
-        absPath: created.absPath,
-        folderName: created.folderName,
-        existingArcLibrary: true as const
-      };
-    }
     try {
-      await finalizeLibraryPathChange(created.absPath, true);
+      await finalizeLibraryPathChange(created.library.path, true);
       return {
         ok: true as const,
-        absPath: created.absPath,
-        folderName: created.folderName,
+        absPath: created.library.path,
+        folderName: created.library.name,
         existingArcLibrary: false as const
       };
     } catch (err) {
@@ -284,11 +418,12 @@ export function registerArcIpc(): void {
       return { ok: false as const, error: 'Пустой путь' };
     }
     const resolved = path.resolve(absPath.trim());
-    if (!(await isValidArcLibraryFolder(resolved))) {
-      return { ok: false as const, error: 'Выбранная папка не является библиотекой ARC' };
+    const opened = await openLibraryOrContainer(resolved);
+    if (!opened.ok) {
+      return { ok: false as const, error: opened.error };
     }
     try {
-      await finalizeLibraryPathChange(resolved, true);
+      await finalizeLibraryPathChange(opened.path, true);
       return { ok: true as const };
     } catch (err) {
       return {
@@ -547,20 +682,34 @@ export function registerArcIpc(): void {
       if (typeof targetPath !== 'string' || !targetPath.trim()) {
         return { ok: false, error: 'Пустой путь' };
       }
+      const oldParent = readParentLibraryPathSync();
       const oldRoot = await readLibraryRootFromDisk();
-      if (!oldRoot) return { ok: false, error: 'Библиотека не выбрана' };
-      const newRoot = path.resolve(targetPath.trim());
+      if (!oldParent && !oldRoot) return { ok: false, error: 'Библиотека не выбрана' };
       acquireMaintenanceLock();
       try {
-        const res = await migrateLibraryToFolder(oldRoot, newRoot);
+        if (oldParent) {
+          const migrated = await migrateParentContainer(path.resolve(targetPath.trim()));
+          if (!migrated.ok) return migrated;
+          const root = readLibraryRootSync();
+          if (root) await finalizeLibraryPathChange(root, true);
+          try {
+            if (root) await appendHistory(root, 'Перенос папки «Библиотека ARC» завершён');
+          } catch {
+            /* ignore */
+          }
+          return { ok: true, oldLibraryPath: oldParent };
+        }
+        const newRoot = path.resolve(targetPath.trim());
+        const res = await migrateLibraryToFolder(oldRoot!, newRoot);
         if (!res.ok) return res;
+        await writeLibraryRootToDisk(newRoot);
         await finalizeLibraryPathChange(newRoot, true);
         try {
           await appendHistory(newRoot, 'Перенос хранилища завершён');
         } catch {
           /* ignore */
         }
-        return { ok: true, oldLibraryPath: oldRoot };
+        return { ok: true, oldLibraryPath: oldRoot! };
       } finally {
         releaseMaintenanceLock();
       }

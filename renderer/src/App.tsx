@@ -31,9 +31,6 @@ const SettingsShortcutsPanel = lazy(() =>
 const SettingsLibraryPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsLibraryPanel }))
 );
-const SettingsBackupPanel = lazy(() =>
-  import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsBackupPanel }))
-);
 const SettingsIntegrityPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsIntegrityPanel }))
 );
@@ -96,7 +93,6 @@ export default function App() {
             <Route path="notifications" element={<SettingsNotificationsPanel />} />
             <Route path="shortcuts" element={<SettingsShortcutsPanel />} />
             <Route path="library" element={<SettingsLibraryPanel />} />
-            <Route path="backup" element={<SettingsBackupPanel />} />
             <Route path="integrity" element={<SettingsIntegrityPanel />} />
             <Route path="auto-import" element={<SettingsAutoImportPanel />} />
             <Route path="browser-extension" element={<SettingsBrowserExtensionPanel />} />

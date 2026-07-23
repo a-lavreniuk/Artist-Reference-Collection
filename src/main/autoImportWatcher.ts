@@ -3,9 +3,10 @@ import fs from 'fs';
 import { readdir, stat } from 'fs/promises';
 import path from 'path';
 
-import { readAppPreferencesSync } from './appPreferences';
+import { readAppPreferencesSync, resolveAutoImportForLibraryId } from './appPreferences';
 import { isVideoExt } from './ffmpeg';
 import { readLibraryRootSync } from './libraryRootConfig';
+import { getActiveLibraryEntry, readLibraryRootConfigSync } from './librarySessionSnapshot';
 import { isMaintenanceLocked } from './maintenanceLock';
 import { ensureLibraryReady, importMediaFile } from './storage/libraryStorage';
 
@@ -22,6 +23,12 @@ let pendingRestart = false;
 
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const pendingStableChecks = new Map<string, { size: number; timer: ReturnType<typeof setTimeout> }>();
+
+function activeAutoImportSettings() {
+  const prefs = readAppPreferencesSync();
+  const active = getActiveLibraryEntry(readLibraryRootConfigSync());
+  return resolveAutoImportForLibraryId(prefs, active?.id ?? null);
+}
 
 function pathQueueKey(absPath: string): string {
   return process.platform === 'win32' ? path.resolve(absPath).toLowerCase() : path.resolve(absPath);
@@ -166,8 +173,8 @@ async function checkStableAndEnqueue(absPath: string): Promise<void> {
 async function processQueue(): Promise<void> {
   if (processing || isMaintenanceLocked()) return;
 
-  const prefs = readAppPreferencesSync();
-  if (!prefs.autoImportEnabled) return;
+  const auto = activeAutoImportSettings();
+  if (!auto.enabled) return;
 
   const libraryRoot = readLibraryRootSync();
   if (!libraryRoot) return;
@@ -182,7 +189,7 @@ async function processQueue(): Promise<void> {
     await ensureLibraryReady(libraryRoot);
 
     while (importQueue.length > 0) {
-      if (isMaintenanceLocked() || !readAppPreferencesSync().autoImportEnabled) break;
+      if (isMaintenanceLocked() || !activeAutoImportSettings().enabled) break;
 
       const batch: string[] = [];
       while (importQueue.length > 0) {
@@ -251,7 +258,7 @@ async function processQueue(): Promise<void> {
       }
     }
 
-    if (importQueue.length > 0 && !isMaintenanceLocked() && readAppPreferencesSync().autoImportEnabled) {
+    if (importQueue.length > 0 && !isMaintenanceLocked() && activeAutoImportSettings().enabled) {
       void processQueue();
     } else if (pendingRestart) {
       pendingRestart = false;
@@ -262,8 +269,7 @@ async function processQueue(): Promise<void> {
 
 async function scanAndImport(folderPath: string): Promise<void> {
   if (isMaintenanceLocked()) return;
-  const prefs = readAppPreferencesSync();
-  if (!prefs.autoImportEnabled) return;
+  if (!activeAutoImportSettings().enabled) return;
   if (!readLibraryRootSync()) return;
 
   const files = await listImportableFilesInRoot(folderPath);
@@ -282,13 +288,13 @@ function doRestartAutoImportWatcher(): void {
   importQueue = [];
   processing = false;
 
-  const prefs = readAppPreferencesSync();
-  if (!prefs.autoImportEnabled || !prefs.autoImportFolderPath) return;
+  const auto = activeAutoImportSettings();
+  if (!auto.enabled || !auto.folderPath) return;
 
   const libraryRoot = readLibraryRootSync();
   if (!libraryRoot) return;
 
-  const folderPath = path.resolve(prefs.autoImportFolderPath);
+  const folderPath = path.resolve(auto.folderPath);
   try {
     if (!fs.existsSync(folderPath) || !fs.statSync(folderPath).isDirectory()) return;
   } catch {
@@ -325,9 +331,9 @@ export function restartAutoImportWatcher(): void {
 }
 
 export async function rescanAutoImportFolder(): Promise<void> {
-  const prefs = readAppPreferencesSync();
-  if (!prefs.autoImportFolderPath) return;
-  const folderPath = path.resolve(prefs.autoImportFolderPath);
+  const auto = activeAutoImportSettings();
+  if (!auto.folderPath) return;
+  const folderPath = path.resolve(auto.folderPath);
   await scanAndImport(folderPath);
 }
 

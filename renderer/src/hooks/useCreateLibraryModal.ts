@@ -4,30 +4,23 @@ import { getNavbarMetrics, invalidateLibraryCache } from '../services/db';
 
 async function resolveDefaultLibraryFolderName(): Promise<string> {
   const fromMain = await window.arc?.getDefaultLibraryFolderName?.();
-  return fromMain?.trim() || ONBOARDING_DEFAULT_LIBRARY_NAME;
+  const trimmed = fromMain?.trim();
+  if (trimmed && trimmed !== 'Библиотека ARC') return trimmed;
+  return ONBOARDING_DEFAULT_LIBRARY_NAME;
 }
 
 type CreateLibraryModalState = {
   folderName: string;
   busy: boolean;
   emptySubmitted: boolean;
-  showExistingConfirm: boolean;
-  pendingExistingPath: string | null;
 };
-
-function joinLibraryPath(parent: string, name: string): string {
-  const sep = parent.includes('\\') ? '\\' : '/';
-  return `${parent.replace(/[/\\]+$/, '')}${sep}${name.replace(/^[/\\]+/, '')}`;
-}
 
 export function useCreateLibraryModal(onSuccess: () => void) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<CreateLibraryModalState>({
     folderName: ONBOARDING_DEFAULT_LIBRARY_NAME,
     busy: false,
-    emptySubmitted: false,
-    showExistingConfirm: false,
-    pendingExistingPath: null
+    emptySubmitted: false
   });
 
   const openModal = useCallback(() => {
@@ -36,9 +29,7 @@ export function useCreateLibraryModal(onSuccess: () => void) {
       setState({
         folderName,
         busy: false,
-        emptySubmitted: false,
-        showExistingConfirm: false,
-        pendingExistingPath: null
+        emptySubmitted: false
       });
       setOpen(true);
     })();
@@ -49,25 +40,16 @@ export function useCreateLibraryModal(onSuccess: () => void) {
     setOpen(false);
   }, [state.busy]);
 
-  const applyLibraryPath = useCallback(async (absPath: string) => {
-    if (!window.arc) return false;
-    setState((prev) => ({ ...prev, busy: true, emptySubmitted: false }));
-    try {
-      const res = await window.arc.setLibraryPath(absPath);
-      if (!res.ok) return false;
-      invalidateLibraryCache();
-      await getNavbarMetrics();
-      window.dispatchEvent(new CustomEvent('arc:library-changed'));
-      setOpen(false);
-      onSuccess();
-      return true;
-    } finally {
-      setState((prev) => ({ ...prev, busy: false }));
-    }
+  const applyLibraryReady = useCallback(async () => {
+    invalidateLibraryCache();
+    await getNavbarMetrics();
+    window.dispatchEvent(new CustomEvent('arc:library-changed'));
+    setOpen(false);
+    onSuccess();
   }, [onSuccess]);
 
   const submit = useCallback(async () => {
-    if (!window.arc || state.busy) return;
+    if (!window.arc?.createLibraryInContainer || state.busy) return;
     const name = state.folderName.trim();
     if (!name) {
       setState((prev) => ({ ...prev, emptySubmitted: true }));
@@ -77,31 +59,18 @@ export function useCreateLibraryModal(onSuccess: () => void) {
     const parent = await window.arc.pickLibraryFolder();
     if (!parent) return;
 
-    const absPath = joinLibraryPath(parent, name);
-    const valid = await window.arc.validateLibraryFolder(absPath);
-    if (valid.ok && valid.valid) {
-      setState((prev) => ({
-        ...prev,
-        pendingExistingPath: absPath,
-        showExistingConfirm: true
-      }));
-      return;
+    setState((prev) => ({ ...prev, busy: true, emptySubmitted: false }));
+    try {
+      const res = await window.arc.createLibraryInContainer({ name, parentHint: parent });
+      if (!res.ok) {
+        setState((prev) => ({ ...prev, emptySubmitted: res.fieldError === true }));
+        return;
+      }
+      await applyLibraryReady();
+    } finally {
+      setState((prev) => ({ ...prev, busy: false }));
     }
-
-    await applyLibraryPath(absPath);
-  }, [applyLibraryPath, state.busy, state.folderName]);
-
-  const confirmExistingLibrary = useCallback(async () => {
-    if (!state.pendingExistingPath) return;
-    setState((prev) => ({ ...prev, showExistingConfirm: false }));
-    const target = state.pendingExistingPath;
-    setState((prev) => ({ ...prev, pendingExistingPath: null }));
-    await applyLibraryPath(target);
-  }, [applyLibraryPath, state.pendingExistingPath]);
-
-  const cancelExistingLibrary = useCallback(() => {
-    setState((prev) => ({ ...prev, showExistingConfirm: false, pendingExistingPath: null }));
-  }, []);
+  }, [applyLibraryReady, state.busy, state.folderName]);
 
   return {
     open,
@@ -109,39 +78,17 @@ export function useCreateLibraryModal(onSuccess: () => void) {
     closeModal,
     state,
     setFolderName: (folderName: string) => setState((prev) => ({ ...prev, folderName, emptySubmitted: false })),
-    submit,
-    confirmExistingLibrary,
-    cancelExistingLibrary
+    submit
   };
-}
-
-export async function runOnboardingRestoreFlow(): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (!window.arc) return { ok: false, message: 'Доступно только в приложении ARC' };
-  const first = await window.arc.pickBackupArchive();
-  if (!first) return { ok: false, message: '' };
-  const dest = await window.arc.pickLibraryFolder();
-  if (!dest) return { ok: false, message: '' };
-  if (!(await window.arc.dirIsEmpty(dest))) {
-    return { ok: false, message: 'Папка восстановления должна быть пустой.' };
-  }
-  const res = await window.arc.restoreLibrary({ firstPartPath: first, destDir: dest });
-  if (!res.ok) {
-    return { ok: false, message: res.error?.trim() ? res.error : 'Не удалось восстановить библиотеку.' };
-  }
-  return { ok: true };
 }
 
 export async function runOnboardingOpenLibraryFlow(
   onSuccess: () => void
 ): Promise<{ ok: true } | { ok: false; message?: string }> {
-  if (!window.arc) return { ok: false, message: 'Доступно только в приложении ARC' };
+  if (!window.arc?.openLibraryOrContainer) return { ok: false, message: 'Доступно только в приложении ARC' };
   const picked = await window.arc.pickLibraryFolder();
   if (!picked) return { ok: false };
-  const validation = await window.arc.validateLibraryFolder(picked);
-  if (!validation.valid) {
-    return { ok: false, message: 'В выбранной папке нет библиотеки ARC.' };
-  }
-  const res = await window.arc.setLibraryPath(picked);
+  const res = await window.arc.openLibraryOrContainer(picked);
   if (!res.ok) {
     return { ok: false, message: res.error?.trim() ? res.error : 'Не удалось открыть библиотеку.' };
   }

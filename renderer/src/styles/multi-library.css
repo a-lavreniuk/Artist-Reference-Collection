@@ -1,0 +1,56 @@
+.arc-library-switch-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: var(--brand-900);
+  opacity: 0.28;
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+}
+
+.arc-gallery-trash-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 var(--s-4) var(--s-2);
+}
+
+.arc-settings-library-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.arc-settings-library-sidebar {
+  max-width: 360px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.arc-settings-library-sidebar__scroll {
+  overflow-y: auto;
+  max-height: 320px;
+}
+
+.arc-settings-library-sidebar__pad {
+  padding: var(--s-2) var(--s-2) var(--s-3);
+}
+
+.arc-settings-library-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.arc-settings-library-row__main {
+  pointer-events: none;
+}
+
+.arc-settings-library-migrate {
+  margin-top: var(--s-2);
+}
+
+.arc-stats-library-tabs {
+  margin-bottom: var(--s-4);
+  flex-wrap: wrap;
+}
