@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { mkdirSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import { INDEX_DB_FILENAME, libraryMetaFileAbs } from '../libraryFilenames';
 import { ensureCardsFtsSchema } from './cardFts';
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS collections (
 
 CREATE TABLE IF NOT EXISTS card_tags (
   card_id TEXT NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
-  tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  tag_id TEXT NOT NULL,
   PRIMARY KEY (card_id, tag_id)
 );
 
@@ -93,6 +93,26 @@ let activeRoot: string | null = null;
 function tableHasColumn(db: Database.Database, table: string, column: string): boolean {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
   return rows.some((r) => r.name === column);
+}
+
+/** Drop FK from card_tags.tag_id → tags so shared catalog ids work. */
+function ensureCardTagsSoftFk(db: Database.Database): void {
+  const fks = db.prepare(`PRAGMA foreign_key_list(card_tags)`).all() as Array<{ table: string }>;
+  if (!fks.some((fk) => fk.table === 'tags')) return;
+  db.exec('PRAGMA foreign_keys = OFF');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS card_tags_soft (
+      card_id TEXT NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+      tag_id TEXT NOT NULL,
+      PRIMARY KEY (card_id, tag_id)
+    );
+    INSERT OR IGNORE INTO card_tags_soft SELECT card_id, tag_id FROM card_tags;
+    DROP TABLE card_tags;
+    ALTER TABLE card_tags_soft RENAME TO card_tags;
+    CREATE INDEX IF NOT EXISTS idx_card_tags_tag ON card_tags(tag_id);
+    CREATE INDEX IF NOT EXISTS idx_card_tags_card ON card_tags(card_id);
+  `);
+  db.exec('PRAGMA foreign_keys = ON');
 }
 
 function migrateLibraryDbSchema(db: Database.Database): void {
@@ -142,6 +162,9 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_collections_sort ON collections(sort_index)');
 
+  // Shared catalog: card_tags.tag_id is a soft ref (no FK to local tags).
+  ensureCardTagsSoftFk(db);
+
   ensureCardsFtsSchema(db);
   ensureCardEmbeddingsSchema(db);
 
@@ -180,6 +203,43 @@ export function openLibraryDb(libraryRoot: string): Database.Database {
   activeDb = db;
   activeRoot = root;
   return db;
+}
+
+/**
+ * Отдельное соединение без смены global `activeDb`.
+ * Для чтения счётчиков по нескольким библиотекам (list-libraries).
+ */
+export function withLibraryDbReadonly<T>(libraryRoot: string, fn: (db: Database.Database) => T): T | null {
+  const root = path.resolve(libraryRoot);
+  if (activeDb && activeRoot === root) {
+    return fn(activeDb);
+  }
+  const dbPath = indexDbPath(root);
+  try {
+    if (!existsSync(dbPath) && !existsSync(flatIndexDbPath(root))) return null;
+  } catch {
+    return null;
+  }
+  let db: Database.Database;
+  try {
+    db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  } catch {
+    try {
+      db = new Database(flatIndexDbPath(root), { readonly: true, fileMustExist: true });
+    } catch {
+      return null;
+    }
+  }
+  try {
+    db.pragma('foreign_keys = ON');
+    return fn(db);
+  } finally {
+    try {
+      db.close();
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export function getLibraryDb(): Database.Database | null {

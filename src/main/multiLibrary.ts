@@ -351,16 +351,35 @@ export async function renameLibrary(
   if (await pathExists(dest)) {
     return { ok: false, error: 'Библиотека с таким именем уже есть', fieldError: true };
   }
-  await rename(current.path, dest);
+  try {
+    await rename(current.path, dest);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Не удалось переименовать папку'
+    };
+  }
   const updated: LibraryRegistryEntry = { ...current, name: validated.name, path: dest };
   libs[idx] = updated;
   const activeId = cfg.activeLibraryId === libraryId ? libraryId : (cfg.activeLibraryId ?? libraryId);
-  await replaceLibraryRootConfig(
-    buildConfigWithActive(cfg.parentPath, libs, activeId, {
-      lastKnownCardCount: cfg.lastKnownCardCount,
-      snapshotAt: cfg.snapshotAt
-    })
-  );
+  try {
+    await replaceLibraryRootConfig(
+      buildConfigWithActive(cfg.parentPath, libs, activeId, {
+        lastKnownCardCount: cfg.lastKnownCardCount,
+        snapshotAt: cfg.snapshotAt
+      })
+    );
+  } catch (err) {
+    try {
+      await rename(dest, current.path);
+    } catch {
+      /* best-effort rollback */
+    }
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Не удалось сохранить конфиг'
+    };
+  }
   invalidateLibraryRootCache();
   return { ok: true, library: updated };
 }
@@ -384,19 +403,12 @@ export async function deleteLibrary(
   const neighbor = libs[idx - 1] ?? libs[idx + 1] ?? null;
   libs.splice(idx, 1);
 
-  if (mode === 'disk') {
-    try {
-      await rm(removing.path, { recursive: true, force: true });
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Не удалось удалить папку' };
-    }
-  }
-
   const nextActive = wasActive ? neighbor : getActiveLibraryEntry({ ...cfg, libraries: libs });
   if (!nextActive) {
     return { ok: false, error: 'Не осталось библиотек' };
   }
 
+  // Сначала конфиг, потом диск — чтобы не потерять файлы при сбое записи JSON
   await replaceLibraryRootConfig(
     buildConfigWithActive(cfg.parentPath, libs, nextActive.id, {
       lastKnownCardCount: cfg.lastKnownCardCount,
@@ -404,6 +416,31 @@ export async function deleteLibrary(
     })
   );
   invalidateLibraryRootCache();
+
+  if (mode === 'disk') {
+    try {
+      await rm(removing.path, { recursive: true, force: true });
+    } catch (err) {
+      return {
+        ok: false,
+        error:
+          err instanceof Error
+            ? `Библиотека отвязана, но папку не удалось удалить: ${err.message}`
+            : 'Библиотека отвязана, но папку не удалось удалить'
+      };
+    }
+  }
+
+  const { removeAutoImportForLibraryId } = await import('./appPreferences');
+  await removeAutoImportForLibraryId(libraryId);
+
+  try {
+    const { pruneLibraryFromCategoryVisibility } = await import('./storage/tagCatalog');
+    pruneLibraryFromCategoryVisibility(libraryId);
+  } catch {
+    /* catalog optional */
+  }
+
   return { ok: true, switchedToId: wasActive ? nextActive.id : null };
 }
 

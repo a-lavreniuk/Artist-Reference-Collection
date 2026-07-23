@@ -10,6 +10,7 @@ export const METADATA_BACKUP_FILENAME = 'arc-metadata.backup.json';
 export const HISTORY_FILENAME = 'arc-history.json';
 export const PENDING_RESTORE_FILENAME = 'arc-pending-restore.json';
 export const INDEX_DB_FILENAME = 'arc-index.db';
+export const CATALOG_DB_FILENAME = 'arc-catalog.db';
 export const SYSTEM_FILENAME = 'arc-system.json';
 export const MOODBOARD_FILENAME = 'arc-moodboard.json';
 export const CARDS_DIR = 'cards';

@@ -54,3 +54,7 @@
   margin-bottom: var(--s-4);
   flex-wrap: wrap;
 }
+
+.arc-stats-library-hint {
+  margin: 0 0 var(--s-4);
+}

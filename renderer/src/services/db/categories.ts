@@ -30,7 +30,12 @@ export async function getAllCategories(): Promise<CategoryRecord[]> {
 export async function addCategory(
   name: string,
   colorHex: string,
-  extras?: { weight?: CategoryWeight; description?: string }
+  extras?: {
+    weight?: CategoryWeight;
+    description?: string;
+    visibilityMode?: 'all' | 'libraries';
+    visibilityLibraryIds?: string[];
+  }
 ): Promise<CategoryRecord> {
   const trimmed = name.trim();
   if (!trimmed) {
@@ -39,6 +44,12 @@ export async function addCategory(
   const hex = normalizeHex(colorHex) ?? '#EAB308';
   const weight = extras?.weight ?? 'neutral';
   const desc = extras?.description?.trim();
+  const visibilityMode = extras?.visibilityMode === 'libraries' ? 'libraries' : 'all';
+  const visibilityLibraryIds =
+    visibilityMode === 'libraries' ? [...new Set(extras?.visibilityLibraryIds ?? [])] : [];
+  if (visibilityMode === 'libraries' && visibilityLibraryIds.length === 0) {
+    throw new Error('Выберите хотя бы одну библиотеку');
+  }
   const list = await readCategoriesUnified();
   if (list.some((c) => normalizeNameForCompare(c.name) === normalizeNameForCompare(trimmed))) {
     throw new Error('Категория с таким названием уже есть');
@@ -51,10 +62,27 @@ export async function addCategory(
     weight,
     sortIndex: maxSort + 1,
     createdAt: new Date().toISOString(),
+    visibilityMode,
+    visibilityLibraryIds,
+    visibleInActive: true,
     ...(desc ? { description: desc } : {})
   };
   await persistCategories([...list, created]);
   return created;
+}
+
+/** Categories visible in the active library (gallery, assign, filters). */
+export async function getVisibleCategories(): Promise<CategoryRecord[]> {
+  return (await getAllCategories()).filter((c) => c.visibleInActive !== false);
+}
+
+export function isCategoryVisibleForLibrary(
+  category: CategoryRecord,
+  libraryId: string | null | undefined
+): boolean {
+  if (category.visibilityMode !== 'libraries') return true;
+  if (!libraryId) return false;
+  return (category.visibilityLibraryIds ?? []).includes(libraryId);
 }
 
 export async function updateCategoryName(id: string, name: string): Promise<void> {
@@ -108,6 +136,8 @@ export async function updateCategory(
     colorHex?: string;
     weight?: CategoryWeight;
     description?: string;
+    visibilityMode?: 'all' | 'libraries';
+    visibilityLibraryIds?: string[];
   }
 ): Promise<void> {
   const list = await readCategoriesUnified();
@@ -136,19 +166,64 @@ export async function updateCategory(
   }
 
   const weight = patch.weight ?? current.weight;
+  const visibilityMode = patch.visibilityMode ?? current.visibilityMode ?? 'all';
+  const visibilityLibraryIds =
+    patch.visibilityLibraryIds ?? current.visibilityLibraryIds ?? [];
+
+  if (visibilityMode === 'libraries' && visibilityLibraryIds.length === 0) {
+    throw new Error('Выберите хотя бы одну библиотеку');
+  }
+
+  const nextCategory: CategoryRecord = {
+    ...current,
+    name,
+    colorHex,
+    weight,
+    visibilityMode,
+    visibilityLibraryIds
+  };
+  if (patch.description !== undefined) {
+    const desc = patch.description.trim();
+    if (desc) nextCategory.description = desc;
+    else delete nextCategory.description;
+  }
+
+  const visibilityChanged =
+    visibilityMode !== (current.visibilityMode ?? 'all') ||
+    JSON.stringify([...(visibilityLibraryIds)].sort()) !==
+      JSON.stringify([...(current.visibilityLibraryIds ?? [])].sort());
+
+  if (visibilityChanged && (await resolveBackend()) === 'file' && window.arc?.storageApplyCategoryVisibility) {
+    const res = await window.arc.storageApplyCategoryVisibility({
+      categoryId: id,
+      visibilityMode,
+      visibilityLibraryIds,
+      category: nextCategory
+    });
+    if (!res.ok) throw new Error(res.error || 'Не удалось сохранить видимость');
+    notifyCategoriesChanged();
+    notifyTagsChanged();
+    notifyCardsChanged();
+    return;
+  }
 
   await persistCategories(
     list.map((c) => {
       if (c.id !== id) return c;
-      const next: CategoryRecord = { ...c, name, colorHex, weight };
-      if (patch.description !== undefined) {
-        const desc = patch.description.trim();
-        if (desc) next.description = desc;
-        else delete next.description;
-      }
-      return next;
+      return nextCategory;
     })
   );
+}
+
+export async function previewCategoryVisibilityChange(payload: {
+  categoryId: string;
+  visibilityMode: 'all' | 'libraries';
+  visibilityLibraryIds: string[];
+}): Promise<{ cardsAffected: number; libraryIdsLosing: string[] }> {
+  if (!window.arc?.storagePreviewCategoryVisibilityChange) {
+    return { cardsAffected: 0, libraryIdsLosing: [] };
+  }
+  return window.arc.storagePreviewCategoryVisibilityChange(payload);
 }
 
 export async function getCategoryStats(categoryId: string): Promise<CategoryStats> {

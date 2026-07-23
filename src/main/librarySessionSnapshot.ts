@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import fs from 'fs';
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, rename, unlink } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { readHistory, type HistoryEntry } from './libraryHistory';
@@ -40,6 +40,23 @@ export function readLibraryRootConfigSync(): LibraryRootConfig {
   }
 }
 
+async function writeConfigAtomic(filePath: string, contents: string): Promise<void> {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  await writeFile(tmp, contents, 'utf8');
+  try {
+    await rename(tmp, filePath);
+  } catch {
+    // Windows: target may exist — overwrite via copy+unlink fallback
+    await writeFile(filePath, contents, 'utf8');
+    try {
+      await unlink(tmp);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export async function writeLibraryRootConfig(patch: LibraryRootConfig): Promise<void> {
   const current = readLibraryRootConfigSync();
   const next: LibraryRootConfig = { ...current, ...patch };
@@ -56,8 +73,7 @@ export async function writeLibraryRootConfig(patch: LibraryRootConfig): Promise<
       name: lib.name.trim()
     }));
   }
-  await mkdir(path.dirname(configPath()), { recursive: true });
-  await writeFile(configPath(), JSON.stringify(next, null, 2), 'utf8');
+  await writeConfigAtomic(configPath(), JSON.stringify(next, null, 2));
 }
 
 /** Полная перезапись конфига (без merge), для миграций. */
@@ -77,8 +93,7 @@ export async function replaceLibraryRootConfig(next: LibraryRootConfig): Promise
       name: lib.name.trim()
     }));
   }
-  await mkdir(path.dirname(configPath()), { recursive: true });
-  await writeFile(configPath(), JSON.stringify(normalized, null, 2), 'utf8');
+  await writeConfigAtomic(configPath(), JSON.stringify(normalized, null, 2));
 }
 
 export function getActiveLibraryEntry(cfg: LibraryRootConfig = readLibraryRootConfigSync()): LibraryRegistryEntry | null {

@@ -31,7 +31,7 @@ import {
   writeCardJson,
   CARDS_DIR
 } from './cardFolder';
-import { closeLibraryDb, indexDbPath, libraryUsesNewStorage, openLibraryDb } from './db';
+import { closeLibraryDb, indexDbPath, libraryUsesNewStorage, openLibraryDb, withLibraryDbReadonly } from './db';
 import { ensureLibraryMetaDirLayout } from './libraryMetaLayout';
 import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
@@ -217,14 +217,39 @@ function syncCardRelations(db: Database.Database, cardId: string, tagIds: string
   for (const cid of collectionIds) insCol.run(cardId, cid);
 }
 
-function recomputeTagUsage(db: Database.Database): void {
-  db.prepare(
-    `UPDATE tags SET usage_count = (
-      SELECT COUNT(*) FROM card_tags ct
-      INNER JOIN cards c ON c.id = ct.card_id AND COALESCE(c.is_deleted, 0) = 0
-      WHERE ct.tag_id = tags.id
-    )`
-  ).run();
+function recomputeTagUsage(_db: Database.Database): void {
+  try {
+    const { recomputeAllCatalogTagUsage, openChildIndexDb } = require('./tagCatalog') as typeof import('./tagCatalog');
+    const { readLibraryRootConfigSync } = require('../librarySessionSnapshot') as typeof import('../librarySessionSnapshot');
+    const cfg = readLibraryRootConfigSync();
+    const libs = cfg.libraries ?? [];
+    recomputeAllCatalogTagUsage((tagId) => {
+      let n = 0;
+      for (const lib of libs) {
+        const child = openChildIndexDb(lib.path);
+        if (!child) continue;
+        try {
+          const row = child
+            .prepare(
+              `SELECT COUNT(*) AS n FROM card_tags ct
+               INNER JOIN cards c ON c.id = ct.card_id AND COALESCE(c.is_deleted, 0) = 0
+               WHERE ct.tag_id = ?`
+            )
+            .get(tagId) as { n: number };
+          n += Number(row?.n ?? 0);
+        } finally {
+          try {
+            child.close();
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      return n;
+    });
+  } catch {
+    /* catalog may be unavailable during early migrate */
+  }
 }
 
 function appendLibraryScopeConditions(scope: LibraryScope | undefined, wh: string[]): void {
@@ -274,6 +299,12 @@ export function resetLibraryStorageCache(): void {
   invalidateScoredSearchCache();
   clearAiResultsCache();
   closeLibraryDb();
+  try {
+    const { closeTagCatalogDb } = require('./tagCatalog') as typeof import('./tagCatalog');
+    closeTagCatalogDb();
+  } catch {
+    /* ignore */
+  }
 }
 
 export type MigrationProgress = {
@@ -361,6 +392,15 @@ async function ensureLibraryReadyInner(root: string): Promise<Database.Database>
   }
 
   await ensureLibraryMetaDirLayout(root);
+
+  try {
+    const { migrateChildCatalogsToShared } = await import('./migrateChildCatalogsToShared');
+    const { openTagCatalogDb, resolveContainerPath } = await import('./tagCatalog');
+    openTagCatalogDb(resolveContainerPath());
+    await migrateChildCatalogsToShared();
+  } catch (err) {
+    console.error('[ARC] tag catalog migrate:', err);
+  }
 
   readyRoots.add(root);
   currentRoot = root;
@@ -674,6 +714,24 @@ export function countCards(
   libraryScope: LibraryScope = 'all'
 ): number {
   const db = openLibraryDb(libraryRoot);
+  return countCardsOnDb(db, filter, libraryScope);
+}
+
+/** COUNT без переключения global activeDb (для list-libraries). */
+export function countCardsReadonly(
+  libraryRoot: string,
+  filter: 'all' | 'images' | 'videos' = 'all',
+  libraryScope: LibraryScope = 'all'
+): number {
+  const n = withLibraryDbReadonly(libraryRoot, (db) => countCardsOnDb(db, filter, libraryScope));
+  return n ?? 0;
+}
+
+function countCardsOnDb(
+  db: ReturnType<typeof openLibraryDb>,
+  filter: 'all' | 'images' | 'videos',
+  libraryScope: LibraryScope
+): number {
   const wh: string[] = [];
   if (libraryScope === 'trash') wh.push('COALESCE(is_deleted, 0) = 1');
   else {
@@ -720,7 +778,12 @@ export async function updateCardInStorage(
   const cardJson = await readCardJson(root, cardId);
   if (!cardJson) throw new Error('Карточка не найдена');
 
-  if (patch.tagIds) cardJson.tagIds = [...patch.tagIds];
+  if (patch.tagIds) {
+    const { getActiveLibraryEntry, readLibraryRootConfigSync } = await import('../librarySessionSnapshot');
+    const { filterVisibleTagIds } = await import('./tagCatalog');
+    const activeId = getActiveLibraryEntry(readLibraryRootConfigSync())?.id ?? null;
+    cardJson.tagIds = filterVisibleTagIds([...patch.tagIds], activeId);
+  }
   if (patch.collectionIds) cardJson.collectionIds = [...patch.collectionIds];
   if (patch.description !== undefined) {
     const trimmed = patch.description.trim();
@@ -855,109 +918,161 @@ export async function emptyTrashFromStorage(libraryRoot: string): Promise<number
   return ids.length;
 }
 
-// --- Categories ---
-export function listCategories(libraryRoot: string): CategoryRow[] {
-  const db = openLibraryDb(libraryRoot);
-  return db
-    .prepare('SELECT * FROM categories ORDER BY sort_index ASC, created_at ASC')
-    .all()
-    .map((r) => {
-      const row = r as Record<string, unknown>;
-      return {
-        id: String(row.id),
-        name: String(row.name),
-        colorHex: String(row.color_hex),
-        weight: row.weight as CategoryRow['weight'],
-        sortIndex: Number(row.sort_index),
-        createdAt: String(row.created_at),
-        ...(row.description ? { description: String(row.description) } : {})
-      };
-    });
-}
-
-export function upsertCategory(libraryRoot: string, cat: CategoryRow): void {
-  const db = openLibraryDb(libraryRoot);
-  db.prepare(
-    `INSERT INTO categories (id, name, color_hex, weight, sort_index, created_at, description)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET name=excluded.name, color_hex=excluded.color_hex,
-       weight=excluded.weight, sort_index=excluded.sort_index, description=excluded.description`
-  ).run(
-    cat.id,
-    cat.name,
-    cat.colorHex,
-    cat.weight,
-    cat.sortIndex,
-    cat.createdAt,
-    cat.description ?? null
+// --- Categories (shared catalog) ---
+export function listCategories(_libraryRoot?: string): CategoryRow[] {
+  const { listCatalogCategories } = require('./tagCatalog') as typeof import('./tagCatalog');
+  return listCatalogCategories().map(
+    ({ visibilityMode: _m, visibilityLibraryIds: _v, visibleInActive: _a, ...rest }) => rest
   );
 }
 
-export async function deleteCategoryFromDb(libraryRoot: string, id: string): Promise<void> {
-  const root = path.resolve(libraryRoot);
-  const db = openLibraryDb(root);
-  const tagIds = db
-    .prepare('SELECT id FROM tags WHERE category_id = ?')
-    .all(id)
-    .map((r) => String((r as { id: string }).id));
+export function listCategoriesWithVisibility(activeLibraryId?: string | null) {
+  const { listCatalogCategories } = require('./tagCatalog') as typeof import('./tagCatalog');
+  return listCatalogCategories(activeLibraryId);
+}
+
+export function upsertCategory(
+  _libraryRoot: string,
+  cat: CategoryRow & {
+    visibilityMode?: 'all' | 'libraries';
+    visibilityLibraryIds?: string[];
+  }
+): void {
+  const { upsertCatalogCategory } = require('./tagCatalog') as typeof import('./tagCatalog');
+  upsertCatalogCategory({
+    ...cat,
+    visibilityMode: cat.visibilityMode ?? 'all',
+    visibilityLibraryIds: cat.visibilityLibraryIds ?? []
+  });
+}
+
+export async function deleteCategoryFromDb(_libraryRoot: string, id: string): Promise<void> {
+  const { deleteCatalogCategory } = await import('./tagCatalog');
+  const tagIds = deleteCatalogCategory(id);
   for (const tagId of tagIds) {
-    await deleteTagFromDb(root, tagId);
+    await stripTagFromAllLibraries(tagId);
   }
-  db.prepare('DELETE FROM categories WHERE id = ?').run(id);
 }
 
-// --- Tags ---
-export function listTagsByCategory(libraryRoot: string, categoryId: string): TagRow[] {
-  const db = openLibraryDb(libraryRoot);
-  return db
-    .prepare('SELECT * FROM tags WHERE category_id = ? ORDER BY name ASC')
-    .all(categoryId)
-    .map(mapTagRow);
+// --- Tags (shared catalog) ---
+export function listTagsByCategory(_libraryRoot: string, categoryId: string): TagRow[] {
+  const { listCatalogTagsByCategory } = require('./tagCatalog') as typeof import('./tagCatalog');
+  return listCatalogTagsByCategory(categoryId);
 }
 
-export function listAllTags(libraryRoot: string): TagRow[] {
-  const db = openLibraryDb(libraryRoot);
-  return db.prepare('SELECT * FROM tags ORDER BY name ASC').all().map(mapTagRow);
+export function listAllTags(_libraryRoot?: string): TagRow[] {
+  const { listAllCatalogTags } = require('./tagCatalog') as typeof import('./tagCatalog');
+  return listAllCatalogTags();
 }
 
-function mapTagRow(r: unknown): TagRow {
-  const row = r as Record<string, unknown>;
-  return {
-    id: String(row.id),
-    categoryId: String(row.category_id),
-    name: String(row.name),
-    usageCount: Number(row.usage_count ?? 0),
-    description: row.description ? String(row.description) : undefined,
-    tooltipImage: row.tooltip_image ? String(row.tooltip_image) : undefined
-  };
+export function upsertTag(_libraryRoot: string, tag: TagRow): void {
+  const { upsertCatalogTag } = require('./tagCatalog') as typeof import('./tagCatalog');
+  upsertCatalogTag(tag);
 }
 
-export function upsertTag(libraryRoot: string, tag: TagRow): void {
-  const db = openLibraryDb(libraryRoot);
-  db.prepare(
-    `INSERT INTO tags (id, category_id, name, usage_count, description, tooltip_image)
-     VALUES (?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET category_id=excluded.category_id, name=excluded.name,
-       usage_count=excluded.usage_count, description=excluded.description, tooltip_image=excluded.tooltip_image`
-  ).run(tag.id, tag.categoryId, tag.name, tag.usageCount, tag.description ?? null, tag.tooltipImage ?? null);
+export async function deleteTagFromDb(_libraryRoot: string, tagId: string): Promise<void> {
+  await stripTagFromAllLibraries(tagId);
+  const { deleteCatalogTag } = await import('./tagCatalog');
+  deleteCatalogTag(tagId);
 }
 
-export async function deleteTagFromDb(libraryRoot: string, tagId: string): Promise<void> {
-  const root = path.resolve(libraryRoot);
-  const db = openLibraryDb(root);
-  const cardIds = db
-    .prepare('SELECT card_id FROM card_tags WHERE tag_id = ?')
-    .all(tagId)
-    .map((r) => String((r as { card_id: string }).card_id));
-  for (const cardId of cardIds) {
-    const cardJson = await readCardJson(root, cardId);
-    if (!cardJson) continue;
-    cardJson.tagIds = cardJson.tagIds.filter((tid) => tid !== tagId);
-    await writeCardJson(root, cardJson);
+/** Remove tag from card_tags + card.json in every registered library. */
+export async function stripTagFromAllLibraries(tagId: string): Promise<number> {
+  const { readLibraryRootConfigSync } = await import('../librarySessionSnapshot');
+  const { openChildIndexDb } = await import('./tagCatalog');
+  const cfg = readLibraryRootConfigSync();
+  let stripped = 0;
+  for (const lib of cfg.libraries ?? []) {
+    stripped += await stripTagFromLibraryPath(lib.path, tagId, openChildIndexDb);
   }
-  db.prepare('DELETE FROM card_tags WHERE tag_id = ?').run(tagId);
-  db.prepare('DELETE FROM tags WHERE id = ?').run(tagId);
-  recomputeTagUsage(db);
+  return stripped;
+}
+
+export async function stripTagFromLibraryPath(
+  libraryPath: string,
+  tagId: string,
+  openChild?: (p: string) => import('better-sqlite3').Database | null
+): Promise<number> {
+  const { openChildIndexDb } = await import('./tagCatalog');
+  const open = openChild ?? openChildIndexDb;
+  const db = open(libraryPath);
+  if (!db) return 0;
+  try {
+    const cardIds = (
+      db.prepare('SELECT card_id FROM card_tags WHERE tag_id = ?').all(tagId) as Array<{
+        card_id: string;
+      }>
+    ).map((r) => String(r.card_id));
+    for (const cardId of cardIds) {
+      const cardJson = await readCardJson(libraryPath, cardId);
+      if (cardJson) {
+        cardJson.tagIds = cardJson.tagIds.filter((tid) => tid !== tagId);
+        await writeCardJson(libraryPath, cardJson);
+      }
+    }
+    db.prepare('DELETE FROM card_tags WHERE tag_id = ?').run(tagId);
+    return cardIds.length;
+  } finally {
+    try {
+      db.close();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export async function stripTagsOfCategoryFromLibraries(
+  categoryId: string,
+  libraryIds: string[]
+): Promise<number> {
+  const { listCatalogTagsByCategory, openChildIndexDb } = await import('./tagCatalog');
+  const { readLibraryRootConfigSync } = await import('../librarySessionSnapshot');
+  const tags = listCatalogTagsByCategory(categoryId);
+  const cfg = readLibraryRootConfigSync();
+  const paths = (cfg.libraries ?? [])
+    .filter((l) => libraryIds.includes(l.id))
+    .map((l) => l.path);
+  let total = 0;
+  for (const tag of tags) {
+    for (const libPath of paths) {
+      total += await stripTagFromLibraryPath(libPath, tag.id, openChildIndexDb);
+    }
+  }
+  return total;
+}
+
+export function countCardsWithTagIdsInLibraries(
+  tagIds: string[],
+  libraryIds: string[]
+): number {
+  if (tagIds.length === 0 || libraryIds.length === 0) return 0;
+  const { openChildIndexDb } = require('./tagCatalog') as typeof import('./tagCatalog');
+  const { readLibraryRootConfigSync } = require('../librarySessionSnapshot') as typeof import('../librarySessionSnapshot');
+  const cfg = readLibraryRootConfigSync();
+  const paths = (cfg.libraries ?? []).filter((l) => libraryIds.includes(l.id)).map((l) => l.path);
+  const placeholders = tagIds.map(() => '?').join(',');
+  let total = 0;
+  for (const libPath of paths) {
+    const db = openChildIndexDb(libPath);
+    if (!db) continue;
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(DISTINCT ct.card_id) AS n FROM card_tags ct
+           INNER JOIN cards c ON c.id = ct.card_id AND COALESCE(c.is_deleted, 0) = 0
+           WHERE ct.tag_id IN (${placeholders})`
+        )
+        .get(...tagIds) as { n: number };
+      total += Number(row?.n ?? 0);
+    } finally {
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  return total;
 }
 
 // --- Collections ---

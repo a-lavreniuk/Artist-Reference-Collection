@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
 import FloatingModalPanel from '../../components/layout/FloatingModalPanel';
+import MessageModal from '../../components/layout/MessageModal';
 import ConfirmModal from './ConfirmModal';
 import { hydrateArcNavbarIcons } from '../../components/layout/navbarIconHydrate';
 import type { LibraryListItem } from '../../hooks/useLibraries';
@@ -27,10 +28,22 @@ export default function LibraryManageModal({
   const [emptySubmitted, setEmptySubmitted] = useState(false);
   const [fieldError, setFieldError] = useState(false);
   const [deleteMode, setDeleteMode] = useState<'disk' | 'unlink' | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
   }, [name, busy, deleteMode]);
+
+  if (deleteError) {
+    return (
+      <MessageModal
+        title="Сообщение"
+        message={deleteError}
+        onClose={() => setDeleteError(null)}
+        closeLabel="Понятно"
+      />
+    );
+  }
 
   if (deleteMode) {
     return (
@@ -45,7 +58,12 @@ export default function LibraryManageModal({
         onCancel={() => setDeleteMode(null)}
         onConfirm={async () => {
           const res = await onDelete(state.library.id, deleteMode);
-          if (res.ok) onClose();
+          if (res.ok) {
+            onClose();
+            return;
+          }
+          setDeleteMode(null);
+          setDeleteError(res.error?.trim() || 'Не удалось удалить библиотеку');
         }}
       />
     );

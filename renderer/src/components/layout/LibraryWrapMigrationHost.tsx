@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import LibraryWrapMigrationModal from './LibraryWrapMigrationModal';
 
-let wrapMigrationModalShownThisSession = false;
-
+/**
+ * Self-named legacy: модалка обязательна, пока статус needs_wrap_name.
+ * Закрытие без completeWrapMigration не допускается.
+ */
 export default function LibraryWrapMigrationHost() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!window.arc?.getLibraryMigrationStatus || wrapMigrationModalShownThisSession) return;
+    if (!window.arc?.getLibraryMigrationStatus) return;
     void (async () => {
       const status = await window.arc!.getLibraryMigrationStatus();
-      if (status.status !== 'needs_wrap_name') return;
-      wrapMigrationModalShownThisSession = true;
-      setOpen(true);
+      if (status.status === 'needs_wrap_name') setOpen(true);
     })();
   }, []);
 
@@ -20,7 +20,7 @@ export default function LibraryWrapMigrationHost() {
 
   return (
     <LibraryWrapMigrationModal
-      onClose={() => {
+      onComplete={() => {
         setOpen(false);
       }}
     />

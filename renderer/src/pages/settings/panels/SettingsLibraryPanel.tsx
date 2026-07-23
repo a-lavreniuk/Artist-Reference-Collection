@@ -61,10 +61,20 @@ export default function SettingsLibraryPanel() {
               <div className="arc-settings-library-sidebar__pad">
                 {libraries.map((lib) => (
                   <div key={lib.id} className="arc-settings-library-row">
-                    <div className="context-menu__item arc-settings-library-row__main">
+                    <div
+                      className={`context-menu__item arc-settings-library-row__main${lib.active ? ' is-active' : ''}`}
+                      aria-current={lib.active ? 'true' : undefined}
+                    >
                       <span className="context-menu__item-inner">
                         <span className="context-menu__item-label-cluster">
                           <TruncatedTextWithTooltip text={lib.name} className="context-menu__item-label" />
+                          {lib.active ? (
+                            <span
+                              className="context-menu__item-check tab-icon arc-icon-check"
+                              data-arc-icon-size="m"
+                              aria-hidden="true"
+                            />
+                          ) : null}
                         </span>
                         {lib.cardCount !== undefined ? (
                           <span className="context-menu__item-counter">{lib.cardCount}</span>
@@ -113,7 +123,7 @@ export default function SettingsLibraryPanel() {
       {migrateConfirm ? (
         <ConfirmModal
           title={`Перенос «${containerName}»`}
-          message="Папка «Библиотека ARC» со всеми библиотеками будет перенесена в выбранное место. Продолжить?"
+          message={`Папка «${containerName}» со всеми библиотеками будет перенесена в выбранное место. Продолжить?`}
           confirmLabel="Выбрать папку"
           onCancel={() => setMigrateConfirm(false)}
           onConfirm={() => void migrateContainer()}

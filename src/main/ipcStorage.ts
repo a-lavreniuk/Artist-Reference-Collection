@@ -35,6 +35,7 @@ import {
   listCollections,
   listFilterPresets,
   listCategories,
+  listCategoriesWithVisibility,
   listSkippedDuplicatePairs,
   listTagsByCategory,
   rebuildIndexFromCardJson,
@@ -567,7 +568,9 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root) return [];
     await ensureLibraryReady(root);
-    return listCategories(root);
+    const { getActiveLibraryEntry, readLibraryRootConfigSync } = await import('./librarySessionSnapshot');
+    const activeId = getActiveLibraryEntry(readLibraryRootConfigSync())?.id ?? null;
+    return listCategoriesWithVisibility(activeId);
   });
 
   ipcMain.handle('arc:storage-upsert-category', async (_e, cat: unknown) => {
@@ -576,6 +579,88 @@ export function registerStorageIpc(
     if (!root) throw new Error('Библиотека не выбрана');
     upsertCategory(root, cat as CategoryRow);
   });
+
+  ipcMain.handle(
+    'arc:storage-preview-category-visibility-change',
+    async (
+      _e,
+      payload: unknown
+    ): Promise<{ cardsAffected: number; libraryIdsLosing: string[] }> => {
+      const body = payload as {
+        categoryId?: string;
+        visibilityMode?: 'all' | 'libraries';
+        visibilityLibraryIds?: string[];
+      } | null;
+      if (!body?.categoryId) return { cardsAffected: 0, libraryIdsLosing: [] };
+      const { listCatalogTagsByCategory, libraryIdsWithCategoryVisibility } = await import(
+        './storage/tagCatalog'
+      );
+      const { readLibraryRootConfigSync } = await import('./librarySessionSnapshot');
+      const { countCardsWithTagIdsInLibraries } = await import('./storage/libraryStorage');
+      const cfg = readLibraryRootConfigSync();
+      const libs = cfg.libraries ?? [];
+      const before = new Set(libraryIdsWithCategoryVisibility(body.categoryId, libs));
+      const after =
+        body.visibilityMode === 'libraries'
+          ? new Set(body.visibilityLibraryIds ?? [])
+          : new Set(libs.map((l) => l.id));
+      const losing = [...before].filter((id) => !after.has(id));
+      const tagIds = listCatalogTagsByCategory(body.categoryId).map((t) => t.id);
+      const cardsAffected = countCardsWithTagIdsInLibraries(tagIds, losing);
+      return { cardsAffected, libraryIdsLosing: losing };
+    }
+  );
+
+  ipcMain.handle(
+    'arc:storage-apply-category-visibility',
+    async (
+      _e,
+      payload: unknown
+    ): Promise<{ ok: true; stripped: number } | { ok: false; error: string }> => {
+      assertNotMaintenance();
+      const body = payload as {
+        categoryId?: string;
+        visibilityMode?: 'all' | 'libraries';
+        visibilityLibraryIds?: string[];
+        category?: CategoryRow;
+      } | null;
+      if (!body?.categoryId || !body.category) {
+        return { ok: false, error: 'Некорректные параметры' };
+      }
+      const root = await readLibraryRoot();
+      if (!root) return { ok: false, error: 'Библиотека не выбрана' };
+
+      const { libraryIdsWithCategoryVisibility } = await import('./storage/tagCatalog');
+      const { readLibraryRootConfigSync } = await import('./librarySessionSnapshot');
+      const {
+        stripTagsOfCategoryFromLibraries,
+        upsertCategory: upsertCat
+      } = await import('./storage/libraryStorage');
+      const cfg = readLibraryRootConfigSync();
+      const libs = cfg.libraries ?? [];
+      const before = new Set(libraryIdsWithCategoryVisibility(body.categoryId, libs));
+      const mode = body.visibilityMode === 'libraries' ? 'libraries' : 'all';
+      const after =
+        mode === 'libraries' ? new Set(body.visibilityLibraryIds ?? []) : new Set(libs.map((l) => l.id));
+      const losing = [...before].filter((id) => !after.has(id));
+
+      if (mode === 'libraries' && (body.visibilityLibraryIds?.length ?? 0) === 0) {
+        return { ok: false, error: 'Выберите хотя бы одну библиотеку' };
+      }
+
+      let stripped = 0;
+      if (losing.length > 0) {
+        stripped = await stripTagsOfCategoryFromLibraries(body.categoryId, losing);
+      }
+
+      upsertCat(root, {
+        ...body.category,
+        visibilityMode: mode,
+        visibilityLibraryIds: mode === 'libraries' ? (body.visibilityLibraryIds ?? []) : []
+      });
+      return { ok: true, stripped };
+    }
+  );
 
   ipcMain.handle('arc:storage-delete-category', async (_e, id: unknown) => {
     assertNotMaintenance();

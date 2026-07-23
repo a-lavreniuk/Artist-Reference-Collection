@@ -192,7 +192,7 @@ function sanitizeAutoImportByLibraryId(raw: unknown): Record<string, AutoImportL
   return out;
 }
 
-/** Настройки автоимпорта для активной библиотеки (с fallback на legacy global). */
+/** Настройки автоимпорта для активной библиотеки (без fallback на чужую папку). */
 export function resolveAutoImportForLibraryId(
   prefs: AppPreferencesV1,
   libraryId: string | null | undefined
@@ -200,11 +200,45 @@ export function resolveAutoImportForLibraryId(
   if (libraryId && prefs.autoImportByLibraryId[libraryId]) {
     return prefs.autoImportByLibraryId[libraryId]!;
   }
+  // Legacy single-library: глобальные поля, пока нет per-library записи
+  if (!libraryId) {
+    return {
+      enabled: prefs.autoImportEnabled,
+      folderPath: prefs.autoImportFolderPath,
+      sourceFilesAction: prefs.autoImportSourceFilesAction
+    };
+  }
   return {
-    enabled: prefs.autoImportEnabled,
-    folderPath: prefs.autoImportFolderPath,
+    enabled: false,
+    folderPath: null,
     sourceFilesAction: prefs.autoImportSourceFilesAction
   };
+}
+
+/** Одноразово перенести legacy global auto-import в запись активной библиотеки. */
+export async function seedAutoImportFromLegacyIfNeeded(libraryId: string | null | undefined): Promise<void> {
+  if (!libraryId) return;
+  const prefs = readAppPreferencesSync();
+  if (prefs.autoImportByLibraryId[libraryId]) return;
+  if (!prefs.autoImportEnabled && !prefs.autoImportFolderPath) return;
+  await writeAppPreferences({
+    autoImportByLibraryId: {
+      ...prefs.autoImportByLibraryId,
+      [libraryId]: {
+        enabled: prefs.autoImportEnabled,
+        folderPath: prefs.autoImportFolderPath,
+        sourceFilesAction: prefs.autoImportSourceFilesAction
+      }
+    }
+  });
+}
+
+export async function removeAutoImportForLibraryId(libraryId: string): Promise<void> {
+  const prefs = readAppPreferencesSync();
+  if (!prefs.autoImportByLibraryId[libraryId]) return;
+  const next = { ...prefs.autoImportByLibraryId };
+  delete next[libraryId];
+  await writeAppPreferences({ autoImportByLibraryId: next });
 }
 
 function sanitizeScreenshotFormat(raw: unknown): ScreenshotFormat {
@@ -382,10 +416,8 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
     next.autoImportSourceFilesAction = sanitizeImportAction(patch.autoImportSourceFilesAction);
   }
   if ('autoImportByLibraryId' in patch && patch.autoImportByLibraryId && typeof patch.autoImportByLibraryId === 'object') {
-    next.autoImportByLibraryId = sanitizeAutoImportByLibraryId({
-      ...current.autoImportByLibraryId,
-      ...patch.autoImportByLibraryId
-    });
+    // Полная замена карты (вызовы уже мержат на своей стороне / передают целевой снимок)
+    next.autoImportByLibraryId = sanitizeAutoImportByLibraryId(patch.autoImportByLibraryId);
   }
   if ('importApiEnabled' in patch && typeof patch.importApiEnabled === 'boolean') {
     next.importApiEnabled = patch.importApiEnabled;

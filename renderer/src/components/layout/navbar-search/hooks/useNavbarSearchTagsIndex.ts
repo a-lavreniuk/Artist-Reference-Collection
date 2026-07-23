@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ARC_CATEGORIES_CHANGED_EVENT,
   ARC_TAGS_CHANGED_EVENT,
-  getAllCategories,
+  getVisibleCategories,
   getTagsByCategory,
   type CategoryRecord,
   type TagRecord
@@ -14,7 +14,7 @@ export function useNavbarSearchTagsIndex() {
   const [tagsVersion, setTagsVersion] = useState(0);
 
   const loadIndex = useCallback(async () => {
-    const cats = await getAllCategories();
+    const cats = await getVisibleCategories();
     const sorted = [...cats].sort((a, b) => a.sortIndex - b.sortIndex);
     setCategories(sorted);
     const map = new Map<string, TagRecord[]>();
@@ -36,9 +36,11 @@ export function useNavbarSearchTagsIndex() {
     const onCats = () => void loadIndex();
     window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCats);
     window.addEventListener(ARC_TAGS_CHANGED_EVENT, onCats);
+    window.addEventListener('arc:library-changed', onCats);
     return () => {
       window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCats);
       window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onCats);
+      window.removeEventListener('arc:library-changed', onCats);
     };
   }, [loadIndex]);
 

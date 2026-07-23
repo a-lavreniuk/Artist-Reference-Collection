@@ -2,7 +2,7 @@
 
 import type { GalleryAdvancedFilters, GallerySortState } from './galleryFilters';
 
-export const STORAGE_SCHEMA_VERSION = 9;
+export const STORAGE_SCHEMA_VERSION = 10;
 
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';
@@ -79,6 +79,9 @@ export type CategoryRow = {
   sortIndex: number;
   createdAt: string;
   description?: string;
+  visibilityMode?: 'all' | 'libraries';
+  visibilityLibraryIds?: string[];
+  visibleInActive?: boolean;
 };
 
 export type TagRow = {

@@ -25,12 +25,15 @@ export { invalidateLibraryCache, invalidateTagsCache, readTagsUnified } from './
 
 export {
   getAllCategories,
+  getVisibleCategories,
+  isCategoryVisibleForLibrary,
   addCategory,
   updateCategoryName,
   updateCategoryColorHex,
   updateCategoryWeight,
   updateCategoryDescription,
   updateCategory,
+  previewCategoryVisibilityChange,
   getCategoryStats,
   moveCategory,
   reorderCategoryToIndex,

@@ -11,17 +11,12 @@ import {
 } from './media/mediaServerHost';
 import { allowMediaStagingPaths, registerMediaStagingToken } from './media/mediaStagingTokens';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
-import { migrateLibraryToFolder } from './libraryMigrate';
 import { appendHistory, clearHistory, readHistory, type HistorySegment } from './libraryHistory';
-import { runBackup } from './backupLibrary';
-import { discoverBackupParts, restoreFromParts } from './restoreLibrary';
 import {
   ensureLibraryFilenamesMigrated,
   INDEX_DB_FILENAME,
-  LEGACY_PENDING_RESTORE_FILENAME,
   libraryMetaFileAbs,
   METADATA_FILENAME,
-  PENDING_RESTORE_FILENAME,
   resolveLegacyMetadataAbsPath
 } from './libraryFilenames';
 import { registerStorageIpc } from './ipcStorage';
@@ -31,20 +26,18 @@ import { readLibraryDiskStats } from './libraryDiskStats';
 import {
   readLibraryRootFromDisk,
   readLibraryRootSync,
-  readParentLibraryPathSync,
-  writeLibraryRootToDisk
+  readParentLibraryPathSync
 } from './libraryRootConfig';
 import { resolvePathToMediaUrl, resolvePathsToMediaUrls } from './toFileUrlHelper';
 import { beginNavigationEpoch, endNavigationEpoch } from './ipcNavigationPriority';
 import { applyLibraryFolderIcon } from './libraryFolderIcon';
-import {
-  checkShouldOfferRelocateModal,
-  refreshLibrarySessionSnapshotFromDisk,
-  updateLibrarySessionSnapshot
-} from './librarySessionSnapshot';
 import { isValidArcLibraryFolder } from './libraryValidate';
 import { getDefaultLibraryFolderName } from './appProfile';
-import { countCards, ensureLibraryReady } from './storage/libraryStorage';
+import { countCards, countCardsReadonly, ensureLibraryReady } from './storage/libraryStorage';
+import {
+  checkShouldOfferRelocateModal,
+  updateLibrarySessionSnapshot
+} from './librarySessionSnapshot';
 import {
   completeWrapMigration,
   createLibraryInContainer,
@@ -71,6 +64,9 @@ function assertNotMaintenance(): void {
 async function finalizeLibraryPathChange(resolved: string, applyIcon: boolean): Promise<void> {
   syncArcMediaServerLibraryRoot(readLibraryRootSync());
   resetLibraryStorageCache();
+  const { getActiveLibraryEntry, readLibraryRootConfigSync } = await import('./librarySessionSnapshot');
+  const { seedAutoImportFromLegacyIfNeeded } = await import('./appPreferences');
+  await seedAutoImportFromLegacyIfNeeded(getActiveLibraryEntry(readLibraryRootConfigSync())?.id ?? null);
   const { restartAutoImportWatcher } = await import('./autoImportWatcher');
   restartAutoImportWatcher();
   if (applyIcon) {
@@ -85,29 +81,6 @@ async function finalizeLibraryPathChange(resolved: string, applyIcon: boolean): 
     /* snapshot best-effort */
   }
 }
-
-function pendingRestorePath(): string {
-  return path.join(app.getPath('userData'), PENDING_RESTORE_FILENAME);
-}
-
-async function ensurePendingRestoreMigrated(): Promise<void> {
-  const nextAbs = pendingRestorePath();
-  const legacyAbs = path.join(app.getPath('userData'), LEGACY_PENDING_RESTORE_FILENAME);
-  try {
-    await stat(nextAbs);
-    return;
-  } catch {
-    /* continue */
-  }
-  try {
-    await stat(legacyAbs);
-    await rename(legacyAbs, nextAbs);
-  } catch {
-    /* no legacy file */
-  }
-}
-
-let backupAbortController: AbortController | null = null;
 
 /** Без привязки к окну диалог выбора файлов на Windows часто не показывается поверх приложения. */
 function dialogParentWindow(): BrowserWindow | undefined {
@@ -233,29 +206,18 @@ export function registerArcIpc(): void {
   ipcMain.handle('arc:get-library-path', async () => readLibraryRootFromDisk());
 
   ipcMain.handle('arc:list-libraries', async () => {
-    const activeRoot = readLibraryRootSync();
     const items = listLibrariesFromConfig();
-    const withCounts = [];
-    for (const item of items) {
+    const withCounts = items.map((item) => {
       let cardCount = 0;
       try {
         if (fs.existsSync(item.path)) {
-          await ensureLibraryReady(item.path);
-          cardCount = countCards(item.path, 'all', 'all');
+          cardCount = countCardsReadonly(item.path, 'all', 'all');
         }
       } catch {
         cardCount = 0;
       }
-      withCounts.push({ ...item, cardCount });
-    }
-    // countCards переключает activeDb — вернуть активную библиотеку
-    if (activeRoot && fs.existsSync(activeRoot)) {
-      try {
-        await ensureLibraryReady(activeRoot);
-      } catch {
-        /* best-effort */
-      }
-    }
+      return { ...item, cardCount };
+    });
     return { ok: true as const, libraries: withCounts };
   });
 
@@ -353,20 +315,11 @@ export function registerArcIpc(): void {
     }
     const resolved = path.resolve(absPath.trim());
     try {
-      // Prefer multi-lib open when path is container or child
       const opened = await openLibraryOrContainer(resolved);
-      if (opened.ok) {
-        await finalizeLibraryPathChange(opened.path, true);
-        return { ok: true as const };
+      if (!opened.ok) {
+        return { ok: false as const, error: opened.error };
       }
-      // Creating a new empty library folder: treat dirname as container parent hint
-      const name = path.basename(resolved);
-      const parentHint = path.dirname(resolved);
-      const created = await createLibraryInContainer(name, parentHint);
-      if (!created.ok) {
-        return { ok: false as const, error: created.error };
-      }
-      await finalizeLibraryPathChange(created.library.path, true);
+      await finalizeLibraryPathChange(opened.path, true);
       return { ok: true as const };
     } catch (err) {
       return {
@@ -683,33 +636,24 @@ export function registerArcIpc(): void {
         return { ok: false, error: 'Пустой путь' };
       }
       const oldParent = readParentLibraryPathSync();
-      const oldRoot = await readLibraryRootFromDisk();
-      if (!oldParent && !oldRoot) return { ok: false, error: 'Библиотека не выбрана' };
+      if (!oldParent) {
+        return {
+          ok: false,
+          error: 'Перенос доступен только для папки «Библиотека ARC». Используйте Настройки → Библиотека.'
+        };
+      }
       acquireMaintenanceLock();
       try {
-        if (oldParent) {
-          const migrated = await migrateParentContainer(path.resolve(targetPath.trim()));
-          if (!migrated.ok) return migrated;
-          const root = readLibraryRootSync();
-          if (root) await finalizeLibraryPathChange(root, true);
-          try {
-            if (root) await appendHistory(root, 'Перенос папки «Библиотека ARC» завершён');
-          } catch {
-            /* ignore */
-          }
-          return { ok: true, oldLibraryPath: oldParent };
-        }
-        const newRoot = path.resolve(targetPath.trim());
-        const res = await migrateLibraryToFolder(oldRoot!, newRoot);
-        if (!res.ok) return res;
-        await writeLibraryRootToDisk(newRoot);
-        await finalizeLibraryPathChange(newRoot, true);
+        const migrated = await migrateParentContainer(path.resolve(targetPath.trim()));
+        if (!migrated.ok) return migrated;
+        const root = readLibraryRootSync();
+        if (root) await finalizeLibraryPathChange(root, true);
         try {
-          await appendHistory(newRoot, 'Перенос хранилища завершён');
+          if (root) await appendHistory(root, 'Перенос папки «Библиотека ARC» завершён');
         } catch {
           /* ignore */
         }
-        return { ok: true, oldLibraryPath: oldRoot! };
+        return { ok: true, oldLibraryPath: oldParent };
       } finally {
         releaseMaintenanceLock();
       }
@@ -749,116 +693,6 @@ export function registerArcIpc(): void {
     const root = await readLibraryRootFromDisk();
     if (!root) return;
     await clearHistory(root);
-  });
-
-  ipcMain.handle('arc:pick-backup-archive', async () => {
-    const res = await showOpenDialogAttached({
-      properties: ['openFile'],
-      filters: [{ name: 'ARC backup', extensions: ['arc'] }]
-    });
-    if (res.canceled || res.filePaths.length === 0) return null;
-    return res.filePaths[0] ?? null;
-  });
-
-  ipcMain.handle('arc:backup-start', async (event, opts: unknown) => {
-    if (isMaintenanceLocked()) {
-      return { ok: false as const, error: 'Идёт операция…' };
-    }
-    const root = await readLibraryRootFromDisk();
-    if (!root) return { ok: false as const, error: 'Библиотека не выбрана' };
-    if (!opts || typeof opts !== 'object') return { ok: false as const, error: 'Некорректные параметры' };
-    const o = opts as { destDir?: unknown; partCount?: unknown };
-    if (typeof o.destDir !== 'string' || !o.destDir.trim()) {
-      return { ok: false as const, error: 'Не указана папка назначения' };
-    }
-    const partCount = o.partCount === 2 || o.partCount === 4 || o.partCount === 8 ? o.partCount : 1;
-    const destDir = path.resolve(o.destDir.trim());
-    const win = BrowserWindow.fromWebContents(event.sender);
-    backupAbortController = new AbortController();
-    acquireMaintenanceLock();
-    try {
-      const result = await runBackup({
-        libraryRoot: root,
-        destDir,
-        partCount,
-        signal: backupAbortController.signal,
-        onProgress(p) {
-          if (win && !win.isDestroyed()) {
-            win.webContents.send('arc:backup-progress', p);
-          }
-        }
-      });
-      return result;
-    } finally {
-      releaseMaintenanceLock();
-      backupAbortController = null;
-    }
-  });
-
-  ipcMain.handle('arc:backup-cancel', async () => {
-    backupAbortController?.abort();
-    return { ok: true as const };
-  });
-
-  ipcMain.handle(
-    'arc:restore-library',
-    async (
-      _e,
-      payload: unknown
-    ): Promise<{ ok: true; restart: true } | { ok: false; error: string }> => {
-      if (isMaintenanceLocked()) {
-        return { ok: false, error: 'Идёт операция…' };
-      }
-      if (!payload || typeof payload !== 'object') return { ok: false, error: 'Некорректные параметры' };
-      const p = payload as { firstPartPath?: unknown; destDir?: unknown };
-      if (typeof p.firstPartPath !== 'string' || typeof p.destDir !== 'string') {
-        return { ok: false, error: 'Не указаны пути' };
-      }
-      const dest = path.resolve(p.destDir.trim());
-      let restart = false;
-      acquireMaintenanceLock();
-      try {
-        const parts = await discoverBackupParts(p.firstPartPath.trim());
-        const res = await restoreFromParts(parts, dest);
-        if (!res.ok) return res;
-        await writeLibraryRootToDisk(dest);
-        const { restartAutoImportWatcher } = await import('./autoImportWatcher');
-        restartAutoImportWatcher();
-        await writeFile(
-          pendingRestorePath(),
-          JSON.stringify({ message: 'Библиотека восстановлена из резервной копии.' }, null, 2),
-          'utf8'
-        );
-        restart = true;
-        return { ok: true, restart: true };
-      } catch (err) {
-        return {
-          ok: false,
-          error: err instanceof Error ? err.message : 'Ошибка восстановления'
-        };
-      } finally {
-        releaseMaintenanceLock();
-        if (restart) {
-          setImmediate(() => {
-            app.relaunch();
-            app.exit(0);
-          });
-        }
-      }
-    }
-  );
-
-  ipcMain.handle('arc:consume-pending-restore-modal', async () => {
-    await ensurePendingRestoreMigrated();
-    const p = pendingRestorePath();
-    try {
-      const raw = await readFile(p, 'utf8');
-      await unlink(p);
-      const j = JSON.parse(raw) as { message?: string };
-      return typeof j.message === 'string' ? { message: j.message } : null;
-    } catch {
-      return null;
-    }
   });
 
   ipcMain.handle('arc:verify-library-paths', async (_e, rels: unknown) => {

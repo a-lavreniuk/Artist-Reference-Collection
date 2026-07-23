@@ -109,6 +109,15 @@ export default function TagsCategorySection({
               text={category.name}
               className="arc-tags-category-section__name"
             />
+            {category.visibleInActive === false ? (
+              <Tooltip content="Скрыта в этой библиотеке" position="top" delay={500}>
+                <span
+                  className="tab-icon arc-icon-eye-off arc-tags-category-section__hidden"
+                  data-arc-icon-size="m"
+                  aria-label="Скрыта в этой библиотеке"
+                />
+              </Tooltip>
+            ) : null}
           </button>
           <span className="arc-tags-category-section__count">{tags.length}</span>
         </h2>

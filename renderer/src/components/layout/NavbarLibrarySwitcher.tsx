@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import CreateLibraryModal from '../onboarding/CreateLibraryModal';
+import MessageModal from './MessageModal';
 import { useLibraries } from '../../hooks/useLibraries';
 import { useLibrarySwitchDim } from './LibrarySwitchDimOverlay';
 import { getNavbarMetrics, invalidateLibraryCache } from '../../services/db';
@@ -19,6 +20,7 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
   const [createBusy, setCreateBusy] = useState(false);
   const [createEmptySubmitted, setCreateEmptySubmitted] = useState(false);
   const [createFieldError, setCreateFieldError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const switchingRef = useRef(false);
 
   const { libraries, activeLibrary, refresh } = useLibraries();
@@ -49,7 +51,10 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
       switchingRef.current = true;
       try {
         const res = await window.arc.switchActiveLibrary(libraryId);
-        if (!res.ok) return;
+        if (!res.ok) {
+          setErrorMessage(res.error?.trim() || 'Не удалось переключить библиотеку');
+          return;
+        }
         await applyLibrarySwitch();
       } finally {
         switchingRef.current = false;
@@ -80,6 +85,7 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
       const res = await window.arc.createLibraryInContainer({ name });
       if (!res.ok) {
         if (res.fieldError) setCreateFieldError(true);
+        else setErrorMessage(res.error?.trim() || 'Не удалось создать библиотеку');
         return;
       }
       setCreateOpen(false);
@@ -150,6 +156,14 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
           }}
           onSubmit={() => void submitCreate()}
           inContainer
+        />
+      ) : null}
+      {errorMessage ? (
+        <MessageModal
+          title="Сообщение"
+          message={errorMessage}
+          onClose={() => setErrorMessage(null)}
+          closeLabel="Понятно"
         />
       ) : null}
     </>

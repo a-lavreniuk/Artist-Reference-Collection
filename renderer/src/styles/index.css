@@ -6151,14 +6151,6 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   margin-top: var(--s-3);
 }
 
-.arc-settings-backup-parts {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
-}
-
 .arc-settings-block__title {
   margin: 0;
 }

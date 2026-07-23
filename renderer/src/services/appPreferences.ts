@@ -236,9 +236,16 @@ export function resolveAutoImportForLibraryId(
       sourceFilesAction: sanitizeImportAction(row.sourceFilesAction)
     };
   }
+  if (!libraryId) {
+    return {
+      enabled: prefs.autoImportEnabled,
+      folderPath: prefs.autoImportFolderPath,
+      sourceFilesAction: prefs.autoImportSourceFilesAction
+    };
+  }
   return {
-    enabled: prefs.autoImportEnabled,
-    folderPath: prefs.autoImportFolderPath,
+    enabled: false,
+    folderPath: null,
     sourceFilesAction: prefs.autoImportSourceFilesAction
   };
 }

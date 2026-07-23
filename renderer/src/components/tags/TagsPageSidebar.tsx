@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { Tooltip } from '../tooltip/Tooltip';
 import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import TagCategoryDropSurface from './TagCategoryDropSurface';
 import TagsCategorySidebarGhost from './TagsCategorySidebarGhost';
@@ -171,6 +172,15 @@ export default function TagsPageSidebar({
                           text={category.name}
                           className="context-menu__item-label"
                         />
+                        {category.visibleInActive === false ? (
+                          <Tooltip content="Скрыта в этой библиотеке" position="top" delay={500}>
+                            <span
+                              className="context-menu__item-icon tab-icon arc-icon-eye-off"
+                              data-arc-icon-size="m"
+                              aria-label="Скрыта в этой библиотеке"
+                            />
+                          </Tooltip>
+                        ) : null}
                       </span>
                       <span className="context-menu__item-counter">{count}</span>
                     </button>

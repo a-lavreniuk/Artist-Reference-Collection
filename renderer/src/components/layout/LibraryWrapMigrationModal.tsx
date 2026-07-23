@@ -5,10 +5,10 @@ import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { invalidateLibraryCache } from '../../services/db';
 
 type Props = {
-  onClose: () => void;
+  onComplete: () => void;
 };
 
-export default function LibraryWrapMigrationModal({ onClose }: Props) {
+export default function LibraryWrapMigrationModal({ onComplete }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState('Основная');
   const [busy, setBusy] = useState(false);
@@ -37,7 +37,7 @@ export default function LibraryWrapMigrationModal({ onClose }: Props) {
       }
       invalidateLibraryCache();
       window.dispatchEvent(new CustomEvent('arc:library-changed'));
-      onClose();
+      onComplete();
     } finally {
       setBusy(false);
     }
@@ -46,8 +46,8 @@ export default function LibraryWrapMigrationModal({ onClose }: Props) {
   const nameInvalid = (emptySubmitted && !name.trim()) || fieldError;
 
   return (
-    <ArcAnimatedModalHost onClose={onClose}>
-      {({ requestClose }) => (
+    <ArcAnimatedModalHost onClose={() => undefined} closeDisabled>
+      {() => (
         <FloatingModalPanel
           ref={hostRef}
           panelId="library-wrap-migration-modal"
@@ -64,22 +64,12 @@ export default function LibraryWrapMigrationModal({ onClose }: Props) {
             <h3 className="arc-modal__title" id="arcLibraryWrapMigrationTitle">
               Название библиотеки
             </h3>
-            <button
-              type="button"
-              className="arc-modal__close"
-              aria-label="Закрыть"
-              onClick={() => {
-                if (!busy) requestClose();
-              }}
-              disabled={busy}
-            >
-              <span className="tab-icon arc-icon-close" aria-hidden="true" />
-            </button>
           </header>
           <div className="arc-modal__body">
             <div className="arc-modal__slot">
               <p className="arc-modal__slot-text">
-                Укажите имя для вашей библиотеки внутри папки «Библиотека ARC»
+                Укажите имя для вашей библиотеки внутри папки «Библиотека ARC». Это обязательный шаг — без него
+                приложение не сможет работать с текущей папкой.
               </p>
             </div>
             <div className="arc-modal__slot">
@@ -109,18 +99,8 @@ export default function LibraryWrapMigrationModal({ onClose }: Props) {
               </label>
             </div>
           </div>
-          <footer className="arc-modal__footer arc-modal__footer--actions-2">
+          <footer className="arc-modal__footer arc-modal__footer--actions-1">
             <div className="arc-modal__footer-right">
-              <button
-                type="button"
-                className="btn btn-outline btn-ds btn-s"
-                onClick={() => {
-                  if (!busy) requestClose();
-                }}
-                disabled={busy}
-              >
-                <span className="btn-ds__value">Отмена</span>
-              </button>
               <button type="button" className="btn btn-brand btn-ds btn-s" onClick={() => void submit()} disabled={busy}>
                 <span className="btn-ds__value">{busy ? '…' : 'Продолжить'}</span>
               </button>

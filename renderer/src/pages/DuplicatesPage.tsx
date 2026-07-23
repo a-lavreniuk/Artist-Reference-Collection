@@ -65,9 +65,30 @@ export default function DuplicatesPage() {
 
   useEffect(() => {
     void getDuplicateSimilarityThresholdPct().then(setThreshold);
-    if (window.arc?.getLibraryPath) {
+    const refreshLibraryRoot = () => {
+      if (!window.arc?.getLibraryPath) {
+        setLibraryRootAbs(null);
+        return;
+      }
       void window.arc.getLibraryPath().then((p) => setLibraryRootAbs(p ?? null));
-    }
+    };
+    refreshLibraryRoot();
+    const onLibraryChanged = () => {
+      refreshLibraryRoot();
+      setPhase('ready');
+      setPairs([]);
+      setStatuses({});
+      setSelectedIndex(0);
+      setThumbUrls({});
+      setUrlA(null);
+      setUrlB(null);
+      setNoResultsNotice(false);
+      setScannedCards(0);
+      setSpaceSavedBytes(0);
+      setProgress({ scannedCards: 0, totalCards: 0, duplicatesFound: 0, etaMs: null });
+    };
+    window.addEventListener('arc:library-changed', onLibraryChanged);
+    return () => window.removeEventListener('arc:library-changed', onLibraryChanged);
   }, []);
 
   useEffect(() => {

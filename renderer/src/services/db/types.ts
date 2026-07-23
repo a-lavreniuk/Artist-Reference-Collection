@@ -17,6 +17,8 @@ export const CATEGORY_WEIGHT_SCORE: Record<CategoryWeight, number> = {
   high: 8
 };
 
+export type CategoryVisibilityMode = 'all' | 'libraries';
+
 export type CategoryRecord = {
   id: string;
   name: string;
@@ -25,6 +27,10 @@ export type CategoryRecord = {
   sortIndex: number;
   createdAt: string;
   description?: string;
+  visibilityMode?: CategoryVisibilityMode;
+  visibilityLibraryIds?: string[];
+  /** True if visible in the currently active library. */
+  visibleInActive?: boolean;
 };
 
 export type TagRecord = {

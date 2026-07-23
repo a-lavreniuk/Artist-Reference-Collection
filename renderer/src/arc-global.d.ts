@@ -164,6 +164,17 @@ declare global {
       storageListCategories: () => Promise<CategoryRecord[]>;
       storageUpsertCategory: (cat: CategoryRecord) => Promise<void>;
       storageDeleteCategory: (id: string) => Promise<void>;
+      storagePreviewCategoryVisibilityChange: (payload: {
+        categoryId: string;
+        visibilityMode: 'all' | 'libraries';
+        visibilityLibraryIds: string[];
+      }) => Promise<{ cardsAffected: number; libraryIdsLosing: string[] }>;
+      storageApplyCategoryVisibility: (payload: {
+        categoryId: string;
+        visibilityMode: 'all' | 'libraries';
+        visibilityLibraryIds: string[];
+        category: CategoryRecord;
+      }) => Promise<{ ok: true; stripped: number } | { ok: false; error: string }>;
       storageListTagsByCategory: (categoryId: string) => Promise<TagRecord[]>;
       storageListAllTags: () => Promise<TagRecord[]>;
       storageUpsertTag: (tag: TagRecord) => Promise<void>;

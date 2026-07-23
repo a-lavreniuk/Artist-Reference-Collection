@@ -24,6 +24,8 @@ export function resolveGalleryFeedEmptyState(input: {
   feedError: string | null;
   hasSearchFilters: boolean;
   libraryScope?: LibraryScope;
+  /** Фильтр наличия меток (галерея). */
+  tagPresence?: 'tagged' | 'untagged' | null;
   context: GalleryFeedEmptyContext;
   isRemoteSearch: boolean;
   isAiSearch?: boolean;
@@ -42,6 +44,7 @@ export function resolveGalleryFeedEmptyState(input: {
     feedError,
     hasSearchFilters,
     libraryScope = 'all',
+    tagPresence = null,
     context,
     isRemoteSearch,
     isAiSearch = false,
@@ -101,7 +104,7 @@ export function resolveGalleryFeedEmptyState(input: {
   }
 
   if (context === 'gallery') {
-    if (libraryScope === 'untagged') {
+    if (tagPresence === 'untagged' || libraryScope === 'untagged') {
       return { copy: EMPTY_STATE_COPY.libraryUntagged };
     }
     if (libraryScope === 'trash') {

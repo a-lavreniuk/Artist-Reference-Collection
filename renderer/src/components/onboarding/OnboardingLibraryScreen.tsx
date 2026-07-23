@@ -114,6 +114,14 @@ export default function OnboardingLibraryScreen({ revealed = true, animateEnter 
       {infoModal ? (
         <MessageModal title="Сообщение" message={infoModal} onClose={() => setInfoModal(null)} closeLabel="Понятно" />
       ) : null}
+      {libraryModal.errorMessage ? (
+        <MessageModal
+          title="Сообщение"
+          message={libraryModal.errorMessage}
+          onClose={libraryModal.clearErrorMessage}
+          closeLabel="Понятно"
+        />
+      ) : null}
     </>
   );
 }

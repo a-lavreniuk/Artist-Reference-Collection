@@ -17,6 +17,7 @@ type CreateLibraryModalState = {
 
 export function useCreateLibraryModal(onSuccess: () => void) {
   const [open, setOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [state, setState] = useState<CreateLibraryModalState>({
     folderName: ONBOARDING_DEFAULT_LIBRARY_NAME,
     busy: false,
@@ -64,6 +65,9 @@ export function useCreateLibraryModal(onSuccess: () => void) {
       const res = await window.arc.createLibraryInContainer({ name, parentHint: parent });
       if (!res.ok) {
         setState((prev) => ({ ...prev, emptySubmitted: res.fieldError === true }));
+        if (!res.fieldError) {
+          setErrorMessage(res.error?.trim() || 'Не удалось создать библиотеку');
+        }
         return;
       }
       await applyLibraryReady();
@@ -77,6 +81,8 @@ export function useCreateLibraryModal(onSuccess: () => void) {
     openModal,
     closeModal,
     state,
+    errorMessage,
+    clearErrorMessage: () => setErrorMessage(null),
     setFolderName: (folderName: string) => setState((prev) => ({ ...prev, folderName, emptySubmitted: false })),
     submit
   };

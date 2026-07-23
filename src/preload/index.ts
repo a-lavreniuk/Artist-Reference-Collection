@@ -187,6 +187,24 @@ contextBridge.exposeInMainWorld('arc', {
   storageListCategories: () => ipcRenderer.invoke('arc:storage-list-categories'),
   storageUpsertCategory: (cat: unknown) => ipcRenderer.invoke('arc:storage-upsert-category', cat),
   storageDeleteCategory: (id: string) => ipcRenderer.invoke('arc:storage-delete-category', id),
+  storagePreviewCategoryVisibilityChange: (payload: {
+    categoryId: string;
+    visibilityMode: 'all' | 'libraries';
+    visibilityLibraryIds: string[];
+  }) =>
+    ipcRenderer.invoke('arc:storage-preview-category-visibility-change', payload) as Promise<{
+      cardsAffected: number;
+      libraryIdsLosing: string[];
+    }>,
+  storageApplyCategoryVisibility: (payload: {
+    categoryId: string;
+    visibilityMode: 'all' | 'libraries';
+    visibilityLibraryIds: string[];
+    category: unknown;
+  }) =>
+    ipcRenderer.invoke('arc:storage-apply-category-visibility', payload) as Promise<
+      { ok: true; stripped: number } | { ok: false; error: string }
+    >,
   storageListTagsByCategory: (categoryId: string) =>
     ipcRenderer.invoke('arc:storage-list-tags-by-category', categoryId),
   storageListAllTags: () => ipcRenderer.invoke('arc:storage-list-all-tags'),

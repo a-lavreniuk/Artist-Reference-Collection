@@ -4,12 +4,12 @@ import {
   getAllCategories,
   getNavbarMetrics,
   getTagsByCategory,
+  isCategoryVisibleForLibrary,
   listAllCardsPaginated,
   deleteTag,
   type CategoryRecord,
   type TagRecord
 } from '../../services/db';
-import * as storage from '../../services/storageClient';
 import { StatisticsDiskUsagePanel } from '../../components/statistics';
 import StatisticsPanelHead from '../../components/statistics/StatisticsPanelHead';
 import TagSettingsModal, { type TagSettingsModalState } from '../../components/tags/TagSettingsModal';
@@ -45,53 +45,87 @@ function SummaryStatValue({ value, enabled }: { value: number; enabled: boolean 
   );
 }
 
+function sortTagsForStats(allTags: TagRecord[]): { top: TagRecord[]; low: TagRecord[] } {
+  const sorted = [...allTags].sort((a, b) => b.usageCount - a.usageCount);
+  return {
+    top: sorted.slice(0, TAG_LIMIT),
+    low: sorted
+      .filter((t) => t.usageCount <= 5)
+      .sort((a, b) => a.usageCount - b.usageCount)
+      .slice(0, TAG_LIMIT)
+  };
+}
+
 export default function SettingsStatisticsPanel() {
   const [libraries, setLibraries] = useState<LibraryListItem[]>([]);
   const [statsScope, setStatsScope] = useState<StatsScope>('all');
   const [metrics, setMetrics] = useState<Awaited<ReturnType<typeof getNavbarMetrics>> | null>(null);
   const [totalTags, setTotalTags] = useState(0);
+  const [totalCategories, setTotalCategories] = useState(0);
   const [topTags, setTopTags] = useState<TagRecord[]>([]);
   const [lowTags, setLowTags] = useState<TagRecord[]>([]);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [diskModel, setDiskModel] = useState<DiskBarModel | null>(null);
   const [tagModal, setTagModal] = useState<TagSettingsModalState | null>(null);
 
-  const refreshTagsData = useCallback(async () => {
+  const refreshTagsData = useCallback(async (scope: StatsScope, libs: LibraryListItem[]) => {
     const cats = await getAllCategories();
-    setCategories(cats);
+    const scopedCats =
+      scope === 'all'
+        ? cats
+        : cats.filter((c) => isCategoryVisibleForLibrary(c, scope));
+    setCategories(scopedCats);
+    setTotalCategories(scopedCats.length);
+
     const allTags: TagRecord[] = [];
-    for (const cat of cats) {
+    for (const cat of scopedCats) {
       allTags.push(...(await getTagsByCategory(cat.id)));
     }
+
+    // Per-library usage only for the active library (IPC counts active DB).
+    const scopedLib = scope === 'all' ? null : libs.find((l) => l.id === scope) ?? null;
+    if (scopedLib?.active && window.arc?.storageCountCardsWithTagIds) {
+      await Promise.all(
+        allTags.map(async (tag) => {
+          tag.usageCount = await window.arc!.storageCountCardsWithTagIds([tag.id]);
+        })
+      );
+    }
+
     setTotalTags(allTags.length);
-    const sorted = [...allTags].sort((a, b) => b.usageCount - a.usageCount);
-    setTopTags(sorted.slice(0, TAG_LIMIT));
-    setLowTags(
-      sorted
-        .filter((t) => t.usageCount <= 5)
-        .sort((a, b) => a.usageCount - b.usageCount)
-        .slice(0, TAG_LIMIT)
-    );
+    const { top, low } = sortTagsForStats(allTags);
+    setTopTags(top);
+    setLowTags(low);
   }, []);
 
   useEffect(() => {
     void (async () => {
+      let libs: LibraryListItem[] = libraries;
       if (window.arc?.listLibraries) {
         const res = await window.arc.listLibraries();
-        setLibraries(res.libraries ?? []);
+        libs = res.libraries ?? [];
+        setLibraries(libs);
       }
 
       const m = await getNavbarMetrics();
       setMetrics(m);
-      await refreshTagsData();
+      await refreshTagsData(statsScope, libs);
 
       if (!window.arc) {
         setDiskModel(null);
         return;
       }
 
-      // Диск и метки — по активной библиотеке; вкладки других библиотек
-      // показывают счётчики из реестра без hot-switch всего приложения.
+      const viewingActive =
+        libs.length <= 1 ||
+        statsScope === 'all' ||
+        libs.find((l) => l.id === statsScope)?.active === true;
+
+      if (!viewingActive || (statsScope === 'all' && libs.length > 1)) {
+        setDiskModel(null);
+        return;
+      }
+
       const cards = await listAllCardsPaginated({ libraryScope: 'all' });
       const trashCards = await listAllCardsPaginated({ libraryScope: 'trash' });
 
@@ -134,6 +168,7 @@ export default function SettingsStatisticsPanel() {
         setDiskModel(null);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh on scope; libraries refreshed inside
   }, [refreshTagsData, statsScope]);
 
   useEffect(() => {
@@ -148,27 +183,67 @@ export default function SettingsStatisticsPanel() {
     })();
   }, []);
 
+  useEffect(() => {
+    const onLibraryChanged = () => {
+      void (async () => {
+        if (!window.arc?.listLibraries) return;
+        const res = await window.arc.listLibraries();
+        const libs = res.libraries ?? [];
+        setLibraries(libs);
+        if (libs.length <= 1) {
+          setStatsScope(libs.find((l) => l.active)?.id ?? 'all');
+        }
+        await refreshTagsData(statsScope === 'all' ? 'all' : statsScope, libs);
+      })();
+    };
+    window.addEventListener('arc:library-changed', onLibraryChanged);
+    return () => window.removeEventListener('arc:library-changed', onLibraryChanged);
+  }, [refreshTagsData, statsScope]);
+
   const categoryColorById = categories.reduce<Record<string, string>>((acc, category) => {
     acc[category.id] = category.colorHex;
     return acc;
   }, {});
 
   const selectedLibrary = statsScope === 'all' ? null : libraries.find((l) => l.id === statsScope) ?? null;
-  const aggregatedCards =
-    statsScope === 'all' && libraries.length > 1
-      ? libraries.reduce((sum, lib) => sum + (lib.cardCount ?? 0), 0)
-      : selectedLibrary && !selectedLibrary.active
-        ? (selectedLibrary.cardCount ?? 0)
-        : (metrics?.totalCards ?? 0);
+  const activeLibrary = libraries.find((l) => l.active) ?? null;
+  const viewingActive =
+    libraries.length <= 1 ||
+    statsScope === 'all' ||
+    selectedLibrary?.active === true ||
+    (activeLibrary != null && statsScope === activeLibrary.id);
+  /** Disk / media breakdown — only for active library (no hot-switch). */
+  const showDetailedMedia = viewingActive && (statsScope !== 'all' || libraries.length <= 1);
+  const showAllLibrariesCardsOnly = statsScope === 'all' && libraries.length > 1;
+  /** Tags catalog: full on «Все», visible-only on a library tab. */
+  const showTagsStats = true;
 
-  const summaryStats: SummaryItem[] = [
-    { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
-    { id: 'image-count', label: 'Изображений', value: metrics?.imageCards ?? 0, icon: 'image' },
-    { id: 'video-count', label: 'Видео', value: metrics?.videoCards ?? 0, icon: 'play-circle' },
-    { id: 'categories-count', label: 'Категорий', value: metrics?.totalCategories ?? 0, icon: 'folder-open' },
-    { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' },
-    { id: 'collections-count', label: 'Коллекций', value: metrics?.totalCollections ?? 0, icon: 'layers' }
-  ];
+  const aggregatedCards = showAllLibrariesCardsOnly
+    ? libraries.reduce((sum, lib) => sum + (lib.cardCount ?? 0), 0)
+    : selectedLibrary && !selectedLibrary.active
+      ? (selectedLibrary.cardCount ?? 0)
+      : (metrics?.totalCards ?? 0);
+
+  const summaryStats: SummaryItem[] = showDetailedMedia
+    ? [
+        { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
+        { id: 'image-count', label: 'Изображений', value: metrics?.imageCards ?? 0, icon: 'image' },
+        { id: 'video-count', label: 'Видео', value: metrics?.videoCards ?? 0, icon: 'play-circle' },
+        { id: 'categories-count', label: 'Категорий', value: totalCategories, icon: 'folder-open' },
+        { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' },
+        { id: 'collections-count', label: 'Коллекций', value: metrics?.totalCollections ?? 0, icon: 'layers' }
+      ]
+    : showAllLibrariesCardsOnly
+      ? [
+          { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
+          { id: 'categories-count', label: 'Категорий', value: totalCategories, icon: 'folder-open' },
+          { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' }
+        ]
+      : [
+          { id: 'total-cards', label: 'Карточек', value: aggregatedCards, icon: 'sticky-note' },
+          { id: 'categories-count', label: 'Категорий', value: totalCategories, icon: 'folder-open' },
+          { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' }
+        ];
 
   return (
     <div className="arc-stats-dashboard" data-interface-tour-anchor="statistics-main">
@@ -211,8 +286,17 @@ export default function SettingsStatisticsPanel() {
         ))}
       </div>
 
-      <StatisticsDiskUsagePanel model={diskModel} />
+      {showAllLibrariesCardsOnly || !showDetailedMedia ? (
+        <p className="text-s hint arc-stats-library-hint">
+          {showAllLibrariesCardsOnly
+            ? 'Сводка по всем библиотекам: общий каталог меток и суммарный счётчик карточек. Подробная статистика медиа и диск — у активной библиотеки.'
+            : 'Подробная статистика медиа и использование диска доступны для активной библиотеки. Переключите её в верхней панели. Метки ниже — видимые в выбранной библиотеке.'}
+        </p>
+      ) : null}
 
+      {showDetailedMedia ? <StatisticsDiskUsagePanel model={diskModel} /> : null}
+
+      {showTagsStats ? (
       <div className="arc-stats-tags-grid">
         <section className="arc-stats-tags-panel panel">
           <StatisticsPanelHead>
@@ -272,8 +356,9 @@ export default function SettingsStatisticsPanel() {
           </StatisticsPanelHead>
         </section>
       </div>
+      ) : null}
 
-      {tagModal ? (
+      {tagModal && showTagsStats ? (
         <TagSettingsModal
           state={tagModal}
           categories={categories}
@@ -287,12 +372,12 @@ export default function SettingsStatisticsPanel() {
               tooltipImageDataUrl: payload.tooltipImageDataUrl
             });
             setTagModal(null);
-            await refreshTagsData();
+            await refreshTagsData(statsScope, libraries);
           }}
           onDelete={async (tagId) => {
             await deleteTag(tagId);
             setTagModal(null);
-            await refreshTagsData();
+            await refreshTagsData(statsScope, libraries);
           }}
         />
       ) : null}

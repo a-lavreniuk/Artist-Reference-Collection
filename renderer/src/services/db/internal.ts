@@ -66,7 +66,12 @@ export function normalizeCategoryRecord(item: unknown, index: number): CategoryR
     weight,
     sortIndex,
     createdAt,
-    ...(description ? { description } : {})
+    ...(description ? { description } : {}),
+    visibilityMode: r.visibilityMode === 'libraries' ? 'libraries' : 'all',
+    visibilityLibraryIds: Array.isArray(r.visibilityLibraryIds)
+      ? r.visibilityLibraryIds.filter((x): x is string => typeof x === 'string')
+      : [],
+    visibleInActive: r.visibleInActive !== false
   };
 }
 

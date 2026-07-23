@@ -15,7 +15,7 @@ import {
   addCategory,
   addTag,
   deleteTag,
-  getAllCategories,
+  getVisibleCategories,
   getTagsByCategory,
   updateTag,
   type CategoryRecord,
@@ -115,7 +115,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
   };
 
   const reloadCatalog = async () => {
-    const cats = await getAllCategories();
+    const cats = await getVisibleCategories();
     setCategories(cats);
     const lists = await Promise.all(cats.map((c) => getTagsByCategory(c.id)));
     const map: Record<string, TagRecord[]> = {};
@@ -130,8 +130,10 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
     void reloadCatalog();
     const onCategoriesChanged = () => void reloadCatalog();
     window.addEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCategoriesChanged);
+    window.addEventListener('arc:library-changed', onCategoriesChanged);
     return () => {
       window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onCategoriesChanged);
+      window.removeEventListener('arc:library-changed', onCategoriesChanged);
     };
   }, []);
 
@@ -397,7 +399,9 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
               onCreate={async (payload) => {
                 const created = await addCategory(payload.name, payload.colorHex, {
                   weight: payload.weight,
-                  description: payload.description
+                  description: payload.description,
+                  visibilityMode: payload.visibilityMode,
+                  visibilityLibraryIds: payload.visibilityLibraryIds
                 });
                 setSelectedCategoryId(created.id);
                 await reloadCatalog();

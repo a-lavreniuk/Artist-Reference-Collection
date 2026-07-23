@@ -89,11 +89,13 @@ export default function TagsPage() {
     window.addEventListener(ARC_TAGS_CHANGED_EVENT, onRefresh);
     window.addEventListener(ARC_CARDS_CHANGED_EVENT, onRefresh);
     window.addEventListener('storage', onRefresh);
+    window.addEventListener('arc:library-changed', onRefresh);
     return () => {
       window.removeEventListener(ARC_CATEGORIES_CHANGED_EVENT, onRefresh);
       window.removeEventListener(ARC_TAGS_CHANGED_EVENT, onRefresh);
       window.removeEventListener(ARC_CARDS_CHANGED_EVENT, onRefresh);
       window.removeEventListener('storage', onRefresh);
+      window.removeEventListener('arc:library-changed', onRefresh);
     };
   }, [load]);
 
@@ -377,7 +379,9 @@ export default function TagsPage() {
       onCreate={async (payload) => {
         const created = await addCategory(payload.name, payload.colorHex, {
           weight: payload.weight,
-          description: payload.description
+          description: payload.description,
+          visibilityMode: payload.visibilityMode,
+          visibilityLibraryIds: payload.visibilityLibraryIds
         });
         setSelectedCategoryId(created.id);
       }}
@@ -386,7 +390,9 @@ export default function TagsPage() {
           name: payload.name,
           colorHex: payload.colorHex,
           weight: payload.weight,
-          description: payload.description
+          description: payload.description,
+          visibilityMode: payload.visibilityMode,
+          visibilityLibraryIds: payload.visibilityLibraryIds
         });
       }}
       onDelete={async (categoryId) => {
