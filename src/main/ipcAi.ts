@@ -53,6 +53,7 @@ import {
   deleteLlamaRuntimeIfUnused,
   ensureLlamaRuntime,
   getLlamaRuntimeStatus,
+  hasCudaServerBinary,
   isLlamaRuntimeInstalled
 } from './ai/llamaRuntime';
 import type { LlamaRuntimeVariant } from './ai/llamaRuntimeCatalog';
@@ -236,7 +237,8 @@ async function ensureVisionRuntimeForUpdate(userData: string, role: ModelRole): 
   await ensureLlamaRuntime(userData, 'cpu', (percent) => {
     broadcastDownloadProgress(role, percent, 'runtime');
   });
-  if (await isLlamaRuntimeInstalled(userData, 'cuda')) {
+  // Repair CUDA (including missing cudart) whenever a CUDA server binary is present.
+  if (await hasCudaServerBinary(userData)) {
     await ensureLlamaRuntime(userData, 'cuda', (percent) => {
       broadcastDownloadProgress(role, percent, 'runtime');
     });

@@ -34,6 +34,29 @@ const artstationBodyEl = document.getElementById('arc-artstation-body');
 const downloadAlbumBtn = document.getElementById('arc-download-album-btn');
 const artstationProgressWrap = document.getElementById('arc-artstation-progress-wrap');
 const artstationProgressEl = document.getElementById('arc-artstation-progress');
+const localTokenInput = document.getElementById('arc-local-token');
+const saveTokenBtn = document.getElementById('arc-save-token-btn');
+
+const TOKEN_STORAGE_KEY = 'arcLocalApiToken';
+
+async function loadLocalToken() {
+  if (!localTokenInput) return;
+  try {
+    const data = await chrome.storage.local.get(TOKEN_STORAGE_KEY);
+    const token = data?.[TOKEN_STORAGE_KEY];
+    if (typeof token === 'string') localTokenInput.value = token;
+  } catch {
+    /* ignore */
+  }
+}
+
+async function saveLocalToken() {
+  if (!localTokenInput) return;
+  const token = localTokenInput.value.trim();
+  await chrome.storage.local.set({ [TOKEN_STORAGE_KEY]: token });
+  setSubtitle(token ? 'Token saved' : 'Token cleared', token ? 'ok' : undefined);
+  await refreshConnectionStatus();
+}
 
 let activeTabId = null;
 let arcConnectionReady = false;
@@ -322,6 +345,13 @@ async function refreshConnectionStatus() {
     return;
   }
 
+  if (res?.arc?.reason === 'unauthorized') {
+    showOfflineLayout(pending, queueMax);
+    setSubtitle('Set local token from ARC settings', 'danger');
+    await detectBulkSections();
+    return;
+  }
+
   showOfflineLayout(pending, queueMax);
   await detectBulkSections();
 }
@@ -330,5 +360,6 @@ bindStaticLabels();
 setSectionVisible(pinterestSection, false);
 setSectionVisible(instagramSection, false);
 setSectionVisible(artstationSection, false);
-void refreshConnectionStatus();
+saveTokenBtn?.addEventListener('click', () => void saveLocalToken());
+void loadLocalToken().then(() => refreshConnectionStatus());
 })();

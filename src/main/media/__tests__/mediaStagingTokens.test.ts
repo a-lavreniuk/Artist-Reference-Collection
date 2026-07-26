@@ -21,6 +21,7 @@ import {
   allowMediaStagingPaths,
   clearMediaStagingTokens,
   isAllowedStagingAbsPath,
+  isTrashableAbsPath,
   registerMediaStagingToken
 } from '../mediaStagingTokens';
 
@@ -53,6 +54,21 @@ describe('mediaStagingTokens allowlist', () => {
     expect(isAllowedStagingAbsPath(fake, null)).toBe(false);
     allowMediaStagingPaths([fake]);
     expect(isAllowedStagingAbsPath(fake, null)).toBe(true);
+  });
+
+  it('does not trash arbitrary temp paths without allowlist', () => {
+    const tempFile = path.join(os.tmpdir(), 'arc-random-temp-file.bin');
+    expect(isTrashableAbsPath(tempFile)).toBe(false);
+    allowMediaStagingPaths([tempFile]);
+    expect(isTrashableAbsPath(tempFile)).toBe(true);
+  });
+
+  it('allows trash under trusted auto-import root', () => {
+    const folder =
+      process.platform === 'win32' ? 'D:\\AutoImportWatch' : '/home/user/AutoImportWatch';
+    const file = path.join(folder, 'shot.jpg');
+    expect(isTrashableAbsPath(file)).toBe(false);
+    expect(isTrashableAbsPath(file, folder)).toBe(true);
   });
 
   it('registers token only for allowed existing media files', async () => {

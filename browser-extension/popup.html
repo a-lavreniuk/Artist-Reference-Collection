@@ -76,6 +76,29 @@
             <p id="arc-artstation-progress" class="arc-ext-modal__slot-text"></p>
           </div>
         </section>
+        <section class="arc-ext-modal__section" aria-label="ARC local token">
+          <hr class="arc-ext-modal__separator" />
+          <div class="arc-ext-modal__slot">
+            <p class="arc-ext-modal__slot-text">
+              Local token from ARC Settings → Browser extension (X-ARC-Local-Token):
+            </p>
+          </div>
+          <div class="arc-ext-modal__slot">
+            <input
+              type="password"
+              id="arc-local-token"
+              class="arc-ext-input"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Paste token"
+            />
+          </div>
+          <div class="arc-ext-modal__slot arc-ext-modal__slot--action">
+            <button type="button" id="arc-save-token-btn" class="arc-ext-btn arc-ext-btn--outline">
+              Save token
+            </button>
+          </div>
+        </section>
       </div>
       <footer class="arc-ext-modal__footer arc-ext-modal__footer--split" id="arc-modal-footer">
         <button type="button" id="arc-website-btn" class="arc-ext-btn arc-ext-btn--secondary"></button>

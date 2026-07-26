@@ -374,8 +374,20 @@ export function buildGalleryFilterWhere(
   if (Array.isArray(ctx.moodboardCardIds)) {
     const moodboardIds = ctx.moodboardCardIds.filter(Boolean);
     if (moodboardIds.length) {
-      wh.push(`${alias}.id IN (${moodboardIds.map(() => '?').join(',')})`);
-      binds.push(...moodboardIds);
+      // SQLite default bind limit is often 999; chunk large moodboards safely.
+      const CHUNK = 400;
+      if (moodboardIds.length <= CHUNK) {
+        wh.push(`${alias}.id IN (${moodboardIds.map(() => '?').join(',')})`);
+        binds.push(...moodboardIds);
+      } else {
+        const parts: string[] = [];
+        for (let i = 0; i < moodboardIds.length; i += CHUNK) {
+          const chunk = moodboardIds.slice(i, i + CHUNK);
+          parts.push(`${alias}.id IN (${chunk.map(() => '?').join(',')})`);
+          binds.push(...chunk);
+        }
+        wh.push(`(${parts.join(' OR ')})`);
+      }
     } else {
       wh.push('1 = 0');
     }

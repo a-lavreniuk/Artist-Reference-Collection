@@ -372,11 +372,16 @@ export async function restoreCard(cardId: string): Promise<void> {
   notifyTagsChanged();
 }
 
-export async function permanentDeleteCard(cardId: string): Promise<void> {
+export async function permanentDeleteCard(cardId: string, confirmToken?: string): Promise<void> {
   const b = await resolveBackend();
 
   if (b === 'file') {
-    await storage.storagePermanentDeleteCard(cardId);
+    const token =
+      confirmToken ??
+      (await import('../destructiveConfirm').then((m) =>
+        m.requestDestructiveConfirm({ kind: 'permanent-delete-card', binding: cardId })
+      ));
+    await storage.storagePermanentDeleteCard(cardId, token);
     notifyMoodboardBoardChanged();
   } else {
     const legacy = safeReadArray<{ id: string; type?: string }>(STORAGE_KEYS.cards);
@@ -403,7 +408,9 @@ export async function permanentDeleteCard(cardId: string): Promise<void> {
 export async function emptyTrash(): Promise<number> {
   const b = await resolveBackend();
   if (b !== 'file') return 0;
-  const n = await storage.storageEmptyTrash();
+  const { requestDestructiveConfirm } = await import('../destructiveConfirm');
+  const token = await requestDestructiveConfirm({ kind: 'empty-trash' });
+  const n = await storage.storageEmptyTrash(token);
   if (n > 0) {
     void tryAppendLibraryHistory(`Очищена корзина (${n})`);
   }

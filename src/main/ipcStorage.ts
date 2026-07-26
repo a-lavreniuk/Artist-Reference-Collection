@@ -8,6 +8,7 @@ import {
   isNavigationEpochStale,
   yieldForNavigationIpc
 } from './ipcNavigationPriority';
+import { consumeDestructiveConfirm } from './destructiveConfirm';
 import {
   addSkippedDuplicatePair,
   countCards,
@@ -435,10 +436,23 @@ export function registerStorageIpc(
     await restoreCardFromStorage(root, cardId);
   });
 
-  ipcMain.handle('arc:storage-permanent-delete-card', async (_e, cardId: unknown) => {
+  ipcMain.handle('arc:storage-permanent-delete-card', async (_e, payload: unknown) => {
     assertNotMaintenance();
+    let cardId: string | null = null;
+    let confirmToken: unknown;
+    if (typeof payload === 'string') {
+      cardId = payload;
+    } else if (payload && typeof payload === 'object') {
+      const body = payload as { cardId?: unknown; confirmToken?: unknown };
+      if (typeof body.cardId === 'string') cardId = body.cardId;
+      confirmToken = body.confirmToken;
+    }
+    if (!cardId) return;
+    if (!consumeDestructiveConfirm(confirmToken, 'permanent-delete-card', cardId)) {
+      throw new Error('Нужно подтверждение удаления');
+    }
     const root = await readLibraryRoot();
-    if (!root || typeof cardId !== 'string') return;
+    if (!root) return;
     await deleteCardFromStorage(root, cardId);
     try {
       const { appendHistory } = await import('./libraryHistory');
@@ -448,8 +462,11 @@ export function registerStorageIpc(
     }
   });
 
-  ipcMain.handle('arc:storage-empty-trash', async () => {
+  ipcMain.handle('arc:storage-empty-trash', async (_e, confirmToken: unknown) => {
     assertNotMaintenance();
+    if (!consumeDestructiveConfirm(confirmToken, 'empty-trash')) {
+      throw new Error('Нужно подтверждение очистки корзины');
+    }
     const root = await readLibraryRoot();
     if (!root) return 0;
     await ensureLibraryReady(root);

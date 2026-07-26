@@ -6,7 +6,13 @@ type Entry = {
 };
 
 const MAX = 8;
+/** Cap rows kept per scored-search key (gallery keeps ≤500 in memory; leave headroom for pages). */
+const MAX_ROWS_PER_ENTRY = 2500;
 const cache = new Map<string, Entry>();
+
+function clampCachedRows(rows: CardIndexRow[]): CardIndexRow[] {
+  return rows.length > MAX_ROWS_PER_ENTRY ? rows.slice(0, MAX_ROWS_PER_ENTRY) : rows;
+}
 
 export function getScoredSearchPage(key: string, offset: number, limit: number): CardIndexRow[] | null {
   const entry = cache.get(key);
@@ -20,7 +26,7 @@ export function setScoredSearchResults(key: string, rows: CardIndexRow[]): void 
     if (oldest) cache.delete(oldest);
     else break;
   }
-  cache.set(key, { rows, at: Date.now() });
+  cache.set(key, { rows: clampCachedRows(rows), at: Date.now() });
 }
 
 export function getOrBuildScoredSearchPage(
@@ -31,7 +37,7 @@ export function getOrBuildScoredSearchPage(
 ): CardIndexRow[] {
   let entry = cache.get(key);
   if (!entry) {
-    entry = { rows: buildAll(), at: Date.now() };
+    entry = { rows: clampCachedRows(buildAll()), at: Date.now() };
     while (cache.size >= MAX) {
       const oldest = cache.keys().next().value;
       if (oldest) cache.delete(oldest);
@@ -50,7 +56,7 @@ export async function getOrBuildScoredSearchPageAsync(
 ): Promise<CardIndexRow[]> {
   let entry = cache.get(key);
   if (!entry) {
-    entry = { rows: await buildAll(), at: Date.now() };
+    entry = { rows: clampCachedRows(await buildAll()), at: Date.now() };
     while (cache.size >= MAX) {
       const oldest = cache.keys().next().value;
       if (oldest) cache.delete(oldest);

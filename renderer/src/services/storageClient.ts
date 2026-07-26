@@ -95,12 +95,12 @@ export async function storageRestoreCard(cardId: string): Promise<void> {
   return arc().storageRestoreCard(cardId);
 }
 
-export async function storagePermanentDeleteCard(cardId: string): Promise<void> {
-  return arc().storagePermanentDeleteCard(cardId);
+export async function storagePermanentDeleteCard(cardId: string, confirmToken: string): Promise<void> {
+  return arc().storagePermanentDeleteCard(cardId, confirmToken);
 }
 
-export async function storageEmptyTrash(): Promise<number> {
-  return arc().storageEmptyTrash();
+export async function storageEmptyTrash(confirmToken: string): Promise<number> {
+  return arc().storageEmptyTrash(confirmToken);
 }
 
 export async function storageCountCards(

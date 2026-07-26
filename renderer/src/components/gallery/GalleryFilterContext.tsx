@@ -312,7 +312,8 @@ function feedScopeKey(scope: GalleryFeedScope): string {
     selectedTagIds: [...(scope.selectedTagIds ?? [])].sort(),
     cardIdExact: scope.cardIdExact ?? '',
     collectionId: scope.collectionId ?? '',
-    moodboardCardIds: [...(scope.moodboardCardIds ?? [])].sort()
+    // null = library; [] = empty moodboard — must not collide.
+    moodboardCardIds: scope.moodboardCardIds == null ? null : [...scope.moodboardCardIds].sort()
   });
 }
 

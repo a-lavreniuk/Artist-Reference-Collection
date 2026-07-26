@@ -8,6 +8,7 @@ import { isVideoExt } from './ffmpeg';
 import { readLibraryRootSync } from './libraryRootConfig';
 import { getActiveLibraryEntry, readLibraryRootConfigSync } from './librarySessionSnapshot';
 import { isMaintenanceLocked } from './maintenanceLock';
+import { allowMediaStagingPaths } from './media/mediaStagingTokens';
 import { ensureLibraryReady, importMediaFile } from './storage/libraryStorage';
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp']);
@@ -238,6 +239,10 @@ async function processQueue(): Promise<void> {
         sourcePaths: batchSuccessPaths
       });
 
+      if (batchSuccessPaths.length > 0) {
+        allowMediaStagingPaths(batchSuccessPaths);
+      }
+
       if (batchImportedIds.length > 0) {
         const { queueCardsForIndexing } = await import('./ipcAi');
         void queueCardsForIndexing(batchImportedIds);
@@ -247,6 +252,9 @@ async function processQueue(): Promise<void> {
     processing = false;
 
     if (sessionAttempted > 0) {
+      if (sessionSuccessPaths.length > 0) {
+        allowMediaStagingPaths(sessionSuccessPaths);
+      }
       broadcastFinished({
         imported: sessionImported,
         attempted: sessionAttempted,

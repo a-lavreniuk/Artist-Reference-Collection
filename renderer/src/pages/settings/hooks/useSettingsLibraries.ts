@@ -75,7 +75,15 @@ export function useSettingsLibraries() {
       if (!window.arc?.deleteLibrary) return { ok: false as const, error: 'Недоступно' };
       setBusy(true);
       try {
-        const res = await window.arc.deleteLibrary({ id: libraryId, mode });
+        let confirmToken: string | undefined;
+        if (mode === 'disk') {
+          const { requestDestructiveConfirm } = await import('../../../services/destructiveConfirm');
+          confirmToken = await requestDestructiveConfirm({
+            kind: 'delete-library-disk',
+            binding: libraryId
+          });
+        }
+        const res = await window.arc.deleteLibrary({ id: libraryId, mode, confirmToken });
         if (res.ok) await notifyLibraryChanged();
         return res;
       } finally {

@@ -715,7 +715,7 @@ export default function SettingsAiSearchPanel() {
       {cudaPrompt ? (
         <ConfirmModal
           title="Ускорение для vision-моделей"
-          message="Обнаружена видеокарта NVIDIA. Скачать CUDA-сборку llama-server (~450 МБ) для ускорения индексации?"
+          message="Обнаружена видеокарта NVIDIA. Скачать CUDA-сборку llama-server и библиотеки CUDA (~820 МБ) для ускорения на GPU?"
           confirmLabel="Скачать CUDA"
           cancelLabel="Только CPU"
           onConfirm={cudaPrompt.onConfirm}

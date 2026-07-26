@@ -123,6 +123,9 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
     next.importApiPrefixText =
       typeof patch.importApiPrefixText === 'string' ? patch.importApiPrefixText.trim().slice(0, 64) : '';
   }
+  if ('localApiSecret' in patch && typeof patch.localApiSecret === 'string') {
+    next.localApiSecret = patch.localApiSecret;
+  }
   if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
     next.mcpServerEnabled = patch.mcpServerEnabled;
   }
@@ -296,6 +299,9 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   if ('importApiPrefixText' in patch) {
     next.importApiPrefixText =
       typeof patch.importApiPrefixText === 'string' ? patch.importApiPrefixText.trim().slice(0, 64) : '';
+  }
+  if ('localApiSecret' in patch && typeof patch.localApiSecret === 'string') {
+    next.localApiSecret = patch.localApiSecret;
   }
   if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
     next.mcpServerEnabled = patch.mcpServerEnabled;

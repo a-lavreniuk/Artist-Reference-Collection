@@ -1,13 +1,25 @@
 import { readFile } from 'fs/promises';
 import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
 import { createServer } from 'net';
-import path from 'path';
 
 import type { AiResourceSettings } from './types';
 import { importEsm } from './esmImport';
-import { resolveLlamaServerBinaryFromUserData } from './llamaRuntime';
+import {
+  ensureLlamaRuntime,
+  hasCudaCudartLibs,
+  llamaServerBinaryPath,
+  resolveLlamaServerBinaryFromUserData
+} from './llamaRuntime';
 import { ensureVisionSafeImagePath } from './indexVisionImage';
 import { logAiIndexer } from './aiIndexerLog';
+import {
+  LLAMA_CTX_SIZE_CHAT,
+  LLAMA_CTX_SIZE_EMBED,
+  LLAMA_IMAGE_MIN_TOKENS,
+  LLAMA_PARALLEL_SLOTS
+} from './llamaServerLimits';
+import { existsSync } from 'fs';
+import path from 'path';
 
 export type LlamaServerHooks = {
   onStatus?: (message: string) => void;
@@ -118,14 +130,44 @@ export async function embedTextWithNodeLlama(
   return Array.from(embedding.vector);
 }
 
+function isCudaRuntimeDir(runtimeDir: string, userDataPath: string): boolean {
+  // Path may end with `...\cuda` (no trailing slash) — do not require a following separator.
+  if (path.basename(runtimeDir).toLowerCase() !== 'cuda') return false;
+  return hasCudaCudartLibs(userDataPath);
+}
+
+function pickFatalServerLog(recentLogs: string[]): string {
+  const fatal = [...recentLogs]
+    .reverse()
+    .find(
+      (line) =>
+        /GGML_ASSERT|failed to allocate|failed to load|exiting due to|error loading model/i.test(line) &&
+        !/require at minimum \d+ image tokens/i.test(line)
+    );
+  if (fatal) return fatal;
+  return recentLogs.slice(-2).join(' | ');
+}
+
 async function waitForServerReady(
   baseUrl: string,
+  child: ChildProcessWithoutNullStreams,
   timeoutMs = 600_000,
-  hooks?: LlamaServerHooks
+  hooks?: LlamaServerHooks,
+  recentLogs?: string[]
 ): Promise<void> {
   const started = Date.now();
   let lastStatusAt = 0;
   while (Date.now() - started < timeoutMs) {
+    if (child.exitCode != null || child.signalCode != null) {
+      const hint = pickFatalServerLog(recentLogs ?? []);
+      throw new Error(
+        hint.includes('failed to allocate') || hint.includes('kv cache')
+          ? 'Не хватило памяти для модели (уменьшите контекст или закройте другие приложения).'
+          : hint.includes('GGML_ASSERT')
+            ? 'llama-server аварийно завершился при загрузке модели (обновите CUDA-среду vision в настройках AI).'
+            : `llama-server завершился при загрузке${hint ? `: ${hint.slice(0, 240)}` : ' (проверьте RAM и CUDA)'}`
+      );
+    }
     const elapsedSec = Math.floor((Date.now() - started) / 1000);
     if (hooks?.onStatus && Date.now() - lastStatusAt >= 2000) {
       lastStatusAt = Date.now();
@@ -159,6 +201,19 @@ export async function ensureLlamaServer(
   await shutdownLlamaServer();
 
   const preferCuda = (resources.gpuLayers ?? 0) > 0;
+  if (preferCuda && existsSync(llamaServerBinaryPath(userDataPath, 'cuda'))) {
+    try {
+      hooks?.onStatus?.('Проверка CUDA-среды…');
+      await ensureLlamaRuntime(userDataPath, 'cuda', (percent) => {
+        if (percent < 100) hooks?.onStatus?.(`Докачка CUDA-библиотек… ${percent}%`);
+      });
+    } catch (err) {
+      logAiIndexer('CUDA ensure failed', {
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+
   const binary = resolveLlamaServerBinary(userDataPath, preferCuda);
   if (!binary) {
     throw new Error(
@@ -166,8 +221,20 @@ export async function ensureLlamaServer(
     );
   }
 
+  const runtimeDir = path.dirname(binary);
+  const usingCuda = isCudaRuntimeDir(runtimeDir, userDataPath);
+  const ctxSize = mode === 'embed' ? LLAMA_CTX_SIZE_EMBED : LLAMA_CTX_SIZE_CHAT;
+  const gpuLayers = usingCuda ? Math.max(0, resources.gpuLayers ?? 0) : 0;
   const port = await getFreePort();
-  logAiIndexer('Запуск llama-server', { mode, port, gpuLayers: resources.gpuLayers ?? 0 });
+  logAiIndexer('Запуск llama-server', {
+    mode,
+    port,
+    gpuLayers,
+    ctxSize,
+    parallel: LLAMA_PARALLEL_SLOTS,
+    usingCuda,
+    runtimeDir
+  });
   hooks?.onStatus?.('Запуск llama-server…');
   const args = [
     '-m',
@@ -177,25 +244,42 @@ export async function ensureLlamaServer(
     '--port',
     String(port),
     '-ngl',
-    String(resources.gpuLayers ?? 0),
+    String(gpuLayers),
     '-t',
-    String(resources.threads ?? 4)
+    String(resources.threads ?? 4),
+    '-c',
+    String(ctxSize),
+    '-np',
+    String(LLAMA_PARALLEL_SLOTS),
+    '--no-warmup'
   ];
 
   if (mmprojPath) {
-    args.push('--mmproj', mmprojPath);
+    args.push('--mmproj', mmprojPath, '--image-min-tokens', String(LLAMA_IMAGE_MIN_TOKENS));
   }
 
   if (mode === 'embed') {
     args.push('--embedding', '--pooling', 'last');
   }
 
-  const child = spawn(binary, args, { stdio: 'pipe', windowsHide: true });
+  const pathEnv = process.env.PATH ?? process.env.Path ?? '';
+  const child = spawn(binary, args, {
+    stdio: 'pipe',
+    windowsHide: true,
+    cwd: runtimeDir,
+    env: {
+      ...process.env,
+      PATH: `${runtimeDir}${path.delimiter}${pathEnv}`
+    }
+  });
   const baseUrl = `http://127.0.0.1:${port}`;
+  const recentLogs: string[] = [];
 
   child.stderr.on('data', (chunk) => {
     const line = String(chunk).trim();
     if (!line) return;
+    recentLogs.push(line.slice(0, 500));
+    if (recentLogs.length > 20) recentLogs.shift();
     logAiIndexer('llama-server', { line: line.slice(0, 500) });
   });
 
@@ -208,7 +292,20 @@ export async function ensureLlamaServer(
 
   serverSession = { process: child, port, baseUrl };
   serverConfigKey = key;
-  await waitForServerReady(baseUrl, 600_000, hooks);
+  try {
+    await waitForServerReady(baseUrl, child, 600_000, hooks, recentLogs);
+  } catch (err) {
+    try {
+      child.kill();
+    } catch {
+      /* ignore */
+    }
+    if (serverSession?.process === child) {
+      serverSession = null;
+      serverConfigKey = null;
+    }
+    throw err;
+  }
   return serverSession;
 }
 

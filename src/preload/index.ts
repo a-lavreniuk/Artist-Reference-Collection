@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld('arc', {
       | { ok: true; library: { id: string; name: string; path: string } }
       | { ok: false; error: string; fieldError?: boolean }
     >,
-  deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink' }) =>
+  deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink'; confirmToken?: string }) =>
     ipcRenderer.invoke('arc:delete-library', payload) as Promise<
       { ok: true; switchedToId: string | null } | { ok: false; error: string }
     >,
@@ -156,9 +156,10 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:storage-insert-cards-metadata', cards),
   storageSoftDeleteCard: (cardId: string) => ipcRenderer.invoke('arc:storage-soft-delete-card', cardId),
   storageRestoreCard: (cardId: string) => ipcRenderer.invoke('arc:storage-restore-card', cardId),
-  storagePermanentDeleteCard: (cardId: string) =>
-    ipcRenderer.invoke('arc:storage-permanent-delete-card', cardId),
-  storageEmptyTrash: () => ipcRenderer.invoke('arc:storage-empty-trash') as Promise<number>,
+  storagePermanentDeleteCard: (cardId: string, confirmToken: string) =>
+    ipcRenderer.invoke('arc:storage-permanent-delete-card', { cardId, confirmToken }),
+  storageEmptyTrash: (confirmToken: string) =>
+    ipcRenderer.invoke('arc:storage-empty-trash', confirmToken) as Promise<number>,
   storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
     ipcRenderer.invoke('arc:storage-count-cards', payload),
   storageCountCardsWithTagIds: (tagIds: string[]) =>
@@ -321,10 +322,20 @@ contextBridge.exposeInMainWorld('arc', {
         }
       | { ok: false; error: string }
     >,
-  maintenanceBegin: (opts?: { silentUi?: boolean }) =>
+  maintenanceBegin: (opts?: { silentUi?: boolean; reason?: string }) =>
     ipcRenderer.invoke('arc:maintenance-begin', opts) as Promise<{ ok: true; token: string }>,
-  maintenanceEnd: (token?: string) =>
-    ipcRenderer.invoke('arc:maintenance-end', token) as Promise<{ ok: true }>,
+  maintenanceEnd: (token: string) =>
+    ipcRenderer.invoke('arc:maintenance-end', token) as Promise<
+      { ok: true } | { ok: false; error: string }
+    >,
+  requestDestructiveConfirm: (payload: {
+    kind: 'empty-trash' | 'permanent-delete-card' | 'delete-library-disk';
+    binding?: string;
+    uses?: number;
+  }) =>
+    ipcRenderer.invoke('arc:request-destructive-confirm', payload) as Promise<
+      { ok: true; token: string } | { ok: false; error: string }
+    >,
   onMaintenance: (cb: (locked: boolean, meta?: { silentUi?: boolean }) => void) => {
     const fn = (_: unknown, payload: { locked?: boolean; silentUi?: boolean }) => {
       cb(Boolean(payload?.locked), { silentUi: Boolean(payload?.silentUi) });

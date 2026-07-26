@@ -16,6 +16,7 @@ import { downloadUrlToTempFile } from './importFromRemote';
 import { resolveImportMaxBytes, resolveImportMediaKind } from './importMediaKind';
 import type { ImportApiHandlerDeps } from './types';
 import { downloadYoutubeToTempFile, isYoutubeUrl } from './youtubeDownload';
+import { requestHasValidLocalApiToken } from '../localApiAuth';
 
 let server: http.Server | null = null;
 
@@ -194,6 +195,12 @@ function buildDeps(): ImportApiHandlerDeps {
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (!isLocalAddress(req)) {
     sendJson(res, 403, { status: 'error', message: 'Forbidden' });
+    return;
+  }
+
+  const secret = readAppPreferencesSync().localApiSecret?.trim() ?? '';
+  if (!secret || !requestHasValidLocalApiToken(req, secret)) {
+    sendJson(res, 401, { status: 'error', message: 'Unauthorized' });
     return;
   }
 

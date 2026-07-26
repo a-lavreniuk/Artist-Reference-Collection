@@ -84,6 +84,22 @@ export function isAllowedStagingAbsPath(absPath: string, libraryRoot: string | n
   return Boolean(entry && entry.expiresAt > Date.now());
 }
 
+/**
+ * Paths the renderer may send to shell.trashItem.
+ * Unlike staging, does NOT trust entire temp/userData — only explicit allowlist
+ * or a path under `trustedTrashRoot` (e.g. auto-import folder).
+ */
+export function isTrashableAbsPath(absPath: string, trustedTrashRoot?: string | null): boolean {
+  const resolved = path.resolve(absPath);
+  pruneExpiredAllowlist();
+  const entry = stagingAllowlist.get(resolved);
+  if (entry && entry.expiresAt > Date.now()) return true;
+  if (typeof trustedTrashRoot === 'string' && trustedTrashRoot.trim()) {
+    if (isUnderDir(resolved, trustedTrashRoot.trim())) return true;
+  }
+  return false;
+}
+
 /** Регистрирует абсолютный путь для выдачи через media server по одноразовому токену (?stg=). */
 export async function registerMediaStagingToken(
   absPath: string,

@@ -705,6 +705,10 @@ async function prepareVisionRuntimeWithCudaOffer(tier: string): Promise<{ ok: bo
   if (!cpuRes.ok) return cpuRes;
 
   const arc = window.arc;
+  // Refresh GPU flags before deciding on CUDA offer (nvidia-smi / deep detect).
+  if (arc?.aiDetectHardware) {
+    await arc.aiDetectHardware();
+  }
   const currentStatus = (await arc?.aiGetStatus?.()) as AiStatus | undefined;
   if (shouldOfferCudaInstall(currentStatus)) {
     await waitForNextFrame();

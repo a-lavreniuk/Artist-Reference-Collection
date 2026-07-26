@@ -60,6 +60,9 @@ async function trySaveOrQueue(payload) {
     if (arc.reason === 'disabled') {
       return { ok: false, code: 'disabled' };
     }
+    if (arc.reason === 'unauthorized') {
+      return { ok: false, code: 'unauthorized' };
+    }
     const q = await enqueue(payload);
     if (q === 'full') {
       return { ok: false, code: 'queue_full', pending: await queueLength(), queueMax: QUEUE_MAX };
@@ -311,7 +314,7 @@ async function importInstagramPostImages(post, collectionId) {
 async function saveInstagramPost(postUrl, tabId) {
   const arc = await checkArc();
   if (!arc.ok) {
-    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : 'offline' };
+    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : arc.reason === 'unauthorized' ? 'unauthorized' : 'offline' };
   }
 
   const post = await resolveInstagramPost(postUrl, tabId);
@@ -343,7 +346,7 @@ async function saveInstagramPost(postUrl, tabId) {
 async function downloadInstagramSaved(tabId, onProgress) {
   const arc = await checkArc();
   if (!arc.ok) {
-    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : 'offline' };
+    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : arc.reason === 'unauthorized' ? 'unauthorized' : 'offline' };
   }
 
   let saved;
@@ -526,7 +529,7 @@ async function importArtstationArtworkMedia(artwork, collectionId) {
 async function downloadArtstationAlbum(tabId, onProgress) {
   const arc = await checkArc();
   if (!arc.ok) {
-    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : 'offline' };
+    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : arc.reason === 'unauthorized' ? 'unauthorized' : 'offline' };
   }
 
   let album;
@@ -601,7 +604,7 @@ async function downloadArtstationAlbum(tabId, onProgress) {
 async function downloadPinterestBoard(tabId, onProgress) {
   const arc = await checkArc();
   if (!arc.ok) {
-    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : 'offline' };
+    return { ok: false, code: arc.reason === 'disabled' ? 'disabled' : arc.reason === 'unauthorized' ? 'unauthorized' : 'offline' };
   }
 
   let board;

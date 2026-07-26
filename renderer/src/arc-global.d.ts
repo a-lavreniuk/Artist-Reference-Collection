@@ -64,7 +64,7 @@ declare global {
         | { ok: true; library: ArcLibraryListItem }
         | { ok: false; error: string; fieldError?: boolean }
       >;
-      deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink' }) => Promise<
+      deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink'; confirmToken?: string }) => Promise<
         { ok: true; switchedToId: string | null } | { ok: false; error: string }
       >;
       reorderLibraries: (orderedIds: string[]) => Promise<{ ok: true } | { ok: false; error: string }>;
@@ -132,8 +132,8 @@ declare global {
       ) => Promise<void>;
       storageSoftDeleteCard: (cardId: string) => Promise<void>;
       storageRestoreCard: (cardId: string) => Promise<void>;
-      storagePermanentDeleteCard: (cardId: string) => Promise<void>;
-      storageEmptyTrash: () => Promise<number>;
+      storagePermanentDeleteCard: (cardId: string, confirmToken: string) => Promise<void>;
+      storageEmptyTrash: (confirmToken: string) => Promise<number>;
       storageCountCards: (
         filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
       ) => Promise<number>;
@@ -268,8 +268,13 @@ declare global {
           }
         | { ok: false; error: string }
       >;
-      maintenanceBegin: (opts?: { silentUi?: boolean }) => Promise<{ ok: true; token: string }>;
-      maintenanceEnd: (token?: string) => Promise<{ ok: true }>;
+      maintenanceBegin: (opts?: { silentUi?: boolean; reason?: string }) => Promise<{ ok: true; token: string }>;
+      maintenanceEnd: (token: string) => Promise<{ ok: true } | { ok: false; error: string }>;
+      requestDestructiveConfirm: (payload: {
+        kind: 'empty-trash' | 'permanent-delete-card' | 'delete-library-disk';
+        binding?: string;
+        uses?: number;
+      }) => Promise<{ ok: true; token: string } | { ok: false; error: string }>;
       onMaintenance: (cb: (locked: boolean, meta?: { silentUi?: boolean }) => void) => () => void;
       onRendererShortcut?: (cb: (id: string) => void) => () => void;
 

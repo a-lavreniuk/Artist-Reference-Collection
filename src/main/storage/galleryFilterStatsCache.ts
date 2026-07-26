@@ -17,7 +17,11 @@ export function buildGalleryFilterStatsCacheKey(opts: {
   moodboardCardIds?: string[] | null;
 }): string {
   const tagIds = [...(opts.selectedTagIds ?? [])].sort().join('\u0001');
-  const moodboardIds = [...(opts.moodboardCardIds ?? [])].sort().join('\u0001');
+  // null/undefined = library feed (no moodboard filter); [] = empty moodboard scope.
+  const moodboardIds =
+    opts.moodboardCardIds == null
+      ? ''
+      : `mb:${[...opts.moodboardCardIds].sort().join('\u0001')}`;
   return [
     opts.libraryScope ?? 'all',
     tagIds,

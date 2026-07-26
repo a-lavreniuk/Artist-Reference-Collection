@@ -5,6 +5,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 
 import {
+  CUDA_CUDART_MARKER_DLL,
   githubReleaseAssetUrl,
   LLAMA_CPP_RELEASE,
   LLAMA_RUNTIME_CATALOG,
@@ -29,7 +30,21 @@ export function llamaServerBinaryPath(userDataPath: string, variant: LlamaRuntim
   return path.join(llamaRuntimeVariantDir(userDataPath, variant), serverBinaryName());
 }
 
-export async function isLlamaRuntimeInstalled(
+function cudaGgmlBackendPath(userDataPath: string): string {
+  return path.join(llamaRuntimeVariantDir(userDataPath, 'cuda'), 'ggml-cuda.dll');
+}
+
+export function cudaCudartMarkerPath(userDataPath: string): string {
+  return path.join(llamaRuntimeVariantDir(userDataPath, 'cuda'), CUDA_CUDART_MARKER_DLL);
+}
+
+/** True when CUDA redistributable DLLs are present next to llama-server. */
+export function hasCudaCudartLibs(userDataPath: string): boolean {
+  if (process.platform !== 'win32') return true;
+  return existsSync(cudaCudartMarkerPath(userDataPath));
+}
+
+async function isServerBinaryPresent(
   userDataPath: string,
   variant: LlamaRuntimeVariant
 ): Promise<boolean> {
@@ -43,13 +58,34 @@ export async function isLlamaRuntimeInstalled(
   }
 }
 
+/**
+ * Fully usable runtime: server binary (+ for Windows CUDA: ggml-cuda + cudart).
+ * Without cudart, ggml-cuda.dll silently fails to load and llama sees no GPU.
+ */
+export async function isLlamaRuntimeInstalled(
+  userDataPath: string,
+  variant: LlamaRuntimeVariant
+): Promise<boolean> {
+  if (!(await isServerBinaryPresent(userDataPath, variant))) return false;
+  if (variant === 'cuda' && process.platform === 'win32') {
+    if (!existsSync(cudaGgmlBackendPath(userDataPath))) return false;
+    if (!hasCudaCudartLibs(userDataPath)) return false;
+  }
+  return true;
+}
+
+/** CUDA folder has a server binary (may still miss cudart). */
+export async function hasCudaServerBinary(userDataPath: string): Promise<boolean> {
+  return isServerBinaryPresent(userDataPath, 'cuda');
+}
+
 export function resolveLlamaServerBinaryFromUserData(
   userDataPath: string,
   preferCuda: boolean
 ): string | null {
   if (preferCuda) {
     const cudaPath = llamaServerBinaryPath(userDataPath, 'cuda');
-    if (existsSync(cudaPath)) return cudaPath;
+    if (existsSync(cudaPath) && hasCudaCudartLibs(userDataPath)) return cudaPath;
   }
   const cpuPath = llamaServerBinaryPath(userDataPath, 'cpu');
   if (existsSync(cpuPath)) return cpuPath;
@@ -145,6 +181,33 @@ async function copyRuntimePayload(sourceDir: string, targetDir: string): Promise
   }
 }
 
+/** Copy every .dll from an extracted tree into the CUDA runtime dir (cudart zip is flat). */
+async function copyDllTreeInto(targetDir: string, extractedRoot: string): Promise<number> {
+  await mkdir(targetDir, { recursive: true });
+  let copied = 0;
+  const stack = [extractedRoot];
+  while (stack.length > 0) {
+    const dir = stack.pop()!;
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.dll')) continue;
+      await cp(full, path.join(targetDir, entry.name), { force: true });
+      copied += 1;
+    }
+  }
+  return copied;
+}
+
 async function recordRuntimeInstall(userDataPath: string, variant: LlamaRuntimeVariant): Promise<void> {
   const manifest = await readModelManifest(userDataPath);
   const binPath = llamaServerBinaryPath(userDataPath, variant);
@@ -159,6 +222,51 @@ async function recordRuntimeInstall(userDataPath: string, variant: LlamaRuntimeV
     cuda: variant === 'cuda' ? entry : manifest.llamaRuntime?.cuda
   };
   await writeModelManifest(userDataPath, manifest);
+}
+
+async function ensureCudaCudartLibs(
+  userDataPath: string,
+  onProgress?: (percent: number) => void
+): Promise<void> {
+  if (process.platform !== 'win32') return;
+  if (hasCudaCudartLibs(userDataPath)) {
+    onProgress?.(100);
+    return;
+  }
+
+  const platformKey = resolvePlatformAssetKey();
+  if (!platformKey) {
+    throw new Error('Среда vision не поддерживается на этой платформе.');
+  }
+  const cudart = LLAMA_RUNTIME_CATALOG[platformKey].cudart;
+  if (!cudart) {
+    throw new Error('CUDA-библиотеки недоступны для этой платформы.');
+  }
+
+  const root = llamaRuntimeRootDir(userDataPath);
+  const tempDir = path.join(root, '.tmp-cudart');
+  const archivePath = path.join(tempDir, cudart.archive);
+  const extractDir = path.join(tempDir, 'extract');
+  const targetDir = llamaRuntimeVariantDir(userDataPath, 'cuda');
+
+  await rm(tempDir, { recursive: true, force: true });
+  await mkdir(tempDir, { recursive: true });
+
+  try {
+    await downloadToFile(githubReleaseAssetUrl(cudart.archive), archivePath, (p) => {
+      onProgress?.(Math.max(0, Math.min(95, Math.round(p * 0.9))));
+    });
+    onProgress?.(92);
+    await extractArchive(archivePath, extractDir, cudart.format);
+    onProgress?.(96);
+    const copied = await copyDllTreeInto(targetDir, extractDir);
+    if (copied < 1 || !hasCudaCudartLibs(userDataPath)) {
+      throw new Error('Не удалось установить CUDA-библиотеки (cudart).');
+    }
+    onProgress?.(100);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
 }
 
 export async function ensureLlamaRuntime(
@@ -177,6 +285,22 @@ export async function ensureLlamaRuntime(
       return;
     }
     await rm(llamaRuntimeVariantDir(userDataPath, variant), { recursive: true, force: true });
+  }
+
+  // Server already present for this release, but cudart missing — only fetch redistributable.
+  if (
+    variant === 'cuda' &&
+    (await isServerBinaryPresent(userDataPath, 'cuda')) &&
+    !hasCudaCudartLibs(userDataPath)
+  ) {
+    const manifest = await readModelManifest(userDataPath);
+    if (manifest.llamaRuntime?.release === LLAMA_CPP_RELEASE || !manifest.llamaRuntime?.release) {
+      await ensureCudaCudartLibs(userDataPath, onProgress);
+      if (!manifest.llamaRuntime?.release) {
+        await recordRuntimeInstall(userDataPath, 'cuda');
+      }
+      return;
+    }
   }
 
   const platformKey = resolvePlatformAssetKey();
@@ -200,10 +324,13 @@ export async function ensureLlamaRuntime(
   await mkdir(tempDir, { recursive: true });
 
   try {
-    await downloadToFile(githubReleaseAssetUrl(asset.archive), archivePath, onProgress);
-    onProgress?.(90);
+    const serverProgressScale = variant === 'cuda' ? 0.55 : 1;
+    await downloadToFile(githubReleaseAssetUrl(asset.archive), archivePath, (p) => {
+      onProgress?.(Math.max(0, Math.min(90, Math.round(p * serverProgressScale))));
+    });
+    onProgress?.(variant === 'cuda' ? 52 : 90);
     await extractArchive(archivePath, extractDir, asset.format);
-    onProgress?.(95);
+    onProgress?.(variant === 'cuda' ? 56 : 95);
 
     const serverPath = await findServerBinary(extractDir);
     if (!serverPath) {
@@ -214,8 +341,22 @@ export async function ensureLlamaRuntime(
     await mkdir(targetDir, { recursive: true });
     await copyRuntimePayload(path.dirname(serverPath), targetDir);
 
-    if (!(await isLlamaRuntimeInstalled(userDataPath, variant))) {
+    if (!(await isServerBinaryPresent(userDataPath, variant))) {
       throw new Error('Не удалось установить llama-server.');
+    }
+
+    if (variant === 'cuda') {
+      await ensureCudaCudartLibs(userDataPath, (p) => {
+        onProgress?.(56 + Math.round((p / 100) * 42));
+      });
+    }
+
+    if (!(await isLlamaRuntimeInstalled(userDataPath, variant))) {
+      throw new Error(
+        variant === 'cuda'
+          ? 'Не удалось установить CUDA-среду (llama-server + библиотеки).'
+          : 'Не удалось установить llama-server.'
+      );
     }
 
     await recordRuntimeInstall(userDataPath, variant);

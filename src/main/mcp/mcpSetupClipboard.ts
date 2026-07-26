@@ -2,6 +2,8 @@ import path from 'path';
 
 import { ipcMain } from 'electron';
 
+import { readAppPreferencesSync } from '../appPreferences';
+import { ARC_LOCAL_TOKEN_HEADER } from '../localApiAuth';
 import { ARC_MCP_PORT, ARC_MCP_URL } from './constants';
 
 let mcpSetupIpcRegistered = false;
@@ -30,13 +32,18 @@ export function getMcpStdioLaunch(): McpStdioLaunch {
   return { command: process.execPath, args: ['--mcp'] };
 }
 
-export function buildHttpMcpServerConfig(): Record<string, unknown> {
-  return {
+export function buildHttpMcpServerConfig(secret?: string): Record<string, unknown> {
+  const token = (secret ?? readAppPreferencesSync().localApiSecret ?? '').trim();
+  const config: Record<string, unknown> = {
     transport: 'http',
     type: 'streamable-http',
     streamable: true,
     url: ARC_MCP_URL
   };
+  if (token) {
+    config.headers = { [ARC_LOCAL_TOKEN_HEADER]: token };
+  }
+  return config;
 }
 
 export function buildStdioMcpServerConfig(launch: McpStdioLaunch = getMcpStdioLaunch()): Record<string, unknown> {
@@ -53,13 +60,15 @@ export function buildStdioMcpServerConfig(launch: McpStdioLaunch = getMcpStdioLa
 export function buildMcpSetupPackageText(options?: {
   launch?: McpStdioLaunch;
   port?: number;
+  secret?: string;
 }): string {
   const launch = options?.launch ?? getMcpStdioLaunch();
   const port = options?.port ?? ARC_MCP_PORT;
+  const secret = options?.secret ?? readAppPreferencesSync().localApiSecret ?? '';
   const httpJson = JSON.stringify(
     {
       mcpServers: {
-        'arc-mcp': buildHttpMcpServerConfig()
+        'arc-mcp': buildHttpMcpServerConfig(secret)
       }
     },
     null,
@@ -82,6 +91,8 @@ export function buildMcpSetupPackageText(options?: {
     '',
     'Ниже два варианта конфигурации. Если клиент умеет подключаться по URL — используйте HTTP.',
     'Иначе используйте stdio (локальный процесс).',
+    '',
+    'HTTP-запросы должны передавать заголовок X-ARC-Local-Token (секрет из настроек ARC).',
     '',
     `## HTTP (порт ${port})`,
     '',

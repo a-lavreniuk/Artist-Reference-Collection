@@ -18,9 +18,15 @@ export async function bulkSendToTrash(cardIds: readonly string[]): Promise<numbe
 }
 
 export async function bulkPermanentDelete(cardIds: readonly string[]): Promise<number> {
+  if (cardIds.length === 0) return 0;
+  const { requestDestructiveConfirm } = await import('../../services/destructiveConfirm');
+  const token = await requestDestructiveConfirm({
+    kind: 'permanent-delete-card',
+    uses: cardIds.length
+  });
   let count = 0;
   for (const cardId of cardIds) {
-    await permanentDeleteCard(cardId);
+    await permanentDeleteCard(cardId, token);
     count += 1;
   }
   return count;

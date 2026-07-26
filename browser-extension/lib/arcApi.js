@@ -8,8 +8,31 @@ const IMPORT_IMAGE_TIMEOUT_MS = 60_000;
 /** Video / YouTube / HLS imports may take several minutes. */
 const IMPORT_VIDEO_TIMEOUT_MS = 15 * 60 * 1000;
 
+const LOCAL_TOKEN_HEADER = 'X-ARC-Local-Token';
+const TOKEN_STORAGE_KEY = 'arcLocalApiToken';
+
 function apiBase(host) {
   return `http://${host}:${ARC_API_PORT}/api/v1`;
+}
+
+async function readLocalToken() {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.storage?.local) {
+      const data = await chrome.storage.local.get(TOKEN_STORAGE_KEY);
+      const token = data?.[TOKEN_STORAGE_KEY];
+      return typeof token === 'string' ? token.trim() : '';
+    }
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
+async function authHeaders(extra = {}) {
+  const token = await readLocalToken();
+  const headers = { ...extra };
+  if (token) headers[LOCAL_TOKEN_HEADER] = token;
+  return headers;
 }
 
 function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
@@ -46,14 +69,19 @@ function importTimeoutFor(payload) {
  */
 export async function checkArc() {
   let sawHttp = false;
+  const headers = await authHeaders();
 
   for (const host of ARC_API_HOSTS) {
     try {
       const res = await fetchWithTimeout(`${apiBase(host)}/app/info`, {
         method: 'GET',
-        cache: 'no-store'
+        cache: 'no-store',
+        headers
       });
       sawHttp = true;
+      if (res.status === 401) {
+        return { ok: false, reason: 'unauthorized' };
+      }
       if (!res.ok) continue;
       const json = await res.json();
       if (json?.status !== 'success') continue;
@@ -105,7 +133,7 @@ export async function importItem(payload) {
       `${apiBase(ARC_API_PRIMARY_HOST)}/item/add`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body)
       },
       importTimeoutFor(payload)
@@ -113,6 +141,9 @@ export async function importItem(payload) {
     const json = await res.json();
     if (res.status === 503) {
       return { ok: false, code: 'no_library', message: json?.message ?? 'Library not selected' };
+    }
+    if (res.status === 401) {
+      return { ok: false, code: 'unauthorized', message: 'Set ARC local token in extension popup' };
     }
     if (res.status === 403) {
       return { ok: false, code: 'disabled', message: json?.message ?? 'Import API disabled' };
@@ -145,7 +176,7 @@ export async function ensureCollection(name) {
       `${apiBase(ARC_API_PRIMARY_HOST)}/collection/ensure`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ name: trimmed })
       },
       IMPORT_IMAGE_TIMEOUT_MS
@@ -153,6 +184,9 @@ export async function ensureCollection(name) {
     const json = await res.json();
     if (res.status === 503) {
       return { ok: false, code: 'no_library', message: json?.message ?? 'Library not selected' };
+    }
+    if (res.status === 401) {
+      return { ok: false, code: 'unauthorized', message: 'Set ARC local token in extension popup' };
     }
     if (res.status === 403) {
       return { ok: false, code: 'disabled', message: json?.message ?? 'Import API disabled' };

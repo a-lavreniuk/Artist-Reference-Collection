@@ -7,13 +7,16 @@ describe('mcpSetupClipboard', () => {
   it('buildMcpSetupPackageText includes HTTP url and stdio absolute command', () => {
     const text = buildMcpSetupPackageText({
       launch: { command: '/Applications/ARC.app/Contents/MacOS/ARC', args: ['--mcp'] },
-      port: 47897
+      port: 47897,
+      secret: 'test-local-api-secret-value'
     });
     expect(text).toContain('http://127.0.0.1:47897/mcp');
     expect(text).toContain('/Applications/ARC.app/Contents/MacOS/ARC');
     expect(text).toContain('"--mcp"');
     expect(text).toContain('## HTTP');
     expect(text).toContain('## stdio');
+    expect(text).toContain('x-arc-local-token');
+    expect(text).toContain('test-local-api-secret-value');
     expect(text).not.toMatch(/Cursor|Claude|ChatGPT/i);
   });
 });

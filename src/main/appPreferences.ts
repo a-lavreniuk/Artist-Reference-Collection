@@ -1,4 +1,5 @@
 import { app, ipcMain } from 'electron';
+import { randomBytes } from 'crypto';
 import fs from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
@@ -69,6 +70,8 @@ export type AppPreferencesV1 = {
   importApiEnabled: boolean;
   importApiPrefixEnabled: boolean;
   importApiPrefixText: string;
+  /** Shared secret for Import API + HTTP MCP (`X-ARC-Local-Token`). */
+  localApiSecret: string;
   mcpServerEnabled: boolean;
   mcpToolsEnabled: McpToolsEnabledMap;
   /** AI semantic search master toggle (same as aiSearchEnabled). */
@@ -120,6 +123,10 @@ function sanitizeOnboardingTourStep(raw: unknown, maxStep = 16): number {
   return Math.max(0, Math.min(maxStep, n));
 }
 
+function generateLocalApiSecret(): string {
+  return randomBytes(24).toString('hex');
+}
+
 export function defaultAppPreferences(): AppPreferencesV1 {
   return {
     version: 1,
@@ -148,6 +155,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     importApiEnabled: true,
     importApiPrefixEnabled: false,
     importApiPrefixText: '',
+    localApiSecret: generateLocalApiSecret(),
     mcpServerEnabled: false,
     mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
@@ -355,6 +363,10 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     importApiPrefixEnabled:
       typeof raw.importApiPrefixEnabled === 'boolean' ? raw.importApiPrefixEnabled : d.importApiPrefixEnabled,
     importApiPrefixText: sanitizeImportApiPrefixText(raw.importApiPrefixText ?? d.importApiPrefixText),
+    localApiSecret:
+      typeof raw.localApiSecret === 'string' && raw.localApiSecret.trim().length >= 16
+        ? raw.localApiSecret.trim()
+        : generateLocalApiSecret(),
     mcpServerEnabled: typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
     mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
     ...migrateAiPrefsFromLegacy(raw, d),
@@ -484,6 +496,14 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('importApiPrefixText' in patch) {
     next.importApiPrefixText = sanitizeImportApiPrefixText(patch.importApiPrefixText);
+  }
+  if ('localApiSecret' in patch && typeof patch.localApiSecret === 'string') {
+    const trimmed = patch.localApiSecret.trim();
+    if (trimmed === '') {
+      next.localApiSecret = generateLocalApiSecret();
+    } else if (trimmed.length >= 16) {
+      next.localApiSecret = trimmed;
+    }
   }
   if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
     next.mcpServerEnabled = patch.mcpServerEnabled;
@@ -650,14 +670,16 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
   if (
     'importApiEnabled' in patch ||
     'importApiPrefixEnabled' in patch ||
-    'importApiPrefixText' in patch
+    'importApiPrefixText' in patch ||
+    'localApiSecret' in patch
   ) {
     const { restartImportApiServer } = await import('./importApi/importApiHost');
     await restartImportApiServer();
   }
   if (
     ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') ||
-    ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object')
+    ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object') ||
+    'localApiSecret' in patch
   ) {
     const { restartMcpServer } = await import('./mcp/mcpHost');
     await restartMcpServer();

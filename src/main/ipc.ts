@@ -9,7 +9,9 @@ import {
   setActiveMediaTabAndSync,
   syncArcMediaServerLibraryRoot
 } from './media/mediaServerHost';
-import { allowMediaStagingPaths, registerMediaStagingToken } from './media/mediaStagingTokens';
+import { allowMediaStagingPaths, isAllowedStagingAbsPath, isTrashableAbsPath, registerMediaStagingToken } from './media/mediaStagingTokens';
+import { consumeDestructiveConfirm, issueDestructiveConfirm } from './destructiveConfirm';
+import type { DestructiveConfirmKind } from './destructiveConfirm';
 import { acquireMaintenanceLock, isMaintenanceLocked, releaseMaintenanceLock } from './maintenanceLock';
 import { appendHistory, clearHistory, readHistory, type HistorySegment } from './libraryHistory';
 import {
@@ -195,14 +197,41 @@ export function registerArcIpc(): void {
   registerStorageIpc(readLibraryRootFromDisk, assertNotMaintenance);
   registerDuplicateIpc(readLibraryRootFromDisk, assertNotMaintenance);
 
-  ipcMain.handle('arc:maintenance-begin', async (_e, opts?: { silentUi?: boolean }) => {
-    const token = acquireMaintenanceLock({ silentUi: Boolean(opts?.silentUi) });
+  ipcMain.handle('arc:maintenance-begin', async (_e, opts?: { silentUi?: boolean; reason?: unknown }) => {
+    const reason = typeof opts?.reason === 'string' ? opts.reason.trim().slice(0, 64) : '';
+    const token = acquireMaintenanceLock({
+      silentUi: Boolean(opts?.silentUi),
+      reason: reason || 'renderer'
+    });
     return { ok: true as const, token };
   });
 
   ipcMain.handle('arc:maintenance-end', async (_e, token?: unknown) => {
-    releaseMaintenanceLock(typeof token === 'string' ? token : undefined);
+    if (typeof token !== 'string' || !token.trim()) {
+      return { ok: false as const, error: 'Нужен токен обслуживания' };
+    }
+    const released = releaseMaintenanceLock(token.trim());
+    if (!released) {
+      return { ok: false as const, error: 'Неизвестный токен обслуживания' };
+    }
     return { ok: true as const };
+  });
+
+  ipcMain.handle('arc:request-destructive-confirm', async (_e, payload: unknown) => {
+    const body = payload as { kind?: unknown; binding?: unknown; uses?: unknown } | null;
+    const kind = body?.kind;
+    const allowed: DestructiveConfirmKind[] = [
+      'empty-trash',
+      'permanent-delete-card',
+      'delete-library-disk'
+    ];
+    if (typeof kind !== 'string' || !allowed.includes(kind as DestructiveConfirmKind)) {
+      return { ok: false as const, error: 'Некорректное действие' };
+    }
+    const binding = typeof body?.binding === 'string' ? body.binding : undefined;
+    const uses = typeof body?.uses === 'number' ? body.uses : undefined;
+    const token = issueDestructiveConfirm(kind as DestructiveConfirmKind, { binding, uses });
+    return { ok: true as const, token };
   });
 
   ipcMain.handle('arc:get-library-path', async () => readLibraryRootFromDisk());
@@ -296,9 +325,14 @@ export function registerArcIpc(): void {
 
   ipcMain.handle('arc:delete-library', async (_e, payload: unknown) => {
     assertNotMaintenance();
-    const body = payload as { id?: unknown; mode?: unknown } | null;
+    const body = payload as { id?: unknown; mode?: unknown; confirmToken?: unknown } | null;
     const id = typeof body?.id === 'string' ? body.id : '';
     const mode = body?.mode === 'disk' ? 'disk' : 'unlink';
+    if (mode === 'disk') {
+      if (!consumeDestructiveConfirm(body?.confirmToken, 'delete-library-disk', id)) {
+        return { ok: false as const, error: 'Нужно подтверждение удаления' };
+      }
+    }
     const deleted = await deleteLibrary(id, mode);
     if (!deleted.ok) return deleted;
     const root = readLibraryRootSync();
@@ -485,8 +519,13 @@ export function registerArcIpc(): void {
     if (typeof folderPath !== 'string' || !folderPath.trim()) {
       throw new Error('Неверный путь к папке');
     }
+    const resolvedFolder = path.resolve(folderPath.trim());
+    const libraryRoot = readLibraryRootSync();
+    if (!isAllowedStagingAbsPath(resolvedFolder, libraryRoot)) {
+      throw new Error('Папка недоступна для импорта');
+    }
     const { listImportableFilesInDirectoryRoot } = await import('./importPathUtils');
-    const files = await listImportableFilesInDirectoryRoot(folderPath.trim());
+    const files = await listImportableFilesInDirectoryRoot(resolvedFolder);
     allowMediaStagingPaths(files);
     return files;
   });
@@ -526,6 +565,18 @@ export function registerArcIpc(): void {
   ipcMain.handle('arc:show-absolute-in-folder', async (_e, absPath: unknown) => {
     if (typeof absPath !== 'string' || !absPath.trim()) return;
     const abs = path.resolve(absPath.trim());
+    const libraryRoot = readLibraryRootSync();
+    const parentLibrary = readParentLibraryPathSync();
+    const allowed =
+      (libraryRoot && (path.resolve(libraryRoot) === abs || isInsideLibrary(libraryRoot, abs))) ||
+      (parentLibrary &&
+        (path.resolve(parentLibrary) === abs ||
+          (() => {
+            const rel = path.relative(path.resolve(parentLibrary), abs);
+            return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+          })())) ||
+      isAllowedStagingAbsPath(abs, libraryRoot);
+    if (!allowed) return;
     try {
       const st = await stat(abs);
       if (st.isDirectory()) {
@@ -566,11 +617,17 @@ export function registerArcIpc(): void {
       return { ok: false as const, error: 'Пустой URL' };
     }
     const trimmed = url.trim();
-    if (!/^https?:\/\//i.test(trimmed)) {
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      return { ok: false as const, error: 'Недопустимый URL' };
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return { ok: false as const, error: 'Недопустимый URL' };
     }
     try {
-      await shell.openExternal(trimmed);
+      await shell.openExternal(parsed.toString());
       return { ok: true as const };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Не удалось открыть ссылку';
@@ -625,6 +682,8 @@ export function registerArcIpc(): void {
   ipcMain.handle('arc:dir-is-empty', async (_e, absPath: unknown) => {
     if (typeof absPath !== 'string' || !absPath.trim()) return false;
     const resolved = path.resolve(absPath.trim());
+    const libraryRoot = readLibraryRootSync();
+    if (!isAllowedStagingAbsPath(resolved, libraryRoot)) return false;
     try {
       const names = await readdir(resolved);
       return names.length === 0;
@@ -646,13 +705,32 @@ export function registerArcIpc(): void {
 
   ipcMain.handle('arc:trash-path', async (_e, absPath: unknown) => {
     if (typeof absPath !== 'string' || !absPath.trim()) return { ok: false as const, error: 'Пустой путь' };
+    const resolved = path.resolve(absPath.trim());
+    const libraryRoot = readLibraryRootSync();
+    // Never trash inside the active library from this channel — only import/auto-import sources.
+    if (libraryRoot && isInsideLibrary(libraryRoot, resolved)) {
+      return { ok: false as const, error: 'Нельзя удалить файл библиотеки этим действием' };
+    }
+    let autoImportFolder: string | null = null;
     try {
-      await shell.trashItem(path.resolve(absPath.trim()));
+      const { readAppPreferencesSync, resolveAutoImportForLibraryId } = await import('./appPreferences');
+      const { getActiveLibraryEntry, readLibraryRootConfigSync } = await import('./librarySessionSnapshot');
+      const active = getActiveLibraryEntry(readLibraryRootConfigSync());
+      const auto = resolveAutoImportForLibraryId(readAppPreferencesSync(), active?.id ?? null);
+      if (auto.enabled && auto.folderPath) autoImportFolder = auto.folderPath;
+    } catch {
+      /* ignore */
+    }
+    if (!isTrashableAbsPath(resolved, autoImportFolder)) {
+      return { ok: false as const, error: 'Путь не разрешён для удаления' };
+    }
+    try {
+      await shell.trashItem(resolved);
       return { ok: true as const };
-    } catch (err) {
+    } catch {
       return {
         ok: false as const,
-        error: err instanceof Error ? err.message : 'Не удалось переместить в корзину'
+        error: 'Не удалось переместить в корзину'
       };
     }
   });

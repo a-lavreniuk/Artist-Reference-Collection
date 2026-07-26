@@ -33,9 +33,9 @@ describe('maintenanceLock', () => {
 
   it('ignores release with unknown token', () => {
     const token = acquireMaintenanceLock();
-    releaseMaintenanceLock('not-the-token');
+    expect(releaseMaintenanceLock('not-the-token')).toBe(false);
     expect(isMaintenanceLocked()).toBe(true);
-    releaseMaintenanceLock(token);
+    expect(releaseMaintenanceLock(token)).toBe(true);
     expect(isMaintenanceLocked()).toBe(false);
   });
 
