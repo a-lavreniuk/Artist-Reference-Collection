@@ -16,25 +16,37 @@ import {
 } from '../storage/cardEmbeddings';
 import { getLibraryDb, openLibraryDb } from '../storage/db';
 import { ensureLibraryReady } from '../storage/libraryStorage';
-import { embedImageForTier, embedHeavyHybridForIndex, captionForHeavyIndex, ensureLightClipForHybrid } from './aiEmbeddingService';
+import {
+  captionForHeavyIndex,
+  embedHeavyHybridForIndex,
+  embedSearchImage,
+  ensureLightClipForHybrid,
+  isQwenSearchModel
+} from './aiEmbeddingService';
 import { initAiWorker, getModelsDir } from './aiWorkerBridge';
-import { ensureModelsDirs, getModelIdForTier, hasAnyInstalledModel, isModelInstalled } from './modelManager';
-import type { IndexStatus, ModelTier } from './types';
+import {
+  ensureModelsDirs,
+  hasAnyInstalledSearchModel,
+  isModelInstalled,
+  sanitizeSearchModelId
+} from './modelManager';
+import type { IndexStatus, SearchModelId } from './types';
 import { MODEL_CATALOG } from './types';
 import { clearAiSearchCache, vectorFromNumbers } from './semanticSearch';
 import { upsertCardAiCaption } from '../storage/cardAiCaption';
 import { upsertCardAiCaptionFts } from '../storage/cardFts';
 import { waitForNavigationIpc } from '../ipcNavigationPriority';
 import { logAiIndexer, logAiIndexerError, logAiIndexerWarn } from './aiIndexerLog';
+import { getCardAiCaption } from '../storage/cardAiCaption';
 
 let indexRunning = false;
 let indexPaused = false;
 let currentCardId: string | null = null;
 let currentCardProgress: number | null = null;
+let indexStage: IndexStatus['stage'] = null;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
-let activeModelId: string | null = null;
-let activeTier: ModelTier | null = null;
-/** modelId, загруженный в AI worker (может отставать от activeModelId до ensureWorkerReady). */
+let activeSearchModelId: SearchModelId | null = null;
+/** CLIP worker ready model id */
 let workerReadyModelId: string | null = null;
 let lastError: string | null = null;
 let pendingCardIds: string[] = [];
@@ -49,7 +61,6 @@ const INTRA_CARD_BROADCAST_MIN_MS = 300;
 
 let lastIntraCardBroadcastAt = 0;
 let intraCardBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
-/** Карточки с ошибкой индексации в текущей сессии — не повторять в цикле. */
 const skippedCardIds = new Set<string>();
 
 function broadcast(channel: string, payload: unknown): void {
@@ -68,7 +79,8 @@ function broadcastProgress(done: number, total: number, running?: boolean): void
     total,
     running: running ?? (indexRunning && !indexPaused),
     currentCardId,
-    currentCardProgress
+    currentCardProgress,
+    stage: indexStage
   });
 }
 
@@ -114,19 +126,8 @@ function broadcastError(message: string, fallback?: boolean): void {
   broadcast('arc:ai-error', { message, fallback: Boolean(fallback) });
 }
 
-async function resolveActiveModelId(): Promise<string | null> {
-  const prefs = await readAppPreferences();
-  const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
-  if (activeModelId && activeTier === tier) return activeModelId;
-  if (await isModelInstalled(app.getPath('userData'), tier)) {
-    return getModelIdForTier(tier);
-  }
-  for (const fallbackTier of ['light', 'heavy'] as ModelTier[]) {
-    if (await isModelInstalled(app.getPath('userData'), fallbackTier)) {
-      return getModelIdForTier(fallbackTier);
-    }
-  }
-  return null;
+function usesHybridIndex(searchModelId: SearchModelId, captionEnabled: boolean): boolean {
+  return captionEnabled && isQwenSearchModel(searchModelId);
 }
 
 async function openLibraryDbSafe(): Promise<{ root: string; db: NonNullable<ReturnType<typeof getLibraryDb>> } | null> {
@@ -160,38 +161,51 @@ export function getIndexerError(): string | null {
 }
 
 export function getActiveAiModelId(): string | null {
-  return activeModelId;
+  return activeSearchModelId;
 }
 
-export function getActiveAiTier(): ModelTier | null {
-  return activeTier;
+export function getActiveSearchModelId(): SearchModelId | null {
+  return activeSearchModelId;
 }
 
-export function setActiveAiTier(tier: ModelTier | null, modelId: string | null): void {
-  activeTier = tier;
-  activeModelId = modelId;
+/** @deprecated */
+export function getActiveAiTier(): 'light' | 'heavy' | null {
+  if (!activeSearchModelId) return null;
+  return isQwenSearchModel(activeSearchModelId) ? 'heavy' : 'light';
+}
+
+export function setActiveSearchModel(modelId: SearchModelId | null): void {
+  activeSearchModelId = modelId;
+}
+
+/** @deprecated */
+export function setActiveAiTier(_tier: 'light' | 'heavy' | null, modelId: string | null): void {
+  activeSearchModelId = modelId ? sanitizeSearchModelId(modelId) : null;
 }
 
 export function resetWorkerReadyState(): void {
   workerReadyModelId = null;
 }
 
-function countIndexedForModel(db: NonNullable<ReturnType<typeof getLibraryDb>>, modelId: string, tier: ModelTier): number {
-  if (tier === 'heavy') {
+function countIndexedForModel(
+  db: NonNullable<ReturnType<typeof getLibraryDb>>,
+  modelId: SearchModelId,
+  captionEnabled: boolean
+): number {
+  if (usesHybridIndex(modelId, captionEnabled)) {
     const hybridCount = countHybridEmbeddingsForModel(db, modelId);
     if (hybridCount > 0) return hybridCount;
-    return countEmbeddingsForModel(db, modelId);
   }
   return countEmbeddingsForModel(db, modelId);
 }
 
 function listMissingForModel(
   db: NonNullable<ReturnType<typeof getLibraryDb>>,
-  modelId: string,
-  tier: ModelTier,
+  modelId: SearchModelId,
+  captionEnabled: boolean,
   limit: number
 ): string[] {
-  if (tier === 'heavy') {
+  if (usesHybridIndex(modelId, captionEnabled)) {
     return listCardsMissingHybridEmbedding(db, modelId, limit);
   }
   return listCardsMissingEmbedding(db, modelId, limit);
@@ -200,17 +214,17 @@ function listMissingForModel(
 export async function getIndexStatus(): Promise<IndexStatus> {
   const opened = await openLibraryDbSafe();
   const prefs = await readAppPreferences();
-  const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
-  const modelId = (await resolveActiveModelId()) ?? getModelIdForTier('light');
+  const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
   const total = opened ? countIndexableImageCards(opened.db) : 0;
-  const indexed = opened ? countIndexedForModel(opened.db, modelId, tier) : 0;
+  const indexed = opened ? countIndexedForModel(opened.db, modelId, prefs.aiCaptionEnabled) : 0;
   return {
     indexed,
     total,
     running: indexRunning,
     paused: indexPaused,
     currentCardId,
-    currentCardProgress
+    currentCardProgress,
+    stage: indexStage
   };
 }
 
@@ -228,37 +242,42 @@ function resolveImageAbsPath(
 
 async function ensureWorkerReady(): Promise<boolean> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiSemanticSearchEnabled) return false;
+  if (!prefs.aiSearchEnabled && !prefs.aiSemanticSearchEnabled) return false;
 
-  const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
   const userData = app.getPath('userData');
-  if (!(await isModelInstalled(userData, tier))) {
-    lastError = 'Сначала скачайте модель в настройках AI Поиска';
+  const modelId = sanitizeSearchModelId(prefs.aiSearchModelId);
+  if (!(await isModelInstalled(userData, modelId))) {
+    lastError = 'Сначала скачайте модель поиска в настройках AI';
     return false;
   }
 
   const modelsDir = getModelsDir();
   await ensureModelsDirs(userData);
 
-  const expectedModelId = getModelIdForTier(tier);
-  if (activeModelId === expectedModelId && activeTier === tier) {
-    if (tier === 'light' || tier === 'heavy') {
-      if (workerReadyModelId === MODEL_CATALOG.light.id) return true;
-    }
-  }
-
   try {
-    const clipModelId =
-      tier === 'heavy'
-        ? await ensureLightClipForHybrid()
-        : (await initAiWorker('light', modelsDir, {
-            threads: prefs.aiThreads,
-            gpuLayers: prefs.aiGpuLayers,
-            maxRamMb: prefs.aiMaxRamMb
-          })).modelId;
-    activeTier = tier;
-    activeModelId = expectedModelId;
-    workerReadyModelId = clipModelId;
+    if (modelId === 'clip-vit-base-patch32') {
+      if (workerReadyModelId === MODEL_CATALOG['search-clip'].id && activeSearchModelId === modelId) {
+        return true;
+      }
+      const loaded = await initAiWorker('search-clip', modelsDir, {
+        threads: prefs.aiThreads,
+        gpuLayers: prefs.aiGpuLayers,
+        maxRamMb: prefs.aiMaxRamMb
+      });
+      workerReadyModelId = loaded.modelId;
+    } else if (prefs.aiCaptionEnabled) {
+      // Hybrid may still need CLIP only if we ever mix — for Qwen hybrid we don't.
+      // Ensure llama runtime exists via caption/search install paths elsewhere.
+    } else {
+      // Qwen-only: no CLIP worker required
+    }
+
+    // Optional: ensure CLIP present for hybrid legacy paths
+    if (prefs.aiCaptionEnabled && modelId === 'clip-vit-base-patch32') {
+      await ensureLightClipForHybrid();
+    }
+
+    activeSearchModelId = modelId;
     lastError = null;
     return true;
   } catch (err) {
@@ -270,54 +289,78 @@ async function ensureWorkerReady(): Promise<boolean> {
 
 export async function indexCardById(cardId: string): Promise<boolean> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiSemanticSearchEnabled) return false;
+  if (!prefs.aiSearchEnabled && !prefs.aiSemanticSearchEnabled && !prefs.aiCaptionEnabled) {
+    return false;
+  }
 
   const opened = await openLibraryDbSafe();
   if (!opened) return false;
 
-  const ready = await ensureWorkerReady();
-  if (!ready || !activeModelId) return false;
+  const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
+  if (searchOn) {
+    const ready = await ensureWorkerReady();
+    if (!ready || !activeSearchModelId) return false;
+  }
 
   const db = requireLibraryDb(opened.root);
   const imagePath = resolveImageAbsPath(opened.root, cardId, db);
   if (!imagePath) return false;
 
+  const searchModelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
   let heavyLoadProgress = 5;
 
   try {
     setCurrentCardProgress(5);
-    const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
-    logAiIndexer('Индексация карточки', { cardId, tier });
+    logAiIndexer('Индексация карточки', {
+      cardId,
+      searchModelId,
+      caption: prefs.aiCaptionEnabled
+    });
 
-    if (tier === 'heavy') {
+    let caption = '';
+    if (prefs.aiCaptionEnabled) {
+      indexStage = 'captions';
+      if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) {
+        throw new Error('Модель описания (JoyCaption) не установлена');
+      }
       const onHeavyStatus = (message: string) => {
         logAiIndexer(message, { cardId });
         heavyLoadProgress = Math.min(45, heavyLoadProgress + 2);
         setCurrentCardProgress(heavyLoadProgress);
       };
-      const caption = await captionForHeavyIndex(imagePath, onHeavyStatus);
+      caption = await captionForHeavyIndex(imagePath, onHeavyStatus);
       setCurrentCardProgress(55);
       const liveDb = requireLibraryDb(opened.root);
       upsertCardAiCaption(liveDb, cardId, caption);
       upsertCardAiCaptionFts(liveDb, cardId, caption);
-      const tagNames = getCardTagNames(liveDb, cardId);
-      logAiIndexer('Гибридные эмбеддинги', { cardId });
-      setCurrentCardProgress(65);
-      const hybrid = await embedHeavyHybridForIndex(imagePath, caption, tagNames);
-      setCurrentCardProgress(85);
-      upsertHybridCardEmbeddings(
-        liveDb,
-        cardId,
-        activeModelId,
-        vectorFromNumbers(hybrid.visual),
-        vectorFromNumbers(hybrid.caption)
-      );
     } else {
-      const vector = await embedImageForTier(tier, imagePath, activeModelId);
-      setCurrentCardProgress(85);
-      const liveDb = requireLibraryDb(opened.root);
-      upsertCardEmbedding(liveDb, cardId, activeModelId, vectorFromNumbers(vector));
+      caption = getCardAiCaption(db, cardId) ?? '';
     }
+
+    if (searchOn) {
+      indexStage = 'embeddings';
+      const liveDb = requireLibraryDb(opened.root);
+      const tagNames = getCardTagNames(liveDb, cardId);
+
+      if (usesHybridIndex(searchModelId, prefs.aiCaptionEnabled)) {
+        logAiIndexer('Гибридные эмбеддинги', { cardId, searchModelId });
+        setCurrentCardProgress(65);
+        const hybrid = await embedHeavyHybridForIndex(imagePath, caption, tagNames, searchModelId);
+        setCurrentCardProgress(85);
+        upsertHybridCardEmbeddings(
+          liveDb,
+          cardId,
+          searchModelId,
+          vectorFromNumbers(hybrid.visual),
+          vectorFromNumbers(hybrid.caption)
+        );
+      } else {
+        const vector = await embedSearchImage(searchModelId, imagePath);
+        setCurrentCardProgress(85);
+        upsertCardEmbedding(liveDb, cardId, searchModelId, vectorFromNumbers(vector));
+      }
+    }
+
     clearAiSearchCache();
     lastError = null;
     setCurrentCardProgress(100);
@@ -329,6 +372,8 @@ export async function indexCardById(cardId: string): Promise<boolean> {
     logAiIndexerError('Ошибка индексации карточки', err);
     setCurrentCardProgress(null);
     return false;
+  } finally {
+    indexStage = null;
   }
 }
 
@@ -352,32 +397,42 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
     let lastTotal = 0;
 
     try {
+      const prefs = await readAppPreferences();
+      const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
+      if (!searchOn && !prefs.aiCaptionEnabled) return;
+
       const opened = await openLibraryDbSafe();
       if (!opened) return;
 
-      const ready = await ensureWorkerReady();
-      if (!ready || !activeModelId) return;
+      if (searchOn) {
+        const ready = await ensureWorkerReady();
+        if (!ready || !activeSearchModelId) return;
+      } else {
+        activeSearchModelId = sanitizeSearchModelId(prefs.aiSearchModelId);
+      }
 
       lastError = null;
       let db = opened.db;
-      const tier = activeTier ?? 'light';
+      const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
       let total = countIndexableImageCards(db);
-      let indexed = countIndexedForModel(db, activeModelId, tier);
+      let indexed = searchOn ? countIndexedForModel(db, modelId, prefs.aiCaptionEnabled) : 0;
       let didWork = false;
       let autoTagCards = 0;
       let autoTagTags = 0;
       let autoTagCreated = 0;
       lastIndexed = indexed;
       lastTotal = total;
-      logAiIndexer('Старт цикла индексации', { tier, indexed, total });
+      logAiIndexer('Старт цикла индексации', { modelId, indexed, total, caption: prefs.aiCaptionEnabled });
       broadcastProgress(indexed, total);
 
       while (!indexPaused) {
         const queued = pendingCardIds.splice(0, pendingCardIds.length);
-        const batchSize = activeTier === 'heavy' ? HEAVY_BATCH_SIZE : BATCH_SIZE;
-        const targets = [
-          ...new Set([...queued, ...listMissingForModel(db, activeModelId, tier, batchSize)])
-        ].filter((id) => !skippedCardIds.has(id));
+        const batchSize =
+          prefs.aiCaptionEnabled || isQwenSearchModel(modelId) ? HEAVY_BATCH_SIZE : BATCH_SIZE;
+        const missing = searchOn
+          ? listMissingForModel(db, modelId, prefs.aiCaptionEnabled, batchSize)
+          : [];
+        const targets = [...new Set([...queued, ...missing])].filter((id) => !skippedCardIds.has(id));
         if (targets.length === 0) break;
 
         for (const cardId of targets) {
@@ -394,6 +449,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
               const { applyAutoTagsAfterIndex } = await import('./suggestTags');
               const auto = await applyAutoTagsAfterIndex(cardId);
               if (auto && (auto.added > 0 || auto.created > 0)) {
+                indexStage = 'tags';
                 autoTagCards += auto.added > 0 ? 1 : 0;
                 autoTagTags += auto.added;
                 autoTagCreated += auto.created;
@@ -413,7 +469,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
             if (lastError) broadcastError(lastError);
           }
           db = requireLibraryDb(opened.root);
-          indexed = countIndexedForModel(db, activeModelId, tier);
+          indexed = searchOn ? countIndexedForModel(db, modelId, prefs.aiCaptionEnabled) : indexed + (ok ? 1 : 0);
           total = countIndexableImageCards(db);
           lastIndexed = indexed;
           lastTotal = total;
@@ -422,7 +478,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
       }
 
       db = requireLibraryDb(opened.root);
-      indexed = countIndexedForModel(db, activeModelId, tier);
+      indexed = searchOn ? countIndexedForModel(db, modelId, prefs.aiCaptionEnabled) : lastIndexed;
       total = countIndexableImageCards(db);
       lastIndexed = indexed;
       lastTotal = total;
@@ -441,6 +497,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
       indexRunning = false;
       currentCardId = null;
       currentCardProgress = null;
+      indexStage = null;
       broadcastProgress(lastIndexed, lastTotal, false);
       loopPromise = null;
       if (pendingCardIds.length > 0 && !indexPaused) {
@@ -458,9 +515,13 @@ export async function runFullReindex(): Promise<void> {
     throw new Error(lastError ?? 'Библиотека не выбрана');
   }
 
-  const ready = await ensureWorkerReady();
-  if (!ready || !activeModelId) {
-    throw new Error(lastError ?? 'Сначала установите модель AI');
+  const prefs = await readAppPreferences();
+  const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
+  if (searchOn) {
+    const ready = await ensureWorkerReady();
+    if (!ready || !activeSearchModelId) {
+      throw new Error(lastError ?? 'Сначала установите модель поиска');
+    }
   }
 
   indexPaused = true;
@@ -472,7 +533,8 @@ export async function runFullReindex(): Promise<void> {
   skippedCardIds.clear();
 
   const db = requireLibraryDb(opened.root);
-  deleteEmbeddingsForModel(db, activeModelId);
+  const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
+  deleteEmbeddingsForModel(db, modelId);
   clearAiSearchCache();
 
   await runIndexingLoop();
@@ -495,7 +557,6 @@ export function scheduleIdleIndexing(): void {
   }, IDLE_DELAY_MS);
 }
 
-/** Сразу переиндексировать библиотеку под активную модель (например, после переключения tier). */
 export function scheduleReindexForActiveModel(): void {
   cancelIdleIndexing();
   void runFullReindex().catch((err) => {
@@ -517,12 +578,11 @@ export async function queueCardsForIndexing(cardIds: string[]): Promise<void> {
   const ids = cardIds.filter(Boolean);
   const userData = app.getPath('userData');
 
-  if (prefs.aiSemanticSearchEnabled && (await hasAnyInstalledModel(userData))) {
+  const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
+  if ((searchOn || prefs.aiCaptionEnabled) && (await hasAnyInstalledSearchModel(userData) || await isModelInstalled(userData, 'caption'))) {
     await runIndexingLoop(ids);
   }
 
-  // Видео не индексируются heavy-pipeline — автотег и AI-описание после импорта отдельно
-  // (и при выключенном AI Поиске, если включены соответствующие prefs).
   try {
     const { applyAutoTagsForImportedVideos, broadcastAutoTagApplied } = await import('./suggestTags');
     const auto = await applyAutoTagsForImportedVideos(ids);

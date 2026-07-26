@@ -122,7 +122,7 @@ export function getActiveLibraryEntry(cfg: LibraryRootConfig = readLibraryRootCo
     const byPath = libs.find((l) => path.resolve(l.path) === resolved);
     if (byPath) return byPath;
   }
-  return [...libs].sort((a, b) => a.name.localeCompare(b.name, 'ru'))[0] ?? null;
+  return libs[0] ?? null;
 }
 
 export function buildConfigWithActive(
@@ -131,14 +131,15 @@ export function buildConfigWithActive(
   activeId: string,
   extra?: Partial<LibraryRootConfig>
 ): LibraryRootConfig {
-  const sorted = [...libraries].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-  const active = sorted.find((l) => l.id === activeId) ?? sorted[0];
+  /** Порядок массива — пользовательский порядок отображения; не сортировать по имени. */
+  const ordered = [...libraries];
+  const active = ordered.find((l) => l.id === activeId) ?? ordered[0];
   if (!active) {
     return { parentPath, libraries: [], ...extra };
   }
   return {
     parentPath: path.resolve(parentPath),
-    libraries: sorted,
+    libraries: ordered,
     activeLibraryId: active.id,
     path: path.resolve(active.path),
     ...extra

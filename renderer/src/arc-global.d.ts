@@ -67,6 +67,7 @@ declare global {
       deleteLibrary: (payload: { id: string; mode: 'disk' | 'unlink' }) => Promise<
         { ok: true; switchedToId: string | null } | { ok: false; error: string }
       >;
+      reorderLibraries: (orderedIds: string[]) => Promise<{ ok: true } | { ok: false; error: string }>;
       getLibraryContainerName: () => Promise<string>;
       getParentLibraryPath: () => Promise<string | null>;
       setActiveMediaTab: (tab: 'gallery' | 'collections' | 'moodboard' | null) => void;
@@ -416,11 +417,12 @@ declare global {
       aiGetIndexStatus?: () => Promise<import('./services/aiTypes').AiIndexStatus>;
       aiDetectHardware?: () => Promise<import('./services/aiTypes').AiHardwareInfo>;
       aiDownloadModel?: (
-        tier: 'light' | 'heavy'
-      ) => Promise<{ ok: true; modelId: string; tier: string } | { ok: false; error: string }>;
+        ref: string | { role?: string; modelId?: string; tier?: string }
+      ) => Promise<{ ok: true; modelId: string; role?: string; tier?: string } | { ok: false; error: string }>;
       aiDownloadLlamaRuntime?: (payload: {
         variant: 'cpu' | 'cuda';
-        tier: 'light' | 'heavy';
+        role?: string;
+        tier?: string;
       }) => Promise<{ ok: true; variant: string } | { ok: false; error: string }>;
       aiCancelDownload?: () => Promise<{ ok: true }>;
       aiPauseDownload?: () => Promise<{ ok: true }>;
@@ -486,28 +488,34 @@ declare global {
         cb: (detail: { cards: number; tags: number; created: number }) => void
       ) => () => void;
       aiSetEnabled?: (payload: Record<string, unknown>) => Promise<import('./services/aiTypes').AiStatus>;
-      aiDeleteModel?: (tier: 'light' | 'heavy') => Promise<import('./services/aiTypes').AiStatus>;
+      aiDeleteModel?: (
+        ref: string | { role?: string; modelId?: string; tier?: string }
+      ) => Promise<import('./services/aiTypes').AiStatus>;
       aiUpdateModel?: (
-        tier: 'light' | 'heavy'
-      ) => Promise<{ ok: true; modelId: string; tier: string } | { ok: false; error: string }>;
+        ref: string | { role?: string; modelId?: string; tier?: string }
+      ) => Promise<{ ok: true; modelId: string; role?: string; tier?: string } | { ok: false; error: string }>;
       aiTestModel?: (
-        tier: 'light' | 'heavy'
+        ref: string | { role?: string; modelId?: string; tier?: string }
       ) => Promise<{ ok: boolean; message: string; vectorDim?: number }>;
-      aiSetActiveModel?: (tier: 'light' | 'heavy') => Promise<import('./services/aiTypes').AiStatus>;
+      aiSetActiveModel?: (
+        ref: string | { role?: string; modelId?: string; tier?: string }
+      ) => Promise<import('./services/aiTypes').AiStatus>;
       onAiDownloadProgress?: (cb: (detail: {
-        tier: string;
+        role?: string;
+        tier?: string;
         percent: number;
         bytesReceived?: number;
         bytesTotal?: number;
         phase?: 'runtime' | 'model' | 'finalize';
       }) => void) => () => void;
-      onAiDownloadComplete?: (cb: (detail: { tier: string }) => void) => () => void;
+      onAiDownloadComplete?: (cb: (detail: { role?: string; tier?: string }) => void) => () => void;
       onAiIndexProgress?: (cb: (detail: {
         done: number;
         total: number;
         running?: boolean;
         currentCardId?: string | null;
         currentCardProgress?: number | null;
+        stage?: 'embeddings' | 'captions' | 'tags' | null;
       }) => void) => () => void;
       onAiIndexComplete?: (cb: (detail: { indexed: number; total: number }) => void) => () => void;
       onAiError?: (cb: (detail: { message: string; fallback?: boolean }) => void) => () => void;

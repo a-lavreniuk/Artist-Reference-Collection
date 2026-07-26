@@ -30,7 +30,7 @@ export function useAiNavbarModesVisible(): boolean {
   useEffect(() => {
     if (!prefsReady) return;
     void refresh();
-  }, [prefsReady, prefs?.aiSemanticSearchEnabled, refresh]);
+  }, [prefsReady, prefs?.aiSemanticSearchEnabled, prefs?.aiSearchEnabled, refresh]);
 
   useEffect(() => {
     const arc = window.arc;

@@ -12,7 +12,7 @@ export async function verifyHeavyGgufLoad(
   resources: AiResourceSettings,
   userDataPath?: string
 ): Promise<void> {
-  const entry = MODEL_CATALOG.heavy;
+  const entry = MODEL_CATALOG.caption;
   const resolved = userDataPath
     ? resolveModelFilePaths(userDataPath, entry)
     : {

@@ -52,7 +52,7 @@ export function useSimilarGalleryFeed(
       if (!arc?.aiSimilarSearchCards || !requestBase) return [];
       const status = arc.aiGetStatus ? await arc.aiGetStatus() : null;
       if (status && !status.setupReady) {
-        throw new Error('Сначала установите модель в «Настройки → AI Поиск».');
+        throw new Error('Сначала установите модель в «Настройки → AI».');
       }
       const raw = await arc.aiSimilarSearchCards({ ...requestBase, offset, limit });
       return Array.isArray(raw) ? (raw as CardRecord[]) : [];

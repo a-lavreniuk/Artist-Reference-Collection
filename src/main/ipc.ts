@@ -47,6 +47,7 @@ import {
   listLibrariesFromConfig,
   openLibraryOrContainer,
   renameLibrary,
+  reorderLibraries,
   repairLibraryRegistryIfNeeded,
   switchActiveLibrary
 } from './multiLibrary';
@@ -303,6 +304,14 @@ export function registerArcIpc(): void {
     const root = readLibraryRootSync();
     if (root) await finalizeLibraryPathChange(root, true);
     return { ok: true as const, switchedToId: deleted.switchedToId };
+  });
+
+  ipcMain.handle('arc:reorder-libraries', async (_e, orderedIds: unknown) => {
+    assertNotMaintenance();
+    if (!Array.isArray(orderedIds) || !orderedIds.every((id) => typeof id === 'string')) {
+      return { ok: false as const, error: 'Некорректный порядок' };
+    }
+    return reorderLibraries(orderedIds as string[]);
   });
 
   ipcMain.handle('arc:get-library-container-name', async () => LIBRARY_CONTAINER_FOLDER_NAME);

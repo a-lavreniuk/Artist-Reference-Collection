@@ -19,13 +19,17 @@ import {
   type JoyCaptionLengthLevel,
   type JoyCaptionTypeId
 } from './ai/joyCaptionPrompt';
+import type { SearchModelId } from './ai/types';
+import { isSearchModelId } from './ai/types';
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
+/** @deprecated Prefer aiSearchModelId + aiCaptionEnabled */
 export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 export type UiThemePreference = 'dark' | 'light' | 'system';
 export type { JoyCaptionTypeId, JoyCaptionExtraId, JoyCaptionLengthLevel };
+export type { SearchModelId };
 
 export type AutoImportLibrarySettings = {
   enabled: boolean;
@@ -67,7 +71,15 @@ export type AppPreferencesV1 = {
   importApiPrefixText: string;
   mcpServerEnabled: boolean;
   mcpToolsEnabled: McpToolsEnabledMap;
+  /** AI semantic search master toggle (same as aiSearchEnabled). */
   aiSemanticSearchEnabled: boolean;
+  /** Explicit search toggle (synced with aiSemanticSearchEnabled). */
+  aiSearchEnabled: boolean;
+  /** Active search embedding model. */
+  aiSearchModelId: SearchModelId;
+  /** JoyCaption descriptions / caption index. */
+  aiCaptionEnabled: boolean;
+  /** @deprecated Migrated to aiSearchModelId + aiCaptionEnabled */
   aiModelTier: AiModelTier;
   aiThreads: number;
   aiGpuLayers: number;
@@ -139,6 +151,9 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     mcpServerEnabled: false,
     mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
+    aiSearchEnabled: false,
+    aiSearchModelId: 'clip-vit-base-patch32',
+    aiCaptionEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
     aiGpuLayers: 0,
@@ -251,6 +266,50 @@ function sanitizeAiModelTier(raw: unknown): AiModelTier {
   return 'light';
 }
 
+function sanitizeSearchModelId(raw: unknown): SearchModelId {
+  if (isSearchModelId(raw)) return raw;
+  return 'clip-vit-base-patch32';
+}
+
+/** Migrate legacy aiModelTier + aiSemanticSearchEnabled into split prefs. */
+function migrateAiPrefsFromLegacy(
+  raw: Partial<AppPreferencesV1> & Record<string, unknown>,
+  d: AppPreferencesV1
+): Pick<
+  AppPreferencesV1,
+  'aiSemanticSearchEnabled' | 'aiSearchEnabled' | 'aiSearchModelId' | 'aiCaptionEnabled' | 'aiModelTier'
+> {
+  const legacyTier = sanitizeAiModelTier(raw.aiModelTier ?? d.aiModelTier);
+  const hasNewSearchFlag = typeof raw.aiSearchEnabled === 'boolean';
+  const hasNewCaptionFlag = typeof raw.aiCaptionEnabled === 'boolean';
+  const hasNewModelId = isSearchModelId(raw.aiSearchModelId);
+  const semantic =
+    typeof raw.aiSemanticSearchEnabled === 'boolean'
+      ? raw.aiSemanticSearchEnabled
+      : typeof raw.aiSearchEnabled === 'boolean'
+        ? raw.aiSearchEnabled
+        : d.aiSemanticSearchEnabled;
+
+  const aiSearchEnabled = hasNewSearchFlag ? (raw.aiSearchEnabled as boolean) : semantic;
+  const aiCaptionEnabled = hasNewCaptionFlag
+    ? (raw.aiCaptionEnabled as boolean)
+    : legacyTier === 'heavy';
+  const aiSearchModelId = hasNewModelId
+    ? (raw.aiSearchModelId as SearchModelId)
+    : 'clip-vit-base-patch32';
+
+  // Keep aiModelTier derived for any leftover readers
+  const aiModelTier: AiModelTier = aiCaptionEnabled ? 'heavy' : 'light';
+
+  return {
+    aiSemanticSearchEnabled: aiSearchEnabled,
+    aiSearchEnabled,
+    aiSearchModelId,
+    aiCaptionEnabled,
+    aiModelTier
+  };
+}
+
 function sanitizeUiTheme(raw: unknown): UiThemePreference {
   if (raw === 'light' || raw === 'system') return raw;
   return 'dark';
@@ -298,9 +357,7 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     importApiPrefixText: sanitizeImportApiPrefixText(raw.importApiPrefixText ?? d.importApiPrefixText),
     mcpServerEnabled: typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
     mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
-    aiSemanticSearchEnabled:
-      typeof raw.aiSemanticSearchEnabled === 'boolean' ? raw.aiSemanticSearchEnabled : d.aiSemanticSearchEnabled,
-    aiModelTier: sanitizeAiModelTier(raw.aiModelTier ?? d.aiModelTier),
+    ...migrateAiPrefsFromLegacy(raw, d),
     aiThreads: typeof raw.aiThreads === 'number' ? Math.max(1, Math.min(32, Math.round(raw.aiThreads))) : d.aiThreads,
     aiGpuLayers:
       typeof raw.aiGpuLayers === 'number' ? Math.max(0, Math.min(128, Math.round(raw.aiGpuLayers))) : d.aiGpuLayers,
@@ -436,10 +493,27 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
+    next.aiSearchEnabled = patch.aiSemanticSearchEnabled;
+  }
+  if ('aiSearchEnabled' in patch && typeof patch.aiSearchEnabled === 'boolean') {
+    next.aiSearchEnabled = patch.aiSearchEnabled;
+    next.aiSemanticSearchEnabled = patch.aiSearchEnabled;
+  }
+  if ('aiSearchModelId' in patch) {
+    next.aiSearchModelId = sanitizeSearchModelId(patch.aiSearchModelId);
+  }
+  if ('aiCaptionEnabled' in patch && typeof patch.aiCaptionEnabled === 'boolean') {
+    next.aiCaptionEnabled = patch.aiCaptionEnabled;
   }
   if ('aiModelTier' in patch) {
+    // Legacy writes: map to caption + keep search model
     next.aiModelTier = sanitizeAiModelTier(patch.aiModelTier);
+    if (patch.aiModelTier === 'heavy') next.aiCaptionEnabled = true;
+    if (patch.aiModelTier === 'light' && !('aiCaptionEnabled' in patch)) {
+      /* do not force caption off unless explicitly migrating */
+    }
   }
+  next.aiModelTier = next.aiCaptionEnabled ? 'heavy' : 'light';
   if ('aiThreads' in patch && typeof patch.aiThreads === 'number') {
     next.aiThreads = Math.max(1, Math.min(32, Math.round(patch.aiThreads)));
   }

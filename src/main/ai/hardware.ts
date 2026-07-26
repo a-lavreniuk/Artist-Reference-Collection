@@ -1,7 +1,7 @@
 import os from 'os';
 import { execFileSync } from 'child_process';
 
-import type { HardwareInfo, ModelTier } from './types';
+import type { HardwareInfo, ModelTier, SearchModelId } from './types';
 
 export type DetectHardwareOptions = {
   /** Полное определение через PowerShell/system_profiler — только по явному запросу (настройки). */
@@ -166,11 +166,29 @@ function detectCpuDeep(): { model: string | null; frequencyGhz: number | null } 
   return detectCpuFallback();
 }
 
+function recommendSearchModelId(totalMemoryMb: number, vramMb: number | null): SearchModelId {
+  if (totalMemoryMb >= 12288 && vramMb != null && vramMb >= 10000) return 'qwen3-vl-embedding-8b';
+  if (totalMemoryMb >= 8192 && vramMb != null && vramMb >= 4000) return 'qwen3-vl-embedding-2b';
+  return 'clip-vit-base-patch32';
+}
+
 function recommendTier(totalMemoryMb: number, vramMb: number | null, _cpuCores: number): ModelTier {
   if (totalMemoryMb >= 12288 && vramMb != null && vramMb >= 6000) return 'heavy';
   return 'light';
 }
 
+export function getSupportedSearchModelIds(info: HardwareInfo): SearchModelId[] {
+  const supported: SearchModelId[] = ['clip-vit-base-patch32'];
+  if (info.totalMemoryMb >= 8192) supported.push('qwen3-vl-embedding-2b');
+  if (info.totalMemoryMb >= 12288) supported.push('qwen3-vl-embedding-8b');
+  return supported;
+}
+
+export function isSearchModelSupported(info: HardwareInfo, modelId: SearchModelId): boolean {
+  return getSupportedSearchModelIds(info).includes(modelId);
+}
+
+/** @deprecated Prefer getSupportedSearchModelIds */
 export function getSupportedTiers(info: HardwareInfo): ModelTier[] {
   const supported: ModelTier[] = ['light'];
   if (info.totalMemoryMb >= 12288) {
@@ -179,6 +197,7 @@ export function getSupportedTiers(info: HardwareInfo): ModelTier[] {
   return supported;
 }
 
+/** @deprecated Prefer isSearchModelSupported */
 export function isTierSupported(info: HardwareInfo, tier: ModelTier): boolean {
   return getSupportedTiers(info).includes(tier);
 }
@@ -201,7 +220,8 @@ function buildHardwareInfo(
     hasNvidiaGpu: gpu.hasNvidia,
     gpuName: gpu.name,
     estimatedVramMb: gpu.vramMb,
-    recommendedTier: recommendTier(totalMemoryMb, gpu.vramMb, cpuCores)
+    recommendedTier: recommendTier(totalMemoryMb, gpu.vramMb, cpuCores),
+    recommendedSearchModelId: recommendSearchModelId(totalMemoryMb, gpu.vramMb)
   };
 }
 

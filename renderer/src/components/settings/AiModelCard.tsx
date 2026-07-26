@@ -3,6 +3,11 @@ import ArcCheckbox from '../ui/ArcCheckbox';
 import ArcRadio from '../ui/ArcRadio';
 import type { SettingsControlVariant } from './SettingsControlRow';
 
+export type AiModelCardProgress = {
+  title: string;
+  percent: number;
+};
+
 type Props = {
   variant: SettingsControlVariant;
   label: string;
@@ -11,6 +16,8 @@ type Props = {
   disabled?: boolean;
   onCheckedChange?: (checked: boolean) => void;
   actions?: ReactNode;
+  /** Прогресс скачивания/установки под описанием (без кнопок паузы/отмены). */
+  progress?: AiModelCardProgress | null;
 };
 
 /** Карточка модели AI: выбор + кнопки управления внутри одной рамки (Figma 1396:12789). */
@@ -21,7 +28,8 @@ function AiModelCard({
   checked,
   disabled = false,
   onCheckedChange,
-  actions
+  actions,
+  progress = null
 }: Props) {
   const role = variant === 'checkbox' ? 'checkbox' : 'radio';
 
@@ -60,6 +68,16 @@ function AiModelCard({
         </span>
         <span className="arc-settings-option-card__description text-s">{description}</span>
       </button>
+      {progress ? (
+        <div className="arc-settings-ai-model-card__progress" aria-live="polite">
+          <div className="arc-settings-ai-status-head">
+            <p className="text-s arc-settings-ai-status-head__title">{progress.title}</p>
+            <span className="text-s arc-settings-ai-status-head__percent" data-typo-role="secondary">
+              {progress.percent}%
+            </span>
+          </div>
+        </div>
+      ) : null}
       {actions ? (
         <div className="arc-settings-ai-model-card__actions arc-ui-kit-scope" data-btn-size="s">
           {actions}

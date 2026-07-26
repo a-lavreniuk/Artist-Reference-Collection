@@ -396,7 +396,7 @@ export default function CollectionsPage() {
     isRemoteSearch: isRemoteSearchFeed,
     onResetSearch: resetGallerySearch,
     onNavigateLibrary: () => navigate('/gallery'),
-    onNavigateAiSettings: () => navigate('/settings/ai-search')
+    onNavigateAiSettings: () => navigate('/settings/ai')
   });
 
   return (

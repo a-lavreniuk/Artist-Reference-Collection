@@ -3,9 +3,7 @@ import { app } from 'electron';
 
 import { readAppPreferences } from '../../appPreferences';
 import { searchCardsBySimilarImage } from '../../ai/similarImageSearch';
-import { getModelIdForTier, isModelInstalled } from '../../ai/modelManager';
-import { MODEL_CATALOG } from '../../ai/types';
-import type { ModelTier } from '../../ai/types';
+import { isModelInstalled, sanitizeSearchModelId } from '../../ai/modelManager';
 import { openLibraryDb } from '../../storage/db';
 import {
   countEmbeddingsForModel,
@@ -85,22 +83,18 @@ export function registerVisualTools(ctx: McpRegisterContext): void {
       async ({ cardId, offset, limit, libraryScope }) =>
         runMcpRead(deps, async (root) => {
           const prefs = await readAppPreferences();
-          if (!prefs.aiSemanticSearchEnabled) {
+          if (!prefs.aiSearchEnabled && !prefs.aiSemanticSearchEnabled) {
             throw new Error('AI Semantic Search выключен в настройках');
           }
           const userData = app.getPath('userData');
-          const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
-          if (!(await isModelInstalled(userData, tier))) {
+          const modelId = sanitizeSearchModelId(prefs.aiSearchModelId);
+          if (!(await isModelInstalled(userData, modelId))) {
             throw new Error('Модель не установлена');
           }
           const db = openLibraryDb(root);
-          const modelId = tier === 'heavy' ? MODEL_CATALOG.heavy.id : MODEL_CATALOG.light.id;
           const indexed =
-            tier === 'heavy'
-              ? Math.max(
-                  countHybridEmbeddingsForModel(db, modelId),
-                  countEmbeddingsForModel(db, MODEL_CATALOG.light.id)
-                )
+            prefs.aiCaptionEnabled && (modelId === 'qwen3-vl-embedding-2b' || modelId === 'qwen3-vl-embedding-8b')
+              ? Math.max(countHybridEmbeddingsForModel(db, modelId), countEmbeddingsForModel(db, modelId))
               : countEmbeddingsForModel(db, modelId);
           if (indexed === 0) {
             throw new Error('Библиотека ещё не проиндексирована');
@@ -110,8 +104,8 @@ export function registerVisualTools(ctx: McpRegisterContext): void {
             imagePath: null,
             crop: null,
             libraryScope: libraryScope ?? 'all',
-            tier,
-            modelId: getModelIdForTier(tier),
+            tier: modelId === 'clip-vit-base-patch32' ? 'light' : 'heavy',
+            modelId,
             strictness: prefs.aiSearchStrictness,
             offset: offset ?? 0,
             limit: limit ?? 50

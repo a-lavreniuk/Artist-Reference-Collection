@@ -29,12 +29,15 @@ export function useSettingsAutoTag() {
     void refreshAiSettings();
   }, []);
 
-  const heavyInstalled = Boolean(
-    aiSnapshot.status?.models.find((m) => m.tier === 'heavy')?.installed
+  const captionInstalled = Boolean(
+    aiSnapshot.status?.models.find(
+      (m) => m.role === 'caption' || m.tier === 'heavy' || m.modelId === 'joycaption-beta-one'
+    )?.installed
   );
+  const heavyInstalled = captionInstalled;
 
   const baseDisabled = !ready || !libraryReady || !window.arc;
-  const enableDisabled = baseDisabled || !heavyInstalled;
+  const enableDisabled = baseDisabled;
 
   const enabled = prefs?.aiAutoTagEnabled === true;
   const volume = prefs?.aiAutoTagVolume ?? 50;

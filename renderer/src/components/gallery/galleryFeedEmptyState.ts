@@ -74,7 +74,7 @@ export function resolveGalleryFeedEmptyState(input: {
       return {
         copy: {
           ...copy,
-          primaryActionLabel: 'Настройки AI Поиска',
+          primaryActionLabel: 'Настройки AI',
           primaryActionVariant: 'outline',
           secondaryActionLabel: 'Сбросить фильтры',
           secondaryActionVariant: 'outline'

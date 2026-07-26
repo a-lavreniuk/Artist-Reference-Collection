@@ -1,4 +1,4 @@
-import { MODEL_CATALOG } from './types';
+import type { SearchModelId } from './types';
 
 export const HYBRID_INDEX_VERSION = 1;
 export const HYBRID_VISUAL_SUFFIX = '::visual';
@@ -14,18 +14,19 @@ export const HYBRID_FUSION_WEIGHTS = {
   tagsBoostMax: 0.12
 } as const;
 
-export function hybridBaseModelId(): string {
-  return MODEL_CATALOG.heavy.id;
-}
-
-export function hybridVisualModelId(baseModelId = hybridBaseModelId()): string {
+/** Hybrid channels are keyed by the active search model id. */
+export function hybridVisualModelId(baseModelId: string): string {
   return `${baseModelId}${HYBRID_VISUAL_SUFFIX}`;
 }
 
-export function hybridCaptionModelId(baseModelId = hybridBaseModelId()): string {
+export function hybridCaptionModelId(baseModelId: string): string {
   return `${baseModelId}${HYBRID_CAPTION_SUFFIX}`;
 }
 
 export function isHybridChannelModelId(modelId: string): boolean {
   return modelId.endsWith(HYBRID_VISUAL_SUFFIX) || modelId.endsWith(HYBRID_CAPTION_SUFFIX);
+}
+
+export function isQwenSearchModel(modelId: string): modelId is SearchModelId {
+  return modelId === 'qwen3-vl-embedding-2b' || modelId === 'qwen3-vl-embedding-8b';
 }

@@ -1,17 +1,17 @@
 import { app } from 'electron';
 
 import { readAppPreferences } from '../appPreferences';
-import { embedTextForTier, embedHeavyHybridQuery } from '../ai/aiEmbeddingService';
+import { embedSearchText, embedHeavyHybridQuery, isQwenSearchModel } from '../ai/aiEmbeddingService';
 import {
   getActiveAiModelId,
-  getActiveAiTier,
-  setActiveAiTier
+  getActiveSearchModelId,
+  setActiveSearchModel
 } from '../ai/indexer';
 import { getModelsDir, initAiWorker } from '../ai/aiWorkerBridge';
-import { getModelIdForTier, isModelInstalled } from '../ai/modelManager';
+import { isModelInstalled, sanitizeSearchModelId } from '../ai/modelManager';
 import { searchHybridHeavy } from '../ai/hybridSearch';
 import { searchByEmbedding, vectorFromNumbers } from '../ai/semanticSearch';
-import type { AiSearchResult, ModelTier } from '../ai/types';
+import type { AiSearchResult, SearchModelId } from '../ai/types';
 import { readLibraryRootFromDisk } from '../libraryRootConfig';
 import { openLibraryDb } from '../storage/db';
 import {
@@ -20,16 +20,20 @@ import {
 } from '../storage/cardEmbeddings';
 import { ensureLibraryReady } from '../storage/libraryStorage';
 
+function usesFusion(modelId: SearchModelId, captionEnabled: boolean): boolean {
+  return captionEnabled && isQwenSearchModel(modelId);
+}
+
 export async function runAiSearch(query: string): Promise<AiSearchResult[]> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiSemanticSearchEnabled) {
+  if (!prefs.aiSearchEnabled && !prefs.aiSemanticSearchEnabled) {
     throw new Error('AI Semantic Search выключен в настройках');
   }
 
   const userData = app.getPath('userData');
-  const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
-  if (!(await isModelInstalled(userData, tier))) {
-    throw new Error('Модель не установлена. Скачайте модель в настройках AI Поиска.');
+  const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? getActiveSearchModelId());
+  if (!(await isModelInstalled(userData, modelId))) {
+    throw new Error('Модель не установлена. Скачайте модель в настройках AI.');
   }
 
   const modelsDir = getModelsDir();
@@ -39,31 +43,30 @@ export async function runAiSearch(query: string): Promise<AiSearchResult[]> {
     maxRamMb: prefs.aiMaxRamMb
   };
 
-  if (tier === 'light') {
-    if (getActiveAiTier() !== tier || !getActiveAiModelId()) {
-      const loaded = await initAiWorker(tier, modelsDir, resources);
-      setActiveAiTier(loaded.tier, loaded.modelId);
+  if (modelId === 'clip-vit-base-patch32') {
+    if (getActiveSearchModelId() !== modelId || !getActiveAiModelId()) {
+      const loaded = await initAiWorker('search-clip', modelsDir, resources);
+      setActiveSearchModel(loaded.modelId as SearchModelId);
     }
   } else {
-    setActiveAiTier(tier, getModelIdForTier(tier));
+    setActiveSearchModel(modelId);
   }
-
-  const modelId = getActiveAiModelId() ?? getModelIdForTier(tier);
 
   const root = await readLibraryRootFromDisk();
   if (!root) return [];
   await ensureLibraryReady(root);
   const db = openLibraryDb(root);
-  const indexed =
-    tier === 'heavy'
-      ? Math.max(countHybridEmbeddingsForModel(db, modelId), countEmbeddingsForModel(db, modelId))
-      : countEmbeddingsForModel(db, modelId);
+
+  const fusion = usesFusion(modelId, prefs.aiCaptionEnabled);
+  const indexed = fusion
+    ? Math.max(countHybridEmbeddingsForModel(db, modelId), countEmbeddingsForModel(db, modelId))
+    : countEmbeddingsForModel(db, modelId);
   if (indexed === 0) {
     throw new Error('Библиотека ещё не проиндексирована. Дождитесь завершения индексации.');
   }
 
-  if (tier === 'heavy') {
-    const queryVectors = await embedHeavyHybridQuery(query, modelsDir);
+  if (fusion) {
+    const queryVectors = await embedHeavyHybridQuery(query, modelsDir, modelId);
     return searchHybridHeavy(
       modelId,
       {
@@ -72,15 +75,15 @@ export async function runAiSearch(query: string): Promise<AiSearchResult[]> {
       },
       query,
       {
-        tier,
+        tier: 'heavy',
         strictness: prefs.aiSearchStrictness
       }
     );
   }
 
-  const vector = await embedTextForTier(tier, query, modelId, modelsDir);
+  const vector = await embedSearchText(modelId, query, modelsDir);
   return searchByEmbedding(vectorFromNumbers(vector), modelId, query, {
-    tier,
+    tier: isQwenSearchModel(modelId) ? 'heavy' : 'light',
     strictness: prefs.aiSearchStrictness
   });
 }

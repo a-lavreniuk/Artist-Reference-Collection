@@ -1,4 +1,5 @@
-import type { AiResourceSettings, ModelCatalogEntry } from './types';
+import type { AiResourceSettings, ModelCatalogEntry, SearchModelId } from './types';
+import { MODEL_CATALOG, SEARCH_ROLE_BY_ID, isSearchModelId } from './types';
 import { resolveModelFilePaths } from './modelManager';
 import {
   embedImageViaServer,
@@ -7,33 +8,29 @@ import {
   resolveLlamaServerBinary
 } from './llamaCppBridge';
 
-/** Legacy Qwen medium catalog (tier removed from product; kept for optional migration tooling). */
-const QWEN_MEDIUM_ENTRY: ModelCatalogEntry = {
-  id: 'qwen3-vl-embedding-2b',
-  tier: 'heavy',
-  stack: 'llama-embed',
-  hfId: 'DevQuasar/Qwen.Qwen3-VL-Embedding-2B-GGUF',
-  catalogRevision: 1,
-  label: 'Qwen3-VL-Embedding',
-  description: 'Legacy medium tier',
-  sizeLabel: '~2.5 ГБ',
-  sizeMb: 2500,
-  minRamMb: 8192,
-  files: [
-    { name: 'Qwen.Qwen3-VL-Embedding-2B.Q4_K_M.gguf', role: 'weights' },
-    { name: 'mmproj-Qwen.Qwen3-VL-Embedding-2B.f16.gguf', role: 'mmproj' }
-  ]
-};
+function resolveEmbedEntry(modelId?: string): ModelCatalogEntry {
+  if (modelId === 'qwen3-vl-embedding-8b') return MODEL_CATALOG['search-embed-8b'];
+  if (modelId === 'qwen3-vl-embedding-2b' || !modelId) return MODEL_CATALOG['search-embed-2b'];
+  if (isSearchModelId(modelId) && SEARCH_ROLE_BY_ID[modelId] !== 'search-clip') {
+    return MODEL_CATALOG[SEARCH_ROLE_BY_ID[modelId as SearchModelId]];
+  }
+  return MODEL_CATALOG['search-embed-2b'];
+}
+
+export function isQwenSearchModelId(modelId: string): modelId is 'qwen3-vl-embedding-2b' | 'qwen3-vl-embedding-8b' {
+  return modelId === 'qwen3-vl-embedding-2b' || modelId === 'qwen3-vl-embedding-8b';
+}
 
 export async function embedQwenImage(
   userDataPath: string,
   imagePath: string,
-  resources: AiResourceSettings
+  resources: AiResourceSettings,
+  modelId?: string
 ): Promise<number[]> {
-  const entry = QWEN_MEDIUM_ENTRY;
+  const entry = resolveEmbedEntry(modelId);
   const { weightsPath, mmprojPath } = resolveModelFilePaths(userDataPath, entry);
   if (!weightsPath || !mmprojPath) {
-    throw new Error('Файлы Qwen3-VL-Embedding не найдены');
+    throw new Error(`Файлы ${entry.label} не найдены`);
   }
 
   if (resolveLlamaServerBinary(userDataPath, (resources.gpuLayers ?? 0) > 0)) {
@@ -41,19 +38,20 @@ export async function embedQwenImage(
   }
 
   throw new Error(
-    'Для индексации изображений нужен llama-server. Переустановите тяжёлую модель в настройках AI Поиска.'
+    'Для индексации изображений нужен llama-server. Переустановите модель поиска в настройках AI.'
   );
 }
 
 export async function embedQwenText(
   userDataPath: string,
   text: string,
-  resources: AiResourceSettings
+  resources: AiResourceSettings,
+  modelId?: string
 ): Promise<number[]> {
-  const entry = QWEN_MEDIUM_ENTRY;
+  const entry = resolveEmbedEntry(modelId);
   const { weightsPath, mmprojPath } = resolveModelFilePaths(userDataPath, entry);
   if (!weightsPath) {
-    throw new Error('Файлы Qwen3-VL-Embedding не найдены');
+    throw new Error(`Файлы ${entry.label} не найдены`);
   }
 
   if (resolveLlamaServerBinary(userDataPath, (resources.gpuLayers ?? 0) > 0)) {
@@ -63,14 +61,19 @@ export async function embedQwenText(
   return embedTextWithNodeLlama(weightsPath, text, resources);
 }
 
-export async function testQwenEmbedding(userDataPath: string, resources: AiResourceSettings): Promise<{
+export async function testQwenEmbedding(
+  userDataPath: string,
+  resources: AiResourceSettings,
+  modelId?: string
+): Promise<{
   ok: boolean;
   message: string;
   vectorDim?: number;
 }> {
   try {
-    const vector = await embedQwenText(userDataPath, 'цветы', resources);
-    return { ok: true, message: 'Qwen embedding OK', vectorDim: vector.length };
+    const entry = resolveEmbedEntry(modelId);
+    const vector = await embedQwenText(userDataPath, 'цветы', resources, entry.id);
+    return { ok: true, message: `${entry.label}: embedding OK`, vectorDim: vector.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, message };

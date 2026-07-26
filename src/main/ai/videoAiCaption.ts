@@ -60,7 +60,7 @@ export async function generateAndStoreVideoAiCaption(
   }
 
   const userData = app.getPath('userData');
-  if (!(await isModelInstalled(userData, 'heavy'))) {
+  if (!(await isModelInstalled(userData, 'caption'))) {
     return {
       ok: false,
       error: 'Нужна тяжёлая модель (JoyCaption). Установите её в Настройки → AI Поиск.'
@@ -130,7 +130,7 @@ export async function generateAndStoreVideoAiCaption(
 export async function applyVideoCaptionsAfterImport(cardIds: string[]): Promise<number> {
   const prefs = await readAppPreferences();
   if (!prefs.aiVideoCaptionOnImport) return 0;
-  if (!(await isModelInstalled(app.getPath('userData'), 'heavy'))) return 0;
+  if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) return 0;
 
   const root = await readLibraryRootFromDisk();
   if (!root) return 0;

@@ -198,7 +198,7 @@ export async function suggestTagsForCard(
   }
 
   const userData = app.getPath('userData');
-  if (!(await isModelInstalled(userData, 'heavy'))) {
+  if (!(await isModelInstalled(userData, 'caption'))) {
     return {
       ok: false,
       error: 'Нужна тяжёлая модель (JoyCaption). Установите её в Настройки → AI Поиск.'
@@ -344,7 +344,7 @@ export async function suggestTagsForCard(
 export async function applyAutoTagsAfterIndex(cardId: string): Promise<{ added: number; created: number } | null> {
   const prefs = await readAppPreferences();
   if (!prefs.aiAutoTagEnabled || !prefs.aiAutoTagOnImport) return null;
-  if (!(await isModelInstalled(app.getPath('userData'), 'heavy'))) return null;
+  if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) return null;
 
   const result = await suggestTagsForCard(cardId);
   if (!result.ok) return { added: 0, created: 0 };
@@ -373,7 +373,7 @@ export async function applyAutoTagsForImportedVideos(
   const prefs = await readAppPreferences();
   const empty = { cards: 0, tags: 0, created: 0 };
   if (!prefs.aiAutoTagEnabled || !prefs.aiAutoTagOnImport) return empty;
-  if (!(await isModelInstalled(app.getPath('userData'), 'heavy'))) return empty;
+  if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) return empty;
 
   const root = await readLibraryRootFromDisk();
   if (!root) return empty;

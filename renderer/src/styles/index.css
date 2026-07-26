@@ -5784,6 +5784,21 @@ html[data-theme="light"] .arc-settings-option-card:disabled .arc-settings-option
   gap: var(--s-2);
 }
 
+.arc-settings-ai-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+}
+
+.arc-settings-ai-tab-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+  width: 100%;
+}
+
 /* Эффективный зазор s-4: section gap s-2 + доп. margin. */
 .arc-settings-ai-panel__section-lead + .arc-settings-ai-slider-col,
 .arc-settings-ai-panel__section > .arc-settings-ai-slider-col + .arc-settings-section__title,
@@ -5961,6 +5976,16 @@ html[data-theme="light"] .arc-settings-ai-model-card.is-disabled .arc-settings-o
   padding-left: 22px;
 }
 
+.arc-settings-ai-model-card__progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  width: 100%;
+  min-width: 0;
+  padding-left: 22px;
+  box-sizing: border-box;
+}
+
 /* Figma 1396:12591 / 1979:21821 — Group Button в карточке модели: border-only default */
 .arc-settings-ai-model-card__actions .btn-group-ds .btn {
   background: transparent;
@@ -6002,7 +6027,6 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  padding-top: var(--s-4);
 }
 
 .arc-settings-ai-status-head {

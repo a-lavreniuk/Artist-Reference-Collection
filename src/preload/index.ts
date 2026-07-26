@@ -52,6 +52,10 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:delete-library', payload) as Promise<
       { ok: true; switchedToId: string | null } | { ok: false; error: string }
     >,
+  reorderLibraries: (orderedIds: string[]) =>
+    ipcRenderer.invoke('arc:reorder-libraries', orderedIds) as Promise<
+      { ok: true } | { ok: false; error: string }
+    >,
   getLibraryContainerName: () =>
     ipcRenderer.invoke('arc:get-library-container-name') as Promise<string>,
   getParentLibraryPath: () => ipcRenderer.invoke('arc:get-parent-library-path') as Promise<string | null>,
@@ -522,11 +526,15 @@ contextBridge.exposeInMainWorld('arc', {
   aiGetStatus: () => ipcRenderer.invoke('arc:ai-get-status'),
   aiGetIndexStatus: () => ipcRenderer.invoke('arc:ai-get-index-status'),
   aiDetectHardware: () => ipcRenderer.invoke('arc:ai-detect-hardware'),
-  aiDownloadModel: (tier: 'light' | 'heavy') =>
-    ipcRenderer.invoke('arc:ai-download-model', tier) as Promise<
-      { ok: true; modelId: string; tier: string } | { ok: false; error: string }
+  aiDownloadModel: (ref: string | { role?: string; modelId?: string; tier?: string }) =>
+    ipcRenderer.invoke('arc:ai-download-model', ref) as Promise<
+      { ok: true; modelId: string; role?: string; tier?: string } | { ok: false; error: string }
     >,
-  aiDownloadLlamaRuntime: (payload: { variant: 'cpu' | 'cuda'; tier: 'light' | 'heavy' }) =>
+  aiDownloadLlamaRuntime: (payload: {
+    variant: 'cpu' | 'cuda';
+    role?: string;
+    tier?: string;
+  }) =>
     ipcRenderer.invoke('arc:ai-download-llama-runtime', payload) as Promise<
       { ok: true; variant: string } | { ok: false; error: string }
     >,
@@ -545,14 +553,16 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:ai-search-cards', params) as Promise<
       Array<Record<string, unknown> & { id: string; aiScore?: number }>
     >,
-  aiDeleteModel: (tier: 'light' | 'heavy') => ipcRenderer.invoke('arc:ai-delete-model', tier),
-  aiUpdateModel: (tier: 'light' | 'heavy') =>
-    ipcRenderer.invoke('arc:ai-update-model', tier) as Promise<
-      { ok: true; modelId: string; tier: string } | { ok: false; error: string }
+  aiDeleteModel: (ref: string | { role?: string; modelId?: string; tier?: string }) =>
+    ipcRenderer.invoke('arc:ai-delete-model', ref),
+  aiUpdateModel: (ref: string | { role?: string; modelId?: string; tier?: string }) =>
+    ipcRenderer.invoke('arc:ai-update-model', ref) as Promise<
+      { ok: true; modelId: string; role?: string; tier?: string } | { ok: false; error: string }
     >,
-  aiTestModel: (tier: 'light' | 'heavy') =>
-    ipcRenderer.invoke('arc:ai-test-model', tier) as Promise<{ ok: boolean; message: string; vectorDim?: number }>,
-  aiSetActiveModel: (tier: 'light' | 'heavy') => ipcRenderer.invoke('arc:ai-set-active-model', tier),
+  aiTestModel: (ref: string | { role?: string; modelId?: string; tier?: string }) =>
+    ipcRenderer.invoke('arc:ai-test-model', ref) as Promise<{ ok: boolean; message: string; vectorDim?: number }>,
+  aiSetActiveModel: (ref: string | { role?: string; modelId?: string; tier?: string }) =>
+    ipcRenderer.invoke('arc:ai-set-active-model', ref),
   aiReindex: () => ipcRenderer.invoke('arc:ai-reindex') as Promise<{ ok: true }>,
   aiPauseIndex: () => ipcRenderer.invoke('arc:ai-pause-index') as Promise<{ ok: true }>,
   aiResumeIndex: () => ipcRenderer.invoke('arc:ai-resume-index') as Promise<{ ok: true }>,

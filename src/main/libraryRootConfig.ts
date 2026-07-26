@@ -33,11 +33,10 @@ export async function reconcileLibraryRootConfig(): Promise<void> {
   if (isMultiLibraryConfig(cfg) && cfg.parentPath && fs.existsSync(cfg.parentPath)) {
     const remaining = (cfg.libraries ?? []).filter((l) => fs.existsSync(l.path));
     if (remaining.length > 0) {
-      const sorted = [...remaining].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-      const nextActive = sorted[0]!;
+      const nextActive = remaining[0]!;
       await writeLibraryRootConfig({
         ...cfg,
-        libraries: sorted,
+        libraries: remaining,
         activeLibraryId: nextActive.id,
         path: nextActive.path,
         pendingWrapMigrationPath: undefined

@@ -1,4 +1,10 @@
-import type { AiModelTier } from './appPreferences';
+export type AiModelRole = 'search-clip' | 'search-embed-2b' | 'search-embed-8b' | 'caption';
+export type AiSearchModelId =
+  | 'clip-vit-base-patch32'
+  | 'qwen3-vl-embedding-2b'
+  | 'qwen3-vl-embedding-8b';
+/** @deprecated Prefer AiModelRole / AiSearchModelId */
+export type AiModelTier = 'light' | 'heavy';
 
 export type AiHardwareInfo = {
   platform: string;
@@ -11,10 +17,13 @@ export type AiHardwareInfo = {
   gpuName: string | null;
   estimatedVramMb: number | null;
   recommendedTier: AiModelTier;
+  recommendedSearchModelId?: AiSearchModelId;
 };
 
 export type AiModelInstallStatus = {
-  tier: AiModelTier;
+  role: AiModelRole;
+  modelId: string;
+  tier?: AiModelTier;
   installed: boolean;
   downloading: boolean;
   progressPercent: number | null;
@@ -24,12 +33,15 @@ export type AiModelInstallStatus = {
 };
 
 export type AiModelCardInfo = {
-  tier: AiModelTier;
+  role: AiModelRole;
+  modelId: string;
+  tier?: AiModelTier;
   label: string;
   description: string;
   sizeLabel: string;
   minRamMb: number;
   supported: boolean;
+  searchLevel?: 'light' | 'medium' | 'heavy';
 };
 
 export type AiIndexStatus = {
@@ -39,6 +51,7 @@ export type AiIndexStatus = {
   paused: boolean;
   currentCardId: string | null;
   currentCardProgress: number | null;
+  stage?: 'embeddings' | 'captions' | 'tags' | null;
 };
 
 export type AiLlamaRuntimeStatus = {
@@ -48,7 +61,9 @@ export type AiLlamaRuntimeStatus = {
 };
 
 export type AiDownloadStatus = {
-  tier: AiModelTier;
+  role: AiModelRole;
+  modelId: string;
+  tier?: AiModelTier;
   percent: number | null;
   phase: 'runtime' | 'model' | 'finalize';
   bytesReceived?: number | null;
@@ -57,10 +72,20 @@ export type AiDownloadStatus = {
 
 export type AiStatus = {
   enabled: boolean;
+  captionEnabled: boolean;
+  activeSearchModelId: AiSearchModelId | null;
+  activeCaptionModelId: string | null;
+  /** @deprecated */
   activeTier: AiModelTier | null;
+  /** @deprecated */
   activeModelId: string | null;
   hardware: AiHardwareInfo;
+  supportedSearchModelIds: AiSearchModelId[];
+  /** @deprecated */
   supportedTiers: AiModelTier[];
+  searchModelCards: AiModelCardInfo[];
+  captionModelCard: AiModelCardInfo;
+  /** Combined search + caption cards */
   modelCards: AiModelCardInfo[];
   resources: { threads: number; gpuLayers: number; maxRamMb: number };
   resourcePreset: number;
@@ -81,3 +106,5 @@ export type AiSearchResult = {
   cardId: string;
   score: number;
 };
+
+export type AiModelRef = AiModelRole | AiModelTier | AiSearchModelId | { role?: string; modelId?: string; tier?: string };

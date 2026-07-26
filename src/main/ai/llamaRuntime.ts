@@ -227,7 +227,7 @@ export async function ensureLlamaRuntime(
 
 export async function deleteLlamaRuntimeIfUnused(userDataPath: string): Promise<void> {
   const { isModelInstalled } = await import('./modelManager');
-  const heavy = await isModelInstalled(userDataPath, 'heavy');
+  const heavy = await isModelInstalled(userDataPath, 'caption');
   if (heavy) return;
 
   await rm(llamaRuntimeRootDir(userDataPath), { recursive: true, force: true });

@@ -114,6 +114,11 @@ export type AppPreferencesV1 = {
   mcpServerEnabled: boolean;
   mcpToolsEnabled: McpToolsEnabledMap;
   aiSemanticSearchEnabled: boolean;
+  /** Master toggle for semantic search (synced with aiSemanticSearchEnabled). */
+  aiSearchEnabled: boolean;
+  aiSearchModelId: 'clip-vit-base-patch32' | 'qwen3-vl-embedding-2b' | 'qwen3-vl-embedding-8b';
+  aiCaptionEnabled: boolean;
+  /** @deprecated Prefer aiSearchModelId + aiCaptionEnabled */
   aiModelTier: AiModelTier;
   aiThreads: number;
   aiGpuLayers: number;
@@ -176,6 +181,9 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     mcpServerEnabled: false,
     mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
+    aiSearchEnabled: false,
+    aiSearchModelId: 'clip-vit-base-patch32',
+    aiCaptionEnabled: false,
     aiModelTier: 'light',
     aiThreads: 4,
     aiGpuLayers: 0,
@@ -306,6 +314,24 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     mcpServerEnabled:
       typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
     mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
+    aiSemanticSearchEnabled:
+      typeof raw.aiSearchEnabled === 'boolean'
+        ? raw.aiSearchEnabled
+        : typeof raw.aiSemanticSearchEnabled === 'boolean'
+          ? raw.aiSemanticSearchEnabled
+          : d.aiSemanticSearchEnabled,
+    aiSearchEnabled:
+      typeof raw.aiSearchEnabled === 'boolean'
+        ? raw.aiSearchEnabled
+        : typeof raw.aiSemanticSearchEnabled === 'boolean'
+          ? raw.aiSemanticSearchEnabled
+          : d.aiSearchEnabled,
+    aiSearchModelId:
+      raw.aiSearchModelId === 'qwen3-vl-embedding-2b' || raw.aiSearchModelId === 'qwen3-vl-embedding-8b'
+        ? raw.aiSearchModelId
+        : 'clip-vit-base-patch32',
+    aiCaptionEnabled:
+      typeof raw.aiCaptionEnabled === 'boolean' ? raw.aiCaptionEnabled : d.aiCaptionEnabled,
     aiAutoTagEnabled:
       typeof raw.aiAutoTagEnabled === 'boolean' ? raw.aiAutoTagEnabled : d.aiAutoTagEnabled,
     aiAutoTagVolume:

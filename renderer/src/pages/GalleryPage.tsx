@@ -299,7 +299,7 @@ export default function GalleryPage() {
       onResetSearch: resetGallerySearch,
       onOpenImport: openImportPicker,
       onNavigateSettingsLibrary: () => navigate('/settings/library'),
-      onNavigateAiSettings: () => navigate('/settings/ai-search')
+      onNavigateAiSettings: () => navigate('/settings/ai')
     });
     if (!resolved) return null;
     const { copy, onPrimaryAction, onSecondaryAction } = resolved;

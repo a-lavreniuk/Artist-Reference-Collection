@@ -6,6 +6,19 @@ export type LibraryManageModalState =
   | null
   | { mode: 'edit'; library: LibraryListItem };
 
+function reorderLocal(list: LibraryListItem[], id: string, insertIndex: number): LibraryListItem[] {
+  const order = [...list];
+  const fromIndex = order.findIndex((l) => l.id === id);
+  if (fromIndex < 0) return list;
+  const bounded = Math.max(0, Math.min(insertIndex, order.length));
+  const [item] = order.splice(fromIndex, 1);
+  if (!item) return list;
+  let target = bounded;
+  if (fromIndex < bounded) target -= 1;
+  order.splice(target, 0, item);
+  return order;
+}
+
 export function useSettingsLibraries() {
   const [libraries, setLibraries] = useState<LibraryListItem[]>([]);
   const [containerName, setContainerName] = useState('Библиотека ARC');
@@ -90,6 +103,48 @@ export function useSettingsLibraries() {
     }
   }, [notifyLibraryChanged]);
 
+  const createLibrary = useCallback(
+    async (name: string) => {
+      if (!window.arc?.createLibraryInContainer) {
+        return { ok: false as const, error: 'Недоступно' };
+      }
+      setBusy(true);
+      try {
+        const res = await window.arc.createLibraryInContainer({
+          name,
+          parentHint: parentPath
+        });
+        if (res.ok) await notifyLibraryChanged();
+        return res;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [notifyLibraryChanged, parentPath]
+  );
+
+  const reorderLibrary = useCallback(
+    async (id: string, insertIndex: number) => {
+      if (!window.arc?.reorderLibraries || libraries.length < 2) return;
+      const next = reorderLocal(libraries, id, insertIndex);
+      const fromIndex = libraries.findIndex((l) => l.id === id);
+      if (fromIndex < 0) return;
+      const sameOrder = next.every((l, i) => l.id === libraries[i]?.id);
+      if (sameOrder) return;
+
+      setLibraries(next);
+      const res = await window.arc.reorderLibraries(next.map((l) => l.id));
+      if (!res.ok) {
+        await refresh();
+        setInfoModal(res.error?.trim() || 'Не удалось изменить порядок');
+        return;
+      }
+      invalidateLibraryCache();
+      window.dispatchEvent(new CustomEvent('arc:library-changed'));
+    },
+    [libraries, refresh]
+  );
+
   return {
     libraries,
     containerName,
@@ -102,6 +157,8 @@ export function useSettingsLibraries() {
     renameLibrary,
     deleteLibrary,
     pickLibraryLocation,
+    createLibrary,
+    reorderLibrary,
     refresh
   };
 }

@@ -7,6 +7,8 @@ import { ensureLightClipForHybrid } from './aiEmbeddingService';
 import { embedImageInWorker, initAiWorker, getModelsDir } from './aiWorkerBridge';
 import { vectorFromNumbers } from './semanticSearch';
 import { searchByVisualEmbedding } from './visualSearch';
+import { sanitizeSearchModelId } from './modelManager';
+import { isQwenSearchModelId } from './qwenVlEmbedding';
 import type { ModelTier } from './types';
 import {
   buildGalleryFilterWhere,
@@ -192,17 +194,22 @@ async function searchCardsBySimilarImageAll(
   try {
     const modelsDir = getModelsDir();
     const prefs = await readAppPreferences();
-    const lightId = await ensureLightClipForHybrid();
-    await initAiWorker('light', modelsDir, {
-      threads: prefs.aiThreads,
-      gpuLayers: prefs.aiGpuLayers,
-      maxRamMb: prefs.aiMaxRamMb
-    });
-    const vector = await embedImageInWorker(croppedPath, lightId);
-    const searchTier = params.tier;
-    const searchModelId = searchTier === 'heavy' ? params.modelId : lightId;
+    const searchModelId = sanitizeSearchModelId(params.modelId ?? prefs.aiSearchModelId);
+    let vector: number[];
+    if (searchModelId === 'clip-vit-base-patch32') {
+      const lightId = await ensureLightClipForHybrid();
+      await initAiWorker('search-clip', modelsDir, {
+        threads: prefs.aiThreads,
+        gpuLayers: prefs.aiGpuLayers,
+        maxRamMb: prefs.aiMaxRamMb
+      });
+      vector = await embedImageInWorker(croppedPath, lightId);
+    } else {
+      const { embedSearchImage } = await import('./aiEmbeddingService');
+      vector = await embedSearchImage(searchModelId, croppedPath);
+    }
     const hits = searchByVisualEmbedding(vectorFromNumbers(vector), searchModelId, {
-      tier: params.tier,
+      tier: isQwenSearchModelId(searchModelId) ? 'heavy' : 'light',
       strictness: params.strictness,
       useCache: false
     });

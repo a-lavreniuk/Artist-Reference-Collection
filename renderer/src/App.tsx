@@ -46,9 +46,6 @@ const SettingsMcpServerPanel = lazy(() =>
 const SettingsAiSearchPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAiSearchPanel }))
 );
-const SettingsAutoTagPanel = lazy(() =>
-  import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAutoTagPanel }))
-);
 const SettingsVideoPlaybackPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({
     default: m.SettingsVideoPlaybackPanelRoute
@@ -97,8 +94,9 @@ export default function App() {
             <Route path="auto-import" element={<SettingsAutoImportPanel />} />
             <Route path="browser-extension" element={<SettingsBrowserExtensionPanel />} />
             <Route path="mcp-server" element={<SettingsMcpServerPanel />} />
-            <Route path="ai-search" element={<SettingsAiSearchPanel />} />
-            <Route path="auto-tag" element={<SettingsAutoTagPanel />} />
+            <Route path="ai" element={<SettingsAiSearchPanel />} />
+            <Route path="ai-search" element={<Navigate to="/settings/ai" replace />} />
+            <Route path="auto-tag" element={<Navigate to="/settings/ai" replace />} />
             <Route path="updates" element={<SettingsUpdatesPanel />} />
           </Route>
           <Route path="ui-kit" element={<UiKitPage />} />

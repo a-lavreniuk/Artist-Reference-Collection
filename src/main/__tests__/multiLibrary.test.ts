@@ -30,8 +30,11 @@ vi.mock('../appPreferences', async () => {
 import {
   createLibraryInContainer,
   deleteLibrary,
+  flattenNestedLibrariesInContainer,
   listLibrariesFromConfig,
+  openLibraryOrContainer,
   renameLibrary,
+  reorderLibraries,
   repairLibraryRegistryIfNeeded,
   switchActiveLibrary
 } from '../multiLibrary';
@@ -195,6 +198,29 @@ describe('multiLibrary manage', () => {
     expect(cfg.libraries?.map((l) => l.id).sort()).toEqual(['a', 'b']);
   });
 
+  it('repair does not re-add unlinked library still on disk', async () => {
+    const parent = path.join(tmpRoot, 'Unlink', LIBRARY_CONTAINER_FOLDER_NAME);
+    const libA = path.join(parent, 'Основная');
+    const libB = path.join(parent, 'Запасная');
+    for (const lib of [libA, libB]) {
+      fs.mkdirSync(path.join(lib, 'meta'), { recursive: true });
+      fs.writeFileSync(path.join(lib, 'meta', 'arc-index.db'), '');
+    }
+
+    await replaceLibraryRootConfig({
+      parentPath: parent,
+      libraries: [{ id: 'a', name: 'Основная', path: libA }],
+      activeLibraryId: 'a',
+      path: libA
+    });
+
+    const repaired = await repairLibraryRegistryIfNeeded();
+    expect(repaired).toBe(false);
+    const cfg = readLibraryRootConfigSync();
+    expect(cfg.libraries).toHaveLength(1);
+    expect(cfg.libraries?.[0]?.id).toBe('a');
+  });
+
   it('repairLibraryRegistryIfNeeded restores missing libraries from disk', async () => {
     const parent = path.join(tmpRoot, 'Repair', LIBRARY_CONTAINER_FOLDER_NAME);
     const libA = path.join(parent, 'Основная');
@@ -249,5 +275,121 @@ describe('multiLibrary manage', () => {
     expect(cfg.libraries).toHaveLength(2);
     expect(cfg.activeLibraryId).toBe('a');
     expect(cfg.parentPath).toBe(path.resolve(parent));
+  });
+
+  function seedMinimalLibrary(libPath: string): void {
+    fs.mkdirSync(path.join(libPath, 'meta'), { recursive: true });
+    fs.mkdirSync(path.join(libPath, 'cards'), { recursive: true });
+    fs.writeFileSync(path.join(libPath, 'meta', 'arc-index.db'), '');
+  }
+
+  it('flattenNestedLibrariesInContainer lifts nested libs and removes empty shell', async () => {
+    const container = path.join(tmpRoot, 'Flat', LIBRARY_CONTAINER_FOLDER_NAME);
+    const shell = path.join(container, 'Основная');
+    const nestedMain = path.join(shell, 'Основная');
+    const nestedSpare = path.join(shell, 'Запасная');
+    seedMinimalLibrary(shell);
+    seedMinimalLibrary(nestedMain);
+    seedMinimalLibrary(nestedSpare);
+
+    const { changed, pathMap } = await flattenNestedLibrariesInContainer(container);
+    expect(changed).toBe(true);
+    // Имя «Основная» остаётся — это бывшая вложенная библиотека на месте оболочки.
+    expect(fs.existsSync(path.join(container, 'Основная'))).toBe(true);
+    expect(fs.existsSync(path.join(container, 'Запасная'))).toBe(true);
+    expect(fs.existsSync(path.join(container, 'Основная', 'Основная'))).toBe(false);
+    expect(fs.existsSync(path.join(container, 'Основная', 'Запасная'))).toBe(false);
+    expect(pathMap.get(path.resolve(nestedMain))).toBe(path.resolve(path.join(container, 'Основная')));
+    expect(pathMap.get(path.resolve(nestedSpare))).toBe(path.resolve(path.join(container, 'Запасная')));
+  });
+
+  it('openLibraryOrContainer flattens and activates nested library with data path', async () => {
+    const container = path.join(tmpRoot, 'OpenFlat', LIBRARY_CONTAINER_FOLDER_NAME);
+    const shell = path.join(container, 'Основная');
+    const nestedMain = path.join(shell, 'Основная');
+    seedMinimalLibrary(shell);
+    seedMinimalLibrary(nestedMain);
+
+    const opened = await openLibraryOrContainer(container);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(fs.existsSync(path.join(container, 'Основная', 'Основная'))).toBe(false);
+    expect(path.resolve(opened.path)).toBe(path.resolve(path.join(container, 'Основная')));
+    const cfg = readLibraryRootConfigSync();
+    expect(cfg.parentPath).toBe(path.resolve(container));
+    expect(cfg.libraries?.every((l) => path.dirname(l.path) === path.resolve(container))).toBe(true);
+  });
+
+  it('openLibraryOrContainer accepts deeply nested library under container', async () => {
+    const container = path.join(tmpRoot, 'DeepOpen', LIBRARY_CONTAINER_FOLDER_NAME);
+    const shell = path.join(container, 'Оболочка');
+    const nested = path.join(shell, 'Реальная');
+    seedMinimalLibrary(shell);
+    seedMinimalLibrary(nested);
+
+    const opened = await openLibraryOrContainer(nested);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(path.resolve(opened.path)).toBe(path.resolve(path.join(container, 'Реальная')));
+    expect(fs.existsSync(path.join(container, 'Реальная'))).toBe(true);
+  });
+
+  it('creates libraries in append order and listLibraries preserves it', async () => {
+    const parentHint = path.join(tmpRoot, 'OrderCreate');
+    fs.mkdirSync(parentHint, { recursive: true });
+
+    const first = await createLibraryInContainer('Яблоко', parentHint);
+    const second = await createLibraryInContainer('Абрикос', parentHint);
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+
+    const listed = listLibrariesFromConfig();
+    expect(listed.map((l) => l.id)).toEqual([first.library.id, second.library.id]);
+  });
+
+  it('reorderLibraries changes display order without switching active', async () => {
+    const parentHint = path.join(tmpRoot, 'OrderReorder');
+    fs.mkdirSync(parentHint, { recursive: true });
+
+    const a = await createLibraryInContainer('Альфа', parentHint);
+    const b = await createLibraryInContainer('Бета', parentHint);
+    const c = await createLibraryInContainer('Гамма', parentHint);
+    expect(a.ok && b.ok && c.ok).toBe(true);
+    if (!a.ok || !b.ok || !c.ok) return;
+
+    const before = readLibraryRootConfigSync();
+    expect(before.activeLibraryId).toBe(a.library.id);
+
+    const reordered = await reorderLibraries([c.library.id, a.library.id, b.library.id]);
+    expect(reordered.ok).toBe(true);
+
+    const listed = listLibrariesFromConfig();
+    expect(listed.map((l) => l.id)).toEqual([c.library.id, a.library.id, b.library.id]);
+    expect(listed.find((l) => l.active)?.id).toBe(a.library.id);
+    expect(readLibraryRootConfigSync().activeLibraryId).toBe(a.library.id);
+  });
+
+  it('repair preserves custom library order when paths unchanged', async () => {
+    const parent = path.join(tmpRoot, 'OrderRepair', LIBRARY_CONTAINER_FOLDER_NAME);
+    const libZ = path.join(parent, 'Зебра');
+    const libA = path.join(parent, 'Аист');
+    for (const lib of [libZ, libA]) {
+      fs.mkdirSync(path.join(lib, 'meta'), { recursive: true });
+      fs.writeFileSync(path.join(lib, 'meta', 'arc-index.db'), '');
+    }
+
+    await replaceLibraryRootConfig({
+      parentPath: parent,
+      libraries: [
+        { id: 'z', name: 'Зебра', path: libZ },
+        { id: 'a', name: 'Аист', path: libA }
+      ],
+      activeLibraryId: 'z',
+      path: libZ
+    });
+
+    const repaired = await repairLibraryRegistryIfNeeded();
+    expect(repaired).toBe(false);
+    expect(listLibrariesFromConfig().map((l) => l.id)).toEqual(['z', 'a']);
   });
 });

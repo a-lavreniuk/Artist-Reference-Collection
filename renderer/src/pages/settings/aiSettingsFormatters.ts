@@ -1,9 +1,7 @@
-import type { AiHardwareInfo, AiModelCardInfo, AiStatus } from '../../services/aiTypes';
-import type { AiModelTier } from '../../services/appPreferences';
+import type { AiHardwareInfo, AiModelCardInfo, AiSearchModelId, AiStatus } from '../../services/aiTypes';
 
 export const AI_INTRO_TEXT =
-  'Функционал позволяет использовать поиск на естественном языке, что значительно повышает эффективность. Для работы необходимо проверить технические характеристики системы и скачать языковые модели';
-
+  'AI в ARC работает локально и не отправляет материалы в облако. Поиск, описания и автотеги включаются независимо, а общие лимиты ресурсов помогают контролировать нагрузку на CPU, GPU и память.';
 export function formatRamGb(mb: number): string {
   if (mb >= 1024) {
     const gb = mb / 1024;
@@ -44,17 +42,28 @@ export function formatGpuLabel(hardware: AiHardwareInfo): string {
   return hardware.gpuName;
 }
 
-export function modelCardTitle(
-  card: AiModelCardInfo,
-  recommendedTier: AiModelTier,
-  tierLabel: 'Лёгкая' | 'Тяжёлая'
-): string {
-  if (!card.supported) return `${tierLabel}. Режим недоступен`;
-  if (card.tier === recommendedTier) return `${tierLabel}. Рекомендуется`;
-  return tierLabel;
+export type SearchLevelLabel = 'Лёгкая' | 'Средняя' | 'Тяжёлая';
+
+export function searchLevelShortLabel(level: 'light' | 'medium' | 'heavy' | undefined): SearchLevelLabel {
+  if (level === 'medium') return 'Средняя';
+  if (level === 'heavy') return 'Тяжёлая';
+  return 'Лёгкая';
 }
 
-export function tierShortLabel(tier: AiModelTier): 'Лёгкая' | 'Тяжёлая' {
+export function modelCardTitle(
+  card: AiModelCardInfo,
+  recommendedSearchModelId: AiSearchModelId | undefined
+): string {
+  const levelLabel = searchLevelShortLabel(card.searchLevel);
+  if (!card.supported) return `${levelLabel}. Режим недоступен`;
+  if (recommendedSearchModelId && card.modelId === recommendedSearchModelId) {
+    return `${levelLabel}. Рекомендуется`;
+  }
+  return levelLabel;
+}
+
+/** @deprecated Prefer searchLevelShortLabel / modelCardTitle with recommendedSearchModelId */
+export function tierShortLabel(tier: 'light' | 'heavy'): 'Лёгкая' | 'Тяжёлая' {
   return tier === 'heavy' ? 'Тяжёлая' : 'Лёгкая';
 }
 

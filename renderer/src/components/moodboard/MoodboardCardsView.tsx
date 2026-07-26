@@ -168,7 +168,7 @@ export default function MoodboardCardsView() {
       isRemoteSearch: isRemoteSearchFeed,
       onResetSearch: resetGallerySearch,
       onNavigateLibrary: () => navigate('/gallery'),
-      onNavigateAiSettings: () => navigate('/settings/ai-search')
+      onNavigateAiSettings: () => navigate('/settings/ai')
     });
   }, [
     feed.booting,

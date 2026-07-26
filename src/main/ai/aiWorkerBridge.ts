@@ -1,7 +1,7 @@
 import { app, utilityProcess, type UtilityProcess } from 'electron';
 import path from 'path';
 
-import type { AiResourceSettings, ModelTier, WorkerRequest, WorkerResponse } from './types';
+import type { AiResourceSettings, ModelRole, WorkerRequest, WorkerResponse } from './types';
 import { logAiIndexer } from './aiIndexerLog';
 
 type PendingRequest = {
@@ -138,12 +138,12 @@ export async function pingAiWorker(): Promise<boolean> {
 }
 
 export async function initAiWorker(
-  tier: ModelTier,
+  role: ModelRole,
   modelsDir: string,
   resources: AiResourceSettings
-): Promise<{ modelId: string; tier: ModelTier }> {
+): Promise<{ modelId: string; role: ModelRole }> {
   const res = await sendRequest(
-    { type: 'init', tier, modelsDir, resources },
+    { type: 'init', role, modelsDir, resources },
     (m) => m.type === 'ready' || m.type === 'error'
   );
   if (res.type === 'error') {
@@ -152,11 +152,11 @@ export async function initAiWorker(
   if (res.type !== 'ready') {
     throw new Error('AI worker: unexpected response');
   }
-  return { modelId: res.modelId, tier: res.tier };
+  return { modelId: res.modelId, role: res.role };
 }
 
 export async function downloadModelInWorker(
-  tier: ModelTier,
+  role: ModelRole,
   modelsDir: string,
   resources: AiResourceSettings,
   onProgress?: (info: number | { percent: number; bytesReceived?: number; bytesTotal?: number }) => void
@@ -165,18 +165,18 @@ export async function downloadModelInWorker(
 
   return new Promise((resolve, reject) => {
     const onMessage = (msg: WorkerResponse) => {
-      if (msg.type === 'download-progress' && msg.tier === tier) {
+      if (msg.type === 'download-progress' && msg.role === role) {
         onProgress?.({
           percent: msg.percent,
           bytesReceived: msg.bytesReceived,
           bytesTotal: msg.bytesTotal
         });
       }
-      if (msg.type === 'download-complete' && msg.tier === tier) {
+      if (msg.type === 'download-complete' && msg.role === role) {
         child.off('message', onMessage);
         resolve({ modelId: msg.modelId });
       }
-      if (msg.type === 'download-error' && msg.tier === tier) {
+      if (msg.type === 'download-error' && msg.role === role) {
         child.off('message', onMessage);
         reject(new Error(msg.message));
       }
@@ -187,7 +187,7 @@ export async function downloadModelInWorker(
     };
 
     child.on('message', onMessage);
-    child.postMessage({ type: 'download-model', tier, modelsDir, resources } satisfies WorkerRequest);
+    child.postMessage({ type: 'download-model', role, modelsDir, resources } satisfies WorkerRequest);
   });
 }
 
@@ -224,12 +224,12 @@ export async function embedTextInWorker(text: string, modelId: string): Promise<
 }
 
 export async function testModelInWorker(
-  tier: ModelTier,
+  role: ModelRole,
   modelsDir: string,
   resources: AiResourceSettings
 ): Promise<{ ok: boolean; message: string; vectorDim?: number }> {
   const child = ensureAiWorker();
-  const timeoutMs = tier === 'heavy' ? 600_000 : 180_000;
+  const timeoutMs = role === 'search-clip' ? 180_000 : 600_000;
 
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -238,7 +238,7 @@ export async function testModelInWorker(
     }, timeoutMs);
 
     const onMessage = (msg: WorkerResponse) => {
-      if (msg.type === 'test-result' && msg.tier === tier) {
+      if (msg.type === 'test-result' && msg.role === role) {
         clearTimeout(timer);
         child.off('message', onMessage);
         resolve({ ok: msg.ok, message: msg.message, vectorDim: msg.vectorDim });
@@ -251,7 +251,7 @@ export async function testModelInWorker(
     };
 
     child.on('message', onMessage);
-    child.postMessage({ type: 'test-model', tier, modelsDir, resources } satisfies WorkerRequest);
+    child.postMessage({ type: 'test-model', role, modelsDir, resources } satisfies WorkerRequest);
   });
 }
 

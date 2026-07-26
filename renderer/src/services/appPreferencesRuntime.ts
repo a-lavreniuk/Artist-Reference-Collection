@@ -131,6 +131,23 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
+    next.aiSearchEnabled = patch.aiSemanticSearchEnabled;
+  }
+  if ('aiSearchEnabled' in patch && typeof patch.aiSearchEnabled === 'boolean') {
+    next.aiSearchEnabled = patch.aiSearchEnabled;
+    next.aiSemanticSearchEnabled = patch.aiSearchEnabled;
+  }
+  if ('aiSearchModelId' in patch) {
+    if (
+      patch.aiSearchModelId === 'clip-vit-base-patch32' ||
+      patch.aiSearchModelId === 'qwen3-vl-embedding-2b' ||
+      patch.aiSearchModelId === 'qwen3-vl-embedding-8b'
+    ) {
+      next.aiSearchModelId = patch.aiSearchModelId;
+    }
+  }
+  if ('aiCaptionEnabled' in patch && typeof patch.aiCaptionEnabled === 'boolean') {
+    next.aiCaptionEnabled = patch.aiCaptionEnabled;
   }
   if ('aiModelTier' in patch) {
     if (patch.aiModelTier === 'heavy' || patch.aiModelTier === 'light') {
@@ -288,6 +305,23 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('aiSemanticSearchEnabled' in patch && typeof patch.aiSemanticSearchEnabled === 'boolean') {
     next.aiSemanticSearchEnabled = patch.aiSemanticSearchEnabled;
+    next.aiSearchEnabled = patch.aiSemanticSearchEnabled;
+  }
+  if ('aiSearchEnabled' in patch && typeof patch.aiSearchEnabled === 'boolean') {
+    next.aiSearchEnabled = patch.aiSearchEnabled;
+    next.aiSemanticSearchEnabled = patch.aiSearchEnabled;
+  }
+  if ('aiSearchModelId' in patch) {
+    if (
+      patch.aiSearchModelId === 'clip-vit-base-patch32' ||
+      patch.aiSearchModelId === 'qwen3-vl-embedding-2b' ||
+      patch.aiSearchModelId === 'qwen3-vl-embedding-8b'
+    ) {
+      next.aiSearchModelId = patch.aiSearchModelId;
+    }
+  }
+  if ('aiCaptionEnabled' in patch && typeof patch.aiCaptionEnabled === 'boolean') {
+    next.aiCaptionEnabled = patch.aiCaptionEnabled;
   }
   if ('aiModelTier' in patch) {
     if (patch.aiModelTier === 'heavy' || patch.aiModelTier === 'light') {

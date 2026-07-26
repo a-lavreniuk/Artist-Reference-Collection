@@ -14,8 +14,9 @@ const SETTINGS_TITLES: Record<string, string> = {
   '/settings/auto-import': 'Автоимпорт',
   '/settings/browser-extension': 'Расширение браузера',
   '/settings/mcp-server': 'MCP сервер',
-  '/settings/ai-search': 'AI Поиск',
-  '/settings/auto-tag': 'Автотегирование',
+  '/settings/ai': 'AI',
+  '/settings/ai-search': 'AI',
+  '/settings/auto-tag': 'AI',
   '/settings/updates': 'Обновления',
   '/settings/ui-kit': 'UI-Kit'
 };

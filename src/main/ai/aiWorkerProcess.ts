@@ -1,18 +1,18 @@
 /**
  * AI worker entry point — runs inside Electron UtilityProcess.
- * Только light tier (CLIP transformers).
+ * Только search-clip (CLIP transformers).
  */
 
 import path from 'path';
 
-import type { AiResourceSettings, ModelTier, WorkerRequest, WorkerResponse } from './types';
+import type { AiResourceSettings, ModelRole, WorkerRequest, WorkerResponse } from './types';
 import { MODEL_CATALOG } from './types';
 import { prepareSearchQuery } from './queryPrep';
 
 type EmbedFn = (input: string) => Promise<number[]>;
 type TensorLike = { data: Float32Array | Float32Array[] };
 
-let activeTier: ModelTier | null = null;
+let activeRole: ModelRole | null = null;
 let activeModelId: string | null = null;
 let activeModelsDir: string | null = null;
 let embedImage: EmbedFn | null = null;
@@ -20,7 +20,7 @@ let embedText: EmbedFn | null = null;
 let downloadAborted = false;
 let downloadPaused = false;
 let downloadPipelineStep = 0;
-const LIGHT_ESTIMATED_BYTES = MODEL_CATALOG.light.sizeMb * 1024 * 1024;
+const CLIP_ESTIMATED_BYTES = MODEL_CATALOG['search-clip'].sizeMb * 1024 * 1024;
 
 function post(msg: WorkerResponse): void {
   process.parentPort?.postMessage(msg);
@@ -32,16 +32,16 @@ function normalizeDownloadPercent(raw: number): number {
   return Math.max(0, Math.min(100, Math.round(ratio * 100)));
 }
 
-function reportDownloadProgress(tier: ModelTier, localPercent: number, pipelineIndex: number): void {
+function reportDownloadProgress(role: ModelRole, localPercent: number, pipelineIndex: number): void {
   if (downloadPaused) return;
   const combined = Math.round(((pipelineIndex + localPercent / 100) / 2) * 100);
   const percent = Math.max(0, Math.min(100, combined));
   post({
     type: 'download-progress',
-    tier,
+    role,
     percent,
-    bytesReceived: Math.round((percent / 100) * LIGHT_ESTIMATED_BYTES),
-    bytesTotal: LIGHT_ESTIMATED_BYTES
+    bytesReceived: Math.round((percent / 100) * CLIP_ESTIMATED_BYTES),
+    bytesTotal: CLIP_ESTIMATED_BYTES
   });
 }
 
@@ -51,12 +51,12 @@ function tensorToVector(tensor: TensorLike): number[] {
 }
 
 async function loadClipEmbedders(
-  tier: ModelTier,
+  role: ModelRole,
   hfId: string,
   modelsDir: string,
   options: { allowRemote: boolean }
 ): Promise<{ modelId: string; embedImage: EmbedFn; embedText: EmbedFn }> {
-  const entry = MODEL_CATALOG[tier];
+  const entry = MODEL_CATALOG[role];
   const transformers = await import('@xenova/transformers');
   const { env, pipeline, AutoTokenizer, CLIPTextModelWithProjection } = transformers;
 
@@ -69,7 +69,7 @@ async function loadClipEmbedders(
   const progressCallback = (progress: { progress?: number }) => {
     if (!options.allowRemote || downloadAborted || downloadPaused) return;
     if (typeof progress.progress !== 'number') return;
-    reportDownloadProgress(tier, normalizeDownloadPercent(progress.progress), downloadPipelineStep);
+    reportDownloadProgress(role, normalizeDownloadPercent(progress.progress), downloadPipelineStep);
   };
 
   const localOnly = !options.allowRemote;
@@ -84,7 +84,7 @@ async function loadClipEmbedders(
   const tokenizer = await AutoTokenizer.from_pretrained(hfId, modelOptions);
   const textModel = await CLIPTextModelWithProjection.from_pretrained(hfId, modelOptions);
   if (options.allowRemote) {
-    post({ type: 'download-progress', tier, percent: 100 });
+    post({ type: 'download-progress', role, percent: 100 });
   }
 
   return {
@@ -110,54 +110,54 @@ async function handleInit(req: Extract<WorkerRequest, { type: 'init' }>): Promis
   downloadAborted = false;
   activeModelsDir = req.modelsDir;
 
-  const entry = MODEL_CATALOG[req.tier];
-  if (entry.stack !== 'transformers' || req.tier !== 'light') {
+  const entry = MODEL_CATALOG[req.role];
+  if (entry.stack !== 'transformers' || req.role !== 'search-clip') {
     post({
       type: 'ready',
       modelId: entry.id,
-      tier: req.tier
+      role: req.role
     });
-    activeTier = req.tier;
+    activeRole = req.role;
     activeModelId = entry.id;
     return;
   }
 
-  const loaded = await loadClipEmbedders(req.tier, entry.hfId, req.modelsDir, { allowRemote: false });
-  activeTier = req.tier;
+  const loaded = await loadClipEmbedders(req.role, entry.hfId, req.modelsDir, { allowRemote: false });
+  activeRole = req.role;
   activeModelId = loaded.modelId;
   embedImage = loaded.embedImage;
   embedText = loaded.embedText;
-  post({ type: 'ready', modelId: loaded.modelId, tier: req.tier });
+  post({ type: 'ready', modelId: loaded.modelId, role: req.role });
 }
 
 async function handleDownload(req: Extract<WorkerRequest, { type: 'download-model' }>): Promise<void> {
   downloadAborted = false;
   try {
-    if (req.tier !== 'light') {
+    if (req.role !== 'search-clip') {
       post({
         type: 'download-complete',
-        tier: req.tier,
-        modelId: MODEL_CATALOG[req.tier].id
+        role: req.role,
+        modelId: MODEL_CATALOG[req.role].id
       });
       return;
     }
-    const loaded = await loadClipEmbedders(req.tier, MODEL_CATALOG[req.tier].hfId, req.modelsDir, {
+    const loaded = await loadClipEmbedders(req.role, MODEL_CATALOG[req.role].hfId, req.modelsDir, {
       allowRemote: true
     });
-    activeTier = req.tier;
+    activeRole = req.role;
     activeModelId = loaded.modelId;
     embedImage = loaded.embedImage;
     embedText = loaded.embedText;
     post({
       type: 'download-complete',
-      tier: req.tier,
+      role: req.role,
       modelId: loaded.modelId
     });
   } catch (err) {
     if (downloadAborted) return;
     post({
       type: 'download-error',
-      tier: req.tier,
+      role: req.role,
       message: err instanceof Error ? err.message : String(err)
     });
   }
@@ -165,10 +165,10 @@ async function handleDownload(req: Extract<WorkerRequest, { type: 'download-mode
 
 async function handleTestModel(req: Extract<WorkerRequest, { type: 'test-model' }>): Promise<void> {
   try {
-    if (req.tier !== 'light') {
+    if (req.role !== 'search-clip') {
       post({
         type: 'test-result',
-        tier: req.tier,
+        role: req.role,
         ok: true,
         message: 'Проверка выполняется в основном процессе.'
       });
@@ -176,18 +176,23 @@ async function handleTestModel(req: Extract<WorkerRequest, { type: 'test-model' 
     }
     await handleInit({
       type: 'init',
-      tier: req.tier,
+      role: req.role,
       modelsDir: req.modelsDir,
       resources: req.resources
     });
     if (!embedText) {
-      post({ type: 'test-result', tier: req.tier, ok: false, message: 'Не удалось загрузить модель. Попробуйте перезагрузить.' });
+      post({
+        type: 'test-result',
+        role: req.role,
+        ok: false,
+        message: 'Не удалось загрузить модель. Попробуйте перезагрузить.'
+      });
       return;
     }
     const vector = await embedText('цветы');
     post({
       type: 'test-result',
-      tier: req.tier,
+      role: req.role,
       ok: vector.length > 0,
       message: 'Лёгкая модель работает. Поиск по изображениям готов.',
       vectorDim: vector.length
@@ -195,7 +200,7 @@ async function handleTestModel(req: Extract<WorkerRequest, { type: 'test-model' 
   } catch (err) {
     post({
       type: 'test-result',
-      tier: req.tier,
+      role: req.role,
       ok: false,
       message: err instanceof Error ? err.message : String(err)
     });
@@ -205,7 +210,7 @@ async function handleTestModel(req: Extract<WorkerRequest, { type: 'test-model' 
 async function unloadModels(): Promise<void> {
   embedImage = null;
   embedText = null;
-  activeTier = null;
+  activeRole = null;
   activeModelId = null;
   activeModelsDir = null;
 }

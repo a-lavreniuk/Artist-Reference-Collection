@@ -2,8 +2,8 @@ import { existsSync } from 'fs';
 import { readFile, stat, writeFile } from 'fs/promises';
 import path from 'path';
 
-import type { ModelCatalogEntry, ModelTier } from './types';
-import { MODEL_CATALOG } from './types';
+import type { ModelCatalogEntry, ModelRole } from './types';
+import { MODEL_ROLES } from './types';
 import { llamaModelsDir, modelsRootDir, transformersCacheDir } from './modelManager';
 
 export type ManifestFileEntry = {
@@ -35,10 +35,26 @@ export type LlamaRuntimeManifest = {
 
 export type AiModelsManifest = {
   llamaRuntime?: LlamaRuntimeManifest;
-} & Partial<Record<ModelTier, TierManifestEntry>>;
+} & Partial<Record<ModelRole, TierManifestEntry>> & {
+    /** @deprecated migrated to search-clip */
+    light?: TierManifestEntry;
+    /** @deprecated migrated to caption */
+    heavy?: TierManifestEntry;
+  };
 
 function manifestPath(userDataPath: string): string {
   return path.join(modelsRootDir(userDataPath), 'ai-models-manifest.json');
+}
+
+function migrateLegacyManifestKeys(raw: AiModelsManifest): AiModelsManifest {
+  const next: AiModelsManifest = { ...raw };
+  if (raw.light && !raw['search-clip']) {
+    next['search-clip'] = raw.light;
+  }
+  if (raw.heavy && !raw.caption) {
+    next.caption = raw.heavy;
+  }
+  return next;
 }
 
 export async function readModelManifest(userDataPath: string): Promise<AiModelsManifest> {
@@ -46,7 +62,8 @@ export async function readModelManifest(userDataPath: string): Promise<AiModelsM
   if (!existsSync(filePath)) return {};
   try {
     const raw = JSON.parse(await readFile(filePath, 'utf8')) as AiModelsManifest;
-    return raw && typeof raw === 'object' ? raw : {};
+    if (!raw || typeof raw !== 'object') return {};
+    return migrateLegacyManifestKeys(raw);
   } catch {
     return {};
   }
@@ -59,7 +76,7 @@ export async function writeModelManifest(userDataPath: string, manifest: AiModel
 
 export async function recordInstalledModel(
   userDataPath: string,
-  tier: ModelTier,
+  role: ModelRole,
   entry: ModelCatalogEntry,
   hfRevisionUsed: string
 ): Promise<void> {
@@ -87,7 +104,7 @@ export async function recordInstalledModel(
     }
   }
 
-  manifest[tier] = {
+  manifest[role] = {
     modelId: entry.id,
     catalogRevision: entry.catalogRevision,
     hfId: entry.hfId,
@@ -96,17 +113,33 @@ export async function recordInstalledModel(
     files
   };
 
+  // Drop legacy keys once role is recorded
+  if (role === 'search-clip') delete manifest.light;
+  if (role === 'caption') delete manifest.heavy;
+
   await writeModelManifest(userDataPath, manifest);
 }
 
-export async function clearTierManifest(userDataPath: string, tier: ModelTier): Promise<void> {
+export async function clearRoleManifest(userDataPath: string, role: ModelRole): Promise<void> {
   const manifest = await readModelManifest(userDataPath);
-  delete manifest[tier];
+  delete manifest[role];
+  if (role === 'search-clip') delete manifest.light;
+  if (role === 'caption') delete manifest.heavy;
   await writeModelManifest(userDataPath, manifest);
+}
+
+/** @deprecated use clearRoleManifest */
+export async function clearTierManifest(
+  userDataPath: string,
+  tierOrRole: ModelRole | 'light' | 'heavy'
+): Promise<void> {
+  const role: ModelRole =
+    tierOrRole === 'light' ? 'search-clip' : tierOrRole === 'heavy' ? 'caption' : tierOrRole;
+  await clearRoleManifest(userDataPath, role);
 }
 
 export function isModelUpdateAvailable(
-  tier: ModelTier,
+  _role: ModelRole,
   entry: ModelCatalogEntry,
   manifestEntry: TierManifestEntry | undefined
 ): boolean {
@@ -118,8 +151,12 @@ export function isModelUpdateAvailable(
 }
 
 export function getInstalledCatalogRevision(
-  tier: ModelTier,
+  role: ModelRole,
   manifest: AiModelsManifest
 ): number | undefined {
-  return manifest[tier]?.catalogRevision;
+  return manifest[role]?.catalogRevision;
+}
+
+export function listManifestRoles(manifest: AiModelsManifest): ModelRole[] {
+  return MODEL_ROLES.filter((role) => Boolean(manifest[role]));
 }
