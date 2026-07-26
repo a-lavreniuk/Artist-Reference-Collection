@@ -92,6 +92,8 @@ export default function CategorySettingsModal({
   const lastNonEmptyCreateNameRef = useRef('');
   const { libraries, activeLibrary } = useLibraries();
   const activeLibraryId = activeLibrary?.id ?? null;
+  /** Видимость по библиотекам имеет смысл только при 2+ библиотеках. */
+  const canConfigureVisibility = libraries.length > 1;
 
   const [tab, setTab] = useState<TabId>('name');
   const [name, setName] = useState(() => (state.mode === 'edit' ? state.category.name : ''));
@@ -130,6 +132,7 @@ export default function CategorySettingsModal({
     visibilityMode: 'all' | 'libraries';
     visibilityLibraryIds: string[];
   } => {
+    if (!canConfigureVisibility) return { visibilityMode: 'all', visibilityLibraryIds: [] };
     if (visibilityUi === 'all') return { visibilityMode: 'all', visibilityLibraryIds: [] };
     if (visibilityUi === 'current') {
       return {
@@ -138,7 +141,7 @@ export default function CategorySettingsModal({
       };
     }
     return { visibilityMode: 'libraries', visibilityLibraryIds: selectedLibIds };
-  }, [visibilityUi, activeLibraryId, selectedLibIds]);
+  }, [canConfigureVisibility, visibilityUi, activeLibraryId, selectedLibIds]);
 
   const committedBaseline = useMemo(() => {
     if (state.mode !== 'edit') return null;
@@ -152,6 +155,13 @@ export default function CategorySettingsModal({
     };
   }, [state]);
 
+  const visibilityDirty =
+    canConfigureVisibility &&
+    committedBaseline !== null &&
+    (resolvedVisibility.visibilityMode !== committedBaseline.visibilityMode ||
+      JSON.stringify([...resolvedVisibility.visibilityLibraryIds].sort()) !==
+        JSON.stringify(committedBaseline.visibilityLibraryIds));
+
   const isDirty =
     isEdit &&
     committedBaseline !== null &&
@@ -159,9 +169,7 @@ export default function CategorySettingsModal({
       description.trim() !== committedBaseline.description.trim() ||
       normalizedColor !== (normalizeHex(committedBaseline.colorHex) ?? committedBaseline.colorHex) ||
       weight !== committedBaseline.weight ||
-      resolvedVisibility.visibilityMode !== committedBaseline.visibilityMode ||
-      JSON.stringify([...resolvedVisibility.visibilityLibraryIds].sort()) !==
-        JSON.stringify(committedBaseline.visibilityLibraryIds));
+      visibilityDirty);
 
   useEffect(() => {
     setTab('name');
@@ -182,6 +190,12 @@ export default function CategorySettingsModal({
     setVisibilityConfirm(null);
     lastNonEmptyCreateNameRef.current = '';
   }, [state, activeLibraryId]);
+
+  useEffect(() => {
+    if (!canConfigureVisibility && tab === 'visibility') {
+      setTab('name');
+    }
+  }, [canConfigureVisibility, tab]);
 
   useLayoutEffect(() => {
     if (hostRef.current) {
@@ -227,7 +241,11 @@ export default function CategorySettingsModal({
       return;
     }
 
-    if (resolvedVisibility.visibilityMode === 'libraries' && resolvedVisibility.visibilityLibraryIds.length === 0) {
+    if (
+      canConfigureVisibility &&
+      resolvedVisibility.visibilityMode === 'libraries' &&
+      resolvedVisibility.visibilityLibraryIds.length === 0
+    ) {
       setError('Выберите хотя бы одну библиотеку');
       setTab('visibility');
       return;
@@ -360,7 +378,7 @@ export default function CategorySettingsModal({
                 {renderTabButton('name', 'Название')}
                 {renderTabButton('weight', 'Вес')}
                 {renderTabButton('color', 'Цвет')}
-                {renderTabButton('visibility', 'Видимость')}
+                {canConfigureVisibility ? renderTabButton('visibility', 'Видимость') : null}
                 {renderTabButton('info', 'Информация', !isEdit)}
               </div>
               <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
@@ -469,7 +487,7 @@ export default function CategorySettingsModal({
                 </div>
               ) : null}
 
-              {tab === 'visibility' ? (
+              {canConfigureVisibility && tab === 'visibility' ? (
                 <div
                   id="arc-category-modal-panel-visibility"
                   role="tabpanel"

@@ -525,7 +525,8 @@ html[data-theme="light"] .arc-app-outlet {
 }
 
 .arc-tags-category-section__name-btn {
-  flex: 1 1 auto;
+  /* Не растягивать: имя и счётчик рядом; shrink — для ellipsis длинных названий */
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
