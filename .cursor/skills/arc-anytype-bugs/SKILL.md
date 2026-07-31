@@ -1,19 +1,22 @@
 ---
 name: arc-anytype-bugs
 description: >-
-  Triages Yandex Forms beta feedback into AnyType bug cards (type «Баг») and
-  implements bugs the user moved to «В работе» on the ARC bug board. Use when
-  the user exports form responses (CSV/JSON), asks for bug triage, beta
-  feedback, «баги AnyType», «доска багов», «сообщить о проблеме», or to pick up
-  in-progress bug cards from AnyType.
+  Triages Yandex Forms beta feedback into AnyType cards (Тип задачи = Баг on the
+  unified Таски board) and implements bugs the user moved to «В работе». Use when
+  the user exports form responses (CSV/JSON), asks for bug triage, beta feedback,
+  «баги AnyType», «возьми баг», «сообщить о проблеме», or to pick up in-progress
+  bug cards from the Таски kanban.
 ---
 
-# ARC — доска Багов (AnyType)
+# ARC — доска Таски / баги (AnyType)
 
-Два режима: **триаж** (форма → карточки) и **работа** (колонка «В работе» → код).  
-Паттерн работы как у [arc-anytype-tasks](../arc-anytype-tasks/SKILL.md); отличия — тип `bagi`, поле Source, триаж из Яндекс.Форм.
+Единая доска **Таски** (`type_key: task`). Баги — карточки с **Тип задачи = Баг** (`tip_zadachi`).  
+Два режима: **триаж** (форма → карточки) и **работа** (колонка «В работе» → код).
 
-Конфиг: [anytype-config.md](../arc-anytype-shared/references/anytype-config.md).
+Паттерн работы как у [arc-anytype-tasks](../arc-anytype-tasks/SKILL.md); отличие — фильтр `tip_zadachi` = Баг, поля формы, шаги воспроизведения.
+
+Конфиг: [anytype-config.md](../arc-anytype-shared/references/anytype-config.md).  
+**Не использовать** устаревший `type_key: "bagi"`.
 
 ## Режим A — триаж выгрузки формы
 
@@ -24,14 +27,14 @@ description: >-
 - [ ] 2. Пропустить или пометить [Тест]: пустое/«Тест» в заголовке и описании
 - [ ] 3. Объединить дубликаты (одинаковый раздел + суть)
 - [ ] 4. Для каждого уникального отчёта — API-create-object:
-        type_key: "bagi"
+        type_key: "task"
         name: краткий заголовок (тестовые — префикс [Тест])
         body: см. шаблон ниже
-        properties: status, source
+        properties: tip_zadachi → Баг, status, source
 - [ ] 5. Статус при создании:
-        реальный баг / серьёзно → «Задача»
+        реальный баг / серьёзно → «Задача» (бэклог)
         идея / пожелание → «Идея»
-- [ ] 6. Таблица в ответе: ID формы → карточка → статус → объединения
+- [ ] 6. Таблица: ID формы → карточка → статус → объединения
 ```
 
 ### Шаблон тела карточки (markdown)
@@ -60,40 +63,42 @@ description: >-
 …краткий вывод агента…
 ```
 
-`source` → URL формы (`https://forms.yandex.ru/u/6a382e851f1eb55aed4c9c42`).
+`source` → URL формы (`https://forms.yandex.ru/u/6a382e851f1eb55aed4c9c42`).  
+`tip_zadachi` → tag id «Баг» из конфига.
 
 ## Режим B — подхват «В работе»
 
-Триггер: «возьми баги», «что в работе на доске багов», «продолжим баг», начало сессии с отсылкой к баг-доске.
+Триггер: «возьми баг», «баги в работе», «продолжим баг», начало сессии с отсылкой к багам.
 
-Повторить workflow из **arc-anytype-tasks**, заменив:
+```
+- [ ] 1. API-search-space: types: ["task"], limit 100
+- [ ] 2. Отфильтровать tip_zadachi === «Баг» И status === «В работе»
+- [ ] 3. Если 0 — сообщить и остановиться
+- [ ] 4. Если >1 — приоритет ниже; остальные списком
+- [ ] 5. API-get-object → шаги воспроизведения, обход
+- [ ] 6. Реализовать в ARC
+- [ ] 7. После «ок» — status → Готово + блок «Итог» / «Результат»
+```
 
-| Задачи | Баги |
-|--------|------|
-| `types: ["task"]` | `types: ["bagi"]` |
-| доска Задач | доска Баги |
+Дополнительно:
 
-Дополнительно для багов:
+1. Сверять раздел ARC (Галерея, Метки, …) с `renderer/src/pages/`.
+2. **Агент не переводит** карточку в «В работе» — только пользователь.
 
-1. В теле карточки искать **шаги воспроизведения** и **обход**.
-2. Сверять раздел ARC (Галерея, Метки, …) с путями в `renderer/src/pages/`.
-3. После фикса — status **Готово** + блок «Итог» в markdown (корневая причина, PR/commit при наличии).
-
-**Агент не переводит баг в «В работе»** — это делает пользователь на канбане.
-
-## Приоритет при нескольких «В работе»
+## Приоритет при нескольких «В работе» (баги)
 
 1. Производительность / блокирует работу  
-2. Баг (не идея)  
-3. Старше по дате отчёта в теле карточки  
+2. Серьёзный баг (не идея)  
+3. Старше по дате отчёта в теле  
 
 Остальные — списком, без автоматического старта.
 
 ## Связь с продуктом
 
 - Виджет и форма: `docs/bug-report-widget.md`
-- UI-правки: skill `arc-anytype-tasks` → `arc-ui-dev`
-- Тестовые карточки `[Тест]` — не брать в работу; предложить архивировать
+- UI: `arc-ui-dev`
+- Старт с Cursor: [anytype-task-take](../anytype-task-take/SKILL.md)
+- Тестовые `[Тест]` — не брать в работу; предложить архивировать
 
 ## Триггеры (примеры)
 
@@ -101,28 +106,26 @@ description: >-
 |-------|--------|
 | «Выгрузил форму» / путь к CSV | A |
 | «Разбери репорты» | A |
-| «Баги в работе» / «возьми баг» | B |
-| «Прелоадеры в галерее» (если карточка уже в работе) | B |
+| «Возьми баг» / «баги в работе» | B |
+| «Прелоадеры в галерее» (если баг уже в работе) | B |
 
 ## Формат отчёта
 
 1. Режим A или B.  
-2. Созданные/взятые карточки (имя + id).  
-3. Изменения в ARC (UI/поведение).  
+2. Созданные/взятые карточки (имя + id), Тип задачи = Баг.  
+3. Изменения в ARC.  
 4. Статусы AnyType.  
 5. Что проверить вручную.
 
 ## Переключение на space ARC2
 
-Шаблон канала: [anytype-config-arc2.md](../arc-anytype-shared/references/anytype-config-arc2.md).
+Шаблон: [anytype-config-arc2.md](../arc-anytype-shared/references/anytype-config-arc2.md).
 
-| Legacy (Artist Reference Collection) | ARC2 |
-|--------------------------------------|------|
-| `type_key: "bagi"` | `type_key: "bug"` |
+| Legacy (объединённая доска Таски) | ARC2 |
+|----------------------------------|------|
+| `type_key: "task"` + `tip_zadachi: Баг` | `type_key: "bug"` |
 | `status` | **`bug_status`** |
 | идея → «Идея» | `report_type: Идея` + `bug_status: Бэклог` |
-| баг → «Задача» | `bug_status: Задача` + `report_type` / `severity` по форме |
+| баг → status «Задача» | `bug_status: Задача` + `report_type` / `severity` |
 
-При создании карточки в ARC2 задавать: `bug_status`, `report_type`, `severity`, `source`, `cursor` (по необходимости).
-
-Поиск: `types: ["bug"]`. «В работе» — по `bug_status`, не по `status`.
+Поиск ARC2: `types: ["bug"]`. «В работе» — по `bug_status`.

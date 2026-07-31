@@ -9,14 +9,27 @@ MCP-сервер: `user-anytype` (локальный `@anyproto/anytype-mcp`). A
 | Название | Artist Reference Collection |
 | `space_id` | `bafyreiatym7s6pb74pl53lc7dsldsoe6qv2n3yq62gvcbrbrlbk5su7o24.3tzcnbz8ajz22` |
 
-## Типы
+## Единая доска «Таски»
 
-| Доска | `type_key` | `type_id` |
-|-------|------------|-----------|
-| Задачи | `task` | `bafyreifjrljfwzqotcacwkt324t4vnmzva3xuzcjcigrnc2dydhyfoakjy` |
-| Баги | `bagi` | `bafyreihedq3u5ym3h4o75l45uc6vr3hkagn2mtg2afs4jsj7tij66u3pna` |
+Задачи и баги живут на **одной** доске — тип **Таски** (`task`). Различаются полем **Тип задачи** (`tip_zadachi`).
 
-Доска **Баги** — представление типа `bagi` (отдельная коллекция не нужна).
+| | Значение |
+|--|----------|
+| Доска (type view) | [Таски](https://object.any.coop/bafyreifjrljfwzqotcacwkt324t4vnmzva3xuzcjcigrnc2dydhyfoakjy?spaceId=bafyreiatym7s6pb74pl53lc7dsldsoe6qv2n3yq62gvcbrbrlbk5su7o24.3tzcnbz8ajz22) |
+| `type_key` | `task` |
+| `type_id` | `bafyreifjrljfwzqotcacwkt324t4vnmzva3xuzcjcigrnc2dydhyfoakjy` |
+| Коллекция (опционально) | `bafyreienkuruscfe4itr7altg26p4ambee4qobloeiprfne7solb4eb6om` — не источник правды; канбан — type view |
+
+**Устарело:** тип `bagi` (Баг-репорты) — карточки перенесены в `task`. Новые баги создавать только как `task` + `tip_zadachi` = Баг.
+
+## Тип задачи (`property` key: `tip_zadachi`)
+
+| Значение | `tag_id` | Когда |
+|----------|----------|--------|
+| Задача | `bafyreihyc7utnvzss5wmg6tfsofglomjlftyx53aprdxgkeqtjtpnjhvpy` | обычная задача продукта |
+| Баг | `bafyreiazrg2sjm4no2nhnbkrjznyr6csxpqtxzrz2asah3xjukkqipnsji` | баг / баг-репорт |
+
+`property_id`: `bafyreiadgiyowt3suvq6b62yaxeisjlhsstna7qdmmmdy5ejajsuuwonzq`
 
 ## Статус (`property` key: `status`)
 
@@ -52,10 +65,16 @@ URL по умолчанию: `https://forms.yandex.ru/u/6a382e851f1eb55aed4c9c42
 
 ```
 API-list-spaces          → space_id
-API-search-space         → types: ["bagi"] | ["task"], limit 100
+API-search-space         → types: ["task"], limit 100
 API-get-object           → format md, тело карточки
-API-create-object        → type_key, name, body, properties[]
-API-update-object        → status → Готово + доп. markdown с итогом
+API-create-object        → type_key: "task", tip_zadachi + status (+ source для багов)
+API-update-object        → status → Готово + markdown с итогом
 ```
 
-Фильтр «В работе»: `API-search-space` с `types`, затем отбор по `properties` где `status.select.name === "В работе"`.
+### Фильтры на доске
+
+1. `API-search-space` с `types: ["task"]`.
+2. Отбор по `status.select.name` (например «В работе»).
+3. Отбор по `tip_zadachi.select.name`:
+   - **Задача** — «возьми задачу» / задачи из «В работе»;
+   - **Баг** — «возьми баг» / баги из «В работе».
