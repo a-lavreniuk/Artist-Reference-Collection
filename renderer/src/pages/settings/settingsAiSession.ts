@@ -1,8 +1,7 @@
 import type { ToastAlertVariant } from '../../components/alert/ToastAlert';
 import { dispatchAiSetupChanged } from '../../search/aiSearchEvents';
-import type { AiModelTier } from '../../services/appPreferences';
+import type { AiModelRole, AiModelRef, AiIndexStatus, AiStatus } from '../../services/aiTypes';
 import { patchAppPreferences } from '../../services/appPreferencesRuntime';
-import type { AiIndexStatus, AiStatus } from '../../services/aiTypes';
 
 type AlertState = { message: string; variant: ToastAlertVariant } | null;
 export type DownloadPhase = 'runtime' | 'model' | 'finalize' | null;
@@ -19,10 +18,11 @@ type IndexProgressPayload = {
   running?: boolean;
   currentCardId?: string | null;
   currentCardProgress?: number | null;
+  stage?: 'embeddings' | 'captions' | 'tags' | null;
 };
 
 export type CudaPromptState = {
-  tier: AiModelTier;
+  tier: string;
   onConfirm: () => void;
   onCancel: () => void;
 } | null;
@@ -31,7 +31,7 @@ type SessionState = {
   status: AiStatus | null;
   loading: boolean;
   analyzing: boolean;
-  downloadTier: AiModelTier | null;
+  downloadTier: string | null;
   downloadPercent: number | null;
   downloadPhase: DownloadPhase;
   downloadBytesReceived: number | null;
@@ -40,7 +40,7 @@ type SessionState = {
   cudaPrompt: CudaPromptState;
   alert: AlertState;
   busy: boolean;
-  testingTier: AiModelTier | null;
+  testingTier: string | null;
   downloadOperation: AiDownloadOperation;
   indexEtaHint: string | null;
 };
@@ -76,8 +76,13 @@ let state: SessionState = {
   indexEtaHint: null
 };
 
-function isVisionTier(tier: AiModelTier): tier is 'heavy' {
-  return tier === 'heavy';
+function isVisionRole(role: string): boolean {
+  return role !== 'search-clip' && role !== 'light' && role !== 'clip-vit-base-patch32';
+}
+
+function normalizeModelRef(ref: AiModelRef): string {
+  if (typeof ref === 'string') return ref;
+  return ref.role ?? ref.modelId ?? ref.tier ?? 'search-clip';
 }
 
 export function resolveAiSetupPhase(status: AiStatus | null, analyzing: boolean): AiSetupPhase {
@@ -134,11 +139,12 @@ export function clampPercent(value: number | null | undefined): number | null {
 
 export function isAiDownloading(snapshot: {
   status: AiStatus | null;
-  downloadTier: AiModelTier | null;
+  downloadTier: string | null;
   busy: boolean;
 }): boolean {
   return Boolean(
     snapshot.downloadTier ||
+      snapshot.status?.download?.role ||
       snapshot.status?.download?.tier ||
       snapshot.status?.models.some((m) => m.downloading) ||
       (snapshot.busy && snapshot.downloadTier)
@@ -148,7 +154,7 @@ export function isAiDownloading(snapshot: {
 export function getEffectiveDownload(
   snapshot: Pick<SessionState, 'status' | 'downloadTier' | 'downloadPercent' | 'downloadPhase'>
 ): {
-  tier: AiModelTier | null;
+  tier: string | null;
   percent: number | null;
   phase: DownloadPhase;
 } {
@@ -161,7 +167,7 @@ export function getEffectiveDownload(
   }
   if (snapshot.status?.download) {
     return {
-      tier: snapshot.status.download.tier,
+      tier: snapshot.status.download.role ?? snapshot.status.download.tier ?? null,
       percent: snapshot.status.download.percent,
       phase: snapshot.status.download.phase
     };
@@ -169,7 +175,7 @@ export function getEffectiveDownload(
   const fromModels = snapshot.status?.models.find((m) => m.downloading);
   if (fromModels) {
     return {
-      tier: fromModels.tier,
+      tier: fromModels.role ?? fromModels.tier ?? null,
       percent: fromModels.progressPercent,
       phase: 'model'
     };
@@ -293,7 +299,8 @@ function applyIndexProgress(payload: IndexProgressPayload): void {
             currentCardProgress:
               payload.currentCardProgress == null
                 ? state.status.index.currentCardProgress
-                : payload.currentCardProgress
+                : payload.currentCardProgress,
+            stage: payload.stage !== undefined ? payload.stage : state.status.index.stage
           },
           lastError: running ? null : state.status.lastError
         }
@@ -345,11 +352,20 @@ function queueIndexProgress(payload: IndexProgressPayload): void {
 export function resolveIndexStatusLine(snapshot: ReturnType<typeof getAiSettingsSnapshot>): string | null {
   const index = snapshot.status?.index;
   if (!index) return null;
+  const stageLabel =
+    index.stage === 'embeddings'
+      ? 'эмбеддинги'
+      : index.stage === 'captions'
+        ? 'описания'
+        : index.stage === 'tags'
+          ? 'теги'
+          : null;
   if (index.running) {
-    if (index.paused) return 'Индексация на паузе…';
+    if (index.paused) return stageLabel ? `Индексация на паузе (${stageLabel})…` : 'Индексация на паузе…';
     const pct = index.total > 0 ? Math.round((index.indexed / index.total) * 100) : 0;
     const etaPart = snapshot.indexEtaHint ? ` Осталось примерно ${snapshot.indexEtaHint}.` : '';
-    return `Индексируется ${index.indexed.toLocaleString('ru-RU')} из ${index.total.toLocaleString('ru-RU')} карточек. ${pct}%.${etaPart}`;
+    const stagePart = stageLabel ? ` Этап: ${stageLabel}.` : '';
+    return `Индексируется ${index.indexed.toLocaleString('ru-RU')} из ${index.total.toLocaleString('ru-RU')} карточек. ${pct}%.${stagePart}${etaPart}`;
   }
   if (index.total > 0 && index.indexed >= index.total && !index.running) {
     return `Индексирование завершено, всего ${index.total.toLocaleString('ru-RU')} карточек`;
@@ -531,7 +547,7 @@ function applyAiStatusFromServer(status: AiStatus): Partial<SessionState> {
   if (status.download && localActive) {
     return {
       status,
-      downloadTier: status.download.tier,
+      downloadTier: status.download.role ?? status.download.tier ?? null,
       downloadPercent: status.download.percent,
       downloadPhase: status.download.phase
     };
@@ -645,7 +661,7 @@ function shouldOfferCudaInstall(status: AiStatus | null | undefined): boolean {
   return Boolean(status.hardware.gpuName && /nvidia/i.test(status.hardware.gpuName));
 }
 
-function askCudaInstall(tier: AiModelTier): Promise<boolean> {
+function askCudaInstall(tier: string): Promise<boolean> {
   return new Promise((resolve) => {
     stopDownloadPoll();
     cudaPromptResolver = resolve;
@@ -670,7 +686,7 @@ function askCudaInstall(tier: AiModelTier): Promise<boolean> {
 }
 
 async function downloadLlamaRuntime(
-  tier: AiModelTier,
+  tier: string,
   variant: 'cpu' | 'cuda'
 ): Promise<{ ok: boolean; error?: string }> {
   const arc = window.arc;
@@ -679,16 +695,20 @@ async function downloadLlamaRuntime(
   }
   patchState({ downloadPhase: 'runtime' });
   syncDownloadPoll();
-  const res = await arc.aiDownloadLlamaRuntime({ variant, tier });
+  const res = await arc.aiDownloadLlamaRuntime({ variant, role: tier, tier });
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
 }
 
-async function prepareVisionRuntimeWithCudaOffer(tier: 'heavy'): Promise<{ ok: boolean; error?: string }> {
+async function prepareVisionRuntimeWithCudaOffer(tier: string): Promise<{ ok: boolean; error?: string }> {
   const cpuRes = await downloadLlamaRuntime(tier, 'cpu');
   if (!cpuRes.ok) return cpuRes;
 
   const arc = window.arc;
+  // Refresh GPU flags before deciding on CUDA offer (nvidia-smi / deep detect).
+  if (arc?.aiDetectHardware) {
+    await arc.aiDetectHardware();
+  }
   const currentStatus = (await arc?.aiGetStatus?.()) as AiStatus | undefined;
   if (shouldOfferCudaInstall(currentStatus)) {
     await waitForNextFrame();
@@ -702,7 +722,7 @@ async function prepareVisionRuntimeWithCudaOffer(tier: 'heavy'): Promise<{ ok: b
   return { ok: true };
 }
 
-async function downloadVisionModel(tier: 'heavy'): Promise<{ ok: boolean; error?: string }> {
+async function downloadVisionModel(tier: string): Promise<{ ok: boolean; error?: string }> {
   const arc = window.arc;
   if (!arc?.aiDownloadModel) {
     return { ok: false, error: 'Загрузка модели недоступна.' };
@@ -727,12 +747,17 @@ export function initAiSettingsSession(): void {
   const arc = window.arc;
   if (!arc) return;
 
-  arc.onAiDownloadProgress?.(({ tier, percent, phase, bytesReceived, bytesTotal }) => {
+  arc.onAiDownloadProgress?.((payload) => {
+    const { percent, phase, bytesReceived, bytesTotal } = payload;
+    const role =
+      (payload as { role?: string }).role ??
+      (payload as { tier?: string }).tier ??
+      null;
     // Progress from main can arrive before renderer sets busy/downloadTier.
     updateDownloadSpeed(bytesReceived);
     patchState({
       busy: true,
-      downloadTier: tier as AiModelTier,
+      downloadTier: role,
       downloadPercent: clampPercent(percent),
       downloadPhase: phase ?? state.downloadPhase ?? 'model',
       downloadBytesReceived: bytesReceived ?? state.downloadBytesReceived,
@@ -752,8 +777,8 @@ export function initAiSettingsSession(): void {
     void refreshAiSettings();
   });
 
-  arc.onAiIndexProgress?.(({ done, total, running, currentCardId, currentCardProgress }) => {
-    queueIndexProgress({ done, total, running, currentCardId, currentCardProgress });
+  arc.onAiIndexProgress?.(({ done, total, running, currentCardId, currentCardProgress, stage }) => {
+    queueIndexProgress({ done, total, running, currentCardId, currentCardProgress, stage });
   });
 
   arc.onAiIndexComplete?.((payload) => {
@@ -794,9 +819,12 @@ export async function setAiEnabled(enabled: boolean): Promise<void> {
 
   patchState({ busy: true, analyzing: enabled });
   try {
-    const next = (await arc.aiSetEnabled({ enabled })) as AiStatus;
+    const next = (await arc.aiSetEnabled({ searchEnabled: enabled, enabled })) as AiStatus;
     patchState({ ...applyAiStatusFromServer(next) });
-    await patchAppPreferences({ aiSemanticSearchEnabled: enabled });
+    await patchAppPreferences({
+      aiSemanticSearchEnabled: enabled,
+      aiSearchEnabled: enabled
+    });
     dispatchAiSetupChanged();
     if (enabled) {
       await new Promise((resolve) => setTimeout(resolve, 600));
@@ -809,15 +837,37 @@ export async function setAiEnabled(enabled: boolean): Promise<void> {
   }
 }
 
-export async function downloadAiModel(tier: AiModelTier): Promise<void> {
+export async function setAiCaptionEnabled(enabled: boolean): Promise<void> {
   const arc = window.arc;
-  if (!arc?.aiDownloadModel) return;
+  if (!arc?.aiSetEnabled) return;
+
+  patchState({ busy: true });
+  try {
+    const next = (await arc.aiSetEnabled({ captionEnabled: enabled })) as AiStatus;
+    patchState({ ...applyAiStatusFromServer(next) });
+    await patchAppPreferences({ aiCaptionEnabled: enabled });
+    dispatchAiSetupChanged();
+    if (enabled) {
+      await refreshAiSettings();
+    }
+  } finally {
+    patchState({ busy: false });
+    syncDownloadPoll();
+    syncIndexPoll(state.status);
+  }
+}
+
+export async function downloadAiModel(ref: AiModelRef): Promise<boolean> {
+  const arc = window.arc;
+  if (!arc?.aiDownloadModel) return false;
+  const tier = normalizeModelRef(ref);
+  let installed = false;
 
   patchState({
     busy: true,
     downloadTier: tier,
     downloadPercent: 0,
-    downloadPhase: isVisionTier(tier) ? 'runtime' : 'model',
+    downloadPhase: isVisionRole(tier) ? 'runtime' : 'model',
     downloadOperation: 'install'
   });
   syncDownloadPoll();
@@ -826,24 +876,47 @@ export async function downloadAiModel(tier: AiModelTier): Promise<void> {
     let ok = false;
     let error: string | undefined;
 
-    if (isVisionTier(tier)) {
+    if (isVisionRole(tier)) {
       const res = await downloadVisionModel(tier);
       ok = res.ok;
       error = res.error;
     } else {
       const res = await arc.aiDownloadModel(tier);
       ok = res.ok;
-      error = res.error;
+      error = res.ok ? undefined : res.error;
     }
 
     if (!ok) {
       patchState({ alert: { message: error || 'Не удалось скачать модель.', variant: 'warning' } });
     } else {
+      installed = true;
       patchState({
         alert: { message: 'Модель установлена.', variant: 'success' },
         ...clearDownloadUiState()
       });
-      void patchAppPreferences({ aiModelTier: tier });
+      if (
+        tier === 'search-clip' ||
+        tier === 'light' ||
+        tier === 'clip-vit-base-patch32' ||
+        tier === 'search-embed-2b' ||
+        tier === 'qwen3-vl-embedding-2b' ||
+        tier === 'search-embed-8b' ||
+        tier === 'qwen3-vl-embedding-8b'
+      ) {
+        const modelId =
+          tier === 'search-clip' || tier === 'light'
+            ? 'clip-vit-base-patch32'
+            : tier === 'search-embed-2b'
+              ? 'qwen3-vl-embedding-2b'
+              : tier === 'search-embed-8b'
+                ? 'qwen3-vl-embedding-8b'
+                : tier;
+        void patchAppPreferences({
+          aiSearchModelId: modelId as 'clip-vit-base-patch32' | 'qwen3-vl-embedding-2b' | 'qwen3-vl-embedding-8b',
+          aiSearchEnabled: true,
+          aiSemanticSearchEnabled: true
+        });
+      }
     }
   } finally {
     patchState({
@@ -855,11 +928,13 @@ export async function downloadAiModel(tier: AiModelTier): Promise<void> {
     syncDownloadPoll();
     void refreshAiSettings();
   }
+  return installed;
 }
 
-export async function deleteAiModel(tier: AiModelTier): Promise<void> {
+export async function deleteAiModel(ref: AiModelRef): Promise<void> {
   const arc = window.arc;
   if (!arc?.aiDeleteModel) return;
+  const tier = normalizeModelRef(ref);
 
   patchState({ busy: true });
   try {
@@ -871,9 +946,10 @@ export async function deleteAiModel(tier: AiModelTier): Promise<void> {
   }
 }
 
-export async function testAiModel(tier: AiModelTier): Promise<void> {
+export async function testAiModel(ref: AiModelRef): Promise<void> {
   const arc = window.arc;
   if (!arc?.aiTestModel) return;
+  const tier = normalizeModelRef(ref);
 
   patchState({ busy: true, testingTier: tier });
   try {
@@ -896,17 +972,17 @@ export async function testAiModel(tier: AiModelTier): Promise<void> {
   }
 }
 
-export async function setActiveAiModel(tier: AiModelTier): Promise<void> {
+export async function setActiveAiModel(ref: AiModelRef): Promise<void> {
   const arc = window.arc;
   if (!arc?.aiSetActiveModel) return;
-
-  const previousTier = state.status?.activeTier;
+  const tier = normalizeModelRef(ref);
+  const previous = state.status?.activeSearchModelId;
   patchState({ busy: true });
   try {
     const next = (await arc.aiSetActiveModel(tier)) as AiStatus;
     patchState({ status: next });
-    await patchAppPreferences({ aiModelTier: tier });
-    if (previousTier && previousTier !== tier) {
+    dispatchAiSetupChanged();
+    if (previous && next.activeSearchModelId && previous !== next.activeSearchModelId) {
       patchState({
         alert: { message: 'Модель переключена. Запущена переиндексация библиотеки.', variant: 'info' }
       });
@@ -994,22 +1070,23 @@ export async function updateAiSearchStrictness(searchStrictness: number): Promis
   patchState({ status: next });
 }
 
-export async function updateAiModel(tier: AiModelTier): Promise<void> {
+export async function updateAiModel(ref: AiModelRef): Promise<void> {
   const arc = window.arc;
   if (!arc?.aiUpdateModel) return;
+  const tier = normalizeModelRef(ref);
 
   patchState({
     busy: true,
     downloadTier: tier,
     downloadPercent: 0,
-    downloadPhase: isVisionTier(tier) ? 'runtime' : 'model',
+    downloadPhase: isVisionRole(tier) ? 'runtime' : 'model',
     downloadOperation: 'update'
   });
   syncDownloadPoll();
 
   try {
     let res: { ok: boolean; error?: string };
-    if (isVisionTier(tier)) {
+    if (isVisionRole(tier)) {
       const runtimeRes = await prepareVisionRuntimeWithCudaOffer(tier);
       if (!runtimeRes.ok) {
         res = runtimeRes;
@@ -1070,6 +1147,21 @@ export async function resumeAiDownload(): Promise<void> {
 }
 
 export function isActiveModelInstalled(status: AiStatus | null): boolean {
-  if (!status?.activeTier) return false;
-  return Boolean(status.models.find((m) => m.tier === status.activeTier)?.installed);
+  if (!status) return false;
+  if (status.activeSearchModelId) {
+    const byModel = status.models.find((m) => m.modelId === status.activeSearchModelId);
+    if (byModel) return Boolean(byModel.installed);
+  }
+  if (status.activeTier) {
+    return Boolean(status.models.find((m) => m.tier === status.activeTier)?.installed);
+  }
+  return false;
+}
+
+export function isCaptionModelInstalled(status: AiStatus | null): boolean {
+  if (!status) return false;
+  return Boolean(
+    status.models.find((m) => m.role === 'caption' || m.tier === 'heavy' || m.modelId === 'joycaption-beta-one')
+      ?.installed
+  );
 }

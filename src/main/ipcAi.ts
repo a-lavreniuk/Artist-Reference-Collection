@@ -1,11 +1,16 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 
 import { readAppPreferences, writeAppPreferences } from './appPreferences';
-import { detectHardware, getSupportedTiers, isTierSupported } from './ai/hardware';
+import {
+  detectHardware,
+  getSupportedSearchModelIds,
+  getSupportedTiers,
+  isSearchModelSupported,
+  isTierSupported
+} from './ai/hardware';
 import {
   cancelIdleIndexing,
-  getActiveAiModelId,
-  getActiveAiTier,
+  getActiveSearchModelId,
   getIndexStatus,
   getIndexerError,
   pauseIndexing,
@@ -15,13 +20,12 @@ import {
   runFullReindex,
   scheduleIdleIndexing,
   scheduleReindexForActiveModel,
-  setActiveAiTier
+  setActiveSearchModel
 } from './ai/indexer';
 import {
   cancelModelDownloadInWorker,
   downloadModelInWorker,
   getModelsDir,
-  initAiWorker,
   pauseModelDownloadInWorker,
   resumeModelDownloadInWorker,
   shutdownAiWorker,
@@ -31,27 +35,30 @@ import {
   deleteInstalledModel,
   ensureModelsDirs,
   getModelEntry,
-  getModelIdForTier,
-  hasAnyInstalledModel,
-  isModelInstalled,
+  hasAnyInstalledSearchModel,
   hasModelArtifactsOnDisk,
-  listModelInstallStatuses
+  isModelInstalled,
+  listModelInstallStatuses,
+  sanitizeModelRole,
+  sanitizeSearchModelId
 } from './ai/modelManager';
 import { downloadGgufModel, cancelGgufDownload, pauseGgufDownload, resumeGgufDownload } from './ai/downloadGguf';
 import { verifyHeavyGgufLoad } from './ai/heavyModelVerify';
 import { runAiSearch } from './ai/aiSearchService';
 import { ensureLightClipForHybrid } from './ai/aiEmbeddingService';
 import { testJoyCaptionLoad } from './ai/joyCaption';
+import { testQwenEmbedding } from './ai/qwenVlEmbedding';
 import { shutdownLlamaBridge } from './ai/llamaCppBridge';
 import {
   deleteLlamaRuntimeIfUnused,
   ensureLlamaRuntime,
   getLlamaRuntimeStatus,
-  isLlamaRuntimeInstalled,
+  hasCudaServerBinary,
+  isLlamaRuntimeInstalled
 } from './ai/llamaRuntime';
 import type { LlamaRuntimeVariant } from './ai/llamaRuntimeCatalog';
 import {
-  clearTierManifest,
+  clearRoleManifest,
   isModelUpdateAvailable,
   readModelManifest,
   recordInstalledModel
@@ -64,16 +71,20 @@ import {
 } from './ai/similarImageSearch';
 import { allowMediaStagingPaths } from './media/mediaStagingTokens';
 import type { ListCardsParams } from './storage/types';
-import type { AiSearchResult, AiStatus, ModelTier } from './ai/types';
-import { MODEL_CATALOG } from './ai/types';
+import type { AiSearchResult, AiStatus, ModelRole, SearchModelId } from './ai/types';
+import { MODEL_CATALOG, MODEL_ROLES, SEARCH_MODEL_IDS, SEARCH_ROLE_BY_ID } from './ai/types';
 import { readLibraryRootFromDisk } from './libraryRootConfig';
 import { getCardByIdFromDb, rowToCardRecord } from './storage/libraryStorage';
 import { ensureLibraryReady } from './storage/libraryStorage';
-import { countEmbeddingsForModel, countHybridEmbeddingsForModel, deleteEmbeddingsForModel } from './storage/cardEmbeddings';
+import {
+  countEmbeddingsForModel,
+  countHybridEmbeddingsForModel,
+  deleteEmbeddingsForModel
+} from './storage/cardEmbeddings';
 import { openLibraryDb } from './storage/db';
 
 let ipcRegistered = false;
-let downloadingTier: ModelTier | null = null;
+let downloadingRole: ModelRole | null = null;
 let downloadPercent: number | null = null;
 let downloadPhase: 'runtime' | 'model' | 'finalize' | null = null;
 let downloadBytesReceived: number | null = null;
@@ -84,8 +95,16 @@ function clampPercent(value: number | null | undefined): number | null {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function broadcast(channel: string, payload: unknown): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send(channel, payload);
+    }
+  }
+}
+
 function broadcastDownloadProgress(
-  tier: ModelTier,
+  role: ModelRole,
   percent: number,
   phase: 'runtime' | 'model' | 'finalize',
   bytes?: { received?: number | null; total?: number | null }
@@ -94,8 +113,11 @@ function broadcastDownloadProgress(
   downloadPhase = phase;
   if (bytes?.received != null) downloadBytesReceived = bytes.received;
   if (bytes?.total != null) downloadBytesTotal = bytes.total;
+  const entry = MODEL_CATALOG[role];
   broadcast('arc:ai-download-progress', {
-    tier,
+    role,
+    modelId: entry.id,
+    tier: entry.tier,
     percent: downloadPercent,
     phase,
     ...(downloadBytesReceived != null ? { bytesReceived: downloadBytesReceived } : {}),
@@ -103,20 +125,29 @@ function broadcastDownloadProgress(
   });
 }
 
-function broadcastDownloadComplete(tier: ModelTier): void {
-  broadcast('arc:ai-download-complete', { tier });
+function broadcastDownloadComplete(role: ModelRole): void {
+  broadcast('arc:ai-download-complete', { role, modelId: MODEL_CATALOG[role].id, tier: MODEL_CATALOG[role].tier });
 }
 
-function createFinalizeProgress(tier: ModelTier) {
-  let lastPercent = 0;
+function resolveRoleFromPayload(raw: unknown): ModelRole {
+  if (raw && typeof raw === 'object') {
+    const o = raw as { role?: unknown; modelId?: unknown; tier?: unknown };
+    const byRole = sanitizeModelRole(o.role ?? o.modelId ?? o.tier);
+    if (byRole) return byRole;
+  }
+  const byRaw = sanitizeModelRole(raw);
+  if (byRaw) return byRaw;
+  return 'search-clip';
+}
 
+function createFinalizeProgress(role: ModelRole) {
+  let lastPercent = 0;
   const report = (percent: number): void => {
     const next = clampPercent(percent) ?? 0;
     if (next < lastPercent) return;
     lastPercent = next;
-    broadcastDownloadProgress(tier, next, 'finalize');
+    broadcastDownloadProgress(role, next, 'finalize');
   };
-
   const run = async <T>(
     from: number,
     to: number,
@@ -126,7 +157,6 @@ function createFinalizeProgress(tier: ModelTier) {
     const end = clampPercent(to) ?? 100;
     let current = start;
     report(start);
-
     let done = false;
     const ceiling = Math.max(start, end - 1);
     const timer = setInterval(() => {
@@ -134,14 +164,12 @@ function createFinalizeProgress(tier: ModelTier) {
       current = Math.min(ceiling, current + 1);
       report(current);
     }, 100);
-
     const sub = (subPercent: number): void => {
       const mapped = start + Math.round(((clampPercent(subPercent) ?? 0) / 100) * (end - start));
       if (mapped <= current) return;
       current = Math.min(end, mapped);
       report(current);
     };
-
     try {
       return await work(sub);
     } finally {
@@ -150,21 +178,21 @@ function createFinalizeProgress(tier: ModelTier) {
       report(end);
     }
   };
-
   return { report, run };
 }
 
 async function finalizeModelInstall(
-  tier: ModelTier,
+  role: ModelRole,
   userData: string,
   entry: ReturnType<typeof getModelEntry>,
   modelId: string,
   options?: {
     withHybridClip?: boolean;
+    setActiveSearch?: boolean;
     onComplete?: () => void | Promise<void>;
   }
 ): Promise<void> {
-  const progress = createFinalizeProgress(tier);
+  const progress = createFinalizeProgress(role);
   let cursor = 0;
 
   if (options?.withHybridClip) {
@@ -182,48 +210,39 @@ async function finalizeModelInstall(
 
   const recordEnd = options?.withHybridClip ? cursor + 25 : 60;
   await progress.run(cursor, recordEnd, async () => {
-    await recordInstalledModel(userData, tier, entry, entry.hfRevision ?? 'main');
+    await recordInstalledModel(userData, role, entry, entry.hfRevision ?? 'main');
   });
   cursor = recordEnd;
 
   await progress.run(cursor, cursor + 12, async () => {
-    await writeAppPreferences({ aiModelTier: tier });
-    setActiveAiTier(tier, modelId);
+    if (role === 'caption') {
+      await writeAppPreferences({ aiCaptionEnabled: true });
+    } else if (options?.setActiveSearch !== false && SEARCH_MODEL_IDS.includes(entry.id as SearchModelId)) {
+      await writeAppPreferences({
+        aiSearchModelId: entry.id as SearchModelId,
+        aiSearchEnabled: true,
+        aiSemanticSearchEnabled: true
+      });
+      setActiveSearchModel(entry.id as SearchModelId);
+    }
   });
   cursor += 12;
 
   await progress.run(cursor, 100, async () => {
-    if (options?.onComplete) {
-      await options.onComplete();
-    }
+    if (options?.onComplete) await options.onComplete();
   });
 }
 
-async function ensureVisionRuntimeForUpdate(
-  userData: string,
-  tier: ModelTier
-): Promise<void> {
+async function ensureVisionRuntimeForUpdate(userData: string, role: ModelRole): Promise<void> {
   await ensureLlamaRuntime(userData, 'cpu', (percent) => {
-    broadcastDownloadProgress(tier, percent, 'runtime');
+    broadcastDownloadProgress(role, percent, 'runtime');
   });
-  if (await isLlamaRuntimeInstalled(userData, 'cuda')) {
+  // Repair CUDA (including missing cudart) whenever a CUDA server binary is present.
+  if (await hasCudaServerBinary(userData)) {
     await ensureLlamaRuntime(userData, 'cuda', (percent) => {
-      broadcastDownloadProgress(tier, percent, 'runtime');
+      broadcastDownloadProgress(role, percent, 'runtime');
     });
   }
-}
-
-function broadcast(channel: string, payload: unknown): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send(channel, payload);
-    }
-  }
-}
-
-function sanitizeTier(raw: unknown): ModelTier {
-  if (raw === 'heavy' || raw === 'medium') return 'heavy';
-  return 'light';
 }
 
 function applyResourcePreset(preset: number, hardware: ReturnType<typeof detectHardware>): {
@@ -268,35 +287,55 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   };
 }
 
+function toModelCard(role: ModelRole, hardware: ReturnType<typeof detectHardware>) {
+  const entry = MODEL_CATALOG[role];
+  const supported =
+    role === 'caption'
+      ? isTierSupported(hardware, 'heavy')
+      : isSearchModelSupported(hardware, entry.id as SearchModelId);
+  return {
+    role,
+    modelId: entry.id,
+    tier: entry.tier,
+    label: entry.label,
+    description: entry.description,
+    sizeLabel: entry.sizeLabel,
+    minRamMb: entry.minRamMb,
+    supported,
+    searchLevel: entry.searchLevel
+  };
+}
+
 export async function buildAiStatus(): Promise<AiStatus> {
   const prefs = await readAppPreferences();
   const hardware = detectHardware();
+  const supportedSearchModelIds = getSupportedSearchModelIds(hardware);
   const supportedTiers = getSupportedTiers(hardware);
   const index = await getIndexStatus();
   const userData = app.getPath('userData');
-  const models = await listModelInstallStatuses(userData, downloadingTier, downloadPercent);
+  const models = await listModelInstallStatuses(userData, downloadingRole, downloadPercent);
   const llamaRuntime = await getLlamaRuntimeStatus(userData);
-  const setupReady = prefs.aiSemanticSearchEnabled && (await hasAnyInstalledModel(userData));
+  const searchEnabled = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
+  const setupReady = searchEnabled && (await hasAnyInstalledSearchModel(userData));
 
-  const modelCards = (['light', 'heavy'] as ModelTier[]).map((tier) => {
-    const entry = MODEL_CATALOG[tier];
-    return {
-      tier,
-      label: entry.label,
-      description: entry.description,
-      sizeLabel: entry.sizeLabel,
-      minRamMb: entry.minRamMb,
-      supported: isTierSupported(hardware, tier)
-    };
-  });
+  const searchModelCards = (['search-clip', 'search-embed-2b', 'search-embed-8b'] as ModelRole[]).map((role) =>
+    toModelCard(role, hardware)
+  );
+  const captionModelCard = toModelCard('caption', hardware);
 
   return {
-    enabled: prefs.aiSemanticSearchEnabled,
-    activeTier: getActiveAiTier() ?? prefs.aiModelTier,
-    activeModelId: getActiveAiModelId(),
+    enabled: searchEnabled,
+    captionEnabled: prefs.aiCaptionEnabled,
+    activeSearchModelId: getActiveSearchModelId() ?? prefs.aiSearchModelId,
+    activeCaptionModelId: prefs.aiCaptionEnabled ? 'joycaption-beta-one' : null,
+    activeTier: prefs.aiCaptionEnabled ? 'heavy' : 'light',
+    activeModelId: getActiveSearchModelId() ?? prefs.aiSearchModelId,
     hardware,
+    supportedSearchModelIds,
     supportedTiers,
-    modelCards,
+    searchModelCards,
+    captionModelCard,
+    modelCards: [...searchModelCards, captionModelCard],
     resources: {
       threads: prefs.aiThreads,
       gpuLayers: prefs.aiGpuLayers,
@@ -312,9 +351,11 @@ export async function buildAiStatus(): Promise<AiStatus> {
     models,
     llamaRuntime,
     download:
-      downloadingTier != null
+      downloadingRole != null
         ? {
-            tier: downloadingTier,
+            role: downloadingRole,
+            modelId: MODEL_CATALOG[downloadingRole].id,
+            tier: MODEL_CATALOG[downloadingRole].tier,
             percent: downloadPercent,
             phase: downloadPhase ?? 'model'
           }
@@ -333,15 +374,14 @@ export function registerAiIpc(): void {
   ipcMain.handle('arc:ai-detect-hardware', async () => detectHardware({ force: true }));
 
   ipcMain.handle('arc:ai-download-llama-runtime', async (_e, payloadRaw: unknown) => {
-    const payload = payloadRaw as { variant?: string; tier?: string };
+    const payload = payloadRaw as { variant?: string; role?: string; tier?: string };
     const variant: LlamaRuntimeVariant = payload.variant === 'cuda' ? 'cuda' : 'cpu';
-    const tier = sanitizeTier(payload.tier);
+    const role = resolveRoleFromPayload(payload.role ?? payload.tier ?? 'caption');
     const userData = app.getPath('userData');
     await ensureModelsDirs(userData);
-
     try {
       await ensureLlamaRuntime(userData, variant, (percent) => {
-        broadcast('arc:ai-download-progress', { tier, percent: clampPercent(percent) ?? 0, phase: 'runtime' });
+        broadcastDownloadProgress(role, clampPercent(percent) ?? 0, 'runtime');
       });
       return { ok: true as const, variant };
     } catch (err) {
@@ -351,14 +391,12 @@ export function registerAiIpc(): void {
     }
   });
 
-  ipcMain.handle('arc:ai-download-model', async (_e, tierRaw: unknown) => {
-    const tier = sanitizeTier(tierRaw);
+  ipcMain.handle('arc:ai-download-model', async (_e, payloadRaw: unknown) => {
+    const role = resolveRoleFromPayload(payloadRaw);
     const hardware = detectHardware();
-    if (!isTierSupported(hardware, tier)) {
-      return {
-        ok: false as const,
-        error: 'Эта модель не поддерживается вашим оборудованием.'
-      };
+    const entry = getModelEntry(role);
+    if (role === 'caption' ? !isTierSupported(hardware, 'heavy') : !isSearchModelSupported(hardware, entry.id as SearchModelId)) {
+      return { ok: false as const, error: 'Эта модель не поддерживается вашим оборудованием.' };
     }
 
     const prefs = await readAppPreferences();
@@ -366,17 +404,18 @@ export function registerAiIpc(): void {
     const userData = app.getPath('userData');
     await ensureModelsDirs(userData);
 
-    downloadingTier = tier;
+    downloadingRole = role;
     downloadPercent = 0;
     downloadPhase = 'model';
     downloadBytesReceived = null;
     downloadBytesTotal = null;
-    broadcastDownloadProgress(tier, 0, 'model');
+    broadcastDownloadProgress(role, 0, 'model');
 
+    const needsGguf = entry.stack !== 'transformers';
     const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
       const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
-      if (tier === 'heavy') {
-        broadcastDownloadProgress(tier, info.percent, 'model', {
+      if (needsGguf) {
+        broadcastDownloadProgress(role, info.percent, 'model', {
           received: info.bytesReceived,
           total: info.bytesTotal
         });
@@ -385,59 +424,51 @@ export function registerAiIpc(): void {
       downloadPercent = clampPercent(info.percent) ?? 0;
       if (info.bytesReceived != null) downloadBytesReceived = info.bytesReceived;
       if (info.bytesTotal != null) downloadBytesTotal = info.bytesTotal;
-      broadcast('arc:ai-download-progress', {
-        tier,
-        percent: downloadPercent,
-        phase: 'model',
-        ...(downloadBytesReceived != null ? { bytesReceived: downloadBytesReceived } : {}),
-        ...(downloadBytesTotal != null ? { bytesTotal: downloadBytesTotal } : {})
+      broadcastDownloadProgress(role, downloadPercent, 'model', {
+        received: downloadBytesReceived,
+        total: downloadBytesTotal
       });
     };
 
     try {
-      const entry = getModelEntry(tier);
-      if (tier === 'heavy') {
-        await downloadGgufModel(userData, entry, report);
-        if (!(await hasModelArtifactsOnDisk(userData, tier))) {
-          return {
-            ok: false as const,
-            error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.'
-          };
+      if (needsGguf) {
+        // Prompt CUDA for vision models when NVIDIA present — handled by UI; ensure CPU runtime at least
+        if (!(await isLlamaRuntimeInstalled(userData, 'cpu'))) {
+          downloadPhase = 'runtime';
+          await ensureLlamaRuntime(userData, 'cpu', (percent) => broadcastDownloadProgress(role, percent, 'runtime'));
+          downloadPhase = 'model';
         }
-        await finalizeModelInstall(tier, userData, entry, getModelIdForTier(tier), {
-          withHybridClip: true,
+        await downloadGgufModel(userData, entry, report);
+        if (!(await hasModelArtifactsOnDisk(userData, role))) {
+          return { ok: false as const, error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.' };
+        }
+        await finalizeModelInstall(role, userData, entry, entry.id, {
+          withHybridClip: false,
           onComplete: () => scheduleIdleIndexing()
         });
-        return { ok: true as const, modelId: getModelIdForTier(tier), tier };
+        return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
       }
 
       const result = await downloadModelInWorker(
-        tier,
+        role,
         modelsDir,
-        {
-          threads: prefs.aiThreads,
-          gpuLayers: prefs.aiGpuLayers,
-          maxRamMb: prefs.aiMaxRamMb
-        },
+        { threads: prefs.aiThreads, gpuLayers: prefs.aiGpuLayers, maxRamMb: prefs.aiMaxRamMb },
         report
       );
-      if (!(await hasModelArtifactsOnDisk(userData, tier))) {
-        return {
-          ok: false as const,
-          error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.'
-        };
+      if (!(await hasModelArtifactsOnDisk(userData, role))) {
+        return { ok: false as const, error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.' };
       }
-      await finalizeModelInstall(tier, userData, entry, result.modelId, {
+      await finalizeModelInstall(role, userData, entry, result.modelId, {
         onComplete: () => scheduleIdleIndexing()
       });
-      return { ok: true as const, modelId: result.modelId, tier };
+      return { ok: true as const, modelId: result.modelId, role, tier: entry.tier };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      broadcast('arc:ai-error', { message, fallback: tier !== 'light' });
+      broadcast('arc:ai-error', { message, fallback: role !== 'search-clip' });
       return { ok: false as const, error: message };
     } finally {
-      broadcastDownloadComplete(tier);
-      downloadingTier = null;
+      broadcastDownloadComplete(role);
+      downloadingRole = null;
       downloadPercent = null;
       downloadPhase = null;
       downloadBytesReceived = null;
@@ -445,35 +476,47 @@ export function registerAiIpc(): void {
     }
   });
 
-  ipcMain.handle('arc:ai-delete-model', async (_e, tierRaw: unknown) => {
-    const tier = sanitizeTier(tierRaw);
+  ipcMain.handle('arc:ai-delete-model', async (_e, payloadRaw: unknown) => {
+    const role = resolveRoleFromPayload(payloadRaw);
     const userData = app.getPath('userData');
-    await deleteInstalledModel(userData, tier);
-    await clearTierManifest(userData, tier);
-    if (tier === 'heavy') {
+    await deleteInstalledModel(userData, role);
+    await clearRoleManifest(userData, role);
+    if (role !== 'search-clip') {
       await deleteLlamaRuntimeIfUnused(userData);
     }
     await shutdownLlamaBridge();
     const prefs = await readAppPreferences();
-    if (prefs.aiModelTier === tier) {
-      setActiveAiTier(null, null);
+    if (role === 'caption') {
+      await writeAppPreferences({ aiCaptionEnabled: false });
+    } else if (prefs.aiSearchModelId === MODEL_CATALOG[role].id) {
+      setActiveSearchModel(null);
     }
     clearAiSearchCache();
     return buildAiStatus();
   });
 
-  ipcMain.handle('arc:ai-set-active-model', async (_e, tierRaw: unknown) => {
-    const tier = sanitizeTier(tierRaw);
+  ipcMain.handle('arc:ai-set-active-model', async (_e, payloadRaw: unknown) => {
+    const role = resolveRoleFromPayload(payloadRaw);
+    if (role === 'caption') {
+      await writeAppPreferences({ aiCaptionEnabled: true });
+      scheduleIdleIndexing();
+      return buildAiStatus();
+    }
     const userData = app.getPath('userData');
-    if (!(await isModelInstalled(userData, tier))) {
+    if (!(await isModelInstalled(userData, role))) {
       throw new Error('Модель не установлена');
     }
+    const modelId = MODEL_CATALOG[role].id as SearchModelId;
     const prefs = await readAppPreferences();
-    const previousTier = prefs.aiModelTier;
-    await writeAppPreferences({ aiModelTier: tier });
-    setActiveAiTier(tier, getModelIdForTier(tier));
+    const previous = prefs.aiSearchModelId;
+    await writeAppPreferences({
+      aiSearchModelId: modelId,
+      aiSearchEnabled: true,
+      aiSemanticSearchEnabled: true
+    });
+    setActiveSearchModel(modelId);
     clearAiSearchCache();
-    if (previousTier !== tier) {
+    if (previous !== modelId) {
       scheduleReindexForActiveModel();
     } else {
       scheduleIdleIndexing();
@@ -484,7 +527,7 @@ export function registerAiIpc(): void {
   ipcMain.handle('arc:ai-cancel-download', async () => {
     cancelModelDownloadInWorker();
     cancelGgufDownload();
-    downloadingTier = null;
+    downloadingRole = null;
     downloadPercent = null;
     downloadPhase = null;
     downloadBytesReceived = null;
@@ -504,80 +547,59 @@ export function registerAiIpc(): void {
     return { ok: true as const };
   });
 
-  ipcMain.handle('arc:ai-update-model', async (_e, tierRaw: unknown) => {
-    const tier = sanitizeTier(tierRaw);
+  ipcMain.handle('arc:ai-update-model', async (_e, payloadRaw: unknown) => {
+    const role = resolveRoleFromPayload(payloadRaw);
     const userData = app.getPath('userData');
-    const entry = getModelEntry(tier);
+    const entry = getModelEntry(role);
     const manifest = await readModelManifest(userData);
-    if (!isModelUpdateAvailable(tier, entry, manifest[tier])) {
+    if (!isModelUpdateAvailable(role, entry, manifest[role])) {
       return { ok: false as const, error: 'Обновление не требуется.' };
     }
 
-    const oldModelId = manifest[tier]?.modelId;
-    await deleteInstalledModel(userData, tier);
-    await clearTierManifest(userData, tier);
+    const oldModelId = manifest[role]?.modelId;
+    await deleteInstalledModel(userData, role);
+    await clearRoleManifest(userData, role);
     await shutdownLlamaBridge();
 
     const prefs = await readAppPreferences();
     const modelsDir = getModelsDir();
     await ensureModelsDirs(userData);
 
-    downloadingTier = tier;
+    downloadingRole = role;
     downloadPercent = 0;
-    downloadPhase = tier === 'heavy' ? 'runtime' : null;
+    downloadPhase = entry.stack !== 'transformers' ? 'runtime' : null;
     downloadBytesReceived = null;
     downloadBytesTotal = null;
-    broadcast('arc:ai-download-progress', {
-      tier,
-      percent: 0,
-      ...(downloadPhase ? { phase: downloadPhase } : {})
-    });
+    broadcastDownloadProgress(role, 0, downloadPhase ?? 'model');
 
     const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
       const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
-      if (tier === 'heavy') {
-        broadcastDownloadProgress(tier, info.percent, 'model', {
-          received: info.bytesReceived,
-          total: info.bytesTotal
-        });
-        return;
-      }
-      downloadPercent = clampPercent(info.percent) ?? 0;
-      if (info.bytesReceived != null) downloadBytesReceived = info.bytesReceived;
-      if (info.bytesTotal != null) downloadBytesTotal = info.bytesTotal;
-      broadcast('arc:ai-download-progress', {
-        tier,
-        percent: downloadPercent,
-        phase: 'model',
-        ...(downloadBytesReceived != null ? { bytesReceived: downloadBytesReceived } : {}),
-        ...(downloadBytesTotal != null ? { bytesTotal: downloadBytesTotal } : {})
+      broadcastDownloadProgress(role, info.percent, 'model', {
+        received: info.bytesReceived,
+        total: info.bytesTotal
       });
     };
 
     try {
-      if (tier === 'heavy') {
-        await ensureVisionRuntimeForUpdate(userData, tier);
+      if (entry.stack !== 'transformers') {
+        await ensureVisionRuntimeForUpdate(userData, role);
         downloadPhase = 'model';
-        broadcastDownloadProgress(tier, 0, 'model');
+        broadcastDownloadProgress(role, 0, 'model');
         await downloadGgufModel(userData, entry, report);
       } else {
         await downloadModelInWorker(
-          tier,
+          role,
           modelsDir,
-          {
-            threads: prefs.aiThreads,
-            gpuLayers: prefs.aiGpuLayers,
-            maxRamMb: prefs.aiMaxRamMb
-          },
+          { threads: prefs.aiThreads, gpuLayers: prefs.aiGpuLayers, maxRamMb: prefs.aiMaxRamMb },
           report
         );
       }
 
-      if (!(await hasModelArtifactsOnDisk(userData, tier))) {
+      if (!(await hasModelArtifactsOnDisk(userData, role))) {
         return { ok: false as const, error: 'Файлы модели не найдены после обновления.' };
       }
 
-      await finalizeModelInstall(tier, userData, entry, entry.id, {
+      await finalizeModelInstall(role, userData, entry, entry.id, {
         onComplete: async () => {
           const root = await readLibraryRootFromDisk();
           if (root && oldModelId && oldModelId !== entry.id) {
@@ -586,16 +608,17 @@ export function registerAiIpc(): void {
             deleteEmbeddingsForModel(db, oldModelId);
           }
           clearAiSearchCache();
-          scheduleReindexForActiveModel();
+          if (role !== 'caption') scheduleReindexForActiveModel();
+          else scheduleIdleIndexing();
         }
       });
-      return { ok: true as const, modelId: entry.id, tier };
+      return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { ok: false as const, error: message };
     } finally {
-      broadcastDownloadComplete(tier);
-      downloadingTier = null;
+      broadcastDownloadComplete(role);
+      downloadingRole = null;
       downloadPercent = null;
       downloadPhase = null;
       downloadBytesReceived = null;
@@ -603,11 +626,11 @@ export function registerAiIpc(): void {
     }
   });
 
-  ipcMain.handle('arc:ai-test-model', async (_e, tierRaw: unknown) => {
-    const tier = sanitizeTier(tierRaw);
+  ipcMain.handle('arc:ai-test-model', async (_e, payloadRaw: unknown) => {
+    const role = resolveRoleFromPayload(payloadRaw);
     const prefs = await readAppPreferences();
     const userData = app.getPath('userData');
-    if (!(await isModelInstalled(userData, tier))) {
+    if (!(await isModelInstalled(userData, role))) {
       return { ok: false as const, message: 'Модель не установлена.' };
     }
     try {
@@ -616,11 +639,14 @@ export function registerAiIpc(): void {
         gpuLayers: prefs.aiGpuLayers,
         maxRamMb: prefs.aiMaxRamMb
       };
-      if (tier === 'heavy') {
+      if (role === 'caption') {
         await verifyHeavyGgufLoad(getModelsDir(), resources, userData);
         return await testJoyCaptionLoad(userData, resources);
       }
-      return await testModelInWorker(tier, getModelsDir(), resources);
+      if (role === 'search-embed-2b' || role === 'search-embed-8b') {
+        return await testQwenEmbedding(userData, resources, MODEL_CATALOG[role].id);
+      }
+      return await testModelInWorker(role, getModelsDir(), resources);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { ok: false as const, message };
@@ -667,7 +693,6 @@ export function registerAiIpc(): void {
     }
 
     if (!query) return [];
-
     const root = await readLibraryRootFromDisk();
     if (!root) return [];
 
@@ -681,10 +706,8 @@ export function registerAiIpc(): void {
     const { getOrBuildAiResultsPage } = await import('./ai/aiResultsCache');
     return getOrBuildAiResultsPage(cacheKey, offset, limit, async () => {
       const searchResults = await runAiSearch(query);
-      const scope =
-        scopeCardIds && scopeCardIds.length > 0 ? new Set(scopeCardIds) : null;
+      const scope = scopeCardIds && scopeCardIds.length > 0 ? new Set(scopeCardIds) : null;
       const moodboardSet = Array.isArray(moodboardCardIds) ? new Set(moodboardCardIds) : null;
-
       const cards = [];
       for (const hit of searchResults) {
         const row = getCardByIdFromDb(root, hit.cardId);
@@ -731,7 +754,10 @@ export function registerAiIpc(): void {
   ipcMain.handle('arc:ai-set-enabled', async (_e, payload: unknown) => {
     const p = payload as {
       enabled?: boolean;
-      tier?: ModelTier;
+      searchEnabled?: boolean;
+      captionEnabled?: boolean;
+      searchModelId?: SearchModelId;
+      tier?: string;
       threads?: number;
       gpuLayers?: number;
       maxRamMb?: number;
@@ -743,8 +769,21 @@ export function registerAiIpc(): void {
       autoTagOnImport?: boolean;
     };
     const patch: Record<string, unknown> = {};
-    if (typeof p.enabled === 'boolean') patch.aiSemanticSearchEnabled = p.enabled;
-    if (p.tier) patch.aiModelTier = sanitizeTier(p.tier);
+    if (typeof p.enabled === 'boolean') {
+      patch.aiSemanticSearchEnabled = p.enabled;
+      patch.aiSearchEnabled = p.enabled;
+    }
+    if (typeof p.searchEnabled === 'boolean') {
+      patch.aiSearchEnabled = p.searchEnabled;
+      patch.aiSemanticSearchEnabled = p.searchEnabled;
+    }
+    if (typeof p.captionEnabled === 'boolean') patch.aiCaptionEnabled = p.captionEnabled;
+    if (p.searchModelId) patch.aiSearchModelId = sanitizeSearchModelId(p.searchModelId);
+    if (p.tier) {
+      const role = sanitizeModelRole(p.tier);
+      if (role === 'caption') patch.aiCaptionEnabled = true;
+      else if (role) patch.aiSearchModelId = MODEL_CATALOG[role].id;
+    }
     if (typeof p.resourcePreset === 'number') {
       const preset = Math.max(10, Math.min(100, Math.round(p.resourcePreset)));
       patch.aiResourcePreset = preset;
@@ -771,8 +810,9 @@ export function registerAiIpc(): void {
     const next = await writeAppPreferences(patch);
     clearAiSearchCache();
 
-    if (next.aiSemanticSearchEnabled) {
-      if (await hasAnyInstalledModel(app.getPath('userData'))) {
+    const searchOn = next.aiSearchEnabled || next.aiSemanticSearchEnabled;
+    if (searchOn || next.aiCaptionEnabled) {
+      if ((await hasAnyInstalledSearchModel(app.getPath('userData'))) || (await isModelInstalled(app.getPath('userData'), 'caption'))) {
         scheduleIdleIndexing();
       }
     } else {
@@ -780,7 +820,7 @@ export function registerAiIpc(): void {
       shutdownAiWorker();
       void shutdownLlamaBridge();
       resetWorkerReadyState();
-      setActiveAiTier(null, null);
+      setActiveSearchModel(null);
     }
 
     return buildAiStatus();
@@ -790,7 +830,6 @@ export function registerAiIpc(): void {
     const source = typeof sourcePath === 'string' ? sourcePath.trim() : '';
     if (!source) return { ok: false as const, error: 'Путь к файлу не указан.' };
     try {
-      // Drop / global file-drop pass paths here without pick/classify allowlist.
       allowMediaStagingPaths([source]);
       const stagedPath = await stageSimilarQueryFile(source);
       return { ok: true as const, stagedPath };
@@ -802,13 +841,13 @@ export function registerAiIpc(): void {
 
   ipcMain.handle('arc:ai-similar-search-cards', async (_e, payload: unknown) => {
     const prefs = await readAppPreferences();
-    if (!prefs.aiSemanticSearchEnabled) {
+    if (!prefs.aiSearchEnabled && !prefs.aiSemanticSearchEnabled) {
       throw new Error('AI Semantic Search выключен в настройках');
     }
     const userData = app.getPath('userData');
-    const tier = (prefs.aiModelTier ?? 'light') as ModelTier;
-    if (!(await isModelInstalled(userData, tier))) {
-      throw new Error('Модель не установлена. Скачайте модель в настройках AI Поиска.');
+    const modelId = sanitizeSearchModelId(prefs.aiSearchModelId);
+    if (!(await isModelInstalled(userData, modelId))) {
+      throw new Error('Модель не установлена. Скачайте модель в настройках AI.');
     }
 
     const root = await readLibraryRootFromDisk();
@@ -816,9 +855,9 @@ export function registerAiIpc(): void {
     await ensureLibraryReady(root);
     const db = openLibraryDb(root);
     const indexed =
-      tier === 'heavy'
-        ? Math.max(countHybridEmbeddingsForModel(db, MODEL_CATALOG.heavy.id), countEmbeddingsForModel(db, MODEL_CATALOG.light.id))
-        : countEmbeddingsForModel(db, MODEL_CATALOG.light.id);
+      prefs.aiCaptionEnabled && (modelId === 'qwen3-vl-embedding-2b' || modelId === 'qwen3-vl-embedding-8b')
+        ? Math.max(countHybridEmbeddingsForModel(db, modelId), countEmbeddingsForModel(db, modelId))
+        : countEmbeddingsForModel(db, modelId);
     if (indexed === 0) {
       throw new Error('Библиотека ещё не проиндексирована. Дождитесь завершения индексации.');
     }
@@ -830,10 +869,7 @@ export function registerAiIpc(): void {
       scopeCardIds?: string[];
     };
 
-    const scope =
-      Array.isArray(p.scopeCardIds) && p.scopeCardIds.length > 0 ? new Set(p.scopeCardIds) : null;
-
-    const modelId = tier === 'heavy' ? MODEL_CATALOG.heavy.id : MODEL_CATALOG.light.id;
+    const scope = Array.isArray(p.scopeCardIds) && p.scopeCardIds.length > 0 ? new Set(p.scopeCardIds) : null;
 
     try {
       const rows = await searchCardsBySimilarImage(root, {
@@ -848,7 +884,7 @@ export function registerAiIpc(): void {
         advancedFilters: p.advancedFilters,
         sort: p.sort,
         scopeCardIds: scope,
-        tier,
+        tier: modelId === 'clip-vit-base-patch32' ? 'light' : 'heavy',
         modelId,
         strictness: prefs.aiSearchStrictness,
         offset: typeof p.offset === 'number' ? p.offset : 0,

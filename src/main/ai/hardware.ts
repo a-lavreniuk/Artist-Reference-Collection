@@ -1,7 +1,7 @@
 import os from 'os';
 import { execFileSync } from 'child_process';
 
-import type { HardwareInfo, ModelTier } from './types';
+import type { HardwareInfo, ModelTier, SearchModelId } from './types';
 
 export type DetectHardwareOptions = {
   /** Полное определение через PowerShell/system_profiler — только по явному запросу (настройки). */
@@ -10,10 +10,15 @@ export type DetectHardwareOptions = {
 
 let cachedHardware: HardwareInfo | null = null;
 let cachedDeepHardware: HardwareInfo | null = null;
+let cachedNvidiaQuick: { name: string | null; vramMb: number | null; hasNvidia: boolean } | null =
+  null;
+let nvidiaQuickRefreshScheduled = false;
 
 export function clearHardwareCache(): void {
   cachedHardware = null;
   cachedDeepHardware = null;
+  cachedNvidiaQuick = null;
+  nvidiaQuickRefreshScheduled = false;
 }
 
 function detectNvidiaVramMbWindows(): number | null {
@@ -31,7 +36,35 @@ function detectNvidiaVramMbWindows(): number | null {
   }
 }
 
+function detectNvidiaQuick(): { name: string | null; vramMb: number | null; hasNvidia: boolean } {
+  try {
+    const out = execFileSync(
+      'nvidia-smi',
+      ['--query-gpu=name,memory.total', '--format=csv,noheader,nounits'],
+      { encoding: 'utf8', timeout: 1500, windowsHide: true }
+    ).trim();
+    const firstLine = out.split(/\r?\n/)[0]?.trim() ?? '';
+    if (!firstLine) return { name: null, vramMb: null, hasNvidia: false };
+    // "NVIDIA GeForce RTX 4070, 12282"
+    const comma = firstLine.lastIndexOf(',');
+    const name = (comma >= 0 ? firstLine.slice(0, comma) : firstLine).trim();
+    const vramRaw = comma >= 0 ? firstLine.slice(comma + 1).trim() : '';
+    const vramMb = Number.parseInt(vramRaw, 10);
+    if (!name) return { name: null, vramMb: null, hasNvidia: false };
+    return {
+      name,
+      vramMb: Number.isFinite(vramMb) && vramMb > 0 ? vramMb : null,
+      hasNvidia: true
+    };
+  } catch {
+    return { name: null, vramMb: null, hasNvidia: false };
+  }
+}
+
 function detectGpuWindows(): { name: string | null; vramMb: number | null; hasNvidia: boolean } {
+  const nvidiaQuick = detectNvidiaQuick();
+  if (nvidiaQuick.hasNvidia) return nvidiaQuick;
+
   try {
     const out = execFileSync(
       'powershell',
@@ -166,11 +199,29 @@ function detectCpuDeep(): { model: string | null; frequencyGhz: number | null } 
   return detectCpuFallback();
 }
 
+function recommendSearchModelId(totalMemoryMb: number, vramMb: number | null): SearchModelId {
+  if (totalMemoryMb >= 12288 && vramMb != null && vramMb >= 10000) return 'qwen3-vl-embedding-8b';
+  if (totalMemoryMb >= 8192 && vramMb != null && vramMb >= 4000) return 'qwen3-vl-embedding-2b';
+  return 'clip-vit-base-patch32';
+}
+
 function recommendTier(totalMemoryMb: number, vramMb: number | null, _cpuCores: number): ModelTier {
   if (totalMemoryMb >= 12288 && vramMb != null && vramMb >= 6000) return 'heavy';
   return 'light';
 }
 
+export function getSupportedSearchModelIds(info: HardwareInfo): SearchModelId[] {
+  const supported: SearchModelId[] = ['clip-vit-base-patch32'];
+  if (info.totalMemoryMb >= 8192) supported.push('qwen3-vl-embedding-2b');
+  if (info.totalMemoryMb >= 12288) supported.push('qwen3-vl-embedding-8b');
+  return supported;
+}
+
+export function isSearchModelSupported(info: HardwareInfo, modelId: SearchModelId): boolean {
+  return getSupportedSearchModelIds(info).includes(modelId);
+}
+
+/** @deprecated Prefer getSupportedSearchModelIds */
 export function getSupportedTiers(info: HardwareInfo): ModelTier[] {
   const supported: ModelTier[] = ['light'];
   if (info.totalMemoryMb >= 12288) {
@@ -179,6 +230,7 @@ export function getSupportedTiers(info: HardwareInfo): ModelTier[] {
   return supported;
 }
 
+/** @deprecated Prefer isSearchModelSupported */
 export function isTierSupported(info: HardwareInfo, tier: ModelTier): boolean {
   return getSupportedTiers(info).includes(tier);
 }
@@ -201,13 +253,36 @@ function buildHardwareInfo(
     hasNvidiaGpu: gpu.hasNvidia,
     gpuName: gpu.name,
     estimatedVramMb: gpu.vramMb,
-    recommendedTier: recommendTier(totalMemoryMb, gpu.vramMb, cpuCores)
+    recommendedTier: recommendTier(totalMemoryMb, gpu.vramMb, cpuCores),
+    recommendedSearchModelId: recommendSearchModelId(totalMemoryMb, gpu.vramMb)
   };
 }
 
-/** Быстрый путь: os.cpus()/totalmem без subprocess — достаточно для navbar и tier checks. */
+/** Быстрый путь: только os.cpus()/totalmem — без subprocess (safe для sendSync list-cards). */
 function detectHardwareFast(): HardwareInfo {
-  return buildHardwareInfo(detectCpuFallback(), { name: null, vramMb: null, hasNvidia: false });
+  scheduleNvidiaQuickRefresh();
+  return buildHardwareInfo(
+    detectCpuFallback(),
+    cachedNvidiaQuick ?? { name: null, vramMb: null, hasNvidia: false }
+  );
+}
+
+/** nvidia-smi вне критического IPC: обновляет кэш после текущего тика event loop. */
+function scheduleNvidiaQuickRefresh(): void {
+  if (cachedNvidiaQuick || nvidiaQuickRefreshScheduled) return;
+  nvidiaQuickRefreshScheduled = true;
+  setImmediate(() => {
+    try {
+      cachedNvidiaQuick = detectNvidiaQuick();
+      if (!cachedDeepHardware) {
+        cachedHardware = buildHardwareInfo(detectCpuFallback(), cachedNvidiaQuick);
+      }
+    } catch {
+      cachedNvidiaQuick = { name: null, vramMb: null, hasNvidia: false };
+    } finally {
+      nvidiaQuickRefreshScheduled = false;
+    }
+  });
 }
 
 /** Полное определение GPU/CPU — может занимать несколько секунд на Windows. */
@@ -218,8 +293,8 @@ function detectHardwareDeep(): HardwareInfo {
 /**
  * Определение железа для AI-статуса.
  *
- * По умолчанию — быстрый путь (os.cpus + кэш сессии), без PowerShell/subprocess.
- * detectHardware({ force: true }) / arc:ai-detect-hardware — только по явному запросу
+ * По умолчанию — быстрый путь (os.cpus + кэш nvidia-smi без блокировки IPC).
+ * detectHardware({ force: true }) / arc:ai-detect-hardware — полное определение
  * (настройки AI). Не вызывать force на hot path навигации: execFileSync блокирует main
  * и задерживает sendSync list-cards.
  */
@@ -231,6 +306,11 @@ export function detectHardware(options?: DetectHardwareOptions): HardwareInfo {
     const result = detectHardwareDeep();
     cachedDeepHardware = result;
     cachedHardware = result;
+    cachedNvidiaQuick = {
+      name: result.gpuName,
+      vramMb: result.estimatedVramMb,
+      hasNvidia: result.hasNvidiaGpu
+    };
     return result;
   }
 

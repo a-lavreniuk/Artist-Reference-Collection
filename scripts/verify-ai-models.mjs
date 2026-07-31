@@ -11,13 +11,14 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 
-const LLAMA_CPP_RELEASE = 'b8390';
+const LLAMA_CPP_RELEASE = 'b8466';
 
 const LLAMA_RUNTIME_ASSETS = [
-  'llama-b8390-bin-win-cpu-x64.zip',
-  'llama-b8390-bin-win-cuda-12.4-x64.zip',
-  'llama-b8390-bin-macos-arm64.tar.gz',
-  'llama-b8390-bin-macos-x64.tar.gz'
+  'llama-b8466-bin-win-cpu-x64.zip',
+  'llama-b8466-bin-win-cuda-12.4-x64.zip',
+  'cudart-llama-bin-win-cuda-12.4-x64.zip',
+  'llama-b8466-bin-macos-arm64.tar.gz',
+  'llama-b8466-bin-macos-x64.tar.gz'
 ];
 
 function githubReleaseAssetUrl(archiveName) {

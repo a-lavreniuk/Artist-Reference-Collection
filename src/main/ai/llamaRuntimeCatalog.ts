@@ -1,6 +1,7 @@
-/** Pinned llama.cpp release for vision runtime (llama-server). */
-
-export const LLAMA_CPP_RELEASE = 'b8390';
+/** Pinned llama.cpp release for vision runtime (llama-server).
+ * b8466+ required for Qwen3-VL-Embedding (n_embd_out pooling fix, #20840).
+ */
+export const LLAMA_CPP_RELEASE = 'b8466';
 
 export type LlamaRuntimeVariant = 'cpu' | 'cuda';
 
@@ -9,25 +10,31 @@ export type PlatformAssetKey = 'win32-x64' | 'darwin-arm64' | 'darwin-x64';
 type PlatformAssets = {
   cpu: { archive: string; format: 'zip' | 'tar.gz' };
   cuda?: { archive: string; format: 'zip' };
+  /** Redistributable CUDA libs required by ggml-cuda.dll (Windows). */
+  cudart?: { archive: string; format: 'zip' };
 };
 
 export const LLAMA_RUNTIME_CATALOG: Record<PlatformAssetKey, PlatformAssets> = {
   'win32-x64': {
-    cpu: { archive: 'llama-b8390-bin-win-cpu-x64.zip', format: 'zip' },
-    cuda: { archive: 'llama-b8390-bin-win-cuda-12.4-x64.zip', format: 'zip' }
+    cpu: { archive: 'llama-b8466-bin-win-cpu-x64.zip', format: 'zip' },
+    cuda: { archive: 'llama-b8466-bin-win-cuda-12.4-x64.zip', format: 'zip' },
+    cudart: { archive: 'cudart-llama-bin-win-cuda-12.4-x64.zip', format: 'zip' }
   },
   'darwin-arm64': {
-    cpu: { archive: 'llama-b8390-bin-macos-arm64.tar.gz', format: 'tar.gz' }
+    cpu: { archive: 'llama-b8466-bin-macos-arm64.tar.gz', format: 'tar.gz' }
   },
   'darwin-x64': {
-    cpu: { archive: 'llama-b8390-bin-macos-x64.tar.gz', format: 'tar.gz' }
+    cpu: { archive: 'llama-b8466-bin-macos-x64.tar.gz', format: 'tar.gz' }
   }
 };
 
-/** Approximate download size hints for UI (MB). */
+/** Marker DLL from cudart zip — without it ggml-cuda.dll fails to load. */
+export const CUDA_CUDART_MARKER_DLL = 'cudart64_12.dll';
+
+/** Approximate download size hints for UI (MB). CUDA includes cudart redistributable. */
 export const LLAMA_RUNTIME_SIZE_HINT_MB: Record<LlamaRuntimeVariant, number> = {
   cpu: 80,
-  cuda: 450
+  cuda: 820
 };
 
 export function resolvePlatformAssetKey(): PlatformAssetKey | null {
