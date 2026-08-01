@@ -25,9 +25,12 @@ export type TierManifestEntry = {
 export type LlamaRuntimeManifestEntry = {
   installedAt: string;
   bytes: number;
+  /** Pinned llama.cpp tag for this variant folder (cpu/cuda upgraded independently). */
+  release?: string;
 };
 
 export type LlamaRuntimeManifest = {
+  /** @deprecated Prefer per-entry `cpu.release` / `cuda.release` — shared field lied when only one variant upgraded. */
   release: string;
   cpu?: LlamaRuntimeManifestEntry;
   cuda?: LlamaRuntimeManifestEntry;

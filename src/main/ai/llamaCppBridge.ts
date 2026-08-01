@@ -62,6 +62,11 @@ let serverConfigKey: string | null = null;
 let startingChild: ChildProcessWithoutNullStreams | null = null;
 /** In-flight ensure: callers with the same logical key await one startup instead of racing. */
 let ensureInflight: { logicalKey: string; promise: Promise<ServerSession> } | null = null;
+/**
+ * After CUDA crashes (e.g. old runtime GGML_ASSERT), keep indexing on CPU for this model key
+ * instead of restarting CUDA on every card.
+ */
+const cudaLoadFailedLogicalKeys = new Set<string>();
 
 const JOYCAPTION_INDEX_PROMPT =
   'Напиши описательную подпись к этому изображению на русском языке. Опиши предмет, цвета, композицию, стиль и настроение одним связным абзацем.';
@@ -476,7 +481,8 @@ export async function ensureLlamaServer(
   hooks?: LlamaServerHooks
 ): Promise<ServerSession> {
   const logicalKey = buildLlamaServerLogicalKey(weightsPath, mmprojPath, mode);
-  const wantGpu = (resources.gpuLayers ?? 0) > 0;
+  const wantGpu =
+    (resources.gpuLayers ?? 0) > 0 && !cudaLoadFailedLogicalKeys.has(logicalKey);
   // Match spawnLlamaServerProcess: modest positive gpuLayers → full offload (999).
   const effectiveGpuLayers = wantGpu ? ((resources.gpuLayers ?? 0) < 99 ? 999 : (resources.gpuLayers ?? 0)) : 0;
   const preferredKey = buildLlamaServerConfigKey(weightsPath, mmprojPath, mode, effectiveGpuLayers);
@@ -484,8 +490,11 @@ export async function ensureLlamaServer(
 
   if (isServerAlive(serverSession)) {
     if (serverConfigKey === preferredKey) return serverSession;
-    // Never keep a CPU-fallback session when the caller asked for GPU.
-    if (!wantGpu && serverConfigKey === cpuKey) return serverSession;
+    // Keep CPU-fallback session for the rest of this process when CUDA already failed,
+    // or when the caller asked for CPU.
+    if ((!wantGpu || cudaLoadFailedLogicalKeys.has(logicalKey)) && serverConfigKey === cpuKey) {
+      return serverSession;
+    }
   }
 
   if (ensureInflight?.logicalKey === logicalKey) {
@@ -504,7 +513,7 @@ export async function ensureLlamaServer(
   const promise = (async (): Promise<ServerSession> => {
     await shutdownLlamaServer();
     try {
-      return await spawnLlamaServerProcess(
+      const session = await spawnLlamaServerProcess(
         userDataPath,
         weightsPath,
         mmprojPath,
@@ -513,11 +522,14 @@ export async function ensureLlamaServer(
         !wantGpu,
         hooks
       );
+      if (wantGpu) cudaLoadFailedLogicalKeys.delete(logicalKey);
+      return session;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (wantGpu && isRecoverableCudaLoadFailure(message)) {
         logAiIndexer('CUDA load failed, falling back to CPU', { error: message });
         hooks?.onStatus?.('CUDA недоступна, запуск на CPU…');
+        cudaLoadFailedLogicalKeys.add(logicalKey);
         await shutdownLlamaServer();
         return spawnLlamaServerProcess(
           userDataPath,

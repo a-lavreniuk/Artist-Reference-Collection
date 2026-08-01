@@ -214,14 +214,29 @@ async function recordRuntimeInstall(userDataPath: string, variant: LlamaRuntimeV
   const bytes = (await stat(binPath)).size;
   const entry: LlamaRuntimeManifestEntry = {
     installedAt: new Date().toISOString(),
-    bytes
+    bytes,
+    release: LLAMA_CPP_RELEASE
   };
+  const prev = manifest.llamaRuntime;
   manifest.llamaRuntime = {
+    // Keep top-level for older readers; truth is per-entry release.
     release: LLAMA_CPP_RELEASE,
-    cpu: variant === 'cpu' ? entry : manifest.llamaRuntime?.cpu,
-    cuda: variant === 'cuda' ? entry : manifest.llamaRuntime?.cuda
+    cpu: variant === 'cpu' ? entry : prev?.cpu,
+    cuda: variant === 'cuda' ? entry : prev?.cuda
   };
   await writeModelManifest(userDataPath, manifest);
+}
+
+/** True when this variant folder matches the catalog pin (not the shared top-level release). */
+export function isLlamaRuntimeReleaseCurrent(
+  manifest: Awaited<ReturnType<typeof readModelManifest>>,
+  variant: LlamaRuntimeVariant
+): boolean {
+  const entry = variant === 'cpu' ? manifest.llamaRuntime?.cpu : manifest.llamaRuntime?.cuda;
+  if (entry?.release) return entry.release === LLAMA_CPP_RELEASE;
+  // Legacy manifests only stamped top-level release after *one* variant install — treat as stale
+  // so the other variant (usually CUDA left on an older build) gets re-downloaded.
+  return false;
 }
 
 async function ensureCudaCudartLibs(
@@ -280,10 +295,11 @@ export async function ensureLlamaRuntime(
 
   if (await isLlamaRuntimeInstalled(userDataPath, variant)) {
     const manifest = await readModelManifest(userDataPath);
-    if (manifest.llamaRuntime?.release === LLAMA_CPP_RELEASE) {
+    if (isLlamaRuntimeReleaseCurrent(manifest, variant)) {
       onProgress?.(100);
       return;
     }
+    // Wrong/legacy pin (e.g. CUDA still b8390 while catalog is b8466) — replace this folder only.
     await rm(llamaRuntimeVariantDir(userDataPath, variant), { recursive: true, force: true });
   }
 
@@ -294,13 +310,12 @@ export async function ensureLlamaRuntime(
     !hasCudaCudartLibs(userDataPath)
   ) {
     const manifest = await readModelManifest(userDataPath);
-    if (manifest.llamaRuntime?.release === LLAMA_CPP_RELEASE || !manifest.llamaRuntime?.release) {
+    if (isLlamaRuntimeReleaseCurrent(manifest, 'cuda')) {
       await ensureCudaCudartLibs(userDataPath, onProgress);
-      if (!manifest.llamaRuntime?.release) {
-        await recordRuntimeInstall(userDataPath, 'cuda');
-      }
       return;
     }
+    // Unknown/legacy CUDA build without a per-variant pin — replace fully (not only cudart).
+    await rm(llamaRuntimeVariantDir(userDataPath, 'cuda'), { recursive: true, force: true });
   }
 
   const platformKey = resolvePlatformAssetKey();
