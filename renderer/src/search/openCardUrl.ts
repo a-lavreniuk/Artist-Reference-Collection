@@ -63,6 +63,8 @@ export function useOpenCardUrl(): OpenCardUrlApi {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const locationRef = useRef(location);
+  locationRef.current = location;
 
   const openCardId = resolveOpenCardId(searchParams);
 
@@ -79,12 +81,15 @@ export function useOpenCardUrl(): OpenCardUrlApi {
   );
 
   const closeCardReplace = useCallback(() => {
-    const next = stripOpenCardFromParams(searchParams);
+    // locationRef: актуальный search даже из устаревшего onClose после navigate(color=).
+    const current = new URLSearchParams(locationRef.current.search);
+    if (!parseDetailCardId(current)) return;
+    const next = stripOpenCardFromParams(current);
     navigate(
-      { pathname: location.pathname, search: formatSearchQuery(next) },
+      { pathname: locationRef.current.pathname, search: formatSearchQuery(next) },
       { replace: true, state: null }
     );
-  }, [location.pathname, navigate, searchParams]);
+  }, [navigate]);
 
   /** Закрыть detail сразу в раздел, без пошагового POP по истории карточек. */
   const closeCard = useCallback(() => {

@@ -69,7 +69,7 @@ export default function CardDetailCollectionsModal({
     const [cols, counts, previews] = await Promise.all([
       getAllCollections(),
       getCollectionCardCounts(),
-      getCollectionPreviewSlices(3)
+      getCollectionPreviewSlices(1)
     ]);
     setCollections(cols);
     setCollCounts(counts);

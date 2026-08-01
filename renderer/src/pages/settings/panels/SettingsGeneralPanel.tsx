@@ -7,6 +7,8 @@ import { INTERFACE_TOUR_SETTINGS } from '../../../content/onboardingTour';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { GalleryCollectionsSortMode, UiThemePreference } from '../../../services/appPreferences';
 
+const LABEL_DESCRIPTION =
+  'Здесь настраиваются оформление, запуск приложения и базовое поведение с файлами. Эти параметры действуют для всего ARC.';
 const LABEL_LAUNCH_AT_LOGIN = 'Запускать ARC при входе в систему.';
 const LABEL_LAUNCH_AT_LOGIN_HIDDEN = 'Запускать ARC свёрнутым.';
 const LABEL_CLOSE_TO_TRAY = 'При закрытии окна сворачивать приложение, а не закрывать.';
@@ -34,6 +36,12 @@ export default function SettingsGeneralPanel() {
   return (
     <div className="arc-settings-main__scroll">
       <div className={`arc-settings-main__content arc-ui-kit-scope${ready ? ' is-prefs-ready' : ''}`} data-btn-size="m">
+        <div className="arc-settings-desc-block">
+          <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+        </div>
+
+        <SettingsSeparator />
+
         <SettingsSection title="Оформление">
           <div className="arc-settings-radio-stack" role="radiogroup" aria-label="Тема оформления">
             {THEME_OPTIONS.map((option) => (
@@ -122,7 +130,7 @@ export default function SettingsGeneralPanel() {
 
         <SettingsSeparator />
 
-        <SettingsSection title="Библиотека">
+        <SettingsSection title="Отображение коллекций">
           <SettingsToggleRow
             label={LABEL_GALLERY_COLLECTIONS_STRIP}
             pressed={prefs?.galleryCollectionsStripEnabled !== false}

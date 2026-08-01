@@ -3,14 +3,14 @@ import ReleaseNotesContent from '../../../components/layout/ReleaseNotesContent'
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import { useSettingsUpdates } from '../hooks/useSettingsUpdates';
 
+const LABEL_DESCRIPTION =
+  'Здесь показаны заметки о текущей версии и можно проверить наличие обновлений. Установка запускается вручную, когда новая версия доступна.';
+
 /** Figma 1037:39869 — Обновления */
 export default function SettingsUpdatesPanel() {
   const {
     loading,
-    installedVersion,
     versions,
-    selectedVersion,
-    setSelectedVersion,
     selectedEntry,
     checkState,
     availableVersion,
@@ -29,41 +29,25 @@ export default function SettingsUpdatesPanel() {
     <>
       <div className="arc-settings-main__scroll">
         <div className="arc-settings-main__content arc-settings-updates-panel arc-ui-kit-scope" data-btn-size="m">
-          {loading ? null : versions.length === 0 ? (
+          <div className="arc-settings-desc-block">
+            <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+          </div>
+
+          <SettingsSeparator />
+
+          {loading ? null : versions.length === 0 || !selectedEntry ? (
             <p className="text-m arc-settings-updates-panel__empty">История версий пока недоступна.</p>
           ) : (
             <>
               <div className="arc-settings-updates-panel__head">
-                <div className="tabs tabs-wrap arc-settings-updates-tabs" role="tablist" aria-label="Версии приложения">
-                  {versions.map((entry) => {
-                    const isCurrent = entry.version === installedVersion;
-                    const isSelected = entry.version === selectedVersion;
-                    const label = isCurrent ? `${entry.version} Текущая версия` : entry.version;
-                    return (
-                      <button
-                        key={entry.version}
-                        type="button"
-                        role="tab"
-                        className={`tab-button${isSelected ? ' is-active' : ''}`}
-                        aria-selected={isSelected}
-                        onClick={() => setSelectedVersion(entry.version)}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
+                <div className="arc-settings-updates-changelog">
+                  <ReleaseNotesContent
+                    version={selectedEntry.version}
+                    buildDate={selectedEntry.buildDate}
+                    changes={selectedEntry.changes}
+                    className="arc-release-notes-content arc-settings-updates-changelog__content"
+                  />
                 </div>
-
-                {selectedEntry ? (
-                  <div className="arc-settings-updates-changelog" role="tabpanel">
-                    <ReleaseNotesContent
-                      version={selectedEntry.version}
-                      buildDate={selectedEntry.buildDate}
-                      changes={selectedEntry.changes}
-                      className="arc-release-notes-content arc-settings-updates-changelog__content"
-                    />
-                  </div>
-                ) : null}
               </div>
 
               <SettingsSeparator />

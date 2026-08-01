@@ -5,7 +5,6 @@ import TopNavbar from './TopNavbar';
 import MaintenanceBanner from './MaintenanceBanner';
 import { AppUpdateProvider } from './appUpdateContext';
 import LibraryWrapMigrationHost from './LibraryWrapMigrationHost';
-import { LibrarySwitchDimProvider } from './LibrarySwitchDimOverlay';
 import ImportHost from '../import/ImportHost';
 import AutoImportHost from '../import/AutoImportHost';
 import ExtensionImportHost from '../import/ExtensionImportHost';
@@ -93,7 +92,6 @@ export default function AppLayout() {
 
   return (
     <AppUpdateProvider>
-    <LibrarySwitchDimProvider>
     <GalleryFilterProvider>
     <GalleryMetaProvider>
     <ArcHistoryNavProvider>
@@ -128,7 +126,6 @@ export default function AppLayout() {
     </ArcHistoryNavProvider>
     </GalleryMetaProvider>
     </GalleryFilterProvider>
-    </LibrarySwitchDimProvider>
     </AppUpdateProvider>
   );
 }

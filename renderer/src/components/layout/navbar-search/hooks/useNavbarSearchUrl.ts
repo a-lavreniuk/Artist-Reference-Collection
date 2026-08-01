@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { ARC_DETAIL_QUERY_CARD } from '../../../../search/openCardUrl';
+import { useSearchParams } from 'react-router-dom';
+import { ARC_DETAIL_QUERY_CARD, stripOpenCardFromParams } from '../../../../search/openCardUrl';
 import { setSearchAiInParams, setSearchColorInParams } from '../../../../search/searchUrl';
 import { clearGallerySearchParams } from '../../../../search/clearGallerySearch';
 import { clearSimilarUploadPath } from '../../../../search/similarSearchSession';
@@ -13,42 +13,17 @@ import {
 import { buildModeChangeParams } from '../utils/searchUrlCommit';
 
 export function useNavbarSearchUrl() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { clearFilters } = useGalleryFilters();
 
-  const isCardHostRoute =
-    location.pathname === '/gallery' ||
-    location.pathname.startsWith('/collections') ||
-    location.pathname.startsWith('/moodboard');
-
-  const navigateToSearchHost = useCallback(
-    (nextParams?: URLSearchParams) => {
-      if (location.pathname.startsWith('/collections') || location.pathname.startsWith('/moodboard')) {
-        return;
-      }
-      if (location.pathname === '/gallery') {
-        return;
-      }
-      const s = (nextParams ?? searchParams).toString();
-      navigate({ pathname: '/gallery', search: s ? `?${s}` : '' });
-    },
-    [location.pathname, navigate, searchParams]
-  );
-
   const commitGallerySearchParams = useCallback(
     (updater: (prev: URLSearchParams) => URLSearchParams, options?: { replace?: boolean }) => {
-      const next = updater(searchParams);
-      if (isCardHostRoute) {
-        setSearchParams(next, { replace: options?.replace ?? true });
-        return;
-      }
-      // На non-card страницах (board/tags/settings/...) не уводим пользователя в галерею
-      // из фоновой синхронизации navbar search.
-      setSearchParams(next, { replace: options?.replace ?? true });
+      // Функциональный updater: не затираем более новый navigate (например color= из деталки).
+      setSearchParams((prev) => updater(new URLSearchParams(prev)), {
+        replace: options?.replace ?? true
+      });
     },
-    [isCardHostRoute, location.pathname, searchParams, setSearchParams]
+    [setSearchParams]
   );
 
   const resetSearchField = useCallback(() => {
@@ -101,7 +76,7 @@ export function useNavbarSearchUrl() {
   const applyColorSearch = useCallback(
     (hex: string, tolerance: number) => {
       commitGallerySearchParams((prev) => {
-        const base = clearGallerySearchParams(prev);
+        const base = stripOpenCardFromParams(clearGallerySearchParams(prev));
         return setSearchColorInParams(base, hex, tolerance);
       });
     },

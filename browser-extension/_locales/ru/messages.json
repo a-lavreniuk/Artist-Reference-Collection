@@ -162,5 +162,20 @@
   },
   "bulkDownloadFailed": {
     "message": "Не удалось выполнить массовое скачивание"
+  },
+  "hoverButtonEnabled": {
+    "message": "Показывать кнопку сохранения при наведении"
+  },
+  "disableOnThisSite": {
+    "message": "Скрыть кнопку на этом сайте"
+  },
+  "enableOnThisSite": {
+    "message": "Показывать кнопку на этом сайте"
+  },
+  "disabledSitesTitle": {
+    "message": "Скрыто на сайтах:"
+  },
+  "removeSite": {
+    "message": "Убрать"
   }
 }

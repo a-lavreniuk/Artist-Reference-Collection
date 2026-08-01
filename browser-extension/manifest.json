@@ -50,6 +50,7 @@
         "lib/artstation/album.js",
         "lib/sites/resolveSave.js",
         "lib/constants.js",
+        "lib/extensionPrefs.js",
         "lib/pageModal.js",
         "content.js"
       ],

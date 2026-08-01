@@ -77,8 +77,8 @@ export default function CardDetailPreviewOptionsBar({
     <div
       ref={rootRef}
       className="arc-card-detail-preview-options arc-ui-kit-scope"
-      data-btn-size="s"
-      data-input-size="s"
+      data-btn-size="m"
+      data-input-size="m"
       aria-label="Параметры превью"
     >
       <div className="arc-card-detail-preview-options__meta">
@@ -156,7 +156,7 @@ export default function CardDetailPreviewOptionsBar({
             min={DISPLAY_SCALE_PCT_MIN}
             max={DISPLAY_SCALE_PCT_MAX}
             step={1}
-            size="s"
+            size="m"
             value={displayScalePct}
             formatValue={(v) => `${v}%`}
             ariaLabel="Масштаб изображения"

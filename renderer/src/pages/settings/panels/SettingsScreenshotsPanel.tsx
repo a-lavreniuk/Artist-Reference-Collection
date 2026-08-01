@@ -13,6 +13,8 @@ const FORMAT_OPTIONS: Array<{ value: ScreenshotFormat; label: string }> = [
   { value: 'webp', label: 'WebP' }
 ];
 
+const LABEL_DESCRIPTION =
+  'Скриншоты можно делать прямо из ARC и сразу сохранять в библиотеку. Включите функцию, затем выберите формат и способ сохранения.';
 const LABEL_ENABLE = 'Включить скриншоты';
 const LABEL_ASK_SAVE = 'Спрашивать куда сохранять';
 const LABEL_RETINA = 'Сохранять скриншоты в ×2 разрешении';
@@ -30,6 +32,12 @@ export default function SettingsScreenshotsPanel() {
   return (
     <div className="arc-settings-main__scroll">
       <div className={`arc-settings-main__content${ready ? ' is-prefs-ready' : ''}`}>
+        <div className="arc-settings-desc-block">
+          <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+        </div>
+
+        <SettingsSeparator />
+
         <SettingsToggleRow
           label={LABEL_ENABLE}
           pressed={prefs?.screenshotsEnabled === true}

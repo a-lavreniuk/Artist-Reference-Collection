@@ -162,5 +162,20 @@
   },
   "bulkDownloadFailed": {
     "message": "Could not complete bulk download"
+  },
+  "hoverButtonEnabled": {
+    "message": "Show save button on hover"
+  },
+  "disableOnThisSite": {
+    "message": "Hide button on this site"
+  },
+  "enableOnThisSite": {
+    "message": "Show button on this site"
+  },
+  "disabledSitesTitle": {
+    "message": "Hidden on these sites:"
+  },
+  "removeSite": {
+    "message": "Remove"
   }
 }

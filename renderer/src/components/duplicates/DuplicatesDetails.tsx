@@ -227,47 +227,13 @@ function DetailColumn({
             minHeight={minHeights.description}
             measureRefs={measureRefs}
           >
-            <div className="arc-card-detail-description-fields arc-ui-kit-scope" data-input-size="m">
-              <label
-                className={`field input-live${card.name?.trim() ? ' has-value' : ''}`}
-                data-live-input
-              >
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="Имя"
-                  value={card.name ?? ''}
-                  readOnly
-                  tabIndex={-1}
-                  aria-readonly="true"
-                />
-              </label>
-              <label
-                className={`field input-live${card.linkUrl?.trim() ? ' has-value' : ''}`}
-                data-live-input
-              >
-                <input
-                  className="input"
-                  type="text"
-                  placeholder="Ссылка"
-                  value={card.linkUrl ?? ''}
-                  readOnly
-                  tabIndex={-1}
-                  aria-readonly="true"
-                />
-              </label>
-              <label className="field">
-                <textarea
-                  className="input textarea"
-                  placeholder="Описание"
-                  value={card.description ?? ''}
-                  readOnly
-                  tabIndex={-1}
-                  aria-readonly="true"
-                  rows={4}
-                />
-              </label>
-            </div>
+            <InfoRows
+              rows={[
+                { label: 'Имя', value: card.name?.trim() || '—' },
+                { label: 'Ссылка', value: card.linkUrl?.trim() || '—' },
+                { label: 'Описание', value: card.description?.trim() || '—' }
+              ]}
+            />
           </SectionFill>
         </CollapsibleSection>
 

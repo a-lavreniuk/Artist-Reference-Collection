@@ -43,6 +43,10 @@ import {
   COLOR_SEARCH_PRESETS,
   DEFAULT_COLOR_SEARCH_TOLERANCE
 } from '../../../search/colorPresets';
+import {
+  ARC_START_COLOR_SEARCH_EVENT,
+  type StartColorSearchDetail
+} from '../../../search/startColorSearch';
 import { NavbarSearchContextProvider } from './NavbarSearchContext';
 import type { NavbarSearchContextValue, NavbarSearchProps } from './types';
 import { NAVBAR_SEARCH_MODES } from './modes/registry';
@@ -142,7 +146,10 @@ export function NavbarSearchProvider({
     }
   }, [loadIndex, searchMode]);
 
-  const displayColorHex = colorHex ?? COLOR_SEARCH_PRESETS[1].hex.replace('#', '');
+  const displayColorHex =
+    (searchMode === 'color' ? panelColorHex.replace(/^#/, '') : null) ||
+    colorHex ||
+    COLOR_SEARCH_PRESETS[1].hex.replace('#', '');
 
   const hasValue = useMemo(() => {
     return NAVBAR_SEARCH_MODES[searchMode].hasValue({
@@ -204,6 +211,45 @@ export function NavbarSearchProvider({
       writeNavbarSearchMode('similar');
     }
   }, [similarRefFromUrl, searchMode]);
+
+  // Только когда color= только что появился в URL — не откатывать ручной уход из режима «Цвет».
+  const prevColorHexRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevColorHexRef.current;
+    prevColorHexRef.current = colorHex;
+    if (!colorHex || colorHex === prev) return;
+    if (searchMode === 'color') return;
+    setSearchMode('color');
+    writeNavbarSearchMode('color');
+  }, [colorHex, searchMode]);
+
+  const applyColorSearchRef = useRef(applyColorSearch);
+  applyColorSearchRef.current = applyColorSearch;
+
+  useEffect(() => {
+    const onStartColorSearch = (event: Event) => {
+      const detail = (event as CustomEvent<StartColorSearchDetail>).detail;
+      const hex = detail?.hex?.trim();
+      if (!hex) return;
+      if (colorDebounceRef.current) {
+        clearTimeout(colorDebounceRef.current);
+        colorDebounceRef.current = null;
+      }
+      const normalized = hex.startsWith('#') ? hex.toUpperCase() : `#${hex.toUpperCase()}`;
+      const tolerance = detail.tolerance ?? DEFAULT_COLOR_SEARCH_TOLERANCE;
+      setSearchMode('color');
+      setPanelColorHex(normalized);
+      setPanelColorTolerance(tolerance);
+      setDraft('');
+      setFieldError(false);
+      panelHadInteraction.current = true;
+      // Дублируем запись color= из провайдера: иначе эффект «дефолтный цвет»
+      // или устаревший setSearchParams мог обогнать navigate из деталки.
+      applyColorSearchRef.current(normalized, tolerance);
+    };
+    window.addEventListener(ARC_START_COLOR_SEARCH_EVENT, onStartColorSearch);
+    return () => window.removeEventListener(ARC_START_COLOR_SEARCH_EVENT, onStartColorSearch);
+  }, []);
 
   useEffect(() => {
     const onModeChanged = (event: Event) => {
@@ -346,6 +392,10 @@ export function NavbarSearchProvider({
 
   const handleModeChange = useCallback(
     (mode: NavbarSearchMode) => {
+      if (colorDebounceRef.current) {
+        clearTimeout(colorDebounceRef.current);
+        colorDebounceRef.current = null;
+      }
       setSearchIslandWidePinned(false);
       handleModeChangeUrl(mode, searchMode, {
         setSearchMode,
@@ -432,15 +482,13 @@ export function NavbarSearchProvider({
     setDraft(aiQuery ?? '');
   }, [aiQuery, searchMode]);
 
+  // Синхронизация панели с URL. Дефолтный color= ставит только handleModeChange —
+  // авто-apply здесь гонялся с startColorSearch и затирал выбранный HEX.
   useEffect(() => {
-    if (searchMode !== 'color') return;
-    if (colorHex) {
-      setPanelColorHex(`#${colorHex}`);
-      setPanelColorTolerance(colorTolerance);
-      return;
-    }
-    applyColorSearch(COLOR_SEARCH_PRESETS[1].hex, DEFAULT_COLOR_SEARCH_TOLERANCE);
-  }, [applyColorSearch, colorHex, colorTolerance, searchMode]);
+    if (searchMode !== 'color' || !colorHex) return;
+    setPanelColorHex(`#${colorHex}`);
+    setPanelColorTolerance(colorTolerance);
+  }, [colorHex, colorTolerance, searchMode]);
 
   useEffect(() => {
     const onLoading = (e: Event) => {

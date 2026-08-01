@@ -76,6 +76,22 @@
             <p id="arc-artstation-progress" class="arc-ext-modal__slot-text"></p>
           </div>
         </section>
+        <section class="arc-ext-modal__section" aria-label="Hover button sites">
+          <hr class="arc-ext-modal__separator" />
+          <div class="arc-ext-modal__slot">
+            <label class="arc-ext-toggle-row">
+              <input type="checkbox" id="arc-hover-enabled" checked />
+              <span id="arc-hover-enabled-label" class="arc-ext-modal__slot-text"></span>
+            </label>
+          </div>
+          <div class="arc-ext-modal__slot arc-ext-modal__slot--action">
+            <button type="button" id="arc-disable-site-btn" class="arc-ext-btn arc-ext-btn--outline"></button>
+          </div>
+          <div class="arc-ext-modal__slot" id="arc-disabled-sites-wrap" hidden>
+            <p id="arc-disabled-sites-title" class="arc-ext-modal__slot-text"></p>
+            <ul id="arc-disabled-sites-list" class="arc-ext-site-list"></ul>
+          </div>
+        </section>
         <section class="arc-ext-modal__section" aria-label="ARC local token">
           <hr class="arc-ext-modal__separator" />
           <div class="arc-ext-modal__slot">
@@ -115,6 +131,7 @@
     <script src="lib/instagram/saved.js"></script>
     <script src="lib/artstation/album.js"></script>
     <script src="lib/constants.js"></script>
+    <script src="lib/extensionPrefs.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

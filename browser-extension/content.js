@@ -20,7 +20,9 @@ const {
   getArtstationAlbumMeta,
   collectArtstationAlbumItems,
   isArtstationArtworkUrl,
-  waitForArtstationArtworkMedia
+  waitForArtstationArtworkMedia,
+  getExtensionUiPrefs,
+  isHoverBlocked
 } = NS;
 
 const MIN_IMAGE_PX = 64;
@@ -52,6 +54,31 @@ let hoverTimer = null;
 let hideTimer = null;
 let moveRaf = 0;
 let saveInFlight = false;
+/** @type {ReturnType<typeof NS.defaultExtensionUiPrefs> | null} */
+let uiPrefsCache = null;
+
+function hoverBlockedOnPage() {
+  // Пока prefs не загрузились — не показываем кнопку (fail-closed).
+  if (!uiPrefsCache || typeof isHoverBlocked !== 'function') return true;
+  return isHoverBlocked(location.hostname, uiPrefsCache);
+}
+
+async function refreshUiPrefs() {
+  if (typeof getExtensionUiPrefs !== 'function') return;
+  uiPrefsCache = await getExtensionUiPrefs();
+  if (hoverBlockedOnPage()) {
+    hideButton();
+  }
+}
+
+void refreshUiPrefs();
+if (chrome.storage?.onChanged) {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (!changes?.[NS.EXTENSION_UI_PREFS_KEY]) return;
+    void refreshUiPrefs();
+  });
+}
 
 function isLargeEnough(el) {
   const rect = el.getBoundingClientRect();
@@ -336,6 +363,11 @@ function isInsideSaveUi(node) {
 }
 
 function considerTarget(target) {
+  if (hoverBlockedOnPage()) {
+    scheduleHide();
+    return;
+  }
+
   if (isInsideSaveUi(target)) {
     return;
   }

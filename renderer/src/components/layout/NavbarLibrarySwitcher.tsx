@@ -4,7 +4,6 @@ import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import CreateLibraryModal from '../onboarding/CreateLibraryModal';
 import MessageModal from './MessageModal';
 import { useLibraries } from '../../hooks/useLibraries';
-import { useLibrarySwitchDim } from './LibrarySwitchDimOverlay';
 import { getNavbarMetrics, invalidateLibraryCache } from '../../services/db';
 import { ONBOARDING_DEFAULT_LIBRARY_NAME } from '../../content/onboarding';
 
@@ -24,7 +23,6 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
   const switchingRef = useRef(false);
 
   const { libraries, activeLibrary, refresh } = useLibraries();
-  const { flashLibrarySwitchDim } = useLibrarySwitchDim();
 
   const activeLabel = activeLibrary?.name ?? 'Библиотека';
 
@@ -40,9 +38,8 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
     invalidateLibraryCache();
     await getNavbarMetrics();
     window.dispatchEvent(new CustomEvent('arc:library-changed'));
-    flashLibrarySwitchDim();
     await refresh();
-  }, [flashLibrarySwitchDim, refresh]);
+  }, [refresh]);
 
   const switchLibrary = useCallback(
     async (libraryId: string) => {

@@ -1,8 +1,4 @@
-import {
-  SEARCH_MODE_META,
-  type NavbarSearchMode,
-  writeNavbarSearchMode
-} from '../../../search/navbarSearchMode';
+import { SEARCH_MODE_META, type NavbarSearchMode } from '../../../search/navbarSearchMode';
 
 type NavbarSearchModesProps = {
   mode: NavbarSearchMode;
@@ -35,7 +31,8 @@ export default function NavbarSearchModes({ mode, aiSearchEnabled, onModeChange 
             disabled={!meta.enabled}
             onClick={() => {
               if (!meta.enabled) return;
-              writeNavbarSearchMode(item);
+              // Режим и URL обновляет handleModeChange; не вызываем writeNavbarSearchMode
+              // заранее — иначе эффект sync по URL может откатить клик (особенно из «Цвет»).
               onModeChange(item);
             }}
           >

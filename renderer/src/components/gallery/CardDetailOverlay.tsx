@@ -50,9 +50,9 @@ import {
 } from '../../services/db';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
-import { ARC_SEARCH_QUERY_TAG } from '../../search/searchUrl';
 import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import { startColorSearch } from '../../search/startColorSearch';
+import { startTagSearch } from '../../search/startTagSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
 import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
@@ -94,7 +94,6 @@ import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
 import type { CardFeedNeighbors } from './cardFeedNeighbors';
 import { openCardsInNewWindow, type CardViewerOpenContext } from '../../card-viewer/openCardsInNewWindow';
-import { useAppPreferences } from '../../hooks/useAppPreferences';
 
 type Props = {
   cardId: string;
@@ -346,7 +345,7 @@ export default function CardDetailOverlay({
       if (!cancelled) setCollectionsById(colm);
 
       if (!cancelled) setCollCounts(await getCollectionCardCounts());
-      if (!cancelled) setCollectionPreviews(await getCollectionPreviewSlices(3));
+      if (!cancelled) setCollectionPreviews(await getCollectionPreviewSlices(1));
 
       if (!cancelled) setSimilar(await listSimilarCards(cardId, 15));
       if (!cancelled) {
@@ -750,7 +749,7 @@ export default function CardDetailOverlay({
     });
 
     if (patch.collectionIds !== undefined) {
-      setCollectionPreviews(await getCollectionPreviewSlices(3));
+      setCollectionPreviews(await getCollectionPreviewSlices(1));
       setCollCounts(await getCollectionCardCounts());
     }
 
@@ -851,7 +850,7 @@ export default function CardDetailOverlay({
       cardRef.current = nextCard;
       try {
         await updateCardPayload(current.id, { collectionIds: nextCollectionIds });
-        setCollectionPreviews(await getCollectionPreviewSlices(3));
+        setCollectionPreviews(await getCollectionPreviewSlices(1));
         setCollCounts(await getCollectionCardCounts());
       } catch {
         const rolledBack = { ...current, collectionIds: prevCollectionIds };
@@ -865,14 +864,10 @@ export default function CardDetailOverlay({
 
   const openTagSearch = useCallback(
     (tagIds: string | string[]) => {
-      const ids = (Array.isArray(tagIds) ? tagIds : [tagIds]).filter((id) => id.trim().length > 0);
-      if (ids.length === 0) return;
-      const next = new URLSearchParams();
-      for (const id of ids) next.append(ARC_SEARCH_QUERY_TAG, id);
-      onClose();
-      navigate({ pathname: '/gallery', search: `?${next.toString()}` });
+      // Не вызывать onClose() отдельно — гонка с navigate(tag=), как у color search.
+      startTagSearch(navigate, searchParams, tagIds, { pathname: '/gallery' });
     },
-    [navigate, onClose]
+    [navigate, searchParams]
   );
 
   useEffect(() => {
@@ -958,16 +953,14 @@ export default function CardDetailOverlay({
   };
 
   const openPaletteColorSearch = (hex: string) => {
-    startColorSearch(navigate, searchParams, hex);
+    // Не вызывать onClose() отдельно — он пишет URL с tag= и гоняется с color=.
+    startColorSearch(navigate, searchParams, hex, { pathname: '/gallery' });
   };
 
   const videoTier =
     card?.type === 'video' && card.originalRelativePath
       ? getVideoPlaybackTierFromPath(card.originalRelativePath)
       : null;
-
-  const { prefs } = useAppPreferences();
-  const videoAutoplay = prefs?.videoAutoplay !== false;
 
   const bookmarkIconClass = isBookmarkHovered
     ? inMoodboard
@@ -1151,7 +1144,7 @@ export default function CardDetailOverlay({
               <CardDetailVideoPlayer
                 cardId={card.id}
                 src={src}
-                autoplay={videoAutoplay}
+                autoplay={true}
                 videoWidth={card.width}
                 videoHeight={card.height}
                 fileSizeBytes={card.fileSize}

@@ -5,7 +5,13 @@ const {
   ARC_WEBSITE_URL,
   isPinterestBoardUrl,
   isInstagramSavedCollectionUrl,
-  isArtstationAlbumUrl
+  isArtstationAlbumUrl,
+  getExtensionUiPrefs,
+  setExtensionUiPrefs,
+  addDisabledHost,
+  removeDisabledHost,
+  normalizeHost,
+  isHoverBlocked
 } = NS;
 
 const modalEl = document.querySelector('.arc-ext-modal--popup');
@@ -36,8 +42,15 @@ const artstationProgressWrap = document.getElementById('arc-artstation-progress-
 const artstationProgressEl = document.getElementById('arc-artstation-progress');
 const localTokenInput = document.getElementById('arc-local-token');
 const saveTokenBtn = document.getElementById('arc-save-token-btn');
+const hoverEnabledInput = document.getElementById('arc-hover-enabled');
+const hoverEnabledLabel = document.getElementById('arc-hover-enabled-label');
+const disableSiteBtn = document.getElementById('arc-disable-site-btn');
+const disabledSitesWrap = document.getElementById('arc-disabled-sites-wrap');
+const disabledSitesTitle = document.getElementById('arc-disabled-sites-title');
+const disabledSitesList = document.getElementById('arc-disabled-sites-list');
 
 const TOKEN_STORAGE_KEY = 'arcLocalApiToken';
+let activeTabHostname = null;
 
 async function loadLocalToken() {
   if (!localTokenInput) return;
@@ -133,6 +146,86 @@ function bindStaticLabels() {
   if (modalEl?.querySelector('#arc-modal-title')) {
     modalEl.querySelector('#arc-modal-title').textContent = msg('modalTitle');
   }
+  if (hoverEnabledLabel) hoverEnabledLabel.textContent = msg('hoverButtonEnabled');
+  if (disabledSitesTitle) disabledSitesTitle.textContent = msg('disabledSitesTitle');
+}
+
+async function resolveActiveTabHostname() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    activeTabId = tab?.id ?? null;
+    if (!tab?.url) {
+      activeTabHostname = null;
+      return null;
+    }
+    try {
+      activeTabHostname = normalizeHost(new URL(tab.url).hostname);
+    } catch {
+      activeTabHostname = null;
+    }
+    return activeTabHostname;
+  } catch {
+    activeTabHostname = null;
+    return null;
+  }
+}
+
+async function renderSiteExceptions() {
+  if (!hoverEnabledInput || !disableSiteBtn || !disabledSitesList || !disabledSitesWrap) return;
+  const prefs = await getExtensionUiPrefs();
+  hoverEnabledInput.checked = prefs.hoverButtonEnabled !== false;
+
+  const host = activeTabHostname;
+  const blocked = host ? isHoverBlocked(host, prefs) : false;
+  disableSiteBtn.disabled = !host;
+  if (!host) {
+    disableSiteBtn.textContent = msg('disableOnThisSite');
+  } else if (blocked && prefs.disabledSiteRules.some((r) => r.value === host)) {
+    disableSiteBtn.textContent = msg('enableOnThisSite');
+    disableSiteBtn.dataset.mode = 'enable';
+  } else {
+    disableSiteBtn.textContent = msg('disableOnThisSite');
+    disableSiteBtn.dataset.mode = 'disable';
+  }
+
+  disabledSitesList.replaceChildren();
+  const rules = prefs.disabledSiteRules;
+  disabledSitesWrap.hidden = rules.length === 0;
+  for (const rule of rules) {
+    const li = document.createElement('li');
+    li.className = 'arc-ext-site-list__item';
+    const label = document.createElement('span');
+    label.className = 'arc-ext-site-list__host';
+    label.textContent = rule.value;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'arc-ext-btn arc-ext-btn--outline arc-ext-site-list__remove';
+    removeBtn.textContent = msg('removeSite');
+    removeBtn.addEventListener('click', () => {
+      void removeDisabledHost(rule.value).then(() => renderSiteExceptions());
+    });
+    li.append(label, removeBtn);
+    disabledSitesList.append(li);
+  }
+}
+
+async function onHoverEnabledChange() {
+  if (!hoverEnabledInput) return;
+  await setExtensionUiPrefs({ hoverButtonEnabled: hoverEnabledInput.checked });
+  await renderSiteExceptions();
+}
+
+async function onDisableSiteClick() {
+  const host = activeTabHostname;
+  if (!host) return;
+  const prefs = await getExtensionUiPrefs();
+  const listed = prefs.disabledSiteRules.some((r) => r.value === host);
+  if (listed) {
+    await removeDisabledHost(host);
+  } else {
+    await addDisabledHost(host);
+  }
+  await renderSiteExceptions();
 }
 
 function setBulkProgress(kind, text, visible = true) {
@@ -204,6 +297,11 @@ async function detectBulkSections() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   activeTabId = tab?.id ?? null;
+  try {
+    activeTabHostname = tab?.url ? normalizeHost(new URL(tab.url).hostname) : null;
+  } catch {
+    activeTabHostname = null;
+  }
 
   let onBoard = typeof tab?.url === 'string' && isPinterestBoardUrl(tab.url);
   let onInstagramSaved = typeof tab?.url === 'string' && isInstagramSavedCollectionUrl(tab.url);
@@ -361,5 +459,10 @@ setSectionVisible(pinterestSection, false);
 setSectionVisible(instagramSection, false);
 setSectionVisible(artstationSection, false);
 saveTokenBtn?.addEventListener('click', () => void saveLocalToken());
-void loadLocalToken().then(() => refreshConnectionStatus());
+hoverEnabledInput?.addEventListener('change', () => void onHoverEnabledChange());
+disableSiteBtn?.addEventListener('click', () => void onDisableSiteClick());
+void loadLocalToken()
+  .then(() => resolveActiveTabHostname())
+  .then(() => renderSiteExceptions())
+  .then(() => refreshConnectionStatus());
 })();

@@ -1,6 +1,9 @@
+import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 
+const LABEL_DESCRIPTION =
+  'Выберите, о каких событиях в библиотеке вас оповещать. Можно оставить только нужные сообщения и при желании включить звук.';
 const LABEL_SCREENSHOT = 'Сообщать, что добавлен скриншот';
 const LABEL_DUPLICATES = 'Сообщать, что найдены дубликаты файлов';
 const LABEL_AUTO_IMPORT = 'Сообщать, что сработал автоимпорт';
@@ -13,37 +16,45 @@ export default function SettingsNotificationsPanel() {
 
   return (
     <div className="arc-settings-main__scroll">
-      <div className={`arc-settings-main__content arc-settings-notifications-list${ready ? ' is-prefs-ready' : ''}`}>
-        <SettingsToggleRow
-          label={LABEL_SCREENSHOT}
-          pressed={prefs?.notifyScreenshotSaved === true}
-          disabled={disabled}
-          onPressedChange={(notifyScreenshotSaved) => void update({ notifyScreenshotSaved })}
-        />
-        <SettingsToggleRow
-          label={LABEL_DUPLICATES}
-          pressed={prefs?.notifyDuplicatesFound === true}
-          disabled={disabled}
-          onPressedChange={(notifyDuplicatesFound) => void update({ notifyDuplicatesFound })}
-        />
-        <SettingsToggleRow
-          label={LABEL_AUTO_IMPORT}
-          pressed={prefs?.notifyAutoImport === true}
-          disabled={disabled}
-          onPressedChange={(notifyAutoImport) => void update({ notifyAutoImport })}
-        />
-        <SettingsToggleRow
-          label={LABEL_FILES_ADDED}
-          pressed={prefs?.notifyFilesAdded === true}
-          disabled={disabled}
-          onPressedChange={(notifyFilesAdded) => void update({ notifyFilesAdded })}
-        />
-        <SettingsToggleRow
-          label={LABEL_SOUND}
-          pressed={prefs?.notifySoundEnabled === true}
-          disabled={disabled}
-          onPressedChange={(notifySoundEnabled) => void update({ notifySoundEnabled })}
-        />
+      <div className={`arc-settings-main__content${ready ? ' is-prefs-ready' : ''}`}>
+        <div className="arc-settings-desc-block">
+          <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+        </div>
+
+        <SettingsSeparator />
+
+        <div className="arc-settings-notifications-list">
+          <SettingsToggleRow
+            label={LABEL_SCREENSHOT}
+            pressed={prefs?.notifyScreenshotSaved === true}
+            disabled={disabled}
+            onPressedChange={(notifyScreenshotSaved) => void update({ notifyScreenshotSaved })}
+          />
+          <SettingsToggleRow
+            label={LABEL_DUPLICATES}
+            pressed={prefs?.notifyDuplicatesFound === true}
+            disabled={disabled}
+            onPressedChange={(notifyDuplicatesFound) => void update({ notifyDuplicatesFound })}
+          />
+          <SettingsToggleRow
+            label={LABEL_AUTO_IMPORT}
+            pressed={prefs?.notifyAutoImport === true}
+            disabled={disabled}
+            onPressedChange={(notifyAutoImport) => void update({ notifyAutoImport })}
+          />
+          <SettingsToggleRow
+            label={LABEL_FILES_ADDED}
+            pressed={prefs?.notifyFilesAdded === true}
+            disabled={disabled}
+            onPressedChange={(notifyFilesAdded) => void update({ notifyFilesAdded })}
+          />
+          <SettingsToggleRow
+            label={LABEL_SOUND}
+            pressed={prefs?.notifySoundEnabled === true}
+            disabled={disabled}
+            onPressedChange={(notifySoundEnabled) => void update({ notifySoundEnabled })}
+          />
+        </div>
       </div>
     </div>
   );

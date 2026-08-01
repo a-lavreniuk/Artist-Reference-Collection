@@ -6,6 +6,9 @@ import SettingsShortcutsSearch from '../../../components/settings/SettingsShortc
 import { formatShortcutLabel } from '../../../shortcuts/formatShortcutLabel';
 import { SHORTCUT_GROUPS, SHORTCUTS } from '../../../shortcuts/shortcutRegistry';
 
+const LABEL_DESCRIPTION =
+  'Список сочетаний клавиш в ARC. Найти нужное действие можно через поиск по названию.';
+
 function normalizeQuery(raw: string): string {
   return raw.trim().toLowerCase();
 }
@@ -30,7 +33,10 @@ export default function SettingsShortcutsPanel() {
     <div className="arc-settings-main__scroll arc-settings-shortcuts-panel">
       <div className="arc-settings-shortcuts-panel__sticky">
         <div className="arc-settings-shortcuts-panel__sticky-inner arc-ui-kit-scope" data-input-size="m">
-          <SettingsShortcutsSearch value={query} onChange={setQuery} />
+          <div className="arc-settings-desc-block">
+            <p className="text-m arc-settings-desc-block__text">{LABEL_DESCRIPTION}</p>
+            <SettingsShortcutsSearch value={query} onChange={setQuery} />
+          </div>
         </div>
         <hr className="arc-settings-shortcuts-panel__sticky-separator" role="separator" />
       </div>

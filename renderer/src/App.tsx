@@ -31,9 +31,6 @@ const SettingsShortcutsPanel = lazy(() =>
 const SettingsLibraryPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsLibraryPanel }))
 );
-const SettingsIntegrityPanel = lazy(() =>
-  import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsIntegrityPanel }))
-);
 const SettingsAutoImportPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAutoImportPanel }))
 );
@@ -45,11 +42,6 @@ const SettingsMcpServerPanel = lazy(() =>
 );
 const SettingsAiSearchPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsAiSearchPanel }))
-);
-const SettingsVideoPlaybackPanel = lazy(() =>
-  import('./pages/settings/panels/settingsProductPanels').then((m) => ({
-    default: m.SettingsVideoPlaybackPanelRoute
-  }))
 );
 const SettingsUpdatesPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsUpdatesPanel }))
@@ -86,11 +78,11 @@ export default function App() {
             <Route index element={<Navigate to="general" replace />} />
             <Route path="general" element={<SettingsGeneralPanel />} />
             <Route path="screenshots" element={<SettingsScreenshotsPanel />} />
-            <Route path="video-playback" element={<SettingsVideoPlaybackPanel />} />
+            <Route path="video-playback" element={<Navigate to="/settings/general" replace />} />
             <Route path="notifications" element={<SettingsNotificationsPanel />} />
             <Route path="shortcuts" element={<SettingsShortcutsPanel />} />
             <Route path="library" element={<SettingsLibraryPanel />} />
-            <Route path="integrity" element={<SettingsIntegrityPanel />} />
+            <Route path="integrity" element={<Navigate to="/settings/general" replace />} />
             <Route path="auto-import" element={<SettingsAutoImportPanel />} />
             <Route path="browser-extension" element={<SettingsBrowserExtensionPanel />} />
             <Route path="mcp-server" element={<SettingsMcpServerPanel />} />

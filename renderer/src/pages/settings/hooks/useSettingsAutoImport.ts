@@ -23,7 +23,7 @@ function mergeAutoImportPatch(
 
 export function useSettingsAutoImport() {
   const { prefs, ready, update } = useAppPreferences();
-  const { activeLibrary } = useLibraries();
+  const { activeLibrary, libraries } = useLibraries();
   const libraryId = activeLibrary?.id ?? null;
   const [libraryReady, setLibraryReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -129,6 +129,7 @@ export function useSettingsAutoImport() {
     folderPath,
     trashSourcesEnabled,
     activeLibraryName: activeLibrary?.name ?? null,
+    libraryCount: libraries.length,
     setEnabled,
     chooseFolder,
     setTrashSourcesEnabled

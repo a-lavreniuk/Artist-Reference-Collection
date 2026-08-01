@@ -95,6 +95,5 @@ export { LIST_CARDS_PAGE_SIZE, listAllCardsPaginated } from './listAllCardsPagin
 export {
   isLibraryConfigured,
   getNavbarMetrics,
-  loadLibraryMetadataSnapshot,
-  applyLibraryIntegrityFixes
+  loadLibraryMetadataSnapshot
 } from './library';

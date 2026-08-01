@@ -285,6 +285,16 @@ export default function CardDetailVideoPlayer({
             </div>
 
             <div className="arc-card-detail-video-meta">
+              <Tooltip content="Информация о файле" position="top">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-icon-only btn-ds"
+                  aria-label="Информация о файле"
+                  onClick={() => onOpenInfo?.()}
+                >
+                  <span className="btn-icon-only__glyph arc-icon-info" aria-hidden="true" />
+                </button>
+              </Tooltip>
               <div className="arc-card-detail-video-meta__item">
                 <span className="btn-ds__icon arc-icon-aspect-ratio-other" aria-hidden="true" />
                 <span className="text-m">{resolutionLabel}</span>
@@ -322,17 +332,6 @@ export default function CardDetailVideoPlayer({
                 onClick={() => player.setFrameMenuOpen((open) => !open)}
               >
                 <span className="btn-icon-only__glyph arc-icon-image" aria-hidden="true" />
-              </button>
-            </Tooltip>
-
-            <Tooltip content="Информация о файле" position="top">
-              <button
-                type="button"
-                className="btn btn-outline btn-icon-only btn-ds"
-                aria-label="Информация о файле"
-                onClick={() => onOpenInfo?.()}
-              >
-                <span className="btn-icon-only__glyph arc-icon-info" aria-hidden="true" />
               </button>
             </Tooltip>
           </div>

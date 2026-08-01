@@ -44,7 +44,7 @@ import {
   type CategoryStats,
   type TagRecord
 } from '../services/db';
-import { ARC_SEARCH_QUERY_TAG } from '../search/searchUrl';
+import { startTagSearch } from '../search/startTagSearch';
 
 export default function TagsPage() {
   const navigate = useNavigate();
@@ -331,9 +331,7 @@ export default function TagsPage() {
     categories,
     selectedTagIds: tagMultiSelect.selectedTagIds,
     onShowInGallery: (tagId) => {
-      const next = new URLSearchParams();
-      next.append(ARC_SEARCH_QUERY_TAG, tagId);
-      navigate({ pathname: '/gallery', search: `?${next.toString()}` });
+      startTagSearch(navigate, searchParams, tagId, { pathname: '/gallery' });
     },
     onEdit: (tag) => setTagModal({ mode: 'edit', tag }),
     onDelete: async (tagId) => {

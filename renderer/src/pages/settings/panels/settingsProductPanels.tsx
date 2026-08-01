@@ -3,7 +3,6 @@ import SettingsGeneralPanel from './SettingsGeneralPanel';
 import SettingsNotificationsPanel from './SettingsNotificationsPanel';
 import SettingsScreenshotsPanel from './SettingsScreenshotsPanel';
 import SettingsShortcutsPanel from './SettingsShortcutsPanel';
-import SettingsVideoPlaybackPanel from './SettingsVideoPlaybackPanel';
 
 export { SettingsGeneralPanel };
 
@@ -22,7 +21,6 @@ export function SettingsShortcutsPanelRoute() {
 export { SettingsShortcutsPanelRoute as SettingsShortcutsPanel };
 
 export { default as SettingsLibraryPanel } from './SettingsLibraryPanel';
-export { default as SettingsIntegrityPanel } from './SettingsIntegrityPanel';
 export { default as SettingsAutoImportPanel } from './SettingsAutoImportPanel';
 export { default as SettingsBrowserExtensionPanel } from './SettingsBrowserExtensionPanel';
 export { default as SettingsUpdatesPanel } from './SettingsUpdatesPanel';
@@ -34,9 +32,3 @@ export function SettingsAiSearchPanelRoute() {
 export { SettingsAiSearchPanelRoute as SettingsAiSearchPanel };
 
 export { default as SettingsAutoTagPanel } from './SettingsAutoTagPanel';
-
-export { default as SettingsVideoPlaybackPanel } from './SettingsVideoPlaybackPanel';
-
-export function SettingsVideoPlaybackPanelRoute() {
-  return <SettingsVideoPlaybackPanel />;
-}
