@@ -212,8 +212,14 @@ function recommendTier(totalMemoryMb: number, vramMb: number | null, _cpuCores: 
 
 export function getSupportedSearchModelIds(info: HardwareInfo): SearchModelId[] {
   const supported: SearchModelId[] = ['clip-vit-base-patch32'];
-  if (info.totalMemoryMb >= 8192) supported.push('qwen3-vl-embedding-2b');
-  if (info.totalMemoryMb >= 12288) supported.push('qwen3-vl-embedding-8b');
+  const vramMb = info.estimatedVramMb;
+  // Match recommendSearchModelId: Qwen needs both RAM and usable VRAM.
+  if (info.totalMemoryMb >= 8192 && vramMb != null && vramMb >= 4000) {
+    supported.push('qwen3-vl-embedding-2b');
+  }
+  if (info.totalMemoryMb >= 12288 && vramMb != null && vramMb >= 10000) {
+    supported.push('qwen3-vl-embedding-8b');
+  }
   return supported;
 }
 

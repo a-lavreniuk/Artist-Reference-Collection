@@ -8,7 +8,11 @@ import {
 } from '../storage/cardEmbeddings';
 import { getLibraryDb } from '../storage/db';
 
-/** Поиск только по visual-вектору (запрос — изображение). */
+/**
+ * Visual (image-query) search across hybrid visual vectors and simple embeddings
+ * for the same modelId. Qwen without captions stores simple rows; with captions —
+ * hybrid rows. Checking both avoids empty results after the dual-index change.
+ */
 export function searchByVisualEmbedding(
   queryVector: Float32Array,
   modelId: string,
@@ -19,32 +23,22 @@ export function searchByVisualEmbedding(
 
   const tier = options?.tier ?? 'light';
   const strictness = options?.strictness ?? 50;
+  const scored = new Map<string, number>();
 
-  if (tier === 'heavy') {
-    const hybridRows = listHybridEmbeddingsForModel(db, modelId);
-    const scored = new Map<string, number>();
-    for (const row of hybridRows) {
-      const score = cosineSimilarity(queryVector, row.visual);
-      scored.set(row.cardId, score);
-    }
-    const legacyRows = listLegacyHeavyEmbeddings(db, modelId);
-    for (const row of legacyRows) {
-      if (scored.has(row.cardId)) continue;
-      scored.set(row.cardId, cosineSimilarity(queryVector, row.vector));
-    }
-    const allScored = [...scored.entries()]
-      .map(([cardId, score]) => ({ cardId, score }))
-      .sort((a, b) => b.score - a.score);
-    return applySearchCutoff(allScored, { ...options, tier, strictness });
+  for (const row of listHybridEmbeddingsForModel(db, modelId)) {
+    scored.set(row.cardId, cosineSimilarity(queryVector, row.visual));
+  }
+  for (const row of listLegacyHeavyEmbeddings(db, modelId)) {
+    if (scored.has(row.cardId)) continue;
+    scored.set(row.cardId, cosineSimilarity(queryVector, row.vector));
+  }
+  for (const row of listEmbeddingsForModel(db, modelId)) {
+    if (scored.has(row.cardId)) continue;
+    scored.set(row.cardId, cosineSimilarity(queryVector, row.vector));
   }
 
-  const rows = listEmbeddingsForModel(db, modelId);
-  const allScored = rows
-    .map((row) => ({
-      cardId: row.cardId,
-      score: cosineSimilarity(queryVector, row.vector)
-    }))
+  const allScored = [...scored.entries()]
+    .map(([cardId, score]) => ({ cardId, score }))
     .sort((a, b) => b.score - a.score);
-
   return applySearchCutoff(allScored, { ...options, tier, strictness });
 }

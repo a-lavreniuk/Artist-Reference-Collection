@@ -16,7 +16,7 @@ type Props = {
   disabled?: boolean;
   onCheckedChange?: (checked: boolean) => void;
   actions?: ReactNode;
-  /** Прогресс скачивания/установки под описанием (без кнопок паузы/отмены). */
+  /** Прогресс скачивания/установки под описанием. */
   progress?: AiModelCardProgress | null;
 };
 

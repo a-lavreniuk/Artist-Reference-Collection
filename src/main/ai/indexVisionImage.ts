@@ -5,26 +5,39 @@ import path from 'path';
 import sharp from 'sharp';
 import { app } from 'electron';
 
-const VISION_SAFE_EXT = new Set(['.jpg', '.jpeg', '.png', '.gif', '.bmp']);
+/** Long edge cap — smaller images keep mmproj on GPU and cut encode time. */
+export const VISION_MAX_EDGE_PX = 768;
 
 function visionCacheDir(): string {
   return path.join(app.getPath('userData'), 'ai-vision-cache');
 }
 
-/** llama-server не декодирует webp — отдаём jpeg/png во временный файл. */
+/**
+ * Always produce a downscaled JPEG for llama-server mtmd.
+ * WebP/GIF and huge originals otherwise take many minutes per card (or kill the client fetch).
+ */
 export async function ensureVisionSafeImagePath(sourceAbs: string): Promise<{
   path: string;
   dispose: () => Promise<void>;
 }> {
-  const ext = path.extname(sourceAbs).toLowerCase();
-  if (VISION_SAFE_EXT.has(ext) && existsSync(sourceAbs)) {
-    return { path: sourceAbs, dispose: async () => {} };
+  if (!existsSync(sourceAbs)) {
+    throw new Error(`Файл изображения не найден: ${sourceAbs}`);
   }
 
   const dir = visionCacheDir();
   await mkdir(dir, { recursive: true });
   const out = path.join(dir, `vision-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`);
-  await sharp(sourceAbs).rotate().jpeg({ quality: 92 }).toFile(out);
+  await sharp(sourceAbs)
+    .rotate()
+    .resize({
+      width: VISION_MAX_EDGE_PX,
+      height: VISION_MAX_EDGE_PX,
+      fit: 'inside',
+      withoutEnlargement: true
+    })
+    .jpeg({ quality: 85, mozjpeg: true })
+    .toFile(out);
+
   return {
     path: out,
     dispose: async () => {

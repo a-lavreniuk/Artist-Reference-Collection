@@ -8,7 +8,10 @@ export type DownloadPhase = 'runtime' | 'model' | 'finalize' | null;
 export type AiSetupPhase = 'off' | 'analyzing' | 'models' | 'ready';
 export type AiDownloadOperation = 'install' | 'update' | null;
 
+/** Share of the overall bar for llama runtime install (phase `runtime`), only when it actually ran. */
 const RUNTIME_PROGRESS_WEIGHT = 40;
+/** Share of the overall bar for finalize/register (phase `finalize`). */
+const FINALIZE_PROGRESS_WEIGHT = 10;
 const INDEX_PROGRESS_THROTTLE_MS = 300;
 const INDEX_FALLBACK_POLL_MS = 12_000;
 
@@ -37,6 +40,8 @@ type SessionState = {
   downloadBytesReceived: number | null;
   downloadBytesTotal: number | null;
   downloadPaused: boolean;
+  /** True only if runtime phase reported progress < 100 (actual download, not instant skip). */
+  downloadReserveRuntimeBand: boolean;
   cudaPrompt: CudaPromptState;
   alert: AlertState;
   busy: boolean;
@@ -68,6 +73,7 @@ let state: SessionState = {
   downloadBytesReceived: null,
   downloadBytesTotal: null,
   downloadPaused: false,
+  downloadReserveRuntimeBand: false,
   cudaPrompt: null,
   alert: null,
   busy: false,
@@ -221,6 +227,35 @@ export function resolveDownloadPercent(snapshot: ReturnType<typeof getAiSettings
   return clampPercent(download.percent) ?? 0;
 }
 
+/** Human-readable stage title for the model card progress row. */
+export function modelCardProgressTitle(phase: DownloadPhase, paused: boolean): string {
+  if (phase === 'runtime') return 'Настройка';
+  if (phase === 'finalize') return 'Установка';
+  if (paused) return 'Скачивание на паузе';
+  return 'Идёт скачивание';
+}
+
+/**
+ * Single 0–100 progress for the model card: runtime → model → finalize
+ * without resetting the bar on each phase.
+ */
+export function resolveModelCardProgress(
+  snapshot: ReturnType<typeof getAiSettingsSnapshot>
+): { title: string; percent: number } | null {
+  if (snapshot.testingTier) return null;
+  const download = getEffectiveDownload(snapshot);
+  if (!download.tier && !isAiDownloading(snapshot)) return null;
+  const ui = computeDownloadUi(download.phase, download.percent, {
+    waitingCuda: Boolean(snapshot.cudaPrompt),
+    updating: snapshot.downloadOperation === 'update',
+    reserveRuntimeBand: snapshot.downloadReserveRuntimeBand
+  });
+  return {
+    title: modelCardProgressTitle(download.phase, snapshot.downloadPaused),
+    percent: ui.overallPercent
+  };
+}
+
 export function resolveDownloadStatus(snapshot: ReturnType<typeof getAiSettingsSnapshot>): {
   visible: boolean;
   percent: number;
@@ -231,9 +266,13 @@ export function resolveDownloadStatus(snapshot: ReturnType<typeof getAiSettingsS
   const download = getEffectiveDownload(snapshot);
   if (!download.tier && !isAiDownloading(snapshot)) return null;
   if (download.phase === 'finalize') return null;
+  const ui = computeDownloadUi(download.phase, download.percent, {
+    updating: snapshot.downloadOperation === 'update',
+    reserveRuntimeBand: snapshot.downloadReserveRuntimeBand
+  });
   return {
     visible: true,
-    percent: resolveDownloadPercent(snapshot),
+    percent: ui.overallPercent,
     subtitle: formatDownloadSubtitle(snapshot),
     paused: snapshot.downloadPaused
   };
@@ -245,7 +284,10 @@ export function resolveInstallStatus(snapshot: ReturnType<typeof getAiSettingsSn
 } | null {
   const download = getEffectiveDownload(snapshot);
   if (!download.tier || download.phase !== 'finalize') return null;
-  return { visible: true, percent: resolveDownloadPercent(snapshot) };
+  const ui = computeDownloadUi(download.phase, download.percent, {
+    reserveRuntimeBand: snapshot.downloadReserveRuntimeBand
+  });
+  return { visible: true, percent: ui.overallPercent };
 }
 
 function recordIndexEtaHint(indexed: number, total: number): string | null {
@@ -402,20 +444,23 @@ export function downloadProgressLabel(
 export function computeDownloadUi(
   phase: DownloadPhase,
   percent: number | null,
-  options?: { waitingCuda?: boolean; updating?: boolean }
+  options?: { waitingCuda?: boolean; updating?: boolean; reserveRuntimeBand?: boolean }
 ): { label: string; overallPercent: number; indeterminate: boolean } {
   if (options?.waitingCuda) {
-    return { label: 'Ожидание выбора CUDA…', overallPercent: RUNTIME_PROGRESS_WEIGHT, indeterminate: true };
+    return { label: 'Ожидание выбора CUDA…', overallPercent: 0, indeterminate: true };
   }
 
   const raw = clampPercent(percent) ?? 0;
+  const runtimeWeight = options?.reserveRuntimeBand ? RUNTIME_PROGRESS_WEIGHT : 0;
+  const modelSpan = 100 - runtimeWeight - FINALIZE_PROGRESS_WEIGHT;
   let overallPercent = raw;
   if (phase === 'runtime') {
+    // While runtime runs, always use the runtime band (0–40), even before the flag is set.
     overallPercent = Math.round((raw * RUNTIME_PROGRESS_WEIGHT) / 100);
   } else if (phase === 'model') {
-    overallPercent = RUNTIME_PROGRESS_WEIGHT + Math.round((raw * (100 - RUNTIME_PROGRESS_WEIGHT)) / 100);
+    overallPercent = runtimeWeight + Math.round((raw * modelSpan) / 100);
   } else if (phase === 'finalize') {
-    overallPercent = 100;
+    overallPercent = runtimeWeight + modelSpan + Math.round((raw * FINALIZE_PROGRESS_WEIGHT) / 100);
   }
 
   return {
@@ -429,7 +474,12 @@ export function resolveAiActivityMessage(snapshot: ReturnType<typeof getAiSettin
   if (snapshot.cudaPrompt) return 'Выберите вариант ускорения CUDA в модальном окне…';
   if (snapshot.testingTier) {
     const label =
-      snapshot.status?.modelCards.find((c) => c.tier === snapshot.testingTier)?.label ?? snapshot.testingTier;
+      snapshot.status?.modelCards.find(
+        (c) =>
+          c.tier === snapshot.testingTier ||
+          c.role === snapshot.testingTier ||
+          c.modelId === snapshot.testingTier
+      )?.label ?? snapshot.testingTier;
     return `Проверка модели: ${label}…`;
   }
 
@@ -437,7 +487,8 @@ export function resolveAiActivityMessage(snapshot: ReturnType<typeof getAiSettin
   if (download.tier) {
     return computeDownloadUi(download.phase, download.percent, {
       waitingCuda: Boolean(snapshot.cudaPrompt),
-      updating: snapshot.downloadOperation === 'update'
+      updating: snapshot.downloadOperation === 'update',
+      reserveRuntimeBand: snapshot.downloadReserveRuntimeBand
     }).label;
   }
 
@@ -472,7 +523,7 @@ export function resolveActivityProgress(snapshot: ReturnType<typeof getAiSetting
     return {
       visible: true,
       label: 'Ожидание выбора CUDA…',
-      percent: RUNTIME_PROGRESS_WEIGHT,
+      percent: 0,
       indeterminate: true
     };
   }
@@ -481,7 +532,8 @@ export function resolveActivityProgress(snapshot: ReturnType<typeof getAiSetting
   if (download.tier || isAiDownloading(snapshot)) {
     const ui = computeDownloadUi(download.phase, download.percent, {
       waitingCuda: Boolean(snapshot.cudaPrompt),
-      updating: snapshot.downloadOperation === 'update'
+      updating: snapshot.downloadOperation === 'update',
+      reserveRuntimeBand: snapshot.downloadReserveRuntimeBand
     });
     return {
       visible: true,
@@ -518,6 +570,7 @@ function clearDownloadSessionFields(): Partial<SessionState> {
     downloadBytesReceived: null,
     downloadBytesTotal: null,
     downloadPaused: false,
+    downloadReserveRuntimeBand: false,
     downloadOperation: null
   };
 }
@@ -700,26 +753,21 @@ async function downloadLlamaRuntime(
   return { ok: true };
 }
 
-async function prepareVisionRuntimeWithCudaOffer(tier: string): Promise<{ ok: boolean; error?: string }> {
-  const cpuRes = await downloadLlamaRuntime(tier, 'cpu');
-  if (!cpuRes.ok) return cpuRes;
-
+async function offerCudaRuntimeIfNeeded(tier: string): Promise<{ ok: boolean; error?: string }> {
   const arc = window.arc;
   // Refresh GPU flags before deciding on CUDA offer (nvidia-smi / deep detect).
   if (arc?.aiDetectHardware) {
     await arc.aiDetectHardware();
   }
   const currentStatus = (await arc?.aiGetStatus?.()) as AiStatus | undefined;
-  if (shouldOfferCudaInstall(currentStatus)) {
-    await waitForNextFrame();
-    const installCuda = await askCudaInstall(tier);
-    if (installCuda) {
-      const cudaRes = await downloadLlamaRuntime(tier, 'cuda');
-      if (!cudaRes.ok) return cudaRes;
-    }
-  }
+  if (!shouldOfferCudaInstall(currentStatus)) return { ok: true };
 
-  return { ok: true };
+  await waitForNextFrame();
+  const installCuda = await askCudaInstall(tier);
+  if (!installCuda) return { ok: true };
+
+  // CPU runtime is ensured inside main `ai-download-model`; here only optional CUDA.
+  return downloadLlamaRuntime(tier, 'cuda');
 }
 
 async function downloadVisionModel(tier: string): Promise<{ ok: boolean; error?: string }> {
@@ -731,7 +779,7 @@ async function downloadVisionModel(tier: string): Promise<{ ok: boolean; error?:
   patchState({ downloadTier: tier, downloadPercent: 0, downloadPhase: 'runtime' });
   syncDownloadPoll();
 
-  const runtimeRes = await prepareVisionRuntimeWithCudaOffer(tier);
+  const runtimeRes = await offerCudaRuntimeIfNeeded(tier);
   if (!runtimeRes.ok) return runtimeRes;
 
   patchState({ downloadPhase: 'model', downloadPercent: 0 });
@@ -761,7 +809,13 @@ export function initAiSettingsSession(): void {
       downloadPercent: clampPercent(percent),
       downloadPhase: phase ?? state.downloadPhase ?? 'model',
       downloadBytesReceived: bytesReceived ?? state.downloadBytesReceived,
-      downloadBytesTotal: bytesTotal ?? state.downloadBytesTotal
+      downloadBytesTotal: bytesTotal ?? state.downloadBytesTotal,
+      ...(phase === 'runtime' &&
+      percent != null &&
+      Number.isFinite(percent) &&
+      percent < 100
+        ? { downloadReserveRuntimeBand: true }
+        : {})
     });
     syncDownloadPoll();
   });
@@ -1087,7 +1141,7 @@ export async function updateAiModel(ref: AiModelRef): Promise<void> {
   try {
     let res: { ok: boolean; error?: string };
     if (isVisionRole(tier)) {
-      const runtimeRes = await prepareVisionRuntimeWithCudaOffer(tier);
+      const runtimeRes = await offerCudaRuntimeIfNeeded(tier);
       if (!runtimeRes.ok) {
         res = runtimeRes;
       } else {
@@ -1152,8 +1206,11 @@ export function isActiveModelInstalled(status: AiStatus | null): boolean {
     const byModel = status.models.find((m) => m.modelId === status.activeSearchModelId);
     if (byModel) return Boolean(byModel.installed);
   }
-  if (status.activeTier) {
-    return Boolean(status.models.find((m) => m.tier === status.activeTier)?.installed);
+  // Legacy fallback: light = CLIP only (do not treat caption/heavy as "search ready").
+  if (status.activeTier === 'light') {
+    return Boolean(
+      status.models.find((m) => m.role === 'search-clip' || m.modelId === 'clip-vit-base-patch32')?.installed
+    );
   }
   return false;
 }

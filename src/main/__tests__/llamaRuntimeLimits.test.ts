@@ -9,8 +9,8 @@ import { CUDA_CUDART_MARKER_DLL, LLAMA_RUNTIME_CATALOG } from '../ai/llamaRuntim
 
 describe('llama server limits', () => {
   it('caps context well below model train sizes', () => {
-    expect(LLAMA_CTX_SIZE_EMBED).toBe(8192);
-    expect(LLAMA_CTX_SIZE_CHAT).toBe(16384);
+    expect(LLAMA_CTX_SIZE_EMBED).toBe(4096);
+    expect(LLAMA_CTX_SIZE_CHAT).toBe(8192);
     expect(LLAMA_CTX_SIZE_EMBED).toBeLessThan(65536);
     expect(LLAMA_CTX_SIZE_CHAT).toBeLessThan(65536);
     expect(LLAMA_PARALLEL_SLOTS).toBe(1);

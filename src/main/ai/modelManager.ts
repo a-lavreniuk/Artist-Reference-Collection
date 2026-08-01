@@ -236,7 +236,8 @@ export function sanitizeSearchModelId(raw: unknown, fallback: SearchModelId = 'c
 export function sanitizeModelRole(raw: unknown): ModelRole | null {
   if (typeof raw === 'string' && MODEL_ROLES.includes(raw as ModelRole)) return raw as ModelRole;
   if (raw === 'light') return 'search-clip';
-  if (raw === 'heavy' || raw === 'medium') return 'caption';
+  if (raw === 'medium') return 'search-embed-2b';
+  if (raw === 'heavy') return 'caption';
   if (isSearchModelId(raw)) return SEARCH_ROLE_BY_ID[raw];
   if (raw === 'joycaption-beta-one') return 'caption';
   return null;

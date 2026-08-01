@@ -83,6 +83,7 @@ export async function runAiSearch(query: string): Promise<AiSearchResult[]> {
 
   const vector = await embedSearchText(modelId, query, modelsDir);
   return searchByEmbedding(vectorFromNumbers(vector), modelId, query, {
+    // Qwen without fusion still uses heavy cutoff; tags boost applies only for light/CLIP.
     tier: isQwenSearchModel(modelId) ? 'heavy' : 'light',
     strictness: prefs.aiSearchStrictness
   });

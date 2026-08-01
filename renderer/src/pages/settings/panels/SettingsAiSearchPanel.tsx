@@ -31,9 +31,8 @@ import {
   isActiveModelInstalled,
   isAiDownloading,
   isCaptionModelInstalled,
-  resolveDownloadStatus,
   resolveIndexStatusLine,
-  resolveInstallStatus
+  resolveModelCardProgress
 } from '../settingsAiSession';
 import { useSettingsArcHint } from '../hooks/useSettingsArcHint';
 import { useSettingsAi } from '../hooks/useSettingsAi';
@@ -93,7 +92,10 @@ export default function SettingsAiSearchPanel() {
     resumeIndex,
     updateResourcePreset,
     updateSearchStrictness,
-    updateModel
+    updateModel,
+    cancelDownload,
+    pauseDownload,
+    resumeDownload
   } = useSettingsAi();
   const autoTag = useSettingsAutoTag();
 
@@ -101,8 +103,7 @@ export default function SettingsAiSearchPanel() {
   const [captionDownloadOwner, setCaptionDownloadOwner] = useState<'caption' | 'tags' | null>(null);
 
   const isDownloading = isAiDownloading(snapshot);
-  const downloadStatus = resolveDownloadStatus(snapshot);
-  const installStatus = resolveInstallStatus(snapshot);
+  const cardProgress = resolveModelCardProgress(snapshot);
   const indexStatusLine = resolveIndexStatusLine(snapshot);
   const activeModelReady = isActiveModelInstalled(status);
   const captionInstalled = isCaptionModelInstalled(status);
@@ -110,6 +111,8 @@ export default function SettingsAiSearchPanel() {
   const indexRunning = Boolean(index?.running);
   const operationBusy = busy && !indexRunning;
   const disabled = !window.arc || operationBusy;
+  const downloadPaused = snapshot.downloadPaused;
+  const canPauseDownload = snapshot.downloadPhase === 'model' || snapshot.downloadPhase == null;
 
   const activeSearchCard =
     status?.searchModelCards.find((c) => c.modelId === status.activeSearchModelId) ??
@@ -179,14 +182,26 @@ export default function SettingsAiSearchPanel() {
 
   const resolveCardProgress = (downloading: boolean) => {
     if (!downloading) return null;
-    if (installStatus) {
-      return { title: 'Установка', percent: installStatus.percent };
-    }
-    if (downloadStatus) {
-      return { title: 'Идёт скачивание', percent: downloadStatus.percent };
-    }
-    return { title: 'Идёт скачивание', percent: 0 };
+    return cardProgress ?? { title: 'Идёт скачивание', percent: 0 };
   };
+
+  const renderDownloadActions = () => (
+    <div className="btn-group btn-group-ds">
+      {canPauseDownload ? (
+        <button
+          type="button"
+          className="btn btn-ds"
+          disabled={!window.arc}
+          onClick={() => void (downloadPaused ? resumeDownload() : pauseDownload())}
+        >
+          <span className="btn-ds__value">{downloadPaused ? 'Продолжить' : 'Остановить'}</span>
+        </button>
+      ) : null}
+      <button type="button" className="btn btn-ds" disabled={!window.arc} onClick={() => void cancelDownload()}>
+        <span className="btn-ds__value">Отменить</span>
+      </button>
+    </div>
+  );
 
   const renderModelCard = (card: AiModelCardInfo) => {
     if (!status) return null;
@@ -226,7 +241,9 @@ export default function SettingsAiSearchPanel() {
           }
         }}
         actions={
-          installed && !downloading ? (
+          downloading ? (
+            renderDownloadActions()
+          ) : installed ? (
             <div className="btn-group btn-group-ds">
               <button
                 type="button"
@@ -277,6 +294,7 @@ export default function SettingsAiSearchPanel() {
             checked={false}
             disabled
             progress={resolveCardProgress(true)}
+            actions={renderDownloadActions()}
           />
         </div>
       </div>

@@ -153,10 +153,15 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
     next.aiCaptionEnabled = patch.aiCaptionEnabled;
   }
   if ('aiModelTier' in patch) {
-    if (patch.aiModelTier === 'heavy' || patch.aiModelTier === 'light') {
-      next.aiModelTier = patch.aiModelTier;
-    } else if (patch.aiModelTier === 'medium') {
+    if (patch.aiModelTier === 'light') {
+      next.aiModelTier = 'light';
+      next.aiSearchModelId = 'clip-vit-base-patch32';
+    } else if (patch.aiModelTier === 'heavy') {
       next.aiModelTier = 'heavy';
+    } else if (patch.aiModelTier === 'medium') {
+      // Legacy "medium" = Qwen 2B search model (not JoyCaption).
+      next.aiModelTier = 'heavy';
+      next.aiSearchModelId = 'qwen3-vl-embedding-2b';
     }
   }
   if ('aiThreads' in patch && typeof patch.aiThreads === 'number') {
@@ -330,10 +335,15 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
     next.aiCaptionEnabled = patch.aiCaptionEnabled;
   }
   if ('aiModelTier' in patch) {
-    if (patch.aiModelTier === 'heavy' || patch.aiModelTier === 'light') {
-      next.aiModelTier = patch.aiModelTier;
-    } else if (patch.aiModelTier === 'medium') {
+    if (patch.aiModelTier === 'light') {
+      next.aiModelTier = 'light';
+      next.aiSearchModelId = 'clip-vit-base-patch32';
+    } else if (patch.aiModelTier === 'heavy') {
       next.aiModelTier = 'heavy';
+    } else if (patch.aiModelTier === 'medium') {
+      // Legacy "medium" = Qwen 2B search model (not JoyCaption).
+      next.aiModelTier = 'heavy';
+      next.aiSearchModelId = 'qwen3-vl-embedding-2b';
     }
   }
   if ('aiThreads' in patch && typeof patch.aiThreads === 'number') {

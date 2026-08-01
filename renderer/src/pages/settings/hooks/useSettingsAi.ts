@@ -37,6 +37,8 @@ export {
   resolveDownloadStatus,
   resolveIndexStatusLine,
   resolveInstallStatus,
+  resolveModelCardProgress,
+  modelCardProgressTitle,
   type AiSetupPhase,
   type CudaPromptState,
   type DownloadPhase

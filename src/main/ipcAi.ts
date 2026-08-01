@@ -235,13 +235,17 @@ async function finalizeModelInstall(
 
 async function ensureVisionRuntimeForUpdate(userData: string, role: ModelRole): Promise<void> {
   await ensureLlamaRuntime(userData, 'cpu', (percent) => {
-    broadcastDownloadProgress(role, percent, 'runtime');
+    const mapped = Math.round((clampPercent(percent) ?? 0) * 0.5);
+    broadcastDownloadProgress(role, mapped, 'runtime');
   });
   // Repair CUDA (including missing cudart) whenever a CUDA server binary is present.
   if (await hasCudaServerBinary(userData)) {
     await ensureLlamaRuntime(userData, 'cuda', (percent) => {
-      broadcastDownloadProgress(role, percent, 'runtime');
+      const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
+      broadcastDownloadProgress(role, mapped, 'runtime');
     });
+  } else {
+    broadcastDownloadProgress(role, 100, 'runtime');
   }
 }
 
@@ -256,7 +260,7 @@ function applyResourcePreset(preset: number, hardware: ReturnType<typeof detectH
     1024,
     Math.min(hardware.totalMemoryMb, Math.round(hardware.totalMemoryMb * 0.25 + hardware.totalMemoryMb * 0.45 * ratio))
   );
-  const gpuLayers = hardware.hasGpu ? Math.round(20 * ratio) : 0;
+  const gpuLayers = hardware.hasGpu ? Math.max(1, Math.round(999 * ratio)) : 0;
   return { threads, gpuLayers, maxRamMb };
 }
 
@@ -322,14 +326,21 @@ export async function buildAiStatus(): Promise<AiStatus> {
     toModelCard(role, hardware)
   );
   const captionModelCard = toModelCard('caption', hardware);
+  const activeSearchId = getActiveSearchModelId() ?? prefs.aiSearchModelId;
+  const activeTier =
+    activeSearchId === 'qwen3-vl-embedding-8b' || activeSearchId === 'qwen3-vl-embedding-2b'
+      ? ('heavy' as const)
+      : prefs.aiCaptionEnabled
+        ? ('heavy' as const)
+        : ('light' as const);
 
   return {
     enabled: searchEnabled,
     captionEnabled: prefs.aiCaptionEnabled,
-    activeSearchModelId: getActiveSearchModelId() ?? prefs.aiSearchModelId,
+    activeSearchModelId: activeSearchId,
     activeCaptionModelId: prefs.aiCaptionEnabled ? 'joycaption-beta-one' : null,
-    activeTier: prefs.aiCaptionEnabled ? 'heavy' : 'light',
-    activeModelId: getActiveSearchModelId() ?? prefs.aiSearchModelId,
+    activeTier,
+    activeModelId: activeSearchId,
     hardware,
     supportedSearchModelIds,
     supportedTiers,
@@ -406,10 +417,9 @@ export function registerAiIpc(): void {
 
     downloadingRole = role;
     downloadPercent = 0;
-    downloadPhase = 'model';
+    downloadPhase = null;
     downloadBytesReceived = null;
     downloadBytesTotal = null;
-    broadcastDownloadProgress(role, 0, 'model');
 
     const needsGguf = entry.stack !== 'transformers';
     const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
@@ -432,12 +442,21 @@ export function registerAiIpc(): void {
 
     try {
       if (needsGguf) {
-        // Prompt CUDA for vision models when NVIDIA present — handled by UI; ensure CPU runtime at least
+        // CUDA offer is handled by Settings UI; ensure CPU (+ repair CUDA if already present).
         if (!(await isLlamaRuntimeInstalled(userData, 'cpu'))) {
           downloadPhase = 'runtime';
+          broadcastDownloadProgress(role, 0, 'runtime');
           await ensureLlamaRuntime(userData, 'cpu', (percent) => broadcastDownloadProgress(role, percent, 'runtime'));
-          downloadPhase = 'model';
         }
+        if (await hasCudaServerBinary(userData)) {
+          downloadPhase = 'runtime';
+          await ensureLlamaRuntime(userData, 'cuda', (percent) => {
+            const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
+            broadcastDownloadProgress(role, mapped, 'runtime');
+          });
+        }
+        downloadPhase = 'model';
+        broadcastDownloadProgress(role, 0, 'model');
         await downloadGgufModel(userData, entry, report);
         if (!(await hasModelArtifactsOnDisk(userData, role))) {
           return { ok: false as const, error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.' };
@@ -449,6 +468,8 @@ export function registerAiIpc(): void {
         return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
       }
 
+      downloadPhase = 'model';
+      broadcastDownloadProgress(role, 0, 'model');
       const result = await downloadModelInWorker(
         role,
         modelsDir,
