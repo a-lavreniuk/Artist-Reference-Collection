@@ -10,7 +10,8 @@ vi.mock('electron', () => ({
     getPath: (name: string) => {
       if (name === 'userData') return path.join(tmpRoot, 'userData');
       return path.join(tmpRoot, name);
-    }
+    },
+    getVersion: () => '0.0.0-test'
   }
 }));
 

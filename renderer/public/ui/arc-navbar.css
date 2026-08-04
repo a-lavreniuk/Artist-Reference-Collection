@@ -424,6 +424,7 @@ html[data-theme="light"] .arc-navbar-island {
 
 .arc-navbar-main-tabs {
   flex-shrink: 0;
+  gap: var(--s-2);
 }
 
 .arc-navbar-main-tabs .tab-button {
@@ -449,11 +450,11 @@ html[data-theme="light"] .arc-navbar-island {
   min-height: 32px;
 }
 
-.arc-navbar-library-btn {
-  max-width: none;
+.arc-navbar-library-split {
+  flex-shrink: 0;
 }
 
-.arc-navbar-library-btn__value {
+.arc-navbar-library-split .btn-icon-split__primary .btn-ds__value {
   white-space: nowrap;
 }
 

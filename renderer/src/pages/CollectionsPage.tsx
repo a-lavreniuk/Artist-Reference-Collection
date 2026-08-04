@@ -367,7 +367,7 @@ export default function CollectionsPage() {
   }
 
   if (collectionsMetaLoaded && collections.length > 0 && routeCollectionId && !activeCollection) {
-    return <Navigate to={`/collections/${collections[0].id}`} replace />;
+    return <Navigate to="/collections" replace />;
   }
 
   if (collectionsMetaLoaded && collections.length === 0) {

@@ -3412,6 +3412,8 @@ button.input {
   align-self: stretch;
   position: relative;
   pointer-events: none;
+  /* Синхрон с половинами при смене Brand/Ghost (иначе колонка «отстаёт»). */
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .btn-icon-split__sep::before {
@@ -3424,7 +3426,19 @@ button.input {
   height: var(--btn-icon-split-sep-h, var(--btn-line-height));
   background: currentColor;
   opacity: 1;
-  transition: opacity var(--transition-fast);
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+/* Мгновенная смена палитры (навигация), без рассинхрона половин и sep. Hover остаётся. */
+.btn-icon-split--instant .btn-icon-split__primary,
+.btn-icon-split--instant .btn-icon-split__secondary,
+.btn-icon-split--instant .btn-icon-split__sep,
+.btn-icon-split--instant .btn-icon-split__sep::before,
+.btn-icon-split--instant .btn-icon-split__chevron,
+.btn-icon-split--instant .btn-ds__value,
+.btn-icon-split--instant .btn-ds__counter,
+.btn-icon-split--instant .btn-ds__icon {
+  transition: none !important;
 }
 
 .btn-icon-split:has(.btn-icon-split__primary:hover:not(:disabled)) .btn-icon-split__sep::before,

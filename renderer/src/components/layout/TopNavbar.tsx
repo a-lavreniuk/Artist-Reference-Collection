@@ -109,8 +109,13 @@ export default function TopNavbar() {
           data-btn-size="m"
         >
           <div className="arc-navbar-island arc-navbar-island--nav">
+            <NavbarLibrarySwitcher
+              disabled={maintenanceLocked}
+              isGalleryActive={activeMainTab === 'gallery'}
+              onPrimaryClick={() => handleMainTabClick('/gallery')}
+            />
             <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация" data-interface-tour-anchor="main-tabs">
-              {MAIN_NAV_TABS.map((tab) => {
+              {MAIN_NAV_TABS.filter((tab) => tab.key !== 'gallery').map((tab) => {
                 const isActive = tab.key === activeMainTab;
                 return (
                   <button
@@ -146,7 +151,6 @@ export default function TopNavbar() {
                 <NavbarGalleryLayoutMenu disabled={maintenanceLocked} />
               </div>
             ) : null}
-            <NavbarLibrarySwitcher disabled={maintenanceLocked} />
             <button
               type="button"
               className="btn btn-brand btn-ds btn-m"

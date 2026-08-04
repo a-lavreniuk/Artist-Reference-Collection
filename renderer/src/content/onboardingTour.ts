@@ -60,10 +60,11 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     id: 'main_tabs',
     catalogIds: ['B1', 'B2', 'B3'],
     route: '/gallery',
-    anchorId: 'main-tabs',
+    anchorId: 'navbar-library-split',
+    fallbackAnchorId: 'main-tabs',
     placement: 'bottom',
     body:
-      'Вкладки вверху переключают основные разделы: «Библиотека» — архив карточек, «Коллекции» — тематические подборки, «Мудборд» — визуальные подборки для проектов',
+      'Слева — кнопка библиотеки: по тексту открывается архив карточек, по шеврону — выбор или создание библиотеки. Рядом табы «Коллекции», «Мудборд» и «Доска»',
     enabled: true
   },
   {

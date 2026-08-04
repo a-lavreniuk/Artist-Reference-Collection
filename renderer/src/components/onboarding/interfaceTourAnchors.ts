@@ -3,6 +3,7 @@ export const INTERFACE_TOUR_ANCHOR_ATTR = 'data-interface-tour-anchor';
 /** Якоря navbar / глобального chrome — не подтверждают монтирование целевой страницы. */
 export const GLOBAL_INTERFACE_TOUR_ANCHOR_IDS = new Set([
   'main-tabs',
+  'navbar-library-split',
   'main-tab-moodboard',
   'navbar-menu',
   'navbar-search',

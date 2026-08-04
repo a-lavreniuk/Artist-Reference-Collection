@@ -43,6 +43,32 @@ async function pathExists(abs: string): Promise<boolean> {
 
 const FLATTEN_TEMP_SUFFIX = '.__arc_flatten__';
 
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/**
+ * Windows часто держит lock на каталоге сразу после close SQLite / rename родителя.
+ * Повторяем EPERM/EBUSY/EACCES, остальное — сразу наружу.
+ */
+async function renameDirWithRetry(from: string, to: string, attempts = 8): Promise<void> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (err) {
+      lastErr = err;
+      const code = (err as NodeJS.ErrnoException)?.code;
+      if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EACCES') throw err;
+      await sleepMs(30 * (i + 1));
+    }
+  }
+  throw lastErr;
+}
+
 /** Ближайший предок с именем «Библиотека ARC», либо null. */
 export function findLibraryContainerAncestor(abs: string): string | null {
   let cur = path.resolve(abs);
@@ -177,7 +203,7 @@ export async function flattenNestedLibrariesInContainer(containerPath: string): 
         tempShell = path.join(container, `${job.name}${FLATTEN_TEMP_SUFFIX}_${Date.now()}`);
       }
       try {
-        await rename(job.shellPath, tempShell);
+        await renameDirWithRetry(job.shellPath, tempShell);
       } catch (err) {
         console.error('[ARC] flatten: rename shell failed', job.shellPath, err);
         continue;
@@ -190,7 +216,7 @@ export async function flattenNestedLibrariesInContainer(containerPath: string): 
         const destName = await resolveUnusedFolderName(container, nested.name);
         const dest = path.join(container, destName);
         try {
-          await rename(from, dest);
+          await renameDirWithRetry(from, dest);
           pathMap.set(path.resolve(nested.path), dest);
           pathMap.set(path.resolve(job.shellPath, nested.name), dest);
         } catch (err) {
@@ -212,7 +238,7 @@ export async function flattenNestedLibrariesInContainer(containerPath: string): 
       const destName = await resolveUnusedFolderName(container, nested.name);
       const dest = path.join(container, destName);
       try {
-        await rename(nested.path, dest);
+        await renameDirWithRetry(nested.path, dest);
         pathMap.set(path.resolve(nested.path), dest);
         changed = true;
       } catch (err) {

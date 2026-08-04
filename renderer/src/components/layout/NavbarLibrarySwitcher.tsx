@@ -7,12 +7,30 @@ import { useLibraries } from '../../hooks/useLibraries';
 import { getNavbarMetrics, invalidateLibraryCache } from '../../services/db';
 import { ONBOARDING_DEFAULT_LIBRARY_NAME } from '../../content/onboarding';
 
+const LIBRARY_LABEL_MAX_CHARS = 16;
+
 type Props = {
   disabled?: boolean;
+  /** Brand на разделе Библиотека, Ghost на остальных. */
+  isGalleryActive?: boolean;
+  /** Клик по текстовой части — переход в `/gallery`. */
+  onPrimaryClick?: () => void;
 };
 
-export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
+function truncateLibraryLabel(label: string, maxChars = LIBRARY_LABEL_MAX_CHARS): string {
+  if (label.length <= maxChars) return label;
+  return `${label.slice(0, maxChars)}…`;
+}
+
+export default function NavbarLibrarySwitcher({
+  disabled = false,
+  isGalleryActive = false,
+  onPrimaryClick
+}: Props) {
+  const scopeRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLButtonElement>(null);
+  const [prevGalleryActive, setPrevGalleryActive] = useState(isGalleryActive);
+  const [paletteInstant, setPaletteInstant] = useState(false);
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState(ONBOARDING_DEFAULT_LIBRARY_NAME);
@@ -24,11 +42,31 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
 
   const { libraries, activeLibrary, refresh } = useLibraries();
 
-  const activeLabel = activeLibrary?.name ?? 'Библиотека';
+  const fullLabel = libraries.length <= 1 ? 'Библиотека' : (activeLibrary?.name ?? 'Библиотека');
+  const displayLabel = truncateLibraryLabel(fullLabel);
+
+  /** Brand ↔ Ghost в одном кадре с `--instant`, иначе sep и половины расходятся. */
+  if (isGalleryActive !== prevGalleryActive) {
+    setPrevGalleryActive(isGalleryActive);
+    setPaletteInstant(true);
+  }
 
   useLayoutEffect(() => {
-    if (anchorRef.current) void hydrateArcNavbarIcons(anchorRef.current);
-  }, [open, activeLabel, libraries.length, disabled]);
+    if (!paletteInstant) return;
+    let outer = 0;
+    let inner = 0;
+    outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setPaletteInstant(false));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [paletteInstant]);
+
+  useLayoutEffect(() => {
+    if (scopeRef.current) void hydrateArcNavbarIcons(scopeRef.current);
+  }, [open, displayLabel, libraries.length, disabled, isGalleryActive]);
 
   useEffect(() => {
     if (open) void refresh();
@@ -119,21 +157,51 @@ export default function NavbarLibrarySwitcher({ disabled = false }: Props) {
     return libRows;
   }, [libraries, openCreateModal, switchLibrary]);
 
+  const splitClass = [
+    'btn-icon-split',
+    'arc-navbar-library-split',
+    'arc-navbar-no-drag',
+    isGalleryActive ? 'btn-icon-split--brand' : 'btn-icon-split--ghost',
+    paletteInstant ? 'btn-icon-split--instant' : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <>
-      <button
-        ref={anchorRef}
-        type="button"
-        className={`btn btn-ghost btn-ds btn-m arc-navbar-library-btn arc-navbar-no-drag${open ? ' is-active' : ''}`}
-        aria-label={`Библиотека: ${activeLabel}`}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+      <div
+        ref={scopeRef}
+        className={splitClass}
+        data-interface-tour-anchor="navbar-library-split"
       >
-        <span className="btn-ds__icon arc-icon-folder-open" aria-hidden="true" />
-        <span className="btn-ds__value arc-navbar-library-btn__value">{activeLabel}</span>
-      </button>
+        <button
+          type="button"
+          className="btn-icon-split__primary"
+          aria-label={fullLabel}
+          aria-current={isGalleryActive ? 'page' : undefined}
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            setOpen(false);
+            onPrimaryClick?.();
+          }}
+        >
+          <span className="btn-ds__value">{displayLabel}</span>
+        </button>
+        <span className="btn-icon-split__sep" aria-hidden="true" />
+        <button
+          ref={anchorRef}
+          type="button"
+          className={`btn-icon-split__secondary${open ? ' is-active' : ''}`}
+          aria-label={`Библиотека: ${fullLabel}. Переключение библиотек`}
+          aria-expanded={open}
+          aria-haspopup="menu"
+          disabled={disabled}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className="btn-icon-split__chevron arc-icon-chevron" aria-hidden="true" />
+        </button>
+      </div>
       <ContextMenu
         open={open}
         anchorRef={anchorRef}
