@@ -1,12 +1,14 @@
 {
   "0.1.13": {
-    "buildDate": "2026-07-26",
+    "buildDate": "2026-08-04",
     "changes": [
-      "AI: ограничен контекст llama-server (embed 8192 / chat 16384) — тяжёлые модели больше не падают из‑за KV-cache на десятки ГБ",
-      "AI: CUDA-установка включает библиотеки cudart — GPU снова определяется (RTX и др.)",
-      "AI: runtime llama.cpp обновлён до b8466 — исправлен краш Qwen3-VL-Embedding (GGML_ASSERT)",
-      "AI: корректный offload слоёв на GPU; --image-min-tokens 1024 для VL-моделей",
-      "AI: надёжнее детект NVIDIA через nvidia-smi; диалог CUDA предлагает полный пакет (~820 МБ)"
+      "Переключатель библиотек в навбаре (кнопка Split): быстрее смена активной библиотеки",
+      "UI: выравнивание выбранных состояний с UI-Kit; полировка поиска по цвету и вступлений в настройках",
+      "AI: ограничен контекст llama-server (embed 8192 / chat 16384) — тяжёлые модели больше не падают из‑за KV-cache",
+      "AI: CUDA-установка включает cudart; runtime llama.cpp b8466 — исправлен краш Qwen3-VL-Embedding",
+      "AI: корректный offload на GPU, VL indexing и прогресс загрузки моделей; sticky CPU fallback при сбое CUDA",
+      "AI: переустановка устаревшего CUDA-рантайма; надёжнее детект NVIDIA через nvidia-smi",
+      "Безопасность: жёстче destructive IPC и auth локального API; стабильнее llama runtime"
     ]
   },
   "0.1.12": {
