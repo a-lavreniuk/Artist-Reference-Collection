@@ -100,7 +100,7 @@ export default function DuplicatesResultsView({
         </button>
 
         <div className="arc-duplicates-actions__center">
-          <button type="button" className="btn btn-primary btn-ds" disabled={busy} onClick={onDeleteA}>
+          <button type="button" className="btn btn-danger btn-ds" disabled={busy} onClick={onDeleteA}>
             <span className="btn-ds__value">Удалить A</span>
           </button>
           <button type="button" className="btn btn-brand btn-ds" disabled={busy} onClick={onMergeA}>
@@ -109,7 +109,7 @@ export default function DuplicatesResultsView({
           <button type="button" className="btn btn-brand btn-ds" disabled={busy} onClick={onMergeB}>
             <span className="btn-ds__value">Объединить в B</span>
           </button>
-          <button type="button" className="btn btn-primary btn-ds" disabled={busy} onClick={onDeleteB}>
+          <button type="button" className="btn btn-danger btn-ds" disabled={busy} onClick={onDeleteB}>
             <span className="btn-ds__value">Удалить B</span>
           </button>
         </div>

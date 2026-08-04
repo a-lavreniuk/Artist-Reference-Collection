@@ -5,6 +5,7 @@ import arcUiKitMainHtml from './arcUiKitMain.html?raw';
 import { mountArcUiKitDemo, refreshArcUiKitGlyphs } from './arcUiKitBoot';
 import UiKitRangeSliderDemo from './UiKitRangeSliderDemo';
 import UiKitControlsDemo from './UiKitControlsDemo';
+import UiKitProductPatternsDemo from './UiKitProductPatternsDemo';
 import {
   applyUiKitScopeDataset,
   parseUiKitElevation,
@@ -16,6 +17,7 @@ export default function UiKitPage() {
   const scopeRef = useRef<HTMLDivElement>(null);
   const rangeSliderRootRef = useRef<Root | null>(null);
   const controlsRootRef = useRef<Root | null>(null);
+  const productPatternsRootRef = useRef<Root | null>(null);
   const [searchParams] = useSearchParams();
 
   /** Один и тот же объект — иначе при каждом ререндере React снова ставит innerHTML и стирает SVG из injectButtonIcons. */
@@ -42,12 +44,20 @@ export default function UiKitPage() {
       controlsRootRef.current.render(<UiKitControlsDemo />);
     }
 
+    const patternsEl = scope.querySelector('#uikit-product-patterns-live');
+    if (patternsEl) {
+      productPatternsRootRef.current = createRoot(patternsEl);
+      productPatternsRootRef.current.render(<UiKitProductPatternsDemo />);
+    }
+
     return () => {
       ac.abort();
       rangeSliderRootRef.current?.unmount();
       rangeSliderRootRef.current = null;
       controlsRootRef.current?.unmount();
       controlsRootRef.current = null;
+      productPatternsRootRef.current?.unmount();
+      productPatternsRootRef.current = null;
     };
   }, []);
 

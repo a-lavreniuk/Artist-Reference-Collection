@@ -205,13 +205,13 @@ export default function ImportDuplicatesModal({
           </div>
 
           <div className="arc-duplicates-import-modal__choices">
-            <button type="button" className="btn btn-primary btn-ds" disabled={busy} onClick={() => void handleReplace()}>
+            <button type="button" className="btn btn-brand btn-ds" disabled={busy} onClick={() => void handleReplace()}>
               <span className="btn-ds__value">Заменить исходник</span>
             </button>
-            <button type="button" className="btn btn-primary btn-ds" disabled={busy} onClick={handleKeepExisting}>
+            <button type="button" className="btn btn-outline btn-ds" disabled={busy} onClick={handleKeepExisting}>
               <span className="btn-ds__value">Оставить исходник</span>
             </button>
-            <button type="button" className="btn btn-primary btn-ds" disabled={busy} onClick={() => void handleKeepBoth()}>
+            <button type="button" className="btn btn-outline btn-ds" disabled={busy} onClick={() => void handleKeepBoth()}>
               <span className="btn-ds__value">Сохранить оба</span>
             </button>
           </div>

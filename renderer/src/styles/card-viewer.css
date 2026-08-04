@@ -8,7 +8,7 @@ body,
   margin: 0;
   overflow: hidden;
   background: transparent;
-  color: var(--typo-p-m-color, #e8e8ec);
+  color: var(--typo-p-m-color, var(--gray-100));
   font-family: var(--font-family, system-ui, sans-serif);
 }
 
@@ -38,8 +38,8 @@ body {
   padding: var(--s-1);
   position: relative;
   z-index: 2;
-  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  background: var(--elevation-default, #1a1a1e);
+  border-bottom: 1px solid var(--surface-border-default, var(--gray-800));
+  background: var(--elevation-default, var(--gray-1000));
   -webkit-app-region: drag;
 }
 
@@ -175,7 +175,7 @@ body {
 
 .arc-card-viewer__empty {
   font: var(--typo-p-m);
-  color: var(--typo-p-m-muted, #9b9ba6);
+  color: var(--typo-p-m-muted, var(--gray-400));
   text-align: center;
   padding: var(--s-4);
 }
@@ -188,8 +188,8 @@ body {
   position: relative;
   z-index: 2;
   padding: var(--s-1);
-  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  background: var(--elevation-default, #1a1a1e);
+  border-top: 1px solid var(--surface-border-default, var(--gray-800));
+  background: var(--elevation-default, var(--gray-1000));
   -webkit-app-region: no-drag;
 }
 

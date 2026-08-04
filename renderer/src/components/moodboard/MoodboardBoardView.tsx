@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { createPortal } from 'react-dom';
 import MoodboardKonvaStage, {
   type DrawTool,
@@ -29,6 +29,7 @@ import {
   saveMoodboardBoard
 } from '../../services/db';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
+import { Tooltip } from '../tooltip/Tooltip';
 import { normalizeHex } from '../../utils/colorPicker';
 import {
   matchesMoodboardRedo,
@@ -39,6 +40,33 @@ import { shortcutMenuLabel } from '../../shortcuts/shortcutLabels';
 
 const MIME_CARD = 'application/x-arc-card-id';
 const BOARD_MENU_SLOT_ORDER = ['label', 'shortcut'] as const;
+
+function MoodboardTip({
+  label,
+  disabled,
+  children
+}: {
+  label: string;
+  disabled?: boolean;
+  children: ReactElement;
+}) {
+  if (disabled) {
+    return (
+      <Tooltip content={label} delay={500} position="top" as="span">
+        <span className="arc-tooltip-anchor-inline">{children}</span>
+      </Tooltip>
+    );
+  }
+  return (
+    <Tooltip content={label} delay={500} position="top" as="span">
+      {children}
+    </Tooltip>
+  );
+}
+
+function MoodboardCtrl({ children }: { children: ReactElement }) {
+  return <span>{children}</span>;
+}
 
 function isTypingTarget(t: EventTarget | null): boolean {
   if (!t || !(t instanceof HTMLElement)) return false;
@@ -905,17 +933,19 @@ export default function MoodboardBoardView() {
           onDrop={(e) => void onDropOnCanvas(e)}
         >
           <div className="arc-moodboard-menu" data-btn-size="s">
-            <button
-              ref={boardMenuButtonRef}
-              type="button"
-              className={`btn btn-outline btn-icon-only btn-ds${boardMenuOpen ? ' is-active' : ''}`}
-              aria-label="Дополнительные действия доски"
-              aria-expanded={boardMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => setBoardMenuOpen((v) => !v)}
-            >
-              <span className="arc-moodboard-menu-burger" aria-hidden="true" />
-            </button>
+            <MoodboardTip label="Дополнительные действия доски">
+              <button
+                ref={boardMenuButtonRef}
+                type="button"
+                className={`btn btn-outline btn-icon-only btn-ds${boardMenuOpen ? ' is-active' : ''}`}
+                aria-label="Дополнительные действия доски"
+                aria-expanded={boardMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setBoardMenuOpen((v) => !v)}
+              >
+                <span className="arc-moodboard-menu-burger" aria-hidden="true" />
+              </button>
+            </MoodboardTip>
             <ContextMenu
               open={boardMenuOpen}
               anchorRef={boardMenuButtonRef}
@@ -933,146 +963,174 @@ export default function MoodboardBoardView() {
           >
             <div className="arc-moodboard-toolbar arc-moodboard-toolbar--history">
               <div className="btn-group btn-group-ds">
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds"
-                  aria-label="Отменить"
-                  disabled={undoStack.length === 0}
-                  onClick={() => undo()}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-undo" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds arc-moodboard-history-redo"
-                  aria-label="Вернуть"
-                  disabled={redoStack.length === 0}
-                  onClick={() => redo()}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-undo" aria-hidden />
-                </button>
+                <MoodboardTip label="Отменить" disabled={undoStack.length === 0}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-icon-only btn-ds"
+                    aria-label="Отменить"
+                    disabled={undoStack.length === 0}
+                    onClick={() => undo()}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-undo" aria-hidden />
+                  </button>
+                </MoodboardTip>
+                <MoodboardTip label="Вернуть" disabled={redoStack.length === 0}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-icon-only btn-ds arc-moodboard-history-redo"
+                    aria-label="Вернуть"
+                    disabled={redoStack.length === 0}
+                    onClick={() => redo()}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-undo" aria-hidden />
+                  </button>
+                </MoodboardTip>
               </div>
             </div>
 
             <div className="arc-moodboard-toolbar arc-moodboard-toolbar--main">
               <div className="btn-group btn-group-ds">
-                <button
-                  type="button"
-                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'select' ? ' is-active' : ''}`}
-                  aria-label="Выделение"
-                  aria-pressed={mainTool === 'select'}
-                  onClick={() => setMainTool('select')}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-cursor" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'pan' ? ' is-active' : ''}`}
-                  aria-label="Панорама"
-                  aria-pressed={mainTool === 'pan'}
-                  onClick={() => setMainTool('pan')}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-pan" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'draw' && drawTool !== 'eraser' ? ' is-active' : ''}`}
-                  aria-label="Нарисовать"
-                  aria-pressed={mainTool === 'draw' && drawTool !== 'eraser'}
-                  onClick={() => {
-                    setMainTool('draw');
-                    if (drawTool === 'eraser') setDrawTool('brush');
-                  }}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-pencil" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'text' ? ' is-active' : ''}`}
-                  aria-label="Написать"
-                  aria-pressed={mainTool === 'text'}
-                  onClick={() => setMainTool('text')}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-type" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'draw' && drawTool === 'eraser' ? ' is-active' : ''}`}
-                  aria-label="Ластик"
-                  aria-pressed={mainTool === 'draw' && drawTool === 'eraser'}
-                  onClick={() => {
-                    setMainTool('draw');
-                    setDrawTool('eraser');
-                  }}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-eraser" aria-hidden />
-                </button>
+                <MoodboardTip label="Выделение">
+                  <button
+                    type="button"
+                    className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'select' ? ' is-active' : ''}`}
+                    aria-label="Выделение"
+                    aria-pressed={mainTool === 'select'}
+                    onClick={() => setMainTool('select')}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-cursor" aria-hidden />
+                  </button>
+                </MoodboardTip>
+                <MoodboardTip label="Панорама">
+                  <button
+                    type="button"
+                    className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'pan' ? ' is-active' : ''}`}
+                    aria-label="Панорама"
+                    aria-pressed={mainTool === 'pan'}
+                    onClick={() => setMainTool('pan')}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-pan" aria-hidden />
+                  </button>
+                </MoodboardTip>
+                <MoodboardTip label="Нарисовать">
+                  <button
+                    type="button"
+                    className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'draw' && drawTool !== 'eraser' ? ' is-active' : ''}`}
+                    aria-label="Нарисовать"
+                    aria-pressed={mainTool === 'draw' && drawTool !== 'eraser'}
+                    onClick={() => {
+                      setMainTool('draw');
+                      if (drawTool === 'eraser') setDrawTool('brush');
+                    }}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-pencil" aria-hidden />
+                  </button>
+                </MoodboardTip>
+                <MoodboardTip label="Написать">
+                  <button
+                    type="button"
+                    className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'text' ? ' is-active' : ''}`}
+                    aria-label="Написать"
+                    aria-pressed={mainTool === 'text'}
+                    onClick={() => setMainTool('text')}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-type" aria-hidden />
+                  </button>
+                </MoodboardTip>
+                <MoodboardTip label="Ластик">
+                  <button
+                    type="button"
+                    className={`btn btn-outline btn-icon-only btn-ds${mainTool === 'draw' && drawTool === 'eraser' ? ' is-active' : ''}`}
+                    aria-label="Ластик"
+                    aria-pressed={mainTool === 'draw' && drawTool === 'eraser'}
+                    onClick={() => {
+                      setMainTool('draw');
+                      setDrawTool('eraser');
+                    }}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-eraser" aria-hidden />
+                  </button>
+                </MoodboardTip>
               </div>
             </div>
 
             {mainTool === 'draw' ? (
               <div className="arc-moodboard-toolbar arc-moodboard-toolbar--draw">
                 <div className="btn-group btn-group-ds">
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'brush' ? ' is-active' : ''}`}
-                    aria-label="Кисть"
-                    aria-pressed={drawTool === 'brush'}
-                    onClick={() => setDrawTool('brush')}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-pencil" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'rect' ? ' is-active' : ''}`}
-                    aria-label="Прямоугольник"
-                    aria-pressed={drawTool === 'rect'}
-                    onClick={() => setDrawTool('rect')}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-predictable" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'ellipse' ? ' is-active' : ''}`}
-                    aria-label="Эллипс"
-                    aria-pressed={drawTool === 'ellipse'}
-                    onClick={() => setDrawTool('ellipse')}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-circle" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'line' ? ' is-active' : ''}`}
-                    aria-label="Линия"
-                    aria-pressed={drawTool === 'line'}
-                    onClick={() => setDrawTool('line')}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-line" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${strokeWidthPx <= 4 ? ' is-active' : ''}`}
-                    aria-label="Тонкая линия"
-                    onClick={() => setStrokeWidthPx(3)}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-line-thin" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${strokeWidthPx > 4 ? ' is-active' : ''}`}
-                    aria-label="Толстая линия"
-                    onClick={() => setStrokeWidthPx(10)}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-line-thik" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-icon-only btn-ds"
-                    aria-label="Цвет линии"
-                    onClick={() => setColorModal('stroke')}
-                  >
-                    <span className="arc-moodboard-color-swatch" style={{ backgroundColor: initialStrokeHex }} />
-                  </button>
+                  <MoodboardTip label="Кисть">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'brush' ? ' is-active' : ''}`}
+                      aria-label="Кисть"
+                      aria-pressed={drawTool === 'brush'}
+                      onClick={() => setDrawTool('brush')}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-pencil" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="Прямоугольник">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'rect' ? ' is-active' : ''}`}
+                      aria-label="Прямоугольник"
+                      aria-pressed={drawTool === 'rect'}
+                      onClick={() => setDrawTool('rect')}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-predictable" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="Эллипс">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'ellipse' ? ' is-active' : ''}`}
+                      aria-label="Эллипс"
+                      aria-pressed={drawTool === 'ellipse'}
+                      onClick={() => setDrawTool('ellipse')}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-circle" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="Линия">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${drawTool === 'line' ? ' is-active' : ''}`}
+                      aria-label="Линия"
+                      aria-pressed={drawTool === 'line'}
+                      onClick={() => setDrawTool('line')}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-line" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="Тонкая линия">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${strokeWidthPx <= 4 ? ' is-active' : ''}`}
+                      aria-label="Тонкая линия"
+                      onClick={() => setStrokeWidthPx(3)}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-line-thin" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="Толстая линия">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${strokeWidthPx > 4 ? ' is-active' : ''}`}
+                      aria-label="Толстая линия"
+                      onClick={() => setStrokeWidthPx(10)}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-line-thik" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="Цвет линии">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-icon-only btn-ds"
+                      aria-label="Цвет линии"
+                      onClick={() => setColorModal('stroke')}
+                    >
+                      <span className="arc-moodboard-color-swatch" style={{ backgroundColor: initialStrokeHex }} />
+                    </button>
+                  </MoodboardTip>
                 </div>
               </div>
             ) : null}
@@ -1080,113 +1138,135 @@ export default function MoodboardBoardView() {
             {mainTool === 'text' ? (
               <div className="arc-moodboard-toolbar arc-moodboard-toolbar--text">
                 <div className="btn-group btn-group-ds">
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-ds btn-s${textFontSize <= 15 ? ' is-active' : ''}`}
-                    onClick={() => {
-                      setTextFontSize(14);
-                      patchTextProps({ fontSize: 14 });
-                    }}
-                  >
-                    <span className="btn-ds__value">S</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-ds btn-s${textFontSize > 15 && textFontSize < 24 ? ' is-active' : ''}`}
-                    onClick={() => {
-                      setTextFontSize(20);
-                      patchTextProps({ fontSize: 20 });
-                    }}
-                  >
-                    <span className="btn-ds__value">M</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-ds btn-s${textFontSize >= 24 ? ' is-active' : ''}`}
-                    onClick={() => {
-                      setTextFontSize(28);
-                      patchTextProps({ fontSize: 28 });
-                    }}
-                  >
-                    <span className="btn-ds__value">L</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'left' ? ' is-active' : ''}`}
-                    aria-label="По левому краю"
-                    aria-pressed={textAlign === 'left'}
-                    onClick={() => {
-                      setTextAlign('left');
-                      patchTextProps({ align: 'left' });
-                    }}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-align-left" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'center' ? ' is-active' : ''}`}
-                    aria-label="По центру"
-                    aria-pressed={textAlign === 'center'}
-                    onClick={() => {
-                      setTextAlign('center');
-                      patchTextProps({ align: 'center' });
-                    }}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-align-center" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'right' ? ' is-active' : ''}`}
-                    aria-label="По правому краю"
-                    aria-pressed={textAlign === 'right'}
-                    onClick={() => {
-                      setTextAlign('right');
-                      patchTextProps({ align: 'right' });
-                    }}
-                  >
-                    <span className="btn-icon-only__glyph tab-icon arc-icon-align-right" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-icon-only btn-ds"
-                    aria-label="Цвет текста"
-                    onClick={() => setColorModal('text')}
-                  >
-                    <span className="arc-moodboard-color-swatch" style={{ backgroundColor: initialTextHex }} />
-                  </button>
+                  <MoodboardCtrl>
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-ds btn-s${textFontSize <= 15 ? ' is-active' : ''}`}
+                      onClick={() => {
+                        setTextFontSize(14);
+                        patchTextProps({ fontSize: 14 });
+                      }}
+                    >
+                      <span className="btn-ds__value">S</span>
+                    </button>
+                  </MoodboardCtrl>
+                  <MoodboardCtrl>
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-ds btn-s${textFontSize > 15 && textFontSize < 24 ? ' is-active' : ''}`}
+                      onClick={() => {
+                        setTextFontSize(20);
+                        patchTextProps({ fontSize: 20 });
+                      }}
+                    >
+                      <span className="btn-ds__value">M</span>
+                    </button>
+                  </MoodboardCtrl>
+                  <MoodboardCtrl>
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-ds btn-s${textFontSize >= 24 ? ' is-active' : ''}`}
+                      onClick={() => {
+                        setTextFontSize(28);
+                        patchTextProps({ fontSize: 28 });
+                      }}
+                    >
+                      <span className="btn-ds__value">L</span>
+                    </button>
+                  </MoodboardCtrl>
+                  <MoodboardTip label="По левому краю">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'left' ? ' is-active' : ''}`}
+                      aria-label="По левому краю"
+                      aria-pressed={textAlign === 'left'}
+                      onClick={() => {
+                        setTextAlign('left');
+                        patchTextProps({ align: 'left' });
+                      }}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-align-left" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="По центру">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'center' ? ' is-active' : ''}`}
+                      aria-label="По центру"
+                      aria-pressed={textAlign === 'center'}
+                      onClick={() => {
+                        setTextAlign('center');
+                        patchTextProps({ align: 'center' });
+                      }}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-align-center" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="По правому краю">
+                    <button
+                      type="button"
+                      className={`btn btn-outline btn-icon-only btn-ds${textAlign === 'right' ? ' is-active' : ''}`}
+                      aria-label="По правому краю"
+                      aria-pressed={textAlign === 'right'}
+                      onClick={() => {
+                        setTextAlign('right');
+                        patchTextProps({ align: 'right' });
+                      }}
+                    >
+                      <span className="btn-icon-only__glyph tab-icon arc-icon-align-right" aria-hidden />
+                    </button>
+                  </MoodboardTip>
+                  <MoodboardTip label="Цвет текста">
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-icon-only btn-ds"
+                      aria-label="Цвет текста"
+                      onClick={() => setColorModal('text')}
+                    >
+                      <span className="arc-moodboard-color-swatch" style={{ backgroundColor: initialTextHex }} />
+                    </button>
+                  </MoodboardTip>
                 </div>
               </div>
             ) : null}
 
             <div className="arc-moodboard-toolbar arc-moodboard-toolbar--zoom" aria-label="Масштаб">
               <div className="btn-group btn-group-ds">
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds"
-                  aria-label="Уменьшить"
-                  onClick={() => zoomCenterFactor(1 / 1.08)}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-minus" aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds"
-                  aria-label="Увеличить"
-                  onClick={() => zoomCenterFactor(1.08)}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-plus" aria-hidden />
-                </button>
-                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={() => resetZoom100()}>
-                  <span className="btn-ds__value">{zoomPct}%</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds"
-                  aria-label="Вписать в экран"
-                  onClick={() => fitView()}
-                >
-                  <span className="btn-icon-only__glyph tab-icon arc-icon-minimize" aria-hidden />
-                </button>
+                <MoodboardTip label="Уменьшить">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-icon-only btn-ds"
+                    aria-label="Уменьшить"
+                    onClick={() => zoomCenterFactor(1 / 1.08)}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-minus" aria-hidden />
+                  </button>
+                </MoodboardTip>
+                <MoodboardTip label="Увеличить">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-icon-only btn-ds"
+                    aria-label="Увеличить"
+                    onClick={() => zoomCenterFactor(1.08)}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-plus" aria-hidden />
+                  </button>
+                </MoodboardTip>
+                <MoodboardCtrl>
+                  <button type="button" className="btn btn-outline btn-ds btn-s" onClick={() => resetZoom100()}>
+                    <span className="btn-ds__value">{zoomPct}%</span>
+                  </button>
+                </MoodboardCtrl>
+                <MoodboardTip label="Вписать в экран">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-icon-only btn-ds"
+                    aria-label="Вписать в экран"
+                    onClick={() => fitView()}
+                  >
+                    <span className="btn-icon-only__glyph tab-icon arc-icon-minimize" aria-hidden />
+                  </button>
+                </MoodboardTip>
               </div>
             </div>
           </div>

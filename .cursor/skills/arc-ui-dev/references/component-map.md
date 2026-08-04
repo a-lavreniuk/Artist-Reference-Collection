@@ -32,7 +32,7 @@
 | Коллекции | `CollectionGalleryCard`, `LibraryCollectionsStrip`, `CollectionSettingsModal` |
 | Мудборд | `MoodboardBoardView`, `MoodboardKonvaStage`, `useMoodboardQueueContextMenu` |
 | Импорт | `ImportContext`, `SourceFilesModal`, `AutoImportHost` |
-| Настройки | `SettingsPage`, `AiModelCard`, `SettingsCheckboxRow` |
+| Настройки | `SettingsPage`, `AiModelCard`, `SettingsOptionCard`, `SettingsCheckboxRow` |
 
 ## Хуки (повторное использование)
 
@@ -50,6 +50,7 @@
 | Design tokens / компоненты CSS | `renderer/public/ui/arc-ui/arc-ui.css` |
 | Доп. стили приложения | `renderer/src/styles/index.css` |
 | UI-Kit (эталон контролов) | `renderer/src/ui-kit/arcUiKitMain.html`, `UiKitPage.tsx` |
+| UI-Kit product patterns | `UiKitProductPatternsDemo.tsx` — Empty State, Tooltip, Datepicker/Calendar, Sidebar row, Settings option/AI cards |
 | Navbar CSS | `renderer/public/ui/arc-navbar.css` |
 
 ## Эталонные страницы

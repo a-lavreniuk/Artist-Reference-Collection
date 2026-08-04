@@ -114,5 +114,13 @@ export const EMPTY_STATE_COPY = {
   historyFilterEmpty: {
     title: 'Нет записей за этот период',
     subtitle: 'Выберите другой период или откройте всю историю'
+  },
+  statsPopularTagsEmpty: {
+    title: 'Нет популярных меток',
+    subtitle: 'Когда метки начнут чаще встречаться на карточках, они появятся здесь'
+  },
+  statsLowTagsEmpty: {
+    title: 'Нет малоиспользуемых меток',
+    subtitle: 'Метки с небольшим числом карточек появятся в этом списке'
   }
 } as const satisfies Record<string, EmptyStateCopy>;

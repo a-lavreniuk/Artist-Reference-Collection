@@ -8,9 +8,11 @@ import {
   type CategoryRecord,
   type TagRecord
 } from '../../services/db';
+import { EmptyState } from '../../components/empty-state';
 import { StatisticsDiskUsagePanel } from '../../components/statistics';
 import StatisticsPanelHead from '../../components/statistics/StatisticsPanelHead';
 import TagSettingsModal, { type TagSettingsModalState } from '../../components/tags/TagSettingsModal';
+import { EMPTY_STATE_COPY } from '../../content/emptyStates';
 import { buildDiskBarModel, type DiskBarModel } from '../../utils/buildDiskBarModel';
 import {
   DISK_PRESSURE_NOTIFY_SESSION_KEY,
@@ -268,7 +270,11 @@ export default function SettingsStatisticsPanel() {
             <p className="text-l arc-stats-tags-panel__title">Популярные метки</p>
             <div className="arc-category-tag-cloud">
               {topTags.length === 0 ? (
-                <p className="hint">Нет популярных меток</p>
+                <EmptyState
+                  {...EMPTY_STATE_COPY.statsPopularTagsEmpty}
+                  className="arc-stats-tags-empty"
+                  elevation="sunken"
+                />
               ) : (
                 topTags.map((tag) => (
                   <button
@@ -297,7 +303,11 @@ export default function SettingsStatisticsPanel() {
             <p className="text-l arc-stats-tags-panel__title">Малоиспользуемые метки</p>
             <div className="arc-category-tag-cloud">
               {lowTags.length === 0 ? (
-                <p className="hint">Нет малоиспользуемых меток</p>
+                <EmptyState
+                  {...EMPTY_STATE_COPY.statsLowTagsEmpty}
+                  className="arc-stats-tags-empty"
+                  elevation="sunken"
+                />
               ) : (
                 lowTags.map((tag) => (
                   <button

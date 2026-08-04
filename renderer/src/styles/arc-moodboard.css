@@ -50,7 +50,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: rgb(59 57 70 / 48%);
+  background: color-mix(in srgb, var(--gray-850) 48%, transparent);
 }
 
 .arc-moodboard-queue-thumb {
@@ -115,41 +115,27 @@
   top: 4px;
 }
 
-.arc-moodboard-menu-dropdown {
-  position: absolute;
-  top: calc(100% + var(--s-1));
-  right: 0;
-  left: auto;
-  transform: none;
-  min-width: 17rem;
-  max-width: min(22rem, calc(100vw - (var(--s-3) * 2)), calc(100% - (var(--s-3) * 2)));
-  box-sizing: border-box;
-  width: max-content;
+.arc-moodboard-toolbar .btn-group > span {
+  display: inline-flex;
 }
 
-.arc-moodboard-menu-dropdown .dropdown-list {
-  max-height: none;
-  overflow: visible;
+.arc-moodboard-toolbar .btn-group > span .btn {
+  position: relative;
+  border-radius: 0;
 }
 
-.arc-moodboard-menu-row {
-  justify-content: space-between;
+.arc-moodboard-toolbar .btn-group > span + span .btn {
+  margin-left: -1px;
 }
 
-.arc-moodboard-menu-row.is-disabled {
-  opacity: 0.45;
+.arc-moodboard-toolbar .btn-group > span:first-child .btn {
+  border-top-left-radius: var(--btn-radius);
+  border-bottom-left-radius: var(--btn-radius);
 }
 
-.arc-moodboard-menu-shortcut {
-  color: var(--text-elev-secondary);
-  margin-left: var(--s-3);
-  white-space: nowrap;
-}
-
-.arc-moodboard-menu-sep {
-  height: 1px;
-  margin: var(--s-1) var(--s-2);
-  background: var(--panel-border);
+.arc-moodboard-toolbar .btn-group > span:last-child .btn {
+  border-top-right-radius: var(--btn-radius);
+  border-bottom-right-radius: var(--btn-radius);
 }
 
 .arc-moodboard-toolbar--main {

@@ -1772,6 +1772,14 @@ button.input {
   --menu-content-inset-x: var(--s-3);
 }
 
+.context-menu-backdrop--above-modal {
+  z-index: 10090;
+}
+
+.context-menu--above-modal {
+  z-index: 10091;
+}
+
 .context-menu--static {
   position: relative;
   z-index: auto;
@@ -4676,6 +4684,11 @@ body[data-elevation="raised"],
 .arc-calendar-day--default:not(.arc-calendar-day--header):not(:disabled):hover {
   background: var(--gray-850);
   color: var(--gray-50);
+}
+
+.arc-calendar-day--default:not(.arc-calendar-day--header):not(:disabled):focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
 }
 
 .arc-calendar-day--in-range {

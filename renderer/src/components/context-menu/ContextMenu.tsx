@@ -31,6 +31,11 @@ type Props = {
   /** belowAnchor — под якорем; belowIsland — под navbar-island; aboveAnchor — над якорем. */
   anchorPlacement?: ContextMenuAnchorPlacement;
   panelClassName?: string;
+  /**
+   * Меню поверх модалок (z-index выше ArcAnimatedModalHost ~10050).
+   * Нужно, когда якорь внутри модалки (настройки метки, color format в modal и т.п.).
+   */
+  aboveModal?: boolean;
 };
 
 function resolveAnchorTop(anchorEl: HTMLElement): number {
@@ -88,7 +93,8 @@ export default function ContextMenu({
   menuWidth = CONTEXT_MENU_WIDTH,
   anchorAlign = 'end',
   anchorPlacement = 'belowIsland',
-  panelClassName = ''
+  panelClassName = '',
+  aboveModal = false
 }: Props) {
   const menuId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -201,10 +207,13 @@ export default function ContextMenu({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onClose();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [open, onClose]);
 
   if (!open) return null;
@@ -213,12 +222,19 @@ export default function ContextMenu({
   const panelTop = isPositioned ? layout.top : -10000;
   const panelLeft = isPositioned ? layout.left : -10000;
 
-  const backdropClass = ['context-menu-backdrop', dragClass].filter(Boolean).join(' ');
+  const backdropClass = [
+    'context-menu-backdrop',
+    aboveModal ? 'context-menu-backdrop--above-modal' : '',
+    dragClass
+  ]
+    .filter(Boolean)
+    .join(' ');
   const panelClass = [
     'context-menu',
     'panel',
     'elevation-raised',
     'arc-ui-kit-scope',
+    aboveModal ? 'context-menu--above-modal' : '',
     dragClass,
     panelClassName
   ]

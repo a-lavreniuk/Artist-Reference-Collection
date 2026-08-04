@@ -455,6 +455,12 @@ html[data-theme="light"] .arc-app-outlet {
   cursor: pointer;
 }
 
+.arc-tags-sidebar-row-select:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: -2px;
+  border-radius: var(--radius-s);
+}
+
 .arc-tags-sidebar-row-select .context-menu__item-label-cluster {
   flex: 1 1 auto;
   min-width: 0;
@@ -720,38 +726,6 @@ html[data-theme="light"] .arc-app-outlet {
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   box-shadow: none;
-}
-
-.arc-category-panel-layout[data-input-size="m"][data-btn-size="m"] {
-  --btn-h: 36px;
-  --btn-radius: 12px;
-  --btn-pad-x: 16px;
-  --btn-gap: 8px;
-  --btn-font-size: var(--typo-p-m-size);
-  --btn-line-height: var(--typo-p-m-line);
-  --btn-font-weight: var(--typo-p-m-weight);
-  --btn-icon-size: 16px;
-  --btn-icon-url: url("/ui/icons/Icon%20M.svg");
-  --tab-h: 36px;
-  --tab-radius: 12px;
-  --tab-pad-x: 16px;
-  --tab-font-size: var(--typo-p-m-size);
-  --tab-line-height: var(--typo-p-m-line);
-  --tab-gap: 8px;
-  --tab-icon-size: 16px;
-  --input-h: 36px;
-  --input-radius: 12px;
-  --input-pad-x: 10px;
-  --input-gap: 8px;
-  --input-icon-size: 16px;
-  --textarea-h: 83px;
-  --input-font-size: var(--typo-p-m-size);
-  --input-line-height: var(--typo-p-m-line);
-  --input-icon-search-url: url("/ui/icons/search_m.svg");
-  --input-icon-close-url: url("/ui/icons/close_m.svg");
-  --input-icon-trash-url: url("/ui/icons/trash_m.svg");
-  --input-icon-chevron-url: url("/ui/icons/chevron_m.svg");
-  --input-icon-check-url: url("/ui/icons/check_m.svg");
 }
 
 .arc-category-panel-settings {
@@ -1856,6 +1830,13 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   border: none;
   background: transparent;
   padding: var(--s-4) 0;
+}
+
+.arc-stats-tags-empty {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: var(--s-3) 0;
 }
 
 .arc-tags-page-main__scroll > .arc-empty-state,
@@ -5506,6 +5487,11 @@ html.arc-onboarding-page,
   border-color: var(--gray-800);
 }
 
+.arc-settings-option-card:focus-visible:not(:disabled):not(.is-disabled) {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
 .arc-settings-option-card.is-selected {
   background: var(--gray-950);
 }
@@ -6617,8 +6603,8 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
 .arc-duplicates-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: calc(var(--s-1) * 2);
+  padding: calc(var(--s-1) * 2);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-m);
   cursor: pointer;
@@ -6633,6 +6619,11 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
 
 .arc-duplicates-row:hover .arc-duplicates-row__sim {
   color: var(--gray-50);
+}
+
+.arc-duplicates-row:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
 }
 
 .arc-duplicates-row.is-selected {
@@ -6650,13 +6641,13 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
 .arc-duplicates-row__thumbs {
   flex: 0 0 auto;
   display: flex;
-  gap: 4px;
+  gap: var(--s-1);
 }
 
 .arc-duplicates-row__thumb {
-  width: 38px;
-  height: 38px;
-  border-radius: 4px;
+  width: calc(var(--s-4) + var(--s-1));
+  height: calc(var(--s-4) + var(--s-1));
+  border-radius: var(--radius-xs);
   overflow: hidden;
   background: var(--elevation-sunken);
   display: block;
@@ -6814,10 +6805,10 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   gap: var(--s-2);
   padding: var(--s-3);
   border-radius: var(--radius-m);
-  background: var(--Blur-Background-Default, rgba(26, 26, 29, 0.16));
+  background: color-mix(in srgb, var(--gray-950) 16%, transparent);
   -webkit-backdrop-filter: blur(64px);
   backdrop-filter: blur(64px);
-  color: var(--Blur-Typography, var(--gray-50));
+  color: var(--gray-50);
   pointer-events: none;
 }
 
@@ -6836,13 +6827,13 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
 .arc-duplicates-meta-overlay__row {
   display: flex;
   gap: var(--s-3);
-  color: var(--Blur-Typography, var(--gray-50));
+  color: var(--gray-50);
 }
 
 .arc-duplicates-meta-overlay__path {
   margin: 0;
   max-width: 100%;
-  color: var(--Blur-Typography, var(--gray-50));
+  color: var(--gray-50);
   opacity: 0.5;
   white-space: nowrap;
   overflow: hidden;
@@ -7005,7 +6996,7 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   display: block;
   padding: 0;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.6);
+  background: color-mix(in srgb, var(--gray-1000) 60%, transparent);
   pointer-events: auto;
 }
 
@@ -7117,9 +7108,9 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   display: inline-flex;
   align-items: center;
   border-radius: var(--radius-s);
-  background: var(--Blur-Background, rgba(26, 26, 29, 0.16));
+  background: color-mix(in srgb, var(--gray-950) 16%, transparent);
   backdrop-filter: blur(32px);
-  color: var(--Blur-Typography, var(--gray-50));
+  color: var(--gray-50);
   font-size: var(--typo-p-s-size);
   line-height: var(--typo-p-s-line);
 }

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import { ArcAnimatedModalHost } from '../../motion';
+import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
 import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
@@ -50,7 +51,7 @@ export default function TagSettingsModal({
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const selectorRef = useRef<HTMLDivElement>(null);
+  const categoryAnchorRef = useRef<HTMLButtonElement>(null);
   const lastNonEmptyCreateNameRef = useRef('');
   const [tab, setTab] = useState<TabId>('main');
   const [categoryId, setCategoryId] = useState(() =>
@@ -142,19 +143,22 @@ export default function TagSettingsModal({
     isDirty
   ]);
 
-  useEffect(() => {
-    if (!categoryMenuOpen) return;
-    const onMouseDown = (e: MouseEvent) => {
-      const el = selectorRef.current;
-      if (el && !el.contains(e.target as Node)) {
-        setCategoryMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [categoryMenuOpen]);
-
   const selectedCategory = categories.find((c) => c.id === categoryId) ?? categories[0];
+
+  const categoryMenuRows = useMemo<ContextMenuRow[]>(
+    () =>
+      categories.map((c) => ({
+        type: 'item' as const,
+        key: c.id,
+        label: c.name,
+        selected: c.id === categoryId,
+        onSelect: () => {
+          setCategoryId(c.id);
+          setCategoryMenuOpen(false);
+        }
+      })),
+    [categories, categoryId]
+  );
 
   const onPickFile = async (fileList: FileList | null) => {
     const file = fileList?.[0];
@@ -345,15 +349,13 @@ export default function TagSettingsModal({
                   </label>
                 </div>
                 <div className="arc-modal__slot">
-                  <div
-                    ref={selectorRef}
-                    className={`field selector-field${selectedCategory ? ' has-value' : ''}`}
-                  >
+                  <div className={`field selector-field${selectedCategory ? ' has-value' : ''}`}>
                     <button
+                      ref={categoryAnchorRef}
                       type="button"
                       className="input pseudo-select input-slots"
                       aria-expanded={categoryMenuOpen}
-                      aria-haspopup="listbox"
+                      aria-haspopup="menu"
                       aria-label="Категория"
                       onClick={() => setCategoryMenuOpen((o) => !o)}
                     >
@@ -368,26 +370,16 @@ export default function TagSettingsModal({
                         />
                       </span>
                     </button>
-                    <div className="selector-dropdown" hidden={!categoryMenuOpen}>
-                      <div className="dropdown-list" role="listbox">
-                        {categories.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            className={`dropdown-row${c.id === categoryId ? ' is-checked' : ''}`}
-                            role="option"
-                            aria-selected={c.id === categoryId}
-                            onClick={() => {
-                              setCategoryId(c.id);
-                              setCategoryMenuOpen(false);
-                            }}
-                          >
-                            <span>{c.name}</span>
-                            <span className="dropdown-row-check" aria-hidden="true" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <ContextMenu
+                      open={categoryMenuOpen}
+                      anchorRef={categoryAnchorRef}
+                      onClose={() => setCategoryMenuOpen(false)}
+                      rows={categoryMenuRows}
+                      ariaLabel="Категория"
+                      aboveModal
+                      anchorPlacement="belowAnchor"
+                      anchorAlign="start"
+                    />
                   </div>
                 </div>
                 <div className="arc-modal__slot">

@@ -362,7 +362,7 @@
   width: 12px;
   height: 12px;
   background: transparent;
-  border: 2px solid #fff;
+  border: 2px solid var(--gray-50);
   box-sizing: border-box;
 }
 
