@@ -6,6 +6,7 @@ import { mountArcUiKitDemo, refreshArcUiKitGlyphs } from './arcUiKitBoot';
 import UiKitRangeSliderDemo from './UiKitRangeSliderDemo';
 import UiKitControlsDemo from './UiKitControlsDemo';
 import UiKitProductPatternsDemo from './UiKitProductPatternsDemo';
+import UiKitButtonIconSplitDemo from './UiKitButtonIconSplitDemo';
 import {
   applyUiKitScopeDataset,
   parseUiKitElevation,
@@ -18,6 +19,7 @@ export default function UiKitPage() {
   const rangeSliderRootRef = useRef<Root | null>(null);
   const controlsRootRef = useRef<Root | null>(null);
   const productPatternsRootRef = useRef<Root | null>(null);
+  const buttonIconSplitRootRef = useRef<Root | null>(null);
   const [searchParams] = useSearchParams();
 
   /** Один и тот же объект — иначе при каждом ререндере React снова ставит innerHTML и стирает SVG из injectButtonIcons. */
@@ -50,6 +52,12 @@ export default function UiKitPage() {
       productPatternsRootRef.current.render(<UiKitProductPatternsDemo />);
     }
 
+    const splitEl = scope.querySelector('#uikit-btn-icon-split-live');
+    if (splitEl) {
+      buttonIconSplitRootRef.current = createRoot(splitEl);
+      buttonIconSplitRootRef.current.render(<UiKitButtonIconSplitDemo />);
+    }
+
     return () => {
       ac.abort();
       rangeSliderRootRef.current?.unmount();
@@ -58,6 +66,8 @@ export default function UiKitPage() {
       controlsRootRef.current = null;
       productPatternsRootRef.current?.unmount();
       productPatternsRootRef.current = null;
+      buttonIconSplitRootRef.current?.unmount();
+      buttonIconSplitRootRef.current = null;
     };
   }, []);
 

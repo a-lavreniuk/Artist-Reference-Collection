@@ -41,6 +41,7 @@ alwaysApply: true
 | Datepicker / calendar | `Datepicker`, `Calendar` | Локальный date-picker |
 | Slider | `RangeSlider` / `ValueSlider` | Свой range input UI |
 | Группа кнопок | `btn-group btn-group-ds` | Свой segmented control |
+| Button icon split | `btn-icon-split` + `--brand`/`--ghost`; `__primary` / `__sep` / `__secondary`; stroke Ghost: `--btn-icon-split-ghost-sep` (не фон `__sep`); демо: `UiKitButtonIconSplitDemo` | `btn-group`, gap-«дырка», локальный split, хардкод цвета линии |
 
 Обёртка scope: `arc-ui-kit-scope` + `data-btn-size="m|s|l"` + при необходимости `data-elevation`, `data-typo-tone`.
 

@@ -12,6 +12,7 @@
 | `Calendar` | `components/calendar/` | Календарь |
 | `RangeSlider` | `components/range-slider/` | Слайдер диапазона |
 | `MasonryGrid` | `components/masonry/` | Колоночная сетка |
+| Button icon split | Классы `btn-icon-split` (+ `--brand` / `--ghost`, `__primary` / `__sep` / `__secondary`) в `arc-ui.css`; демо `ui-kit/UiKitButtonIconSplitDemo.tsx` | Split-кнопка: две половины + stroke в `__sep::before` (Figma 2062:14857). Ghost stroke: `--btn-icon-split-ghost-sep` (Dark: 950/900/850; Light: 100/100/150 по sunken/default/raised). Brand stroke: `--brand-600`. Hover/`is-active` скрывает только stroke. Navbar — фаза 2 |
 
 ## Layout и chrome
 

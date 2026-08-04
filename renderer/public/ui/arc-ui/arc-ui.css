@@ -307,6 +307,8 @@ html[data-theme="dark"] {
   --ui-text-primary: var(--gray-200);
   --ui-text-secondary: var(--gray-500);
   --ui-text-disabled: var(--gray-700);
+  /* Fallback until elevation scope sets it (Dark Default) */
+  --btn-icon-split-ghost-sep: var(--gray-900);
 }
 
 *,
@@ -344,6 +346,8 @@ body[data-elevation="sunken"],
   --panel-border: var(--gray-900);
   --text-elev-primary: var(--gray-300);
   --text-elev-secondary: var(--gray-650);
+  /* Button icon split Ghost — stroke line (not sep track) */
+  --btn-icon-split-ghost-sep: var(--gray-950);
 }
 
 body[data-elevation="default"],
@@ -353,6 +357,7 @@ body[data-elevation="default"],
   --panel-border: var(--gray-850);
   --text-elev-primary: var(--gray-250);
   --text-elev-secondary: var(--gray-600);
+  --btn-icon-split-ghost-sep: var(--gray-900);
 }
 
 body[data-elevation="raised"],
@@ -363,6 +368,29 @@ body[data-elevation="raised"],
   --panel-border: var(--gray-800);
   --text-elev-primary: var(--gray-200);
   --text-elev-secondary: var(--gray-550);
+  --btn-icon-split-ghost-sep: var(--gray-850);
+}
+
+/* Button icon split Ghost — stroke line (Light) */
+html[data-theme="light"] body[data-elevation="sunken"],
+html[data-theme="light"] .arc-category-panel-layout[data-elevation="sunken"],
+html[data-theme="light"] .arc-ui-kit-scope[data-elevation="sunken"] {
+  --btn-icon-split-ghost-sep: var(--gray-100);
+}
+
+html[data-theme="light"] body[data-elevation="default"],
+html[data-theme="light"] .arc-ui-kit-scope[data-elevation="default"] {
+  --btn-icon-split-ghost-sep: var(--gray-100);
+}
+
+html[data-theme="light"] body[data-elevation="raised"],
+html[data-theme="light"] .arc-modal,
+html[data-theme="light"] .arc-ui-kit-scope[data-elevation="raised"] {
+  --btn-icon-split-ghost-sep: var(--gray-150);
+}
+
+html[data-theme="light"] {
+  --btn-icon-split-ghost-sep: var(--gray-100);
 }
 
 body[data-elevation="sunken"][data-typo-tone="white"],
@@ -1047,6 +1075,9 @@ body[data-btn-size="l"],
   --btn-font-weight: var(--typo-p-m-weight);
   --btn-icon-size: 24px;
   --btn-icon-url: url("../icons/Icon%20L.svg");
+  --btn-icon-split-secondary-pad-x: var(--s-1);
+  --btn-icon-split-chevron-size: 12px;
+  --btn-icon-split-sep-h: 22px;
   --tab-h: 40px;
   --tab-radius: 12px;
   --tab-pad-x: 16px;
@@ -1068,6 +1099,9 @@ body[data-btn-size="m"],
   --btn-font-weight: var(--typo-p-m-weight);
   --btn-icon-size: 16px;
   --btn-icon-url: url("../icons/Icon%20M.svg");
+  --btn-icon-split-secondary-pad-x: 2px;
+  --btn-icon-split-chevron-size: 12px;
+  --btn-icon-split-sep-h: 22px;
   --tab-h: 32px;
   --tab-radius: var(--radius-s);
   --tab-pad-x: var(--s-2);
@@ -1089,6 +1123,9 @@ body[data-btn-size="s"],
   --btn-font-weight: var(--typo-p-s-weight);
   --btn-icon-size: 12px;
   --btn-icon-url: url("../icons/Icon%20S.svg");
+  --btn-icon-split-secondary-pad-x: 2px;
+  --btn-icon-split-chevron-size: 12px;
+  --btn-icon-split-sep-h: 16px;
   --tab-h: 24px;
   --tab-radius: 8px;
   --tab-pad-x: 8px;
@@ -3301,6 +3338,249 @@ button.input {
 .btn-group-ds .btn.state-hover:not(:disabled):not(:focus-visible) .btn-ds__icon,
 .btn-group-ds .btn.state-hover:not(:disabled):not(:focus-visible) .btn-icon-only__glyph {
   color: var(--btn-group-icon-hover);
+}
+
+/*
+ * Button icon split (Figma ARC-2 / 2062:14857)
+ * Сплошной фон + Separator 1px; полоска (Brand: --brand-600, Ghost: --gray-950);
+ * при hover / state-hover / is-active скрывается только полоска, колонка остаётся.
+ */
+.btn-icon-split {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  width: max-content;
+  max-width: 100%;
+  isolation: isolate;
+}
+
+.btn-icon-split__primary,
+.btn-icon-split__secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--btn-h);
+  min-height: var(--btn-h);
+  max-height: var(--btn-h);
+  border: 1px solid transparent;
+  border-radius: 0;
+  font-size: var(--btn-font-size);
+  line-height: var(--btn-line-height);
+  font-weight: var(--btn-font-weight, var(--typo-p-m-weight));
+  font-family: "Google Sans", "Inter", "Segoe UI", sans-serif;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  box-shadow: none;
+}
+
+.btn-icon-split__primary {
+  gap: var(--btn-gap);
+  padding: 0 var(--btn-pad-x);
+  border-top-left-radius: var(--btn-radius);
+  border-bottom-left-radius: var(--btn-radius);
+  width: max-content;
+}
+
+.btn-icon-split__secondary {
+  gap: 0;
+  padding: 0 var(--btn-icon-split-secondary-pad-x, var(--s-1));
+  border-top-right-radius: var(--btn-radius);
+  border-bottom-right-radius: var(--btn-radius);
+  flex: 0 0 auto;
+}
+
+.btn-icon-split__chevron {
+  width: var(--btn-icon-split-chevron-size, 12px);
+  min-width: var(--btn-icon-split-chevron-size, 12px);
+  height: var(--btn-icon-split-chevron-size, 12px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.btn-icon-split__chevron .arc-icon,
+.btn-icon-split__chevron .btn-icon-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.btn-icon-split__sep {
+  flex: 0 0 1px;
+  width: 1px;
+  align-self: stretch;
+  position: relative;
+  pointer-events: none;
+}
+
+.btn-icon-split__sep::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: var(--btn-icon-split-sep-h, var(--btn-line-height));
+  background: currentColor;
+  opacity: 1;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-icon-split:has(.btn-icon-split__primary:hover:not(:disabled)) .btn-icon-split__sep::before,
+.btn-icon-split:has(.btn-icon-split__secondary:hover:not(:disabled)) .btn-icon-split__sep::before,
+.btn-icon-split:has(.btn-icon-split__primary.state-hover:not(:disabled)) .btn-icon-split__sep::before,
+.btn-icon-split:has(.btn-icon-split__secondary.state-hover:not(:disabled)) .btn-icon-split__sep::before,
+.btn-icon-split:has(.btn-icon-split__secondary.is-active:not(:disabled)) .btn-icon-split__sep::before {
+  opacity: 0;
+}
+
+/* Brand */
+.btn-icon-split--brand .btn-icon-split__primary,
+.btn-icon-split--brand .btn-icon-split__secondary {
+  background: var(--btn-brand-fill-default);
+  border-color: transparent;
+}
+
+.btn-icon-split--brand .btn-icon-split__sep {
+  background: var(--btn-brand-fill-default);
+  /* Figma Separator Line → Brand/600 */
+  color: var(--brand-600);
+}
+
+.btn-icon-split--brand:has(.btn-icon-split__primary:disabled) .btn-icon-split__sep {
+  background: var(--btn-brand-fill-disabled);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary .btn-ds__value {
+  color: var(--btn-brand-value-default);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary .btn-ds__counter {
+  color: var(--btn-brand-counter-default);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary .btn-ds__icon,
+.btn-icon-split--brand .btn-icon-split__chevron {
+  color: var(--btn-brand-icon-default);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:hover:not(:disabled),
+.btn-icon-split--brand .btn-icon-split__primary.state-hover:not(:disabled),
+.btn-icon-split--brand .btn-icon-split__secondary:hover:not(:disabled),
+.btn-icon-split--brand .btn-icon-split__secondary.state-hover:not(:disabled),
+.btn-icon-split--brand .btn-icon-split__secondary.is-active:not(:disabled) {
+  background: var(--btn-brand-fill-hover);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:hover:not(:disabled) .btn-ds__value,
+.btn-icon-split--brand .btn-icon-split__primary.state-hover:not(:disabled) .btn-ds__value {
+  color: var(--btn-brand-value-hover);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:hover:not(:disabled) .btn-ds__counter,
+.btn-icon-split--brand .btn-icon-split__primary.state-hover:not(:disabled) .btn-ds__counter {
+  color: var(--btn-brand-counter-hover);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:hover:not(:disabled) .btn-ds__icon,
+.btn-icon-split--brand .btn-icon-split__primary.state-hover:not(:disabled) .btn-ds__icon,
+.btn-icon-split--brand .btn-icon-split__secondary:hover:not(:disabled) .btn-icon-split__chevron,
+.btn-icon-split--brand .btn-icon-split__secondary.state-hover:not(:disabled) .btn-icon-split__chevron,
+.btn-icon-split--brand .btn-icon-split__secondary.is-active:not(:disabled) .btn-icon-split__chevron {
+  color: var(--btn-brand-icon-hover);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:disabled,
+.btn-icon-split--brand .btn-icon-split__secondary:disabled {
+  background: var(--btn-brand-fill-disabled);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:disabled .btn-ds__value {
+  color: var(--btn-brand-value-disabled);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:disabled .btn-ds__counter {
+  color: var(--btn-brand-counter-disabled);
+}
+
+.btn-icon-split--brand .btn-icon-split__primary:disabled .btn-ds__icon,
+.btn-icon-split--brand .btn-icon-split__secondary:disabled .btn-icon-split__chevron {
+  color: var(--btn-brand-icon-disabled);
+}
+
+/* Ghost — Figma: половины и Separator без заливки; Line = Gray/950 на canvas Gray/1000 */
+.btn-icon-split--ghost .btn-icon-split__primary,
+.btn-icon-split--ghost .btn-icon-split__secondary {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-icon-split--ghost .btn-icon-split__sep {
+  background: transparent;
+  /* Stroke only; token remaps per theme + elevation (--btn-icon-split-ghost-sep) */
+  color: var(--btn-icon-split-ghost-sep, var(--gray-900));
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary .btn-ds__value {
+  color: var(--btn-secondary-value-default);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary .btn-ds__counter {
+  color: var(--btn-secondary-counter-default);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary .btn-ds__icon,
+.btn-icon-split--ghost .btn-icon-split__chevron {
+  color: var(--btn-secondary-icon-default);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:hover:not(:disabled),
+.btn-icon-split--ghost .btn-icon-split__primary.state-hover:not(:disabled),
+.btn-icon-split--ghost .btn-icon-split__secondary:hover:not(:disabled),
+.btn-icon-split--ghost .btn-icon-split__secondary.state-hover:not(:disabled),
+.btn-icon-split--ghost .btn-icon-split__secondary.is-active:not(:disabled) {
+  background: var(--button-ghost-hover);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:hover:not(:disabled) .btn-ds__value,
+.btn-icon-split--ghost .btn-icon-split__primary.state-hover:not(:disabled) .btn-ds__value {
+  color: var(--btn-secondary-value-hover);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:hover:not(:disabled) .btn-ds__counter,
+.btn-icon-split--ghost .btn-icon-split__primary.state-hover:not(:disabled) .btn-ds__counter {
+  color: var(--btn-secondary-counter-hover);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:hover:not(:disabled) .btn-ds__icon,
+.btn-icon-split--ghost .btn-icon-split__primary.state-hover:not(:disabled) .btn-ds__icon,
+.btn-icon-split--ghost .btn-icon-split__secondary:hover:not(:disabled) .btn-icon-split__chevron,
+.btn-icon-split--ghost .btn-icon-split__secondary.state-hover:not(:disabled) .btn-icon-split__chevron,
+.btn-icon-split--ghost .btn-icon-split__secondary.is-active:not(:disabled) .btn-icon-split__chevron {
+  color: var(--btn-secondary-icon-hover);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:disabled,
+.btn-icon-split--ghost .btn-icon-split__secondary:disabled {
+  background: var(--button-ghost-disabled);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:disabled .btn-ds__value {
+  color: var(--btn-secondary-value-disabled);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:disabled .btn-ds__counter {
+  color: var(--btn-secondary-counter-disabled);
+}
+
+.btn-icon-split--ghost .btn-icon-split__primary:disabled .btn-ds__icon,
+.btn-icon-split--ghost .btn-icon-split__secondary:disabled .btn-icon-split__chevron {
+  color: var(--btn-secondary-icon-disabled);
 }
 
 .toast {
