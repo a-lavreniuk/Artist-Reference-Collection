@@ -104,17 +104,28 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   const filtersRef = useRef(filters);
   const sortRef = useRef(sort);
   const statsRef = useRef(stats);
-  /** Duration hidden by auto-clear (no video); kept so persistence / restore are not wiped. */
+  /** Values hidden by auto-clear; kept so persistence / restore are not wiped. */
   const suppressedDurationRef = useRef<DurationFilterValue[] | null>(null);
+  const suppressedFileExtensionsRef = useRef<string[] | null>(null);
   filtersRef.current = filters;
   sortRef.current = sort;
   statsRef.current = stats;
 
   const filtersForPersist = useCallback((nextFilters: GalleryAdvancedFilters): GalleryAdvancedFilters => {
-    if (nextFilters.duration.length > 0) return nextFilters;
-    const suppressed = suppressedDurationRef.current;
-    if (!suppressed || suppressed.length === 0) return nextFilters;
-    return { ...nextFilters, duration: suppressed };
+    let out = nextFilters;
+    if (out.duration.length === 0) {
+      const suppressed = suppressedDurationRef.current;
+      if (suppressed && suppressed.length > 0) {
+        out = { ...out, duration: suppressed };
+      }
+    }
+    if (out.fileExtensions.length === 0) {
+      const suppressed = suppressedFileExtensionsRef.current;
+      if (suppressed && suppressed.length > 0) {
+        out = { ...out, fileExtensions: suppressed };
+      }
+    }
+    return out;
   }, []);
 
   const persistTabState = useCallback(
@@ -135,9 +146,8 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   const setFilters = useCallback(
     (next: GalleryAdvancedFilters) => {
       const migrated = migrateGalleryAdvancedFilters(next);
-      if ('duration' in migrated) {
-        suppressedDurationRef.current = null;
-      }
+      suppressedDurationRef.current = null;
+      suppressedFileExtensionsRef.current = null;
       filtersRef.current = migrated;
       setFiltersState(migrated);
       const tab = mainTabRef.current;
@@ -162,6 +172,9 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       if (persist && 'duration' in patch) {
         suppressedDurationRef.current = null;
       }
+      if (persist && 'fileExtensions' in patch) {
+        suppressedFileExtensionsRef.current = null;
+      }
       setFiltersState((prev) => {
         const next = { ...prev, ...patch };
         filtersRef.current = next;
@@ -179,6 +192,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     const empty = emptyGalleryAdvancedFilters();
     const defaultSort = { ...DEFAULT_GALLERY_SORT };
     suppressedDurationRef.current = null;
+    suppressedFileExtensionsRef.current = null;
     filtersRef.current = empty;
     sortRef.current = defaultSort;
     setFiltersState(empty);
@@ -253,6 +267,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
 
     if (isGalleryFilterPersistTab(nextTab)) {
       suppressedDurationRef.current = null;
+      suppressedFileExtensionsRef.current = null;
       const loaded = readGalleryFiltersSortTab(nextTab);
       filtersRef.current = loaded.filters;
       sortRef.current = loaded.sort;
@@ -316,8 +331,26 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     const anyExtStillPresent = filters.fileExtensions.some(
       (ext) => (stats.fileExtensions[ext] ?? 0) > 0
     );
-    if (!anyExtStillPresent) patchFilters({ fileExtensions: [] }, { persist: false });
+    if (!anyExtStillPresent) {
+      suppressedFileExtensionsRef.current = filters.fileExtensions;
+      patchFilters({ fileExtensions: [] }, { persist: false });
+    }
   }, [stats, filters.fileExtensions, patchFilters]);
+
+  // Restore file type filters once matching extensions reappear in stats.
+  useEffect(() => {
+    if (!stats || filters.fileExtensions.length > 0) return;
+    const candidates =
+      suppressedFileExtensionsRef.current ??
+      (isGalleryFilterPersistTab(mainTabRef.current)
+        ? readGalleryFiltersSortTab(mainTabRef.current).filters.fileExtensions
+        : []);
+    if (candidates.length === 0) return;
+    const restored = candidates.filter((ext) => (stats.fileExtensions[ext] ?? 0) > 0);
+    if (restored.length === 0) return;
+    suppressedFileExtensionsRef.current = null;
+    patchFilters({ fileExtensions: restored }, { persist: false });
+  }, [stats, filters.fileExtensions.length, patchFilters]);
 
   useEffect(() => {
     const onLibrary = () => {
@@ -352,6 +385,7 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       const nextFilters = migrateGalleryAdvancedFilters(preset.payload.filters);
       const nextSort = preset.payload.sort;
       suppressedDurationRef.current = null;
+      suppressedFileExtensionsRef.current = null;
       filtersRef.current = nextFilters;
       sortRef.current = nextSort;
       setFiltersState(nextFilters);
