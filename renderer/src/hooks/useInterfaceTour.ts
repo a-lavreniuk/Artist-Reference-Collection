@@ -130,6 +130,9 @@ export function useInterfaceTour() {
       openingTourCardRef.current = false;
       userOverrodeTourRouteRef.current = false;
       routeSyncRequestedRef.current = true;
+      // Sync epoch: вход в Настройки уже поднял manualSectionNavEpoch.
+      // Без синхронизации prepare-effect считает это «ручным уходом» и сбрасывает автонавигацию на /gallery.
+      manualSectionNavEpochRef.current = getManualSectionNavigationEpoch();
       if (openCardIdRef.current) {
         closeCardRef.current();
       }

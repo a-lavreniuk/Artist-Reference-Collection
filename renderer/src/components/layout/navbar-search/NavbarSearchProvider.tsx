@@ -47,6 +47,9 @@ import {
   ARC_START_COLOR_SEARCH_EVENT,
   type StartColorSearchDetail
 } from '../../../search/startColorSearch';
+import { addTag } from '../../../services/db';
+import { showAppNotification } from '../../../services/notificationService';
+import TagSettingsModal, { type TagSettingsModalState } from '../../tags/TagSettingsModal';
 import { NavbarSearchContextProvider } from './NavbarSearchContext';
 import type { NavbarSearchContextValue, NavbarSearchProps } from './types';
 import { NAVBAR_SEARCH_MODES } from './modes/registry';
@@ -105,6 +108,7 @@ export function NavbarSearchProvider({
   const [panelColorTolerance, setPanelColorTolerance] = useState(DEFAULT_COLOR_SEARCH_TOLERANCE);
   const [colorFormat, setColorFormatState] = useState<ColorFormat>(() => readColorSearchFormatPreference());
   const [searchIslandWidePinned, setSearchIslandWidePinned] = useState(false);
+  const [createTagModal, setCreateTagModal] = useState<TagSettingsModalState | null>(null);
 
   const searchAnchorRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -145,6 +149,21 @@ export function NavbarSearchProvider({
       void loadIndex();
     }
   }, [loadIndex, searchMode]);
+
+  const openCreateTagModal = useCallback(
+    async (initialName: string) => {
+      let categoryId = categories[0]?.id;
+      if (!categoryId) {
+        const loaded = await loadIndex();
+        categoryId = loaded[0]?.id;
+      }
+      if (!categoryId) return;
+      // Закрываем search до открытия модалки: её lifecycle не должен зависеть от панели.
+      closePanel();
+      setCreateTagModal({ mode: 'create', categoryId, initialName });
+    },
+    [categories, closePanel, loadIndex]
+  );
 
   const displayColorHex =
     (searchMode === 'color' ? panelColorHex.replace(/^#/, '') : null) ||
@@ -606,9 +625,36 @@ export function NavbarSearchProvider({
     showAiClearDraft,
     showAiClearResult,
     loadIndex,
+    openCreateTagModal,
     searchParams,
     setSearchParams
   };
 
-  return <NavbarSearchContextProvider value={contextValue}>{children}</NavbarSearchContextProvider>;
+  return (
+    <NavbarSearchContextProvider value={contextValue}>
+      {children}
+      {createTagModal ? (
+        <TagSettingsModal
+          state={createTagModal}
+          categories={categories}
+          onClose={() => setCreateTagModal(null)}
+          onCreate={async (payload) => {
+            await addTag(payload.categoryId, payload.name, {
+              description: payload.description,
+              tooltipImageDataUrl: payload.tooltipImageDataUrl
+            });
+            await loadIndex();
+            setCreateTagModal(null);
+            showAppNotification({
+              message: 'Метка создана',
+              variant: 'success',
+              skipPrefCheck: true
+            });
+          }}
+          onSave={async () => {}}
+          onDelete={async () => {}}
+        />
+      ) : null}
+    </NavbarSearchContextProvider>
+  );
 }

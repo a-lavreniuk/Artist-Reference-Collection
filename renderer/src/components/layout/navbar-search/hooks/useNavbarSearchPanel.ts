@@ -65,6 +65,8 @@ export function useNavbarSearchPanel({
       if (document.querySelector('.arc-search-panel')?.contains(target)) return;
       if (getSearchIsland()?.contains(target)) return;
       if (target instanceof Element && target.closest('.context-menu, .context-menu-backdrop')) return;
+      // Модалки (в т.ч. создание метки) живут вне панели — клик по ним не закрывает search.
+      if (target instanceof Element && target.closest('.arc-modal-host')) return;
       onClose();
     };
     document.addEventListener('pointerdown', onPointerDown, true);
@@ -76,6 +78,7 @@ export function useNavbarSearchPanel({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (document.querySelector('.context-menu')) return;
+      if (document.querySelector('.arc-modal-host')) return;
       onClose();
     };
     window.addEventListener('keydown', onKey);

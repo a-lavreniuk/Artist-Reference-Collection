@@ -104,7 +104,7 @@ function GalleryCardTile({
     ? `${formatVideoClock(videoHover.currentMs / 1000)} / ${formatVideoClock(durationMs / 1000)}`
     : '';
   const showMoodboardAction = Boolean(moodboardEnabled && onToggleMoodboard);
-  const showSimilarAction = Boolean(onFindSimilar);
+  const showSimilarAction = Boolean(onFindSimilar) && !isVideo;
   const hideOverlayTime = useGalleryCardOverlayTimeFit({
     enabled: isVideo && !overlaySuppressed,
     controlsRef: overlayControlsRef,

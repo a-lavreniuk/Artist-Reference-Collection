@@ -310,6 +310,7 @@ export default function CardDetailOverlay({
     setCard(null);
     setThumbSrc(null);
     setSrc(null);
+    setSimilar([]);
     void (async () => {
       const c = await reloadCard(cardId);
       if (cancelled) return;
@@ -347,7 +348,13 @@ export default function CardDetailOverlay({
       if (!cancelled) setCollCounts(await getCollectionCardCounts());
       if (!cancelled) setCollectionPreviews(await getCollectionPreviewSlices(1));
 
-      if (!cancelled) setSimilar(await listSimilarCards(cardId, 15));
+      if (!cancelled) {
+        if (c?.type === 'video') {
+          setSimilar([]);
+        } else {
+          setSimilar(await listSimilarCards(cardId, 15));
+        }
+      }
       if (!cancelled) {
         const moodboardIds = await getMoodboardCardIds();
         setMoodboardCardIds(new Set(moodboardIds));
@@ -1011,6 +1018,10 @@ export default function CardDetailOverlay({
       onToggleMoodboard: (id) => void handleSimilarToggleMoodboard(id),
       onFindSimilar: handleSimilarFind,
       onCardDeleted: async () => {
+        if (card?.type === 'video') {
+          setSimilar([]);
+          return;
+        }
         setSimilar(await listSimilarCards(cardId, 15));
       }
     });
@@ -1092,13 +1103,18 @@ export default function CardDetailOverlay({
           onClick={() => void handleSuggestTags()}
           disabled={busy || suggestTagsBusy}
         >
-          <span className="btn-ds__value">{suggestTagsBusy ? 'Предлагаю…' : 'Предложить'}</span>
           {suggestTagsBusy ? (
-            <span className="btn-ds__icon" aria-hidden="true">
-              <Loader decorative />
-            </span>
+            <>
+              <span className="btn-ds__icon" aria-hidden="true">
+                <Loader decorative />
+              </span>
+              <span className="btn-ds__value">Предлагаю…</span>
+            </>
           ) : (
-            <span className="btn-ds__icon arc-icon-ai" aria-hidden="true" />
+            <>
+              <span className="btn-ds__value">Предложить</span>
+              <span className="btn-ds__icon arc-icon-ai" aria-hidden="true" />
+            </>
           )}
         </button>
       ) : null}
@@ -1136,7 +1152,7 @@ export default function CardDetailOverlay({
 
       <div className="arc-card-detail-scroll">
         <div
-          className={`arc-card-detail-shell${similar.length > 0 ? ' arc-card-detail-shell--has-similar' : ''}`}
+          className={`arc-card-detail-shell${card?.type !== 'video' && similar.length > 0 ? ' arc-card-detail-shell--has-similar' : ''}`}
         >
         <div className="arc-card-detail-main-row" style={mainRowStyle}>
           <div className="arc-card-detail-preview arc-card-detail-preview--video panel elevation-sunken">
@@ -1658,7 +1674,7 @@ export default function CardDetailOverlay({
           </aside>
         </div>
 
-        {similar.length > 0 ? (
+        {card?.type !== 'video' && similar.length > 0 ? (
           <section className="arc-card-detail-similar" data-interface-tour-anchor="card-detail-similar">
             <div className="arc-card-detail-similar-head">
               <h2 className="h1">Похожие изображения</h2>

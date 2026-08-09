@@ -150,4 +150,31 @@ describe('buildCardContextMenuRows — normal mode', () => {
     );
     expect(gifLabels).not.toContain('Выбрать кадр превью');
   });
+
+  it('hides find similar for video cards', () => {
+    const videoLabels = rowLabels(
+      buildCardContextMenuRows({
+        scope: { kind: 'library' },
+        inMoodboard: false,
+        hasSourcePath: true,
+        cardType: 'video',
+        cardFormat: 'mp4',
+        selectionModeActive: false,
+        actions: baseActions()
+      })
+    );
+    expect(videoLabels).not.toContain('Найти похожее');
+
+    const imageLabels = rowLabels(
+      buildCardContextMenuRows({
+        scope: { kind: 'library' },
+        inMoodboard: false,
+        hasSourcePath: true,
+        cardType: 'image',
+        selectionModeActive: false,
+        actions: baseActions()
+      })
+    );
+    expect(imageLabels).toContain('Найти похожее');
+  });
 });

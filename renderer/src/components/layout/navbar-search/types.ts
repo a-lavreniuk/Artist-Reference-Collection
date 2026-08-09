@@ -74,7 +74,8 @@ export type NavbarSearchContextValue = {
   showAiSend: boolean;
   showAiClearDraft: boolean;
   showAiClearResult: boolean;
-  loadIndex: () => Promise<void>;
+  loadIndex: () => Promise<CategoryRecord[]>;
+  openCreateTagModal: (initialName: string) => void | Promise<void>;
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof import('react-router-dom').useSearchParams>[1];
   closePanel: () => void;

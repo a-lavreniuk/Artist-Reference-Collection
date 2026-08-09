@@ -63,7 +63,8 @@ function GalleryListRow({
       ? 'arc-icon-bookmark-off'
       : 'arc-icon-bookmark-on'
     : 'arc-icon-bookmark';
-  const showActions = Boolean((moodboardEnabled && onToggleMoodboard) || onFindSimilar);
+  const showFindSimilar = Boolean(onFindSimilar) && card.type !== 'video';
+  const showActions = Boolean((moodboardEnabled && onToggleMoodboard) || showFindSimilar);
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
@@ -145,7 +146,7 @@ function GalleryListRow({
             </span>
           </button>
         ) : null}
-        {onFindSimilar ? (
+        {showFindSimilar ? (
           <button
             type="button"
             className="btn btn-outline btn-ds"
@@ -153,7 +154,7 @@ function GalleryListRow({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              onFindSimilar(card.id);
+              onFindSimilar?.(card.id);
             }}
           >
             <span className="btn-ds__icon arc-icon-search" aria-hidden="true" />
@@ -169,6 +170,7 @@ function propsEqual(prev: Props, next: Props): boolean {
   return (
     prev.card.id === next.card.id &&
     prev.card.name === next.card.name &&
+    prev.card.type === next.card.type &&
     prev.card.format === next.card.format &&
     prev.card.fileSize === next.card.fileSize &&
     prev.card.width === next.card.width &&

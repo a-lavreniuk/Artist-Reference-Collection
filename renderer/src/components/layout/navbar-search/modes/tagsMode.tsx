@@ -140,8 +140,7 @@ function TagsPanelContent({ ctx }: NavbarSearchPanelContentProps) {
     toggleTag,
     setRecentTick,
     selectRecentCard,
-    categories,
-    loadIndex
+    openCreateTagModal
   } = ctx;
 
   const showRecentTags = recentIds.length > 0;
@@ -163,9 +162,7 @@ function TagsPanelContent({ ctx }: NavbarSearchPanelContentProps) {
               Меток с таким именем не найдено.{' '}
               <SearchPanelCreateTagAction
                 query={draft.trim()}
-                categories={categories}
-                onReloadIndex={loadIndex}
-                onCreated={(tagId) => toggleTag(tagId)}
+                onOpenCreate={(name) => void openCreateTagModal(name)}
               />
             </p>
           ) : (

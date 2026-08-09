@@ -26,6 +26,7 @@ export function useNavbarSearchTagsIndex() {
     );
     tagsByCategoryRef.current = map;
     setTagsVersion((v) => v + 1);
+    return sorted;
   }, []);
 
   useEffect(() => {

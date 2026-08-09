@@ -17,6 +17,10 @@ function canShowPreviewFramePicker(input: BuildCardContextMenuRowsInput): boolea
   return canPickVideoPreviewFrame(pseudoCard);
 }
 
+function canShowFindSimilar(input: BuildCardContextMenuRowsInput): boolean {
+  return input.cardType !== 'video';
+}
+
 function itemRow(
   key: string,
   label: string,
@@ -134,8 +138,14 @@ function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[]
 
   rows.push(
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
-    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-folder-plus', actions.onOpenCollections),
-    itemRow('similar', 'Найти похожее', 'arc-icon-search', actions.onFindSimilar),
+    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-folder-plus', actions.onOpenCollections)
+  );
+
+  if (canShowFindSimilar(input)) {
+    rows.push(itemRow('similar', 'Найти похожее', 'arc-icon-search', actions.onFindSimilar));
+  }
+
+  rows.push(
     itemRow('open-folder', 'Открыть папку исходника', 'arc-icon-folder-open', actions.onOpenSourceFolder, {
       disabled: !hasSourcePath
     })
