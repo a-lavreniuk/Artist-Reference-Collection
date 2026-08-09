@@ -45,7 +45,7 @@ import {
 import { downloadGgufModel, cancelGgufDownload, pauseGgufDownload, resumeGgufDownload } from './ai/downloadGguf';
 import { verifyHeavyGgufLoad } from './ai/heavyModelVerify';
 import { runAiSearch } from './ai/aiSearchService';
-import { ensureLightClipForHybrid } from './ai/aiEmbeddingService';
+import { ensureLightClipForHybrid, isQwenSearchModel } from './ai/aiEmbeddingService';
 import { testJoyCaptionLoad } from './ai/joyCaption';
 import { testQwenEmbedding } from './ai/qwenVlEmbedding';
 import { shutdownLlamaBridge } from './ai/llamaCppBridge';
@@ -189,6 +189,8 @@ async function finalizeModelInstall(
   options?: {
     withHybridClip?: boolean;
     setActiveSearch?: boolean;
+    /** When installing caption manually from settings — turn on AI Описание toggle. Default true. */
+    enableCaptionToggle?: boolean;
     onComplete?: () => void | Promise<void>;
   }
 ): Promise<void> {
@@ -216,7 +218,9 @@ async function finalizeModelInstall(
 
   await progress.run(cursor, cursor + 12, async () => {
     if (role === 'caption') {
-      await writeAppPreferences({ aiCaptionEnabled: true });
+      if (options?.enableCaptionToggle !== false) {
+        await writeAppPreferences({ aiCaptionEnabled: true });
+      }
     } else if (options?.setActiveSearch !== false && SEARCH_MODEL_IDS.includes(entry.id as SearchModelId)) {
       await writeAppPreferences({
         aiSearchModelId: entry.id as SearchModelId,
@@ -231,6 +235,76 @@ async function finalizeModelInstall(
   await progress.run(cursor, 100, async () => {
     if (options?.onComplete) await options.onComplete();
   });
+}
+
+/**
+ * After any search model install/update, ensure JoyCaption is on disk (for hybrid / on-demand).
+ * Does not enable the user-facing AI Описание toggle.
+ */
+async function downloadCaptionModelIfMissing(userData: string): Promise<void> {
+  if (await isModelInstalled(userData, 'caption')) return;
+  if (downloadingRole != null) return;
+
+  const role: ModelRole = 'caption';
+  const hardware = detectHardware();
+  const entry = getModelEntry(role);
+  if (!isTierSupported(hardware, 'heavy')) return;
+
+  await ensureModelsDirs(userData);
+
+  downloadingRole = role;
+  downloadPercent = 0;
+  downloadPhase = 'runtime';
+  downloadBytesReceived = null;
+  downloadBytesTotal = null;
+  broadcastDownloadProgress(role, 0, 'runtime');
+
+  const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
+    const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
+    broadcastDownloadProgress(role, info.percent, 'model', {
+      received: info.bytesReceived,
+      total: info.bytesTotal
+    });
+  };
+
+  try {
+    if (!(await isLlamaRuntimeInstalled(userData, 'cpu'))) {
+      await ensureLlamaRuntime(userData, 'cpu', (percent) => broadcastDownloadProgress(role, percent, 'runtime'));
+    }
+    if (await hasCudaServerBinary(userData)) {
+      await ensureLlamaRuntime(userData, 'cuda', (percent) => {
+        const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
+        broadcastDownloadProgress(role, mapped, 'runtime');
+      });
+    }
+    downloadPhase = 'model';
+    broadcastDownloadProgress(role, 0, 'model');
+    await downloadGgufModel(userData, entry, report);
+    if (!(await hasModelArtifactsOnDisk(userData, role))) {
+      throw new Error('Файлы JoyCaption не найдены после загрузки.');
+    }
+    await finalizeModelInstall(role, userData, entry, entry.id, {
+      enableCaptionToggle: false,
+      setActiveSearch: false,
+      onComplete: () => scheduleIdleIndexing()
+    });
+  } finally {
+    broadcastDownloadComplete(role);
+    downloadingRole = null;
+    downloadPercent = null;
+    downloadPhase = null;
+    downloadBytesReceived = null;
+    downloadBytesTotal = null;
+  }
+}
+
+function scheduleEnsureJoyCaption(userData: string): void {
+  setTimeout(() => {
+    void downloadCaptionModelIfMissing(userData).catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      broadcast('arc:ai-error', { message, fallback: true });
+    });
+  }, 0);
 }
 
 async function ensureVisionRuntimeForUpdate(userData: string, role: ModelRole): Promise<void> {
@@ -465,6 +539,7 @@ export function registerAiIpc(): void {
           withHybridClip: false,
           onComplete: () => scheduleIdleIndexing()
         });
+        if (role !== 'caption') scheduleEnsureJoyCaption(userData);
         return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
       }
 
@@ -482,6 +557,7 @@ export function registerAiIpc(): void {
       await finalizeModelInstall(role, userData, entry, result.modelId, {
         onComplete: () => scheduleIdleIndexing()
       });
+      if (role !== 'caption') scheduleEnsureJoyCaption(userData);
       return { ok: true as const, modelId: result.modelId, role, tier: entry.tier };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -633,6 +709,7 @@ export function registerAiIpc(): void {
           else scheduleIdleIndexing();
         }
       });
+      if (role !== 'caption') scheduleEnsureJoyCaption(userData);
       return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -772,6 +849,18 @@ export function registerAiIpc(): void {
     return suggestTagsForCard(cardId);
   });
 
+  ipcMain.handle('arc:ai-generate-card-description', async (_e, payload: unknown) => {
+    const cardId =
+      typeof payload === 'string'
+        ? payload.trim()
+        : typeof (payload as { cardId?: unknown })?.cardId === 'string'
+          ? String((payload as { cardId: string }).cardId).trim()
+          : '';
+    if (!cardId) return { ok: false as const, error: 'Не указана карточка.' };
+    const { generateCardDescription } = await import('./ai/generateCardDescription');
+    return generateCardDescription(cardId);
+  });
+
   ipcMain.handle('arc:ai-set-enabled', async (_e, payload: unknown) => {
     const p = payload as {
       enabled?: boolean;
@@ -832,7 +921,7 @@ export function registerAiIpc(): void {
     clearAiSearchCache();
 
     const searchOn = next.aiSearchEnabled || next.aiSemanticSearchEnabled;
-    if (searchOn || next.aiCaptionEnabled) {
+    if (searchOn) {
       if ((await hasAnyInstalledSearchModel(app.getPath('userData'))) || (await isModelInstalled(app.getPath('userData'), 'caption'))) {
         scheduleIdleIndexing();
       }
@@ -875,8 +964,7 @@ export function registerAiIpc(): void {
     if (!root) return [];
     await ensureLibraryReady(root);
     const db = openLibraryDb(root);
-    const indexed =
-      prefs.aiCaptionEnabled && (modelId === 'qwen3-vl-embedding-2b' || modelId === 'qwen3-vl-embedding-8b')
+    const indexed = isQwenSearchModel(modelId)
         ? Math.max(countHybridEmbeddingsForModel(db, modelId), countEmbeddingsForModel(db, modelId))
         : countEmbeddingsForModel(db, modelId);
     if (indexed === 0) {

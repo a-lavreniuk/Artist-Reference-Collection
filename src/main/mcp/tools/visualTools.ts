@@ -4,6 +4,7 @@ import { app } from 'electron';
 import { readAppPreferences } from '../../appPreferences';
 import { searchCardsBySimilarImage } from '../../ai/similarImageSearch';
 import { isModelInstalled, sanitizeSearchModelId } from '../../ai/modelManager';
+import { isQwenSearchModel } from '../../ai/aiEmbeddingService';
 import { openLibraryDb } from '../../storage/db';
 import {
   countEmbeddingsForModel,
@@ -92,8 +93,7 @@ export function registerVisualTools(ctx: McpRegisterContext): void {
             throw new Error('Модель не установлена');
           }
           const db = openLibraryDb(root);
-          const indexed =
-            prefs.aiCaptionEnabled && (modelId === 'qwen3-vl-embedding-2b' || modelId === 'qwen3-vl-embedding-8b')
+          const indexed = isQwenSearchModel(modelId)
               ? Math.max(countHybridEmbeddingsForModel(db, modelId), countEmbeddingsForModel(db, modelId))
               : countEmbeddingsForModel(db, modelId);
           if (indexed === 0) {

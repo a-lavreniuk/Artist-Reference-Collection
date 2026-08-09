@@ -3547,7 +3547,8 @@ button.input {
 }
 
 .btn-icon-split--ghost .btn-icon-split__primary .btn-ds__icon,
-.btn-icon-split--ghost .btn-icon-split__chevron {
+.btn-icon-split--ghost .btn-icon-split__chevron,
+.btn-icon-split--ghost .btn-icon-split__secondary .btn-ds__icon {
   color: var(--btn-secondary-icon-default);
 }
 
@@ -3573,7 +3574,10 @@ button.input {
 .btn-icon-split--ghost .btn-icon-split__primary.state-hover:not(:disabled) .btn-ds__icon,
 .btn-icon-split--ghost .btn-icon-split__secondary:hover:not(:disabled) .btn-icon-split__chevron,
 .btn-icon-split--ghost .btn-icon-split__secondary.state-hover:not(:disabled) .btn-icon-split__chevron,
-.btn-icon-split--ghost .btn-icon-split__secondary.is-active:not(:disabled) .btn-icon-split__chevron {
+.btn-icon-split--ghost .btn-icon-split__secondary.is-active:not(:disabled) .btn-icon-split__chevron,
+.btn-icon-split--ghost .btn-icon-split__secondary:hover:not(:disabled) .btn-ds__icon,
+.btn-icon-split--ghost .btn-icon-split__secondary.state-hover:not(:disabled) .btn-ds__icon,
+.btn-icon-split--ghost .btn-icon-split__secondary.is-active:not(:disabled) .btn-ds__icon {
   color: var(--btn-secondary-icon-hover);
 }
 

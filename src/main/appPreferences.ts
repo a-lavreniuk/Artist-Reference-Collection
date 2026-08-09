@@ -80,8 +80,10 @@ export type AppPreferencesV1 = {
   aiSearchEnabled: boolean;
   /** Active search embedding model. */
   aiSearchModelId: SearchModelId;
-  /** JoyCaption descriptions / caption index. */
+  /** On-demand AI description button in card detail (does not control search ai_caption). */
   aiCaptionEnabled: boolean;
+  /** One-shot: aiCaptionEnabled forced off after on-demand UX migration. */
+  aiCaptionOnDemandMigrated: boolean;
   /** @deprecated Migrated to aiSearchModelId + aiCaptionEnabled */
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -162,6 +164,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiSearchEnabled: false,
     aiSearchModelId: 'clip-vit-base-patch32',
     aiCaptionEnabled: false,
+    aiCaptionOnDemandMigrated: true,
     aiModelTier: 'light',
     aiThreads: 4,
     aiGpuLayers: 0,
@@ -299,6 +302,7 @@ function migrateAiPrefsFromLegacy(
         : d.aiSemanticSearchEnabled;
 
   const aiSearchEnabled = hasNewSearchFlag ? (raw.aiSearchEnabled as boolean) : semantic;
+  // Legacy heavy tier used to imply caption; after on-demand migration that link is broken in sanitizeFromDisk.
   const aiCaptionEnabled = hasNewCaptionFlag
     ? (raw.aiCaptionEnabled as boolean)
     : legacyTier === 'heavy';
@@ -370,6 +374,8 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     mcpServerEnabled: typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
     mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
     ...migrateAiPrefsFromLegacy(raw, d),
+    aiCaptionOnDemandMigrated:
+      typeof raw.aiCaptionOnDemandMigrated === 'boolean' ? raw.aiCaptionOnDemandMigrated : false,
     aiThreads: typeof raw.aiThreads === 'number' ? Math.max(1, Math.min(32, Math.round(raw.aiThreads))) : d.aiThreads,
     aiGpuLayers:
       typeof raw.aiGpuLayers === 'number' ? Math.max(0, Math.min(128, Math.round(raw.aiGpuLayers))) : d.aiGpuLayers,
@@ -418,6 +424,13 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
 
   if (!sanitized.launchAtLogin) {
     sanitized.launchAtLoginHidden = false;
+  }
+
+  // One-shot: user-facing AI description is on-demand only; force toggle off for existing installs.
+  if (!sanitized.aiCaptionOnDemandMigrated) {
+    sanitized.aiCaptionEnabled = false;
+    sanitized.aiCaptionOnDemandMigrated = true;
+    sanitized.aiModelTier = 'light';
   }
 
   return sanitized;
@@ -525,6 +538,9 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   if ('aiCaptionEnabled' in patch && typeof patch.aiCaptionEnabled === 'boolean') {
     next.aiCaptionEnabled = patch.aiCaptionEnabled;
   }
+  if ('aiCaptionOnDemandMigrated' in patch && typeof patch.aiCaptionOnDemandMigrated === 'boolean') {
+    next.aiCaptionOnDemandMigrated = patch.aiCaptionOnDemandMigrated;
+  }
   if ('aiModelTier' in patch) {
     // Legacy writes: map to caption + keep search model
     next.aiModelTier = sanitizeAiModelTier(patch.aiModelTier);
@@ -605,7 +621,13 @@ export async function readAppPreferences(): Promise<AppPreferencesV1> {
   if (cached) return cached;
   try {
     const raw = JSON.parse(await readFile(prefsPath(), 'utf8')) as Partial<AppPreferencesV1> & Record<string, unknown>;
+    const hadMigrationFlag = typeof raw.aiCaptionOnDemandMigrated === 'boolean' && raw.aiCaptionOnDemandMigrated;
     cached = sanitizeFromDisk(raw);
+    if (!hadMigrationFlag) {
+      const filePath = prefsPath();
+      await mkdir(path.dirname(filePath), { recursive: true });
+      await writeFile(filePath, JSON.stringify(cached, null, 2), 'utf8');
+    }
   } catch {
     cached = defaultAppPreferences();
   }
@@ -616,7 +638,13 @@ export function readAppPreferencesSync(): AppPreferencesV1 {
   if (cached) return cached;
   try {
     const raw = JSON.parse(fs.readFileSync(prefsPath(), 'utf8')) as Partial<AppPreferencesV1> & Record<string, unknown>;
+    const hadMigrationFlag = typeof raw.aiCaptionOnDemandMigrated === 'boolean' && raw.aiCaptionOnDemandMigrated;
     cached = sanitizeFromDisk(raw);
+    if (!hadMigrationFlag) {
+      const filePath = prefsPath();
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(cached, null, 2), 'utf8');
+    }
   } catch {
     cached = defaultAppPreferences();
   }

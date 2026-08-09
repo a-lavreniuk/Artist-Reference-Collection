@@ -20,8 +20,8 @@ import {
 } from '../storage/cardEmbeddings';
 import { ensureLibraryReady } from '../storage/libraryStorage';
 
-function usesFusion(modelId: SearchModelId, captionEnabled: boolean): boolean {
-  return captionEnabled && isQwenSearchModel(modelId);
+function usesFusion(modelId: SearchModelId): boolean {
+  return isQwenSearchModel(modelId);
 }
 
 export async function runAiSearch(query: string): Promise<AiSearchResult[]> {
@@ -57,7 +57,7 @@ export async function runAiSearch(query: string): Promise<AiSearchResult[]> {
   await ensureLibraryReady(root);
   const db = openLibraryDb(root);
 
-  const fusion = usesFusion(modelId, prefs.aiCaptionEnabled);
+  const fusion = usesFusion(modelId);
   const indexed = fusion
     ? Math.max(countHybridEmbeddingsForModel(db, modelId), countEmbeddingsForModel(db, modelId))
     : countEmbeddingsForModel(db, modelId);

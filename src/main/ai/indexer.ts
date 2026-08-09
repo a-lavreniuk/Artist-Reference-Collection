@@ -20,7 +20,6 @@ import {
   captionForHeavyIndex,
   embedHeavyHybridForIndex,
   embedSearchImage,
-  ensureLightClipForHybrid,
   isQwenSearchModel
 } from './aiEmbeddingService';
 import { initAiWorker, getModelsDir } from './aiWorkerBridge';
@@ -130,8 +129,13 @@ function broadcastError(message: string, fallback?: boolean): void {
   broadcast('arc:ai-error', { message, fallback: Boolean(fallback) });
 }
 
-function usesHybridIndex(searchModelId: SearchModelId, captionEnabled: boolean): boolean {
-  return captionEnabled && isQwenSearchModel(searchModelId);
+/** Qwen hybrid search needs JoyCaption text in ai_caption — independent of user description toggle. */
+function needsSearchCaption(searchModelId: SearchModelId): boolean {
+  return isQwenSearchModel(searchModelId);
+}
+
+function usesHybridIndex(searchModelId: SearchModelId): boolean {
+  return needsSearchCaption(searchModelId);
 }
 
 async function openLibraryDbSafe(): Promise<{ root: string; db: NonNullable<ReturnType<typeof getLibraryDb>> } | null> {
@@ -193,10 +197,9 @@ export function resetWorkerReadyState(): void {
 
 function countIndexedForModel(
   db: NonNullable<ReturnType<typeof getLibraryDb>>,
-  modelId: SearchModelId,
-  captionEnabled: boolean
+  modelId: SearchModelId
 ): number {
-  if (usesHybridIndex(modelId, captionEnabled)) {
+  if (usesHybridIndex(modelId)) {
     const hybridCount = countHybridEmbeddingsForModel(db, modelId);
     if (hybridCount > 0) return hybridCount;
   }
@@ -206,10 +209,9 @@ function countIndexedForModel(
 function listMissingForModel(
   db: NonNullable<ReturnType<typeof getLibraryDb>>,
   modelId: SearchModelId,
-  captionEnabled: boolean,
   limit: number
 ): string[] {
-  if (usesHybridIndex(modelId, captionEnabled)) {
+  if (usesHybridIndex(modelId)) {
     return listCardsMissingHybridEmbedding(db, modelId, limit);
   }
   return listCardsMissingEmbedding(db, modelId, limit);
@@ -220,7 +222,7 @@ export async function getIndexStatus(): Promise<IndexStatus> {
   const prefs = await readAppPreferences();
   const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
   const total = opened ? countIndexableImageCards(opened.db) : 0;
-  const indexed = opened ? countIndexedForModel(opened.db, modelId, prefs.aiCaptionEnabled) : 0;
+  const indexed = opened ? countIndexedForModel(opened.db, modelId) : 0;
   return {
     indexed,
     total,
@@ -269,17 +271,8 @@ async function ensureWorkerReady(): Promise<boolean> {
         maxRamMb: prefs.aiMaxRamMb
       });
       workerReadyModelId = loaded.modelId;
-    } else if (prefs.aiCaptionEnabled) {
-      // Hybrid may still need CLIP only if we ever mix — for Qwen hybrid we don't.
-      // Ensure llama runtime exists via caption/search install paths elsewhere.
-    } else {
-      // Qwen-only: no CLIP worker required
     }
-
-    // Optional: ensure CLIP present for hybrid legacy paths
-    if (prefs.aiCaptionEnabled && modelId === 'clip-vit-base-patch32') {
-      await ensureLightClipForHybrid();
-    }
+    // Qwen hybrid: llama/JoyCaption installed via search or caption download paths.
 
     activeSearchModelId = modelId;
     lastError = null;
@@ -293,24 +286,23 @@ async function ensureWorkerReady(): Promise<boolean> {
 
 export async function indexCardById(cardId: string): Promise<boolean> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiSearchEnabled && !prefs.aiSemanticSearchEnabled && !prefs.aiCaptionEnabled) {
+  const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
+  if (!searchOn) {
     return false;
   }
 
   const opened = await openLibraryDbSafe();
   if (!opened) return false;
 
-  const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
-  if (searchOn) {
-    const ready = await ensureWorkerReady();
-    if (!ready || !activeSearchModelId) return false;
-  }
+  const ready = await ensureWorkerReady();
+  if (!ready || !activeSearchModelId) return false;
 
   const db = requireLibraryDb(opened.root);
   const imagePath = resolveImageAbsPath(opened.root, cardId, db);
   if (!imagePath) return false;
 
   const searchModelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
+  const buildSearchCaption = needsSearchCaption(searchModelId);
   let heavyLoadProgress = 5;
 
   try {
@@ -318,11 +310,11 @@ export async function indexCardById(cardId: string): Promise<boolean> {
     logAiIndexer('Индексация карточки', {
       cardId,
       searchModelId,
-      caption: prefs.aiCaptionEnabled
+      searchCaption: buildSearchCaption
     });
 
     let caption = '';
-    if (prefs.aiCaptionEnabled) {
+    if (buildSearchCaption) {
       indexStage = 'captions';
       if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) {
         throw new Error('Модель описания (JoyCaption) не установлена');
@@ -336,22 +328,20 @@ export async function indexCardById(cardId: string): Promise<boolean> {
       setCurrentCardProgress(48);
 
       // Qwen hybrid: second JoyCaption pass extracts on-image UI text into ai_caption.
-      if (isQwenSearchModel(searchModelId)) {
-        try {
-          logAiIndexer('Извлечение видимого текста', { cardId, searchModelId });
-          const onVisibleStatus = (message: string) => {
-            logAiIndexer(message, { cardId });
-            heavyLoadProgress = Math.min(54, Math.max(heavyLoadProgress, 48) + 1);
-            setCurrentCardProgress(heavyLoadProgress);
-          };
-          const visibleText = await extractVisibleTextFromImage(imagePath, onVisibleStatus);
-          caption = mergeCaptionWithVisibleText(caption, visibleText);
-        } catch (err) {
-          logAiIndexerWarn('Не удалось извлечь видимый текст — продолжаем с описанием', {
-            cardId,
-            error: err instanceof Error ? err.message : String(err)
-          });
-        }
+      try {
+        logAiIndexer('Извлечение видимого текста', { cardId, searchModelId });
+        const onVisibleStatus = (message: string) => {
+          logAiIndexer(message, { cardId });
+          heavyLoadProgress = Math.min(54, Math.max(heavyLoadProgress, 48) + 1);
+          setCurrentCardProgress(heavyLoadProgress);
+        };
+        const visibleText = await extractVisibleTextFromImage(imagePath, onVisibleStatus);
+        caption = mergeCaptionWithVisibleText(caption, visibleText);
+      } catch (err) {
+        logAiIndexerWarn('Не удалось извлечь видимый текст — продолжаем с описанием', {
+          cardId,
+          error: err instanceof Error ? err.message : String(err)
+        });
       }
 
       setCurrentCardProgress(55);
@@ -362,12 +352,12 @@ export async function indexCardById(cardId: string): Promise<boolean> {
       caption = getCardAiCaption(db, cardId) ?? '';
     }
 
-    if (searchOn) {
+    {
       indexStage = 'embeddings';
       const liveDb = requireLibraryDb(opened.root);
       const tagNames = getCardTagNames(liveDb, cardId);
 
-      if (usesHybridIndex(searchModelId, prefs.aiCaptionEnabled)) {
+      if (usesHybridIndex(searchModelId)) {
         logAiIndexer('Гибридные эмбеддинги', { cardId, searchModelId });
         setCurrentCardProgress(65);
         const hybrid = await embedHeavyHybridForIndex(imagePath, caption, tagNames, searchModelId);
@@ -424,39 +414,37 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
     try {
       const prefs = await readAppPreferences();
       const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
-      if (!searchOn && !prefs.aiCaptionEnabled) return;
+      if (!searchOn) return;
 
       const opened = await openLibraryDbSafe();
       if (!opened) return;
 
-      if (searchOn) {
-        const ready = await ensureWorkerReady();
-        if (!ready || !activeSearchModelId) return;
-      } else {
-        activeSearchModelId = sanitizeSearchModelId(prefs.aiSearchModelId);
-      }
+      const ready = await ensureWorkerReady();
+      if (!ready || !activeSearchModelId) return;
 
       lastError = null;
       let db = opened.db;
       const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
       let total = countIndexableImageCards(db);
-      let indexed = searchOn ? countIndexedForModel(db, modelId, prefs.aiCaptionEnabled) : 0;
+      let indexed = countIndexedForModel(db, modelId);
       let didWork = false;
       let autoTagCards = 0;
       let autoTagTags = 0;
       let autoTagCreated = 0;
       lastIndexed = indexed;
       lastTotal = total;
-      logAiIndexer('Старт цикла индексации', { modelId, indexed, total, caption: prefs.aiCaptionEnabled });
+      logAiIndexer('Старт цикла индексации', {
+        modelId,
+        indexed,
+        total,
+        searchCaption: needsSearchCaption(modelId)
+      });
       broadcastProgress(indexed, total);
 
       while (!indexPaused) {
         const queued = pendingCardIds.splice(0, pendingCardIds.length);
-        const batchSize =
-          prefs.aiCaptionEnabled || isQwenSearchModel(modelId) ? HEAVY_BATCH_SIZE : BATCH_SIZE;
-        const missing = searchOn
-          ? listMissingForModel(db, modelId, prefs.aiCaptionEnabled, batchSize)
-          : [];
+        const batchSize = needsSearchCaption(modelId) ? HEAVY_BATCH_SIZE : BATCH_SIZE;
+        const missing = listMissingForModel(db, modelId, batchSize);
         const targets = [...new Set([...queued, ...missing])].filter((id) => !skippedCardIds.has(id));
         if (targets.length === 0) break;
 
@@ -494,7 +482,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
             if (lastError) broadcastError(lastError);
           }
           db = requireLibraryDb(opened.root);
-          indexed = searchOn ? countIndexedForModel(db, modelId, prefs.aiCaptionEnabled) : indexed + (ok ? 1 : 0);
+          indexed = countIndexedForModel(db, modelId);
           total = countIndexableImageCards(db);
           lastIndexed = indexed;
           lastTotal = total;
@@ -503,7 +491,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
       }
 
       db = requireLibraryDb(opened.root);
-      indexed = searchOn ? countIndexedForModel(db, modelId, prefs.aiCaptionEnabled) : lastIndexed;
+      indexed = countIndexedForModel(db, modelId);
       total = countIndexableImageCards(db);
       lastIndexed = indexed;
       lastTotal = total;
@@ -604,7 +592,7 @@ export async function queueCardsForIndexing(cardIds: string[]): Promise<void> {
   const userData = app.getPath('userData');
 
   const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
-  if ((searchOn || prefs.aiCaptionEnabled) && (await hasAnyInstalledSearchModel(userData) || await isModelInstalled(userData, 'caption'))) {
+  if (searchOn && (await hasAnyInstalledSearchModel(userData) || await isModelInstalled(userData, 'caption'))) {
     await runIndexingLoop(ids);
   }
 

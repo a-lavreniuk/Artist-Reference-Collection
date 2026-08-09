@@ -591,8 +591,13 @@ contextBridge.exposeInMainWorld('arc', {
           }>;
           tagIds: string[];
           createdCount: number;
+          proposedNew: string[];
         }
       | { ok: false; error: string }
+    >,
+  aiGenerateCardDescription: (cardId: string) =>
+    ipcRenderer.invoke('arc:ai-generate-card-description', { cardId }) as Promise<
+      { ok: true; description: string } | { ok: false; error: string }
     >,
   onAutoTagApplied: (cb: (detail: { cards: number; tags: number; created: number }) => void) => {
     const fn = (_: unknown, payload: { cards: number; tags: number; created: number }) => cb(payload);

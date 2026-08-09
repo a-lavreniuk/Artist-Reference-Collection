@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ToastAlert from '../../../components/alert/ToastAlert';
 import ValueSlider from '../../../components/range-slider/ValueSlider';
 import { Loader } from '../../../components/loader';
@@ -39,6 +40,11 @@ import { useSettingsAi } from '../hooks/useSettingsAi';
 import { useSettingsAutoTag } from '../hooks/useSettingsAutoTag';
 
 type AiSettingsTab = 'search' | 'caption' | 'tags';
+
+function parseAiSettingsTab(raw: string | null): AiSettingsTab {
+  if (raw === 'caption' || raw === 'tags' || raw === 'search') return raw;
+  return 'search';
+}
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return <p className="arc-settings-section__title text-s">{children}</p>;
@@ -98,8 +104,30 @@ export default function SettingsAiSearchPanel() {
     resumeDownload
   } = useSettingsAi();
   const autoTag = useSettingsAutoTag();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseAiSettingsTab(searchParams.get('tab'));
+  const captionPanelRef = useRef<HTMLDivElement>(null);
 
-  const [tab, setTab] = useState<AiSettingsTab>('search');
+  const setTab = (next: AiSettingsTab) => {
+    setSearchParams(
+      (prev) => {
+        const nextParams = new URLSearchParams(prev);
+        if (next === 'search') nextParams.delete('tab');
+        else nextParams.set('tab', next);
+        return nextParams;
+      },
+      { replace: true }
+    );
+  };
+
+  useEffect(() => {
+    if (tab !== 'caption') return;
+    const frame = window.requestAnimationFrame(() => {
+      captionPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [tab]);
+
   const [captionDownloadOwner, setCaptionDownloadOwner] = useState<'caption' | 'tags' | null>(null);
 
   const isDownloading = isAiDownloading(snapshot);
@@ -119,9 +147,6 @@ export default function SettingsAiSearchPanel() {
     status?.searchModelCards[0];
   const minRamMb = activeSearchCard?.minRamMb ?? status?.captionModelCard.minRamMb ?? 2048;
 
-  const anyFeatureOn = Boolean(
-    status?.enabled || status?.captionEnabled || autoTag.enabled || captionDownloadOwner
-  );
   const downloadRole =
     snapshot.downloadTier ?? status?.download?.role ?? status?.download?.modelId ?? status?.download?.tier ?? null;
   const captionDownloading =
@@ -447,33 +472,6 @@ export default function SettingsAiSearchPanel() {
                 </div>
               )}
 
-              {anyFeatureOn ? (
-                <>
-                  <SettingsSeparator />
-                  <div className="arc-settings-ai-slider-col">
-                    <SectionLabel>
-                      Ресурсы {status.resourcePreset}% ({formatRamGb(status.resources.maxRamMb)})
-                    </SectionLabel>
-                    <ValueSlider
-                      size="s"
-                      min={10}
-                      max={100}
-                      step={5}
-                      value={status.resourcePreset}
-                      showValue={false}
-                      disabled={disabled}
-                      formatValue={(v) => `${v}%`}
-                      onChange={(value) => void updateResourcePreset(value)}
-                      ariaLabel="Ресурсы для AI"
-                    />
-                    <p className="text-m arc-settings-ai-slider-col__hint">
-                      Доступно {formatRamGb(status.hardware.totalMemoryMb)}. Минимум для активной модели{' '}
-                      {formatRamGb(minRamMb)}
-                    </p>
-                  </div>
-                </>
-              ) : null}
-
               <SettingsSeparator />
 
               <div className="tabs tabs-wrap" role="tablist" aria-label="Разделы AI">
@@ -523,24 +521,47 @@ export default function SettingsAiSearchPanel() {
                       </div>
 
                       {(phase === 'ready' || activeModelReady) && !searchDownloading ? (
-                        <div className="arc-settings-ai-tab-block arc-settings-ai-slider-col">
-                          <SectionLabel>Точность поиска {status.searchStrictness}%</SectionLabel>
-                          <ValueSlider
-                            size="s"
-                            min={0}
-                            max={100}
-                            step={5}
-                            value={status.searchStrictness}
-                            showValue={false}
-                            disabled={disabled}
-                            formatValue={(v) => `${v}`}
-                            onChange={(value) => void updateSearchStrictness(value)}
-                            ariaLabel="Точность поиска"
-                          />
-                          <p className="text-m arc-settings-ai-slider-col__hint">
-                            {strictnessHint(status.searchStrictness)}
-                          </p>
-                        </div>
+                        <>
+                          <div className="arc-settings-ai-tab-block arc-settings-ai-slider-col">
+                            <SectionLabel>Точность поиска {status.searchStrictness}%</SectionLabel>
+                            <ValueSlider
+                              size="s"
+                              min={0}
+                              max={100}
+                              step={5}
+                              value={status.searchStrictness}
+                              showValue={false}
+                              disabled={disabled}
+                              formatValue={(v) => `${v}`}
+                              onChange={(value) => void updateSearchStrictness(value)}
+                              ariaLabel="Точность поиска"
+                            />
+                            <p className="text-m arc-settings-ai-slider-col__hint">
+                              {strictnessHint(status.searchStrictness)}
+                            </p>
+                          </div>
+                          <div className="arc-settings-ai-tab-block arc-settings-ai-slider-col">
+                            <SectionLabel>
+                              Ресурсы {status.resourcePreset}% ({formatRamGb(status.resources.maxRamMb)})
+                            </SectionLabel>
+                            <ValueSlider
+                              size="s"
+                              min={10}
+                              max={100}
+                              step={5}
+                              value={status.resourcePreset}
+                              showValue={false}
+                              disabled={disabled}
+                              formatValue={(v) => `${v}%`}
+                              onChange={(value) => void updateResourcePreset(value)}
+                              ariaLabel="Ресурсы для AI"
+                            />
+                            <p className="text-m arc-settings-ai-slider-col__hint">
+                              Доступно {formatRamGb(status.hardware.totalMemoryMb)}. Минимум для активной модели{' '}
+                              {formatRamGb(minRamMb)}
+                            </p>
+                          </div>
+                        </>
                       ) : null}
 
                       {(phase === 'ready' || activeModelReady) && !searchDownloading ? (
@@ -552,12 +573,12 @@ export default function SettingsAiSearchPanel() {
               ) : null}
 
               {tab === 'caption' ? (
-                <div className="arc-settings-ai-tab-panel" role="tabpanel">
+                <div className="arc-settings-ai-tab-panel" role="tabpanel" ref={captionPanelRef}>
                   <div className="arc-settings-ai-tab-block">
                     <p className="text-m arc-settings-desc-block__text">
-                      ARC создаёт текстовые описания изображений с помощью JoyCaption. Описания сохраняются локально
-                      и улучшают продвинутый поиск, когда активна модель Qwen — в том числе по тексту, видимому на
-                      скриншотах и макетах.
+                      Включает кнопку «Сгенерировать описание» в деталке карточки. Описание можно править вручную.
+                      Отдельно при индексации поиска JoyCaption создаёт скрытый текст для гибридного поиска (Qwen) —
+                      он не показывается в интерфейсе.
                     </p>
                     <SettingsToggleRow
                       label="Включить AI Описание"

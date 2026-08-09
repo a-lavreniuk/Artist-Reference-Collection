@@ -110,8 +110,6 @@ type Props = {
 const DESCRIPTION_SAVE_MS = 600;
 const FIELD_SAVE_MS = 600;
 
-type DescriptionTab = 'description' | 'ai';
-
 function normalizeExternalUrl(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -164,8 +162,6 @@ export default function CardDetailOverlay({
   const [draftName, setDraftName] = useState('');
   const [draftLink, setDraftLink] = useState('');
   const [description, setDescription] = useState('');
-  const [descriptionTab, setDescriptionTab] = useState<DescriptionTab>('description');
-  const descriptionTabPrevRef = useRef<DescriptionTab>('description');
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
   const [settingsMinWidth, setSettingsMinWidth] = useState(CARD_DETAIL_SETTINGS_WIDTH_MIN);
@@ -173,10 +169,13 @@ export default function CardDetailOverlay({
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
+  const [confirmOverwriteDescription, setConfirmOverwriteDescription] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
   const [suggestTagsBusy, setSuggestTagsBusy] = useState(false);
+  const [generateDescriptionBusy, setGenerateDescriptionBusy] = useState(false);
   const [autoTagEnabled, setAutoTagEnabled] = useState(false);
+  const [aiCaptionEnabled, setAiCaptionEnabled] = useState(false);
   const [pendingTagSearchIds, setPendingTagSearchIds] = useState<string[]>([]);
   const pendingTagSearchIdsRef = useRef<string[]>([]);
   pendingTagSearchIdsRef.current = pendingTagSearchIds;
@@ -203,9 +202,10 @@ export default function CardDetailOverlay({
 
   const libraryScope = parseLibraryScope(searchParams);
   const inTrash = libraryScope === 'trash';
-  const hasAiCaption = Boolean(
-    (card?.type === 'image' || card?.type === 'video') && card.aiCaption?.trim()
-  );
+  const cardIdRef = useRef(cardId);
+  cardIdRef.current = cardId;
+  const canGenerateDescription =
+    aiCaptionEnabled && (card?.type === 'image' || card?.type === 'video');
 
   const reloadCard = useCallback(async (id: string) => {
     let c = await getCardById(id);
@@ -239,25 +239,23 @@ export default function CardDetailOverlay({
   }, []);
 
   useEffect(() => {
-    setDescriptionTab('description');
     setPendingTagSearchIds([]);
+    setConfirmOverwriteDescription(false);
+    setGenerateDescriptionBusy(false);
   }, [cardId]);
 
   useEffect(() => {
     let cancelled = false;
     void getAppPreferences().then((prefs) => {
-      if (!cancelled) setAutoTagEnabled(Boolean(prefs.aiAutoTagEnabled));
+      if (!cancelled) {
+        setAutoTagEnabled(Boolean(prefs.aiAutoTagEnabled));
+        setAiCaptionEnabled(Boolean(prefs.aiCaptionEnabled));
+      }
     });
     return () => {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (!hasAiCaption && descriptionTab === 'ai') {
-      setDescriptionTab('description');
-    }
-  }, [hasAiCaption, descriptionTab]);
 
   useEffect(() => {
     const onProgress = window.arc?.onAiIndexProgress?.((payload) => {
@@ -268,7 +266,7 @@ export default function CardDetailOverlay({
     const onComplete = window.arc?.onAiIndexComplete?.(() => {
       void refreshAiCaption(cardId);
     });
-    // Видео-caption после импорта шлёт quiet extension-import — подтянуть aiCaption в открытой деталке.
+    // Видео-caption после импорта шлёт quiet extension-import — подтянуть скрытый aiCaption в модели карточки.
     const onImportSaved = window.arc?.onExtensionImportSaved?.(({ cardIds }) => {
       if (!cardIds.includes(cardId)) return;
       void refreshAiCaption(cardId);
@@ -285,6 +283,7 @@ export default function CardDetailOverlay({
   }, [
     confirmDelete,
     confirmPermanentDelete,
+    confirmOverwriteDescription,
     busy,
     card,
     similar,
@@ -296,7 +295,9 @@ export default function CardDetailOverlay({
     tagsModalOpen,
     collectionsModalOpen,
     autoTagEnabled,
+    aiCaptionEnabled,
     suggestTagsBusy,
+    generateDescriptionBusy,
     palette,
     settingsWidth,
     thumbSrc,
@@ -534,10 +535,8 @@ export default function CardDetailOverlay({
   }, []);
 
   useLayoutEffect(() => {
-    const tabChanged = descriptionTabPrevRef.current !== descriptionTab;
-    descriptionTabPrevRef.current = descriptionTab;
-    fitDescriptionTextarea({ animate: tabChanged });
-  }, [fitDescriptionTextarea, description, descriptionTab, card?.aiCaption, hasAiCaption]);
+    fitDescriptionTextarea({ animate: false });
+  }, [fitDescriptionTextarea, description]);
 
   useEffect(() => {
     const el = descriptionTextareaRef.current;
@@ -550,7 +549,7 @@ export default function CardDetailOverlay({
       gsap.killTweensOf(el);
       descriptionFitLockRef.current = false;
     };
-  }, [fitDescriptionTextarea, hasAiCaption]);
+  }, [fitDescriptionTextarea]);
 
   const scheduleNameSave = useCallback(
     (next: string) => {
@@ -1026,14 +1025,63 @@ export default function CardDetailOverlay({
       }
     });
 
-  const addRowButton = (label: string, onClick: () => void) => (
+  const addRowButton = (label: string, iconClass: string, onClick: () => void) => (
     <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
       <button type="button" className="btn btn-outline btn-ds arc-card-detail-add-row" onClick={onClick}>
         <span className="btn-ds__value">{label}</span>
-        <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+        <span className={`btn-ds__icon ${iconClass}`} aria-hidden="true" />
       </button>
     </div>
   );
+
+  const runGenerateDescription = async () => {
+    if (!card || generateDescriptionBusy) return;
+    if (!window.arc?.aiGenerateCardDescription) {
+      setActionAlert({ message: 'Генерация описания недоступна', variant: 'danger' });
+      return;
+    }
+    if (descriptionSaveTimerRef.current != null) {
+      window.clearTimeout(descriptionSaveTimerRef.current);
+      descriptionSaveTimerRef.current = null;
+    }
+    const requestCardId = card.id;
+    setGenerateDescriptionBusy(true);
+    try {
+      const result = await window.arc.aiGenerateCardDescription(requestCardId);
+      if (cardIdRef.current !== requestCardId) return;
+      if (!result.ok) {
+        setActionAlert({ message: result.error, variant: 'danger' });
+        return;
+      }
+      setDescription(result.description);
+      setCard((prev) =>
+        prev && prev.id === requestCardId ? { ...prev, description: result.description } : prev
+      );
+      setActionAlert({ message: 'Описание сгенерировано', variant: 'brand' });
+    } catch (err) {
+      if (cardIdRef.current !== requestCardId) return;
+      setActionAlert({
+        message: err instanceof Error ? err.message : 'Не удалось сгенерировать описание',
+        variant: 'danger'
+      });
+    } finally {
+      if (cardIdRef.current === requestCardId) setGenerateDescriptionBusy(false);
+    }
+  };
+
+  const handleGenerateDescriptionClick = () => {
+    if (!card || generateDescriptionBusy) return;
+    if (description.trim()) {
+      setConfirmOverwriteDescription(true);
+      return;
+    }
+    void runGenerateDescription();
+  };
+
+  const handleConfirmOverwriteDescription = () => {
+    setConfirmOverwriteDescription(false);
+    void runGenerateDescription();
+  };
 
   const handleSuggestTags = async () => {
     if (!card || suggestTagsBusy) return;
@@ -1085,6 +1133,45 @@ export default function CardDetailOverlay({
     }
   };
 
+  const descriptionSectionFooter = canGenerateDescription ? (
+    <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
+      <div className="btn-group btn-group-ds arc-card-detail-desc-gen">
+        <button
+          type="button"
+          className="btn btn-outline btn-ds"
+          aria-label={generateDescriptionBusy ? 'Генерация описания' : 'Сгенерировать описание'}
+          disabled={busy || generateDescriptionBusy}
+          onClick={handleGenerateDescriptionClick}
+        >
+          {generateDescriptionBusy ? (
+            <>
+              <span className="btn-ds__icon" aria-hidden="true">
+                <Loader decorative />
+              </span>
+              <span className="btn-ds__value">Генерирую…</span>
+            </>
+          ) : (
+            <>
+              <span className="btn-ds__value">Сгенерировать описание</span>
+              <span className="btn-ds__icon arc-icon-description" aria-hidden="true" />
+            </>
+          )}
+        </button>
+        <Tooltip content="Настройки AI Описания" position="top" as="span">
+          <button
+            type="button"
+            className="btn btn-outline btn-icon-only"
+            aria-label="Настройки AI Описания"
+            disabled={busy || generateDescriptionBusy}
+            onClick={() => navigate('/settings/ai?tab=caption')}
+          >
+            <span className="btn-icon-only__glyph arc-icon-options" aria-hidden="true" />
+          </button>
+        </Tooltip>
+      </div>
+    </div>
+  ) : null;
+
   const tagsSectionFooter = (
     <div
       className={[
@@ -1096,6 +1183,17 @@ export default function CardDetailOverlay({
         .join(' ')}
       data-btn-size="m"
     >
+      {!suggestTagsBusy ? (
+        <button
+          type="button"
+          className="btn btn-outline btn-ds arc-card-detail-add-row"
+          onClick={() => setTagsModalOpen(true)}
+          disabled={busy}
+        >
+          <span className="btn-ds__value">Добавить метки</span>
+          <span className="btn-ds__icon arc-icon-tag" aria-hidden="true" />
+        </button>
+      ) : null}
       {autoTagEnabled && (card?.type === 'image' || card?.type === 'video') ? (
         <button
           type="button"
@@ -1116,17 +1214,6 @@ export default function CardDetailOverlay({
               <span className="btn-ds__icon arc-icon-ai" aria-hidden="true" />
             </>
           )}
-        </button>
-      ) : null}
-      {!suggestTagsBusy ? (
-        <button
-          type="button"
-          className="btn btn-outline btn-ds arc-card-detail-add-row"
-          onClick={() => setTagsModalOpen(true)}
-          disabled={busy}
-        >
-          <span className="btn-ds__value">Добавить</span>
-          <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
         </button>
       ) : null}
     </div>
@@ -1395,7 +1482,7 @@ export default function CardDetailOverlay({
 
             <div ref={settingsScrollRef} className="arc-card-detail-settings-scroll">
               <div className="arc-card-detail-settings-scroll__pad">
-              <CollapsibleSection title="Описание">
+              <CollapsibleSection title="Описание" footer={descriptionSectionFooter}>
                 <div
                   className="arc-card-detail-description-fields arc-ui-kit-scope"
                   data-input-size="m"
@@ -1487,80 +1574,20 @@ export default function CardDetailOverlay({
                       </button>
                     </Tooltip>
                   </div>
-                  {hasAiCaption ? (
-                    <div className="arc-card-detail-description-editor">
-                      <div
-                        className="arc-card-detail-description-tabs tabs arc-ui-kit-scope"
-                        data-btn-size="s"
-                        role="tablist"
-                        aria-label="Описание карточки"
-                      >
-                        <button
-                          type="button"
-                          className={`tab-button${descriptionTab === 'description' ? ' is-active' : ''}`}
-                          role="tab"
-                          aria-selected={descriptionTab === 'description'}
-                          id="arc-card-detail-desc-tab-description"
-                          aria-controls="arc-card-detail-desc-panel"
-                          onClick={() => setDescriptionTab('description')}
-                        >
-                          Описание
-                        </button>
-                        <button
-                          type="button"
-                          className={`tab-button${descriptionTab === 'ai' ? ' is-active' : ''}`}
-                          role="tab"
-                          aria-selected={descriptionTab === 'ai'}
-                          id="arc-card-detail-desc-tab-ai"
-                          aria-controls="arc-card-detail-desc-panel"
-                          onClick={() => setDescriptionTab('ai')}
-                        >
-                          AI описание
-                        </button>
-                      </div>
-                      <label className="field">
-                        <textarea
-                          ref={descriptionTextareaRef}
-                          id="arc-card-detail-desc-panel"
-                          className="input textarea arc-card-detail-description-textarea"
-                          role="tabpanel"
-                          aria-labelledby={
-                            descriptionTab === 'ai'
-                              ? 'arc-card-detail-desc-tab-ai'
-                              : 'arc-card-detail-desc-tab-description'
-                          }
-                          placeholder={descriptionTab === 'ai' ? 'AI описание' : 'Описание'}
-                          rows={4}
-                          value={descriptionTab === 'ai' ? (card?.aiCaption ?? '') : description}
-                          readOnly={descriptionTab === 'ai'}
-                          onChange={
-                            descriptionTab === 'ai'
-                              ? undefined
-                              : (e) => {
-                                  const v = e.target.value;
-                                  setDescription(v);
-                                  scheduleDescriptionSave(v);
-                                }
-                          }
-                        />
-                      </label>
-                    </div>
-                  ) : (
-                    <label className="field">
-                      <textarea
-                        ref={descriptionTextareaRef}
-                        className="input textarea arc-card-detail-description-textarea"
-                        placeholder="Описание"
-                        rows={4}
-                        value={description}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setDescription(v);
-                          scheduleDescriptionSave(v);
-                        }}
-                      />
-                    </label>
-                  )}
+                  <label className="field">
+                    <textarea
+                      ref={descriptionTextareaRef}
+                      className="input textarea arc-card-detail-description-textarea"
+                      placeholder="Описание"
+                      rows={4}
+                      value={description}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setDescription(v);
+                        scheduleDescriptionSave(v);
+                      }}
+                    />
+                  </label>
                 </div>
               </CollapsibleSection>
 
@@ -1626,7 +1653,7 @@ export default function CardDetailOverlay({
                 title="Коллекции"
                 count={collectionsResolved.length}
                 collapsible={collectionsResolved.length > 0}
-                footer={addRowButton('Добавить в коллекцию', () => setCollectionsModalOpen(true))}
+                footer={addRowButton('Добавить в коллекцию', 'arc-icon-collection', () => setCollectionsModalOpen(true))}
               >
                 {collectionsResolved.length > 0 && (
                   <ul className="arc-card-detail-collections">
@@ -1694,6 +1721,69 @@ export default function CardDetailOverlay({
         ) : null}
         </div>
       </div>
+
+      {confirmOverwriteDescription ? (
+        <div
+          className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
+          aria-hidden="false"
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !generateDescriptionBusy) {
+              setConfirmOverwriteDescription(false);
+            }
+          }}
+        >
+          <section
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="s"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcCardOverwriteDescriptionTitle"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="arc-modal__header arc-modal__header--title">
+              <h3 className="arc-modal__title" id="arcCardOverwriteDescriptionTitle">
+                Заменить описание?
+              </h3>
+              <button
+                type="button"
+                className="arc-modal__close"
+                aria-label="Закрыть"
+                onClick={() => setConfirmOverwriteDescription(false)}
+                disabled={generateDescriptionBusy}
+              >
+                <span className="tab-icon arc-icon-close" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="arc-modal__body">
+              <div className="arc-modal__slot">
+                <p className="arc-modal__slot-text">
+                  Текущее описание будет удалено и заменено сгенерированным текстом.
+                </p>
+              </div>
+            </div>
+            <footer className="arc-modal__footer arc-modal__footer--actions-2">
+              <button
+                type="button"
+                className="btn btn-outline btn-ds btn-s"
+                onClick={() => setConfirmOverwriteDescription(false)}
+                disabled={generateDescriptionBusy}
+              >
+                <span className="btn-ds__value">Отмена</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-brand btn-ds btn-s"
+                onClick={handleConfirmOverwriteDescription}
+                disabled={busy || generateDescriptionBusy}
+              >
+                <span className="btn-ds__value">Заменить</span>
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
 
       {confirmDelete ? (
         <div

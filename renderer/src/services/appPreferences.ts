@@ -119,6 +119,7 @@ export type AppPreferencesV1 = {
   aiSearchEnabled: boolean;
   aiSearchModelId: 'clip-vit-base-patch32' | 'qwen3-vl-embedding-2b' | 'qwen3-vl-embedding-8b';
   aiCaptionEnabled: boolean;
+  aiCaptionOnDemandMigrated: boolean;
   /** @deprecated Prefer aiSearchModelId + aiCaptionEnabled */
   aiModelTier: AiModelTier;
   aiThreads: number;
@@ -186,6 +187,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiSearchEnabled: false,
     aiSearchModelId: 'clip-vit-base-patch32',
     aiCaptionEnabled: false,
+    aiCaptionOnDemandMigrated: true,
     aiModelTier: 'light',
     aiThreads: 4,
     aiGpuLayers: 0,
@@ -335,6 +337,10 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
         : 'clip-vit-base-patch32',
     aiCaptionEnabled:
       typeof raw.aiCaptionEnabled === 'boolean' ? raw.aiCaptionEnabled : d.aiCaptionEnabled,
+    aiCaptionOnDemandMigrated:
+      typeof raw.aiCaptionOnDemandMigrated === 'boolean'
+        ? raw.aiCaptionOnDemandMigrated
+        : d.aiCaptionOnDemandMigrated,
     aiAutoTagEnabled:
       typeof raw.aiAutoTagEnabled === 'boolean' ? raw.aiAutoTagEnabled : d.aiAutoTagEnabled,
     aiAutoTagVolume:

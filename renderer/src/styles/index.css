@@ -3056,34 +3056,63 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-shrink: 0;
 }
 
+.arc-card-detail-desc-gen {
+  width: max-content;
+  max-width: 100%;
+}
+
+/* Tooltip wraps secondary — same join pattern as moodboard EL-BTNGROUP. */
+.arc-card-detail-desc-gen > .arc-tooltip-wrapper {
+  display: inline-flex;
+  margin-left: -1px;
+}
+
+.arc-card-detail-desc-gen > .btn:first-child {
+  border-radius: 0;
+  border-top-left-radius: var(--btn-radius);
+  border-bottom-left-radius: var(--btn-radius);
+}
+
+.arc-card-detail-desc-gen > .arc-tooltip-wrapper .btn {
+  border-radius: 0;
+  border-top-right-radius: var(--btn-radius);
+  border-bottom-right-radius: var(--btn-radius);
+}
+
+.arc-card-detail-desc-gen .btn-ds__icon .loader {
+  display: block;
+}
+
 .arc-card-detail-add-row-scope {
   display: block;
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
 }
 
 .arc-card-detail-add-row {
-  width: 100%;
+  width: auto;
   margin: 0;
 }
 
 .arc-card-detail-tag-actions {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: var(--s-2);
-  width: 100%;
+  width: max-content;
+  max-width: 100%;
 }
 
 .arc-card-detail-tag-actions > .btn {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
   width: auto;
   margin: 0;
 }
 
 .arc-card-detail-tag-actions--busy > .btn {
-  flex: 1 1 auto;
-  width: 100%;
+  flex: 0 0 auto;
+  width: auto;
 }
 
 .arc-card-detail-tag-actions .btn-ds__icon .loader {
