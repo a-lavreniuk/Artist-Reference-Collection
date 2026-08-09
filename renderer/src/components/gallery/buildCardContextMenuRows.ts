@@ -52,7 +52,7 @@ function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): Conte
       () => actions.onToggleCardSelection?.()
     ),
     { type: 'separator', key: 'sep-main' },
-    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow),
+    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-picture-in-picture', actions.onOpenInNewWindow),
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
     itemRow('collections', 'Добавить в коллекцию', 'arc-icon-folder-plus', actions.onOpenCollections)
   ];
@@ -94,13 +94,13 @@ function trashMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[] {
   const rows: ContextMenuRow[] = [];
 
   if (!bulk && onStartMultiSelect) {
-    rows.push(itemRow('multi-select', 'Выбрать несколько', 'arc-icon-check', onStartMultiSelect));
+    rows.push(itemRow('multi-select', 'Выбрать несколько', 'arc-icon-check-hexagon', onStartMultiSelect));
     rows.push({ type: 'separator', key: 'sep-multi' });
   }
 
   rows.push(
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
-    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow),
+    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-picture-in-picture', actions.onOpenInNewWindow),
     itemRow('restore', 'Восстановить', 'arc-icon-undo', () => actions.onRestore?.()),
     itemRow('open-folder', 'Открыть папку исходника', 'arc-icon-folder-open', actions.onOpenSourceFolder, {
       disabled: !hasSourcePath
@@ -121,13 +121,13 @@ function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[]
   const rows: ContextMenuRow[] = [];
 
   if (!bulk && onStartMultiSelect) {
-    rows.push(itemRow('multi-select', 'Выбрать несколько', 'arc-icon-check', onStartMultiSelect));
+    rows.push(itemRow('multi-select', 'Выбрать несколько', 'arc-icon-check-hexagon', onStartMultiSelect));
     rows.push({ type: 'separator', key: 'sep-multi' });
   }
 
   rows.push(
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
-    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow)
+    itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-picture-in-picture', actions.onOpenInNewWindow)
   );
 
   if (canShowPreviewFramePicker(input)) {

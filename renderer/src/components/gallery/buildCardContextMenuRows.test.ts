@@ -95,20 +95,27 @@ describe('buildCardContextMenuRows — selection mode', () => {
 
 describe('buildCardContextMenuRows — normal mode', () => {
   it('keeps full library menu when selection mode is off', () => {
-    const labels = rowLabels(
-      buildCardContextMenuRows({
-        scope: { kind: 'library' },
-        inMoodboard: false,
-        hasSourcePath: true,
-        selectionModeActive: false,
-        onStartMultiSelect: vi.fn(),
-        actions: baseActions()
-      })
-    );
+    const rows = buildCardContextMenuRows({
+      scope: { kind: 'library' },
+      inMoodboard: false,
+      hasSourcePath: true,
+      selectionModeActive: false,
+      onStartMultiSelect: vi.fn(),
+      actions: baseActions()
+    });
+    const labels = rowLabels(rows);
     expect(labels).toContain('Открыть');
     expect(labels).toContain('Открыть в новом окне');
     expect(labels).toContain('Выбрать несколько');
     expect(labels).toContain('Найти похожее');
+
+    const items = rows.filter(
+      (row): row is Extract<typeof row, { type: 'item' }> => row.type === 'item'
+    );
+    expect(items.find((row) => row.key === 'multi-select')?.iconClass).toBe('arc-icon-check-hexagon');
+    expect(items.find((row) => row.key === 'open-new-window')?.iconClass).toBe(
+      'arc-icon-picture-in-picture'
+    );
   });
 
   it('shows preview frame picker only for video cards', () => {
