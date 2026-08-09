@@ -116,13 +116,21 @@ function queryListCards(root: string, p: ListCardsParams): ReturnType<typeof car
   return listCardsFromDb(root, p).map((r) => cardIndexToRenderer(rowToCardRecord(r)));
 }
 
-function broadcastImportProgress(payload: { current: number; total: number; message?: string }): void {
+function broadcastImportProgress(payload: {
+  current: number;
+  total: number;
+  message?: string;
+  etaMs?: number | null;
+}): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) {
       win.webContents.send('arc:import-files-progress', payload);
     }
   }
 }
+
+/** Активный ручной импорт: отмена после текущего файла. */
+let activeImportAbort: AbortController | null = null;
 
 function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   return {
@@ -263,10 +271,17 @@ export function registerStorageIpc(
     return { ok: true as const };
   });
 
+  ipcMain.on('arc:import-files-abort', () => {
+    activeImportAbort?.abort();
+  });
+
   ipcMain.handle('arc:import-files', async (_e, absolutePaths: unknown) => {
     assertNotMaintenance();
     if (!Array.isArray(absolutePaths) || !absolutePaths.every((x) => typeof x === 'string')) {
       throw new Error('Неверный список файлов');
+    }
+    if (activeImportAbort) {
+      throw new Error('Импорт уже выполняется');
     }
     const root = await readLibraryRoot();
     if (!root) throw new Error('Библиотека не выбрана');
@@ -274,26 +289,45 @@ export function registerStorageIpc(
     const paths = absolutePaths as string[];
     const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
     allowMediaStagingPaths(paths);
-    const total = paths.length;
-    const results = [];
-    for (let i = 0; i < paths.length; i++) {
-      broadcastImportProgress({ current: i, total, message: `Добавлено ${i} из ${total}` });
-      results.push(await importMediaFile(root, paths[i]));
-      broadcastImportProgress({ current: i + 1, total, message: `Добавлено ${i + 1} из ${total}` });
+
+    const { runImportFilesBatch } = await import('./importFilesBatch');
+    const {
+      deferCardsForImportIndexing,
+      setManualImportActive
+    } = await import('./importIndexingDefer');
+    const abort = new AbortController();
+    activeImportAbort = abort;
+    setManualImportActive(true);
+    try {
+      const outcome = await runImportFilesBatch({
+        paths,
+        signal: abort.signal,
+        importOne: (absolutePath) => importMediaFile(root, absolutePath),
+        onProgress: (payload) => broadcastImportProgress(payload)
+      });
+
+      const importedIds: string[] = [];
+      for (const result of outcome.results) {
+        if (result.ok) importedIds.push(result.row.id);
+      }
+      if (importedIds.length > 0) {
+        deferCardsForImportIndexing(importedIds);
+        const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
+        void refreshLibrarySessionSnapshotFromDisk();
+        const { triggerDuplicateScanAfterImport } = await import('./ipcDuplicates');
+        void triggerDuplicateScanAfterImport();
+      }
+      return outcome;
+    } finally {
+      if (activeImportAbort === abort) activeImportAbort = null;
+      setManualImportActive(false);
     }
-    const importedIds: string[] = [];
-    for (const result of results) {
-      if (result.ok) importedIds.push(result.row.id);
-    }
-    if (importedIds.length > 0) {
-      const { queueCardsForIndexing } = await import('./ipcAi');
-      void queueCardsForIndexing(importedIds);
-      const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
-      void refreshLibrarySessionSnapshotFromDisk();
-      const { triggerDuplicateScanAfterImport } = await import('./ipcDuplicates');
-      void triggerDuplicateScanAfterImport();
-    }
-    return results;
+  });
+
+  ipcMain.on('arc:import-queue-idle', () => {
+    void import('./importIndexingDefer').then(({ scheduleDeferredImportIndexingAfterQueueIdle }) => {
+      scheduleDeferredImportIndexingAfterQueueIdle();
+    });
   });
 
   ipcMain.on('arc:storage-list-cards-sync', (event, params: unknown) => {

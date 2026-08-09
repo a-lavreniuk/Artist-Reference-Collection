@@ -27,7 +27,14 @@ export type ArcImportedMediaRow = {
   format?: string;
 };
 
-export type ArcImportFileResult = { ok: true; row: ArcImportedMediaRow } | { ok: false; error: string };
+export type ArcImportFileResult =
+  | { ok: true; row: ArcImportedMediaRow; path: string }
+  | { ok: false; error: string; path: string };
+
+export type ArcImportFilesResponse = {
+  results: ArcImportFileResult[];
+  cancelled: boolean;
+};
 
 export type ArcLibraryListItem = {
   id: string;
@@ -93,7 +100,9 @@ declare global {
         absolutePaths: string[]
       ) => Promise<{ files: string[]; directories: string[] }>;
       listImportableFilesInDirectory?: (folderPath: string) => Promise<string[]>;
-      importFiles: (absolutePaths: string[]) => Promise<ArcImportFileResult[]>;
+      importFiles: (absolutePaths: string[]) => Promise<ArcImportFilesResponse>;
+      abortImportFiles?: () => void;
+      notifyImportQueueIdle?: () => void;
       storageEnsureReady: () => Promise<{ ok: true } | { ok: false; error: string }>;
       storageListCards: (params: {
         offset: number;
@@ -154,7 +163,9 @@ declare global {
       storageDeleteFilterPreset: (id: string) => Promise<void>;
       storageRenameFilterPreset: (payload: { id: string; name: string }) => Promise<void>;
       storageBackfillDuration: () => Promise<{ updated: number; failed: number }>;
-      onImportFilesProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => () => void;
+      onImportFilesProgress: (
+        cb: (p: { current: number; total: number; message?: string; etaMs?: number | null }) => void
+      ) => () => void;
       storageListCategories: () => Promise<CategoryRecord[]>;
       storageUpsertCategory: (cat: CategoryRecord) => Promise<void>;
       storageDeleteCategory: (id: string) => Promise<void>;

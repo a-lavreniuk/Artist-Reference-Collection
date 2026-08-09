@@ -4032,6 +4032,82 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   flex-shrink: 0;
 }
 
+/* ImportQueueToast — Figma Loader 712:4031
+   Background/Primary + Typography/White Bg/Primary + Icons/White Bg */
+.arc-import-queue-toast {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-2);
+  width: max-content;
+  max-width: calc(100vw - var(--s-3) * 2);
+  box-sizing: border-box;
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  border-radius: var(--radius-m);
+  border: none;
+  background: var(--btn-primary-fill-default);
+  color: var(--font-white-primary-default);
+  pointer-events: auto;
+}
+
+.arc-import-queue-toast__loader.loader {
+  flex-shrink: 0;
+  border-color: color-mix(in srgb, var(--icons-white-default) 35%, transparent);
+  border-top-color: var(--icons-white-default);
+}
+
+.arc-import-queue-toast__message {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
+  color: var(--font-white-primary-default);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arc-import-queue-toast__cancel {
+  flex-shrink: 0;
+}
+
+.arc-import-failures-modal__scroll {
+  max-height: min(360px, 50vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.arc-import-failures-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.arc-import-failures-modal__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.arc-import-failures-modal__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arc-import-failures-modal__error {
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Navbar /add: «Добавить» + counter + plus (иконка через маску — те же токены, что у btn-success) */
 .arc-navbar-add-submit {
   --btn-icon-size: 24px;

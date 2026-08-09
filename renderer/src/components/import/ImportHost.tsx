@@ -1,7 +1,24 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ARC_CARDS_CHANGED_EVENT, isLibraryConfigured, addCollection, getAllCollections } from '../../services/db';
+import {
+  ARC_CARDS_CHANGED_EVENT,
+  isLibraryConfigured,
+  addCollection,
+  getAllCollections,
+  softDeleteCard
+} from '../../services/db';
 import { isImportableMediaPath } from '../../media/allowedImportExtensions';
 import { getImportSourceFilesAction } from '../../import/importDefaults';
+import {
+  pluralFilesRu,
+  tryEnqueueImportJob,
+  type ImportQueueJob
+} from '../../import/importQueue';
+import type { FolderImportPlan } from '../../import/folderImportPlan';
+import {
+  folderBaseName,
+  resolveFolderCollectionTarget,
+  SINGLE_FOLDER_IMPORT_PLAN
+} from '../../import/folderImportPlan';
 import { showAppNotification } from '../../services/notificationService';
 import ToastAlert from '../alert/ToastAlert';
 import SourceFilesModal from './SourceFilesModal';
@@ -9,16 +26,13 @@ import ImportDuplicatesModal, { type ImportDuplicateConflict } from './ImportDup
 import ImportFolderCollectionsModal, {
   type FolderImportDropContext
 } from './ImportFolderCollectionsModal';
+import ImportQueueToast, { type ImportQueueProgress } from './ImportQueueToast';
+import ImportFailuresModal, { type ImportFailureItem } from './ImportFailuresModal';
+import ImportCancelKeepModal from './ImportCancelKeepModal';
 import MessageModal from '../layout/MessageModal';
 import { ImportContext } from './ImportContext';
 import { useImportDropzonePerimeterDash } from './useImportDropzonePerimeterDash';
 import { bulkAddToCollection } from '../gallery/galleryBulkActions';
-import {
-  folderBaseName,
-  resolveFolderCollectionTarget,
-  SINGLE_FOLDER_IMPORT_PLAN,
-  type FolderImportPlan
-} from '../../import/folderImportPlan';
 import type { CollectionRecord } from '../../services/arcSchema';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
@@ -65,14 +79,16 @@ type ImportPhase =
   | 'importing'
   | 'source-modal'
   | 'duplicate-modal'
-  | 'folder-modal';
+  | 'folder-modal'
+  | 'failures-modal'
+  | 'cancel-keep-modal';
 
 export default function ImportHost({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<ImportPhase>('idle');
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const [libraryReady, setLibraryReady] = useState(false);
   const [maintenanceLocked, setMaintenanceLocked] = useState(false);
-  const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ImportQueueProgress | null>(null);
   const [sourceModalPaths, setSourceModalPaths] = useState<string[] | null>(null);
   const [duplicateConflicts, setDuplicateConflicts] = useState<ImportDuplicateConflict[]>([]);
   const [duplicateIndex, setDuplicateIndex] = useState(0);
@@ -82,9 +98,14 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const [duplicateAssignCollectionId, setDuplicateAssignCollectionId] = useState<string | undefined>(
     undefined
   );
+  const [failures, setFailures] = useState<ImportFailureItem[]>([]);
+  const [failuresAddedCount, setFailuresAddedCount] = useState(0);
+  const [cancelKeepCount, setCancelKeepCount] = useState(0);
+  const [cancelKeepIds, setCancelKeepIds] = useState<string[]>([]);
+  const [queueLimitToast, setQueueLimitToast] = useState<string | null>(null);
+
   const assignCollectionIdRef = useRef<string | null>(null);
   const emptyFolderResolverRef = useRef<(() => void) | null>(null);
-  /** Разрешается, когда пользователь закрыл модалку дублей/источников — чтобы импорт папок шёл строго по очереди. */
   const importFlowResolverRef = useRef<(() => void) | null>(null);
   const overlayOpenedManuallyRef = useRef(false);
   const isDraggingFilesRef = useRef(false);
@@ -92,6 +113,22 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const ctaWrapRef = useRef<HTMLDivElement>(null);
   const dropzoneRef = useRef<HTMLDivElement>(null);
   const borderRectRef = useRef<SVGRectElement>(null);
+  const queueRef = useRef<ImportQueueJob[]>([]);
+  const drainingRef = useRef(false);
+  const cancelRequestedRef = useRef(false);
+  const modalBlockingRef = useRef(false);
+  const phaseRef = useRef<ImportPhase>('idle');
+
+  useEffect(() => {
+    phaseRef.current = phase;
+    modalBlockingRef.current =
+      phase === 'source-modal' ||
+      phase === 'duplicate-modal' ||
+      phase === 'folder-modal' ||
+      phase === 'failures-modal' ||
+      phase === 'cancel-keep-modal' ||
+      emptyFolderName != null;
+  }, [phase, emptyFolderName]);
 
   useEffect(() => {
     void (async () => {
@@ -109,7 +146,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     return window.arc.onMaintenance((v) => setMaintenanceLocked(v));
   }, []);
 
-  const canImport = libraryReady && !maintenanceLocked && !importBusy;
+  const libraryOpen = libraryReady && !maintenanceLocked;
 
   const assignImportedCards = useCallback(async (cardIds: string[]) => {
     const collectionId = assignCollectionIdRef.current;
@@ -143,108 +180,214 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     resolve?.();
   }, []);
 
-  const runImport = useCallback(async (rawPaths: string[]) => {
-    if (!window.arc || !canImport) return;
-    const paths = rawPaths.filter((p) => isImportableMediaPath(p));
-    if (!paths.length) return;
+  const requestCancelImport = useCallback(() => {
+    cancelRequestedRef.current = true;
+    setProgress((prev) => (prev ? { ...prev, cancelling: true } : prev));
+    window.arc?.abortImportFiles?.();
+  }, []);
 
-    setImportBusy(true);
-    setPhase('importing');
-    setProgressMessage(`Добавлено 0 из ${paths.length}`);
-    overlayOpenedManuallyRef.current = false;
+  const finishWithFailures = useCallback(
+    async (added: number, items: ImportFailureItem[]) => {
+      if (items.length === 0) return false;
+      setFailures(items);
+      setFailuresAddedCount(added);
+      setPhase('failures-modal');
+      await waitForImportFlow();
+      return true;
+    },
+    [waitForImportFlow]
+  );
 
-    const unsub =
-      window.arc.onImportFilesProgress?.((p) => {
-        const msg = p.message ?? `Добавлено ${p.current} из ${p.total}`;
-        setProgressMessage(msg);
-      }) ?? (() => {});
+  const finishWithCancelKeep = useCallback(
+    async (cardIds: string[]) => {
+      if (cardIds.length === 0) return false;
+      setCancelKeepIds(cardIds);
+      setCancelKeepCount(cardIds.length);
+      setPhase('cancel-keep-modal');
+      await waitForImportFlow();
+      return true;
+    },
+    [waitForImportFlow]
+  );
 
-    try {
-      const dupMatches =
-        window.arc.checkImportDuplicates != null
-          ? await window.arc.checkImportDuplicates(paths)
-          : [];
-      const conflictPaths = new Set(dupMatches.map((m) => m.path));
-      const cleanPaths = paths.filter((p) => !conflictPaths.has(p));
+  const runImportBatch = useCallback(
+    async (rawPaths: string[]) => {
+      if (!window.arc || !libraryOpen) return;
+      const paths = rawPaths.filter((p) => isImportableMediaPath(p));
+      if (!paths.length) return;
 
-      let successes: Array<{ row: { id: string } }> = [];
-      let sourcePaths: string[] = [];
+      setImportBusy(true);
+      setPhase('importing');
+      setProgress({ current: 0, total: paths.length, etaMs: null, cancelling: cancelRequestedRef.current });
+      overlayOpenedManuallyRef.current = false;
 
-      if (cleanPaths.length > 0) {
-        const results = await window.arc.importFiles(cleanPaths);
-        successes = results.flatMap((r) => (r.ok ? [{ row: { id: r.row.id } }] : []));
-        sourcePaths = cleanPaths.filter((_, i) => results[i]?.ok);
-        const importedIds = successes.map((s) => s.row.id);
-        await assignImportedCards(importedIds);
-      }
+      const unsub =
+        window.arc.onImportFilesProgress?.((p) => {
+          setProgress({
+            current: p.current,
+            total: p.total,
+            etaMs: p.etaMs ?? null,
+            cancelling: cancelRequestedRef.current
+          });
+        }) ?? (() => {});
 
-      const conflicts = dupMatches.filter((m): m is ImportDuplicateConflict => m.existingCard != null);
+      try {
+        const dupMatches =
+          window.arc.checkImportDuplicates != null
+            ? await window.arc.checkImportDuplicates(paths)
+            : [];
+        const conflictPaths = new Set(dupMatches.map((m) => m.path));
+        const cleanPaths = paths.filter((p) => !conflictPaths.has(p));
 
-      if (conflicts.length > 0) {
-        setProgressMessage(null);
-        setDuplicateConflicts(conflicts);
-        setDuplicateIndex(0);
-        setDuplicateAssignCollectionId(assignCollectionIdRef.current ?? undefined);
-        setPhase('duplicate-modal');
+        let successes: Array<{ row: { id: string }; path: string }> = [];
+        let batchFailures: ImportFailureItem[] = [];
+        let cancelled = cancelRequestedRef.current;
 
-        if (successes.length > 0) {
+        if (!cancelled && cleanPaths.length > 0) {
+          const outcome = await window.arc.importFiles(cleanPaths);
+          cancelled = outcome.cancelled;
+          for (const r of outcome.results) {
+            if (r.ok) successes.push({ row: { id: r.row.id }, path: r.path });
+            else batchFailures.push({ path: r.path, error: r.error });
+          }
+          const importedIds = successes.map((s) => s.row.id);
+          await assignImportedCards(importedIds);
+        }
+
+        const conflicts = dupMatches.filter((m): m is ImportDuplicateConflict => m.existingCard != null);
+
+        if (cancelled) {
           const n = successes.length;
-          const word = n === 1 ? 'файл' : n < 5 ? 'файла' : 'файлов';
-          void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
-          window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+          const word = pluralFilesRu(n);
+          void window.arc.appendHistoryLine(
+            n > 0 ? `Импорт отменён: добавлено ${n} ${word}` : 'Импорт отменён'
+          );
+          if (n > 0) {
+            window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+            showAppNotification({
+              message: `Добавлено ${n} ${word} до отмены`,
+              variant: 'warning',
+              prefKey: 'notifyFilesAdded'
+            });
+          } else {
+            showAppNotification({
+              message: 'Импорт отменён',
+              variant: 'info',
+              prefKey: 'notifyFilesAdded'
+            });
+          }
+          setProgress(null);
+          const showedKeep = await finishWithCancelKeep(successes.map((s) => s.row.id));
+          if (!showedKeep) setPhase('idle');
+          return;
+        }
+
+        if (conflicts.length > 0) {
+          setProgress(null);
+          setDuplicateConflicts(conflicts);
+          setDuplicateIndex(0);
+          setDuplicateAssignCollectionId(assignCollectionIdRef.current ?? undefined);
+          setPhase('duplicate-modal');
+
+          if (successes.length > 0) {
+            const n = successes.length;
+            const word = pluralFilesRu(n);
+            void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
+            window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+            showAppNotification({
+              message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`,
+              variant: 'success',
+              prefKey: 'notifyFilesAdded'
+            });
+          }
+          await waitForImportFlow();
+          return;
+        }
+
+        const n = successes.length;
+        const failed = batchFailures.length;
+        if (n > 0 || failed > 0) {
+          const word = pluralFilesRu(n);
+          if (failed > 0) {
+            void window.arc.appendHistoryLine(
+              n > 0
+                ? `Импорт: добавлено ${n}, не удалось ${failed}`
+                : `Импорт: не удалось ${failed}`
+            );
+          } else if (n > 0) {
+            void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
+          }
+          if (n > 0) {
+            window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+          }
+        }
+
+        setProgress(null);
+
+        if (failed > 0) {
+          if (n > 0) {
+            showAppNotification({
+              message: `Добавлено ${n}, не удалось ${failed}`,
+              variant: 'warning',
+              prefKey: 'notifyFilesAdded'
+            });
+          } else {
+            showAppNotification({
+              message: failed === 1 ? 'Не удалось добавить файл' : `Не удалось добавить ${failed} файлов`,
+              variant: 'danger',
+              prefKey: 'notifyFilesAdded'
+            });
+          }
+          await finishWithFailures(n, batchFailures);
+          return;
+        }
+
+        if (n > 0) {
           showAppNotification({
-            message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`,
+            message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${pluralFilesRu(n)}`,
             variant: 'success',
             prefKey: 'notifyFilesAdded'
           });
         }
-        await waitForImportFlow();
-        return;
-      }
 
-      if (successes.length > 0) {
-        const n = successes.length;
-        const word = n === 1 ? 'файл' : n < 5 ? 'файла' : 'файлов';
-        void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
-        window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
-        showAppNotification({
-          message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`,
-          variant: 'success',
-          prefKey: 'notifyFilesAdded'
-        });
-      }
-
-      setProgressMessage(null);
-
-      const sourceAction = getImportSourceFilesAction();
-      if (successes.length > 0 && sourcePaths.length > 0) {
-        if (sourceAction === 'ask') {
-          setSourceModalPaths(sourcePaths);
-          setPhase('source-modal');
-          await waitForImportFlow();
-        } else if (sourceAction === 'trash') {
-          for (const abs of sourcePaths) {
-            await window.arc.trashPath(abs);
+        const sourceAction = getImportSourceFilesAction();
+        const sourcePaths = successes.map((s) => s.path);
+        if (n > 0 && sourcePaths.length > 0) {
+          if (sourceAction === 'ask') {
+            setSourceModalPaths(sourcePaths);
+            setPhase('source-modal');
+            await waitForImportFlow();
+          } else if (sourceAction === 'trash') {
+            for (const abs of sourcePaths) {
+              await window.arc.trashPath(abs);
+            }
+            setPhase('idle');
+          } else {
+            setPhase('idle');
           }
-          setPhase('idle');
         } else {
           setPhase('idle');
         }
-      } else {
+      } catch {
+        setProgress(null);
         setPhase('idle');
+        showAppNotification({
+          message: 'Не удалось выполнить импорт',
+          variant: 'danger',
+          prefKey: 'notifyFilesAdded'
+        });
+      } finally {
+        unsub();
+        setImportBusy(false);
+        setProgress(null);
       }
-    } catch {
-      setProgressMessage(null);
-      setPhase('idle');
-    } finally {
-      unsub();
-      setImportBusy(false);
-    }
-  }, [assignImportedCards, canImport, waitForImportFlow]);
+    },
+    [assignImportedCards, finishWithCancelKeep, finishWithFailures, libraryOpen, waitForImportFlow]
+  );
 
   const executeFolderImports = useCallback(
     async (folderPaths: string[], plan: FolderImportPlan, looseFiles: string[]) => {
-      if (!window.arc?.listImportableFilesInDirectory) return;
+      if (!window.arc?.listImportableFilesInDirectory || !libraryOpen) return;
 
       setImportBusy(true);
       let collections: CollectionRecord[] = await getAllCollections();
@@ -252,6 +395,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
 
       try {
         for (const folderPath of folderPaths) {
+          if (cancelRequestedRef.current) break;
+
           const filePaths = await window.arc.listImportableFilesInDirectory(folderPath);
           const folderName = folderBaseName(folderPath);
 
@@ -279,24 +424,106 @@ export default function ImportHost({ children }: { children: ReactNode }) {
           }
 
           assignCollectionIdRef.current = collectionId;
-          await runImport(filePaths);
+          await runImportBatch(filePaths);
           assignCollectionIdRef.current = null;
+
+          if (cancelRequestedRef.current) break;
         }
       } finally {
         assignCollectionIdRef.current = null;
         setImportBusy(false);
       }
 
-      if (looseFiles.length > 0) {
-        await runImport(looseFiles);
+      if (!cancelRequestedRef.current && looseFiles.length > 0) {
+        await runImportBatch(looseFiles);
       }
     },
-    [runImport, showEmptyFolderModal]
+    [libraryOpen, runImportBatch, showEmptyFolderModal]
+  );
+
+  const drainQueue = useCallback(async () => {
+    if (drainingRef.current) return;
+    drainingRef.current = true;
+    try {
+      while (queueRef.current.length > 0) {
+        if (modalBlockingRef.current) break;
+        const job = queueRef.current.shift();
+        if (!job) break;
+        cancelRequestedRef.current = false;
+
+        if (job.kind === 'files') {
+          await runImportBatch(job.paths);
+        } else {
+          await executeFolderImports(
+            job.folderPaths,
+            job.plan as FolderImportPlan,
+            job.looseFiles
+          );
+        }
+      }
+    } finally {
+      drainingRef.current = false;
+      if (queueRef.current.length > 0 && !modalBlockingRef.current) {
+        void drainQueue();
+      } else if (queueRef.current.length === 0) {
+        window.arc?.notifyImportQueueIdle?.();
+      }
+    }
+  }, [executeFolderImports, runImportBatch]);
+
+  const enqueueJob = useCallback(
+    (job: ImportQueueJob) => {
+      if (!libraryOpen) return;
+      const blocked =
+        phaseRef.current === 'source-modal' ||
+        phaseRef.current === 'duplicate-modal' ||
+        phaseRef.current === 'folder-modal' ||
+        phaseRef.current === 'failures-modal' ||
+        phaseRef.current === 'cancel-keep-modal' ||
+        emptyFolderName != null;
+
+      const result = tryEnqueueImportJob(queueRef.current, job, { blocked });
+
+      if (!result.ok && result.reason === 'blocked') {
+        showAppNotification({
+          message: 'Дождитесь закрытия окна, затем добавьте файлы снова',
+          variant: 'warning',
+          prefKey: 'notifyFilesAdded'
+        });
+        return;
+      }
+      if (!result.ok && result.reason === 'limit') {
+        setQueueLimitToast(
+          result.accepted > 0
+            ? `В очередь принято ${result.accepted}, лимит ${result.queuedTotal} файлов`
+            : 'Очередь заполнена (лимит 500 файлов)'
+        );
+        if (result.accepted === 0) return;
+      }
+      void drainQueue();
+    },
+    [drainQueue, emptyFolderName, libraryOpen]
   );
 
   const handleDroppedPaths = useCallback(
     async (paths: string[]) => {
-      if (!window.arc || !canImport || paths.length === 0) return;
+      if (!window.arc || !libraryOpen || paths.length === 0) return;
+
+      const blocked =
+        phaseRef.current === 'source-modal' ||
+        phaseRef.current === 'duplicate-modal' ||
+        phaseRef.current === 'folder-modal' ||
+        phaseRef.current === 'failures-modal' ||
+        phaseRef.current === 'cancel-keep-modal' ||
+        emptyFolderName != null;
+      if (blocked) {
+        showAppNotification({
+          message: 'Дождитесь закрытия окна, затем добавьте файлы снова',
+          variant: 'warning',
+          prefKey: 'notifyFilesAdded'
+        });
+        return;
+      }
 
       let looseFiles = paths.filter((p) => isImportableMediaPath(p));
       let folderPaths: string[] = [];
@@ -309,7 +536,12 @@ export default function ImportHost({ children }: { children: ReactNode }) {
 
       if (folderPaths.length > 0) {
         if (folderPaths.length === 1) {
-          void executeFolderImports(folderPaths, SINGLE_FOLDER_IMPORT_PLAN, looseFiles);
+          enqueueJob({
+            kind: 'folders',
+            folderPaths,
+            plan: SINGLE_FOLDER_IMPORT_PLAN,
+            looseFiles
+          });
           return;
         }
         setFolderDropContext({ folderPaths, looseFiles });
@@ -318,10 +550,10 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       }
 
       if (looseFiles.length > 0) {
-        await runImport(looseFiles);
+        enqueueJob({ kind: 'files', paths: looseFiles });
       }
     },
-    [canImport, executeFolderImports, runImport]
+    [emptyFolderName, enqueueJob, libraryOpen]
   );
 
   const closeDuplicateModal = useCallback(() => {
@@ -376,11 +608,21 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       e.preventDefault();
       const dt = e.dataTransfer;
       if (!dt) return;
-      dt.dropEffect = canImport ? 'copy' : 'none';
+
+      const blocked =
+        phaseRef.current === 'source-modal' ||
+        phaseRef.current === 'duplicate-modal' ||
+        phaseRef.current === 'folder-modal' ||
+        phaseRef.current === 'failures-modal' ||
+        phaseRef.current === 'cancel-keep-modal' ||
+        emptyFolderName != null;
+      const accept = libraryOpen && !blocked;
+      dt.dropEffect = accept ? 'copy' : 'none';
+
       if (!isDraggingFilesRef.current) {
         isDraggingFilesRef.current = true;
         setIsDraggingFiles(true);
-        if (canImport) {
+        if (accept && !importBusy) {
           setPhase((p) => (p === 'importing' || p === 'source-modal' ? p : 'overlay'));
         }
       }
@@ -407,16 +649,17 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       document.removeEventListener('dragleave', onDragLeave, true);
       document.removeEventListener('dragend', onDragEnd, true);
     };
-  }, [canImport, clearFileDrag]);
+  }, [clearFileDrag, emptyFolderName, importBusy, libraryOpen]);
 
   const openImportPicker = useCallback(() => {
-    if (!canImport) return;
+    if (!libraryOpen || importBusy) return;
+    if (modalBlockingRef.current) return;
     overlayOpenedManuallyRef.current = true;
     setPhase('overlay');
-  }, [canImport]);
+  }, [importBusy, libraryOpen]);
 
   const pickFiles = useCallback(async () => {
-    if (!window.arc) return;
+    if (!window.arc || !libraryOpen) return;
     try {
       const pick =
         typeof window.arc.pickMediaFiles === 'function'
@@ -425,16 +668,16 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       const paths = await pick.call(window.arc);
       overlayOpenedManuallyRef.current = false;
       if (!paths.length) {
-        setPhase('idle');
+        setPhase((p) => (p === 'overlay' ? 'idle' : p));
         return;
       }
-      setPhase('idle');
-      await runImport(paths);
+      setPhase((p) => (p === 'overlay' ? 'idle' : p));
+      enqueueJob({ kind: 'files', paths });
     } catch {
       overlayOpenedManuallyRef.current = false;
-      setPhase('idle');
+      setPhase((p) => (p === 'overlay' ? 'idle' : p));
     }
-  }, [runImport]);
+  }, [enqueueJob, libraryOpen]);
 
   const closeOverlay = useCallback(() => {
     overlayOpenedManuallyRef.current = false;
@@ -460,9 +703,36 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     closeSourceModal();
   };
 
+  const closeFailuresModal = () => {
+    setFailures([]);
+    setFailuresAddedCount(0);
+    setPhase('idle');
+    resolveImportFlow();
+  };
+
+  const closeCancelKeepModal = () => {
+    setCancelKeepIds([]);
+    setCancelKeepCount(0);
+    setPhase('idle');
+    resolveImportFlow();
+  };
+
+  const deleteCancelledImports = async () => {
+    const ids = [...cancelKeepIds];
+    closeCancelKeepModal();
+    for (const id of ids) {
+      try {
+        await softDeleteCard(id);
+      } catch {
+        /* ignore single delete errors */
+      }
+    }
+    window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+  };
+
   const contextValue = useMemo(() => ({ openImportPicker }), [openImportPicker]);
 
-  const showOverlay = phase === 'overlay' || isDraggingFiles;
+  const showOverlay = (phase === 'overlay' || isDraggingFiles) && !importBusy;
   const dropzoneActive = isDraggingFiles;
 
   useLayoutEffect(() => {
@@ -534,8 +804,17 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      {progressMessage ? (
-        <ToastAlert message={progressMessage} variant="info" autoDismissMs={0} withSound={false} onClose={() => {}} />
+      {progress ? (
+        <ImportQueueToast progress={progress} onCancel={requestCancelImport} />
+      ) : null}
+
+      {queueLimitToast ? (
+        <ToastAlert
+          message={queueLimitToast}
+          variant="warning"
+          withSound={false}
+          onClose={() => setQueueLimitToast(null)}
+        />
       ) : null}
 
       {sourceModalPaths && sourceModalPaths.length > 0 ? (
@@ -567,8 +846,29 @@ export default function ImportHost({ children }: { children: ReactNode }) {
             const drop = folderDropContext;
             setFolderDropContext(null);
             setPhase('idle');
-            void executeFolderImports(drop.folderPaths, plan, drop.looseFiles);
+            enqueueJob({
+              kind: 'folders',
+              folderPaths: drop.folderPaths,
+              plan,
+              looseFiles: drop.looseFiles
+            });
           }}
+        />
+      ) : null}
+
+      {phase === 'failures-modal' && failures.length > 0 ? (
+        <ImportFailuresModal
+          failures={failures}
+          addedCount={failuresAddedCount}
+          onClose={closeFailuresModal}
+        />
+      ) : null}
+
+      {phase === 'cancel-keep-modal' && cancelKeepCount > 0 ? (
+        <ImportCancelKeepModal
+          addedCount={cancelKeepCount}
+          onKeep={closeCancelKeepModal}
+          onDelete={() => void deleteCancelledImports()}
         />
       ) : null}
 

@@ -100,10 +100,11 @@ contextBridge.exposeInMainWorld('arc', {
   getPathsForDroppedDataTransfer: (dt: DataTransfer) => pathsFromDroppedDataTransfer(dt),
   onFileDrop: (cb: (paths: string[]) => void) => registerFileDropListener(cb),
   importFiles: (absolutePaths: string[]) =>
-    ipcRenderer.invoke('arc:import-files', absolutePaths) as Promise<
-      Array<
+    ipcRenderer.invoke('arc:import-files', absolutePaths) as Promise<{
+      results: Array<
         | {
             ok: true;
+            path: string;
             row: {
               id: string;
               type: 'image' | 'video';
@@ -119,9 +120,16 @@ contextBridge.exposeInMainWorld('arc', {
               height?: number;
             };
           }
-        | { ok: false; error: string }
-      >
-    >,
+        | { ok: false; error: string; path: string }
+      >;
+      cancelled: boolean;
+    }>,
+  abortImportFiles: () => {
+    ipcRenderer.send('arc:import-files-abort');
+  },
+  notifyImportQueueIdle: () => {
+    ipcRenderer.send('arc:import-queue-idle');
+  },
   storageEnsureReady: () =>
     ipcRenderer.invoke('arc:storage-ensure-ready') as Promise<{ ok: true } | { ok: false; error: string }>,
   storageListCards: (params: unknown) => {
@@ -174,8 +182,13 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:storage-rename-filter-preset', payload),
   storageBackfillDuration: () =>
     ipcRenderer.invoke('arc:storage-backfill-duration') as Promise<{ updated: number; failed: number }>,
-  onImportFilesProgress: (cb: (p: { current: number; total: number; message?: string }) => void) => {
-    const fn = (_: unknown, payload: { current: number; total: number; message?: string }) => cb(payload);
+  onImportFilesProgress: (
+    cb: (p: { current: number; total: number; message?: string; etaMs?: number | null }) => void
+  ) => {
+    const fn = (
+      _: unknown,
+      payload: { current: number; total: number; message?: string; etaMs?: number | null }
+    ) => cb(payload);
     ipcRenderer.on('arc:import-files-progress', fn);
     return () => ipcRenderer.removeListener('arc:import-files-progress', fn);
   },

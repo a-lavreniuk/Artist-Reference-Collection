@@ -109,10 +109,11 @@ export default function ImportDuplicatesModal({
     if (busy || !window.arc) return;
     setBusy(true);
     try {
-      const results = await window.arc.importFiles([conflict.path]);
-      if (results[0]?.ok) {
-        await addSkippedDuplicatePair(conflict.existingCardId, results[0].row.id);
-        await assignImported(results[0].row.id);
+      const outcome = await window.arc.importFiles([conflict.path]);
+      const first = outcome.results[0];
+      if (first?.ok) {
+        await addSkippedDuplicatePair(conflict.existingCardId, first.row.id);
+        await assignImported(first.row.id);
       }
       onResolved();
     } finally {
