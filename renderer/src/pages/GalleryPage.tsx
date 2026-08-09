@@ -28,11 +28,13 @@ import { useGalleryCollectionsStrip } from '../hooks/useGalleryCollectionsStrip'
 import {
   getMoodboardCardIds,
   isCardOnBoard,
-  removeCardFromMoodboard,
-  addCardToMoodboard,
   deleteCollection,
   updateCollection
 } from '../services/db';
+import {
+  applyMoodboardAddWithUndo,
+  applyMoodboardRemoveWithUndo
+} from '../components/gallery/galleryUndoToast';
 import { useGalleryMeta } from '../context/GalleryMetaContext';
 import { useLibraryConfigured } from '../hooks/useLibraryConfigured';
 
@@ -155,8 +157,7 @@ export default function GalleryPage() {
     async (id: string) => {
       const ids = await getMoodboardCardIds();
       if (!ids.includes(id)) {
-        await addCardToMoodboard(id);
-        await refreshMoodboard();
+        await applyMoodboardAddWithUndo(id, refreshMoodboard);
         return;
       }
       const onBoard = await isCardOnBoard(id);
@@ -164,8 +165,7 @@ export default function GalleryPage() {
         setRemoveMoodboardConfirm({ cardId: id, onBoard: true });
         return;
       }
-      await removeCardFromMoodboard(id);
-      await refreshMoodboard();
+      await applyMoodboardRemoveWithUndo(id, refreshMoodboard);
     },
     [refreshMoodboard]
   );
@@ -451,8 +451,7 @@ export default function GalleryPage() {
           onClose={() => setRemoveMoodboardConfirm(null)}
 
           onConfirm={async () => {
-            await removeCardFromMoodboard(removeMoodboardConfirm.cardId);
-            await refreshMoodboard();
+            await applyMoodboardRemoveWithUndo(removeMoodboardConfirm.cardId, refreshMoodboard);
           }}
 
         />

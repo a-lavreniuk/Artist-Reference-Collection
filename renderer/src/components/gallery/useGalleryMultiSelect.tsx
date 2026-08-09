@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { CardRecord } from '../../services/db';
-import { showAppNotification } from '../../services/notificationService';
 import type { CardContextMenuScope } from './cardContextMenuTypes';
 import GallerySelectionBar, { type GallerySelectionBarVariant } from './GallerySelectionBar';
 import BulkCardCollectionsModal from './BulkCardCollectionsModal';
@@ -15,6 +14,7 @@ import {
   bulkToggleCollectionForCards
 } from './galleryBulkActions';
 import {
+  formatCollectionAddToast,
   formatCollectionRemoveToast,
   formatMoodboardAddToast,
   formatMoodboardRemoveToast,
@@ -22,6 +22,15 @@ import {
   formatRestoreToast,
   formatTrashToast
 } from './gallerySelectionCopy';
+import {
+  notifyGalleryMutation,
+  undoCollectionAdd,
+  undoCollectionRemove,
+  undoMoodboardAdd,
+  undoMoodboardRemove,
+  undoRestore,
+  undoTrash
+} from './galleryUndoToast';
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
 import { openCardInNewWindowFromScope, resolveFocusedGalleryCardId } from '../../card-viewer/openCardsInNewWindow';
@@ -100,26 +109,37 @@ export function useGalleryMultiSelect({
     selection.clearSelection();
   }, [selection]);
 
+  const refreshAfter = useCallback(async () => {
+    await onRefresh();
+    if (refreshMoodboard) await refreshMoodboard();
+  }, [onRefresh, refreshMoodboard]);
+
   const runBulk = useCallback(
-    async (action: () => Promise<number>, toast: (count: number) => string) => {
-      const ids = [...selectedIdsRef.current];
-      if (ids.length === 0) return;
-      const count = await action();
-      await onRefresh();
-      if (refreshMoodboard) await refreshMoodboard();
-      if (count > 0) {
-        showAppNotification({ message: toast(count), variant: 'success' });
+    async (
+      action: () => Promise<string[]>,
+      toast: (count: number) => string,
+      undoFactory?: (affectedIds: string[]) => () => Promise<void>
+    ) => {
+      const affectedIds = await action();
+      await refreshAfter();
+      if (affectedIds.length > 0) {
+        notifyGalleryMutation({
+          message: toast(affectedIds.length),
+          undo: undoFactory?.(affectedIds),
+          onAfterUndo: refreshAfter
+        });
       }
       clearAfterAction();
     },
-    [clearAfterAction, onRefresh, refreshMoodboard]
+    [clearAfterAction, refreshAfter]
   );
 
   const onAddToMoodboard = useCallback(() => {
     const ids = [...selectedIdsRef.current];
     void runBulk(
       () => bulkAddMissingToMoodboard(ids, moodboardCardIds),
-      formatMoodboardAddToast
+      formatMoodboardAddToast,
+      undoMoodboardAdd
     );
   }, [moodboardCardIds, runBulk]);
 
@@ -127,19 +147,20 @@ export function useGalleryMultiSelect({
     const ids = [...selectedIdsRef.current];
     void runBulk(
       () => bulkRemoveFromMoodboard(ids, moodboardCardIds),
-      formatMoodboardRemoveToast
+      formatMoodboardRemoveToast,
+      undoMoodboardRemove
     );
   }, [moodboardCardIds, runBulk]);
 
   const onTrashAction = useCallback(() => {
-    const ids = [...selectedIdsRef.current];
     if (scope.kind === 'trash') return;
-    void runBulk(() => bulkSendToTrash(ids), formatTrashToast);
+    const ids = [...selectedIdsRef.current];
+    void runBulk(() => bulkSendToTrash(ids), formatTrashToast, undoTrash);
   }, [runBulk, scope.kind]);
 
   const onRestore = useCallback(() => {
     const ids = [...selectedIdsRef.current];
-    void runBulk(() => bulkRestore(ids), formatRestoreToast);
+    void runBulk(() => bulkRestore(ids), formatRestoreToast, undoRestore);
   }, [runBulk]);
 
   const onPermanentDelete = useCallback(() => {
@@ -150,9 +171,11 @@ export function useGalleryMultiSelect({
   const onCollectionAction = useCallback(() => {
     if (scope.kind === 'collection') {
       const ids = [...selectedIdsRef.current];
+      const collectionId = scope.collectionId;
       void runBulk(
-        () => bulkRemoveFromCollection(ids, scope.collectionId),
-        formatCollectionRemoveToast
+        () => bulkRemoveFromCollection(ids, collectionId),
+        formatCollectionRemoveToast,
+        (affected) => undoCollectionRemove(affected, collectionId)
       );
       return;
     }
@@ -162,10 +185,10 @@ export function useGalleryMultiSelect({
   const bulkHandlers = useMemo(
     () => ({
       onBulkSendToTrash: async (cardIds: string[]) => {
-        await runBulk(() => bulkSendToTrash(cardIds), formatTrashToast);
+        await runBulk(() => bulkSendToTrash(cardIds), formatTrashToast, undoTrash);
       },
       onBulkRestore: async (cardIds: string[]) => {
-        await runBulk(() => bulkRestore(cardIds), formatRestoreToast);
+        await runBulk(() => bulkRestore(cardIds), formatRestoreToast, undoRestore);
       },
       onBulkPermanentDelete: async (cardIds: string[]) => {
         await runBulk(() => bulkPermanentDelete(cardIds), formatPermanentDeleteToast);
@@ -173,17 +196,18 @@ export function useGalleryMultiSelect({
       onBulkToggleMoodboard: async (cardIds: string[]) => {
         const allInMoodboard =
           cardIds.length > 0 && cardIds.every((id) => moodboardCardIds.has(id));
-        // В мудборде — всегда убираем; иначе тумблер по составу выбора (как подпись пункта меню).
         if (scope.kind === 'moodboard-cards' || allInMoodboard) {
           await runBulk(
             () => bulkRemoveFromMoodboard(cardIds, moodboardCardIds),
-            formatMoodboardRemoveToast
+            formatMoodboardRemoveToast,
+            undoMoodboardRemove
           );
           return;
         }
         await runBulk(
           () => bulkAddMissingToMoodboard(cardIds, moodboardCardIds),
-          formatMoodboardAddToast
+          formatMoodboardAddToast,
+          undoMoodboardAdd
         );
       },
       onBulkOpenCollections: () => {
@@ -192,7 +216,8 @@ export function useGalleryMultiSelect({
       onBulkRemoveFromCollection: async (cardIds: string[], collectionId: string) => {
         await runBulk(
           () => bulkRemoveFromCollection(cardIds, collectionId),
-          formatCollectionRemoveToast
+          formatCollectionRemoveToast,
+          (affected) => undoCollectionRemove(affected, collectionId)
         );
       }
     }),
@@ -327,13 +352,37 @@ export function useGalleryMultiSelect({
           clearAfterAction();
         }}
         onToggleCollection={async (collectionId, nextSelected) => {
-          const count = await bulkToggleCollectionForCards(selectedCardIds, collectionId, nextSelected);
-          return count;
+          const affected = await bulkToggleCollectionForCards(
+            selectedCardIds,
+            collectionId,
+            nextSelected
+          );
+          if (affected.length > 0) {
+            notifyGalleryMutation({
+              message: nextSelected
+                ? formatCollectionAddToast(affected.length)
+                : formatCollectionRemoveToast(affected.length),
+              undo: nextSelected
+                ? undoCollectionAdd(affected, collectionId)
+                : undoCollectionRemove(affected, collectionId),
+              onAfterUndo: refreshAfter
+            });
+            await refreshAfter();
+          }
+          return affected.length;
         }}
         onCreateAndAssign={async (name) => {
           const { addCollection } = await import('../../services/db');
           const created = await addCollection(name);
-          await bulkAddToCollection(selectedCardIds, created.id);
+          const affected = await bulkAddToCollection(selectedCardIds, created.id);
+          if (affected.length > 0) {
+            notifyGalleryMutation({
+              message: formatCollectionAddToast(affected.length),
+              undo: undoCollectionAdd(affected, created.id),
+              onAfterUndo: refreshAfter
+            });
+            await refreshAfter();
+          }
         }}
       />
     ) : null;

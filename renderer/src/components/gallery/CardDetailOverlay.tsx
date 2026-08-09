@@ -48,6 +48,22 @@ import {
   removeCardFromMoodboard,
   updateCardPayload
 } from '../../services/db';
+import {
+  formatCollectionAddToast,
+  formatCollectionRemoveToast,
+  formatMoodboardAddToast,
+  formatMoodboardRemoveToast
+} from './gallerySelectionCopy';
+import {
+  notifyGalleryMutation,
+  notifyPermanentDelete,
+  notifyRestoreWithUndo,
+  notifyTrashWithUndo,
+  undoCollectionAdd,
+  undoCollectionRemove,
+  undoMoodboardAdd,
+  undoMoodboardRemove
+} from './galleryUndoToast';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import { parseLibraryScope } from '../../search/libraryScopeUrl';
 import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
@@ -678,7 +694,9 @@ export default function CardDetailOverlay({
     if (!card || busy) return;
     setBusy(true);
     try {
-      await deleteCard(card.id);
+      const id = card.id;
+      await deleteCard(id);
+      notifyTrashWithUndo(id, onDeleted);
       onDeleted();
       requestClose();
     } finally {
@@ -690,7 +708,9 @@ export default function CardDetailOverlay({
     if (!card || busy) return;
     setBusy(true);
     try {
-      await restoreCard(card.id);
+      const id = card.id;
+      await restoreCard(id);
+      notifyRestoreWithUndo(id, onDeleted);
       onDeleted();
       requestClose();
     } finally {
@@ -703,6 +723,7 @@ export default function CardDetailOverlay({
     setBusy(true);
     try {
       await permanentDeleteCard(card.id);
+      notifyPermanentDelete(1);
       onDeleted();
       requestClose();
     } finally {
@@ -935,8 +956,21 @@ export default function CardDetailOverlay({
     [navigate, onClose]
   );
 
-  const removeCollection = (collectionId: string) =>
-    patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
+  const removeCollection = async (collectionId: string) => {
+    if (!card) return;
+    const cardId = card.id;
+    await patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
+    notifyGalleryMutation({
+      message: formatCollectionRemoveToast(1),
+      undo: async () => {
+        await undoCollectionRemove([cardId], collectionId)();
+        await patchCardCollectionIds((ids) =>
+          ids.includes(collectionId) ? ids : [...ids, collectionId]
+        );
+      },
+      onAfterUndo: onDeleted
+    });
+  };
 
   const toggleTagOnCard = (tagId: string) =>
     patchCardTagIds((ids) =>
@@ -945,17 +979,48 @@ export default function CardDetailOverlay({
 
   const applyCollections = (collectionIds: string[]) => patchCardCollectionIds(() => collectionIds);
 
-  const toggleCollectionOnCard = (collectionId: string) =>
-    patchCardCollectionIds((ids) =>
+  const toggleCollectionOnCard = async (collectionId: string) => {
+    if (!card) return;
+    const cardId = card.id;
+    const wasIn = card.collectionIds.includes(collectionId);
+    await patchCardCollectionIds((ids) =>
       ids.includes(collectionId) ? ids.filter((id) => id !== collectionId) : [...ids, collectionId]
     );
+    notifyGalleryMutation({
+      message: wasIn ? formatCollectionRemoveToast(1) : formatCollectionAddToast(1),
+      undo: async () => {
+        if (wasIn) {
+          await undoCollectionRemove([cardId], collectionId)();
+          await patchCardCollectionIds((ids) =>
+            ids.includes(collectionId) ? ids : [...ids, collectionId]
+          );
+        } else {
+          await undoCollectionAdd([cardId], collectionId)();
+          await patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
+        }
+      },
+      onAfterUndo: onDeleted
+    });
+  };
 
   const createAndAssignCollection = async (name: string) => {
     if (!card) return;
+    const cardId = card.id;
     const created = await addCollection(name);
+    const already = card.collectionIds.includes(created.id);
     await patchCardCollectionIds((ids) =>
       ids.includes(created.id) ? ids : [...ids, created.id]
     );
+    if (!already) {
+      notifyGalleryMutation({
+        message: formatCollectionAddToast(1),
+        undo: async () => {
+          await undoCollectionAdd([cardId], created.id)();
+          await patchCardCollectionIds((ids) => ids.filter((id) => id !== created.id));
+        },
+        onAfterUndo: onDeleted
+      });
+    }
   };
 
   const openPaletteColorSearch = (hex: string) => {
@@ -992,6 +1057,18 @@ export default function CardDetailOverlay({
       await addCardToMoodboard(targetId);
       setMoodboardCardIds((prev) => new Set(prev).add(targetId));
       if (targetId === cardId) setInMoodboard(true);
+      notifyGalleryMutation({
+        message: formatMoodboardAddToast(1),
+        undo: async () => {
+          await undoMoodboardAdd([targetId])();
+          setMoodboardCardIds((prev) => {
+            const next = new Set(prev);
+            next.delete(targetId);
+            return next;
+          });
+          if (targetId === cardId) setInMoodboard(false);
+        }
+      });
       return;
     }
     const onBoard = await isCardOnBoard(targetId);
@@ -1006,6 +1083,14 @@ export default function CardDetailOverlay({
       return next;
     });
     if (targetId === cardId) setInMoodboard(false);
+    notifyGalleryMutation({
+      message: formatMoodboardRemoveToast(1),
+      undo: async () => {
+        await undoMoodboardRemove([targetId])();
+        setMoodboardCardIds((prev) => new Set(prev).add(targetId));
+        if (targetId === cardId) setInMoodboard(true);
+      }
+    });
   };
 
   const { onCardContextMenu: onSimilarCardContextMenu, contextMenuLayer: similarContextMenuLayer } =
@@ -1415,7 +1500,18 @@ export default function CardDetailOverlay({
                             await addCardToMoodboard(card.id);
                             setInMoodboard(true);
                             setMoodboardCardIds((prev) => new Set(prev).add(card.id));
-                            setActionAlert({ message: 'Карточка добавлена в мудборд', variant: 'brand' });
+                            notifyGalleryMutation({
+                              message: formatMoodboardAddToast(1),
+                              undo: async () => {
+                                await undoMoodboardAdd([card.id])();
+                                setInMoodboard(false);
+                                setMoodboardCardIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(card.id);
+                                  return next;
+                                });
+                              }
+                            });
                             return;
                           }
                           const onBoard = await isCardOnBoard(card.id);
@@ -1434,7 +1530,14 @@ export default function CardDetailOverlay({
                             next.delete(card.id);
                             return next;
                           });
-                          setActionAlert({ message: 'Карточка убрана из мудборда', variant: 'brand' });
+                          notifyGalleryMutation({
+                            message: formatMoodboardRemoveToast(1),
+                            undo: async () => {
+                              await undoMoodboardRemove([card.id])();
+                              setInMoodboard(true);
+                              setMoodboardCardIds((prev) => new Set(prev).add(card.id));
+                            }
+                          });
                         }}
                         disabled={!card}
                       >
@@ -1916,6 +2019,14 @@ export default function CardDetailOverlay({
               return next;
             });
             if (targetId === cardId) setInMoodboard(false);
+            notifyGalleryMutation({
+              message: formatMoodboardRemoveToast(1),
+              undo: async () => {
+                await undoMoodboardRemove([targetId])();
+                setMoodboardCardIds((prev) => new Set(prev).add(targetId));
+                if (targetId === cardId) setInMoodboard(true);
+              }
+            });
           }}
         />
       ) : null}

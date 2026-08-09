@@ -2379,7 +2379,31 @@ button.input {
   pointer-events: none;
 }
 
-.demo-alert-host .alert {
+/** Стек app-toast: растёт вверх, несколько уведомлений одновременно. */
+.demo-alert-stack {
+  position: fixed;
+  left: 50%;
+  bottom: var(--s-3);
+  transform: translateX(-50%);
+  z-index: 5000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: calc(100vw - var(--s-3) * 2);
+}
+
+.demo-alert-stack .demo-alert-item {
+  pointer-events: none;
+}
+
+.demo-alert-stack .demo-alert-item .alert {
+  pointer-events: auto;
+}
+
+.demo-alert-host .alert,
+.demo-alert-stack .alert {
   min-width: 480px;
   width: max-content;
   max-width: calc(100vw - var(--s-3) * 2);
@@ -2396,6 +2420,17 @@ button.input {
   flex: 1;
   margin: 0;
   white-space: nowrap;
+  min-width: 0;
+}
+
+.demo-alert__action-wrap {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.demo-alert__action-wrap .demo-alert__action {
+  flex-shrink: 0;
 }
 
 .demo-alert__close {
@@ -2424,43 +2459,53 @@ button.input {
   stroke: currentColor;
 }
 
-.demo-alert-host .alert-success .demo-alert__close {
+.demo-alert-host .alert-success .demo-alert__close,
+.demo-alert-stack .alert-success .demo-alert__close {
   color: var(--alert-success-close);
 }
 
-.demo-alert-host .alert-success .demo-alert__close:hover {
+.demo-alert-host .alert-success .demo-alert__close:hover,
+.demo-alert-stack .alert-success .demo-alert__close:hover {
   color: var(--alert-success-close);
 }
 
-.demo-alert-host .alert-danger .demo-alert__close {
+.demo-alert-host .alert-danger .demo-alert__close,
+.demo-alert-stack .alert-danger .demo-alert__close {
   color: var(--alert-danger-close);
 }
 
-.demo-alert-host .alert-danger .demo-alert__close:hover {
+.demo-alert-host .alert-danger .demo-alert__close:hover,
+.demo-alert-stack .alert-danger .demo-alert__close:hover {
   color: var(--alert-danger-close);
 }
 
-.demo-alert-host .alert-warning .demo-alert__close {
+.demo-alert-host .alert-warning .demo-alert__close,
+.demo-alert-stack .alert-warning .demo-alert__close {
   color: var(--alert-warning-close);
 }
 
-.demo-alert-host .alert-warning .demo-alert__close:hover {
+.demo-alert-host .alert-warning .demo-alert__close:hover,
+.demo-alert-stack .alert-warning .demo-alert__close:hover {
   color: var(--alert-warning-close);
 }
 
-.demo-alert-host .alert-info .demo-alert__close {
+.demo-alert-host .alert-info .demo-alert__close,
+.demo-alert-stack .alert-info .demo-alert__close {
   color: var(--alert-info-close);
 }
 
-.demo-alert-host .alert-info .demo-alert__close:hover {
+.demo-alert-host .alert-info .demo-alert__close:hover,
+.demo-alert-stack .alert-info .demo-alert__close:hover {
   color: var(--alert-info-close);
 }
 
-.demo-alert-host .alert-brand .demo-alert__close {
+.demo-alert-host .alert-brand .demo-alert__close,
+.demo-alert-stack .alert-brand .demo-alert__close {
   color: var(--alert-brand-close);
 }
 
-.demo-alert-host .alert-brand .demo-alert__close:hover {
+.demo-alert-host .alert-brand .demo-alert__close:hover,
+.demo-alert-stack .alert-brand .demo-alert__close:hover {
   color: var(--alert-brand-close);
 }
 

@@ -3,14 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import ToastAlert, { type ToastAlertVariant } from '../alert/ToastAlert';
 import type { NotificationPrefKey } from '../../services/appPreferences';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
-import { APP_NOTIFICATION_EVENT, type AppNotificationPayload } from '../../services/notificationService';
+import {
+  APP_NOTIFICATION_EVENT,
+  consumeNotificationAction,
+  createNotificationId,
+  dropNotificationAction,
+  type AppNotificationPayload
+} from '../../services/notificationService';
 
 type ActiveAlert = {
+  id: string;
   message: string;
   variant: ToastAlertVariant;
   autoDismissMs?: number;
   withSound?: boolean;
   navigateTo?: string;
+  actionLabel?: string;
+  actionId?: string;
 };
 
 function isPrefEnabled(prefKey: NotificationPrefKey | undefined, skipPrefCheck: boolean | undefined): boolean {
@@ -22,23 +31,39 @@ function isPrefEnabled(prefKey: NotificationPrefKey | undefined, skipPrefCheck: 
 
 export default function NotificationHost({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
-  const [active, setActive] = useState<ActiveAlert | null>(null);
+  const [alerts, setAlerts] = useState<ActiveAlert[]>([]);
 
-  const dismiss = useCallback(() => setActive(null), []);
+  const dismiss = useCallback((id: string) => {
+    setAlerts((prev) => {
+      const target = prev.find((a) => a.id === id);
+      if (target?.actionId) dropNotificationAction(target.actionId);
+      return prev.filter((a) => a.id !== id);
+    });
+  }, []);
 
   useEffect(() => {
     const onNotify = (event: Event) => {
       const detail = (event as CustomEvent<AppNotificationPayload>).detail;
       if (!detail?.message) return;
-      if (!isPrefEnabled(detail.prefKey, detail.skipPrefCheck)) return;
+      if (!isPrefEnabled(detail.prefKey, detail.skipPrefCheck)) {
+        if (detail.actionId) dropNotificationAction(detail.actionId);
+        return;
+      }
 
-      setActive({
-        message: detail.message,
-        variant: detail.variant ?? 'info',
-        autoDismissMs: detail.autoDismissMs,
-        withSound: detail.withSound,
-        navigateTo: detail.navigateTo
-      });
+      const id = detail.id ?? createNotificationId();
+      setAlerts((prev) => [
+        ...prev,
+        {
+          id,
+          message: detail.message,
+          variant: detail.variant ?? 'info',
+          autoDismissMs: detail.autoDismissMs,
+          withSound: detail.withSound,
+          navigateTo: detail.navigateTo,
+          actionLabel: detail.actionLabel,
+          actionId: detail.actionId
+        }
+      ]);
     };
 
     window.addEventListener(APP_NOTIFICATION_EVENT, onNotify);
@@ -90,24 +115,65 @@ export default function NotificationHost({ children }: { children: React.ReactNo
     });
   }, []);
 
-  const onActivate = useCallback(() => {
-    if (!active?.navigateTo) return;
-    navigate(active.navigateTo);
-    dismiss();
-  }, [active?.navigateTo, dismiss, navigate]);
+  useEffect(() => {
+    if (alerts.length === 0) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const top = alerts[alerts.length - 1];
+      if (top) dismiss(top.id);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [alerts, dismiss]);
+
+  const runAction = useCallback(
+    (alert: ActiveAlert) => {
+      if (!alert.actionId) return;
+      const handler = consumeNotificationAction(alert.actionId);
+      if (!handler) return;
+      void Promise.resolve(handler()).catch(() => {
+        window.dispatchEvent(
+          new CustomEvent(APP_NOTIFICATION_EVENT, {
+            detail: {
+              message: 'Не удалось отменить действие',
+              variant: 'danger',
+              skipPrefCheck: true
+            } satisfies AppNotificationPayload
+          })
+        );
+      });
+    },
+    []
+  );
 
   return (
     <>
       {children}
-      {active ? (
-        <ToastAlert
-          message={active.message}
-          variant={active.variant}
-          autoDismissMs={active.autoDismissMs}
-          withSound={active.withSound}
-          onClose={dismiss}
-          onActivate={active.navigateTo ? onActivate : undefined}
-        />
+      {alerts.length > 0 ? (
+        <div className="demo-alert-stack" aria-live="polite">
+          {alerts.map((alert) => (
+            <ToastAlert
+              key={alert.id}
+              embedded
+              listenEscape={false}
+              message={alert.message}
+              variant={alert.variant}
+              autoDismissMs={alert.autoDismissMs}
+              withSound={alert.withSound}
+              onClose={() => dismiss(alert.id)}
+              onActivate={
+                alert.navigateTo
+                  ? () => {
+                      navigate(alert.navigateTo!);
+                      dismiss(alert.id);
+                    }
+                  : undefined
+              }
+              actionLabel={alert.actionLabel}
+              onAction={alert.actionLabel && alert.actionId ? () => runAction(alert) : undefined}
+            />
+          ))}
+        </div>
       ) : null}
     </>
   );

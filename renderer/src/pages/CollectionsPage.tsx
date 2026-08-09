@@ -43,19 +43,21 @@ import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 import {
   ARC_COLLECTIONS_CHANGED_EVENT,
   addCollection,
-  addCardToMoodboard,
   deleteCollection,
   getAllCollections,
   getCollectionStats,
   getCollectionsSidebarMeta,
   getMoodboardCardIds,
   isCardOnBoard,
-  removeCardFromMoodboard,
   reorderCollectionToIndex,
   updateCollection,
   type CollectionRecord,
   type CollectionStats
 } from '../services/db';
+import {
+  applyMoodboardAddWithUndo,
+  applyMoodboardRemoveWithUndo
+} from '../components/gallery/galleryUndoToast';
 import { useLibraryConfigured } from '../hooks/useLibraryConfigured';
 
 export default function CollectionsPage() {
@@ -244,8 +246,7 @@ export default function CollectionsPage() {
     async (id: string) => {
       const ids = await getMoodboardCardIds();
       if (!ids.includes(id)) {
-        await addCardToMoodboard(id);
-        await refreshMoodboard();
+        await applyMoodboardAddWithUndo(id, refreshMoodboard);
         return;
       }
       const onBoard = await isCardOnBoard(id);
@@ -253,8 +254,7 @@ export default function CollectionsPage() {
         setRemoveMoodboardConfirm({ cardId: id, onBoard: true });
         return;
       }
-      await removeCardFromMoodboard(id);
-      await refreshMoodboard();
+      await applyMoodboardRemoveWithUndo(id, refreshMoodboard);
     },
     [refreshMoodboard]
   );
@@ -506,8 +506,7 @@ export default function CollectionsPage() {
           cardOnBoard={removeMoodboardConfirm.onBoard}
           onClose={() => setRemoveMoodboardConfirm(null)}
           onConfirm={async () => {
-            await removeCardFromMoodboard(removeMoodboardConfirm.cardId);
-            await refreshMoodboard();
+            await applyMoodboardRemoveWithUndo(removeMoodboardConfirm.cardId, refreshMoodboard);
           }}
         />
       ) : null}

@@ -17,6 +17,18 @@ import type { CardContextMenuScope } from './cardContextMenuTypes';
 import { openCardInNewWindowFromScope } from '../../card-viewer/openCardsInNewWindow';
 import VideoPreviewFrameModal from './VideoPreviewFrameModal';
 import { canPickVideoPreviewFrame } from './videoPreviewFrame';
+import {
+  formatCollectionAddToast,
+  formatCollectionRemoveToast
+} from './gallerySelectionCopy';
+import {
+  notifyGalleryMutation,
+  notifyPermanentDelete,
+  notifyRestoreWithUndo,
+  notifyTrashWithUndo,
+  undoCollectionAdd,
+  undoCollectionRemove
+} from './galleryUndoToast';
 
 type BulkHandlers = {
   onBulkSendToTrash?: (cardIds: string[]) => void | Promise<void>;
@@ -179,6 +191,7 @@ export function useGalleryCardContextMenu({
             return;
           }
           await deleteCard(menuCard.id);
+          notifyTrashWithUndo(menuCard.id, onCardDeleted);
           await onCardDeleted();
         },
         onRestore: async () => {
@@ -187,6 +200,7 @@ export function useGalleryCardContextMenu({
             return;
           }
           await restoreCard(menuCard.id);
+          notifyRestoreWithUndo(menuCard.id, onCardDeleted);
           await onCardDeleted();
         },
         onPermanentDelete: () => {
@@ -197,6 +211,7 @@ export function useGalleryCardContextMenu({
           if (scope.kind === 'trash') {
             void (async () => {
               await permanentDeleteCard(menuCard.id);
+              notifyPermanentDelete(1);
               await onCardDeleted();
             })();
             return;
@@ -211,6 +226,11 @@ export function useGalleryCardContextMenu({
               }
               const next = menuCard.collectionIds.filter((id) => id !== scopeCollectionId);
               await updateCardPayload(menuCard.id, { collectionIds: next });
+              notifyGalleryMutation({
+                message: formatCollectionRemoveToast(1),
+                undo: undoCollectionRemove([menuCard.id], scopeCollectionId),
+                onAfterUndo: onCardDeleted
+              });
               await onCardDeleted();
             }
           : undefined,
@@ -244,7 +264,8 @@ export function useGalleryCardContextMenu({
     scope,
     scopeCollectionId,
     closeMenu,
-    isCardSelected
+    isCardSelected,
+    collectionName
   ]);
 
   const openPreviewFramePicker = useCallback((card: CardRecord) => {
@@ -280,8 +301,16 @@ export function useGalleryCardContextMenu({
               ? card.collectionIds.filter((id) => id !== collectionId)
               : [...card.collectionIds, collectionId];
             await updateCardPayload(card.id, { collectionIds: next });
+            notifyGalleryMutation({
+              message: has ? formatCollectionRemoveToast(1) : formatCollectionAddToast(1),
+              undo: has
+                ? undoCollectionRemove([card.id], collectionId)
+                : undoCollectionAdd([card.id], collectionId),
+              onAfterUndo: onCardDeleted
+            });
             const updated = await getCardById(collectionsCardId);
             if (updated) setCollectionsCard(updated);
+            await onCardDeleted();
           }}
           onCreateAndAssign={async (name) => {
             const card = await getCardById(collectionsCardId);
@@ -291,9 +320,15 @@ export function useGalleryCardContextMenu({
               await updateCardPayload(card.id, {
                 collectionIds: [...card.collectionIds, created.id]
               });
+              notifyGalleryMutation({
+                message: formatCollectionAddToast(1),
+                undo: undoCollectionAdd([card.id], created.id),
+                onAfterUndo: onCardDeleted
+              });
             }
             const updated = await getCardById(collectionsCardId);
             if (updated) setCollectionsCard(updated);
+            await onCardDeleted();
           }}
         />
       ) : null}
@@ -303,6 +338,7 @@ export function useGalleryCardContextMenu({
           onClose={() => setPermanentDeleteCardId(null)}
           onConfirm={async () => {
             await permanentDeleteCard(permanentDeleteCardId);
+            notifyPermanentDelete(1);
             await onCardDeleted();
           }}
         />

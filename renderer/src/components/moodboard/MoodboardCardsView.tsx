@@ -22,10 +22,12 @@ import { useGalleryMeta } from '../../context/GalleryMetaContext';
 import { useLibraryConfigured } from '../../hooks/useLibraryConfigured';
 import {
   getMoodboardCardIds,
-  isCardOnBoard,
-  removeCardFromMoodboard,
-  addCardToMoodboard
+  isCardOnBoard
 } from '../../services/db';
+import {
+  applyMoodboardAddWithUndo,
+  applyMoodboardRemoveWithUndo
+} from '../gallery/galleryUndoToast';
 
 export default function MoodboardCardsView() {
   const { pathname } = useLocation();
@@ -106,8 +108,7 @@ export default function MoodboardCardsView() {
     async (cardId: string) => {
       const ids = await getMoodboardCardIds();
       if (!ids.includes(cardId)) {
-        await addCardToMoodboard(cardId);
-        await refreshMoodboard();
+        await applyMoodboardAddWithUndo(cardId, refreshMoodboard);
         return;
       }
       const onBoard = await isCardOnBoard(cardId);
@@ -118,8 +119,7 @@ export default function MoodboardCardsView() {
 
   const confirmRemoveAction = useCallback(async () => {
     if (!removeConfirm) return;
-    await removeCardFromMoodboard(removeConfirm.cardId);
-    await refreshMoodboard();
+    await applyMoodboardRemoveWithUndo(removeConfirm.cardId, refreshMoodboard);
   }, [refreshMoodboard, removeConfirm]);
 
   const multiSelect = useGalleryMultiSelect({

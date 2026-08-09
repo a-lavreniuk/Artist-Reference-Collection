@@ -12,29 +12,36 @@ export function formatSelectedCardsLabel(count: number): string {
 }
 
 export function formatTrashToast(count: number): string {
+  if (count === 1) return 'Карточка отправлена в корзину';
   return `${count} ${pluralCardsRu(count)} отправлены в корзину`;
 }
 
 export function formatRestoreToast(count: number): string {
+  if (count === 1) return 'Карточка восстановлена';
   return `${count} ${pluralCardsRu(count)} восстановлены`;
 }
 
 export function formatPermanentDeleteToast(count: number): string {
+  if (count === 1) return 'Карточка удалена навсегда';
   return `${count} ${pluralCardsRu(count)} удалены навсегда`;
 }
 
 export function formatMoodboardAddToast(count: number): string {
+  if (count === 1) return 'Карточка добавлена в мудборд';
   return `Добавлено в мудборд: ${count} ${pluralCardsRu(count)}`;
 }
 
 export function formatMoodboardRemoveToast(count: number): string {
+  if (count === 1) return 'Карточка убрана из мудборда';
   return `Убрано из мудборда: ${count} ${pluralCardsRu(count)}`;
 }
 
 export function formatCollectionAddToast(count: number): string {
+  if (count === 1) return 'Карточка добавлена в коллекцию';
   return `Добавлено в коллекцию: ${count} ${pluralCardsRu(count)}`;
 }
 
 export function formatCollectionRemoveToast(count: number): string {
+  if (count === 1) return 'Карточка убрана из коллекции';
   return `Убрано из коллекции: ${count} ${pluralCardsRu(count)}`;
 }

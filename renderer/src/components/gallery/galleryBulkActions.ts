@@ -8,102 +8,102 @@ import {
   updateCardPayload
 } from '../../services/db';
 
-export async function bulkSendToTrash(cardIds: readonly string[]): Promise<number> {
-  let count = 0;
+export async function bulkSendToTrash(cardIds: readonly string[]): Promise<string[]> {
+  const affected: string[] = [];
   for (const cardId of cardIds) {
     await softDeleteCard(cardId);
-    count += 1;
+    affected.push(cardId);
   }
-  return count;
+  return affected;
 }
 
-export async function bulkPermanentDelete(cardIds: readonly string[]): Promise<number> {
-  if (cardIds.length === 0) return 0;
+export async function bulkPermanentDelete(cardIds: readonly string[]): Promise<string[]> {
+  if (cardIds.length === 0) return [];
   const { requestDestructiveConfirm } = await import('../../services/destructiveConfirm');
   const token = await requestDestructiveConfirm({
     kind: 'permanent-delete-card',
     uses: cardIds.length
   });
-  let count = 0;
+  const affected: string[] = [];
   for (const cardId of cardIds) {
     await permanentDeleteCard(cardId, token);
-    count += 1;
+    affected.push(cardId);
   }
-  return count;
+  return affected;
 }
 
-export async function bulkRestore(cardIds: readonly string[]): Promise<number> {
-  let count = 0;
+export async function bulkRestore(cardIds: readonly string[]): Promise<string[]> {
+  const affected: string[] = [];
   for (const cardId of cardIds) {
     await restoreCard(cardId);
-    count += 1;
+    affected.push(cardId);
   }
-  return count;
+  return affected;
 }
 
 export async function bulkAddMissingToMoodboard(
   cardIds: readonly string[],
   moodboardCardIds: ReadonlySet<string>
-): Promise<number> {
-  let count = 0;
+): Promise<string[]> {
+  const affected: string[] = [];
   for (const cardId of cardIds) {
     if (moodboardCardIds.has(cardId)) continue;
     await addCardToMoodboard(cardId);
-    count += 1;
+    affected.push(cardId);
   }
-  return count;
+  return affected;
 }
 
 export async function bulkRemoveFromMoodboard(
   cardIds: readonly string[],
   moodboardCardIds: ReadonlySet<string>
-): Promise<number> {
-  let count = 0;
+): Promise<string[]> {
+  const affected: string[] = [];
   for (const cardId of cardIds) {
     if (!moodboardCardIds.has(cardId)) continue;
     await removeCardFromMoodboard(cardId);
-    count += 1;
+    affected.push(cardId);
   }
-  return count;
+  return affected;
 }
 
 export async function bulkAddToCollection(
   cardIds: readonly string[],
   collectionId: string
-): Promise<number> {
-  let count = 0;
+): Promise<string[]> {
+  const affected: string[] = [];
   for (const cardId of cardIds) {
     const card = await getCardById(cardId);
     if (!card || card.collectionIds.includes(collectionId)) continue;
     await updateCardPayload(cardId, {
       collectionIds: [...card.collectionIds, collectionId]
     });
-    count += 1;
+    affected.push(cardId);
   }
-  return count;
+  return affected;
 }
 
 export async function bulkRemoveFromCollection(
   cardIds: readonly string[],
   collectionId: string
-): Promise<number> {
-  let count = 0;
+): Promise<string[]> {
+  const affected: string[] = [];
   for (const cardId of cardIds) {
     const card = await getCardById(cardId);
     if (!card || !card.collectionIds.includes(collectionId)) continue;
     await updateCardPayload(cardId, {
       collectionIds: card.collectionIds.filter((id) => id !== collectionId)
     });
-    count += 1;
+    affected.push(cardId);
   }
-  return count;
+  return affected;
 }
 
 export async function bulkToggleCollectionForCards(
   cardIds: readonly string[],
   collectionId: string,
   nextSelected: boolean
-): Promise<number> {
+): Promise<string[]> {
   if (nextSelected) return bulkAddToCollection(cardIds, collectionId);
   return bulkRemoveFromCollection(cardIds, collectionId);
 }
