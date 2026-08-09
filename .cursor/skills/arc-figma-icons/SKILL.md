@@ -21,7 +21,7 @@ Skill для **выгрузки и подключения** иконок из о
 | Синонимы поиска | [icon-synonyms.json](references/icon-synonyms.json) |
 | Размеры | [size-map.md](references/size-map.md) |
 | Регистрация в коде | [registration.md](references/registration.md) |
-| SVG в проекте | `renderer/public/ui/icons/{name}_{size}.svg` |
+| SVG в проекте | `renderer/public/ui/icons/{name}/{name}_{size}.svg` (+ опционально `Size=*.svg`) |
 | Hydration | `renderer/src/components/layout/navbarIconHydrate.ts` |
 
 ## Правила Figma (обязательные)
@@ -57,7 +57,7 @@ Skill для **выгрузки и подключения** иконок из о
 ### 2. Проверить локально
 
 ```
-renderer/public/ui/icons/{name}_{size}.svg
+renderer/public/ui/icons/{name}/{name}_{size}.svg
 ```
 
 - Файл **есть** → не экспортировать из Figma.

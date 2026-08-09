@@ -1,5 +1,5 @@
 /**
- * Подставляет в узлы `arc-icon-*` inline-SVG из `public/ui/icons/`:
+ * Подставляет в узлы `arc-icon-*` inline-SVG из `public/ui/icons/{name}/{name}_{size}.svg`:
  * `stroke`/`fill` с белого переводятся в `currentColor`, чтобы работали токены родителя.
  */
 const ICON_DIR = '/ui/icons/';
@@ -553,10 +553,17 @@ function normalizeSvgForTokens(svgText: string): string {
   return out;
 }
 
+function iconFolderForFile(file: string): string {
+  const stem = file.replace(/\.svg$/i, '');
+  const sized = stem.match(/^(.*)_(s|m|l|xl)$/i);
+  return sized ? sized[1] : stem;
+}
+
 function iconUrl(file: string): string {
   const base = typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL ? import.meta.env.BASE_URL : '/';
   const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
-  return `${normalized}${ICON_DIR}${file}`;
+  const folder = iconFolderForFile(file);
+  return `${normalized}${ICON_DIR}${folder}/${file}`;
 }
 
 function getIconSize(scope?: HTMLElement): UiSize {

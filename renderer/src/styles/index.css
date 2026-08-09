@@ -3846,8 +3846,8 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 
 .arc-add-dropzone-plus-icon {
   background-color: currentColor;
-  -webkit-mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
-  mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+  -webkit-mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
+  mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
   transition: background-color var(--transition-fast);
 }
 
@@ -3990,8 +3990,8 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 
 .arc-import-dropzone-plus-icon {
   background-color: currentColor;
-  -webkit-mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
-  mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+  -webkit-mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
+  mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
 }
 
 .arc-import-dropzone-cta-wrap {
@@ -4016,8 +4016,8 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 
 .arc-navbar-add-submit-plus {
   background-color: currentColor;
-  -webkit-mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
-  mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+  -webkit-mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
+  mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
 }
 
 .arc-add-with-queue {
@@ -4125,8 +4125,8 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 .arc-add-queue-remove-btn .arc-add-queue-remove-icon {
   display: block;
   background-color: currentColor;
-  -webkit-mask: url("/ui/icons/close_s.svg") center / contain no-repeat;
-  mask: url("/ui/icons/close_s.svg") center / contain no-repeat;
+  -webkit-mask: url("/ui/icons/close/close_s.svg") center / contain no-repeat;
+  mask: url("/ui/icons/close/close_s.svg") center / contain no-repeat;
 }
 
 .arc-add-queue-add-tile {
@@ -4168,8 +4168,8 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   width: 24px;
   height: 24px;
   background-color: var(--text-elev-secondary);
-  -webkit-mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
-  mask: url("/ui/icons/plus_l.svg") center / contain no-repeat;
+  -webkit-mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
+  mask: url("/ui/icons/plus/plus_l.svg") center / contain no-repeat;
 }
 
 .arc-add-queue-add-tile:hover:not(:disabled) .arc-add-queue-add-tile-plus {
@@ -4302,13 +4302,13 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 }
 
 .arc-add-tags-btn-group .arc-add-copy-settings-icon {
-  -webkit-mask-image: url("/ui/icons/copy_l.svg");
-  mask-image: url("/ui/icons/copy_l.svg");
+  -webkit-mask-image: url("/ui/icons/copy/copy_l.svg");
+  mask-image: url("/ui/icons/copy/copy_l.svg");
 }
 
 .arc-add-tags-btn-group .arc-add-apply-tags-icon {
-  -webkit-mask-image: url("/ui/icons/file-plus_l.svg");
-  mask-image: url("/ui/icons/file-plus_l.svg");
+  -webkit-mask-image: url("/ui/icons/file-plus/file-plus_l.svg");
+  mask-image: url("/ui/icons/file-plus/file-plus_l.svg");
 }
 
 /* Внутренний .search-inner получает фокус — обводка как у .input:focus-visible и .input.search-field:focus-within */
@@ -4673,15 +4673,15 @@ html.arc-onboarding-page,
 }
 
 .arc-onboarding-feature-card__icon--search {
-  --arc-onboarding-feature-icon-url: url("../ui/icons/search_xl.svg");
+  --arc-onboarding-feature-icon-url: url("../ui/icons/search/search_xl.svg");
 }
 
 .arc-onboarding-feature-card__icon--server {
-  --arc-onboarding-feature-icon-url: url("../ui/icons/server_xl.svg");
+  --arc-onboarding-feature-icon-url: url("../ui/icons/server/server_xl.svg");
 }
 
 .arc-onboarding-feature-card__icon--whiteboard {
-  --arc-onboarding-feature-icon-url: url("../ui/icons/whiteboard_xl.svg");
+  --arc-onboarding-feature-icon-url: url("../ui/icons/whiteboard/whiteboard_xl.svg");
 }
 
 .arc-onboarding-feature-card__content {
@@ -4870,8 +4870,8 @@ html.arc-onboarding-page,
 
 .arc-onboarding-knowledge-btn__icon {
   background-color: currentColor;
-  -webkit-mask: url("/ui/icons/book-l.svg") center / contain no-repeat;
-  mask: url("/ui/icons/book-l.svg") center / contain no-repeat;
+  -webkit-mask: url("/ui/icons/book-l/book-l.svg") center / contain no-repeat;
+  mask: url("/ui/icons/book-l/book-l.svg") center / contain no-repeat;
 }
 
 .arc-onboarding-library-btn__icon {
@@ -4887,15 +4887,15 @@ html.arc-onboarding-page,
 }
 
 .arc-onboarding-library-btn__icon--create {
-  --arc-onboarding-library-btn-icon-url: url("../ui/icons/folder-plus_l.svg");
+  --arc-onboarding-library-btn-icon-url: url("../ui/icons/folder-plus/folder-plus_l.svg");
 }
 
 .arc-onboarding-library-btn__icon--open {
-  --arc-onboarding-library-btn-icon-url: url("../ui/icons/folder-open_l.svg");
+  --arc-onboarding-library-btn-icon-url: url("../ui/icons/folder-open/folder-open_l.svg");
 }
 
 .arc-onboarding-library-btn__icon--restore {
-  --arc-onboarding-library-btn-icon-url: url("../ui/icons/download_l.svg");
+  --arc-onboarding-library-btn-icon-url: url("../ui/icons/download/download_l.svg");
 }
 
 .arc-onboarding-stage--features.arc-onboarding-stage--instant {
@@ -6346,8 +6346,8 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   width: 24px;
   height: 24px;
   background-color: currentColor;
-  -webkit-mask: url("/ui/icons/trash_l.svg") center / contain no-repeat;
-  mask: url("/ui/icons/trash_l.svg") center / contain no-repeat;
+  -webkit-mask: url("/ui/icons/trash/trash_l.svg") center / contain no-repeat;
+  mask: url("/ui/icons/trash/trash_l.svg") center / contain no-repeat;
 }
 
 /* ==========================================================================
@@ -7518,67 +7518,67 @@ html[data-theme="light"] .arc-stats-disk-bar__segment--nonArc {
 }
 
 .arc-stat-icon--image {
-  --arc-stat-icon-url: url("/ui/icons/image_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/image/image_xl.svg");
 }
 
 .arc-stat-icon--sticky-note {
-  --arc-stat-icon-url: url("/ui/icons/sticky-note_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/sticky-note/sticky-note_xl.svg");
 }
 
 .arc-stat-icon--card {
-  --arc-stat-icon-url: url("/ui/icons/card_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/card/card_xl.svg");
 }
 
 .arc-stat-icon--play-circle {
-  --arc-stat-icon-url: url("/ui/icons/play-circle_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/play-circle/play-circle_xl.svg");
 }
 
 .arc-stat-icon--layers {
-  --arc-stat-icon-url: url("/ui/icons/layers_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/layers/layers_xl.svg");
 }
 
 .arc-stat-icon--collection {
-  --arc-stat-icon-url: url("/ui/icons/collection_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/collection/collection_xl.svg");
 }
 
 .arc-stat-icon--play {
-  --arc-stat-icon-url: url("/ui/icons/play_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/play/play_xl.svg");
 }
 
 .arc-stat-icon--folder-open {
-  --arc-stat-icon-url: url("/ui/icons/folder-open_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/folder-open/folder-open_xl.svg");
 }
 
 .arc-stat-icon--tags {
-  --arc-stat-icon-url: url("/ui/icons/tags_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/tags/tags_xl.svg");
 }
 
 .arc-stat-icon--tag {
-  --arc-stat-icon-url: url("/ui/icons/tag_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/tag/tag_xl.svg");
 }
 
 .arc-stat-icon--whiteboard {
-  --arc-stat-icon-url: url("/ui/icons/whiteboard_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/whiteboard/whiteboard_xl.svg");
 }
 
 .arc-stat-icon--images {
-  --arc-stat-icon-url: url("/ui/icons/images_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/images/images_xl.svg");
 }
 
 .arc-stat-icon--file-video {
-  --arc-stat-icon-url: url("/ui/icons/file-video_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/file-video/file-video_xl.svg");
 }
 
 .arc-stat-icon--hard-drive {
-  --arc-stat-icon-url: url("/ui/icons/hard-drive_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/hard-drive/hard-drive_xl.svg");
 }
 
 .arc-stat-icon--arrow-up-right {
-  --arc-stat-icon-url: url("/ui/icons/arrow-up-right_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/arrow-up-right/arrow-up-right_xl.svg");
 }
 
 .arc-stat-icon--arrow-down-left {
-  --arc-stat-icon-url: url("/ui/icons/arrow-down-left_xl.svg");
+  --arc-stat-icon-url: url("/ui/icons/arrow-down-left/arrow-down-left_xl.svg");
 }
 
 .arc-stat-icon--success {

@@ -1145,11 +1145,11 @@ body[data-input-size="l"],
   --textarea-h: 87px;
   --input-font-size: var(--typo-p-m-size);
   --input-line-height: var(--typo-p-m-line);
-  --input-icon-search-url: url("../icons/search_m.svg");
-  --input-icon-close-url: url("../icons/close_m.svg");
-  --input-icon-trash-url: url("../icons/trash_m.svg");
-  --input-icon-chevron-url: url("../icons/chevron_m.svg");
-  --input-icon-check-url: url("../icons/check_m.svg");
+  --input-icon-search-url: url("../icons/search/search_m.svg");
+  --input-icon-close-url: url("../icons/close/close_m.svg");
+  --input-icon-trash-url: url("../icons/trash/trash_m.svg");
+  --input-icon-chevron-url: url("../icons/chevron/chevron_m.svg");
+  --input-icon-check-url: url("../icons/check/check_m.svg");
 }
 
 body[data-input-size="m"],
@@ -1163,11 +1163,11 @@ body[data-input-size="m"],
   --textarea-h: 83px;
   --input-font-size: var(--typo-p-m-size);
   --input-line-height: var(--typo-p-m-line);
-  --input-icon-search-url: url("../icons/search_m.svg");
-  --input-icon-close-url: url("../icons/close_m.svg");
-  --input-icon-trash-url: url("../icons/trash_m.svg");
-  --input-icon-chevron-url: url("../icons/chevron_m.svg");
-  --input-icon-check-url: url("../icons/check_m.svg");
+  --input-icon-search-url: url("../icons/search/search_m.svg");
+  --input-icon-close-url: url("../icons/close/close_m.svg");
+  --input-icon-trash-url: url("../icons/trash/trash_m.svg");
+  --input-icon-chevron-url: url("../icons/chevron/chevron_m.svg");
+  --input-icon-check-url: url("../icons/check/check_m.svg");
 }
 
 body[data-input-size="s"],
@@ -1181,11 +1181,11 @@ body[data-input-size="s"],
   --textarea-h: 58px;
   --input-font-size: var(--typo-p-s-size);
   --input-line-height: var(--typo-p-s-line);
-  --input-icon-search-url: url("../icons/search_s.svg");
-  --input-icon-close-url: url("../icons/close_s.svg");
-  --input-icon-trash-url: url("../icons/trash_s.svg");
-  --input-icon-chevron-url: url("../icons/chevron_s.svg");
-  --input-icon-check-url: url("../icons/check_s.svg");
+  --input-icon-search-url: url("../icons/search/search_s.svg");
+  --input-icon-close-url: url("../icons/close/close_s.svg");
+  --input-icon-trash-url: url("../icons/trash/trash_s.svg");
+  --input-icon-chevron-url: url("../icons/chevron/chevron_s.svg");
+  --input-icon-check-url: url("../icons/check/check_s.svg");
 }
 
 /* Док: EL-INP-GROUP-SEARCH-MULTI всегда L — не зависит от глобального data-input-size */
@@ -1198,11 +1198,11 @@ body[data-input-size="s"],
   --textarea-h: 87px;
   --input-font-size: var(--typo-p-m-size);
   --input-line-height: var(--typo-p-m-line);
-  --input-icon-search-url: url("../icons/search_m.svg");
-  --input-icon-close-url: url("../icons/close_m.svg");
-  --input-icon-trash-url: url("../icons/trash_m.svg");
-  --input-icon-chevron-url: url("../icons/chevron_m.svg");
-  --input-icon-check-url: url("../icons/check_m.svg");
+  --input-icon-search-url: url("../icons/search/search_m.svg");
+  --input-icon-close-url: url("../icons/close/close_m.svg");
+  --input-icon-trash-url: url("../icons/trash/trash_m.svg");
+  --input-icon-chevron-url: url("../icons/chevron/chevron_m.svg");
+  --input-icon-check-url: url("../icons/check/check_m.svg");
 }
 
 .btn-ds {
@@ -1622,7 +1622,7 @@ button.input {
   --input-font-size: var(--typo-p-s-size);
   --input-line-height: var(--typo-p-s-line);
   --input-icon-size: 12px;
-  --input-icon-search-url: url("../icons/search_s.svg");
+  --input-icon-search-url: url("../icons/search/search_s.svg");
 }
 
 .selector-dropdown .selector-search {
