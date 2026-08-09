@@ -58,10 +58,10 @@ function GalleryListRow({
     width: GALLERY_LIST_THUMB_SIZE_PX,
     height: GALLERY_LIST_THUMB_SIZE_PX
   };
-  const bookmarkIcon = hoveredBookmark
-    ? inMoodboard
-      ? 'arc-icon-bookmark-minus'
-      : 'arc-icon-bookmark-plus'
+  const bookmarkIcon = inMoodboard
+    ? hoveredBookmark
+      ? 'arc-icon-bookmark-off'
+      : 'arc-icon-bookmark-on'
     : 'arc-icon-bookmark';
   const showActions = Boolean((moodboardEnabled && onToggleMoodboard) || onFindSimilar);
 

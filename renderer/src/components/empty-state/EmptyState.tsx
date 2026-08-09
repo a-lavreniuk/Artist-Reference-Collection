@@ -19,8 +19,8 @@ type Props = EmptyStateCopy & {
 
 function EmptyStateActionButton({ action }: { action: EmptyStateAction }) {
   const variantClass = action.variant === 'brand' ? 'btn-brand' : 'btn-outline';
-  const iconClass =
-    action.iconClass ?? (action.variant === 'brand' ? 'arc-add-dropzone-plus-icon' : 'arc-icon-plus');
+  /* Inline SVG (hydrate), не CSS-mask: у stroke-иконок с рамкой mask даёт разрывы. */
+  const iconClass = action.iconClass ?? 'arc-icon-plus';
   return (
     <button
       type="button"

@@ -85,7 +85,8 @@ export default function GallerySelectionBar({
   if (selectedCount <= 0) return null;
 
   const collectionLabel = variant === 'collection' ? 'Убрать из коллекции' : 'Добавить в коллекцию';
-  const collectionIcon = 'arc-icon-layout-grid';
+  const collectionIcon =
+    variant === 'collection' ? 'arc-icon-layout-grid' : 'arc-icon-folder-plus';
 
   return (
     <div

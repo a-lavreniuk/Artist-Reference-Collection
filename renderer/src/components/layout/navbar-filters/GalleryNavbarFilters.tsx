@@ -838,7 +838,7 @@ export default function NavbarFiltersMenu() {
       type: 'item',
       key: 'filter-options',
       label: 'Настроить список',
-      iconClass: 'arc-icon-filter-list',
+      iconClass: 'arc-icon-adjust-position',
       closeOnSelect: false,
       onSelect: () => placeFilterSubmenu('filter-options', 'options')
     });
@@ -856,7 +856,7 @@ export default function NavbarFiltersMenu() {
         type: 'item',
         key: 'filter-clear',
         label: 'Очистить фильтры',
-        iconClass: 'arc-icon-trash',
+        iconClass: 'arc-icon-filter-off',
         counter: activeCategoryCount,
         slotOrder: ['label', 'counter', 'icon'],
         onSelect: () => {

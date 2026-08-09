@@ -534,7 +534,7 @@ export default function CardViewerApp() {
                   disabled={!session.canGoNext}
                   onClick={() => session.goNext()}
                 >
-                  <span className="btn-icon-only__glyph arc-icon-skip-forward" aria-hidden="true" />
+                  <span className="btn-icon-only__glyph arc-icon-skip" aria-hidden="true" />
                 </button>
               </div>
             </div>

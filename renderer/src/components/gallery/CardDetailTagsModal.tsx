@@ -344,7 +344,7 @@ export default function CardDetailTagsModal({ selectedTagIds, onClose, onToggleT
                           onClick={() => openCreateTag(cat.id)}
                           aria-label={`Добавить метку в категорию «${cat.name}»`}
                         >
-                          <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
+                          <span className="btn-icon-only__glyph arc-icon-tag" aria-hidden="true" />
                         </button>
                       </Tooltip>
                     </div>

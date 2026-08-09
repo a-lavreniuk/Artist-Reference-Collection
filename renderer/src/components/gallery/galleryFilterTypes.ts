@@ -184,14 +184,14 @@ export const FILTER_CHIP_META: Record<
   { label: string; iconClass: string }
 > = {
   aspectRatio: { label: 'Соотношение сторон', iconClass: 'arc-icon-aspect-ratio' },
-  fileType: { label: 'Тип файла', iconClass: 'arc-icon-file-type' },
+  fileType: { label: 'Тип файла', iconClass: 'arc-icon-images' },
   tagPresence: { label: 'Метки', iconClass: 'arc-icon-tag' },
   description: { label: 'Описание', iconClass: 'arc-icon-description' },
   link: { label: 'Ссылка', iconClass: 'arc-icon-link' },
   dateAdded: { label: 'Дата добавления', iconClass: 'arc-icon-calendar' },
-  fileWeight: { label: 'Вес файла', iconClass: 'arc-icon-weight' },
-  resolution: { label: 'Разрешение', iconClass: 'arc-icon-resolution' },
-  duration: { label: 'Длительность', iconClass: 'arc-icon-duration' }
+  fileWeight: { label: 'Вес файла', iconClass: 'arc-icon-file' },
+  resolution: { label: 'Разрешение', iconClass: 'arc-icon-size' },
+  duration: { label: 'Длительность', iconClass: 'arc-icon-clock' }
 };
 
 export const SORT_FIELD_LABELS: Record<GalleryOrderableSortField, string> = {

@@ -34,7 +34,7 @@ export default function SearchPanelRecentQueries({ queries, onSelect, onReuse }:
               onClick={() => onReuse(query)}
             >
               <span
-                className="context-menu__item-icon tab-icon arc-icon-reuse"
+                className="context-menu__item-icon tab-icon arc-icon-repeat"
                 data-arc-icon-size="s"
                 aria-hidden="true"
               />

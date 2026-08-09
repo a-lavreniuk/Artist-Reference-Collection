@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ARC_CARDS_CHANGED_EVENT, isLibraryConfigured, addCollection, getAllCollections } from '../../services/db';
 import { isImportableMediaPath } from '../../media/allowedImportExtensions';
 import { getImportSourceFilesAction } from '../../import/importDefaults';
@@ -20,6 +20,7 @@ import {
   type FolderImportPlan
 } from '../../import/folderImportPlan';
 import type { CollectionRecord } from '../../services/arcSchema';
+import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
 function isFileDragEvent(e: DragEvent): boolean {
   const dt = e.dataTransfer;
@@ -464,6 +465,11 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const showOverlay = phase === 'overlay' || isDraggingFiles;
   const dropzoneActive = isDraggingFiles;
 
+  useLayoutEffect(() => {
+    if (!showOverlay || !ctaWrapRef.current) return;
+    void hydrateArcNavbarIcons(ctaWrapRef.current);
+  }, [showOverlay]);
+
   useImportDropzonePerimeterDash({
     enabled: showOverlay,
     dropzoneRef,
@@ -521,7 +527,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
                 }}
               >
                 <span className="btn-ds__value">Перетащите файлы в это окно</span>
-                <span className="btn-ds__icon arc-import-dropzone-plus-icon" aria-hidden="true" />
+                <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
               </button>
             </div>
           </div>

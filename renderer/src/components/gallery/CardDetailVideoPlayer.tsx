@@ -121,7 +121,7 @@ export default function CardDetailVideoPlayer({
         type: 'item',
         key: 'save-frame',
         label: 'Сохранить кадр',
-        iconClass: 'arc-icon-save',
+        iconClass: 'arc-icon-download',
         onSelect: () => void player.saveFrame()
       },
       {
@@ -246,7 +246,7 @@ export default function CardDetailVideoPlayer({
                   aria-label="Вперёд на 5 секунд"
                   onClick={() => player.seekBySeconds(5)}
                 >
-                  <span className="btn-icon-only__glyph arc-icon-skip-forward" aria-hidden="true" />
+                  <span className="btn-icon-only__glyph arc-icon-skip" aria-hidden="true" />
                 </button>
               </Tooltip>
             </div>
@@ -296,7 +296,7 @@ export default function CardDetailVideoPlayer({
                 </button>
               </Tooltip>
               <div className="arc-card-detail-video-meta__item">
-                <span className="btn-ds__icon arc-icon-aspect-ratio-other" aria-hidden="true" />
+                <span className="btn-ds__icon arc-icon-size" aria-hidden="true" />
                 <span className="text-m">{resolutionLabel}</span>
               </div>
               <div className="arc-card-detail-video-meta__item">
@@ -316,7 +316,7 @@ export default function CardDetailVideoPlayer({
                 aria-expanded={player.speedMenuOpen}
                 onClick={() => player.setSpeedMenuOpen((open) => !open)}
               >
-                <span className="btn-ds__icon arc-icon-fast-forward" aria-hidden="true" />
+                <span className="btn-ds__icon arc-icon-forward" aria-hidden="true" />
                 <span className="btn-ds__value">{formatPlaybackRate(player.playbackRate)}</span>
               </button>
             </Tooltip>

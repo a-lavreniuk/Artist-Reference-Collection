@@ -88,10 +88,10 @@ function GalleryCardTile({
     suppressed: overlaySuppressed
   });
 
-  const iconClass = hoveredBookmarkCardId
-    ? inMoodboard
-      ? 'arc-icon-bookmark-minus'
-      : 'arc-icon-bookmark-plus'
+  const iconClass = inMoodboard
+    ? hoveredBookmarkCardId
+      ? 'arc-icon-bookmark-off'
+      : 'arc-icon-bookmark-on'
     : 'arc-icon-bookmark';
   const mediaTypeIconClass = isVideo ? 'arc-icon-play' : 'arc-icon-image';
   const formatLabel = cardFileFormatLabel(card);

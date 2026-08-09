@@ -206,12 +206,12 @@ export default function SettingsStatisticsPanel() {
   const showAllLibrariesHint = statsScope === 'all' && libraries.length > 1;
 
   const summaryStats: SummaryItem[] = [
-    { id: 'total-cards', label: 'Карточек', value: metrics?.totalCards ?? 0, icon: 'sticky-note' },
+    { id: 'total-cards', label: 'Карточек', value: metrics?.totalCards ?? 0, icon: 'card' },
     { id: 'image-count', label: 'Изображений', value: metrics?.imageCards ?? 0, icon: 'image' },
     { id: 'video-count', label: 'Видео', value: metrics?.videoCards ?? 0, icon: 'play-circle' },
     { id: 'categories-count', label: 'Категорий', value: totalCategories, icon: 'folder-open' },
     { id: 'tags-count', label: 'Меток', value: totalTags, icon: 'tag' },
-    { id: 'collections-count', label: 'Коллекций', value: metrics?.totalCollections ?? 0, icon: 'layers' }
+    { id: 'collections-count', label: 'Коллекций', value: metrics?.totalCollections ?? 0, icon: 'collection' }
   ];
 
   return (

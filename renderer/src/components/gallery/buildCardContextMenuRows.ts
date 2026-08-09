@@ -50,7 +50,7 @@ function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): Conte
     { type: 'separator', key: 'sep-main' },
     itemRow('open-new-window', 'Открыть в новом окне', 'arc-icon-arrow-up-right', actions.onOpenInNewWindow),
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
-    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections)
+    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-folder-plus', actions.onOpenCollections)
   ];
 
   if (input.scope.kind === 'collection' && actions.onRemoveFromCollection) {
@@ -134,7 +134,7 @@ function libraryMenuRows(input: BuildCardContextMenuRowsInput): ContextMenuRow[]
 
   rows.push(
     itemRow('moodboard', moodboardLabel, moodboardIcon, actions.onToggleMoodboard),
-    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-layout-grid', actions.onOpenCollections),
+    itemRow('collections', 'Добавить в коллекцию', 'arc-icon-folder-plus', actions.onOpenCollections),
     itemRow('similar', 'Найти похожее', 'arc-icon-search', actions.onFindSimilar),
     itemRow('open-folder', 'Открыть папку исходника', 'arc-icon-folder-open', actions.onOpenSourceFolder, {
       disabled: !hasSourcePath

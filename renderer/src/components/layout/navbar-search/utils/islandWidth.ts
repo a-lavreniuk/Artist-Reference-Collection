@@ -24,7 +24,10 @@ export function resolveIslandExpanded(params: {
   searchMode: string;
 }): boolean {
   const { panelOpen, hasValue, searchIslandWidePinned, searchMode } = params;
-  if (searchMode === 'color') return true;
+  // Режим «Цвет»: дефолтный/URL hex не растягивает остров — только фокус (панель) или pin.
+  if (searchMode === 'color') {
+    return panelOpen || searchIslandWidePinned;
+  }
   return panelOpen || searchIslandWidePinned || hasValue;
 }
 

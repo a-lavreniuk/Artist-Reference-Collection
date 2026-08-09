@@ -962,10 +962,10 @@ export default function CardDetailOverlay({
       ? getVideoPlaybackTierFromPath(card.originalRelativePath)
       : null;
 
-  const bookmarkIconClass = isBookmarkHovered
-    ? inMoodboard
-      ? 'arc-icon-bookmark-minus'
-      : 'arc-icon-bookmark-plus'
+  const bookmarkIconClass = inMoodboard
+    ? isBookmarkHovered
+      ? 'arc-icon-bookmark-off'
+      : 'arc-icon-bookmark-on'
     : 'arc-icon-bookmark';
 
   const overlayStyle = {
@@ -1292,7 +1292,7 @@ export default function CardDetailOverlay({
                       requestClose();
                     }}
                   >
-                    <span className="btn-icon-only__glyph arc-icon-external-link" aria-hidden="true" />
+                    <span className="btn-icon-only__glyph arc-icon-picture-in-picture" aria-hidden="true" />
                   </button>
                 </Tooltip>
                 <div className="arc-card-detail-segmented" role="group" aria-label="Действия с карточкой">
@@ -1467,7 +1467,7 @@ export default function CardDetailOverlay({
                         disabled={!normalizeExternalUrl(draftLink)}
                         onClick={openDraftLink}
                       >
-                        <span className="btn-icon-only__glyph arc-icon-arrow-up-right" aria-hidden="true" />
+                        <span className="btn-icon-only__glyph arc-icon-external-link" aria-hidden="true" />
                       </button>
                     </Tooltip>
                   </div>

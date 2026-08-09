@@ -26,7 +26,7 @@ export default function OnboardingTopBar() {
           aria-label="Закрыть"
           onClick={() => void window.arc?.windowCloseToTray?.()}
         >
-          <span className="arc-topbar-btn__glyph arc-icon-close" data-arc-icon-size="s" aria-hidden="true" />
+          <span className="arc-topbar-btn__glyph arc-icon-close-chrome" data-arc-icon-size="s" aria-hidden="true" />
         </button>
       </div>
     </header>

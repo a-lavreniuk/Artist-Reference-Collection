@@ -217,7 +217,7 @@ export default function DuplicatesSidebar({
         <div className="context-menu__sep" role="separator" aria-hidden="true" />
         <div className="arc-duplicates-sidebar__foot-pad">
           <button type="button" className="btn btn-outline btn-ds arc-duplicates-sidebar__rescan" onClick={onRescan}>
-            <span className="btn-ds__icon arc-icon-reuse" aria-hidden="true" />
+            <span className="btn-ds__icon arc-icon-repeat" aria-hidden="true" />
             <span className="btn-ds__value">Повторить сканирование</span>
           </button>
         </div>

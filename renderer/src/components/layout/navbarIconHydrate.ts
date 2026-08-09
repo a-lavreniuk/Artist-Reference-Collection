@@ -7,6 +7,8 @@ const ICON_DIR = '/ui/icons/';
 type IconKey =
   | 'search'
   | 'close'
+  | 'closeChrome'
+  | 'closeSquare'
   | 'plus'
   | 'images'
   | 'image'
@@ -116,35 +118,86 @@ type IconKey =
   | 'highlighter'
   | 'moon'
   | 'sunMedium'
-  | 'contrast';
+  | 'contrast'
+  /** Запасные ключи нового пака (регистрация «про запас»). */
+  | 'alert'
+  | 'eyeOn'
+  | 'sun'
+  | 'sortAsc'
+  | 'sortDesc'
+  | 'deviceUpdate'
+  | 'clock'
+  | 'chart'
+  | 'folder'
+  | 'folderImport'
+  | 'keyboard'
+  | 'lock'
+  | 'lockOff'
+  | 'options'
+  | 'refresh'
+  | 'filterOff'
+  | 'layoutTemplate'
+  | 'layoutWaterfall'
+  | 'layoutGrid'
+  | 'gridMedium'
+  | 'gridSmall'
+  | 'checkHexagon'
+  | 'file'
+  | 'size'
+  | 'message'
+  | 'scan'
+  | 'square'
+  | 'bookmarkOn'
+  | 'bookmarkOff'
+  | 'chevronDown'
+  | 'chevronUp'
+  | 'chevronLeft'
+  | 'chevronRight'
+  | 'volumeOff'
+  | 'hexagon'
+  | 'scale'
+  | 'triangle'
+  | 'adjustPosition'
+  | 'pictureInPicture'
+  | 'repeat'
+  | 'shrink'
+  | 'folderPlus'
+  | 'skip'
+  | 'forward'
+  | 'backward'
+  | 'card'
+  | 'collection';
 
 const ICON_FILES: Record<IconKey, string> = {
   search: 'search_m.svg',
   close: 'close_m.svg',
+  /** Старый stroke-крест только для top bar (не пакет). */
+  closeChrome: 'close-chrome_s.svg',
+  closeSquare: 'close-square_m.svg',
   plus: 'plus_m.svg',
   images: 'images_m.svg',
   image: 'image_m.svg',
   play: 'play_m.svg',
   whiteboard: 'whiteboard_m.svg',
-  hardDrive: 'hard-drive_m.svg',
-  pieChart: 'pie-chart_m.svg',
-  history: 'history_m.svg',
+  hardDrive: 'folder_m.svg',
+  pieChart: 'chart_m.svg',
+  history: 'clock_m.svg',
   copy: 'copy_m.svg',
-  copySettings: 'copy-settings_l.svg',
-  pasteSettings: 'paste-settings_l.svg',
+  copySettings: 'copy-settings_m.svg',
+  pasteSettings: 'paste-settings_m.svg',
   save: 'save_m.svg',
-  chevron: 'chevron_m.svg',
-  chevronBottom: 'chevron-buttom_s.svg',
-  chevronPeak: 'chevron-peak_s.svg',
+  chevron: 'chevron_s.svg',
+  chevronBottom: 'chevron-down_m.svg',
+  chevronPeak: 'chevron-up_m.svg',
   arrowUp: 'arrow-up_s.svg',
   arrowDown: 'arrow-down_s.svg',
   arrowUpRight: 'arrow-up-right_m.svg',
   arrowLeftRight: 'arrow-left-right_m.svg',
   trash: 'trash_m.svg',
-  broom: 'broom_l.svg',
+  broom: 'broom_m.svg',
   bookmark: 'bookmark_m.svg',
-  bookmarkPlus: 'bookmark-plus_m.svg',
-  bookmarkMinus: 'bookmark-minus_m.svg',
+  bookmarkPlus: 'bookmark-on_m.svg',
+  bookmarkMinus: 'bookmark-off_m.svg',
   download: 'download_m.svg',
   folderOpen: 'folder-open_m.svg',
   edit: 'edit_m.svg',
@@ -167,70 +220,117 @@ const ICON_FILES: Record<IconKey, string> = {
   minus: 'minus_m.svg',
   minimize: 'minimize_s.svg',
   menu: 'menu_m.svg',
-  grid: 'grid_m.svg',
+  grid: 'layout-grid_m.svg',
   filter: 'filter_m.svg',
-  maximize: 'maximize_s.svg',
-  sorting: 'sorting_m.svg',
+  maximize: 'maximize_m.svg',
+  sorting: 'sort-desc_m.svg',
   aspectRatio: 'aspect-ratio_m.svg',
   aspectRatioHorizontal: 'aspect-ratio-horizontal_m.svg',
   aspectRatioVertical: 'aspect-ratio-vertical_m.svg',
-  aspectRatioSquare: 'aspect-ratio-square_m.svg',
+  aspectRatioSquare: 'square_m.svg',
   aspectRatioPanoramic: 'aspect-ratio-panoramic_m.svg',
-  fileType: 'file-type_m.svg',
-  description: 'description_m.svg',
+  fileType: 'file_m.svg',
+  description: 'message_m.svg',
   link: 'link_m.svg',
-  calendar: 'date_m.svg',
-  weight: 'file-weight_m.svg',
+  calendar: 'calendar_m.svg',
+  weight: 'size_m.svg',
   resolution: 'resolution_m.svg',
   arrowsHorizontal: 'arrows-horizontal_s.svg',
   arrowsVertical: 'arrows-vertical_s.svg',
-  duration: 'duration_m.svg',
-  filterList: 'filter-list_m.svg',
+  duration: 'clock_m.svg',
+  filterList: 'filter_m.svg',
   layoutList: 'layout-list_m.svg',
-  eye: 'eye_m.svg',
+  eye: 'eye-on_m.svg',
   eyeOff: 'eye-off_m.svg',
   chevronsUpDown: 'chevrons-up-down_m.svg',
-  check: 'check_s.svg',
-  gridL: 'grid-L_s.svg',
-  gridM: 'grid-M_s.svg',
-  gridS: 'grid-S_s.svg',
-  settings: 'settings_s.svg',
-  screenshot: 'screenshot_s.svg',
-  notifications: 'notifications_s.svg',
+  check: 'check_m.svg',
+  gridL: 'layout-grid_m.svg',
+  gridM: 'grid-medium_m.svg',
+  gridS: 'grid-small_m.svg',
+  settings: 'settings_m.svg',
+  screenshot: 'scan_m.svg',
+  notifications: 'alert_m.svg',
   shortcut: 'shortcut_s.svg',
   library: 'libray_s.svg',
-  copyS: 'copy_s.svg',
-  serverS: 'server_s.svg',
-  integrityCheck: 'integrity-check_s.svg',
-  autoimport: 'autoimport_s.svg',
-  browser: 'browser_s.svg',
-  ai: 'ai_s.svg',
-  update: 'update_s.svg',
+  copyS: 'copy_m.svg',
+  serverS: 'server_m.svg',
+  integrityCheck: 'check-hexagon_m.svg',
+  autoimport: 'folder-import_m.svg',
+  browser: 'browser_m.svg',
+  ai: 'ai_m.svg',
+  update: 'device-update_m.svg',
   send: 'send_m.svg',
-  reuse: 'reuse_s.svg',
-  redo: 'redo_s.svg',
+  reuse: 'repeat_m.svg',
+  redo: 'redo_m.svg',
   bug: 'bug_l.svg',
   bugS: 'bug_s.svg',
   eyedropper: 'eyedropper_m.svg',
   pause: 'pause_m.svg',
   skipBack: 'skip-back_m.svg',
-  skipForward: 'skip-forward_m.svg',
+  skipForward: 'skip_m.svg',
   volume: 'volume_m.svg',
-  volumeX: 'volume-x_m.svg',
-  fastForward: 'fast-forward_m.svg',
+  volumeX: 'volume-off_m.svg',
+  fastForward: 'forward_m.svg',
   aspectRatioOther: 'aspect-ratio-other_m.svg',
-  info: 'info_s.svg',
-  externalLink: 'external-link_l.svg',
+  info: 'info_m.svg',
+  externalLink: 'external-link_m.svg',
   maximize2: 'maximize-2_m.svg',
   minimize2: 'minimize-2_m.svg',
-  pin: 'pin_s.svg',
-  pinOff: 'pin-off_s.svg',
+  pin: 'pin_m.svg',
+  pinOff: 'pin-off_m.svg',
   flipHorizontal: 'flip-horizontal_m.svg',
   flipVertical: 'flip-vertical_m.svg',
   highlighter: 'highlighter_m.svg',
   moon: 'moon_m.svg',
-  sunMedium: 'sun-medium_m.svg',
-  contrast: 'contrast_m.svg'
+  sunMedium: 'sun_m.svg',
+  contrast: 'contrast_m.svg',
+  alert: 'alert_m.svg',
+  eyeOn: 'eye-on_m.svg',
+  sun: 'sun_m.svg',
+  sortAsc: 'sort-asc_m.svg',
+  sortDesc: 'sort-desc_m.svg',
+  deviceUpdate: 'device-update_m.svg',
+  clock: 'clock_m.svg',
+  chart: 'chart_m.svg',
+  folder: 'folder_m.svg',
+  folderImport: 'folder-import_m.svg',
+  keyboard: 'keyboard_m.svg',
+  lock: 'lock_m.svg',
+  lockOff: 'lock-off_m.svg',
+  options: 'options_m.svg',
+  refresh: 'repeat_m.svg',
+  filterOff: 'filter-off_m.svg',
+  layoutTemplate: 'layout-template_m.svg',
+  layoutWaterfall: 'layout-waterfall_m.svg',
+  layoutGrid: 'layout-grid_m.svg',
+  gridMedium: 'grid-medium_m.svg',
+  gridSmall: 'grid-small_m.svg',
+  checkHexagon: 'check-hexagon_m.svg',
+  file: 'file_m.svg',
+  size: 'size_m.svg',
+  message: 'message_m.svg',
+  scan: 'scan_m.svg',
+  square: 'square_m.svg',
+  bookmarkOn: 'bookmark-on_m.svg',
+  bookmarkOff: 'bookmark-off_m.svg',
+  chevronDown: 'chevron-down_m.svg',
+  chevronUp: 'chevron-up_m.svg',
+  chevronLeft: 'chevron-left_m.svg',
+  chevronRight: 'chevron-right_m.svg',
+  volumeOff: 'volume-off_m.svg',
+  hexagon: 'hexagon_m.svg',
+  scale: 'scale_m.svg',
+  triangle: 'triangle_m.svg',
+  adjustPosition: 'adjust-position_m.svg',
+  pictureInPicture: 'picture-in-picture_m.svg',
+  repeat: 'repeat_m.svg',
+  shrink: 'shrink_m.svg',
+  folderPlus: 'folder-plus_m.svg',
+  skip: 'skip_m.svg',
+  forward: 'forward_m.svg',
+  backward: 'backward_m.svg',
+  card: 'card_m.svg',
+  collection: 'collection_m.svg'
 };
 const SIZE_SUFFIX_RE = /_(s|m|l|xl)\.svg$/;
 type UiSize = 's' | 'm' | 'l' | 'xl';
@@ -238,6 +338,8 @@ type UiSize = 's' | 'm' | 'l' | 'xl';
 const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
   arc_icon_search: 'search',
   arc_icon_close: 'close',
+  arc_icon_close_chrome: 'closeChrome',
+  arc_icon_close_square: 'closeSquare',
   arc_icon_plus: 'plus',
   arc_icon_images: 'images',
   arc_icon_image: 'image',
@@ -285,7 +387,7 @@ const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
   arc_icon_minimize: 'minimize',
   arc_icon_menu: 'menu',
   arc_icon_grid: 'grid',
-  arc_icon_layout_grid: 'grid',
+  arc_icon_layout_grid: 'layoutGrid',
   arc_icon_filter: 'filter',
   arc_icon_maximize: 'maximize',
   arc_icon_sorting: 'sorting',
@@ -348,11 +450,57 @@ const ICON_CLASS_TO_KEY: Record<string, IconKey> = {
   arc_icon_highlighter: 'highlighter',
   arc_icon_moon: 'moon',
   arc_icon_sun_medium: 'sunMedium',
-  arc_icon_contrast: 'contrast'
+  arc_icon_contrast: 'contrast',
+  arc_icon_alert: 'alert',
+  arc_icon_eye_on: 'eyeOn',
+  arc_icon_sun: 'sun',
+  arc_icon_sort_asc: 'sortAsc',
+  arc_icon_sort_desc: 'sortDesc',
+  arc_icon_device_update: 'deviceUpdate',
+  arc_icon_clock: 'clock',
+  arc_icon_chart: 'chart',
+  arc_icon_folder: 'folder',
+  arc_icon_folder_import: 'folderImport',
+  arc_icon_keyboard: 'keyboard',
+  arc_icon_lock: 'lock',
+  arc_icon_lock_off: 'lockOff',
+  arc_icon_options: 'options',
+  arc_icon_refresh: 'refresh',
+  arc_icon_filter_off: 'filterOff',
+  arc_icon_layout_template: 'layoutTemplate',
+  arc_icon_layout_waterfall: 'layoutWaterfall',
+  arc_icon_grid_medium: 'gridMedium',
+  arc_icon_grid_small: 'gridSmall',
+  arc_icon_check_hexagon: 'checkHexagon',
+  arc_icon_file: 'file',
+  arc_icon_size: 'size',
+  arc_icon_message: 'message',
+  arc_icon_scan: 'scan',
+  arc_icon_square: 'square',
+  arc_icon_bookmark_on: 'bookmarkOn',
+  arc_icon_bookmark_off: 'bookmarkOff',
+  arc_icon_chevron_down: 'chevronDown',
+  arc_icon_chevron_up: 'chevronUp',
+  arc_icon_chevron_left: 'chevronLeft',
+  arc_icon_chevron_right: 'chevronRight',
+  arc_icon_volume_off: 'volumeOff',
+  arc_icon_hexagon: 'hexagon',
+  arc_icon_scale: 'scale',
+  arc_icon_triangle: 'triangle',
+  arc_icon_adjust_position: 'adjustPosition',
+  arc_icon_picture_in_picture: 'pictureInPicture',
+  arc_icon_repeat: 'repeat',
+  arc_icon_shrink: 'shrink',
+  arc_icon_folder_plus: 'folderPlus',
+  arc_icon_skip: 'skip',
+  arc_icon_forward: 'forward',
+  arc_icon_backward: 'backward',
+  arc_icon_card: 'card',
+  arc_icon_collection: 'collection'
 };
 
 const ICON_SELECTOR =
-  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-maximize-2, .arc-icon-minimize-2, .arc-icon-external-link, .arc-icon-pin, .arc-icon-pin-off, .arc-icon-flip-horizontal, .arc-icon-flip-vertical, .arc-icon-highlighter, .arc-icon-moon, .arc-icon-sun-medium, .arc-icon-contrast, .arc-icon-menu, .arc-icon-grid, .arc-icon-grid-l, .arc-icon-grid-m, .arc-icon-grid-s, .arc-icon-check, .arc-icon-layout-grid, .arc-icon-layout-list, .arc-icon-filter, .arc-icon-sorting, .arc-icon-aspect-ratio, .arc-icon-aspect-ratio-horizontal, .arc-icon-aspect-ratio-vertical, .arc-icon-aspect-ratio-square, .arc-icon-aspect-ratio-panoramic, .arc-icon-aspect-ratio-other, .arc-icon-file-type, .arc-icon-eyedropper, .arc-icon-description, .arc-icon-link, .arc-icon-calendar, .arc-icon-weight, .arc-icon-resolution, .arc-icon-arrows-horizontal, .arc-icon-arrows-vertical, .arc-icon-arrow-left-right, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-eye, .arc-icon-eye-off, .arc-icon-chevrons-up-down, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-pause, .arc-icon-skip-back, .arc-icon-skip-forward, .arc-icon-volume, .arc-icon-volume-x, .arc-icon-fast-forward, .arc-icon-info, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-pie-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-copy-s, .arc-icon-copy-settings, .arc-icon-paste-settings, .arc-icon-close, .arc-icon-save, .arc-icon-chevron, .arc-icon-chevron-bottom, .arc-icon-chevron-peak, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-send, .arc-icon-reuse, .arc-icon-redo, .arc-icon-bug, .arc-icon-bug-s, .arc-icon-trash, .arc-icon-broom, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-server-s, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus, .arc-icon-settings, .arc-icon-screenshot, .arc-icon-notifications, .arc-icon-shortcut, .arc-icon-library, .arc-icon-integrity-check, .arc-icon-autoimport, .arc-icon-browser, .arc-icon-ai, .arc-icon-update';
+  '.arc-icon-search, .arc-icon-plus, .arc-icon-minimize, .arc-icon-maximize, .arc-icon-maximize-2, .arc-icon-minimize-2, .arc-icon-external-link, .arc-icon-picture-in-picture, .arc-icon-pin, .arc-icon-pin-off, .arc-icon-flip-horizontal, .arc-icon-flip-vertical, .arc-icon-highlighter, .arc-icon-moon, .arc-icon-sun-medium, .arc-icon-sun, .arc-icon-contrast, .arc-icon-menu, .arc-icon-grid, .arc-icon-grid-l, .arc-icon-grid-m, .arc-icon-grid-s, .arc-icon-grid-medium, .arc-icon-grid-small, .arc-icon-check, .arc-icon-check-hexagon, .arc-icon-layout-grid, .arc-icon-layout-list, .arc-icon-layout-template, .arc-icon-layout-waterfall, .arc-icon-filter, .arc-icon-filter-off, .arc-icon-sorting, .arc-icon-sort-asc, .arc-icon-sort-desc, .arc-icon-aspect-ratio, .arc-icon-aspect-ratio-horizontal, .arc-icon-aspect-ratio-vertical, .arc-icon-aspect-ratio-square, .arc-icon-aspect-ratio-panoramic, .arc-icon-aspect-ratio-other, .arc-icon-file-type, .arc-icon-file, .arc-icon-eyedropper, .arc-icon-description, .arc-icon-message, .arc-icon-link, .arc-icon-calendar, .arc-icon-clock, .arc-icon-weight, .arc-icon-size, .arc-icon-resolution, .arc-icon-arrows-horizontal, .arc-icon-arrows-vertical, .arc-icon-arrow-left-right, .arc-icon-duration, .arc-icon-filter-list, .arc-icon-eye, .arc-icon-eye-on, .arc-icon-eye-off, .arc-icon-chevrons-up-down, .arc-icon-images, .arc-icon-image, .arc-icon-play, .arc-icon-pause, .arc-icon-skip-back, .arc-icon-skip-forward, .arc-icon-volume, .arc-icon-volume-x, .arc-icon-volume-off, .arc-icon-fast-forward, .arc-icon-info, .arc-icon-whiteboard, .arc-icon-hard-drive, .arc-icon-folder, .arc-icon-folder-import, .arc-icon-pie-chart, .arc-icon-chart, .arc-icon-history, .arc-icon-copy, .arc-icon-copy-s, .arc-icon-copy-settings, .arc-icon-paste-settings, .arc-icon-close, .arc-icon-close-chrome, .arc-icon-close-square, .arc-icon-save, .arc-icon-chevron, .arc-icon-chevron-bottom, .arc-icon-chevron-peak, .arc-icon-chevron-down, .arc-icon-chevron-up, .arc-icon-chevron-left, .arc-icon-chevron-right, .arc-icon-arrow-up, .arc-icon-arrow-down, .arc-icon-arrow-up-right, .arc-icon-send, .arc-icon-reuse, .arc-icon-refresh, .arc-icon-redo, .arc-icon-bug, .arc-icon-bug-s, .arc-icon-trash, .arc-icon-broom, .arc-icon-bookmark, .arc-icon-bookmark-plus, .arc-icon-bookmark-minus, .arc-icon-bookmark-on, .arc-icon-bookmark-off, .arc-icon-download, .arc-icon-folder-open, .arc-icon-edit, .arc-icon-tag, .arc-icon-server, .arc-icon-server-s, .arc-icon-undo, .arc-icon-cursor, .arc-icon-pan, .arc-icon-pencil, .arc-icon-type, .arc-icon-eraser, .arc-icon-line-thin, .arc-icon-line-thik, .arc-icon-predictable, .arc-icon-line, .arc-icon-circle, .arc-icon-align-left, .arc-icon-align-center, .arc-icon-align-right, .arc-icon-minus, .arc-icon-settings, .arc-icon-options, .arc-icon-screenshot, .arc-icon-scan, .arc-icon-notifications, .arc-icon-alert, .arc-icon-shortcut, .arc-icon-library, .arc-icon-integrity-check, .arc-icon-autoimport, .arc-icon-browser, .arc-icon-ai, .arc-icon-update, .arc-icon-device-update, .arc-icon-keyboard, .arc-icon-lock, .arc-icon-lock-off, .arc-icon-hexagon, .arc-icon-scale, .arc-icon-triangle, .arc-icon-adjust-position, .arc-icon-square, .arc-icon-repeat, .arc-icon-shrink, .arc-icon-folder-plus, .arc-icon-skip, .arc-icon-forward, .arc-icon-backward, .arc-icon-card, .arc-icon-collection';
 
 const svgMarkupCache = new Map<string, string>();
 let preloadPromise: Promise<void> | null = null;
@@ -371,7 +519,7 @@ function isLikelySvgMarkup(raw: string): boolean {
 }
 
 function normalizeSvgForTokens(svgText: string): string {
-  return svgText
+  let out = svgText
     .replace(/<\?xml[^?]*\?>/gi, '')
     .replace(/stroke="white"/gi, 'stroke="currentColor"')
     .replace(/stroke='white'/gi, "stroke='currentColor'")
@@ -379,6 +527,8 @@ function normalizeSvgForTokens(svgText: string): string {
     .replace(/stroke="#FFFFFF"/gi, 'stroke="currentColor"')
     .replace(/stroke="#fff"/gi, 'stroke="currentColor"')
     .replace(/stroke="#FFF"/gi, 'stroke="currentColor"')
+    .replace(/stroke="#F3F3F4"/gi, 'stroke="currentColor"')
+    .replace(/stroke="#f3f3f4"/gi, 'stroke="currentColor"')
     .replace(/stroke="black"/gi, 'stroke="currentColor"')
     .replace(/stroke='black'/gi, "stroke='currentColor'")
     .replace(/stroke="#000000"/gi, 'stroke="currentColor"')
@@ -389,10 +539,18 @@ function normalizeSvgForTokens(svgText: string): string {
     .replace(/fill="#FFFFFF"/gi, 'fill="currentColor"')
     .replace(/fill="#fff"/gi, 'fill="currentColor"')
     .replace(/fill="#FFF"/gi, 'fill="currentColor"')
+    .replace(/fill="#F3F3F4"/gi, 'fill="currentColor"')
+    .replace(/fill="#f3f3f4"/gi, 'fill="currentColor"')
     .replace(/fill="black"/gi, 'fill="currentColor"')
     .replace(/fill='black'/gi, "fill='currentColor'")
     .replace(/fill="#000000"/gi, 'fill="currentColor"')
     .replace(/fill="#000"/gi, 'fill="currentColor"');
+
+  // Figma часто экспортирует clip на весь viewBox — 1px stroke по краю обрезается → «разрывы».
+  out = out.replace(/\s*clip-path="url\([^"]+\)"/gi, '');
+  out = out.replace(/<clipPath[\s\S]*?<\/clipPath>/gi, '');
+  out = out.replace(/<defs>\s*<\/defs>/gi, '');
+  return out;
 }
 
 function iconUrl(file: string): string {
@@ -416,14 +574,49 @@ function withSizeVariant(file: string, size: UiSize): string {
 }
 
 const SIZE_INVARIANT_ICON_KEYS = new Set<IconKey>([
-  'gridL',
-  'gridM',
-  'gridS',
-  'externalLink',
+  /** Вкладки поиска: всегда глиф Size=M (две звезды), не S (звезда+плюс) и не L. */
+  'ai',
   'maximize2',
   'minimize2',
   'flipHorizontal',
-  'flipVertical'
+  'flipVertical',
+  /** Top bar: один файл chrome-close, без суффиксов пакета. */
+  'closeChrome'
+]);
+
+/** Иконки без полного набора s/m/l/xl — не запрашивать отсутствующий размер. */
+const SIZE_FALLBACK_ONLY_KEYS = new Set<IconKey>([
+  'whiteboard',
+  'arrowUp',
+  'arrowDown',
+  'arrowUpRight',
+  'arrowLeftRight',
+  'cursor',
+  'pan',
+  'pencil',
+  'type',
+  'eraser',
+  'lineThin',
+  'lineThik',
+  'predictable',
+  'line',
+  'alignLeft',
+  'alignCenter',
+  'alignRight',
+  'minimize',
+  'aspectRatioHorizontal',
+  'aspectRatioVertical',
+  'aspectRatioPanoramic',
+  'aspectRatioOther',
+  'resolution',
+  'arrowsHorizontal',
+  'arrowsVertical',
+  'shortcut',
+  'library',
+  'bug',
+  'bugS',
+  'pause',
+  'highlighter'
 ]);
 
 function resolveIconFile(iconKey: IconKey, scope?: HTMLElement): { preferred: string; fallback: string } {
@@ -432,8 +625,11 @@ function resolveIconFile(iconKey: IconKey, scope?: HTMLElement): { preferred: st
     return { preferred: fallback, fallback };
   }
   const preferred = withSizeVariant(fallback, getIconSize(scope));
-  // В каталоге только S-вариант (например ai_s.svg) — не запрашивать отсутствующий _m/_l.
-  if (fallback.endsWith('_s.svg') && preferred !== fallback) {
+  // Старые иконки без полного набора размеров — не подменять чужим суффиксом.
+  if (SIZE_FALLBACK_ONLY_KEYS.has(iconKey) && preferred !== fallback) {
+    return { preferred: fallback, fallback };
+  }
+  if (fallback.endsWith('_s.svg') && preferred !== fallback && SIZE_FALLBACK_ONLY_KEYS.has(iconKey)) {
     return { preferred: fallback, fallback };
   }
   return { preferred, fallback };
@@ -469,6 +665,18 @@ function classToIconKey(element: HTMLElement): IconKey | null {
   return null;
 }
 
+/** Стыки Figma-path (рамка начинается mid-edge) дают разрывы stroke в Chromium без round join. */
+function hardenSvgStrokeJoins(svg: SVGSVGElement): void {
+  svg.setAttribute('shape-rendering', 'geometricPrecision');
+  svg.setAttribute('overflow', 'visible');
+  svg.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon').forEach((node) => {
+    if (!(node instanceof SVGElement)) return;
+    const stroke = node.getAttribute('stroke');
+    if (!stroke || stroke === 'none') return;
+    if (!node.hasAttribute('stroke-linejoin')) node.setAttribute('stroke-linejoin', 'round');
+  });
+}
+
 function injectSvgMarkup(host: HTMLElement, normalizedMarkup: string, file: string): void {
   host.innerHTML = uniquifySvgIds(normalizedMarkup);
   const svg = host.querySelector('svg');
@@ -481,6 +689,7 @@ function injectSvgMarkup(host: HTMLElement, normalizedMarkup: string, file: stri
   svg.setAttribute('aria-hidden', 'true');
   svg.removeAttribute('width');
   svg.removeAttribute('height');
+  hardenSvgStrokeJoins(svg);
   host.dataset.arcIconFile = file;
 }
 

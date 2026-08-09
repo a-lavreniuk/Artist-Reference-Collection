@@ -5,14 +5,14 @@ import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import SettingsSidebarNavItem from './SettingsSidebarNavItem';
 
 const PRODUCT_SECTIONS = [
-  { key: 'general', to: '/settings/general', label: 'Общие', iconClass: 'arc-icon-settings' },
+  { key: 'general', to: '/settings/general', label: 'Общие', iconClass: 'arc-icon-options' },
   { key: 'screenshots', to: '/settings/screenshots', label: 'Скриншоты', iconClass: 'arc-icon-screenshot' },
   { key: 'notifications', to: '/settings/notifications', label: 'Уведомления', iconClass: 'arc-icon-notifications' },
-  { key: 'shortcuts', to: '/settings/shortcuts', label: 'Горячие клавиши', iconClass: 'arc-icon-shortcut' }
+  { key: 'shortcuts', to: '/settings/shortcuts', label: 'Горячие клавиши', iconClass: 'arc-icon-keyboard' }
 ] as const;
 
 const LIBRARY_SECTIONS = [
-  { key: 'library', to: '/settings/library', label: 'Библиотека', iconClass: 'arc-icon-library' }
+  { key: 'library', to: '/settings/library', label: 'Библиотека', iconClass: 'arc-icon-folder' }
 ] as const;
 
 const ADVANCED_SECTIONS = [
@@ -27,7 +27,7 @@ const ADVANCED_SECTIONS = [
     key: 'mcp-server',
     to: '/settings/mcp-server',
     label: 'MCP сервер',
-    iconClass: 'arc-icon-server-s'
+    iconClass: 'arc-icon-server'
   },
   { key: 'ai', to: '/settings/ai', label: 'AI', iconClass: 'arc-icon-ai' }
 ] as const;

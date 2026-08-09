@@ -213,7 +213,7 @@ export default function TagsPageSidebar({
         <div className="arc-tags-page-sidebar__pad">
           <button type="button" className="btn btn-outline btn-ds arc-tags-sidebar-add" onClick={onAddCategory} data-interface-tour-anchor="tags-add-category">
             <span className="btn-ds__value">Добавить категорию</span>
-            <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+            <span className="btn-ds__icon arc-icon-folder-plus" aria-hidden="true" />
           </button>
         </div>
       </div>

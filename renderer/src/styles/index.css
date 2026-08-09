@@ -4,19 +4,25 @@
 @import url("./multi-library.css");
 
 /* Inline SVG из `hydrateArcNavbarIcons`: stroke/fill → currentColor, размер с родителя */
+.btn-ds__icon,
+.btn-icon-only__glyph,
+.tab-icon,
+.search-icon,
+.input-inline-icon {
+  overflow: visible;
+}
+
 .btn-ds__icon > .arc-navbar-icon-svg,
 .btn-icon-only__glyph > .arc-navbar-icon-svg,
 .tab-icon > .arc-navbar-icon-svg,
-.search-icon > .arc-navbar-icon-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
+.search-icon > .arc-navbar-icon-svg,
 .input-inline-icon > .arc-navbar-icon-svg {
   width: 100%;
   height: 100%;
   display: block;
+  overflow: visible;
+  /* Не обрезать 1px stroke на границах viewBox при DPI/субпикселе */
+  shape-rendering: geometricPrecision;
 }
 
 .arc-navbar-icon-svg [stroke],
@@ -7519,12 +7525,20 @@ html[data-theme="light"] .arc-stats-disk-bar__segment--nonArc {
   --arc-stat-icon-url: url("/ui/icons/sticky-note_xl.svg");
 }
 
+.arc-stat-icon--card {
+  --arc-stat-icon-url: url("/ui/icons/card_xl.svg");
+}
+
 .arc-stat-icon--play-circle {
   --arc-stat-icon-url: url("/ui/icons/play-circle_xl.svg");
 }
 
 .arc-stat-icon--layers {
   --arc-stat-icon-url: url("/ui/icons/layers_xl.svg");
+}
+
+.arc-stat-icon--collection {
+  --arc-stat-icon-url: url("/ui/icons/collection_xl.svg");
 }
 
 .arc-stat-icon--play {

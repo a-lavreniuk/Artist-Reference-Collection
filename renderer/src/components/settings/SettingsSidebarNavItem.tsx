@@ -21,7 +21,7 @@ export default function SettingsSidebarNavItem({ to, label, iconClass }: Props) 
     >
       <span className="context-menu__item-inner">
         <span className="context-menu__item-label-cluster">
-          <span className={`context-menu__item-icon tab-icon ${iconClass}`} data-arc-icon-size="s" aria-hidden="true" />
+          <span className={`context-menu__item-icon tab-icon ${iconClass}`} data-arc-icon-size="m" aria-hidden="true" />
           <span className="context-menu__item-label">{label}</span>
         </span>
         {isActive ? <span className="sr-only"> (текущий раздел)</span> : null}

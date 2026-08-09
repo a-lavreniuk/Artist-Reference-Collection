@@ -89,7 +89,7 @@ export default function TagsCategorySection({
             aria-label={`Добавить метку в «${category.name}»`}
             onClick={onAddTag}
           >
-            <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
+            <span className="btn-icon-only__glyph arc-icon-tag" aria-hidden="true" />
           </button>
         </Tooltip>
       </span>

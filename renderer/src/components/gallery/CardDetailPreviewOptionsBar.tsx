@@ -95,7 +95,7 @@ export default function CardDetailPreviewOptionsBar({
         </Tooltip>
         <div className="arc-card-detail-preview-options__meta-item">
           <span
-            className="arc-card-detail-preview-options__meta-icon arc-icon-aspect-ratio-other"
+            className="arc-card-detail-preview-options__meta-icon arc-icon-size"
             data-arc-icon-size="m"
             aria-hidden="true"
           />
@@ -125,7 +125,7 @@ export default function CardDetailPreviewOptionsBar({
             disabled={disabled}
             onClick={onFitClick}
           >
-            <span className="btn-icon-only__glyph arc-icon-maximize" aria-hidden="true" />
+            <span className="btn-icon-only__glyph arc-icon-shrink" aria-hidden="true" />
           </button>
         </Tooltip>
         <Tooltip content="Реальный размер" position="top">
@@ -137,7 +137,7 @@ export default function CardDetailPreviewOptionsBar({
             disabled={disabled}
             onClick={onActualClick}
           >
-            <span className="btn-icon-only__glyph arc-icon-resolution" aria-hidden="true" />
+            <span className="btn-icon-only__glyph arc-icon-maximize" data-arc-icon-size="m" aria-hidden="true" />
           </button>
         </Tooltip>
         <Tooltip content="Уменьшить" position="top">

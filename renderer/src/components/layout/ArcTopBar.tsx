@@ -77,7 +77,7 @@ export default function ArcTopBar() {
           aria-label={closeToTray ? 'Закрыть в трей' : 'Закрыть приложение'}
           onClick={close}
         >
-          <span className="arc-topbar-btn__glyph arc-icon-close" data-arc-icon-size="s" aria-hidden="true" />
+          <span className="arc-topbar-btn__glyph arc-icon-close-chrome" data-arc-icon-size="s" aria-hidden="true" />
         </button>
       </div>    </header>
   );

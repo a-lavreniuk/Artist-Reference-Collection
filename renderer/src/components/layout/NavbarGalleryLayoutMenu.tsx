@@ -13,19 +13,19 @@ const LAYOUT_OPTIONS: {
   label: string;
   iconClass: string;
 }[] = [
-  { key: 'masonry', label: 'Плитка', iconClass: 'arc-icon-grid' },
-  { key: 'grid', label: 'Сетка', iconClass: 'arc-icon-grid-l' },
+  { key: 'masonry', label: 'Плитка', iconClass: 'arc-icon-layout-waterfall' },
+  { key: 'grid', label: 'Сетка', iconClass: 'arc-icon-layout-grid' },
   { key: 'list', label: 'Строки', iconClass: 'arc-icon-layout-list' }
 ];
 
 const GRID_OPTIONS: { key: GridSize; label: string; iconClass: string }[] = [
-  { key: 'l', label: 'Большая', iconClass: 'arc-icon-grid-l' },
+  { key: 'l', label: 'Большая', iconClass: 'arc-icon-layout-grid' },
   { key: 'm', label: 'Средняя', iconClass: 'arc-icon-grid-m' },
   { key: 's', label: 'Маленькая', iconClass: 'arc-icon-grid-s' }
 ];
 
 function layoutButtonIcon(mode: GalleryLayoutMode): string {
-  return LAYOUT_OPTIONS.find((o) => o.key === mode)?.iconClass ?? 'arc-icon-grid';
+  return LAYOUT_OPTIONS.find((o) => o.key === mode)?.iconClass ?? 'arc-icon-layout-waterfall';
 }
 
 type Props = {

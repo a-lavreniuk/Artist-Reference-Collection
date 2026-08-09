@@ -16,7 +16,13 @@ export default function NavbarSearchModes({ mode, aiSearchEnabled, onModeChange 
   });
 
   return (
-    <div className="tabs arc-navbar-search-modes" role="tablist" aria-label="Режим поиска">
+    <div
+      className="tabs arc-navbar-search-modes"
+      role="tablist"
+      aria-label="Режим поиска"
+      data-arc-icon-size="m"
+      data-btn-size="m"
+    >
       {visibleModes.map((item) => {
         const meta = SEARCH_MODE_META[item];
         const active = mode === item;
@@ -36,7 +42,7 @@ export default function NavbarSearchModes({ mode, aiSearchEnabled, onModeChange 
               onModeChange(item);
             }}
           >
-            <span className={`tab-icon ${meta.iconClass}`} aria-hidden="true" />
+            <span className={`tab-icon ${meta.iconClass}`} data-arc-icon-size="m" aria-hidden="true" />
           </button>
         );
       })}
