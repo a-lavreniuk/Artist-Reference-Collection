@@ -1,6 +1,7 @@
 import type { SearchModelId } from './types';
 
-export const HYBRID_INDEX_VERSION = 1;
+/** Bump when hybrid caption payload / indexing steps change (e.g. visible UI text merge). */
+export const HYBRID_INDEX_VERSION = 2;
 export const HYBRID_VISUAL_SUFFIX = '::visual';
 export const HYBRID_CAPTION_SUFFIX = '::caption';
 
@@ -8,10 +9,13 @@ export const HYBRID_CAPTION_SUFFIX = '::caption';
 // visual 0.55 — сохраняет качество на визуальных запросах;
 // caption 0.45 — усиливает описательные запросы;
 // tagsBoostMax 0.12 — мягкий буст без «ломания» выдачи.
+// captionTextBoostMax 0.18 — literal match по ai_caption (в т.ч. UI-текст на кадре).
 export const HYBRID_FUSION_WEIGHTS = {
   visual: 0.55,
   caption: 0.45,
-  tagsBoostMax: 0.12
+  tagsBoostMax: 0.12,
+  /** Literal match of query against ai_caption (incl. on-image UI text). */
+  captionTextBoostMax: 0.18
 } as const;
 
 /** Hybrid channels are keyed by the active search model id. */

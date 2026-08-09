@@ -13,6 +13,29 @@ export function getCardAiCaption(db: Database.Database, cardId: string): string 
   return row?.ai_caption ?? null;
 }
 
+/** Batch-load ai_caption for hybrid search literal boost (avoids N+1). */
+export function getCardAiCaptionsByIds(
+  db: Database.Database,
+  cardIds: string[]
+): Map<string, string> {
+  const out = new Map<string, string>();
+  if (cardIds.length === 0) return out;
+
+  const CHUNK = 400;
+  for (let i = 0; i < cardIds.length; i += CHUNK) {
+    const chunk = cardIds.slice(i, i + CHUNK);
+    const placeholders = chunk.map(() => '?').join(',');
+    const rows = db
+      .prepare(`SELECT id, ai_caption FROM cards WHERE id IN (${placeholders})`)
+      .all(...chunk) as Array<{ id: string; ai_caption?: string | null }>;
+    for (const row of rows) {
+      const caption = row.ai_caption?.trim();
+      if (caption) out.set(row.id, caption);
+    }
+  }
+  return out;
+}
+
 export function listCardsMissingAiCaption(
   db: Database.Database,
   modelId: string,

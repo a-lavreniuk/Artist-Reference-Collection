@@ -503,6 +503,7 @@ export default function SettingsAiSearchPanel() {
                     <p className="text-m arc-settings-desc-block__text">
                       Поиск на естественном языке сравнивает запрос с содержимым карточек. Выберите модель по
                       скорости и качеству: CLIP работает быстрее, Qwen точнее понимает сложные визуальные запросы.
+                      Вместе с AI Описанием Qwen также учитывает текст на изображениях (кнопки, заголовки UI).
                     </p>
                     <SettingsToggleRow
                       label="Включить AI Поиск"
@@ -555,7 +556,8 @@ export default function SettingsAiSearchPanel() {
                   <div className="arc-settings-ai-tab-block">
                     <p className="text-m arc-settings-desc-block__text">
                       ARC создаёт текстовые описания изображений с помощью JoyCaption. Описания сохраняются локально
-                      и улучшают продвинутый поиск, когда активна модель Qwen.
+                      и улучшают продвинутый поиск, когда активна модель Qwen — в том числе по тексту, видимому на
+                      скриншотах и макетах.
                     </p>
                     <SettingsToggleRow
                       label="Включить AI Описание"

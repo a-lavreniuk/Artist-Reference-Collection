@@ -38,6 +38,10 @@ import { upsertCardAiCaptionFts } from '../storage/cardFts';
 import { waitForNavigationIpc } from '../ipcNavigationPriority';
 import { logAiIndexer, logAiIndexerError, logAiIndexerWarn } from './aiIndexerLog';
 import { getCardAiCaption } from '../storage/cardAiCaption';
+import {
+  extractVisibleTextFromImage,
+  mergeCaptionWithVisibleText
+} from './visibleTextExtract';
 
 let indexRunning = false;
 let indexPaused = false;
@@ -329,6 +333,27 @@ export async function indexCardById(cardId: string): Promise<boolean> {
         setCurrentCardProgress(heavyLoadProgress);
       };
       caption = await captionForHeavyIndex(imagePath, onHeavyStatus);
+      setCurrentCardProgress(48);
+
+      // Qwen hybrid: second JoyCaption pass extracts on-image UI text into ai_caption.
+      if (isQwenSearchModel(searchModelId)) {
+        try {
+          logAiIndexer('Извлечение видимого текста', { cardId, searchModelId });
+          const onVisibleStatus = (message: string) => {
+            logAiIndexer(message, { cardId });
+            heavyLoadProgress = Math.min(54, Math.max(heavyLoadProgress, 48) + 1);
+            setCurrentCardProgress(heavyLoadProgress);
+          };
+          const visibleText = await extractVisibleTextFromImage(imagePath, onVisibleStatus);
+          caption = mergeCaptionWithVisibleText(caption, visibleText);
+        } catch (err) {
+          logAiIndexerWarn('Не удалось извлечь видимый текст — продолжаем с описанием', {
+            cardId,
+            error: err instanceof Error ? err.message : String(err)
+          });
+        }
+      }
+
       setCurrentCardProgress(55);
       const liveDb = requireLibraryDb(opened.root);
       upsertCardAiCaption(liveDb, cardId, caption);
