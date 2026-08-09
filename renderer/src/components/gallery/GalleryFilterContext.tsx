@@ -7,7 +7,9 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction
 } from 'react';
 import { useLocation } from 'react-router-dom';
 import { resolveMainTab } from '../layout/navbarLayout';
@@ -18,12 +20,20 @@ import {
   writeGalleryFilterLayout
 } from './galleryFilterLayout';
 import {
+  defaultGalleryFiltersSortTabState,
+  isGalleryFilterPersistTab,
+  readGalleryFiltersSortTab,
+  writeGalleryFiltersSortTab,
+  type GalleryFilterPersistTab
+} from './galleryFilterPersistence';
+import {
   countActiveFilterCategories,
   DEFAULT_GALLERY_SORT,
   emptyGalleryAdvancedFilters,
   layoutToPresetItems,
   migrateGalleryAdvancedFilters,
   presetItemsToLayout,
+  type DurationFilterValue,
   type GalleryAdvancedFilters,
   type GalleryFeedScope,
   type GalleryFilterId,
@@ -35,10 +45,15 @@ import {
 } from './galleryFilterTypes';
 import * as storage from '../../services/storageClient';
 
+type PatchFiltersOptions = {
+  /** When false, live state updates but localStorage for the tab is left alone. */
+  persist?: boolean;
+};
+
 type GalleryFilterContextValue = {
   filters: GalleryAdvancedFilters;
   setFilters: (next: GalleryAdvancedFilters) => void;
-  patchFilters: (patch: Partial<GalleryAdvancedFilters>) => void;
+  patchFilters: (patch: Partial<GalleryAdvancedFilters>, options?: PatchFiltersOptions) => void;
   clearFilters: () => void;
   clearFilterCategory: (id: GalleryFilterId) => void;
   sort: GallerySortState;
@@ -48,7 +63,7 @@ type GalleryFilterContextValue = {
   reorderFilter: (id: GalleryFilterId, toIndex: number) => void;
   toggleFilterVisibility: (id: GalleryFilterId) => void;
   feedScope: GalleryFeedScope;
-  setFeedScope: (scope: GalleryFeedScope) => void;
+  setFeedScope: Dispatch<SetStateAction<GalleryFeedScope>>;
   stats: GalleryFilterStats | null;
   refreshStats: () => Promise<void>;
   presets: SavedFilterPreset[];
@@ -64,29 +79,114 @@ type GalleryFilterContextValue = {
 
 const GalleryFilterContext = createContext<GalleryFilterContextValue | null>(null);
 
+function initialTabState(pathname: string) {
+  const tab = resolveMainTab(pathname);
+  if (isGalleryFilterPersistTab(tab)) return readGalleryFiltersSortTab(tab);
+  return defaultGalleryFiltersSortTabState();
+}
+
 export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const mainTabRef = useRef(resolveMainTab(location.pathname));
 
-  const [filters, setFilters] = useState<GalleryAdvancedFilters>(emptyGalleryAdvancedFilters);
-  const [sort, setSort] = useState<GallerySortState>(DEFAULT_GALLERY_SORT);
+  const [filters, setFiltersState] = useState<GalleryAdvancedFilters>(
+    () => initialTabState(location.pathname).filters
+  );
+  const [sort, setSortState] = useState<GallerySortState>(
+    () => initialTabState(location.pathname).sort
+  );
   const [layout, setLayoutState] = useState<GalleryFilterLayoutState>(() => readGalleryFilterLayout());
   const [feedScope, setFeedScope] = useState<GalleryFeedScope>({ libraryScope: 'all' });
   const [stats, setStats] = useState<GalleryFilterStats | null>(null);
   const [presets, setPresets] = useState<SavedFilterPreset[]>([]);
   const [shuffleReloading, setShuffleReloading] = useState(false);
 
+  const filtersRef = useRef(filters);
+  const sortRef = useRef(sort);
+  const statsRef = useRef(stats);
+  /** Duration hidden by auto-clear (no video); kept so persistence / restore are not wiped. */
+  const suppressedDurationRef = useRef<DurationFilterValue[] | null>(null);
+  filtersRef.current = filters;
+  sortRef.current = sort;
+  statsRef.current = stats;
+
+  const filtersForPersist = useCallback((nextFilters: GalleryAdvancedFilters): GalleryAdvancedFilters => {
+    if (nextFilters.duration.length > 0) return nextFilters;
+    const suppressed = suppressedDurationRef.current;
+    if (!suppressed || suppressed.length === 0) return nextFilters;
+    return { ...nextFilters, duration: suppressed };
+  }, []);
+
+  const persistTabState = useCallback(
+    (tab: GalleryFilterPersistTab, nextFilters: GalleryAdvancedFilters, nextSort: GallerySortState) => {
+      writeGalleryFiltersSortTab(tab, {
+        filters: filtersForPersist(nextFilters),
+        sort: nextSort
+      });
+    },
+    [filtersForPersist]
+  );
+
   const setLayout = useCallback((next: GalleryFilterLayoutState) => {
     setLayoutState(next);
     writeGalleryFilterLayout(next);
   }, []);
 
-  const patchFilters = useCallback((patch: Partial<GalleryAdvancedFilters>) => {
-    setFilters((prev) => ({ ...prev, ...patch }));
-  }, []);
+  const setFilters = useCallback(
+    (next: GalleryAdvancedFilters) => {
+      const migrated = migrateGalleryAdvancedFilters(next);
+      if ('duration' in migrated) {
+        suppressedDurationRef.current = null;
+      }
+      filtersRef.current = migrated;
+      setFiltersState(migrated);
+      const tab = mainTabRef.current;
+      if (isGalleryFilterPersistTab(tab)) persistTabState(tab, migrated, sortRef.current);
+    },
+    [persistTabState]
+  );
+
+  const setSort = useCallback(
+    (next: GallerySortState) => {
+      sortRef.current = next;
+      setSortState(next);
+      const tab = mainTabRef.current;
+      if (isGalleryFilterPersistTab(tab)) persistTabState(tab, filtersRef.current, next);
+    },
+    [persistTabState]
+  );
+
+  const patchFilters = useCallback(
+    (patch: Partial<GalleryAdvancedFilters>, options?: PatchFiltersOptions) => {
+      const persist = options?.persist !== false;
+      if (persist && 'duration' in patch) {
+        suppressedDurationRef.current = null;
+      }
+      setFiltersState((prev) => {
+        const next = { ...prev, ...patch };
+        filtersRef.current = next;
+        if (persist) {
+          const tab = mainTabRef.current;
+          if (isGalleryFilterPersistTab(tab)) persistTabState(tab, next, sortRef.current);
+        }
+        return next;
+      });
+    },
+    [persistTabState]
+  );
 
   const clearFilters = useCallback(() => {
-    setFilters(emptyGalleryAdvancedFilters());
+    const empty = emptyGalleryAdvancedFilters();
+    const defaultSort = { ...DEFAULT_GALLERY_SORT };
+    suppressedDurationRef.current = null;
+    filtersRef.current = empty;
+    sortRef.current = defaultSort;
+    setFiltersState(empty);
+    setSortState(defaultSort);
+    const tab = mainTabRef.current;
+    if (isGalleryFilterPersistTab(tab)) {
+      writeGalleryFiltersSortTab(tab, { filters: empty, sort: defaultSort });
+    }
   }, []);
 
   const clearFilterCategory = useCallback(
@@ -141,13 +241,25 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   );
 
   useLayoutEffect(() => {
-    const tab = resolveMainTab(location.pathname);
-    if (tab !== mainTabRef.current) {
-      mainTabRef.current = tab;
-      setSort(DEFAULT_GALLERY_SORT);
-      setFilters(emptyGalleryAdvancedFilters());
+    const nextTab = resolveMainTab(location.pathname);
+    const prevTab = mainTabRef.current;
+    if (nextTab === prevTab) return;
+
+    if (isGalleryFilterPersistTab(prevTab)) {
+      persistTabState(prevTab, filtersRef.current, sortRef.current);
     }
-  }, [location.pathname]);
+
+    mainTabRef.current = nextTab;
+
+    if (isGalleryFilterPersistTab(nextTab)) {
+      suppressedDurationRef.current = null;
+      const loaded = readGalleryFiltersSortTab(nextTab);
+      filtersRef.current = loaded.filters;
+      sortRef.current = loaded.sort;
+      setFiltersState(loaded.filters);
+      setSortState(loaded.sort);
+    }
+  }, [location.pathname, persistTabState]);
 
   const refreshStats = useCallback(async () => {
     try {
@@ -179,15 +291,32 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!stats || stats.hasVideo || filters.duration.length === 0) return;
-    patchFilters({ duration: [] });
+    suppressedDurationRef.current = filters.duration;
+    patchFilters({ duration: [] }, { persist: false });
   }, [stats, filters.duration.length, patchFilters]);
+
+  // Restore duration once video appears again in this feed.
+  useEffect(() => {
+    if (!stats?.hasVideo || filters.duration.length > 0) return;
+    const suppressed = suppressedDurationRef.current;
+    if (suppressed && suppressed.length > 0) {
+      suppressedDurationRef.current = null;
+      patchFilters({ duration: suppressed }, { persist: false });
+      return;
+    }
+    const tab = mainTabRef.current;
+    if (!isGalleryFilterPersistTab(tab)) return;
+    const stored = readGalleryFiltersSortTab(tab);
+    if (stored.filters.duration.length === 0) return;
+    patchFilters({ duration: stored.filters.duration }, { persist: false });
+  }, [stats?.hasVideo, filters.duration.length, patchFilters]);
 
   useEffect(() => {
     if (!stats || filters.fileExtensions.length === 0) return;
     const anyExtStillPresent = filters.fileExtensions.some(
       (ext) => (stats.fileExtensions[ext] ?? 0) > 0
     );
-    if (!anyExtStillPresent) patchFilters({ fileExtensions: [] });
+    if (!anyExtStillPresent) patchFilters({ fileExtensions: [] }, { persist: false });
   }, [stats, filters.fileExtensions, patchFilters]);
 
   useEffect(() => {
@@ -220,12 +349,21 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
 
   const applyPreset = useCallback(
     (preset: SavedFilterPreset) => {
-      setFilters(migrateGalleryAdvancedFilters(preset.payload.filters));
-      setSort(preset.payload.sort);
+      const nextFilters = migrateGalleryAdvancedFilters(preset.payload.filters);
+      const nextSort = preset.payload.sort;
+      suppressedDurationRef.current = null;
+      filtersRef.current = nextFilters;
+      sortRef.current = nextSort;
+      setFiltersState(nextFilters);
+      setSortState(nextSort);
+      const tab = mainTabRef.current;
+      if (isGalleryFilterPersistTab(tab)) {
+        persistTabState(tab, nextFilters, nextSort);
+      }
       const nextLayout = presetItemsToLayout(preset.payload.layout);
       setLayout(nextLayout);
     },
-    [setLayout]
+    [persistTabState, setLayout]
   );
 
   const deletePreset = useCallback(
@@ -275,10 +413,12 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     }),
     [
       filters,
+      setFilters,
       patchFilters,
       clearFilters,
       clearFilterCategory,
       sort,
+      setSort,
       layout,
       setLayout,
       reorderFilter,

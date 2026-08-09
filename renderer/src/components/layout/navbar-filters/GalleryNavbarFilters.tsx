@@ -7,7 +7,6 @@ import {
   useState
 } from 'react';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
-import { arcMotionTokens, ensureGsapSetup, getPrefersReducedMotion, motionDuration } from '../../../motion';
 import {
   ContextMenu,
   ContextMenuInput,
@@ -318,29 +317,6 @@ export default function NavbarFiltersMenu() {
   }, [customDurationDebounced, filters.duration, patchFilters, stats?.durationMeta.maxSec]);
 
   const filtersMainRef = useRef<HTMLButtonElement>(null);
-  const filterActiveDotRef = useRef<HTMLSpanElement>(null);
-  const prevActiveCategoryCountRef = useRef(0);
-
-  useLayoutEffect(() => {
-    if (activeCategoryCount <= 0) {
-      prevActiveCategoryCountRef.current = 0;
-      return;
-    }
-    const dot = filterActiveDotRef.current;
-    if (!dot) return;
-    const wasInactive = prevActiveCategoryCountRef.current === 0;
-    prevActiveCategoryCountRef.current = activeCategoryCount;
-    if (!wasInactive) return;
-
-    const gsap = ensureGsapSetup();
-    const reduced = getPrefersReducedMotion();
-    if (reduced) return;
-    gsap.fromTo(
-      dot,
-      { scale: 0, opacity: 0 },
-      { scale: 1, opacity: 1, duration: motionDuration('fast', false), ease: arcMotionTokens.ease }
-    );
-  }, [activeCategoryCount]);
   const scopeRef = useRef<HTMLSpanElement>(null);
   const [mainOpen, setMainOpen] = useState(false);
   const [submenuPosition, setSubmenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -919,7 +895,9 @@ export default function NavbarFiltersMenu() {
         <button
           ref={filtersMainRef}
           type="button"
-          className={`btn btn-ghost btn-ds btn-m btn-icon-only arc-navbar-filter-btn${mainOpen || activeCategoryCount > 0 ? ' is-active' : ''}`}
+          className={`btn btn-ghost btn-ds btn-m${
+            activeCategoryCount > 0 ? '' : ' btn-icon-only'
+          }${mainOpen || activeCategoryCount > 0 ? ' is-active' : ''}`}
           aria-label={activeCategoryCount > 0 ? `Фильтры (${activeCategoryCount})` : 'Фильтры'}
           aria-expanded={mainOpen}
           aria-haspopup="menu"
@@ -930,7 +908,7 @@ export default function NavbarFiltersMenu() {
         >
           <span className="btn-icon-only__glyph arc-icon-filter" aria-hidden="true" />
           {activeCategoryCount > 0 ? (
-            <span ref={filterActiveDotRef} className="arc-navbar-filter-active-dot" aria-hidden="true" />
+            <span className="btn-ds__counter">{activeCategoryCount}</span>
           ) : null}
         </button>
 
