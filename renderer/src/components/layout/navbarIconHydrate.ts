@@ -248,7 +248,7 @@ const ICON_FILES: Record<IconKey, string> = {
   gridM: 'grid-medium_m.svg',
   gridS: 'grid-small_m.svg',
   settings: 'settings_m.svg',
-  screenshot: 'scan_m.svg',
+  screenshot: 'crop_m.svg',
   notifications: 'alert_m.svg',
   shortcut: 'shortcut_s.svg',
   library: 'libray_s.svg',
