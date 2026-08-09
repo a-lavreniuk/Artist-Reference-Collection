@@ -45,7 +45,7 @@ Skill для разработки и ревью UI в репозитории **A
 - [ ] 4. Зафиксировать, что должно совпасть: отступы, типографика, состояния
 - [ ] 5. Оценить: расширить общий компонент или локальная правка
 - [ ] 6. Если меняется общий компонент — проверить влияние на другие экраны
-- [ ] 7. Если нужен новый `arc-icon-*`, а файла нет в `renderer/public/ui/icons/` — подключить skill `arc-figma-icons`
+- [ ] 7. Если нужен новый `arc-icon-*` — взять SVG из `renderer/public/ui/icons/{name}/` и зарегистрировать в `navbarIconHydrate.ts`
 ```
 
 ### Поиск перед созданием
@@ -73,7 +73,7 @@ Skill для разработки и ревью UI в репозитории **A
 | Модалка подтверждения | `MessageModal` и существующие modal-паттерны |
 | Сброс поиска галереи | `useResetGallerySearch()` |
 | Иконки navbar | `hydrateArcNavbarIcons`, `arc-icon-*` |
-| Иконка отсутствует в проекте | skill [`arc-figma-icons`](../arc-figma-icons/SKILL.md) — выгрузка из Figma (variant, Weight=1) |
+| Иконка отсутствует в проекте | SVG в `renderer/public/ui/icons/{name}/{name}_{size}.svg` + регистрация в `navbarIconHydrate.ts` |
 | Сетка карточек | `MasonryGrid`, `GalleryBoard` |
 | Валидация поля | `field-error` + `aria-invalid`, **без** текста под полем |
 
