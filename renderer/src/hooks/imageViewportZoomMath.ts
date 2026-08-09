@@ -51,6 +51,31 @@ export function displayPctToScale(displayPct: number, fitScale: number): number 
   return clampScale((clampedPct / DISPLAY_SCALE_PCT_MIN) * fitScale, fitScale);
 }
 
+/**
+ * Log mapping so equal slider travel ≈ equal relative zoom (doubling).
+ * Slider still uses DISPLAY_SCALE_PCT_MIN..MAX as the track range.
+ */
+export function displayPctToZoomSliderValue(displayPct: number): number {
+  const clamped = Math.max(
+    DISPLAY_SCALE_PCT_MIN,
+    Math.min(DISPLAY_SCALE_PCT_MAX, displayPct)
+  );
+  const t =
+    Math.log(clamped / DISPLAY_SCALE_PCT_MIN) /
+    Math.log(DISPLAY_SCALE_PCT_MAX / DISPLAY_SCALE_PCT_MIN);
+  return DISPLAY_SCALE_PCT_MIN + t * (DISPLAY_SCALE_PCT_MAX - DISPLAY_SCALE_PCT_MIN);
+}
+
+export function zoomSliderValueToDisplayPct(sliderValue: number): number {
+  const span = DISPLAY_SCALE_PCT_MAX - DISPLAY_SCALE_PCT_MIN;
+  const t = Math.max(0, Math.min(1, (sliderValue - DISPLAY_SCALE_PCT_MIN) / span));
+  const pct = DISPLAY_SCALE_PCT_MIN * Math.pow(DISPLAY_SCALE_PCT_MAX / DISPLAY_SCALE_PCT_MIN, t);
+  return Math.max(
+    DISPLAY_SCALE_PCT_MIN,
+    Math.min(DISPLAY_SCALE_PCT_MAX, Math.round(pct))
+  );
+}
+
 function baseOffset(
   stage: StageSize,
   natural: NaturalSize,

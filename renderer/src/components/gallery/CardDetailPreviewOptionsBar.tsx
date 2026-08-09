@@ -1,6 +1,11 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
-import { DISPLAY_SCALE_PCT_MAX, DISPLAY_SCALE_PCT_MIN } from '../../hooks/imageViewportZoomMath';
+import {
+  DISPLAY_SCALE_PCT_MAX,
+  DISPLAY_SCALE_PCT_MIN,
+  displayPctToZoomSliderValue,
+  zoomSliderValueToDisplayPct
+} from '../../hooks/imageViewportZoomMath';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import ValueSlider from '../range-slider/ValueSlider';
 import { Tooltip } from '../tooltip/Tooltip';
@@ -157,12 +162,12 @@ export default function CardDetailPreviewOptionsBar({
             max={DISPLAY_SCALE_PCT_MAX}
             step={1}
             size="m"
-            value={displayScalePct}
-            formatValue={(v) => `${v}%`}
+            value={Math.round(displayPctToZoomSliderValue(displayScalePct))}
+            formatValue={() => `${displayScalePct}%`}
             ariaLabel="Масштаб изображения"
             showValue={false}
             disabled={disabled}
-            onChange={onDisplayPctChange}
+            onChange={(sliderValue) => onDisplayPctChange(zoomSliderValueToDisplayPct(sliderValue))}
           />
         </div>
         <Tooltip content="Увеличить" position="top">

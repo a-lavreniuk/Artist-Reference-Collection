@@ -40,7 +40,10 @@ export default function ValueSlider({
 }: Props) {
   const current = snapToStep(value, min, max, step);
   const span = Math.max(max - min, step);
-  const widthPct = ((current - min) / span) * 100;
+  // Progress 0..1 mapped onto usable track after pin footprint.
+  // Plain % width + CSS min-width leaves the pin stuck until fill exceeds min-width.
+  const fillProgress = Math.max(0, Math.min(1, (current - min) / span));
+  const fillWidth = `calc((var(--range-slider-thumb-w) + var(--range-slider-pin-inset) * 2) + (100% - (var(--range-slider-thumb-w) + var(--range-slider-pin-inset) * 2)) * ${fillProgress})`;
 
   const rootClass = ['arc-range-slider', className].filter(Boolean).join(' ');
   const trackRef = useRef<HTMLDivElement>(null);
@@ -109,7 +112,7 @@ export default function ValueSlider({
         >
           <div
             className="arc-range-slider__fill"
-            style={{ left: 0, width: `${widthPct}%` }}
+            style={{ left: 0, width: fillWidth }}
           >
             <span className="arc-range-slider__pin arc-range-slider__pin--max" aria-hidden="true" />
           </div>

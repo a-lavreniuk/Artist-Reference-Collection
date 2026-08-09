@@ -5,6 +5,7 @@ import {
   clampPan,
   computeFitScale,
   displayPctToScale,
+  displayPctToZoomSliderValue,
   isViewportAtActual,
   isViewportAtFit,
   normalizeViewport,
@@ -12,7 +13,8 @@ import {
   setDisplayPctAtCenter,
   setScaleAtCenter,
   viewportAtActualSize,
-  zoomAtPoint
+  zoomAtPoint,
+  zoomSliderValueToDisplayPct
 } from '../hooks/imageViewportZoomMath';
 
 const stage = { width: 800, height: 600 };
@@ -38,6 +40,33 @@ describe('imageViewportZoomMath', () => {
     expect(displayPctToScale(250, fitScale)).toBeCloseTo(0.625);
     expect(displayPctToScale(DISPLAY_SCALE_PCT_MIN, fitScale)).toBeCloseTo(fitScale);
     expect(displayPctToScale(DISPLAY_SCALE_PCT_MAX, fitScale)).toBeCloseTo(fitScale * 10);
+  });
+
+  it('maps zoom slider log-uniformly across display percent', () => {
+    expect(displayPctToZoomSliderValue(DISPLAY_SCALE_PCT_MIN)).toBeCloseTo(DISPLAY_SCALE_PCT_MIN);
+    expect(displayPctToZoomSliderValue(DISPLAY_SCALE_PCT_MAX)).toBeCloseTo(DISPLAY_SCALE_PCT_MAX);
+    // Geometric mid of 100..1000 ≈ 316 → midpoint of slider track
+    const midPct = Math.sqrt(DISPLAY_SCALE_PCT_MIN * DISPLAY_SCALE_PCT_MAX);
+    const midSlider =
+      (DISPLAY_SCALE_PCT_MIN + DISPLAY_SCALE_PCT_MAX) / 2;
+    expect(displayPctToZoomSliderValue(midPct)).toBeCloseTo(midSlider, 0);
+    // Equal relative steps (×10 and ×√10) land at equal track fractions
+    const at200 = displayPctToZoomSliderValue(200);
+    const at100 = displayPctToZoomSliderValue(100);
+    const at400 = displayPctToZoomSliderValue(400);
+    expect(at200 - at100).toBeCloseTo(at400 - at200, 0);
+  });
+
+  it('round-trips display percent through zoom slider value', () => {
+    for (const pct of [100, 108, 200, 316, 500, 1000]) {
+      const slider = displayPctToZoomSliderValue(pct);
+      expect(zoomSliderValueToDisplayPct(slider)).toBe(pct);
+    }
+    expect(zoomSliderValueToDisplayPct(DISPLAY_SCALE_PCT_MIN)).toBe(100);
+    expect(zoomSliderValueToDisplayPct(DISPLAY_SCALE_PCT_MAX)).toBe(1000);
+    expect(zoomSliderValueToDisplayPct((DISPLAY_SCALE_PCT_MIN + DISPLAY_SCALE_PCT_MAX) / 2)).toBe(
+      Math.round(Math.sqrt(DISPLAY_SCALE_PCT_MIN * DISPLAY_SCALE_PCT_MAX))
+    );
   });
 
   it('zooms toward focal point', () => {
