@@ -97,7 +97,7 @@ description: >-
 
 - Виджет и форма: `docs/bug-report-widget.md`
 - UI: `arc-ui-dev`
-- Старт с Cursor: [anytype-task-take](../anytype-task-take/SKILL.md)
+- Старт с Cursor: [buildin-task-take](../buildin-task-take/SKILL.md) (доска Таски в Buildin)
 - Тестовые `[Тест]` — не брать в работу; предложить архивировать
 
 ## Триггеры (примеры)
