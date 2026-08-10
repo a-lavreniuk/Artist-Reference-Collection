@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "buildin-cli": {
+      "source": "next-space/buildin-skill",
+      "sourceType": "github",
+      "skillPath": "skills/buildin-cli/SKILL.md",
+      "computedHash": "1bf1986314acf8f18e43450bf6a10a746467c7ea5a30c7c14c6a4cc46caac183"
+    }
+  }
+}
