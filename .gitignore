@@ -8,6 +8,7 @@ dist-electron/
 npm-debug.log*
 
 # Локальные артефакты разработки
+.buildin/
 .cache/
 debug-*.log
 .cursor/debug-*.log
