@@ -3,7 +3,6 @@ import path from 'path';
 import { ipcMain } from 'electron';
 
 import { readAppPreferencesSync } from '../appPreferences';
-import { ARC_LOCAL_TOKEN_HEADER } from '../localApiAuth';
 import { ARC_MCP_PORT, ARC_MCP_URL } from './constants';
 
 let mcpSetupIpcRegistered = false;
@@ -33,15 +32,14 @@ export function getMcpStdioLaunch(): McpStdioLaunch {
 }
 
 export function buildHttpMcpServerConfig(secret?: string): Record<string, unknown> {
-  const token = (secret ?? readAppPreferencesSync().localApiSecret ?? '').trim();
+  const token = (secret ?? readAppPreferencesSync().mcpApiSecret ?? '').trim();
   const config: Record<string, unknown> = {
-    transport: 'http',
-    type: 'streamable-http',
-    streamable: true,
     url: ARC_MCP_URL
   };
   if (token) {
-    config.headers = { [ARC_LOCAL_TOKEN_HEADER]: token };
+    // Cursor HTTP MCP: Authorization Bearer is the documented header form.
+    // ARC also accepts x-arc-local-token (see localApiAuth).
+    config.headers = { Authorization: `Bearer ${token}` };
   }
   return config;
 }
@@ -64,7 +62,7 @@ export function buildMcpSetupPackageText(options?: {
 }): string {
   const launch = options?.launch ?? getMcpStdioLaunch();
   const port = options?.port ?? ARC_MCP_PORT;
-  const secret = options?.secret ?? readAppPreferencesSync().localApiSecret ?? '';
+  const secret = options?.secret ?? readAppPreferencesSync().mcpApiSecret ?? '';
   const httpJson = JSON.stringify(
     {
       mcpServers: {
@@ -92,7 +90,7 @@ export function buildMcpSetupPackageText(options?: {
     'Ниже два варианта конфигурации. Если клиент умеет подключаться по URL — используйте HTTP.',
     'Иначе используйте stdio (локальный процесс).',
     '',
-    'HTTP-запросы должны передавать заголовок X-ARC-Local-Token (секрет из настроек ARC).',
+    'HTTP-запросы должны передавать Authorization: Bearer <секрет MCP из настроек ARC>.',
     '',
     `## HTTP (порт ${port})`,
     '',

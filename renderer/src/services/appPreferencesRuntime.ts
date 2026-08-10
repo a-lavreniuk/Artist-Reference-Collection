@@ -126,6 +126,9 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('localApiSecret' in patch && typeof patch.localApiSecret === 'string') {
     next.localApiSecret = patch.localApiSecret;
   }
+  if ('mcpApiSecret' in patch && typeof patch.mcpApiSecret === 'string') {
+    next.mcpApiSecret = patch.mcpApiSecret;
+  }
   if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
     next.mcpServerEnabled = patch.mcpServerEnabled;
   }
@@ -308,6 +311,9 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   if ('localApiSecret' in patch && typeof patch.localApiSecret === 'string') {
     next.localApiSecret = patch.localApiSecret;
   }
+  if ('mcpApiSecret' in patch && typeof patch.mcpApiSecret === 'string') {
+    next.mcpApiSecret = patch.mcpApiSecret;
+  }
   if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
     next.mcpServerEnabled = patch.mcpServerEnabled;
   }
@@ -480,17 +486,23 @@ export async function patchAppPreferences(patch: Partial<AppPreferencesV1>): Pro
 
       const remote = await setAppPreferences(toSend);
       const cacheAfter = getAppPreferencesSync();
-      const next = coerceAppPreferences(
-        touchesCaption
-          ? {
-              ...remote,
-              ...toSend,
-              aiCaptionType: cacheAfter.aiCaptionType,
-              aiCaptionLengthLevel: cacheAfter.aiCaptionLengthLevel,
-              aiCaptionExtraIds: cacheAfter.aiCaptionExtraIds
-            }
-          : { ...remote, ...normalized }
-      );
+      const merged = touchesCaption
+        ? {
+            ...remote,
+            ...toSend,
+            aiCaptionType: cacheAfter.aiCaptionType,
+            aiCaptionLengthLevel: cacheAfter.aiCaptionLengthLevel,
+            aiCaptionExtraIds: cacheAfter.aiCaptionExtraIds
+          }
+        : { ...remote, ...normalized };
+      // Empty secret in patch means "regenerate on main" — keep the value main returned.
+      if ('mcpApiSecret' in normalized && normalized.mcpApiSecret === '') {
+        merged.mcpApiSecret = remote.mcpApiSecret;
+      }
+      if ('localApiSecret' in normalized && normalized.localApiSecret === '') {
+        merged.localApiSecret = remote.localApiSecret;
+      }
+      const next = coerceAppPreferences(merged);
       cache = next;
       notify();
       return next;

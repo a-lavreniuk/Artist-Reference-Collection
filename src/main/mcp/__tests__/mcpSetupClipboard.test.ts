@@ -15,8 +15,9 @@ describe('mcpSetupClipboard', () => {
     expect(text).toContain('"--mcp"');
     expect(text).toContain('## HTTP');
     expect(text).toContain('## stdio');
-    expect(text).toContain('x-arc-local-token');
-    expect(text).toContain('test-local-api-secret-value');
+    expect(text).toContain('"Authorization"');
+    expect(text).toContain('Bearer test-local-api-secret-value');
+    expect(text).toContain('секрет MCP');
     expect(text).not.toMatch(/Cursor|Claude|ChatGPT/i);
   });
 });

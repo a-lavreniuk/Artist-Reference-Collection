@@ -255,7 +255,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   }
 
-  const secret = readAppPreferencesSync().localApiSecret?.trim() ?? '';
+  const secret = readAppPreferencesSync().mcpApiSecret?.trim() ?? '';
   if (!secret || !requestHasValidLocalApiToken(req, secret)) {
     sendJson(res, 401, { status: 'error', message: 'Unauthorized' });
     return;

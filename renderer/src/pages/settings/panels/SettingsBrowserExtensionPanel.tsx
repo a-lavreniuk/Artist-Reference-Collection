@@ -16,7 +16,7 @@ const HINT_SITES = 'Поддерживаются в том числе Pinterest,
 const HINT_SITE_EXCEPTIONS =
   'Чтобы скрыть кнопку сохранения на отдельных сайтах, откройте popup расширения и добавьте сайт в исключения.';
 const HINT_SECRET =
-  'Локальный секрет (X-ARC-Local-Token) нужен расширению и MCP. Скопируйте его в настройки расширения.';
+  'Локальный секрет (X-ARC-Local-Token) нужен расширению. Скопируйте его в настройки расширения.';
 
 /** Настройки Import API для браузерного расширения */
 export default function SettingsBrowserExtensionPanel() {
