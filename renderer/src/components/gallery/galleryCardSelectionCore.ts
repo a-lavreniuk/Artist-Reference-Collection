@@ -24,6 +24,43 @@ export function addIdsToSet(current: ReadonlySet<string>, ids: Iterable<string>)
   return next;
 }
 
+export function removeIdsFromSet(current: ReadonlySet<string>, ids: Iterable<string>): Set<string> {
+  const next = new Set(current);
+  for (const id of ids) next.delete(id);
+  return next;
+}
+
+/** Рамка без модификаторов заменяет выделение, Ctrl добавляет, Alt вычитает. */
+export type MarqueeMode = 'replace' | 'add' | 'subtract';
+
+export function resolveMarqueeMode(modifiers: {
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+}): MarqueeMode {
+  if (modifiers.altKey) return 'subtract';
+  if (modifiers.ctrlKey || modifiers.metaKey) return 'add';
+  return 'replace';
+}
+
+export function computeMarqueeSelection(
+  base: ReadonlySet<string>,
+  inside: ReadonlySet<string>,
+  mode: MarqueeMode
+): Set<string> {
+  if (mode === 'replace') return new Set(inside);
+  if (mode === 'add') return addIdsToSet(base, inside);
+  return removeIdsFromSet(base, inside);
+}
+
+export function setsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const id of a) {
+    if (!b.has(id)) return false;
+  }
+  return true;
+}
+
 export function rangeSelectIds(
   orderedIds: readonly string[],
   anchorId: string | null,
@@ -46,17 +83,17 @@ export function rangeSelectIds(
   return next;
 }
 
-function rectsIntersect(a: SelectionRect, b: DOMRect): boolean {
+function rectsIntersect(a: SelectionRect, b: SelectionRect): boolean {
   return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 }
 
 export function idsIntersectingRect(
-  cardRects: ReadonlyMap<string, DOMRect>,
+  cardRects: ReadonlyMap<string, SelectionRect>,
   rect: SelectionRect
 ): string[] {
   const ids: string[] = [];
-  for (const [id, domRect] of cardRects) {
-    if (rectsIntersect(rect, domRect)) ids.push(id);
+  for (const [id, cardRect] of cardRects) {
+    if (rectsIntersect(rect, cardRect)) ids.push(id);
   }
   return ids;
 }

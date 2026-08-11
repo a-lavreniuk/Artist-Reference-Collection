@@ -13,6 +13,7 @@ import CardInspectModal from '../components/gallery/CardInspectModal';
 import { resolveCardFeedNeighbors } from '../components/gallery/cardFeedNeighbors';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
 import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
+import { listAllCardIdsForQuery } from '../components/gallery/gallerySelectAllIds';
 import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
@@ -265,6 +266,13 @@ export default function CollectionsPage() {
 
   const selectionResetKey = `${galleryRevealResetKey(scopedFeedQuery)}|${activeCollectionId ?? ''}`;
 
+  const handleFindSimilar = useCallback(
+    (id: string) => {
+      void startFindSimilarSearch(navigate, searchParams, id);
+    },
+    [navigate, searchParams]
+  );
+
   const multiSelect = useGalleryMultiSelect({
     cards: feed.cards,
     resetKey: selectionResetKey,
@@ -275,7 +283,10 @@ export default function CollectionsPage() {
     enabled: Boolean(activeCollectionId) && libraryStorageReady,
     onOpenCard: openCard,
     onRefresh: () => void feed.reloadFromStart(),
-    refreshMoodboard: () => void refreshMoodboard()
+    refreshMoodboard: () => void refreshMoodboard(),
+    resolveSelectAllIds: isRemoteSearchFeed
+      ? undefined
+      : () => listAllCardIdsForQuery(scopedFeedQuery)
   });
 
   const { onCardContextMenu, contextMenuLayer: cardContextMenuLayer } = useGalleryCardContextMenu({
@@ -284,9 +295,7 @@ export default function CollectionsPage() {
     moodboardCardIds,
     onOpenCard: openCard,
     onToggleMoodboard: handleToggleMoodboard,
-    onFindSimilar: (id) => {
-      void startFindSimilarSearch(navigate, searchParams, id);
-    },
+    onFindSimilar: handleFindSimilar,
     onCardDeleted: () => void feed.reloadFromStart(),
     getSelectedCardIds: () => multiSelect.selectedCardIds,
     isCardSelected: multiSelect.isSelected,
@@ -471,9 +480,7 @@ export default function CollectionsPage() {
                     onCardPointerMove={multiSelect.onCardPointerMove}
                     onCardPointerUp={multiSelect.onCardPointerUp}
                     onToggleMoodboard={handleToggleMoodboard}
-                    onFindSimilar={(id) => {
-                      void startFindSimilarSearch(navigate, searchParams, id);
-                    }}
+                    onFindSimilar={handleFindSimilar}
                   />
                   <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
                 </div>

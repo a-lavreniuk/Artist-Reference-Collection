@@ -1498,6 +1498,16 @@ html[data-theme="light"] .arc-gallery-list-row__meta {
   pointer-events: none;
 }
 
+.arc-gallery-marquee--subtract {
+  border-color: var(--red-500);
+  background: color-mix(in srgb, var(--red-500) 12%, transparent);
+}
+
+/* Протягивание рамки не должно попутно выделять текст интерфейса. */
+body.arc-gallery-marquee-dragging {
+  user-select: none;
+}
+
 body.arc-gallery-selection-active .arc-scroll-to-top--center-outlet {
   bottom: calc(var(--s-4) + 56px + var(--s-2));
 }

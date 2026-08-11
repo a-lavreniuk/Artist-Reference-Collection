@@ -39,10 +39,11 @@ import {
   undoTrash
 } from './galleryUndoToast';
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
-import { isEditableTarget } from '../../shortcuts/shortcutGuards';
+import { isContextMenuOpen, isEditableTarget } from '../../shortcuts/shortcutGuards';
 import { openCardInNewWindowFromScope, resolveFocusedGalleryCardId } from '../../card-viewer/openCardsInNewWindow';
 import { useGalleryCardSelection } from './useGalleryCardSelection';
 import { useGalleryCardLongPress, useGalleryMarqueeSelection } from './useGalleryMarqueeSelection';
+import GalleryMarqueeOverlay from './GalleryMarqueeOverlay';
 
 type Options = {
   cards: CardRecord[];
@@ -55,6 +56,11 @@ type Options = {
   onOpenCard: (id: string) => void;
   onRefresh: () => void | Promise<void>;
   refreshMoodboard?: () => void | Promise<void>;
+  /**
+   * Полный список id раздела для Ctrl+A. Без него «выделить всё» берёт
+   * только уже загруженные карточки ленты.
+   */
+  resolveSelectAllIds?: () => Promise<string[]>;
 };
 
 export function useGalleryMultiSelect({
@@ -67,7 +73,8 @@ export function useGalleryMultiSelect({
   enabled = true,
   onOpenCard,
   onRefresh,
-  refreshMoodboard
+  refreshMoodboard,
+  resolveSelectAllIds
 }: Options) {
   const orderedCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
   const selection = useGalleryCardSelection(orderedCardIds, resetKey, onOpenCard);
@@ -75,19 +82,34 @@ export function useGalleryMultiSelect({
   const [tagsOpen, setTagsOpen] = useState(false);
   const selectedIdsRef = useRef(selection.selectedIds);
   selectedIdsRef.current = selection.selectedIds;
-  const handleMarquee = useCallback(
-    (ids: string[]) => {
-      selection.addMarqueeIds(ids);
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
+  const orderedCardIdsRef = useRef(orderedCardIds);
+  orderedCardIdsRef.current = orderedCardIds;
+  const resolveSelectAllIdsRef = useRef(resolveSelectAllIds);
+  resolveSelectAllIdsRef.current = resolveSelectAllIds;
+  const selectAllSeqRef = useRef(0);
+
+  const getSelectedIdsForMarquee = useCallback(() => selectedIdsRef.current, []);
+  const handleMarqueeSelection = useCallback(
+    (ids: Set<string>) => {
+      selection.applyMarqueeSelection(ids);
     },
     [selection]
   );
+  const handleEmptyClick = useCallback(() => {
+    selection.clearSelection();
+  }, [selection]);
 
-  const { marquee } = useGalleryMarqueeSelection({
+  const { subscribeMarquee } = useGalleryMarqueeSelection({
     boardRef,
     scrollRootRef,
-    selectionMode: selection.selectionMode,
     enabled,
-    onMarqueeSelect: handleMarquee
+    getSelectedIds: getSelectedIdsForMarquee,
+    onSelectionChange: handleMarqueeSelection,
+    onEmptyClick: handleEmptyClick
   });
 
   const longPress = useGalleryCardLongPress(selection.enterSelectionWithCard, enabled);
@@ -239,37 +261,66 @@ export function useGalleryMultiSelect({
     [moodboardCardIds, runBulk, scope.kind]
   );
 
+  // Колбэки карточек держим со стабильной ссылкой: иначе memo плиток не работает
+  // и при каждом изменении выделения перерисовывается вся видимая лента.
+  const { onPointerDown: longPressPointerDown, consumeSuppressedClick } = longPress;
+
   const handleCardPointerDown = useCallback(
     (cardId: string, event: React.PointerEvent) => {
       // При Shift/Ctrl не трогаем якорь: он нужен click-обработчику для диапазонного выбора.
       if (event.button === 0 && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
-        selection.noteAnchor(cardId);
+        selectionRef.current.noteAnchor(cardId);
       }
-      longPress.onPointerDown(cardId, event);
+      longPressPointerDown(cardId, event);
     },
-    [longPress, selection]
+    [longPressPointerDown]
   );
 
   const handleCardClick = useCallback(
     (cardId: string, event: React.MouseEvent) => {
-      if (longPress.consumeSuppressedClick()) return;
-      if (selection.handleCardClick(cardId, event)) return;
-      selection.handleOpenCard(cardId);
+      if (consumeSuppressedClick()) return;
+      if (selectionRef.current.handleCardClick(cardId, event)) return;
+      selectionRef.current.handleOpenCard(cardId);
     },
-    [longPress, selection]
+    [consumeSuppressedClick]
   );
+
+  /**
+   * Выделяет загруженные карточки сразу, затем — весь раздел, если страница
+   * умеет отдать полный список id (коллекции, мудборд).
+   */
+  const selectAllCards = useCallback(() => {
+    const seq = ++selectAllSeqRef.current;
+    selection.selectAllIds(orderedCardIdsRef.current);
+    const resolver = resolveSelectAllIdsRef.current;
+    if (!resolver) return;
+    void (async () => {
+      try {
+        const ids = await resolver();
+        if (seq !== selectAllSeqRef.current) return;
+        if (ids.length > 0) selection.selectAllIds(ids);
+      } catch {
+        // Дозапрос не удался — остаётся выделение по загруженным карточкам.
+      }
+    })();
+  }, [selection]);
+
+  useEffect(() => {
+    selectAllSeqRef.current += 1;
+  }, [resetKey]);
 
   const openInNewWindowForCard = useCallback(
     (cardId: string) => {
       const selected = [...selectedIdsRef.current];
       void openCardInNewWindowFromScope({
-        scope,
-        feedOrder: orderedCardIds,
+        scope: scopeRef.current,
+        feedOrder: orderedCardIdsRef.current,
         cardId,
-        selectedIds: selection.selectionMode && selected.length > 0 ? selected : undefined
+        selectedIds:
+          selectionRef.current.selectionMode && selected.length > 0 ? selected : undefined
       });
     },
-    [orderedCardIds, scope, selection.selectionMode]
+    []
   );
 
   useEffect(() => {
@@ -291,6 +342,14 @@ export function useGalleryMultiSelect({
           cardId,
           selectedIds: selected.length > 0 ? selected : undefined
         });
+        return;
+      }
+
+      if (matchesShortcut(event, 'gallery.selectAll')) {
+        // Поверх модалки и меню Ctrl+A относится к их содержимому, не к ленте.
+        if (document.querySelector('.arc-modal-host') || isContextMenuOpen()) return;
+        event.preventDefault();
+        selectAllCards();
         return;
       }
 
@@ -319,6 +378,7 @@ export function useGalleryMultiSelect({
     onPermanentDelete,
     onTrashAction,
     scope.kind,
+    selectAllCards,
     selection.clearSelection,
     selection.selectedCount,
     selection.selectionMode,
@@ -434,19 +494,7 @@ export function useGalleryMultiSelect({
       />
     ) : null;
 
-  const marqueeOverlay =
-    marquee && enabled ? (
-      <div
-        className="arc-gallery-marquee"
-        style={{
-          left: marquee.rect.left,
-          top: marquee.rect.top,
-          width: marquee.rect.right - marquee.rect.left,
-          height: marquee.rect.bottom - marquee.rect.top
-        }}
-        aria-hidden
-      />
-    ) : null;
+  const marqueeOverlay = enabled ? <GalleryMarqueeOverlay subscribe={subscribeMarquee} /> : null;
 
   return {
     selection,

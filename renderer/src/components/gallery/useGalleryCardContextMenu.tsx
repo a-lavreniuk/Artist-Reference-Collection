@@ -105,12 +105,14 @@ export function useGalleryCardContextMenu({
     [getSelectedCardIds, isCardSelected, selectionModeActive]
   );
 
+  // Ссылка должна быть стабильной: обработчик уходит в каждую карточку ленты.
+  const openMenuAt = menu.openAt;
   const openAtCard = useCallback(
     (card: CardRecord, event: React.MouseEvent) => {
-      menu.openAt(event);
+      openMenuAt(event);
       setMenuCardId(card.id);
     },
-    [menu]
+    [openMenuAt]
   );
 
   const scopeCollectionId = scope.kind === 'collection' ? scope.collectionId : null;

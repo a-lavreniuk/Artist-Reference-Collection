@@ -170,6 +170,13 @@ export default function GalleryPage() {
     [refreshMoodboard]
   );
 
+  const handleFindSimilar = useCallback(
+    (id: string) => {
+      void startFindSimilarSearch(navigate, searchParams, id);
+    },
+    [navigate, searchParams]
+  );
+
   const multiSelect = useGalleryMultiSelect({
     cards,
     resetKey: selectionResetKey,
@@ -189,9 +196,7 @@ export default function GalleryPage() {
     moodboardCardIds,
     onOpenCard: openCard,
     onToggleMoodboard: handleToggleMoodboard,
-    onFindSimilar: (id) => {
-      void startFindSimilarSearch(navigate, searchParams, id);
-    },
+    onFindSimilar: handleFindSimilar,
     onCardDeleted: () => void reloadFromStart(),
     getSelectedCardIds: () => multiSelect.selectedCardIds,
     isCardSelected: multiSelect.isSelected,
@@ -402,9 +407,7 @@ export default function GalleryPage() {
 
             onToggleMoodboard={handleToggleMoodboard}
 
-            onFindSimilar={(id) => {
-              void startFindSimilarSearch(navigate, searchParams, id);
-            }}
+            onFindSimilar={handleFindSimilar}
 
           />
 

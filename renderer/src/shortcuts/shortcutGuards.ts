@@ -6,8 +6,12 @@ export function isEditableTarget(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+/**
+ * Только всплывающее меню. Класс `context-menu` переиспользуют статичные сайдбары
+ * (коллекции, метки, настройки) — они не должны блокировать шорткаты.
+ */
 export function isContextMenuOpen(): boolean {
-  return Boolean(document.querySelector('.context-menu'));
+  return Boolean(document.querySelector('.context-menu:not(.context-menu--static)'));
 }
 
 /** Block renderer shortcuts while typing or when a context menu is open. */

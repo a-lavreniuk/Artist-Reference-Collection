@@ -32,6 +32,7 @@ export type ShortcutId =
   | 'moodboard.zoomOut'
   | 'moodboard.zoomReset'
   | 'moodboard.fitView'
+  | 'gallery.selectAll'
   | 'gallery.deleteSelection'
   | 'gallery.clearSelection'
   | 'gallery.gridLarge'
@@ -215,6 +216,14 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     label: 'Инструменты разработчика',
     defaultAccelerator: DEVTOOLS_ACCELERATORS[1],
     scope: 'global',
+    settingsVisible: true
+  },
+  {
+    id: 'gallery.selectAll',
+    groupId: 'gallery',
+    label: 'Выделить всё',
+    defaultAccelerator: 'CommandOrControl+A',
+    scope: 'renderer',
     settingsVisible: true
   },
   {

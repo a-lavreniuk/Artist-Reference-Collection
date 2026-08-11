@@ -4,6 +4,7 @@ import { useOpenCardUrl } from '../../search/openCardUrl';
 import { parseSearchCardId, parseSearchTagIds } from '../../search/searchUrl';
 import { resolveGalleryFeedEmptyState } from '../gallery/galleryFeedEmptyState';
 import type { GalleryFeedQuery } from '../gallery/galleryQuery';
+import { listAllCardIdsForQuery } from '../gallery/gallerySelectAllIds';
 import { useGalleryFeedSentinel } from '../gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../gallery/useScopedGalleryFeed';
 import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
@@ -122,6 +123,13 @@ export default function MoodboardCardsView() {
     await applyMoodboardRemoveWithUndo(removeConfirm.cardId, refreshMoodboard);
   }, [refreshMoodboard, removeConfirm]);
 
+  const handleFindSimilar = useCallback(
+    (id: string) => {
+      void startFindSimilarSearch(navigate, searchParams, id);
+    },
+    [navigate, searchParams]
+  );
+
   const multiSelect = useGalleryMultiSelect({
     cards: feed.cards,
     resetKey: galleryRevealResetKey(feedQuery),
@@ -132,7 +140,8 @@ export default function MoodboardCardsView() {
     enabled: libraryStorageReady,
     onOpenCard: openCard,
     onRefresh: () => void feed.reloadFromStart(),
-    refreshMoodboard: () => void refreshMoodboard()
+    refreshMoodboard: () => void refreshMoodboard(),
+    resolveSelectAllIds: isRemoteSearchFeed ? undefined : () => listAllCardIdsForQuery(feedQuery)
   });
 
   const { onCardContextMenu, contextMenuLayer } = useGalleryCardContextMenu({
@@ -141,9 +150,7 @@ export default function MoodboardCardsView() {
     moodboardCardIds,
     onOpenCard: openCard,
     onToggleMoodboard: handleToggleMoodboard,
-    onFindSimilar: (id) => {
-      void startFindSimilarSearch(navigate, searchParams, id);
-    },
+    onFindSimilar: handleFindSimilar,
     onCardDeleted: () => void feed.reloadFromStart(),
     getSelectedCardIds: () => multiSelect.selectedCardIds,
     isCardSelected: multiSelect.isSelected,
@@ -224,9 +231,7 @@ export default function MoodboardCardsView() {
             onCardPointerMove={multiSelect.onCardPointerMove}
             onCardPointerUp={multiSelect.onCardPointerUp}
             onToggleMoodboard={handleToggleMoodboard}
-            onFindSimilar={(id) => {
-              void startFindSimilarSearch(navigate, searchParams, id);
-            }}
+            onFindSimilar={handleFindSimilar}
           />
           <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
         </>

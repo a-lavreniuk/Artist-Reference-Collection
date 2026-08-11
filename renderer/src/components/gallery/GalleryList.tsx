@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -9,6 +10,9 @@ import {
   type RefObject
 } from 'react';
 import { useContainerWidth } from '../masonry/useMasonryColumnCount';
+import { handleGridArrowKey } from '../masonry/masonryKeyboard';
+import type { MasonryItemLayout } from '../masonry/masonryTypes';
+import { GALLERY_CARD_ATTRIBUTE, focusGalleryCardById } from './galleryArrowNavigation';
 import {
   GALLERY_LIST_COLUMN_LABELS,
   GALLERY_LIST_HEADER_GAP_PX,
@@ -49,6 +53,7 @@ export default function GalleryList({
   const headerRef = useRef<HTMLDivElement>(null);
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
   const [range, setRange] = useState({ start: 0, end: items.length });
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [actionsWidthPx, setActionsWidthPx] = useState(0);
   const containerWidth = useContainerWidth(containerRef);
 
@@ -146,8 +151,46 @@ export default function GalleryList({
       const item = items[index];
       if (item) slice.push({ item, index });
     }
+    // Строка в фокусе остаётся смонтированной, иначе прокрутка сбрасывает
+    // навигацию стрелками (как в UniformGrid).
+    if (focusedId && !slice.some(({ item }) => item.id === focusedId)) {
+      const index = items.findIndex((item) => item.id === focusedId);
+      const item = index >= 0 ? items[index] : undefined;
+      if (item) {
+        if (index < range.start) slice.unshift({ item, index });
+        else slice.push({ item, index });
+      }
+    }
     return slice;
-  }, [items, range.end, range.start, virtualize]);
+  }, [focusedId, items, range.end, range.start, virtualize]);
+
+  const rowLayouts = useMemo(() => {
+    const map = new Map<string, MasonryItemLayout>();
+    for (const { item, index } of visibleItems) {
+      map.set(item.id, {
+        id: item.id,
+        x: 0,
+        y: index * GALLERY_LIST_ROW_STRIDE_PX,
+        width: Math.max(containerWidth, 1),
+        height: GALLERY_LIST_ROW_HEIGHT_PX,
+        column: 0
+      });
+    }
+    return map;
+  }, [containerWidth, visibleItems]);
+
+  const focusItem = useCallback((id: string) => {
+    setFocusedId(id);
+    focusGalleryCardById(containerRef.current, id);
+  }, []);
+
+  const onListKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const mountedIds = visibleItems.map(({ item }) => item.id);
+      handleGridArrowKey(event, rowLayouts, mountedIds, focusItem, GALLERY_CARD_ATTRIBUTE);
+    },
+    [focusItem, rowLayouts, visibleItems]
+  );
 
   const rootClass = ['arc-gallery-list', className, busy ? 'arc-gallery-list--busy' : '']
     .filter(Boolean)
@@ -170,6 +213,7 @@ export default function GalleryList({
       aria-busy={busy || loadingMore}
       aria-rowcount={items.length}
       style={listCssVars}
+      onKeyDown={onListKeyDown}
     >
       <div
         ref={headerRef}

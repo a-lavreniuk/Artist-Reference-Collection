@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -8,6 +9,8 @@ import {
   type RefObject
 } from 'react';
 import { useContainerWidth, useMasonryColumnCount } from '../masonry/useMasonryColumnCount';
+import { handleGridArrowKey } from '../masonry/masonryKeyboard';
+import { GALLERY_CARD_ATTRIBUTE, focusGalleryCardById } from './galleryArrowNavigation';
 import { useMasonryVirtualRange } from '../masonry/useMasonryVirtualRange';
 import {
   MASONRY_LOADING_SKELETON_COUNT,
@@ -132,6 +135,19 @@ export default function UniformGrid({
     return set;
   }, [virtualRange.visibleIds, focusedId]);
 
+  const focusItem = useCallback((id: string) => {
+    setFocusedId(id);
+    focusGalleryCardById(containerRef.current, id);
+  }, []);
+
+  const onGridKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const mountedIds = items.map((item) => item.id).filter((id) => visibleIds.has(id));
+      handleGridArrowKey(event, layouts, mountedIds, focusItem, GALLERY_CARD_ATTRIBUTE);
+    },
+    [focusItem, items, layouts, visibleIds]
+  );
+
   const rootClass = ['arc-uniform-grid', className, busy ? 'arc-uniform-grid--busy' : '']
     .filter(Boolean)
     .join(' ');
@@ -143,6 +159,7 @@ export default function UniformGrid({
       role="grid"
       aria-busy={busy || loadingMore}
       aria-rowcount={items.length}
+      onKeyDown={onGridKeyDown}
     >
       <div className="arc-uniform-grid__inner" style={{ height: totalHeight, position: 'relative' }}>
         {allIds.map((id, index) => {

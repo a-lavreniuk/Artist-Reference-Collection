@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  addIdToSet,
-  addIdsToSet,
-  rangeSelectIds,
-  toggleIdInSet
-} from './galleryCardSelectionCore';
+import { addIdToSet, rangeSelectIds, toggleIdInSet } from './galleryCardSelectionCore';
 
 type Options = {
   orderedCardIds: readonly string[];
@@ -20,7 +15,9 @@ export type GalleryCardSelectionApi = {
   clearSelection: () => void;
   enterSelectionWithCard: (cardId: string) => void;
   toggleCardSelection: (cardId: string) => void;
-  addMarqueeIds: (ids: string[]) => void;
+  /** Итоговый набор рамки — уже с учётом replace / add / subtract. */
+  applyMarqueeSelection: (ids: ReadonlySet<string>) => void;
+  selectAllIds: (ids: readonly string[]) => void;
   noteAnchor: (cardId: string) => void;
   handleCardClick: (cardId: string, event: React.MouseEvent) => boolean;
   handleOpenCard: (cardId: string) => void;
@@ -74,15 +71,26 @@ export function useGalleryCardSelection(
     });
   }, []);
 
-  const addMarqueeIds = useCallback(
-    (ids: string[]) => {
-      if (ids.length === 0) return;
-      setSelectionMode(true);
-      setSelectedIds((prev) => addIdsToSet(prev, ids));
-      if (!anchorIdRef.current) anchorIdRef.current = ids[0] ?? null;
-    },
-    []
-  );
+  const applyMarqueeSelection = useCallback((ids: ReadonlySet<string>) => {
+    const next = new Set(ids);
+    setSelectedIds(next);
+    setSelectionMode(next.size > 0);
+    if (next.size === 0) {
+      anchorIdRef.current = null;
+      return;
+    }
+    const anchor = anchorIdRef.current;
+    if (!anchor || !next.has(anchor)) {
+      anchorIdRef.current = next.values().next().value ?? null;
+    }
+  }, []);
+
+  const selectAllIds = useCallback((ids: readonly string[]) => {
+    if (ids.length === 0) return;
+    setSelectionMode(true);
+    setSelectedIds(new Set(ids));
+    anchorIdRef.current = ids[0] ?? null;
+  }, []);
 
   const noteAnchor = useCallback((cardId: string) => {
     anchorIdRef.current = cardId;
@@ -146,13 +154,15 @@ export function useGalleryCardSelection(
       clearSelection,
       enterSelectionWithCard,
       toggleCardSelection,
-      addMarqueeIds,
+      applyMarqueeSelection,
+      selectAllIds,
       noteAnchor,
       handleCardClick,
       handleOpenCard
     }),
     [
-      addMarqueeIds,
+      applyMarqueeSelection,
+      selectAllIds,
       noteAnchor,
       clearSelection,
       enterSelectionWithCard,

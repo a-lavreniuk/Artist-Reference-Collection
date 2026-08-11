@@ -52,17 +52,25 @@ export function findArrowTargetId(
   return bestId;
 }
 
-export function handleMasonryArrowKey(
+export const MASONRY_ITEM_ATTRIBUTE = 'data-masonry-item-id';
+
+/**
+ * Общая навигация стрелками по геометрии раскладки: masonry, равномерная сетка,
+ * список. Отличается только атрибутом, по которому опознаётся элемент в фокусе.
+ */
+export function handleGridArrowKey(
   event: React.KeyboardEvent,
   layouts: Map<string, MasonryItemLayout>,
   mountedIds: readonly string[],
-  focusItem: (id: string) => void
+  focusItem: (id: string) => void,
+  itemAttribute: string = MASONRY_ITEM_ATTRIBUTE
 ): boolean {
   if (!ARROW_KEYS.has(event.key)) return false;
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return false;
   const active = document.activeElement;
   const currentId =
-    active?.getAttribute('data-masonry-item-id') ??
-    active?.closest('[data-masonry-item-id]')?.getAttribute('data-masonry-item-id') ??
+    active?.getAttribute(itemAttribute) ??
+    active?.closest(`[${itemAttribute}]`)?.getAttribute(itemAttribute) ??
     null;
   if (!currentId) return false;
 
@@ -72,4 +80,13 @@ export function handleMasonryArrowKey(
   event.preventDefault();
   focusItem(nextId);
   return true;
+}
+
+export function handleMasonryArrowKey(
+  event: React.KeyboardEvent,
+  layouts: Map<string, MasonryItemLayout>,
+  mountedIds: readonly string[],
+  focusItem: (id: string) => void
+): boolean {
+  return handleGridArrowKey(event, layouts, mountedIds, focusItem, MASONRY_ITEM_ATTRIBUTE);
 }
