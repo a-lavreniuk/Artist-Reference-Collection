@@ -8,6 +8,7 @@ import type {
 } from '../components/gallery/galleryFilterTypes';
 import type { CardRecord, CollectionRecord, MoodboardBoardV1 } from './arcSchema';
 import type { CategoryRecord, TagRecord } from './db';
+import type { TagDeleteUndo, TagMergeUndo } from '../arc-global';
 
 export type StorageListCardsParams = {
   offset: number;
@@ -140,6 +141,26 @@ export async function storageUpsertTag(tag: TagRecord): Promise<void> {
 
 export async function storageDeleteTag(tagId: string): Promise<void> {
   return arc().storageDeleteTag(tagId);
+}
+
+export async function storageMergeTags(payload: {
+  targetTagId: string;
+  sourceTagIds: string[];
+  targetMetadata: { name: string; description?: string; tooltipImage?: string };
+}): Promise<TagMergeUndo> {
+  return arc().storageMergeTags(payload);
+}
+
+export async function storageUndoMergeTags(undo: TagMergeUndo): Promise<void> {
+  return arc().storageUndoMergeTags(undo);
+}
+
+export async function storageDeleteTags(tagIds: string[]): Promise<TagDeleteUndo> {
+  return arc().storageDeleteTags(tagIds);
+}
+
+export async function storageUndoDeleteTags(undo: TagDeleteUndo): Promise<void> {
+  return arc().storageUndoDeleteTags(undo);
 }
 
 export async function storageListCollections(): Promise<CollectionRecord[]> {

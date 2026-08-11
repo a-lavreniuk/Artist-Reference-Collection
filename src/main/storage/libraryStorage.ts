@@ -217,7 +217,7 @@ function syncCardRelations(db: Database.Database, cardId: string, tagIds: string
   for (const cid of collectionIds) insCol.run(cardId, cid);
 }
 
-function recomputeTagUsage(_db: Database.Database): void {
+function recomputeTagUsage(_db?: Database.Database): void {
   try {
     const { recomputeAllCatalogTagUsage, openChildIndexDb } = require('./tagCatalog') as typeof import('./tagCatalog');
     const { readLibraryRootConfigSync } = require('../librarySessionSnapshot') as typeof import('../librarySessionSnapshot');
@@ -1029,6 +1029,241 @@ export async function stripTagFromLibraryPath(
       /* ignore */
     }
   }
+}
+
+export type MergeTagsTargetMetadata = {
+  name: string;
+  description?: string;
+  tooltipImage?: string;
+};
+
+/** Прежний состав меток карточки — общая часть отмены для слияния и удаления. */
+export type TagCardsSnapshot = Array<{ libraryPath: string; cardId: string; tagIds: string[] }>;
+
+/** Прежнее состояние каталога и карточек — для отмены слияния. */
+export type MergeTagsUndo = {
+  targetTagId: string;
+  previousTarget: TagRow;
+  removedTags: TagRow[];
+  cards: TagCardsSnapshot;
+};
+
+/** Прежнее состояние каталога и карточек — для отмены удаления меток. */
+export type DeleteTagsUndo = {
+  removedTags: TagRow[];
+  cards: TagCardsSnapshot;
+};
+
+/** Заменяет исходные метки целевой, сохраняя порядок и убирая дубликаты. */
+export function replaceTagIds(
+  tagIds: readonly string[],
+  sources: ReadonlySet<string>,
+  targetTagId: string
+): string[] {
+  const next: string[] = [];
+  for (const id of tagIds) {
+    const mapped = sources.has(id) ? targetTagId : id;
+    if (!next.includes(mapped)) next.push(mapped);
+  }
+  return next;
+}
+
+/** Убирает удаляемые метки, сохраняя порядок остальных. */
+export function removeTagIds(tagIds: readonly string[], removed: ReadonlySet<string>): string[] {
+  const next: string[] = [];
+  for (const id of tagIds) {
+    if (removed.has(id) || next.includes(id)) continue;
+    next.push(id);
+  }
+  return next;
+}
+
+/** id карточки — один сегмент пути: без разделителей и переходов вверх. */
+function isPlainCardId(cardId: string): boolean {
+  return cardId.length > 0 && !/[\\/]/.test(cardId) && cardId !== '.' && cardId !== '..';
+}
+
+async function applyCardTagIds(
+  libraryPath: string,
+  db: Database.Database,
+  cardId: string,
+  tagIds: readonly string[]
+): Promise<void> {
+  const cardJson = await readCardJson(libraryPath, cardId);
+  if (cardJson) {
+    cardJson.tagIds = [...tagIds];
+    await writeCardJson(libraryPath, cardJson);
+  }
+  db.prepare('DELETE FROM card_tags WHERE card_id = ?').run(cardId);
+  const ins = db.prepare('INSERT OR IGNORE INTO card_tags (card_id, tag_id) VALUES (?, ?)');
+  for (const tagId of tagIds) ins.run(cardId, tagId);
+}
+
+/**
+ * Перезаписывает состав меток у всех карточек, где встречается любая из `tagIds`,
+ * и возвращает снимок прежнего состава для отмены.
+ */
+async function rewriteCardsWithTags(
+  tagIds: ReadonlySet<string>,
+  nextTagIds: (previous: readonly string[]) => string[]
+): Promise<TagCardsSnapshot> {
+  const { openChildIndexDb } = await import('./tagCatalog');
+  const { readLibraryRootConfigSync } = await import('../librarySessionSnapshot');
+
+  const snapshot: TagCardsSnapshot = [];
+  if (tagIds.size === 0) return snapshot;
+  const cfg = readLibraryRootConfigSync();
+  const placeholders = [...tagIds].map(() => '?').join(', ');
+
+  for (const lib of cfg.libraries ?? []) {
+    const db = openChildIndexDb(lib.path);
+    if (!db) continue;
+    try {
+      const cardIds = (
+        db
+          .prepare(`SELECT DISTINCT card_id FROM card_tags WHERE tag_id IN (${placeholders})`)
+          .all(...tagIds) as Array<{ card_id: string }>
+      ).map((r) => String(r.card_id));
+
+      for (const cardId of cardIds) {
+        const cardJson = await readCardJson(lib.path, cardId);
+        const previous = cardJson
+          ? [...cardJson.tagIds]
+          : (
+              db.prepare('SELECT tag_id FROM card_tags WHERE card_id = ?').all(cardId) as Array<{
+                tag_id: string;
+              }>
+            ).map((r) => String(r.tag_id));
+        snapshot.push({ libraryPath: lib.path, cardId, tagIds: previous });
+        await applyCardTagIds(lib.path, db, cardId, nextTagIds(previous));
+      }
+    } finally {
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  return snapshot;
+}
+
+/**
+ * Возвращает карточкам прежний состав меток по снимку.
+ * Снимок приходит из renderer, поэтому пути принимаются только из библиотек контейнера,
+ * а `cardId` — без разделителей пути: иначе запись ушла бы мимо текущего контейнера.
+ */
+async function restoreCardsSnapshot(cards: TagCardsSnapshot): Promise<void> {
+  const { openChildIndexDb } = await import('./tagCatalog');
+  const { readLibraryRootConfigSync } = await import('../librarySessionSnapshot');
+
+  const allowedPaths = new Set(
+    (readLibraryRootConfigSync().libraries ?? []).map((lib) => path.resolve(lib.path))
+  );
+
+  const byLibrary = new Map<string, TagCardsSnapshot>();
+  for (const entry of cards) {
+    if (!allowedPaths.has(path.resolve(entry.libraryPath))) continue;
+    if (!isPlainCardId(entry.cardId)) continue;
+    const list = byLibrary.get(entry.libraryPath) ?? [];
+    list.push(entry);
+    byLibrary.set(entry.libraryPath, list);
+  }
+
+  for (const [libraryPath, entries] of byLibrary) {
+    const db = openChildIndexDb(libraryPath);
+    if (!db) continue;
+    try {
+      for (const entry of entries) {
+        await applyCardTagIds(libraryPath, db, entry.cardId, entry.tagIds);
+      }
+    } finally {
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+/**
+ * Переносит все привязки исходных меток на целевую и удаляет исходные из каталога.
+ * Категория целевой метки не меняется; имя, описание и картинку задаёт вызывающий.
+ */
+export async function mergeTagsInStorage(params: {
+  targetTagId: string;
+  sourceTagIds: readonly string[];
+  targetMetadata: MergeTagsTargetMetadata;
+}): Promise<MergeTagsUndo> {
+  const { listAllCatalogTags, upsertCatalogTag, deleteCatalogTag } = await import('./tagCatalog');
+
+  const catalog = listAllCatalogTags();
+  const previousTarget = catalog.find((t) => t.id === params.targetTagId);
+  if (!previousTarget) throw new Error('Целевая метка не найдена');
+
+  const sourceTagIds = [...new Set(params.sourceTagIds)].filter((id) => id !== params.targetTagId);
+  const removedTags = sourceTagIds
+    .map((id) => catalog.find((t) => t.id === id))
+    .filter((t): t is TagRow => t !== undefined);
+  if (removedTags.length === 0) throw new Error('Нет меток для слияния');
+
+  const sources = new Set(removedTags.map((t) => t.id));
+  const cards = await rewriteCardsWithTags(sources, (previous) =>
+    replaceTagIds(previous, sources, params.targetTagId)
+  );
+
+  upsertCatalogTag({
+    ...previousTarget,
+    name: params.targetMetadata.name.trim(),
+    description: params.targetMetadata.description,
+    tooltipImage: params.targetMetadata.tooltipImage
+  });
+  for (const tag of removedTags) deleteCatalogTag(tag.id);
+  recomputeTagUsage();
+
+  return { targetTagId: params.targetTagId, previousTarget, removedTags, cards };
+}
+
+/** Возвращает каталог и карточки в состояние до `mergeTagsInStorage`. */
+export async function undoMergeTagsInStorage(undo: MergeTagsUndo): Promise<void> {
+  const { upsertCatalogTag } = await import('./tagCatalog');
+
+  upsertCatalogTag(undo.previousTarget);
+  for (const tag of undo.removedTags) upsertCatalogTag(tag);
+  await restoreCardsSnapshot(undo.cards);
+
+  recomputeTagUsage();
+}
+
+/** Удаляет метки из каталога и снимает их со всех карточек во всех библиотеках. */
+export async function deleteTagsInStorage(tagIds: readonly string[]): Promise<DeleteTagsUndo> {
+  const { listAllCatalogTags, deleteCatalogTag } = await import('./tagCatalog');
+
+  const catalog = listAllCatalogTags();
+  const removedTags = [...new Set(tagIds)]
+    .map((id) => catalog.find((t) => t.id === id))
+    .filter((t): t is TagRow => t !== undefined);
+  if (removedTags.length === 0) throw new Error('Нет меток для удаления');
+
+  const removed = new Set(removedTags.map((t) => t.id));
+  const cards = await rewriteCardsWithTags(removed, (previous) => removeTagIds(previous, removed));
+
+  for (const tag of removedTags) deleteCatalogTag(tag.id);
+  recomputeTagUsage();
+
+  return { removedTags, cards };
+}
+
+/** Возвращает каталог и карточки в состояние до `deleteTagsInStorage`. */
+export async function undoDeleteTagsInStorage(undo: DeleteTagsUndo): Promise<void> {
+  const { upsertCatalogTag } = await import('./tagCatalog');
+
+  for (const tag of undo.removedTags) upsertCatalogTag(tag);
+  await restoreCardsSnapshot(undo.cards);
+
+  recomputeTagUsage();
 }
 
 export async function stripTagsOfCategoryFromLibraries(

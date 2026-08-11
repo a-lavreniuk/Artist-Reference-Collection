@@ -8,26 +8,33 @@ import { buildTagChipContextMenuRows } from './buildTagChipContextMenuRows';
 
 type Props = {
   categories: CategoryRecord[];
+  allTags: TagRecord[];
   selectedTagIds: ReadonlySet<string>;
-  onShowInGallery: (tagId: string) => void;
+  onShowInGallery: (tagIds: string[]) => void;
   onEdit: (tag: TagRecord) => void;
-  onDelete: (tagId: string) => Promise<void>;
+  onDelete: (tagIds: string[]) => Promise<void>;
   onMoveTagsToCategory: (tagIds: string[], categoryId: string) => Promise<void>;
+  onMergeTags?: (tagIds: string[]) => void;
+  onCreateCategoryForTags?: (tagIds: string[]) => void;
+  onStartMultiSelect?: (tagId: string) => void;
 };
 
 export function useTagChipContextMenu({
   categories,
+  allTags,
   selectedTagIds,
   onShowInGallery,
   onEdit,
   onDelete,
-  onMoveTagsToCategory
+  onMoveTagsToCategory,
+  onMergeTags,
+  onCreateCategoryForTags,
+  onStartMultiSelect
 }: Props) {
   const menu = useContextMenuAtPointer();
   const [menuTag, setMenuTag] = useState<TagRecord | null>(null);
-  const [deleteTag, setDeleteTag] = useState<TagRecord | null>(null);
-  const [moveModalOpen, setMoveModalOpen] = useState(false);
-  const [moveTagIds, setMoveTagIds] = useState<string[]>([]);
+  const [deleteTagIds, setDeleteTagIds] = useState<string[] | null>(null);
+  const [moveTagIds, setMoveTagIds] = useState<string[] | null>(null);
 
   const closeMenu = useCallback(() => {
     menu.close();
@@ -44,13 +51,15 @@ export function useTagChipContextMenu({
     [selectedTagIds]
   );
 
-  const openAtTag = useCallback(
-    (tag: TagRecord, event: React.MouseEvent) => {
-      menu.openAt(event);
-      setMenuTag(tag);
-    },
-    [menu]
-  );
+  const openMoveToCategory = useCallback((tagIds: string[]) => {
+    if (tagIds.length > 0) setMoveTagIds(tagIds);
+  }, []);
+
+  const openDeleteTags = useCallback((tagIds: string[]) => {
+    if (tagIds.length > 0) setDeleteTagIds(tagIds);
+  }, []);
+
+  const closeMove = useCallback(() => setMoveTagIds(null), []);
 
   const menuRows = useMemo(() => {
     if (!menuTag) return [];
@@ -59,16 +68,58 @@ export function useTagChipContextMenu({
     const bulk = tagIds.length > 1;
     return buildTagChipContextMenuRows({
       bulk,
-      onShowInGallery: bulk ? undefined : () => onShowInGallery(tag.id),
-      onMoveToCategory: () => {
-        setMoveTagIds(tagIds);
-        setMoveModalOpen(true);
+      onStartMultiSelect:
+        !bulk && onStartMultiSelect
+          ? () => {
+              onStartMultiSelect(tag.id);
+              closeMenu();
+            }
+          : undefined,
+      onShowInGallery: () => {
+        onShowInGallery(tagIds);
         closeMenu();
       },
+      onMoveToCategory: () => {
+        openMoveToCategory(tagIds);
+        closeMenu();
+      },
+      onMerge:
+        bulk && onMergeTags
+          ? () => {
+              onMergeTags(tagIds);
+              closeMenu();
+            }
+          : undefined,
       onEdit: bulk ? undefined : () => onEdit(tag),
-      onDelete: bulk ? undefined : () => setDeleteTag(tag)
+      onDelete: () => openDeleteTags(tagIds)
     });
-  }, [closeMenu, menuTag, onEdit, onShowInGallery, resolveMenuTagIds]);
+  }, [
+    closeMenu,
+    menuTag,
+    onEdit,
+    onMergeTags,
+    onShowInGallery,
+    onStartMultiSelect,
+    openDeleteTags,
+    openMoveToCategory,
+    resolveMenuTagIds
+  ]);
+
+  const openAtTag = useCallback(
+    (tag: TagRecord, event: React.MouseEvent) => {
+      menu.openAt(event);
+      setMenuTag(tag);
+    },
+    [menu]
+  );
+
+  const deleteTagNames = useMemo(
+    () =>
+      (deleteTagIds ?? []).map(
+        (id) => allTags.find((t) => t.id === id)?.name ?? 'Без названия'
+      ),
+    [allTags, deleteTagIds]
+  );
 
   const contextMenuLayer = (
     <>
@@ -80,28 +131,32 @@ export function useTagChipContextMenu({
         rows={menuRows}
       />
 
-      {deleteTag ? (
+      {deleteTagIds && deleteTagIds.length > 0 ? (
         <ConfirmDeleteTagModal
-          tagName={deleteTag.name}
-          onClose={() => setDeleteTag(null)}
+          tagNames={deleteTagNames}
+          onClose={() => setDeleteTagIds(null)}
           onConfirm={async () => {
-            await onDelete(deleteTag.id);
+            await onDelete(deleteTagIds);
           }}
         />
       ) : null}
 
-      {moveModalOpen ? (
+      {moveTagIds && moveTagIds.length > 0 ? (
         <TagMoveCategoryModal
           categories={categories}
           selectedCount={moveTagIds.length}
-          onClose={() => {
-            setMoveModalOpen(false);
-            setMoveTagIds([]);
-          }}
+          onClose={closeMove}
+          onCreateCategory={
+            onCreateCategoryForTags
+              ? () => {
+                  onCreateCategoryForTags(moveTagIds);
+                  closeMove();
+                }
+              : undefined
+          }
           onSelectCategory={async (categoryId) => {
             await onMoveTagsToCategory(moveTagIds, categoryId);
-            setMoveModalOpen(false);
-            setMoveTagIds([]);
+            closeMove();
           }}
         />
       ) : null}
@@ -110,6 +165,8 @@ export function useTagChipContextMenu({
 
   return {
     openTagContextMenu: openAtTag,
+    openMoveToCategory,
+    openDeleteTags,
     contextMenuLayer
   };
 }

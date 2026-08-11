@@ -2,16 +2,18 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { ArcAnimatedModalHost } from '../../motion';
 import FloatingModalPanel from './FloatingModalPanel';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
+import { formatDeleteTagsTitle } from '../tags/tagsSelectionCopy';
 
 type Props = {
-  tagName: string;
+  tagNames: string[];
   onClose: () => void;
   onConfirm: () => Promise<void>;
 };
 
-export default function ConfirmDeleteTagModal({ tagName, onClose, onConfirm }: Props) {
+export default function ConfirmDeleteTagModal({ tagNames, onClose, onConfirm }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
+  const single = tagNames.length === 1;
 
   useLayoutEffect(() => {
     if (hostRef.current) {
@@ -47,7 +49,7 @@ export default function ConfirmDeleteTagModal({ tagName, onClose, onConfirm }: P
         >
           <header className="arc-modal__header arc-modal__header--title">
             <h3 className="arc-modal__title" id="arcDeleteTagTitle">
-              Удалить метку?
+              {formatDeleteTagsTitle(tagNames.length)}
             </h3>
             <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
               <span className="tab-icon arc-icon-close" aria-hidden="true" />
@@ -56,9 +58,18 @@ export default function ConfirmDeleteTagModal({ tagName, onClose, onConfirm }: P
           <div className="arc-modal__body">
             <div className="arc-modal__slot">
               <p className="arc-modal__slot-text">
-                Метка «{tagName}» будет удалена. Это действие нельзя отменить.
+                {single
+                  ? `Метка «${tagNames[0]}» будет снята со всех карточек и удалена из каталога.`
+                  : `Выбранные метки будут сняты со всех карточек и удалены из каталога.`}
               </p>
             </div>
+            {single ? null : (
+              <div className="arc-modal__slot">
+                <p className="arc-modal__slot-text arc-modal__slot-text--muted">
+                  {tagNames.join(', ')}
+                </p>
+              </div>
+            )}
           </div>
           <footer className="arc-modal__footer arc-modal__footer--actions-3">
             <button

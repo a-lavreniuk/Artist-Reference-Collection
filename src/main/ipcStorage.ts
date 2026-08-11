@@ -39,6 +39,10 @@ import {
   listCategoriesWithVisibility,
   listSkippedDuplicatePairs,
   listTagsByCategory,
+  mergeTagsInStorage,
+  undoMergeTagsInStorage,
+  deleteTagsInStorage,
+  undoDeleteTagsInStorage,
   rebuildIndexFromCardJson,
   rowToCardRecord,
   saveMoodboardData,
@@ -72,6 +76,7 @@ import {
   LIBRARY_META_DIR
 } from './libraryFilenames';
 import type { ArcMoodboardV1, ArcSystemV1, CardJsonV1, CategoryRow, CollectionRow, ListCardsParams, LibraryScope, TagRow } from './storage/types';
+import type { DeleteTagsUndo, MergeTagsTargetMetadata, MergeTagsUndo } from './storage/libraryStorage';
 import { readLibraryRootSync } from './libraryRootConfig';
 
 const MAX_LIST_CARDS_SYNC_LIMIT = 500;
@@ -726,6 +731,42 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root || typeof tagId !== 'string') return;
     await deleteTagFromDb(root, tagId);
+  });
+
+  ipcMain.handle('arc:storage-merge-tags', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    await ensureLibraryReady(root);
+    const input = payload as {
+      targetTagId: string;
+      sourceTagIds: string[];
+      targetMetadata: MergeTagsTargetMetadata;
+    };
+    return mergeTagsInStorage(input);
+  });
+
+  ipcMain.handle('arc:storage-undo-merge-tags', async (_e, undo: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    await undoMergeTagsInStorage(undo as MergeTagsUndo);
+  });
+
+  ipcMain.handle('arc:storage-delete-tags', async (_e, tagIds: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    await ensureLibraryReady(root);
+    if (!Array.isArray(tagIds)) throw new Error('Не переданы метки для удаления');
+    return deleteTagsInStorage(tagIds.filter((id): id is string => typeof id === 'string'));
+  });
+
+  ipcMain.handle('arc:storage-undo-delete-tags', async (_e, undo: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    await undoDeleteTagsInStorage(undo as DeleteTagsUndo);
   });
 
   ipcMain.handle('arc:storage-list-collections', async () => {

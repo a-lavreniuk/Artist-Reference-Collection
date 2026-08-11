@@ -7,9 +7,11 @@ import {
   showUndoableNotification
 } from '../../services/notificationService';
 import {
+  bulkAddTagToCards,
   bulkAddToCollection,
   bulkRemoveFromCollection,
   bulkRemoveFromMoodboard,
+  bulkRemoveTagFromCards,
   bulkAddMissingToMoodboard,
   bulkRestore,
   bulkSendToTrash
@@ -96,6 +98,24 @@ export function undoCollectionRemove(
 ): () => Promise<void> {
   return async () => {
     await bulkAddToCollection(cardIds, collectionId);
+  };
+}
+
+export function undoTagAdd(
+  cardIds: readonly string[],
+  tagId: string
+): () => Promise<void> {
+  return async () => {
+    await bulkRemoveTagFromCards(cardIds, tagId);
+  };
+}
+
+export function undoTagRemove(
+  cardIds: readonly string[],
+  tagId: string
+): () => Promise<void> {
+  return async () => {
+    await bulkAddTagToCards(cardIds, tagId);
   };
 }
 

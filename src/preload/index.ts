@@ -218,6 +218,14 @@ contextBridge.exposeInMainWorld('arc', {
   storageListAllTags: () => ipcRenderer.invoke('arc:storage-list-all-tags'),
   storageUpsertTag: (tag: unknown) => ipcRenderer.invoke('arc:storage-upsert-tag', tag),
   storageDeleteTag: (tagId: string) => ipcRenderer.invoke('arc:storage-delete-tag', tagId),
+  storageMergeTags: (payload: {
+    targetTagId: string;
+    sourceTagIds: string[];
+    targetMetadata: { name: string; description?: string; tooltipImage?: string };
+  }) => ipcRenderer.invoke('arc:storage-merge-tags', payload),
+  storageUndoMergeTags: (undo: unknown) => ipcRenderer.invoke('arc:storage-undo-merge-tags', undo),
+  storageDeleteTags: (tagIds: string[]) => ipcRenderer.invoke('arc:storage-delete-tags', tagIds),
+  storageUndoDeleteTags: (undo: unknown) => ipcRenderer.invoke('arc:storage-undo-delete-tags', undo),
   storageListCollections: () => ipcRenderer.invoke('arc:storage-list-collections'),
   storageUpsertCollection: (col: unknown) => ipcRenderer.invoke('arc:storage-upsert-collection', col),
   storageDeleteCollection: (id: string) => ipcRenderer.invoke('arc:storage-delete-collection', id),

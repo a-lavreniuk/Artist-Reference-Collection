@@ -45,8 +45,13 @@ export {
   getDuplicateSimilarityThresholdPct,
   setDuplicateSimilarityThresholdPct,
   addSkippedDuplicatePair,
+  mergeTags,
+  undoMergeTags,
+  deleteTags,
+  undoDeleteTags,
   moveTagToCategory
 } from './categories';
+export type { TagMergeMetadata } from './categories';
 
 export {
   getAllCollections,

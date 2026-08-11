@@ -11,6 +11,7 @@ type Props = {
   onAddToMoodboard?: () => void;
   onRemoveFromMoodboard?: () => void;
   onCollectionAction?: () => void;
+  onTagsAction?: () => void;
   onTrashAction?: () => void;
   onRestore?: () => void;
   onPermanentDelete?: () => void;
@@ -56,6 +57,7 @@ export default function GallerySelectionBar({
   onAddToMoodboard,
   onRemoveFromMoodboard,
   onCollectionAction,
+  onTagsAction,
   onTrashAction,
   onRestore,
   onPermanentDelete,
@@ -121,6 +123,9 @@ export default function GallerySelectionBar({
           ) : null}
           {onCollectionAction ? (
             <ActionButton label={collectionLabel} iconClass={collectionIcon} onClick={onCollectionAction} />
+          ) : null}
+          {onTagsAction ? (
+            <ActionButton label="Добавить метки" iconClass="arc-icon-tag" onClick={onTagsAction} />
           ) : null}
           {onTrashAction ? (
             <ActionButton label="Отправить в корзину" iconClass="arc-icon-trash" onClick={onTrashAction} />

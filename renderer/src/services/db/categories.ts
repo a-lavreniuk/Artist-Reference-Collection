@@ -1,22 +1,32 @@
 import { normalizeHex } from '../../utils/colorPicker';
 import * as storage from '../storageClient';
 import {
+  invalidateTagsCache,
   migrateCategoriesIfNeededLocal,
   persistCategories,
   persistTags,
   readCategoriesUnified,
   readTagsUnified,
   resolveBackend,
+  STORAGE_KEYS,
   tryAppendLibraryHistory
 } from './backend';
 import { historyQuotedEntity } from '../historySegments';
-import { newId, normalizeNameForCompare } from './internal';
+import {
+  newId,
+  normalizeCardRecord,
+  normalizeNameForCompare,
+  safeReadArray,
+  safeWriteArray
+} from './internal';
 import {
   notifyCardsChanged,
   notifyCategoriesChanged,
   notifyTagsChanged
 } from './events';
+import type { CardRecord } from '../arcSchema';
 import type { CategoryRecord, CategoryStats, CategoryWeight, TagRecord } from './types';
+import type { TagDeleteUndo, TagMergeUndo } from '../../arc-global';
 
 export async function getAllCategories(): Promise<CategoryRecord[]> {
   const list = await readCategoriesUnified();
@@ -434,6 +444,163 @@ export async function addSkippedDuplicatePair(idA: string, idB: string): Promise
   const b = await resolveBackend();
   if (b !== 'file') return;
   await storage.storageAddSkippedPair(idA, idB);
+}
+
+export type TagMergeMetadata = {
+  name: string;
+  description?: string;
+  tooltipImageDataUrl?: string;
+};
+
+/**
+ * Объединяет метки: привязки карточек переходят на целевую, исходные удаляются
+ * из каталога. Возвращает снимок для отмены.
+ */
+export async function mergeTags(
+  targetTagId: string,
+  sourceTagIds: readonly string[],
+  metadata: TagMergeMetadata
+): Promise<TagMergeUndo> {
+  const sources = [...new Set(sourceTagIds)].filter((id) => id !== targetTagId);
+  if (sources.length === 0) {
+    throw new Error('Нет меток для слияния');
+  }
+  const tags = await readTagsUnified();
+  const target = tags.find((t) => t.id === targetTagId);
+  if (!target) {
+    throw new Error('Целевая метка не найдена');
+  }
+
+  const undo = await storage.storageMergeTags({
+    targetTagId,
+    sourceTagIds: sources,
+    targetMetadata: {
+      name: metadata.name.trim(),
+      ...(metadata.description?.trim() ? { description: metadata.description.trim() } : {}),
+      ...(metadata.tooltipImageDataUrl?.startsWith('data:image/')
+        ? { tooltipImage: metadata.tooltipImageDataUrl }
+        : {})
+    }
+  });
+
+  invalidateTagsCache();
+  notifyTagsChanged();
+  notifyCardsChanged();
+
+  const entry = historyQuotedEntity(`Объединены метки (${sources.length}) в «`, {
+    entityType: 'tag',
+    id: targetTagId,
+    label: metadata.name.trim()
+  });
+  void tryAppendLibraryHistory(entry.message, entry.segments);
+
+  return undo;
+}
+
+export async function undoMergeTags(undo: TagMergeUndo): Promise<void> {
+  await storage.storageUndoMergeTags(undo);
+  invalidateTagsCache();
+  notifyTagsChanged();
+  notifyCardsChanged();
+}
+
+/**
+ * Снимает удаляемые метки с карточек локального хранилища и возвращает прежний состав.
+ * В режиме библиотеки то же самое делает main-процесс.
+ */
+function stripTagsFromLocalCards(removedIds: ReadonlySet<string>): TagDeleteUndo['cards'] {
+  const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
+    .map(normalizeCardRecord)
+    .filter((card): card is CardRecord => card !== null);
+  if (localCards.length === 0) return [];
+
+  const snapshot: TagDeleteUndo['cards'] = [];
+  const next = localCards.map((card) => {
+    if (!card.tagIds.some((id) => removedIds.has(id))) return card;
+    snapshot.push({ libraryPath: '', cardId: card.id, tagIds: [...card.tagIds] });
+    return { ...card, tagIds: card.tagIds.filter((id) => !removedIds.has(id)) };
+  });
+  if (snapshot.length === 0) return [];
+
+  safeWriteArray(STORAGE_KEYS.cards, next);
+  return snapshot;
+}
+
+/** Восстанавливает состав меток у карточек локального хранилища по снимку. */
+function restoreLocalCards(cards: TagDeleteUndo['cards']): void {
+  if (cards.length === 0) return;
+  const byId = new Map(cards.map((entry) => [entry.cardId, entry.tagIds]));
+  const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
+    .map(normalizeCardRecord)
+    .filter((card): card is CardRecord => card !== null);
+  if (localCards.length === 0) return;
+
+  safeWriteArray(
+    STORAGE_KEYS.cards,
+    localCards.map((card) => {
+      const tagIds = byId.get(card.id);
+      return tagIds ? { ...card, tagIds: [...tagIds] } : card;
+    })
+  );
+}
+
+/** Удаляет несколько меток и возвращает снимок для отмены. */
+export async function deleteTags(tagIds: readonly string[]): Promise<TagDeleteUndo> {
+  const ids = [...new Set(tagIds)].filter((id) => id.trim().length > 0);
+  if (ids.length === 0) {
+    throw new Error('Нет меток для удаления');
+  }
+  const tags = await readTagsUnified();
+  const removed = ids
+    .map((id) => tags.find((t) => t.id === id))
+    .filter((t): t is TagRecord => t !== undefined);
+  if (removed.length === 0) {
+    throw new Error('Метки не найдены');
+  }
+
+  const removedIds = new Set(removed.map((t) => t.id));
+  const backend = await resolveBackend();
+  const undo: TagDeleteUndo =
+    backend === 'file'
+      ? await storage.storageDeleteTags([...removedIds])
+      : { removedTags: removed, cards: stripTagsFromLocalCards(removedIds), local: true };
+
+  if (backend !== 'file') {
+    await persistTags(tags.filter((t) => !removedIds.has(t.id)));
+  }
+
+  invalidateTagsCache();
+  notifyTagsChanged();
+  notifyCardsChanged();
+
+  if (removed.length === 1) {
+    const entry = historyQuotedEntity('Удалена метка «', {
+      entityType: 'tag',
+      id: removed[0].id,
+      label: removed[0].name
+    });
+    void tryAppendLibraryHistory(entry.message, entry.segments);
+  } else {
+    void tryAppendLibraryHistory(`Удалены метки (${removed.length})`);
+  }
+
+  return undo;
+}
+
+export async function undoDeleteTags(undo: TagDeleteUndo): Promise<void> {
+  if (undo.local) {
+    const current = await readTagsUnified();
+    const restored = (undo.removedTags as TagRecord[]).filter(
+      (tag) => !current.some((t) => t.id === tag.id)
+    );
+    await persistTags([...current, ...restored]);
+    restoreLocalCards(undo.cards);
+  } else {
+    await storage.storageUndoDeleteTags(undo);
+  }
+  invalidateTagsCache();
+  notifyTagsChanged();
+  notifyCardsChanged();
 }
 
 export async function moveTagToCategory(tagId: string, targetCategoryId: string): Promise<void> {

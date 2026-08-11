@@ -879,6 +879,48 @@ button.color-swatch-inline:disabled {
   border-radius: 4px;
 }
 
+/* Список категорий в модалке переноса меток: строки dropdown лежат прямо в теле модалки, отступы — на внутреннем __pad, чтобы скролл обрезал у края зоны */
+.arc-tag-move-list {
+  max-height: calc(var(--input-h) * 8);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.arc-tag-move-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.arc-tag-move-list__pad {
+  display: grid;
+  padding: var(--s-2) var(--s-3);
+}
+
+.arc-tag-move-list .dropdown-row {
+  gap: var(--s-2);
+}
+
+.arc-tag-move-row__label {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-tag-move-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arc-tag-move-empty {
+  margin: 0;
+  color: var(--text-elev-secondary);
+}
+
 /* Шеврон в React-селекторе: chevron_m.svg уже «вниз», как в pseudo-select — без доп. поворота */
 .selector-caret.arc-selector-dropdown-caret {
   align-items: center;
@@ -2642,6 +2684,43 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-add-tags-picker__content-inset,
 .arc-add-tags-picker__group-inset {
   padding: 0 var(--s-3);
+}
+
+.arc-add-tags-picker__context-note {
+  margin: 0 0 var(--s-2);
+  color: var(--text-elev-secondary);
+}
+
+.arc-tag-merge__hint {
+  margin: 0;
+  color: var(--text-elev-secondary);
+}
+
+.arc-tag-merge__error {
+  margin: 0;
+  color: var(--font-danger-primary-default);
+}
+
+.arc-tag-merge__preview {
+  display: block;
+  width: 192px;
+  height: 108px;
+  object-fit: cover;
+  border-radius: var(--radius-s);
+}
+
+.arc-bulk-tag-chip__state {
+  display: block;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  color: currentColor;
+}
+
+.arc-bulk-tag-chip__state > .arc-navbar-icon-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .arc-add-tags-picker__group-inset {
@@ -4585,6 +4664,10 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 /* Модалки: многострочный текст (частичный сбой импорта и т.п.) */
 .arc-modal__slot-text {
   white-space: pre-wrap;
+}
+
+.arc-modal__slot-text--muted {
+  color: var(--text-elev-secondary);
 }
 
 @media (max-width: 1200px) {

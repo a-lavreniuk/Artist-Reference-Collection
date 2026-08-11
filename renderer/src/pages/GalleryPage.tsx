@@ -493,6 +493,7 @@ export default function GalleryPage() {
 
       {multiSelect.selectionBar}
       {multiSelect.collectionsModal}
+      {multiSelect.tagsModal}
       {multiSelect.marqueeOverlay}
 
       <ScrollToTopButton enabled={ready && cards.length > 0} align="center-outlet" />

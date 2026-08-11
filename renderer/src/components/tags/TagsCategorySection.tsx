@@ -16,9 +16,11 @@ type Props = {
   draggingTagIdsRef?: MutableRefObject<ReadonlySet<string> | null>;
   allTags: TagRecord[];
   isTagSelected: (tagId: string) => boolean;
+  selectionMode?: boolean;
   onToggleCollapse: () => void;
   onAddTag: () => void;
   onEditTag: (tag: TagRecord) => void;
+  onSelectToggleTag?: (tag: TagRecord) => void;
   onTagChipPointerDown?: (tag: TagRecord, event: React.PointerEvent<HTMLButtonElement>) => boolean;
   onTagContextMenu?: (tag: TagRecord, event: React.MouseEvent<HTMLButtonElement>) => void;
   onTagDragStart: (tagId: string, dataTransfer: DataTransfer) => void;
@@ -36,9 +38,11 @@ export default function TagsCategorySection({
   draggingTagIdsRef,
   allTags,
   isTagSelected,
+  selectionMode = false,
   onToggleCollapse,
   onAddTag,
   onEditTag,
+  onSelectToggleTag,
   onTagChipPointerDown,
   onTagContextMenu,
   onTagDragStart,
@@ -69,7 +73,9 @@ export default function TagsCategorySection({
           draggingTagIds={draggingTagIds}
           selected={isTagSelected(tag.id)}
           dragDisabled={false}
+          selectionMode={selectionMode}
           onEdit={onEditTag}
+          onSelectToggle={onSelectToggleTag}
           onChipPointerDown={(t, event) => onTagChipPointerDown?.(t, event) ?? false}
           onContextMenu={onTagContextMenu}
           onDragStart={onTagDragStart}

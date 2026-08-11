@@ -9,7 +9,10 @@ type Props = {
   draggingTagIds: ReadonlySet<string> | null;
   selected?: boolean;
   dragDisabled?: boolean;
+  /** В режиме выделения обычный клик выбирает метку вместо открытия настроек. */
+  selectionMode?: boolean;
   onEdit: (tag: TagRecord) => void;
+  onSelectToggle?: (tag: TagRecord) => void;
   onChipPointerDown?: (tag: TagRecord, event: React.PointerEvent<HTMLButtonElement>) => boolean;
   onContextMenu?: (tag: TagRecord, event: React.MouseEvent<HTMLButtonElement>) => void;
   onDragStart: (tagId: string, dataTransfer: DataTransfer) => void;
@@ -22,7 +25,9 @@ export default function TagManageChip({
   draggingTagIds,
   selected = false,
   dragDisabled = false,
+  selectionMode = false,
   onEdit,
+  onSelectToggle,
   onChipPointerDown,
   onContextMenu,
   onDragStart,
@@ -46,7 +51,11 @@ export default function TagManageChip({
       type="button"
       className={`chip${isDragging ? ' arc-tag-chip--dragging' : ''}${selected ? ' arc-tag-chip--selected' : ''}`}
       draggable={!dragDisabled}
-      aria-label={`Редактировать метку «${tag.name}»`}
+      aria-label={
+        selectionMode && onSelectToggle
+          ? `${selected ? 'Снять выделение с метки' : 'Выбрать метку'} «${tag.name}»`
+          : `Редактировать метку «${tag.name}»`
+      }
       aria-grabbed={isDragging}
       aria-pressed={selected}
       onPointerDown={(event) => {
@@ -62,6 +71,12 @@ export default function TagManageChip({
         if (event.ctrlKey || event.metaKey || event.shiftKey) {
           event.preventDefault();
           event.stopPropagation();
+          return;
+        }
+        if (selectionMode && onSelectToggle) {
+          event.preventDefault();
+          event.stopPropagation();
+          onSelectToggle(tag);
           return;
         }
         onEdit(tag);

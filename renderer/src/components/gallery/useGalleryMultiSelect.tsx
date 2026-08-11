@@ -3,15 +3,18 @@ import type { CardRecord } from '../../services/db';
 import type { CardContextMenuScope } from './cardContextMenuTypes';
 import GallerySelectionBar, { type GallerySelectionBarVariant } from './GallerySelectionBar';
 import BulkCardCollectionsModal from './BulkCardCollectionsModal';
+import BulkCardTagsModal from './BulkCardTagsModal';
 import {
   bulkAddMissingToMoodboard,
+  bulkAddTagToCards,
   bulkAddToCollection,
   bulkPermanentDelete,
   bulkRemoveFromCollection,
   bulkRemoveFromMoodboard,
   bulkRestore,
   bulkSendToTrash,
-  bulkToggleCollectionForCards
+  bulkToggleCollectionForCards,
+  bulkToggleTagForCards
 } from './galleryBulkActions';
 import {
   formatCollectionAddToast,
@@ -20,6 +23,8 @@ import {
   formatMoodboardRemoveToast,
   formatPermanentDeleteToast,
   formatRestoreToast,
+  formatTagAddToast,
+  formatTagRemoveToast,
   formatTrashToast
 } from './gallerySelectionCopy';
 import {
@@ -29,6 +34,8 @@ import {
   undoMoodboardAdd,
   undoMoodboardRemove,
   undoRestore,
+  undoTagAdd,
+  undoTagRemove,
   undoTrash
 } from './galleryUndoToast';
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
@@ -65,6 +72,7 @@ export function useGalleryMultiSelect({
   const orderedCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
   const selection = useGalleryCardSelection(orderedCardIds, resetKey, onOpenCard);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [tagsOpen, setTagsOpen] = useState(false);
   const selectedIdsRef = useRef(selection.selectedIds);
   selectedIdsRef.current = selection.selectedIds;
   const handleMarquee = useCallback(
@@ -182,6 +190,10 @@ export function useGalleryMultiSelect({
     setCollectionsOpen(true);
   }, [runBulk, scope]);
 
+  const onTagsAction = useCallback(() => {
+    setTagsOpen(true);
+  }, []);
+
   const bulkHandlers = useMemo(
     () => ({
       onBulkSendToTrash: async (cardIds: string[]) => {
@@ -212,6 +224,9 @@ export function useGalleryMultiSelect({
       },
       onBulkOpenCollections: () => {
         setCollectionsOpen(true);
+      },
+      onBulkOpenTags: () => {
+        setTagsOpen(true);
       },
       onBulkRemoveFromCollection: async (cardIds: string[], collectionId: string) => {
         await runBulk(
@@ -333,6 +348,7 @@ export function useGalleryMultiSelect({
       onAddToMoodboard={scope.kind === 'trash' || isMoodboardScope ? undefined : onAddToMoodboard}
       onRemoveFromMoodboard={isMoodboardScope ? onRemoveFromMoodboard : undefined}
       onCollectionAction={scope.kind === 'trash' ? undefined : onCollectionAction}
+      onTagsAction={scope.kind === 'trash' ? undefined : onTagsAction}
       onTrashAction={scope.kind === 'trash' ? undefined : onTrashAction}
       onRestore={scope.kind === 'trash' ? onRestore : undefined}
       onPermanentDelete={scope.kind === 'trash' ? onPermanentDelete : undefined}
@@ -387,6 +403,37 @@ export function useGalleryMultiSelect({
       />
     ) : null;
 
+  const tagsModal =
+    tagsOpen && scope.kind !== 'trash' ? (
+      <BulkCardTagsModal
+        cardIds={selectedCardIds}
+        cardsById={cardsById}
+        onClose={() => setTagsOpen(false)}
+        onToggleTag={async (tagId, nextSelected) => {
+          const affected = await bulkToggleTagForCards(selectedCardIds, tagId, nextSelected);
+          if (affected.length === 0) return;
+          notifyGalleryMutation({
+            message: nextSelected
+              ? formatTagAddToast(affected.length)
+              : formatTagRemoveToast(affected.length),
+            undo: nextSelected ? undoTagAdd(affected, tagId) : undoTagRemove(affected, tagId),
+            onAfterUndo: refreshAfter
+          });
+          await refreshAfter();
+        }}
+        onCreateAndAssign={async (tagId) => {
+          const affected = await bulkAddTagToCards(selectedCardIds, tagId);
+          if (affected.length === 0) return;
+          notifyGalleryMutation({
+            message: formatTagAddToast(affected.length),
+            undo: undoTagAdd(affected, tagId),
+            onAfterUndo: refreshAfter
+          });
+          await refreshAfter();
+        }}
+      />
+    ) : null;
+
   const marqueeOverlay =
     marquee && enabled ? (
       <div
@@ -415,6 +462,7 @@ export function useGalleryMultiSelect({
     selectionMode: selection.selectionMode,
     selectionBar,
     collectionsModal,
+    tagsModal,
     marqueeOverlay,
     selectionActive: selection.selectionMode || selection.selectedCount > 0,
     bulkHandlers

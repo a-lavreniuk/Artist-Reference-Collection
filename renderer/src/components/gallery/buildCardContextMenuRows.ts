@@ -57,6 +57,10 @@ function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): Conte
     itemRow('collections', 'Добавить в коллекцию', 'arc-icon-folder-plus', actions.onOpenCollections)
   ];
 
+  if (actions.onOpenTags) {
+    rows.push(itemRow('tags', 'Добавить метки', 'arc-icon-tag', actions.onOpenTags));
+  }
+
   if (input.scope.kind === 'collection' && actions.onRemoveFromCollection) {
     rows.push(
       itemRow('remove-collection', 'Убрать из этой коллекции', 'arc-icon-layout-grid', actions.onRemoveFromCollection)

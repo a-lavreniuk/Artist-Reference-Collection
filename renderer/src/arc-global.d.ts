@@ -27,6 +27,22 @@ export type ArcImportedMediaRow = {
   format?: string;
 };
 
+/** Снимок каталога и карточек до слияния меток; возвращается в main для отмены. */
+export type TagMergeUndo = {
+  targetTagId: string;
+  previousTarget: unknown;
+  removedTags: unknown[];
+  cards: Array<{ libraryPath: string; cardId: string; tagIds: string[] }>;
+};
+
+/** Снимок каталога и карточек до удаления меток; возвращается в main для отмены. */
+export type TagDeleteUndo = {
+  removedTags: unknown[];
+  cards: Array<{ libraryPath: string; cardId: string; tagIds: string[] }>;
+  /** Библиотека не выбрана: метки хранились локально, восстановление идёт мимо main. */
+  local?: boolean;
+};
+
 export type ArcImportFileResult =
   | { ok: true; row: ArcImportedMediaRow; path: string }
   | { ok: false; error: string; path: string };
@@ -184,6 +200,14 @@ declare global {
       storageListAllTags: () => Promise<TagRecord[]>;
       storageUpsertTag: (tag: TagRecord) => Promise<void>;
       storageDeleteTag: (tagId: string) => Promise<void>;
+      storageMergeTags: (payload: {
+        targetTagId: string;
+        sourceTagIds: string[];
+        targetMetadata: { name: string; description?: string; tooltipImage?: string };
+      }) => Promise<TagMergeUndo>;
+      storageUndoMergeTags: (undo: TagMergeUndo) => Promise<void>;
+      storageDeleteTags: (tagIds: string[]) => Promise<TagDeleteUndo>;
+      storageUndoDeleteTags: (undo: TagDeleteUndo) => Promise<void>;
       storageListCollections: () => Promise<CollectionRecord[]>;
       storageUpsertCollection: (col: CollectionRecord) => Promise<void>;
       storageDeleteCollection: (id: string) => Promise<void>;

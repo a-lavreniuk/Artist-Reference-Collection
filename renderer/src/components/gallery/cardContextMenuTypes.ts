@@ -11,6 +11,7 @@ export type CardContextMenuActions = {
   onOpenInNewWindow: () => void;
   onToggleMoodboard: () => void;
   onOpenCollections: () => void;
+  onOpenTags?: () => void;
   onFindSimilar: () => void;
   onOpenSourceFolder: () => void;
   onSendToTrash: () => void;

@@ -21,17 +21,39 @@ function itemRow(
 
 export function buildTagChipContextMenuRows(actions: {
   bulk?: boolean;
+  onStartMultiSelect?: () => void;
   onShowInGallery?: () => void;
   onMoveToCategory: () => void;
+  onMerge?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }): ContextMenuRow[] {
-  const rows: ContextMenuRow[] = [
-    itemRow('move-category', 'Переместить в категорию…', 'arc-icon-chevrons-up-down', actions.onMoveToCategory)
-  ];
+  const rows: ContextMenuRow[] = [];
+
+  if (!actions.bulk && actions.onStartMultiSelect) {
+    rows.push(
+      itemRow('multi-select', 'Выбрать несколько', 'arc-icon-check-hexagon', actions.onStartMultiSelect)
+    );
+    rows.push({ type: 'separator', key: 'sep-multi' });
+  }
 
   if (actions.onShowInGallery) {
-    rows.unshift(itemRow('gallery', 'Показать в галерее', 'arc-icon-image', actions.onShowInGallery));
+    rows.push(
+      itemRow(
+        'gallery',
+        actions.bulk ? 'Показать карточки по меткам' : 'Показать в галерее',
+        'arc-icon-image',
+        actions.onShowInGallery
+      )
+    );
+  }
+
+  rows.push(
+    itemRow('move-category', 'Переместить в категорию…', 'arc-icon-chevrons-up-down', actions.onMoveToCategory)
+  );
+
+  if (actions.bulk && actions.onMerge) {
+    rows.push(itemRow('merge', 'Объединить метки…', 'arc-icon-reuse', actions.onMerge));
   }
 
   if (actions.onEdit) {
@@ -40,7 +62,14 @@ export function buildTagChipContextMenuRows(actions: {
 
   if (actions.onDelete) {
     rows.push({ type: 'separator', key: 'sep-danger' });
-    rows.push(itemRow('delete', 'Удалить метку', 'arc-icon-trash', actions.onDelete));
+    rows.push(
+      itemRow(
+        'delete',
+        actions.bulk ? 'Удалить метки' : 'Удалить метку',
+        'arc-icon-trash',
+        actions.onDelete
+      )
+    );
   }
 
   return rows;

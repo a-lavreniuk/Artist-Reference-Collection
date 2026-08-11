@@ -76,6 +76,28 @@ describe('buildCardContextMenuRows — selection mode', () => {
     expect(labels[2]).toBe('Убрать из мудборда');
   });
 
+  it('adds bulk tags row only when the handler is provided', () => {
+    expect(
+      rowLabels(
+        buildCardContextMenuRows({
+          ...base,
+          menuCardIsSelected: true,
+          actions: { ...baseActions(), onOpenTags: vi.fn() }
+        })
+      )
+    ).toContain('Добавить метки');
+
+    expect(
+      rowLabels(
+        buildCardContextMenuRows({
+          ...base,
+          menuCardIsSelected: true,
+          actions: baseActions()
+        })
+      )
+    ).not.toContain('Добавить метки');
+  });
+
   it('shows trash selection menu with restore and permanent delete', () => {
     const labels = rowLabels(
       buildCardContextMenuRows({

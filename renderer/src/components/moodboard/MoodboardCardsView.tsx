@@ -258,6 +258,7 @@ export default function MoodboardCardsView() {
 
       {multiSelect.selectionBar}
       {multiSelect.collectionsModal}
+      {multiSelect.tagsModal}
       {multiSelect.marqueeOverlay}
 
       <ScrollToTopButton enabled={feed.cards.length > 0} />

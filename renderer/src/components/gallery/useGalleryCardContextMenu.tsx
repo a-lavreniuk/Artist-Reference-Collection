@@ -36,6 +36,7 @@ type BulkHandlers = {
   onBulkPermanentDelete?: (cardIds: string[]) => void | Promise<void>;
   onBulkToggleMoodboard?: (cardIds: string[]) => void | Promise<void>;
   onBulkOpenCollections?: (cardIds: string[]) => void;
+  onBulkOpenTags?: (cardIds: string[]) => void;
   onBulkRemoveFromCollection?: (cardIds: string[], collectionId: string) => void | Promise<void>;
 };
 
@@ -180,6 +181,10 @@ export function useGalleryCardContextMenu({
           void onToggleMoodboard(menuCard.id);
         },
         onOpenCollections: () => void openCollectionsPicker(menuCard.id),
+        onOpenTags:
+          bulkCount > 1 && bulkHandlers?.onBulkOpenTags
+            ? () => bulkHandlers.onBulkOpenTags?.(targetIds)
+            : undefined,
         onFindSimilar: () => onFindSimilar(menuCard.id),
         onOpenSourceFolder: () => {
           if (!menuCard.originalRelativePath || !window.arc) return;

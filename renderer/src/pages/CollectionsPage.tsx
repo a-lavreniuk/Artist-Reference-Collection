@@ -516,6 +516,7 @@ export default function CollectionsPage() {
 
       {multiSelect.selectionBar}
       {multiSelect.collectionsModal}
+      {multiSelect.tagsModal}
       {multiSelect.marqueeOverlay}
 
       <ScrollToTopButton enabled={feed.cards.length > 0} />

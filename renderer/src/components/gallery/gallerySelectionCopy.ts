@@ -45,3 +45,13 @@ export function formatCollectionRemoveToast(count: number): string {
   if (count === 1) return 'Карточка убрана из коллекции';
   return `Убрано из коллекции: ${count} ${pluralCardsRu(count)}`;
 }
+
+export function formatTagAddToast(count: number): string {
+  if (count === 1) return 'Метка добавлена карточке';
+  return `Метка добавлена: ${count} ${pluralCardsRu(count)}`;
+}
+
+export function formatTagRemoveToast(count: number): string {
+  if (count === 1) return 'Метка снята с карточки';
+  return `Метка снята: ${count} ${pluralCardsRu(count)}`;
+}

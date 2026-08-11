@@ -503,7 +503,7 @@ export default function TagSettingsModal({
 
       {deleteConfirmOpen && isEdit ? (
         <ConfirmDeleteTagModal
-          tagName={state.tag.name}
+          tagNames={[state.tag.name]}
           onClose={() => setDeleteConfirmOpen(false)}
           onConfirm={async () => {
             await onDelete(state.tag.id);

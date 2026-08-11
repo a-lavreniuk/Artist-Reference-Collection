@@ -108,6 +108,45 @@ export async function bulkToggleCollectionForCards(
   return bulkRemoveFromCollection(cardIds, collectionId);
 }
 
+export async function bulkAddTagToCards(
+  cardIds: readonly string[],
+  tagId: string
+): Promise<string[]> {
+  const affected: string[] = [];
+  for (const cardId of cardIds) {
+    const card = await getCardById(cardId);
+    if (!card || card.tagIds.includes(tagId)) continue;
+    await updateCardPayload(cardId, { tagIds: [...card.tagIds, tagId] });
+    affected.push(cardId);
+  }
+  return affected;
+}
+
+export async function bulkRemoveTagFromCards(
+  cardIds: readonly string[],
+  tagId: string
+): Promise<string[]> {
+  const affected: string[] = [];
+  for (const cardId of cardIds) {
+    const card = await getCardById(cardId);
+    if (!card || !card.tagIds.includes(tagId)) continue;
+    await updateCardPayload(cardId, {
+      tagIds: card.tagIds.filter((id) => id !== tagId)
+    });
+    affected.push(cardId);
+  }
+  return affected;
+}
+
+export async function bulkToggleTagForCards(
+  cardIds: readonly string[],
+  tagId: string,
+  nextSelected: boolean
+): Promise<string[]> {
+  if (nextSelected) return bulkAddTagToCards(cardIds, tagId);
+  return bulkRemoveTagFromCards(cardIds, tagId);
+}
+
 export type BulkCollectionState = 'none' | 'some' | 'all';
 
 export function resolveBulkCollectionState(
@@ -123,6 +162,24 @@ export function resolveBulkCollectionState(
   }
   if (withCollection === 0) return 'none';
   if (withCollection === cardIds.length) return 'all';
+  return 'some';
+}
+
+export type BulkTagState = 'none' | 'some' | 'all';
+
+export function resolveBulkTagState(
+  cardIds: readonly string[],
+  cardsById: ReadonlyMap<string, { tagIds: string[] }>,
+  tagId: string
+): BulkTagState {
+  if (cardIds.length === 0) return 'none';
+  let withTag = 0;
+  for (const cardId of cardIds) {
+    const card = cardsById.get(cardId);
+    if (card?.tagIds.includes(tagId)) withTag += 1;
+  }
+  if (withTag === 0) return 'none';
+  if (withTag === cardIds.length) return 'all';
   return 'some';
 }
 

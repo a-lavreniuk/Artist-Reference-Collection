@@ -12,6 +12,10 @@ import CategorySettingsModal, {
   type CategorySettingsModalState
 } from '../components/tags/CategorySettingsModal';
 import TagSettingsModal, { type TagSettingsModalState } from '../components/tags/TagSettingsModal';
+import TagMergeConfirmModal from '../components/tags/TagMergeConfirmModal';
+import TagsSelectionBar from '../components/tags/TagsSelectionBar';
+import { formatTagsDeletedToast, formatTagsMovedToast } from '../components/tags/tagsSelectionCopy';
+import { showAppNotification, showUndoableNotification } from '../services/notificationService';
 import { EmptyState } from '../components/empty-state';
 import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import {
@@ -31,17 +35,21 @@ import {
   addCategory,
   addTag,
   deleteCategory,
-  deleteTag,
+  deleteTags,
+  undoDeleteTags,
   getAllCategories,
   getCategoryStats,
   getTagsByCategory,
   invalidateTagsCache,
+  mergeTags,
   moveTagToCategory,
+  undoMergeTags,
   reorderCategoryToIndex,
   updateCategory,
   updateTag,
   type CategoryRecord,
   type CategoryStats,
+  type TagMergeMetadata,
   type TagRecord
 } from '../services/db';
 import { startTagSearch } from '../search/startTagSearch';
@@ -60,6 +68,9 @@ export default function TagsPage() {
   const [categoryModal, setCategoryModal] = useState<CategorySettingsModalState | null>(null);
   const [categoryModalStats, setCategoryModalStats] = useState<CategoryStats | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(() => readTagsSidebarWidth());
+  const [mergeTagIds, setMergeTagIds] = useState<string[] | null>(null);
+  /** Метки, ожидающие переноса в категорию, которую пользователь создаёт прямо сейчас. */
+  const [pendingCategoryTagIds, setPendingCategoryTagIds] = useState<string[] | null>(null);
 
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
   const sidebarWidthRef = useRef(sidebarWidth);
@@ -256,20 +267,121 @@ export default function TagsPage() {
     setDraggingTagIds(null);
   };
 
-  const handleTagDrop = async (tagIds: string[], targetCategoryId: string) => {
-    try {
-      await moveTagsToCategory(tagIds, targetCategoryId, moveTagToCategory);
-    } finally {
-      draggingTagIdsRef.current = null;
-      setDraggingTagIds(null);
-      tagMultiSelect.clearSelection();
-    }
-  };
+  const handleMoveTagsToCategory = useCallback(
+    async (tagIds: string[], categoryId: string, knownCategoryName?: string) => {
+      // Метки, которые уже лежат в целевой категории, не участвуют в отмене.
+      const moved = tagIds
+        .map((id) => allTags.find((t) => t.id === id))
+        .filter((tag): tag is TagRecord => tag !== undefined && tag.categoryId !== categoryId)
+        .map((tag) => ({ id: tag.id, categoryId: tag.categoryId }));
 
-  const handleMoveTagsToCategory = useCallback(async (tagIds: string[], categoryId: string) => {
-    await moveTagsToCategory(tagIds, categoryId, moveTagToCategory);
-    tagMultiSelect.clearSelection();
-  }, [tagMultiSelect.clearSelection]);
+      await moveTagsToCategory(tagIds, categoryId, moveTagToCategory);
+      tagMultiSelect.clearSelection();
+      if (moved.length === 0) return;
+
+      // У только что созданной категории ещё нет записи в `categories` — имя приходит извне.
+      const categoryName = knownCategoryName ?? categories.find((c) => c.id === categoryId)?.name;
+      showUndoableNotification({
+        message: formatTagsMovedToast(moved.length, categoryName),
+        variant: 'success',
+        undo: async () => {
+          try {
+            for (const tag of moved) {
+              await moveTagToCategory(tag.id, tag.categoryId);
+            }
+            await load();
+          } catch {
+            showAppNotification({
+              message: 'Не удалось отменить перенос',
+              variant: 'danger',
+              skipPrefCheck: true
+            });
+          }
+        }
+      });
+    },
+    [allTags, categories, load, tagMultiSelect.clearSelection]
+  );
+
+  const handleTagDrop = useCallback(
+    async (tagIds: string[], targetCategoryId: string) => {
+      try {
+        await handleMoveTagsToCategory(tagIds, targetCategoryId);
+      } finally {
+        draggingTagIdsRef.current = null;
+        setDraggingTagIds(null);
+      }
+    },
+    [handleMoveTagsToCategory]
+  );
+
+  const handleShowTagsInGallery = useCallback(
+    (tagIds: string[]) => {
+      if (tagIds.length === 0) return;
+      startTagSearch(navigate, searchParams, tagIds, { pathname: '/gallery' });
+    },
+    [navigate, searchParams]
+  );
+
+  const handleDeleteTags = useCallback(
+    async (tagIds: string[]) => {
+      const undo = await deleteTags(tagIds);
+      tagMultiSelect.clearSelection();
+      await load();
+      showUndoableNotification({
+        message: formatTagsDeletedToast(tagIds.length),
+        variant: 'success',
+        undo: async () => {
+          try {
+            await undoDeleteTags(undo);
+            await load();
+          } catch {
+            showAppNotification({
+              message: 'Не удалось восстановить метки',
+              variant: 'danger',
+              skipPrefCheck: true
+            });
+          }
+        }
+      });
+    },
+    [load, tagMultiSelect.clearSelection]
+  );
+
+  const tagsToMerge = useMemo(
+    () =>
+      mergeTagIds
+        ? mergeTagIds
+            .map((id) => allTags.find((t) => t.id === id))
+            .filter((t): t is TagRecord => t !== undefined)
+        : [],
+    [allTags, mergeTagIds]
+  );
+
+  const handleConfirmMerge = useCallback(
+    async (targetTagId: string, sourceTagIds: string[], metadata: TagMergeMetadata) => {
+      const undo = await mergeTags(targetTagId, sourceTagIds, metadata);
+      tagMultiSelect.clearSelection();
+      await load();
+      showUndoableNotification({
+        message: `Объединены метки (${sourceTagIds.length}) в «${metadata.name}»`,
+        variant: 'success',
+        undo: async () => {
+          try {
+            await undoMergeTags(undo);
+            await load();
+          } catch {
+            showAppNotification({
+              message: 'Не удалось отменить объединение',
+              variant: 'danger',
+              skipPrefCheck: true
+            });
+          }
+        }
+      });
+    },
+    [load, tagMultiSelect.clearSelection]
+  );
 
   const resolvedCategoryModal = useMemo((): CategorySettingsModalState | null => {
     if (!categoryModal) return null;
@@ -327,17 +439,25 @@ export default function TagsPage() {
       onDelete: handleDeleteCategory
     });
 
-  const { openTagContextMenu, contextMenuLayer: tagContextMenuLayer } = useTagChipContextMenu({
+  const {
+    openTagContextMenu,
+    openMoveToCategory,
+    openDeleteTags,
+    contextMenuLayer: tagContextMenuLayer
+  } = useTagChipContextMenu({
     categories,
+    allTags,
     selectedTagIds: tagMultiSelect.selectedTagIds,
-    onShowInGallery: (tagId) => {
-      startTagSearch(navigate, searchParams, tagId, { pathname: '/gallery' });
-    },
+    onShowInGallery: handleShowTagsInGallery,
     onEdit: (tag) => setTagModal({ mode: 'edit', tag }),
-    onDelete: async (tagId) => {
-      await deleteTag(tagId);
+    onDelete: handleDeleteTags,
+    onMoveTagsToCategory: handleMoveTagsToCategory,
+    onMergeTags: setMergeTagIds,
+    onCreateCategoryForTags: (tagIds) => {
+      setPendingCategoryTagIds(tagIds);
+      setCategoryModal({ mode: 'create' });
     },
-    onMoveTagsToCategory: handleMoveTagsToCategory
+    onStartMultiSelect: tagMultiSelect.enterSelectionWithTag
   });
 
   const toggleCollapse = (categoryId: string) => {
@@ -373,7 +493,10 @@ export default function TagsPage() {
     <CategorySettingsModal
       state={resolvedCategoryModal}
       stats={categoryModalStats}
-      onClose={() => setCategoryModal(null)}
+      onClose={() => {
+        setCategoryModal(null);
+        setPendingCategoryTagIds(null);
+      }}
       onCreate={async (payload) => {
         const created = await addCategory(payload.name, payload.colorHex, {
           weight: payload.weight,
@@ -381,6 +504,10 @@ export default function TagsPage() {
           visibilityMode: payload.visibilityMode,
           visibilityLibraryIds: payload.visibilityLibraryIds
         });
+        if (pendingCategoryTagIds && pendingCategoryTagIds.length > 0) {
+          await handleMoveTagsToCategory(pendingCategoryTagIds, created.id, created.name);
+          setPendingCategoryTagIds(null);
+        }
         setSelectedCategoryId(created.id);
       }}
       onSave={async (payload) => {
@@ -484,9 +611,11 @@ export default function TagsPage() {
                     draggingTagIdsRef={draggingTagIdsRef}
                     allTags={allTags}
                     isTagSelected={tagMultiSelect.isSelected}
+                    selectionMode={tagMultiSelect.selectionMode}
                     onToggleCollapse={() => toggleCollapse(cat.id)}
                     onAddTag={() => setTagModal({ mode: 'create', categoryId: cat.id })}
                     onEditTag={(tag) => setTagModal({ mode: 'edit', tag })}
+                    onSelectToggleTag={(tag) => tagMultiSelect.toggleTagSelection(tag.id)}
                     onTagChipPointerDown={(tag, event) => tagMultiSelect.handleTagPointerDown(tag.id, event)}
                     onTagContextMenu={openTagContextMenu}
                     onTagDragStart={handleTagDragStart}
@@ -528,8 +657,26 @@ export default function TagsPage() {
             });
           }}
           onDelete={async (tagId) => {
-            await deleteTag(tagId);
+            await handleDeleteTags([tagId]);
           }}
+        />
+      ) : null}
+
+      <TagsSelectionBar
+        selectedCount={tagMultiSelect.selectedCount}
+        onShowInGallery={() => handleShowTagsInGallery([...tagMultiSelect.selectedTagIds])}
+        onMoveToCategory={() => openMoveToCategory([...tagMultiSelect.selectedTagIds])}
+        onMerge={() => setMergeTagIds([...tagMultiSelect.selectedTagIds])}
+        onDelete={() => openDeleteTags([...tagMultiSelect.selectedTagIds])}
+        onClear={tagMultiSelect.clearSelection}
+      />
+
+      {tagsToMerge.length >= 2 ? (
+        <TagMergeConfirmModal
+          tags={tagsToMerge}
+          categories={categories}
+          onClose={() => setMergeTagIds(null)}
+          onConfirm={handleConfirmMerge}
         />
       ) : null}
     </div>
