@@ -335,7 +335,7 @@ export default function CategoryPanel({
               onClick={() => void handleAddTag()}
             >
               <span className="btn-ds__value">Добавить</span>
-              <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+              <span className="btn-ds__icon arc-icon-tag-plus" aria-hidden="true" />
             </button>
           </div>
           <div className="arc-category-tag-cloud">

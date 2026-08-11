@@ -49,11 +49,11 @@ export function buildTagChipContextMenuRows(actions: {
   }
 
   rows.push(
-    itemRow('move-category', 'Переместить в категорию…', 'arc-icon-chevrons-up-down', actions.onMoveToCategory)
+    itemRow('move-category', 'Переместить в категорию…', 'arc-icon-folder-import', actions.onMoveToCategory)
   );
 
   if (actions.bulk && actions.onMerge) {
-    rows.push(itemRow('merge', 'Объединить метки…', 'arc-icon-reuse', actions.onMerge));
+    rows.push(itemRow('merge', 'Объединить метки…', 'arc-icon-combine', actions.onMerge));
   }
 
   if (actions.onEdit) {

@@ -58,7 +58,7 @@ function multiSelectLibraryMenuRows(input: BuildCardContextMenuRowsInput): Conte
   ];
 
   if (actions.onOpenTags) {
-    rows.push(itemRow('tags', 'Добавить метки', 'arc-icon-tag', actions.onOpenTags));
+    rows.push(itemRow('tags', 'Добавить метки', 'arc-icon-tag-plus', actions.onOpenTags));
   }
 
   if (input.scope.kind === 'collection' && actions.onRemoveFromCollection) {

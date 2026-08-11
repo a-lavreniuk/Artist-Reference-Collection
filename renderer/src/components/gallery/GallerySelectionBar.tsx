@@ -125,7 +125,7 @@ export default function GallerySelectionBar({
             <ActionButton label={collectionLabel} iconClass={collectionIcon} onClick={onCollectionAction} />
           ) : null}
           {onTagsAction ? (
-            <ActionButton label="Добавить метки" iconClass="arc-icon-tag" onClick={onTagsAction} />
+            <ActionButton label="Добавить метки" iconClass="arc-icon-tag-plus" onClick={onTagsAction} />
           ) : null}
           {onTrashAction ? (
             <ActionButton label="Отправить в корзину" iconClass="arc-icon-trash" onClick={onTrashAction} />

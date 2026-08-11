@@ -26,7 +26,7 @@ export default function NavbarMenu() {
       { type: 'item', key: 'tags', label: 'Категории и метки', iconClass: 'arc-icon-tag', onSelect: () => navigateToSection('/tags') },
       { type: 'item', key: 'stats', label: 'Статистика', iconClass: 'arc-icon-pie-chart', onSelect: () => navigateToSection('/statistics') },
       { type: 'item', key: 'history', label: 'История', iconClass: 'arc-icon-history', onSelect: () => navigateToSection('/history') },
-      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-settings', onSelect: () => navigateToSection('/settings/general') },
+      { type: 'item', key: 'settings', label: 'Настройки', iconClass: 'arc-icon-options', onSelect: () => navigateToSection('/settings/general') },
       { type: 'separator', key: 'sep1' },
       { type: 'item', key: 'dup', label: 'Поиск дублей', iconClass: 'arc-icon-copy', onSelect: () => navigateToSection('/duplicates') },
       {
@@ -88,7 +88,7 @@ export default function NavbarMenu() {
         data-interface-tour-anchor="navbar-menu"
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="btn-icon-only__glyph arc-icon-menu" aria-hidden="true" />
+        <span className="btn-icon-only__glyph arc-icon-chevron-down" aria-hidden="true" />
       </button>
       <ContextMenu
         open={open}

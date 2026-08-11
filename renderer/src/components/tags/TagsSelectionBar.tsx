@@ -96,11 +96,11 @@ export default function TagsSelectionBar({
       />
       <ActionButton
         label="Переместить в категорию"
-        iconClass="arc-icon-chevrons-up-down"
+        iconClass="arc-icon-folder-import"
         onClick={onMoveToCategory}
       />
       {single ? null : (
-        <ActionButton label="Объединить метки" iconClass="arc-icon-reuse" onClick={onMerge} />
+        <ActionButton label="Объединить метки" iconClass="arc-icon-combine" onClick={onMerge} />
       )}
       <ActionButton
         label={single ? 'Удалить метку' : 'Удалить метки'}
