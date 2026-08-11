@@ -179,12 +179,15 @@ Skill для разработки и ревью UI в репозитории **A
 
 См. [examples.md](examples.md).
 
-## Связанные rules (always-applied)
+## Связанные rules
 
-Полный индекс с glob-правилами: [references/rules-index.md](references/rules-index.md).
+Always-applied: `Base.mdc`, `UI-Kit-DS-Guard.mdc`, `Critical-UX-Regression-Check.mdc`.
 
-При UI-задачах дополнительно читать по теме:
+Полный индекс (включая globs): [references/rules-index.md](references/rules-index.md).
 
-- `EmptyState-ARC.mdc`, `Tooltip-ARC.mdc`, `ContextMenu-ARC.mdc` — при соответствующих элементах
-- `TopBar-ARC.mdc` — только для `ArcTopBar.tsx` / top bar
+При UI-задачах дополнительно по теме (или когда подтянутся по globs):
+
+- `EmptyState-ARC.mdc`, `Tooltip-ARC.mdc`, `ContextMenu-ARC.mdc` — соответствующие элементы
+- `Scroll-clip-ARC.mdc` — внутренний скролл panel/sidebar/modal
+- `TopBar-ARC.mdc` — `ArcTopBar` / window controls
 - `Input-validation-no-inline-errors.mdc` — формы и модалки

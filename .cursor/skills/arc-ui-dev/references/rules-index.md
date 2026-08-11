@@ -1,21 +1,16 @@
 # Индекс rules ARC
 
-Rules в `.cursor/rules/` применяются автоматически. Этот файл — навигация: **когда** перечитать rule целиком.
+Rules в `.cursor/rules/` применяются автоматически (alwaysApply или по globs). Этот файл — навигация: **когда** перечитать rule целиком.
 
-## Always-applied (все UI-задачи)
+## Always-applied (все задачи)
 
 | Rule | Суть |
 |------|------|
-| `ARC-Project.mdc` | Код только в этом репо; адаптировать внешние идеи |
-| `Base.mdc` | Токены дизайн-системы; без новых зависимостей |
-| `UI-Consistency-Guard.mdc` | Сначала существующий компонент; все состояния; без локальных костылей |
-| `UI-Kit-DS-Guard.mdc` | Все контролы только из UI-Kit/arc-ui; gate перед разметкой; классы из Figma дословно |
-| `Common-Components.mdc` | Единообразие; Electron a11y; tooltip/dnd через общие компоненты |
-| `Figma.mdc` | Node Figma; self-check; общий компонент перед локальным |
-| `Input-validation-no-inline-errors.mdc` | Ошибка поля = `field-error` / `aria-invalid`, без текста под полем |
-| `Scroll-clip-ARC.mdc` | Внутренний скролл: overflow без padding; inset на child; sep flush к scroll |
+| `Base.mdc` | Токены; границы репо; без новых зависимостей; не плодить одноразовые UI-варианты |
+| `UI-Kit-DS-Guard.mdc` | Gate перед разметкой; карта контролов; Figma-классы дословно; Electron a11y |
+| `Critical-UX-Regression-Check.mdc` | Перед сдачей: `verify:renderer-ui` + `npm test`; дата / UI / деталка |
 
-## По типу элемента
+## По globs (когда открыты matching-файлы)
 
 | Rule | Когда читать |
 |------|--------------|
@@ -23,7 +18,8 @@ Rules в `.cursor/rules/` применяются автоматически. Э�
 | `Tooltip-ARC.mdc` | Иконки без подписи, disabled-кнопки, rich-метки |
 | `ContextMenu-ARC.mdc` | Dropdown сортировки/сетки/фильтров, ПКМ-меню |
 | `TopBar-ARC.mdc` | `ArcTopBar`, window controls, history back/forward |
-| `Scroll-clip-ARC.mdc` | Внутренний скролл panel/sidebar/modal: обрезка flush к рамке, не к padding |
+| `Scroll-clip-ARC.mdc` | Внутренний скролл panel/sidebar/modal: клип flush к рамке |
+| `Input-validation-no-inline-errors.mdc` | Валидация полей: `field-error` / `aria-invalid`, без текста под инпутом |
 
 ## Figma nodes (частые)
 

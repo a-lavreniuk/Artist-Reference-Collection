@@ -1,47 +1,33 @@
 ---
-description: Tooltip ARC — подсказки при длительном наведении для всех элементов UI
-alwaysApply: true
+description: Tooltip ARC — подсказки при наведении; общий компонент, не title=
+globs: renderer/**/*.{tsx,css}
+alwaysApply: false
 ---
 
 # Tooltip (ARC)
 
-Макет: [ARC-2 / Tooltip, node 28:387](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=28-387).
+Макет: [28:387](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=28-387).
 
-## Когда нужен tooltip
+## Когда
 
-- Иконка или кнопка без видимой подписи.
-- Действие неочевидно из контекста (сокращённый текст, только символ).
-- Дополнительное пояснение при наведении (описание метки, статус «в разработке»).
+- Иконка/кнопка без подписи; неочевидное действие; доп. пояснение (метка, «в разработке»).
+- Не дублируй, если элемент уже полностью подписан.
 
-Не дублируй tooltip, если элемент уже полностью подписан и смысл очевиден.
+## Как
 
-## Как реализовать
-
-- Используй общий компонент `Tooltip` из `renderer/src/components/tooltip/Tooltip.tsx`.
-- Для меток с описанием/картинкой — `TagTooltipBody` + `variant="rich"`.
-- Для `disabled`-кнопок оборачивай в `<span className="arc-tooltip-anchor-inline">` — нативный hover не срабатывает.
+- `Tooltip` из `renderer/src/components/tooltip/Tooltip.tsx`.
+- Rich-метки: `TagTooltipBody` + `variant="rich"`.
+- Disabled: обёртка `<span className="arc-tooltip-anchor-inline">`.
 
 ```tsx
-// ✅ Хорошо
 <Tooltip content="Добавить в мудборд" delay={500} position="top">
   <button type="button" aria-label="Добавить в мудборд">…</button>
 </Tooltip>
-
-// ❌ Плохо — системный title, не стиль ARC
-<button type="button" title="Добавить в мудборд">…</button>
+// ❌ <button title="…">
 ```
 
-## Визуал (сверка с Figma)
+## Визуал / поведение
 
-- Фон и стрелка: `--brand-550`; текст: `--brand-100` (Paragraph/S, `--typo-p-s-*`).
-- `max-width`: `192px` (`default`), `204px` (`rich`, Figma 146:5400 — картинка 192 + padding 6+6); padding `--s-1` (6px); radius `--s-1` (6px по макету).
-- Rich-метка с картинкой: текст сверху, изображение снизу **192×108** (`TagTooltipBody`, `object-fit: cover`, radius 4px, без обводки).
-- Стрелка на стороне, противоположной якорю (`top` / `bottom` / `left` / `right`).
-- Без border и тени; fade-in через `--transition-fast`.
-
-## Поведение
-
-- `position: fixed`, `pointer-events: none`.
-- Задержка показа по умолчанию **500 ms** (`delay={500}`); для rich-меток допустимо **1000 ms**.
-- Не выходить за viewport; пересчитывать позицию при `scroll` и `resize`.
-- Не создавай локальные tooltip-стили и одноразовые обёртки — расширяй общий компонент.
+- Фон/стрелка `--brand-550`; текст `--brand-100` (`--typo-p-s-*`); padding/radius `--s-1`; max-width 192 (`default`) / 204 (`rich`); rich-картинка 192×108.
+- `position: fixed`, `pointer-events: none`; delay 500 ms (rich — до 1000); не выходить за viewport; пересчёт при `scroll`/`resize`.
+- Без локальных tooltip-стилей — расширяй общий компонент.

@@ -1,47 +1,31 @@
 ---
-description: Context Menu ARC — единый компонент меню по клику (сетка, сортировка, фильтры, navbar) и по ПКМ
-alwaysApply: true
+description: Context Menu ARC — меню по клику и ПКМ; не локальные dropdown
+globs: renderer/**/*.{tsx,css}
+alwaysApply: false
 ---
 
 # Context Menu (ARC)
 
-Макет: [ARC-2 / Menu Options, node 1168:23372](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1168-23372). Строка: [771:2110](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=771-2110). Заголовок секции: [771:2195](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=771-2195).
+Макет: [1168:23372](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=1168-23372); строка [771:2110](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=771-2110); header [771:2195](https://www.figma.com/design/JD3pZdlV4Sz62creRMQsJV/ARC-2?node-id=771-2195).
 
-## Когда использовать
+## Когда
 
-- Меню по **клику** на кнопку или якорь (не ПКМ): navbar, **выбор сетки**, **сортировка**, **фильтры**, списки действий.
-- Меню по **ПКМ** на целевом элементе (карточка, строка сайдбара и т.п.) — тот же компонент, режим `position` у курсора.
-- Пункты с label, иконкой справа, shortcut, counter, секциями, разделителями, слотами под инпут.
+- Клик (сетка, сортировка, фильтры, navbar) или ПКМ на карточке/строке — один компонент `ContextMenu`.
+- Selector (`selector-dropdown`) — другой паттерн; для меню сетки/сортировки/фильтров не использовать.
 
-**Selector** (`selector` / `selector-dropdown`) — отдельный компонент для другого паттерна; для новых меню сетки, сортировки и фильтров **не** создавай локальные dropdown-обёртки — используй `ContextMenu`.
+## Как
 
-## Как реализовать
-
-- Импорт из `renderer/src/components/context-menu`.
-- Обёртка: `ContextMenu` + `open` / `onClose` / `ariaLabel`.
-- Позиция: `anchorRef` (клик по кнопке) **или** `position: { x, y }` (ПКМ) — взаимоисключающе.
-- ПКМ: хук `useContextMenuAtPointer` из `renderer/src/hooks/useContextMenuAtPointer.ts`.
-- Содержимое: `rows` (declarative) и/или `children` (`ContextMenuItem`, `ContextMenuHeader`, `ContextMenuSeparator`, `ContextMenuInput`).
-- Эталон клика: `renderer/src/components/layout/NavbarMenu.tsx`. Эталон ПКМ: `useGalleryCardContextMenu`.
+- `ContextMenu` + `open` / `onClose` / `ariaLabel`; позиция: `anchorRef` **или** `position: { x, y }` (ПКМ).
+- ПКМ: `useContextMenuAtPointer`. Контент: `rows` и/или `ContextMenuItem` / `Header` / `Separator` / `Input`.
+- Эталоны: `NavbarMenu.tsx` (клик), `useGalleryCardContextMenu` (ПКМ).
 
 ```tsx
-// ✅ Хорошо
 <ContextMenu open={open} anchorRef={anchorRef} onClose={() => setOpen(false)} ariaLabel="Сортировка" rows={rows} />
-
-// ❌ Плохо — локальное меню, дубли CSS
-<div className="selector-dropdown">…</div>
-<div className="arc-gallery-sort-menu">…</div>
+// ❌ локальные .selector-dropdown / .arc-gallery-sort-menu
 ```
 
-## Визуал и стили
+## Визуал / поведение
 
-- Классы только из `renderer/public/ui/arc-ui/arc-ui.css` (`.context-menu*`). Не копируй и не переопределяй локально.
-- Ширина **250px** (`CONTEXT_MENU_WIDTH`), строка **32px**, иконки **M** (`data-btn-size="m"` на панели).
-- Default без заливки; hover — `brand-600`. Label слева на одной линии с header (`--menu-content-inset-x`).
-- Контейнер обрамляет контент — **без** внутреннего вертикального скролла, если продукт не согласовал иное.
-
-## Поведение
-
-- Portal + backdrop; закрытие по backdrop и `Escape`.
-- Иконки через `arc-icon-*` + `hydrateArcNavbarIcons` (уже внутри `ContextMenu`).
-- Расширяй общий компонент и токены `--menu-row-*`, не плоди одноразовые варианты.
+- Классы только `.context-menu*` из `arc-ui.css`; ширина 250px (`CONTEXT_MENU_WIDTH`), строка 32px, `data-btn-size="m"`.
+- Portal + backdrop; Escape / backdrop закрывают; иконки через `arc-icon-*` (hydrate внутри компонента).
+- Без внутреннего вертикального скролла, если продукт не согласовал иное.
