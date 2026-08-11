@@ -29,7 +29,9 @@ const HINT_CONNECT_TITLE = 'Как подключить ARC-MCP для ваше�
 const HINT_CONNECT_1 = 'Включите агента.';
 const HINT_CONNECT_2 = 'Нажмите «Копировать».';
 const HINT_CONNECT_3 =
-  'В чате агента попросите его установить сервер и вставьте содержимое буфера. В конфиге HTTP уже будет заголовок X-ARC-Local-Token (тот же секрет, что в настройках расширения).';
+  'В чате агента попросите его установить сервер и вставьте содержимое буфера. В HTTP-конфиге уже будет токен — отдельно его копировать не нужно.';
+const HINT_ROTATE =
+  'Менять секрет нужно редко. После смены снова нажмите «Копировать» и обновите конфиг клиента.';
 const COPY_SUCCESS_MESSAGE = 'Конфигурация MCP сервера скопирована в буфер';
 
 const MCP_PORT = 47897;
@@ -38,6 +40,7 @@ const MCP_PORT = 47897;
 export default function SettingsMcpServerPanel() {
   const { prefs, ready, update } = useAppPreferences();
   const [copyAlertKey, setCopyAlertKey] = useState(0);
+  const [rotatedHint, setRotatedHint] = useState(false);
   const disabled = !ready;
   const mcpEnabled = prefs?.mcpServerEnabled === true;
 
@@ -68,6 +71,12 @@ export default function SettingsMcpServerPanel() {
         /* clipboard / IPC unavailable */
       });
   }, []);
+
+  const regenerateSecret = useCallback(() => {
+    void update({ mcpApiSecret: '' }).then(() => {
+      setRotatedHint(true);
+    });
+  }, [update]);
 
   const setToolEnabled = (toolId: McpToolId, pressed: boolean) => {
     void update({
@@ -111,7 +120,18 @@ export default function SettingsMcpServerPanel() {
                   >
                     <span className="btn-ds__value">Копировать</span>
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-ds btn-s"
+                    disabled={disabled}
+                    onClick={regenerateSecret}
+                  >
+                    <span className="btn-ds__value">Сгенерировать новый секрет</span>
+                  </button>
                 </div>
+                {rotatedHint ? (
+                  <p className="text-m arc-settings-desc-block__text">{HINT_ROTATE}</p>
+                ) : null}
                 <SettingsSeparator className="arc-settings-separator--flush-bottom" />
               </>
             ) : null}

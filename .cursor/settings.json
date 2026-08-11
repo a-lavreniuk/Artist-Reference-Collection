@@ -9,13 +9,5 @@
     "gitlab": {
       "enabled": true
     }
-  },
-  "mcpServers": {
-    "arc-mcp": {
-      "transport": "http",
-      "type": "streamable-http",
-      "streamable": true,
-      "url": "http://127.0.0.1:47897/mcp"
-    }
   }
 }

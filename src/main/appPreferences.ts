@@ -70,8 +70,10 @@ export type AppPreferencesV1 = {
   importApiEnabled: boolean;
   importApiPrefixEnabled: boolean;
   importApiPrefixText: string;
-  /** Shared secret for Import API + HTTP MCP (`X-ARC-Local-Token`). */
+  /** Secret for Import API / browser extension (`X-ARC-Local-Token`). */
   localApiSecret: string;
+  /** Secret for HTTP MCP (`X-ARC-Local-Token`). Independent from localApiSecret. */
+  mcpApiSecret: string;
   mcpServerEnabled: boolean;
   mcpToolsEnabled: McpToolsEnabledMap;
   /** AI semantic search master toggle (same as aiSearchEnabled). */
@@ -158,6 +160,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     importApiPrefixEnabled: false,
     importApiPrefixText: '',
     localApiSecret: generateLocalApiSecret(),
+    mcpApiSecret: generateLocalApiSecret(),
     mcpServerEnabled: false,
     mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
@@ -371,6 +374,11 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.localApiSecret === 'string' && raw.localApiSecret.trim().length >= 16
         ? raw.localApiSecret.trim()
         : generateLocalApiSecret(),
+    // Migration B: missing/short mcpApiSecret → generate new (do not copy localApiSecret).
+    mcpApiSecret:
+      typeof raw.mcpApiSecret === 'string' && raw.mcpApiSecret.trim().length >= 16
+        ? raw.mcpApiSecret.trim()
+        : generateLocalApiSecret(),
     mcpServerEnabled: typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
     mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),
     ...migrateAiPrefsFromLegacy(raw, d),
@@ -434,6 +442,13 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
   }
 
   return sanitized;
+}
+
+/** Exported for unit tests (mcpApiSecret migration B). */
+export function sanitizeAppPreferencesFromDisk(
+  raw: Partial<AppPreferencesV1> & Record<string, unknown>
+): AppPreferencesV1 {
+  return sanitizeFromDisk(raw);
 }
 
 function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>): AppPreferencesV1 {
@@ -516,6 +531,14 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
       next.localApiSecret = generateLocalApiSecret();
     } else if (trimmed.length >= 16) {
       next.localApiSecret = trimmed;
+    }
+  }
+  if ('mcpApiSecret' in patch && typeof patch.mcpApiSecret === 'string') {
+    const trimmed = patch.mcpApiSecret.trim();
+    if (trimmed === '') {
+      next.mcpApiSecret = generateLocalApiSecret();
+    } else if (trimmed.length >= 16) {
+      next.mcpApiSecret = trimmed;
     }
   }
   if ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') {
@@ -622,8 +645,11 @@ export async function readAppPreferences(): Promise<AppPreferencesV1> {
   try {
     const raw = JSON.parse(await readFile(prefsPath(), 'utf8')) as Partial<AppPreferencesV1> & Record<string, unknown>;
     const hadMigrationFlag = typeof raw.aiCaptionOnDemandMigrated === 'boolean' && raw.aiCaptionOnDemandMigrated;
+    const needsMcpSecretPersist = !(
+      typeof raw.mcpApiSecret === 'string' && raw.mcpApiSecret.trim().length >= 16
+    );
     cached = sanitizeFromDisk(raw);
-    if (!hadMigrationFlag) {
+    if (!hadMigrationFlag || needsMcpSecretPersist) {
       const filePath = prefsPath();
       await mkdir(path.dirname(filePath), { recursive: true });
       await writeFile(filePath, JSON.stringify(cached, null, 2), 'utf8');
@@ -639,8 +665,11 @@ export function readAppPreferencesSync(): AppPreferencesV1 {
   try {
     const raw = JSON.parse(fs.readFileSync(prefsPath(), 'utf8')) as Partial<AppPreferencesV1> & Record<string, unknown>;
     const hadMigrationFlag = typeof raw.aiCaptionOnDemandMigrated === 'boolean' && raw.aiCaptionOnDemandMigrated;
+    const needsMcpSecretPersist = !(
+      typeof raw.mcpApiSecret === 'string' && raw.mcpApiSecret.trim().length >= 16
+    );
     cached = sanitizeFromDisk(raw);
-    if (!hadMigrationFlag) {
+    if (!hadMigrationFlag || needsMcpSecretPersist) {
       const filePath = prefsPath();
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, JSON.stringify(cached, null, 2), 'utf8');
@@ -707,7 +736,7 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
   if (
     ('mcpServerEnabled' in patch && typeof patch.mcpServerEnabled === 'boolean') ||
     ('mcpToolsEnabled' in patch && patch.mcpToolsEnabled && typeof patch.mcpToolsEnabled === 'object') ||
-    'localApiSecret' in patch
+    'mcpApiSecret' in patch
   ) {
     const { restartMcpServer } = await import('./mcp/mcpHost');
     await restartMcpServer();

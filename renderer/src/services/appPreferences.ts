@@ -112,6 +112,7 @@ export type AppPreferencesV1 = {
   importApiPrefixEnabled: boolean;
   importApiPrefixText: string;
   localApiSecret: string;
+  mcpApiSecret: string;
   mcpServerEnabled: boolean;
   mcpToolsEnabled: McpToolsEnabledMap;
   aiSemanticSearchEnabled: boolean;
@@ -181,6 +182,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     importApiPrefixEnabled: false,
     importApiPrefixText: '',
     localApiSecret: '',
+    mcpApiSecret: '',
     mcpServerEnabled: false,
     mcpToolsEnabled: defaultMcpToolsEnabled(),
     aiSemanticSearchEnabled: false,
@@ -316,6 +318,7 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     importApiPrefixText:
       typeof raw.importApiPrefixText === 'string' ? raw.importApiPrefixText.trim().slice(0, 64) : d.importApiPrefixText,
     localApiSecret: typeof raw.localApiSecret === 'string' ? raw.localApiSecret : d.localApiSecret,
+    mcpApiSecret: typeof raw.mcpApiSecret === 'string' ? raw.mcpApiSecret : d.mcpApiSecret,
     mcpServerEnabled:
       typeof raw.mcpServerEnabled === 'boolean' ? raw.mcpServerEnabled : d.mcpServerEnabled,
     mcpToolsEnabled: sanitizeMcpToolsEnabled(raw.mcpToolsEnabled ?? d.mcpToolsEnabled),

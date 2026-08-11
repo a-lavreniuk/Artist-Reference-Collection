@@ -61,7 +61,8 @@ buildin --json page create --body page.json
 buildin markdown get <page_id>
 ```
 
-Формат тела карточки (Описание / Что сделано, блок `divider`): [task-card-format.md](./task-card-format.md).
+Формат тела карточки (Описание / Что сделано, блок `divider`): [task-card-format.md](./task-card-format.md).  
+Краткая таблица option id: [buildin-ids.md](../../buildin-task-finish/references/buildin-ids.md).
 
 ### `query.json` — «В работе» + «Задача»
 
