@@ -66,13 +66,7 @@ import {
 } from './storage/galleryFilterStatsCache';
 import { backfillPalettesBatch, searchCardsByColor } from './storage/colorSearch';
 import { readCardJson } from './storage/cardFolder';
-import {
-  CARD_DETAIL_PALETTE_MAX,
-  computeImagePalette,
-  normalizeHex,
-  parsePaletteJson,
-  trimPaletteForDisplay
-} from './storage/palette';
+import { getCardDisplayPaletteRows, normalizeHex } from './storage/palette';
 import {
   CARDS_DIR,
   LIBRARY_META_DIR
@@ -414,23 +408,8 @@ export function registerStorageIpc(
     if (!root || typeof cardId !== 'string') return [];
     await ensureLibraryReady(root);
     const row = getCardByIdFromDb(root, cardId);
-    if (!row || row.type !== 'image' || !row.originalRel) return [];
-
-    const stored = parsePaletteJson(row.paletteJson);
-    if (stored.length > 0) {
-      return trimPaletteForDisplay(stored, CARD_DETAIL_PALETTE_MAX);
-    }
-
-    const abs = path.join(root, row.originalRel.replace(/\//g, path.sep));
-    try {
-      const palette = await computeImagePalette(abs, 'search');
-      const computed = trimPaletteForDisplay(palette, CARD_DETAIL_PALETTE_MAX);
-      if (computed.length > 0) return computed;
-    } catch {
-      /* fallback below */
-    }
-
-    return parsePaletteJson(null, row.dominantColor);
+    if (!row) return [];
+    return getCardDisplayPaletteRows(root, row);
   });
 
   ipcMain.handle('arc:storage-update-card', async (_e, payload: unknown) => {

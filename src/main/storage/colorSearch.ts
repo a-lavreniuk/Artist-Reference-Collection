@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import {
   buildGalleryFilterWhere,
   DEFAULT_GALLERY_SORT,
@@ -45,19 +46,48 @@ export async function backfillPalettesBatch(libraryRoot: string, limit = 48): Pr
   const db = openLibraryDb(libraryRoot);
   const rows = db
     .prepare(
-      `SELECT id, original_rel, dominant_color FROM cards
-       WHERE type = 'image' AND COALESCE(is_deleted, 0) = 0
+      `SELECT id, type, original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, dominant_color FROM cards
+       WHERE type IN ('image', 'video') AND COALESCE(is_deleted, 0) = 0
          AND (palette_json IS NULL OR palette_json = '')
        LIMIT ?`
     )
-    .all(limit) as Array<{ id: string; original_rel: string; dominant_color: string | null }>;
+    .all(limit) as Array<{
+    id: string;
+    type: 'image' | 'video';
+    original_rel: string;
+    thumb_s_rel: string | null;
+    thumb_m_rel: string | null;
+    thumb_l_rel: string | null;
+    dominant_color: string | null;
+  }>;
 
   const upd = db.prepare('UPDATE cards SET palette_json = ? WHERE id = ?');
   let done = 0;
   for (const row of rows) {
-    const abs = path.join(libraryRoot, row.original_rel.replace(/\//g, path.sep));
+    let sourceAbs: string | null = null;
+    if (row.type === 'video') {
+      for (const rel of [row.thumb_l_rel, row.thumb_m_rel, row.thumb_s_rel]) {
+        if (!rel) continue;
+        const abs = path.join(libraryRoot, rel.replace(/\//g, path.sep));
+        if (fs.existsSync(abs)) {
+          sourceAbs = abs;
+          break;
+        }
+      }
+    } else {
+      sourceAbs = path.join(libraryRoot, row.original_rel.replace(/\//g, path.sep));
+    }
+
+    if (!sourceAbs) {
+      if (row.dominant_color) {
+        upd.run(JSON.stringify(parsePaletteJson(null, row.dominant_color)), row.id);
+        done += 1;
+      }
+      continue;
+    }
+
     try {
-      const palette = await computeImagePalette(abs);
+      const palette = await computeImagePalette(sourceAbs);
       if (palette.length === 0 && row.dominant_color) {
         upd.run(JSON.stringify(parsePaletteJson(null, row.dominant_color)), row.id);
       } else {
@@ -113,7 +143,7 @@ export function searchCardsByColor(libraryRoot: string, params: ColorSearchParam
       boundaries
     );
 
-    wh.push("c.type = 'image'");
+    wh.push("(c.type = 'image' OR c.type = 'video')");
     const sql = `SELECT c.* FROM cards c WHERE ${wh.join(' AND ')}`;
     const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
 

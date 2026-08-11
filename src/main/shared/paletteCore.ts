@@ -119,6 +119,52 @@ function clustersToSwatches(clusters: Cluster[], total: number): PaletteSwatch[]
   }));
 }
 
+/** Уникальные hex по порядку; при коллизии суммируем pct. */
+function uniqueSwatchesByHex(swatches: PaletteSwatch[]): PaletteSwatch[] {
+  const map = new Map<string, number>();
+  const order: string[] = [];
+  for (const sw of swatches) {
+    const hex = normalizeHex(sw.hex) || sw.hex;
+    if (!hex) continue;
+    if (!map.has(hex)) {
+      order.push(hex);
+      map.set(hex, sw.pct);
+    } else {
+      map.set(hex, (map.get(hex) ?? 0) + sw.pct);
+    }
+  }
+  return order.map((hex) => ({ hex, pct: map.get(hex) ?? 0 }));
+}
+
+/**
+ * Добираем кластеры до target уникальных hex: сначала merged, потом сырые buckets.
+ */
+function takeClustersUntilUniqueHex(
+  primary: Cluster[],
+  fallback: Cluster[],
+  total: number,
+  target: number
+): PaletteSwatch[] {
+  const selected: Cluster[] = [];
+  const seen = new Set<string>();
+
+  const pushAll = (list: Cluster[]) => {
+    for (const cluster of list) {
+      if (selected.length >= target && seen.size >= target) break;
+      const hex = rgbToHex(cluster.r, cluster.g, cluster.b);
+      if (seen.has(hex)) continue;
+      seen.add(hex);
+      selected.push(cluster);
+      if (seen.size >= target) break;
+    }
+  };
+
+  pushAll(primary);
+  if (seen.size < target) pushAll(fallback);
+
+  return normalizePercentages(clustersToSwatches(selected, total));
+}
+
 function collectPixelsFromRgba(data: Uint8Array | Uint8ClampedArray, channels = 4): Rgb[] {
   const pixels: Rgb[] = [];
   for (let i = 0; i < data.length; i += channels) {
@@ -156,7 +202,7 @@ function bucketPixels(pixels: Rgb[]): Cluster[] {
 }
 
 function mergeClustersByDeltaE(clusters: Cluster[], mergeDeltaE: number, maxInitial = 64): Cluster[] {
-  let working = [...clusters].sort((a, b) => b.count - a.count).slice(0, maxInitial);
+  let working = pickInitialClustersForMerge(clusters, maxInitial);
   if (working.length === 0) return [];
 
   let merged = true;
@@ -189,15 +235,48 @@ function mergeClustersByDeltaE(clusters: Cluster[], mergeDeltaE: number, maxInit
   return working.sort((a, b) => b.count - a.count);
 }
 
+/**
+ * Сначала склеиваем цветные корзины между собой (оранжевый/жёлтый),
+ * нейтрали — отдельно, иначе top-N по площади выкидывает мелкие акценты.
+ */
+function mergeClustersForPalette(clusters: Cluster[], mergeDeltaE: number, maxInitial: number): Cluster[] {
+  if (clusters.length === 0) return [];
+
+  const colorful: Cluster[] = [];
+  const neutral: Cluster[] = [];
+  for (const c of clusters) {
+    if (labChroma(clusterLab(c)) >= LOW_CHROMA_LAB) colorful.push(c);
+    else neutral.push(c);
+  }
+
+  // Цветные: берём больше кандидатов — их мало по count, но важно склеить по hue.
+  const colorfulMerged = mergeClustersByDeltaE(
+    colorful,
+    mergeDeltaE,
+    Math.min(Math.max(maxInitial, colorful.length), 192)
+  );
+  const neutralMerged = mergeClustersByDeltaE(neutral, mergeDeltaE, maxInitial);
+
+  return [...colorfulMerged, ...neutralMerged].sort((a, b) => b.count - a.count);
+}
+
+/**
+ * В начальный пул merge: топ по площади (для нейтралей / общего случая).
+ */
+function pickInitialClustersForMerge(clusters: Cluster[], maxInitial: number): Cluster[] {
+  if (clusters.length === 0 || maxInitial <= 0) return [];
+  return [...clusters].sort((a, b) => b.count - a.count).slice(0, maxInitial);
+}
+
 function buildGrayscalePalette(pixels: Rgb[], mode: PaletteMode, total: number): PaletteSwatch[] {
-  const config = PALETTE_MODE_CONFIG[mode];
   const lights = pixels.map((pixel) => rgbToLab(pixel.r, pixel.g, pixel.b).L);
   const minL = Math.min(...lights);
   const maxL = Math.max(...lights);
   const spread = maxL - minL;
 
-  const maxGraySwatches = mode === 'display' ? 2 : 3;
-  if (spread < 12) {
+  // search/деталка — всегда до 12 ступеней яркости (фиксированный лимит UI).
+  const maxGraySwatches = mode === 'display' ? 2 : 12;
+  if (spread < 8) {
     const avg = pixels.reduce(
       (acc, pixel) => ({ r: acc.r + pixel.r, g: acc.g + pixel.g, b: acc.b + pixel.b }),
       { r: 0, g: 0, b: 0 }
@@ -206,7 +285,12 @@ function buildGrayscalePalette(pixels: Rgb[], mode: PaletteMode, total: number):
     return [{ hex: rgbToHex(avg.r / n, avg.g / n, avg.b / n), pct: 100 }];
   }
 
-  const targetK = spread > 40 && maxGraySwatches >= 3 ? 3 : Math.min(2, maxGraySwatches);
+  const targetK =
+    mode === 'display'
+      ? spread > 40 && maxGraySwatches >= 2
+        ? 2
+        : Math.min(2, maxGraySwatches)
+      : maxGraySwatches;
   const centroids = Array.from({ length: targetK }, (_, idx) => minL + ((idx + 0.5) / targetK) * spread);
   const groups = Array.from({ length: targetK }, () => ({ r: 0, g: 0, b: 0, count: 0 }));
 
@@ -260,16 +344,23 @@ export function buildPaletteFromPixels(pixels: Rgb[], mode: PaletteMode = 'searc
   }
 
   const initial = bucketPixels(pixels);
-  const merged = mergeClustersByDeltaE(initial, config.mergeDeltaE, mode === 'search' ? 96 : 48);
+  const merged = mergeClustersForPalette(initial, config.mergeDeltaE, mode === 'search' ? 128 : 48);
   const minCount = Math.ceil((config.minPct / 100) * total);
+  // Яркие акценты: чуть ниже порог площади (0.35%), чтобы лестница/жилеты не отваливались.
+  const minCountAccent = Math.max(1, Math.ceil(0.0035 * total));
 
-  let selected = merged.filter((cluster) => cluster.count >= minCount).slice(0, config.maxColors);
-  if (selected.length === 0) {
-    selected = merged.slice(0, config.maxColors);
+  const preferred = merged.filter((cluster) => {
+    const chroma = labChroma(clusterLab(cluster));
+    const need = chroma >= LOW_CHROMA_LAB ? Math.min(minCount, minCountAccent) : minCount;
+    return cluster.count >= need;
+  });
+  const preferredSet = new Set(preferred);
+  const primary = [...preferred, ...merged.filter((c) => !preferredSet.has(c))];
+  const swatches = takeClustersUntilUniqueHex(primary, initial, total, config.maxColors);
+  if (swatches.length === 0) {
+    return normalizePercentages(clustersToSwatches(merged.slice(0, config.maxColors), total));
   }
-  if (selected.length === 0) return [];
-
-  return normalizePercentages(clustersToSwatches(selected, total));
+  return swatches;
 }
 
 export function buildPaletteFromRgba(
@@ -311,4 +402,94 @@ export function scorePaletteMinDeltaE(queryHex: string, palette: PaletteSwatch[]
     minD = Math.min(minD, deltaE76(queryLab, rgbToLab(r, g, b)));
   }
   return Number.isFinite(minD) ? minD : null;
+}
+
+/** Предпочтительный min ΔE между свотчами деталки (diversity greedy). */
+export const DISPLAY_PALETTE_MIN_DELTA_E = 16;
+
+function swatchLab(hex: string): Lab {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToLab(r, g, b);
+}
+
+function minDeltaEToSelected(hex: string, selectedLabs: Lab[]): number {
+  const lab = swatchLab(hex);
+  let minD = Number.POSITIVE_INFINITY;
+  for (const other of selectedLabs) {
+    minD = Math.min(minD, deltaE76(lab, other));
+  }
+  return minD;
+}
+
+/**
+ * Top-N по площади — baseline для сравнения с diversity greedy.
+ * Порядок: pct убыв.
+ */
+export function selectPaletteTopN(swatches: PaletteSwatch[], max: number): PaletteSwatch[] {
+  if (swatches.length <= max) return swatches;
+  return [...swatches].sort((a, b) => b.pct - a.pct || a.hex.localeCompare(b.hex)).slice(0, max);
+}
+
+/**
+ * Diversity greedy для деталки: всегда набирает ровно `max` уникальных hex,
+ * пока хватает кандидатов (фиксированные 12 в UI).
+ */
+export function selectPaletteForDisplay(
+  swatches: PaletteSwatch[],
+  max: number,
+  minDeltaE = DISPLAY_PALETTE_MIN_DELTA_E
+): PaletteSwatch[] {
+  const usable = uniqueSwatchesByHex(swatches.filter((sw) => sw.hex));
+  if (usable.length === 0 || max <= 0) return [];
+
+  const remaining = [...usable].sort((a, b) => b.pct - a.pct || a.hex.localeCompare(b.hex));
+  const first = remaining.shift()!;
+  const selected: PaletteSwatch[] = [first];
+  const selectedLabs: Lab[] = [swatchLab(first.hex)];
+  const selectedHex = new Set<string>([first.hex]);
+
+  while (selected.length < max && remaining.length > 0) {
+    let bestIdx = -1;
+    let bestMinD = -1;
+    let bestPct = -1;
+    let bestFarIdx = -1;
+    let bestFarMinD = -1;
+    let bestFarPct = -1;
+
+    for (let i = 0; i < remaining.length; i += 1) {
+      const candidate = remaining[i]!;
+      if (selectedHex.has(candidate.hex)) continue;
+      const minD = minDeltaEToSelected(candidate.hex, selectedLabs);
+      if (minD > bestMinD || (minD === bestMinD && candidate.pct > bestPct)) {
+        bestMinD = minD;
+        bestPct = candidate.pct;
+        bestIdx = i;
+      }
+      if (minD >= minDeltaE) {
+        if (minD > bestFarMinD || (minD === bestFarMinD && candidate.pct > bestFarPct)) {
+          bestFarMinD = minD;
+          bestFarPct = candidate.pct;
+          bestFarIdx = i;
+        }
+      }
+    }
+
+    const pickIdx = bestFarIdx >= 0 ? bestFarIdx : bestIdx;
+    if (pickIdx < 0) break;
+    const picked = remaining.splice(pickIdx, 1)[0]!;
+    selected.push(picked);
+    selectedLabs.push(swatchLab(picked.hex));
+    selectedHex.add(picked.hex);
+  }
+
+  return selected;
+}
+
+/** Есть ли в палитре заметный цветной акцент (не только серые). */
+export function paletteHasColorfulAccent(swatches: PaletteSwatch[]): boolean {
+  for (const sw of swatches) {
+    const { r, g, b } = hexToRgb(sw.hex);
+    if (labChroma(rgbToLab(r, g, b)) >= LOW_CHROMA_LAB) return true;
+  }
+  return false;
 }

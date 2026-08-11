@@ -422,7 +422,7 @@ export default function CardDetailOverlay({
   }, [settingsWidth]);
 
   useEffect(() => {
-    if (card?.type !== 'image') {
+    if (card?.type !== 'image' && card?.type !== 'video') {
       setPalette([]);
       return;
     }
@@ -1346,6 +1346,14 @@ export default function CardDetailOverlay({
                   cardRef.current = updated;
                   setThumbBudgetEpoch((epoch) => epoch + 1);
                   void reloadCard(updated.id);
+                  const paletteCardId = updated.id;
+                  void loadCardDetailPalette(paletteCardId)
+                    .then((rows) => {
+                      if (cardRef.current?.id === paletteCardId) setPalette(rows);
+                    })
+                    .catch(() => {
+                      if (cardRef.current?.id === paletteCardId) setPalette([]);
+                    });
                 }}
                 onToast={showCopyAlert}
               />
@@ -1593,9 +1601,9 @@ export default function CardDetailOverlay({
                 >
                   {palette.length > 0 ? (
                     <div className="arc-card-detail-palette">
-                      {palette.map((swatch) => (
+                      {palette.map((swatch, index) => (
                         <Tooltip
-                          key={swatch.hex}
+                          key={`${swatch.hex}-${index}`}
                           content={`Поиск по цвету · ${swatch.hex.toUpperCase()} (${swatch.pct}%)`}
                           position="top"
                         >
