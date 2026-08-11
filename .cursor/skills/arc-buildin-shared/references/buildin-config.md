@@ -85,10 +85,16 @@ buildin markdown get <page_id>
 ```json
 {
   "properties": {
-    "Статус": { "select": { "name": "Готово" } }
+    "Статус": {
+      "id": "1f397dfd-9313-46b1-a579-00b3f04e58fd",
+      "type": "select",
+      "select": { "id": "db25c591-c4b3-4441-ab1f-cba54c2e9249", "name": "Готово" }
+    }
   }
 }
 ```
+
+**Важно:** API отклоняет запись (`validation_error: Invalid database page properties`), если у свойства нет полей `id` и `type`. Короткая форма `{ "select": { "name": "…" } }` не проходит.
 
 ### `page.json` — создать карточку в «Таски»
 
@@ -99,15 +105,15 @@ buildin markdown get <page_id>
   "parent": { "database_id": "56b5b380-8a79-4939-a188-1742d8862761" },
   "properties": {
     "Название": {
-      "title": [{ "type": "text", "text": { "content": "Три четыре слова" } }]
-    },
-    "Тип задачи": { "select": { "name": "Задача" } },
-    "Статус": { "select": { "name": "Готово" } },
-    "Source": { "url": null }
-  },
-  "children": []
+      "id": "title",
+      "type": "title",
+      "title": [{ "type": "text", "text": { "content": "Три четыре слова", "link": null } }]
+    }
+  }
 }
 ```
+
+Каждое свойство — с `id` и `type`, иначе `validation_error`. Рабочий порядок: `page create` только с `Название` → `page update` со `Статус` / `Тип задачи` (формат как в `patch.json`) → `block append` с телом.
 
 В `children` — канон: Описание → divider → текст → Что сделано → divider → текст. Не использовать `markdown put` для структуры.
 

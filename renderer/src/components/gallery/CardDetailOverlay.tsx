@@ -1276,7 +1276,7 @@ export default function CardDetailOverlay({
           disabled={busy}
         >
           <span className="btn-ds__value">Добавить метки</span>
-          <span className="btn-ds__icon arc-icon-tag" aria-hidden="true" />
+          <span className="btn-ds__icon arc-icon-tag-plus" aria-hidden="true" />
         </button>
       ) : null}
       {autoTagEnabled && (card?.type === 'image' || card?.type === 'video') ? (

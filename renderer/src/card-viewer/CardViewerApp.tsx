@@ -480,7 +480,7 @@ export default function CardViewerApp() {
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((open) => !open)}
             >
-              <span className="btn-icon-only__glyph arc-icon-menu" aria-hidden="true" />
+              <span className="btn-icon-only__glyph arc-icon-chevron-down" aria-hidden="true" />
             </button>
           </Tooltip>
 
