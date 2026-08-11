@@ -1,44 +1,54 @@
 ---
-name: anytype-task-take
+name: buildin-task-take
 description: >-
-  Берёт карточку с единой доски Таски (AnyType) из колонки «В работе» и запускает
+  Берёт карточку с доски Таски (Buildin) из колонки «В работе» и запускает
   workflow по полю Cursor (Нужна ветка, Нужен план, Хотфикс). Use when the user
   says «возьми задачу», «возьми баг», «взять задачу в работу», «начни задачу из
-  AnyType», or asks to start work from the Таски kanban.
+  Buildin», or asks to start work from the Таски kanban.
 ---
 
-# Взять задачу / баг из AnyType
+# Взять задачу / баг из Buildin
 
 Полуавтоматический старт: пользователь переносит карточку в **«В работе»** на доске **Таски** и говорит «возьми задачу» или «возьми баг». Агент читает карточку и действует по режимам поля **Cursor**.
 
-AnyType Desktop должен быть запущен. MCP: `user-anytype`. Константы — [anytype-ids.md](../anytype-task-finish/references/anytype-ids.md). Полный конфиг — [anytype-config.md](../arc-anytype-shared/references/anytype-config.md).
+CLI: `buildin`. Конфиг: [buildin-config.md](../arc-buildin-shared/references/buildin-config.md).  
+Формат тела: [task-card-format.md](../arc-buildin-shared/references/task-card-format.md).  
+Skill CLI: [buildin-cli](../../../.agents/skills/buildin-cli/SKILL.md).
+
+## 0. Preflight
+
+```bash
+buildin --json doctor
+buildin --json whoami
+```
+
+При ошибке auth — не логиниться самим; предложить `buildin login --browser` или `BUILDIN_TOKEN` и ждать выбора пользователя.
 
 ## 1. Прочитать карточку
 
-1. `API-list-spaces` → space **Artist Reference Collection**.
-2. `API-search-space` с `types: ["task"]` → все карточки доски **Таски**.
-3. Отфильтровать **Статус** = `В работе`.
-4. Дополнительно по фразе пользователя и **Тип задачи** (`tip_zadachi`):
+1. Собрать `query.json` (см. конфиг): `Статус` = `В работе` + `Тип задачи` по фразе:
 
-| Фраза пользователя | Фильтр `tip_zadachi` |
-|--------------------|----------------------|
+| Фраза пользователя | Фильтр `Тип задачи` |
+|--------------------|---------------------|
 | «возьми задачу» / «задачу из В работе» | **Задача** |
 | «возьми баг» / «баг из В работе» | **Баг** |
-| «возьми» без уточнения | обе; если несколько — спросить |
+| «возьми» без уточнения | две query (Задача и Баг); если несколько — спросить |
 
-5. **Одна** подходящая → брать её. **Несколько** → спросить. **Ноль** → сообщить и остановиться.
-6. `API-get-object` (`format: md`) → название, тело, свойства.
-7. Поле **Cursor** (`key: cursor`, `multi_select`) — теги: `Нужна ветка`, `Нужен план`, `Хотфикс`.
-8. **Cursor пустой** → спросить режим, **не начинать** без ответа.
+2. `buildin --json database query <database_id> --body query.json`
+3. **Одна** подходящая → брать. **Несколько** → спросить. **Ноль** → сообщить и остановиться.
+4. `buildin --json page get <page_id>` + `buildin --json block children <page_id>` (и при необходимости `markdown get` для legacy-текста) → название, тело, свойства.
+5. В теле ориентироваться на секции **«Описание»** / **«Что сделано»** (см. task-card-format); для работы нужен смысл из **Описание**.
+6. Поле **Cursor** (`multi_select`): `Нужна ветка`, `Нужен план`, `Хотфикс`.
+7. **Cursor пустой** → спросить режим, **не начинать** без ответа.
 
-**Запомнить на всю сессию** (для **anytype-task-finish**):
+**Запомнить на всю сессию** (для **buildin-task-finish**):
 
-- `anytype_object_id` — id карточки;
-- `anytype_type_key` — всегда `task` (единый тип);
-- `anytype_tip_zadachi` — `Задача` или `Баг`;
-- `anytype_object_name` — название.
+- `buildin_page_id` — id страницы-карточки;
+- `buildin_tip_zadachi` — `Задача` или `Баг`;
+- `buildin_page_name` — название;
+- `buildin_page_url` — `https://buildin.ai/<page_id>`.
 
-Кратко пересказать: название, Тип задачи (Задача / Баг), статус, Cursor, суть описания.
+Кратко пересказать: название, Тип задачи, статус, Cursor, суть **Описание** (если «Что сделано» уже есть — упомянуть).
 
 ## 2. Приоритеты режимов
 
@@ -80,8 +90,8 @@ git checkout -b <branch-name>
 
 - `SwitchMode` → **agent** (если был Plan).
 - Реализация; UI — **arc-ui-dev**.
-- Для багов дополнительно: шаги воспроизведения, обход (см. **arc-anytype-bugs**).
-- Закрытие: **git-task-finish** → **anytype-task-finish**.
+- Для багов дополнительно: шаги воспроизведения, обход (см. **arc-buildin-bugs**).
+- Закрытие: **git-task-finish** → **buildin-task-finish**.
 
 ## 7. Ограничения
 
@@ -91,8 +101,8 @@ git checkout -b <branch-name>
 
 ## Примеры
 
-**Задача:** «Возьми задачу» → `tip_zadachi` Задача + «В работе» → Cursor → ветка/план/код.
+**Задача:** «Возьми задачу» → Тип задачи Задача + «В работе» → Cursor → ветка/план/код.
 
-**Баг:** «Возьми баг» → `tip_zadachi` Баг + «В работе» → тот же Cursor-workflow.
+**Баг:** «Возьми баг» → Тип задачи Баг + «В работе» → тот же Cursor-workflow.
 
 **Несколько в работе:** спросить, какую карточку брать.
