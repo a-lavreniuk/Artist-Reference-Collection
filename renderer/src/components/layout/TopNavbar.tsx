@@ -8,6 +8,7 @@ import NavbarMenu from './NavbarMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
 import NavbarSortMenu from './NavbarSortMenu';
+import NavbarTrashActions from './NavbarTrashActions';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { beginManualSectionNavigation } from '../../search/sectionNavigation';
 import { parseDetailCardId, stripOpenCardFromParams } from '../../search/openCardUrl';
@@ -16,6 +17,7 @@ import {
   applyNavbarStackCssVars,
   clearNavbarStackCssVars,
   MAIN_NAV_TABS,
+  resolveActiveMainTab,
   resolveMainTab,
   resolveNavbarVariant
 } from './navbarLayout';
@@ -37,6 +39,10 @@ export default function TopNavbar() {
     [location.pathname, location.search]
   );
   const activeMainTab = useMemo(() => resolveMainTab(location.pathname), [location.pathname]);
+  const highlightedTab = useMemo(
+    () => resolveActiveMainTab(location.pathname, location.search),
+    [location.pathname, location.search]
+  );
   const showSortAndFilters = variant === 'full';
 
   useEffect(() => {
@@ -87,9 +93,9 @@ export default function TopNavbar() {
       ? stripOpenCardFromParams(searchParams)
       : new URLSearchParams(searchParams);
 
-    const leavingGallery = activeMainTab === 'gallery' && !path.startsWith('/gallery');
     let search = '';
-    if (leavingGallery && parseLibraryScope(searchParams) !== 'all') {
+    // Клик по вкладке всегда выводит из корзины, в том числе при возврате в библиотеку.
+    if (activeMainTab === 'gallery' && parseLibraryScope(searchParams) !== 'all') {
       const nextParams = setLibraryScopeInParams(baseParams, 'all');
       const qs = nextParams.toString();
       search = qs ? `?${qs}` : '';
@@ -111,12 +117,12 @@ export default function TopNavbar() {
           <div className="arc-navbar-island arc-navbar-island--nav">
             <NavbarLibrarySwitcher
               disabled={maintenanceLocked}
-              isGalleryActive={activeMainTab === 'gallery'}
+              isGalleryActive={highlightedTab === 'gallery'}
               onPrimaryClick={() => handleMainTabClick('/gallery')}
             />
             <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация" data-interface-tour-anchor="main-tabs">
               {MAIN_NAV_TABS.filter((tab) => tab.key !== 'gallery').map((tab) => {
-                const isActive = tab.key === activeMainTab;
+                const isActive = tab.key === highlightedTab;
                 return (
                   <button
                     key={tab.key}
@@ -151,6 +157,7 @@ export default function TopNavbar() {
                 <NavbarGalleryLayoutMenu disabled={maintenanceLocked} />
               </div>
             ) : null}
+            <NavbarTrashActions disabled={maintenanceLocked} />
             <button
               type="button"
               className="btn btn-brand btn-ds btn-m"

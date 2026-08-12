@@ -47,7 +47,6 @@ import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedE
 import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 
 import { EmptyState } from '../components/empty-state';
-import GalleryTrashToolbar from '../components/gallery/GalleryTrashToolbar';
 import { useImportContext } from '../components/import/ImportContext';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
@@ -340,8 +339,6 @@ export default function GalleryPage() {
   return (
 
     <div className="arc-gallery-page" data-interface-tour-anchor="gallery-page">
-      <GalleryTrashToolbar />
-
       {booting && !isRemoteSearchFeed && !shuffleReloading ? (
 
         <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">

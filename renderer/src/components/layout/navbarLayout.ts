@@ -1,3 +1,5 @@
+import { ARC_LIBRARY_SCOPE_PARAM } from '../../search/libraryScopeUrl';
+
 export type NavbarVariant = 'full' | 'compact';
 
 export type MainTabKey = 'gallery' | 'collections' | 'moodboard' | 'board';
@@ -14,6 +16,22 @@ export function resolveMainTab(pathname: string): MainTabKey {
   if (pathname.startsWith('/moodboard')) return 'moodboard';
   if (pathname.startsWith('/board')) return 'board';
   return 'gallery';
+}
+
+/**
+ * Подсветка кнопок навбара: разделы вне навбара (настройки, история, метки, дубликаты,
+ * UI-Kit) и корзина не выделяют ни одну кнопку. Отличается от `resolveMainTab`, который
+ * отвечает на вопрос «к какой вкладке относится контекст» и всегда даёт значение.
+ */
+export function resolveActiveMainTab(pathname: string, search = ''): MainTabKey | null {
+  if (pathname.startsWith('/collections')) return 'collections';
+  if (pathname.startsWith('/moodboard')) return 'moodboard';
+  if (pathname.startsWith('/board')) return 'board';
+  if (pathname === '/gallery' || pathname === '/' || pathname === '') {
+    const scope = new URLSearchParams(search).get(ARC_LIBRARY_SCOPE_PARAM);
+    return scope === 'trash' ? null : 'gallery';
+  }
+  return null;
 }
 
 /** Полный Search Container: библиотека, коллекция, список карточек мудборда */

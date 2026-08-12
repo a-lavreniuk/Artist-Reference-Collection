@@ -18,9 +18,9 @@ export function useMainTabNavigation() {
         ? stripOpenCardFromParams(searchParams)
         : new URLSearchParams(searchParams);
 
-      const leavingGallery = activeMainTab === 'gallery' && !path.startsWith('/gallery');
       let search = '';
-      if (leavingGallery && parseLibraryScope(searchParams) !== 'all') {
+      // Переход по вкладке всегда выводит из корзины, в том числе при возврате в библиотеку.
+      if (activeMainTab === 'gallery' && parseLibraryScope(searchParams) !== 'all') {
         const nextParams = setLibraryScopeInParams(baseParams, 'all');
         const qs = nextParams.toString();
         search = qs ? `?${qs}` : '';

@@ -4,7 +4,7 @@ import { useNavigateToAppSection } from '../../search/openCardUrl';
 import { openBugReportForm } from '../../services/bugReportService';
 import { useAppPreferences } from '../../hooks/useAppPreferences';
 import type { UiThemePreference } from '../../services/appPreferences';
-import { useGlobalTrashCardCount, useNavigateToTrashGallery } from '../gallery/GalleryTrashToolbar';
+import { useGlobalTrashCardCount, useNavigateToTrashGallery } from '../gallery/useTrashScope';
 
 export default function NavbarMenu() {
   const navigateToSection = useNavigateToAppSection();
