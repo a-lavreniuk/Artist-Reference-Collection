@@ -2,7 +2,7 @@
 
 import type { GalleryAdvancedFilters, GallerySortState } from './galleryFilters';
 
-export const STORAGE_SCHEMA_VERSION = 10;
+export const STORAGE_SCHEMA_VERSION = 11;
 
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';
@@ -56,6 +56,8 @@ export type CardJsonV1 = {
   description?: string;
   name?: string;
   linkUrl?: string;
+  /** Оценка карточки: целое 0–5, 0 = без оценки. */
+  rating?: number;
   tagIds: string[];
   collectionIds: string[];
   phash?: ImageDupFingerprint;
@@ -130,6 +132,7 @@ export type CardIndexRow = {
   name?: string;
   linkUrl?: string;
   durationMs?: number;
+  rating?: number;
 };
 
 export type ArcSystemV1 = {

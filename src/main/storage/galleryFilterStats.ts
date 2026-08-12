@@ -31,6 +31,7 @@ export type GalleryFilterStats = {
   fileWeight: Record<string, number>;
   resolution: Record<string, number>;
   duration: Record<string, number>;
+  rating: Record<string, number>;
 };
 
 function baseContext(
@@ -112,6 +113,18 @@ function countResolutionSegment(
     [seg.minPx, seg.maxPx],
     boundaries
   );
+}
+
+function countRatings(
+  db: Database.Database,
+  ctx: GalleryFilterQueryContext,
+  boundaries: GalleryFilterBoundaries
+): Record<string, number> {
+  const rating: Record<string, number> = {};
+  for (const value of [0, 1, 2, 3, 4, 5]) {
+    rating[String(value)] = countWithExtra(db, ctx, ['COALESCE(c.rating, 0) = ?'], [value], boundaries);
+  }
+  return rating;
 }
 
 function countDurationSegment(
@@ -241,6 +254,8 @@ export function getGalleryFilterStats(
     duration[seg.key] = countDurationSegment(db, ctx, boundaries, seg.key);
   }
 
+  const rating = countRatings(db, ctx, boundaries);
+
   return {
     fileWeightMeta: boundaries.fileWeight,
     durationMeta: boundaries.duration,
@@ -254,7 +269,8 @@ export function getGalleryFilterStats(
     dateAdded,
     fileWeight,
     resolution,
-    duration
+    duration,
+    rating
   };
 }
 
@@ -371,6 +387,10 @@ export async function getGalleryFilterStatsAsync(
   for (const seg of boundaries.duration.segments) {
     duration[seg.key] = countDurationSegment(db, ctx, boundaries, seg.key);
   }
+
+  await cooperativeYield(shouldAbort);
+  const rating = countRatings(db, ctx, boundaries);
+
   return {
     fileWeightMeta: boundaries.fileWeight,
     durationMeta: boundaries.duration,
@@ -384,7 +404,8 @@ export async function getGalleryFilterStatsAsync(
     dateAdded,
     fileWeight,
     resolution,
-    duration
+    duration,
+    rating
   };
 }
 

@@ -8,7 +8,7 @@ const CARD_OVERLAY_ENTER_DURATION_S = 0.3;
 const CARD_OVERLAY_INITIAL_DELAY_S = 0.15;
 const CARD_OVERLAY_STAGGER_S = 0.15;
 
-/** Video timeline first; then badge, time, actions (DOM order within each group). */
+/** Video timeline first; then badges (rating, format), time, actions (DOM order within each group). */
 const OVERLAY_STAGGER_ORDER = [
   '.arc-gallery-card-overlay-timeline',
   '.arc-gallery-card-overlay-badge',

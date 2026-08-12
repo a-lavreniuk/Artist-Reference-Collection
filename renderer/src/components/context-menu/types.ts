@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export type ContextMenuSlot = 'icon' | 'label' | 'counter' | 'shortcut';
 
 export const DEFAULT_CONTEXT_MENU_SLOT_ORDER: ContextMenuSlot[] = ['label', 'icon'];
@@ -7,6 +9,8 @@ export type ContextMenuRow =
       type: 'item';
       key: string;
       label: string;
+      /** Визуальная замена текста строки (например, звёзды оценки); label остаётся для скринридера. */
+      labelNode?: ReactNode;
       iconClass?: string;
       shortcut?: string;
       counter?: string | number;

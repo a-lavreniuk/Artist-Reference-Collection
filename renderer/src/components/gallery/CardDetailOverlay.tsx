@@ -19,6 +19,8 @@ import ToastAlert, { type ToastAlertVariant } from '../alert/ToastAlert';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
+import CardRatingStars from './CardRatingStars';
+import { useCardRatingShortcuts } from './useCardRatingShortcuts';
 import CardDetailImageViewport from './CardDetailImageViewport';
 import CardInfoModal from './CardInfoModal';
 import CardDetailVideoPlayer from './CardDetailVideoPlayer';
@@ -30,6 +32,7 @@ import CardDetailTagsModal from './CardDetailTagsModal';
 import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import CardDetailCollectionStrip from './CardDetailCollectionStrip';
 import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodboardModal';
+import { clampCardRating } from '@arc-main-shared/cardRating';
 import type { CardRecord, CategoryRecord, TagRecord } from '../../services/db';
 import {
   getMoodboardCardIds,
@@ -178,6 +181,7 @@ export default function CardDetailOverlay({
   const [draftName, setDraftName] = useState('');
   const [draftLink, setDraftLink] = useState('');
   const [description, setDescription] = useState('');
+  const [rating, setRating] = useState(0);
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
   const [settingsMinWidth, setSettingsMinWidth] = useState(CARD_DETAIL_SETTINGS_WIDTH_MIN);
@@ -238,10 +242,12 @@ export default function CardDetailOverlay({
       setDraftName(c.name ?? draft.name ?? '');
       setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
       setDescription(c.description ?? '');
+      setRating(clampCardRating(c.rating));
     } else {
       setDraftName('');
       setDraftLink('');
       setDescription('');
+      setRating(0);
     }
     setCard(c);
     return c;
@@ -589,6 +595,18 @@ export default function CardDetailOverlay({
     [cardId, reloadCard]
   );
 
+  const applyRating = useCallback(
+    (next: number) => {
+      const value = clampCardRating(next);
+      setRating(value);
+      void updateCardPayload(cardId, { rating: value }).then(() => {
+        // Пока шла запись, карточку могли переключить — не подменять открытую деталку.
+        setCard((prev) => (prev && prev.id === cardId ? { ...prev, rating: value || undefined } : prev));
+      });
+    },
+    [cardId]
+  );
+
   const clampSettingsWidth = useCallback(
     (px: number) => clampCardDetailSettingsWidth(px, settingsMinWidth),
     [settingsMinWidth]
@@ -787,6 +805,22 @@ export default function CardDetailOverlay({
   useCardDetailVideoShortcuts({
     enabled: card?.type === 'video',
     playerRef: videoPlayerRef
+  });
+
+  // Клавиши 0–5 меняют данные молча — при открытом модальном слое их глушим.
+  const detailLayerOpen =
+    infoOpen ||
+    tagsModalOpen ||
+    collectionsModalOpen ||
+    copySettingsMenuOpen ||
+    confirmDelete ||
+    confirmPermanentDelete ||
+    confirmOverwriteDescription ||
+    removeMoodboardConfirm !== null;
+
+  useCardRatingShortcuts({
+    enabled: Boolean(card) && !inTrash && !detailLayerOpen,
+    onRate: applyRating
   });
 
   useEffect(() => {
@@ -1599,6 +1633,7 @@ export default function CardDetailOverlay({
                   data-input-size="m"
                   data-btn-size="m"
                 >
+                  <CardRatingStars value={rating} onChange={applyRating} disabled={!card || inTrash} />
                   {palette.length > 0 ? (
                     <div className="arc-card-detail-palette">
                       {palette.map((swatch, index) => (

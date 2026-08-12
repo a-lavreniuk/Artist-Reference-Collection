@@ -28,7 +28,7 @@ export const libraryScopeSchema = z
 export const gallerySortSchema = z
   .object({
     field: z
-      .enum(['addedAt', 'fileType', 'fileWeight', 'resolution', 'duration', 'shuffle'])
+      .enum(['addedAt', 'fileType', 'fileWeight', 'resolution', 'duration', 'rating', 'shuffle'])
       .describe('Поле сортировки'),
     direction: z.enum(['asc', 'desc']).describe('Направление сортировки'),
     shuffleSeed: z.number().int().optional().describe('Сид для сортировки «перемешать»')
@@ -85,7 +85,11 @@ export const galleryAdvancedFiltersSchema = z
       .describe('Фильтр по дате добавления'),
     fileWeight: z.array(z.record(z.string(), z.unknown())).optional(),
     resolution: z.array(z.record(z.string(), z.unknown())).optional(),
-    duration: z.array(z.record(z.string(), z.unknown())).optional()
+    duration: z.array(z.record(z.string(), z.unknown())).optional(),
+    rating: z
+      .array(z.object({ value: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]) }))
+      .optional()
+      .describe('Фильтр по оценке карточки: 0 — без оценки')
   })
   .optional()
   .describe('Расширенные фильтры галереи (как в navbar)');
@@ -116,6 +120,7 @@ export function mergeGalleryAdvancedFilters(
     dateAdded: (input.dateAdded ?? []) as GalleryAdvancedFilters['dateAdded'],
     fileWeight: (input.fileWeight ?? []) as GalleryAdvancedFilters['fileWeight'],
     resolution: (input.resolution ?? []) as GalleryAdvancedFilters['resolution'],
-    duration: (input.duration ?? []) as GalleryAdvancedFilters['duration']
+    duration: (input.duration ?? []) as GalleryAdvancedFilters['duration'],
+    rating: (input.rating ?? []) as GalleryAdvancedFilters['rating']
   };
 }

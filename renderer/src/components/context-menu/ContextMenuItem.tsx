@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { Loader } from '../loader';
 import { DEFAULT_CONTEXT_MENU_SLOT_ORDER, type ContextMenuSlot } from './types';
 
 export type ContextMenuItemProps = {
   label: string;
+  /** Визуальная замена текста строки; label остаётся для скринридера. */
+  labelNode?: ReactNode;
   iconClass?: string;
   shortcut?: string;
   counter?: string | number;
@@ -31,7 +34,7 @@ function renderSlot(slot: ContextMenuSlot, props: ContextMenuItemProps) {
     case 'label':
       return (
         <span className="context-menu__item-label-cluster" key="label">
-          <span className="context-menu__item-label">{props.label}</span>
+          <span className="context-menu__item-label">{props.labelNode ?? props.label}</span>
           {props.selected ? (
             <span
               className="context-menu__item-check tab-icon arc-icon-check"
@@ -60,6 +63,7 @@ function renderSlot(slot: ContextMenuSlot, props: ContextMenuItemProps) {
 
 export default function ContextMenuItem({
   label,
+  labelNode,
   iconClass,
   shortcut,
   counter,
@@ -79,6 +83,7 @@ export default function ContextMenuItem({
       className={`context-menu__item${disabled ? ' is-disabled' : ''}`}
       data-context-menu-key={menuKey}
       disabled={disabled || loading}
+      {...(labelNode ? { 'aria-label': label } : {})}
       onClick={() => {
         if (disabled || loading) return;
         onSelect?.();
@@ -86,7 +91,18 @@ export default function ContextMenuItem({
     >
       <span className="context-menu__item-inner">
         {order.map((slot) =>
-          renderSlot(slot, { label, iconClass, shortcut, counter, slotOrder, selected, disabled, loading, onSelect })
+          renderSlot(slot, {
+            label,
+            labelNode,
+            iconClass,
+            shortcut,
+            counter,
+            slotOrder,
+            selected,
+            disabled,
+            loading,
+            onSelect
+          })
         )}
       </span>
     </button>

@@ -233,6 +233,9 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
         case 'duration':
           patchFilters({ duration: [] });
           break;
+        case 'rating':
+          patchFilters({ rating: [] });
+          break;
         default:
           break;
       }

@@ -1,10 +1,22 @@
 import {
+  GALLERY_FILTER_IDS,
   defaultGalleryFilterLayout,
   type GalleryFilterLayoutState,
   type GalleryFilterId
 } from './galleryFilterTypes';
 
 const STORAGE_KEY = 'arc.galleryFilterLayout.v1';
+
+/** Сохранённая раскладка старше нового фильтра — добиваем недостающие id, иначе чип не появится. */
+function withKnownFilterIds(layout: GalleryFilterLayoutState): GalleryFilterLayoutState {
+  const order = [...layout.order];
+  const visible = { ...layout.visible };
+  for (const id of GALLERY_FILTER_IDS) {
+    if (!order.includes(id)) order.push(id);
+    if (!(id in visible)) visible[id] = true;
+  }
+  return { order, visible };
+}
 
 function readRaw(): GalleryFilterLayoutState | null {
   try {
@@ -19,7 +31,8 @@ function readRaw(): GalleryFilterLayoutState | null {
 }
 
 export function readGalleryFilterLayout(): GalleryFilterLayoutState {
-  return readRaw() ?? defaultGalleryFilterLayout();
+  const stored = readRaw();
+  return stored ? withKnownFilterIds(stored) : defaultGalleryFilterLayout();
 }
 
 export function writeGalleryFilterLayout(layout: GalleryFilterLayoutState): void {

@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import type { GridSize } from '../../layout/gridSizePreference';
 import { readGridSize } from '../../layout/gridSizePreference';
 import type { CardRecord } from '../../services/db';
+import { clampCardRating } from '@arc-main-shared/cardRating';
 import { useCardOverlayStagger } from '../../motion';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
@@ -66,6 +67,7 @@ function GalleryCardTile({
   const stackRef = useRef<HTMLSpanElement>(null);
   const overlayInnerRef = useRef<HTMLSpanElement>(null);
   const overlayControlsRef = useRef<HTMLSpanElement>(null);
+  const overlayRatingRef = useRef<HTMLSpanElement>(null);
   const overlayBadgeRef = useRef<HTMLSpanElement>(null);
   const overlayTimeRef = useRef<HTMLSpanElement>(null);
   const overlayRightRef = useRef<HTMLSpanElement>(null);
@@ -105,10 +107,12 @@ function GalleryCardTile({
     : '';
   const showMoodboardAction = Boolean(moodboardEnabled && onToggleMoodboard);
   const showSimilarAction = Boolean(onFindSimilar) && !isVideo;
+  const cardRating = clampCardRating(card.rating);
   const hideOverlayTime = useGalleryCardOverlayTimeFit({
     enabled: isVideo && !overlaySuppressed,
     controlsRef: overlayControlsRef,
     badgeRef: overlayBadgeRef,
+    ratingRef: overlayRatingRef,
     timeRef: overlayTimeRef,
     rightRef: overlayRightRef,
     layoutKey: [
@@ -117,6 +121,7 @@ function GalleryCardTile({
       videoTimeLabel.length,
       showMoodboardAction ? '1' : '0',
       showSimilarAction ? '1' : '0',
+      cardRating,
       card.id
     ].join('|')
   });
@@ -140,7 +145,15 @@ function GalleryCardTile({
     if (rootRef.current) {
       void hydrateArcNavbarIcons(rootRef.current);
     }
-  }, [card.id, inMoodboard, hoveredBookmarkCardId, thumbSrc, overlayActive, formatLabel]);
+  }, [
+    card.id,
+    inMoodboard,
+    hoveredBookmarkCardId,
+    thumbSrc,
+    overlayActive,
+    formatLabel,
+    cardRating
+  ]);
 
   return (
     <div className={`arc-gallery-card-shell${isSelected ? ' is-selected' : ''}`}>
@@ -238,6 +251,17 @@ function GalleryCardTile({
             >
               <span ref={overlayControlsRef} className="arc-gallery-card-overlay-controls">
                 <span className="arc-gallery-card-overlay-controls__left">
+                  {cardRating > 0 ? (
+                    <span
+                      ref={overlayRatingRef}
+                      className="btn btn-primary btn-ds arc-gallery-card-overlay-badge"
+                      role="img"
+                      aria-label={`Оценка: ${cardRating} из 5`}
+                    >
+                      <span className="btn-ds__icon arc-icon-star-stroke" aria-hidden="true" />
+                      <span className="btn-ds__value text-s">{cardRating}</span>
+                    </span>
+                  ) : null}
                   <span
                     ref={overlayBadgeRef}
                     className={`btn btn-primary btn-ds arc-gallery-card-overlay-badge${formatLabel ? '' : ' arc-gallery-card-overlay-badge--icon-only'}`}
@@ -333,6 +357,7 @@ function galleryCardTilePropsEqual(prev: Props, next: Props): boolean {
     prev.card.type === next.card.type &&
     prev.card.dominantColorHex === next.card.dominantColorHex &&
     prev.card.durationMs === next.card.durationMs &&
+    prev.card.rating === next.card.rating &&
     prev.thumbSrc === next.thumbSrc &&
     prev.gridSize === next.gridSize &&
     prev.inMoodboard === next.inMoodboard &&

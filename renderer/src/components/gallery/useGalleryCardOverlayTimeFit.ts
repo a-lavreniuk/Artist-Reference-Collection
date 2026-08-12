@@ -5,6 +5,8 @@ type Args = {
   enabled: boolean;
   controlsRef: RefObject<HTMLElement | null>;
   badgeRef: RefObject<HTMLElement | null>;
+  /** Метка оценки слева от метки формата (может отсутствовать). */
+  ratingRef?: RefObject<HTMLElement | null>;
   timeRef: RefObject<HTMLElement | null>;
   rightRef: RefObject<HTMLElement | null>;
   /** Пересчёт при смене подписи времени / кнопок / размера сетки. */
@@ -25,6 +27,7 @@ export function useGalleryCardOverlayTimeFit({
   enabled,
   controlsRef,
   badgeRef,
+  ratingRef,
   timeRef,
   rightRef,
   layoutKey
@@ -61,12 +64,15 @@ export function useGalleryCardOverlayTimeFit({
       }
 
       const left = badge.parentElement;
+      const leftGapPx = readGapPx(left, 6);
+      const rating = ratingRef?.current;
+      const ratingBlockPx = rating ? rating.offsetWidth + leftGapPx : 0;
       const nextHidden = shouldHideOverlayTime({
         availablePx: controls.clientWidth,
-        badgeWidthPx: badge.offsetWidth,
+        badgeWidthPx: badge.offsetWidth + ratingBlockPx,
         timeWidthPx,
         rightWidthPx: right.offsetWidth,
-        leftGapPx: readGapPx(left, 6),
+        leftGapPx,
         rowGapPx: readGapPx(controls, 8),
         currentlyHidden: hideTimeRef.current
       });
@@ -88,7 +94,7 @@ export function useGalleryCardOverlayTimeFit({
       ro?.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [enabled, controlsRef, badgeRef, timeRef, rightRef, layoutKey, hideTime]);
+  }, [enabled, controlsRef, badgeRef, ratingRef, timeRef, rightRef, layoutKey, hideTime]);
 
   return hideTime;
 }

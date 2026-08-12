@@ -154,7 +154,8 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
     aiCaption: row.aiCaption,
     name: row.name,
     linkUrl: row.linkUrl,
-    durationMs: row.durationMs
+    durationMs: row.durationMs,
+    rating: row.rating ?? 0
   };
 }
 
@@ -427,7 +428,14 @@ export function registerStorageIpc(
     if (!raw.patch || typeof raw.patch !== 'object') throw new Error('Неверные данные');
     const p = raw as {
       cardId: string;
-      patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string };
+      patch: {
+        tagIds?: string[];
+        collectionIds?: string[];
+        description?: string;
+        name?: string;
+        linkUrl?: string;
+        rating?: number;
+      };
     };
     await updateCardInStorage(root, p.cardId, p.patch);
   });

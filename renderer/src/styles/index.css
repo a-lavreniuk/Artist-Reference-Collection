@@ -3079,6 +3079,33 @@ body.arc-card-detail-open .arc-app-outlet {
   outline-offset: 2px;
 }
 
+/* Figma 2174:2066 — оценка карточки: группа кнопок; залитая звезда — brand. */
+.arc-card-rating {
+  align-self: flex-start;
+}
+
+.arc-card-rating.btn-group-ds .btn.arc-card-rating__star.is-filled:not(:disabled) .btn-icon-only__glyph {
+  color: var(--background-brand-default);
+}
+
+/* Figma 2174:2344 — уровень оценки в меню фильтра: звёзды вместо текста, цвет как у чека строки. */
+/* Текстовый слот строки — inline, иначе иконки встают на базовую линию, а не по центру. */
+.context-menu__item-label:has(.arc-filter-rating-stars) {
+  display: flex;
+  align-items: center;
+}
+
+.arc-filter-rating-stars {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--menu-row-icon-default);
+}
+
+.context-menu__item:hover:not(:disabled):not(.is-disabled) .arc-filter-rating-stars {
+  color: var(--menu-row-icon-hover);
+}
+
 .arc-card-detail-link-row {
   display: flex;
   flex-direction: row;

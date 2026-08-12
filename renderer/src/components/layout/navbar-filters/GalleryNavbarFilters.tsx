@@ -29,6 +29,7 @@ import {
   type DurationFilterValue,
   type FileWeightFilterValue,
   type GalleryFilterId,
+  type RatingFilterValue,
   type ResolutionFilterValue,
   type SavedFilterPreset
 } from '../../gallery/galleryFilterTypes';
@@ -54,6 +55,23 @@ const FILTER_RANGE_DEBOUNCE_MS = 400;
 const FILTER_KEYWORDS_PLACEHOLDER = 'Ключевые слова — через пробел, все обязательны';
 const RESOLUTION_MAX_W = 3840;
 const RESOLUTION_MAX_H = 2160;
+
+const RATING_STAR_POSITIONS = [1, 2, 3, 4, 5] as const;
+
+/** Figma 2174:2344 — уровень оценки в меню фильтра показан звёздами, а не текстом. */
+function ratingStarsNode(value: number) {
+  return (
+    <span className="arc-filter-rating-stars" aria-hidden="true">
+      {RATING_STAR_POSITIONS.map((star) => (
+        <span
+          key={star}
+          className={`tab-icon ${star <= value ? 'arc-icon-star-fill' : 'arc-icon-star-stroke'}`}
+          data-arc-icon-size="m"
+        />
+      ))}
+    </span>
+  );
+}
 
 function isFullRange(min: number, max: number, libraryMax: number): boolean {
   return min <= 0 && max >= libraryMax;
@@ -694,6 +712,34 @@ export default function NavbarFiltersMenu() {
     return rows;
   };
 
+  const buildRatingRows = (): ContextMenuRow[] => {
+    const options: { value: RatingFilterValue['value']; label: string }[] = [
+      { value: 5, label: '5 звёзд' },
+      { value: 4, label: '4 звезды' },
+      { value: 3, label: '3 звезды' },
+      { value: 2, label: '2 звезды' },
+      { value: 1, label: '1 звезда' },
+      { value: 0, label: 'Без оценки' }
+    ];
+    return options.map((option) => ({
+      type: 'item',
+      key: `rating-${option.value}`,
+      label: option.label,
+      labelNode: ratingStarsNode(option.value),
+      counter: stats?.rating[String(option.value)],
+      slotOrder: FILTER_COUNTER_ITEM_SLOTS,
+      selected: filters.rating.some((r) => r.value === option.value),
+      closeOnSelect: false,
+      onSelect: () => {
+        const has = filters.rating.some((r) => r.value === option.value);
+        const next = has
+          ? filters.rating.filter((r) => r.value !== option.value)
+          : [...filters.rating, { value: option.value }];
+        patchFilters({ rating: next as RatingFilterValue[] });
+      }
+    }));
+  };
+
   const visibleChips = layout.order.filter((id) => {
     if (!layout.visible[id]) return false;
     if (id === 'duration' && stats && !stats.hasVideo) return false;
@@ -784,6 +830,9 @@ export default function NavbarFiltersMenu() {
             ariaLabel="Другая Длительность"
           />
         ) : null;
+        break;
+      case 'rating':
+        rows = buildRatingRows();
         break;
       default:
         break;

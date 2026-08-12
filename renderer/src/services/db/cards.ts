@@ -1,5 +1,6 @@
 import type { CardRecord } from '../arcSchema';
 import { createEmptyMoodboardBoard } from '../arcSchema';
+import { clampCardRating } from '@arc-main-shared/cardRating';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import * as storage from '../storageClient';
 import { listAllCardsPaginated } from './listAllCardsPaginated';
@@ -293,7 +294,14 @@ export async function insertImportedCards(newCards: CardRecord[]): Promise<void>
 
 export async function updateCardPayload(
   cardId: string,
-  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
+  patch: {
+    tagIds?: string[];
+    collectionIds?: string[];
+    description?: string;
+    name?: string;
+    linkUrl?: string;
+    rating?: number;
+  }
 ): Promise<void> {
   const b = await resolveBackend();
   if (b === 'file') {
@@ -327,6 +335,11 @@ export async function updateCardPayload(
         const trimmed = patch.linkUrl.trim();
         if (trimmed) updated.linkUrl = trimmed;
         else delete updated.linkUrl;
+      }
+      if (patch.rating !== undefined) {
+        const rating = clampCardRating(patch.rating);
+        if (rating > 0) updated.rating = rating;
+        else delete updated.rating;
       }
       return updated;
     });

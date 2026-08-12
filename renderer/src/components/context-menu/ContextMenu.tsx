@@ -66,6 +66,7 @@ function renderRow(row: ContextMenuRow, onClose: () => void) {
       key={row.key}
       menuKey={row.key}
       label={row.label}
+      labelNode={row.labelNode}
       iconClass={row.iconClass}
       shortcut={row.shortcut}
       counter={row.counter}

@@ -26,6 +26,7 @@ export type {
   ResolutionFilterValue,
   DurationPreset,
   DurationFilterValue,
+  RatingFilterValue,
   GalleryAdvancedFilters,
   GalleryFilterLayoutItem,
   GalleryFilterPresetPayload,
@@ -87,6 +88,7 @@ export type GalleryFilterStats = {
   fileWeight: Record<string, number>;
   resolution: Record<string, number>;
   duration: Record<string, number>;
+  rating: Record<string, number>;
 };
 
 const LEGACY_DURATION_PRESETS: Record<string, DurationPreset> = {
@@ -137,6 +139,7 @@ export function migrateGalleryAdvancedFilters(filters: GalleryAdvancedFilters): 
   return {
     ...filters,
     tagPresence: filters.tagPresence ?? null,
+    rating: Array.isArray(filters.rating) ? filters.rating : [],
     duration: filters.duration.map(migrateDurationFilterValue),
     resolution: filters.resolution
       .map(migrateResolutionFilterValue)
@@ -191,7 +194,8 @@ export const FILTER_CHIP_META: Record<
   dateAdded: { label: 'Дата добавления', iconClass: 'arc-icon-calendar' },
   fileWeight: { label: 'Вес файла', iconClass: 'arc-icon-file' },
   resolution: { label: 'Разрешение', iconClass: 'arc-icon-size' },
-  duration: { label: 'Длительность', iconClass: 'arc-icon-clock' }
+  duration: { label: 'Длительность', iconClass: 'arc-icon-clock' },
+  rating: { label: 'Оценка', iconClass: 'arc-icon-star-stroke' }
 };
 
 export const SORT_FIELD_LABELS: Record<GalleryOrderableSortField, string> = {
@@ -199,7 +203,8 @@ export const SORT_FIELD_LABELS: Record<GalleryOrderableSortField, string> = {
   fileType: 'Тип файлов',
   fileWeight: 'Вес',
   resolution: 'Разрешение',
-  duration: 'Длительность'
+  duration: 'Длительность',
+  rating: 'Оценка'
 };
 
 /** Подписи направления сортировки для каждого критерия (вариант A). */
@@ -236,6 +241,12 @@ export const SORT_DIRECTION_OPTIONS: Record<
     primaryLabel: 'Сначала длинные',
     secondary: 'asc',
     secondaryLabel: 'Сначала короткие'
+  },
+  rating: {
+    primary: 'desc',
+    primaryLabel: 'Сначала высокие',
+    secondary: 'asc',
+    secondaryLabel: 'Сначала низкие'
   }
 };
 
@@ -282,6 +293,8 @@ export function countFilterCategorySelections(
       return filters.resolution.length;
     case 'duration':
       return filters.duration.length;
+    case 'rating':
+      return filters.rating.length;
     default:
       return 0;
   }

@@ -9,7 +9,8 @@ export const GALLERY_FILTER_IDS = [
   'dateAdded',
   'fileWeight',
   'resolution',
-  'duration'
+  'duration',
+  'rating'
 ] as const;
 
 export type GalleryFilterId = (typeof GALLERY_FILTER_IDS)[number];
@@ -19,7 +20,8 @@ export const GALLERY_ORDERABLE_SORT_FIELDS = [
   'fileType',
   'fileWeight',
   'resolution',
-  'duration'
+  'duration',
+  'rating'
 ] as const;
 
 export type GalleryOrderableSortField = (typeof GALLERY_ORDERABLE_SORT_FIELDS)[number];
@@ -60,6 +62,9 @@ export type ResolutionFilterValue =
   | { preset: Exclude<ResolutionPreset, 'custom'> }
   | { preset: 'custom'; minWidth?: number; maxWidth?: number; minHeight?: number; maxHeight?: number };
 
+/** Оценка карточки: конкретные значения, 0 = «Без оценки». */
+export type RatingFilterValue = { value: 0 | 1 | 2 | 3 | 4 | 5 };
+
 export type DurationPreset = 'bucket1' | 'bucket2' | 'bucket3' | 'bucket4' | 'custom';
 export type DurationFilterValue =
   | { preset: Exclude<DurationPreset, 'custom'> }
@@ -75,6 +80,7 @@ export type GalleryAdvancedFilters = {
   fileWeight: FileWeightFilterValue[];
   resolution: ResolutionFilterValue[];
   duration: DurationFilterValue[];
+  rating: RatingFilterValue[];
 };
 
 export type GalleryFilterLayoutItem = {
@@ -106,7 +112,8 @@ export function emptyGalleryAdvancedFilters(): GalleryAdvancedFilters {
     dateAdded: [],
     fileWeight: [],
     resolution: [],
-    duration: []
+    duration: [],
+    rating: []
   };
 }
 
@@ -129,6 +136,7 @@ export function countActiveFilterCategories(filters: GalleryAdvancedFilters): nu
   if (filters.fileWeight.length) n++;
   if (filters.resolution.length) n++;
   if (filters.duration.length) n++;
+  if (filters.rating.length) n++;
   return n;
 }
 

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS cards (
   thumb_m_rel TEXT NOT NULL,
   thumb_l_rel TEXT NOT NULL,
   description TEXT,
+  rating INTEGER NOT NULL DEFAULT 0,
   is_deleted INTEGER NOT NULL DEFAULT 0,
   deleted_at TEXT
 );
@@ -141,6 +142,9 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'cards', 'palette_json')) {
     db.exec('ALTER TABLE cards ADD COLUMN palette_json TEXT');
   }
+  if (!tableHasColumn(db, 'cards', 'rating')) {
+    db.exec('ALTER TABLE cards ADD COLUMN rating INTEGER NOT NULL DEFAULT 0');
+  }
   if (!tableHasColumn(db, 'categories', 'description')) {
     db.exec('ALTER TABLE categories ADD COLUMN description TEXT');
   }
@@ -160,6 +164,7 @@ function migrateLibraryDbSchema(db: Database.Database): void {
     rows.forEach((row, index) => upd.run(index, row.id));
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_cards_deleted_added ON cards(is_deleted, added_at DESC)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_cards_rating ON cards(rating)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_collections_sort ON collections(sort_index)');
 
   // Shared catalog: card_tags.tag_id is a soft ref (no FK to local tags).

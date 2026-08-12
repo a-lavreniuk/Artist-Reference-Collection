@@ -43,7 +43,15 @@ function normalizeSort(raw: unknown): GallerySortState {
   if (!isRecord(raw)) return { ...DEFAULT_GALLERY_SORT };
   const field = raw.field;
   const direction = raw.direction;
-  const knownFields = new Set(['addedAt', 'fileType', 'fileWeight', 'resolution', 'duration', 'shuffle']);
+  const knownFields = new Set([
+    'addedAt',
+    'fileType',
+    'fileWeight',
+    'resolution',
+    'duration',
+    'rating',
+    'shuffle'
+  ]);
   if (typeof field !== 'string' || !knownFields.has(field)) return { ...DEFAULT_GALLERY_SORT };
   if (direction !== 'asc' && direction !== 'desc') return { ...DEFAULT_GALLERY_SORT };
   const sort: GallerySortState = {

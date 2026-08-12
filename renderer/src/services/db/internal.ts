@@ -1,4 +1,5 @@
 import { normalizeHex } from '../../utils/colorPicker';
+import { normalizeCardRating } from '@arc-main-shared/cardRating';
 import type { CardRecord, CollectionRecord } from '../arcSchema';
 import type { CategoryRecord, CategoryWeight, TagRecord } from './types';
 
@@ -146,6 +147,7 @@ export function normalizeCardRecord(item: unknown): CardRecord | null {
     typeof r.description === 'string' && r.description.trim() ? String(r.description).trim() : undefined;
   const name = typeof r.name === 'string' && r.name.trim() ? String(r.name).trim() : undefined;
   const linkUrl = typeof r.linkUrl === 'string' && r.linkUrl.trim() ? String(r.linkUrl).trim() : undefined;
+  const rating = normalizeCardRating(r.rating);
   return {
     id,
     type,
@@ -170,6 +172,7 @@ export function normalizeCardRecord(item: unknown): CardRecord | null {
     ...(description ? { description } : {}),
     ...(name ? { name } : {}),
     ...(linkUrl ? { linkUrl } : {}),
+    ...(rating !== undefined ? { rating } : {}),
     ...(fileSize !== undefined ? { fileSize } : {}),
     ...(fileSizeMb !== undefined ? { fileSizeMb } : {})
   };

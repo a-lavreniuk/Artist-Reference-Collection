@@ -9,6 +9,7 @@ import {
   type ResolutionFineBucket
 } from './filterBucketLabels';
 import type { LibraryScope } from './types';
+import { clampCardRating } from '../shared/cardRating';
 import type {
   AspectRatioFilterValue,
   DateAddedPreset,
@@ -44,6 +45,7 @@ export type {
   ResolutionFilterValue,
   DurationPreset,
   DurationFilterValue,
+  RatingFilterValue,
   GalleryAdvancedFilters,
   GalleryFilterLayoutItem,
   GalleryFilterPresetPayload,
@@ -545,6 +547,12 @@ export function buildGalleryFilterWhere(
     if (parts.length) wh.push(`(${parts.join(' OR ')})`);
   }
 
+  if (f.rating.length) {
+    const values = [...new Set(f.rating.map((r) => clampCardRating(r.value)))];
+    wh.push(`COALESCE(${alias}.rating, 0) IN (${values.map(() => '?').join(',')})`);
+    binds.push(...values);
+  }
+
   if (ctx.sort.field === 'duration') {
     wh.push(`${alias}.type = 'video'`);
   }
@@ -563,6 +571,8 @@ export function buildGallerySortSql(sort: GallerySortState, alias = 'c'): string
       return `ORDER BY CASE WHEN COALESCE(${alias}.width,0) >= COALESCE(${alias}.height,0) THEN COALESCE(${alias}.width,0) ELSE COALESCE(${alias}.height,0) END ${dir}, ${alias}.added_at DESC`;
     case 'duration':
       return `ORDER BY COALESCE(${alias}.duration_ms, 0) ${dir}, ${alias}.added_at DESC`;
+    case 'rating':
+      return `ORDER BY COALESCE(${alias}.rating, 0) ${dir}, ${alias}.added_at DESC`;
     case 'shuffle':
       return `ORDER BY ${alias}.added_at DESC`;
     case 'addedAt':

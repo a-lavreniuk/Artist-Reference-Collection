@@ -43,6 +43,12 @@ export type ShortcutId =
   | 'detail.next'
   | 'detail.copySettings'
   | 'detail.pasteSettings'
+  | 'detail.rating0'
+  | 'detail.rating1'
+  | 'detail.rating2'
+  | 'detail.rating3'
+  | 'detail.rating4'
+  | 'detail.rating5'
   | 'video.playPause'
   | 'video.seekBack5'
   | 'video.seekForward5'
@@ -375,6 +381,54 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'detail',
     label: 'Вставить настройки',
     defaultAccelerator: 'CommandOrControl+Shift+V',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.rating0',
+    groupId: 'detail',
+    label: 'Убрать оценку',
+    defaultAccelerator: '0',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.rating1',
+    groupId: 'detail',
+    label: 'Оценка 1',
+    defaultAccelerator: '1',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.rating2',
+    groupId: 'detail',
+    label: 'Оценка 2',
+    defaultAccelerator: '2',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.rating3',
+    groupId: 'detail',
+    label: 'Оценка 3',
+    defaultAccelerator: '3',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.rating4',
+    groupId: 'detail',
+    label: 'Оценка 4',
+    defaultAccelerator: '4',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.rating5',
+    groupId: 'detail',
+    label: 'Оценка 5',
+    defaultAccelerator: '5',
     scope: 'renderer',
     settingsVisible: true
   },

@@ -139,7 +139,14 @@ declare global {
       storageGetCardDisplayPalette: (cardId: string) => Promise<Array<{ hex: string; pct: number }>>;
       storageUpdateCard: (
         cardId: string,
-        patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
+        patch: {
+          tagIds?: string[];
+          collectionIds?: string[];
+          description?: string;
+          name?: string;
+          linkUrl?: string;
+          rating?: number;
+        }
       ) => Promise<void>;
       storageInsertCardsMetadata: (
         cards: Array<{

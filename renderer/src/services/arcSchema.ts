@@ -55,6 +55,8 @@ export type CardRecord = {
   name?: string;
   /** Внешняя ссылка, связанная с карточкой. */
   linkUrl?: string;
+  /** Оценка карточки: целое 1–5; нет поля = без оценки. */
+  rating?: number;
   fileSize?: number;
   fileSizeMb?: number;
   /** Расширенные метаданные для окна «Информация о файле». */

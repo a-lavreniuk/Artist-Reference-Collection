@@ -55,6 +55,7 @@ import { clearAiResultsCache } from '../ai/aiResultsCache';
 import { ensureDimensionsBackfill, ensureVideoDurationBackfill } from './galleryFilterBackfill';
 import { ensureThumbGenerationBackfill } from './thumbBackfill';
 import { extractMediaFileMeta, isMediaMetaProbed } from './mediaFileMeta';
+import { clampCardRating, normalizeCardRating } from '../shared/cardRating';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
@@ -134,7 +135,8 @@ function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collection
     aiCaption: readAiCaptionFromDbRow(row),
     name: row.name ? String(row.name) : undefined,
     linkUrl: row.link_url ? String(row.link_url) : undefined,
-    durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined
+    durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined,
+    rating: normalizeCardRating(row.rating)
   };
 }
 
@@ -781,7 +783,14 @@ export function countCardsWithAnyTagIds(libraryRoot: string, tagIds: readonly st
 export async function updateCardInStorage(
   libraryRoot: string,
   cardId: string,
-  patch: { tagIds?: string[]; collectionIds?: string[]; description?: string; name?: string; linkUrl?: string }
+  patch: {
+    tagIds?: string[];
+    collectionIds?: string[];
+    description?: string;
+    name?: string;
+    linkUrl?: string;
+    rating?: number;
+  }
 ): Promise<void> {
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
@@ -810,6 +819,11 @@ export async function updateCardInStorage(
     if (trimmed) cardJson.linkUrl = trimmed;
     else delete cardJson.linkUrl;
   }
+  if (patch.rating !== undefined) {
+    const rating = clampCardRating(patch.rating);
+    if (rating > 0) cardJson.rating = rating;
+    else delete cardJson.rating;
+  }
   cardJson.dateModified = new Date().toISOString();
   await writeCardJson(root, cardJson);
 
@@ -827,6 +841,10 @@ export async function updateCardInStorage(
     sets.push('link_url = ?');
     vals.push(cardJson.linkUrl ?? null);
   }
+  if (patch.rating !== undefined) {
+    sets.push('rating = ?');
+    vals.push(cardJson.rating ?? 0);
+  }
   vals.push(cardId);
   db.prepare(`UPDATE cards SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
 
@@ -834,6 +852,9 @@ export async function updateCardInStorage(
     syncCardRelations(db, cardId, cardJson.tagIds, cardJson.collectionIds);
     recomputeTagUsage(db);
   }
+
+  // Счётчики фильтра «Оценка» кэшируются до смены библиотеки — иначе останутся старыми.
+  if (patch.rating !== undefined) invalidateGalleryFilterStatsCache();
 }
 
 export async function insertCardMetadata(
@@ -1804,8 +1825,8 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
     db.prepare(
       `INSERT INTO cards (
         id, type, added_at, date_modified, format, width, height, file_size, dominant_color, phash_json,
-        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, is_deleted, deleted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, rating, is_deleted, deleted_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardIdNorm,
       cardJson.type,
@@ -1822,6 +1843,7 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
       thumbM,
       thumbL,
       cardJson.description ?? null,
+      clampCardRating(cardJson.rating),
       isDeleted,
       cardJson.deletedAt ?? null
     );
