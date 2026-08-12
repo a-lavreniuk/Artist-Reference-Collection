@@ -135,11 +135,26 @@ function migrateResolutionFilterValue(r: ResolutionFilterValue): ResolutionFilte
   return null;
 }
 
+/** Сохранённые фильтры приходят из localStorage и пресетов — оставляем только уровни 0–5. */
+function migrateRatingFilterValues(values: unknown): RatingFilterValue[] {
+  if (!Array.isArray(values)) return [];
+  const seen = new Set<number>();
+  const result: RatingFilterValue[] = [];
+  for (const entry of values) {
+    const raw = (entry as RatingFilterValue | null)?.value;
+    if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0 || raw > 5) continue;
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    result.push({ value: raw as RatingFilterValue['value'] });
+  }
+  return result;
+}
+
 export function migrateGalleryAdvancedFilters(filters: GalleryAdvancedFilters): GalleryAdvancedFilters {
   return {
     ...filters,
     tagPresence: filters.tagPresence ?? null,
-    rating: Array.isArray(filters.rating) ? filters.rating : [],
+    rating: migrateRatingFilterValues(filters.rating),
     duration: filters.duration.map(migrateDurationFilterValue),
     resolution: filters.resolution
       .map(migrateResolutionFilterValue)
