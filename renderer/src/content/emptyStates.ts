@@ -122,5 +122,14 @@ export const EMPTY_STATE_COPY = {
   statsLowTagsEmpty: {
     title: 'Нет малоиспользуемых меток',
     subtitle: 'Метки с небольшим числом карточек появятся в этом списке'
+  },
+  appCrash: {
+    title: 'Что-то пошло не так',
+    subtitle:
+      'Интерфейс остановился из-за ошибки. Можно перезагрузить окно или отправить сообщение о проблеме.',
+    primaryActionLabel: 'Перезагрузить',
+    primaryActionVariant: 'brand',
+    secondaryActionLabel: 'Сообщить о проблеме',
+    secondaryActionVariant: 'outline'
   }
 } as const satisfies Record<string, EmptyStateCopy>;

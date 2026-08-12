@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import type { EmptyStateCopy } from '../../content/emptyStates';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 
@@ -15,6 +15,9 @@ type Props = EmptyStateCopy & {
   fill?: boolean;
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
+  /** Иконка brand-кнопки (по умолчанию `arc-icon-plus`). */
+  primaryActionIconClass?: string;
+  children?: ReactNode;
 };
 
 function EmptyStateActionButton({ action }: { action: EmptyStateAction }) {
@@ -44,13 +47,20 @@ export default function EmptyState({
   elevation = 'default',
   fill = false,
   onPrimaryAction,
-  onSecondaryAction
+  onSecondaryAction,
+  primaryActionIconClass,
+  children
 }: Props) {
   const actionsRef = useRef<HTMLDivElement>(null);
 
   const primaryAction =
     primaryActionLabel && onPrimaryAction
-      ? { label: primaryActionLabel, variant: primaryActionVariant, onClick: onPrimaryAction }
+      ? {
+          label: primaryActionLabel,
+          variant: primaryActionVariant,
+          iconClass: primaryActionIconClass,
+          onClick: onPrimaryAction
+        }
       : null;
   const secondaryAction =
     secondaryActionLabel && onSecondaryAction
@@ -61,7 +71,7 @@ export default function EmptyState({
     if (actionsRef.current) {
       void hydrateArcNavbarIcons(actionsRef.current);
     }
-  }, [primaryActionLabel, secondaryActionLabel]);
+  }, [primaryActionLabel, secondaryActionLabel, primaryActionIconClass]);
 
   return (
     <div
@@ -78,6 +88,7 @@ export default function EmptyState({
           {secondaryAction ? <EmptyStateActionButton action={secondaryAction} /> : null}
         </div>
       ) : null}
+      {children}
     </div>
   );
 }
