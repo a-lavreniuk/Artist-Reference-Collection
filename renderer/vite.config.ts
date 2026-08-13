@@ -27,6 +27,7 @@ export default defineConfig({
         main: path.resolve(__dirname, 'index.html'),
         screenshotPicker: path.resolve(__dirname, 'screenshot-picker.html'),
         screenshotWindowPicker: path.resolve(__dirname, 'screenshot-window-picker.html'),
+        colorEyedropper: path.resolve(__dirname, 'color-eyedropper.html'),
         loadingScreen: path.resolve(__dirname, 'loading-screen.html'),
         cardViewer: path.resolve(__dirname, 'card-viewer.html')
       }

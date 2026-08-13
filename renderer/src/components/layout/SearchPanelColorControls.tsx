@@ -1,16 +1,21 @@
+import { useLayoutEffect, useRef } from 'react';
 import ModalCategoryColorPicker from './ModalCategoryColorPicker';
 import PantoneNearestMatches from './PantoneNearestMatches';
 import SearchPanelModeHeader from './SearchPanelModeHeader';
 import ValueSlider from '../range-slider/ValueSlider';
+import { Tooltip } from '../tooltip/Tooltip';
 import { COLOR_SEARCH_PRESETS } from '../../search/colorPresets';
 import { SEARCH_MODE_META } from '../../search/navbarSearchMode';
 import { normalizeHex } from '../../utils/colorPicker';
+import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 
 type SearchPanelColorControlsProps = {
   colorHex: string;
   tolerance: number;
   onColorChange: (hex: string) => void;
   onToleranceChange: (value: number) => void;
+  onEyedropper?: () => void;
+  eyedropperBusy?: boolean;
   /** Режим Pantone: под палитрой показываются ближайшие совпадения. */
   pantoneMode?: boolean;
 };
@@ -25,10 +30,17 @@ export default function SearchPanelColorControls({
   tolerance,
   onColorChange,
   onToleranceChange,
+  onEyedropper,
+  eyedropperBusy = false,
   pantoneMode = false
 }: SearchPanelColorControlsProps) {
+  const toolsRef = useRef<HTMLDivElement>(null);
   const safeHex = normalizeHex(colorHex) ?? COLOR_SEARCH_PRESETS[1].hex;
   const activePresetId = COLOR_SEARCH_PRESETS.find((p) => p.hex.toUpperCase() === safeHex.toUpperCase())?.id;
+
+  useLayoutEffect(() => {
+    if (toolsRef.current) void hydrateArcNavbarIcons(toolsRef.current);
+  }, [eyedropperBusy]);
 
   const onToleranceInput = (raw: string) => {
     const digits = raw.replace(/\D/g, '');
@@ -46,7 +58,13 @@ export default function SearchPanelColorControls({
       <div className="arc-search-panel-color-intro">
         <div className="arc-search-panel-color-header">
           <SearchPanelModeHeader mode="color" />
-          <div className="arc-search-panel-color-presets" role="list" aria-label="Быстрые цвета">
+          <div
+            ref={toolsRef}
+            className="arc-search-panel-color-presets arc-ui-kit-scope"
+            data-btn-size="s"
+            role="list"
+            aria-label="Быстрые цвета"
+          >
             {COLOR_SEARCH_PRESETS.map((preset) => {
               const active = preset.id === activePresetId;
               return (
@@ -62,6 +80,32 @@ export default function SearchPanelColorControls({
                 />
               );
             })}
+            {onEyedropper ? (
+              eyedropperBusy ? (
+                <span className="arc-tooltip-anchor-inline" role="listitem">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-s btn-icon-only btn-ds arc-navbar-no-drag"
+                    aria-label="Пипетка"
+                    disabled
+                  >
+                    <span className="btn-icon-only__glyph arc-icon-eyedropper" aria-hidden="true" />
+                  </button>
+                </span>
+              ) : (
+                <Tooltip content="Пипетка" delay={500} position="bottom">
+                  <button
+                    type="button"
+                    role="listitem"
+                    className="btn btn-outline btn-s btn-icon-only btn-ds arc-navbar-no-drag"
+                    aria-label="Пипетка"
+                    onClick={() => onEyedropper()}
+                  >
+                    <span className="btn-icon-only__glyph arc-icon-eyedropper" aria-hidden="true" />
+                  </button>
+                </Tooltip>
+              )
+            ) : null}
           </div>
         </div>
         <p className="text-m arc-search-panel-hint">{SEARCH_MODE_META.color.panelHint}</p>

@@ -507,6 +507,18 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:screenshot-window-picker-confirm', payload) as Promise<{ ok: boolean }>,
   screenshotWindowPickerCancel: () =>
     ipcRenderer.invoke('arc:screenshot-window-picker-cancel') as Promise<{ ok: boolean }>,
+  colorEyedropperStart: () =>
+    ipcRenderer.invoke('arc:color-eyedropper-start') as Promise<
+      { ok: true; hex: string } | { ok: false; cancelled?: boolean; error?: string }
+    >,
+  colorEyedropperGetFrame: () =>
+    ipcRenderer.invoke('arc:color-eyedropper-get-frame') as Promise<
+      { ok: true; dataUrl: string; scaleFactor: number } | { ok: false }
+    >,
+  colorEyedropperConfirm: (hex: string) =>
+    ipcRenderer.invoke('arc:color-eyedropper-confirm', hex) as Promise<{ ok: boolean }>,
+  colorEyedropperCancel: () =>
+    ipcRenderer.invoke('arc:color-eyedropper-cancel') as Promise<{ ok: boolean }>,
   openCardViewer: (payload: {
     cardIds: string[];
     startIndex?: number;

@@ -361,6 +361,14 @@ declare global {
       }>;
       screenshotWindowPickerConfirm?: (payload: { title: string; nativeId?: number }) => Promise<{ ok: boolean }>;
       screenshotWindowPickerCancel?: () => Promise<{ ok: boolean }>;
+      colorEyedropperStart?: () => Promise<
+        { ok: true; hex: string } | { ok: false; cancelled?: boolean; error?: string }
+      >;
+      colorEyedropperGetFrame?: () => Promise<
+        { ok: true; dataUrl: string; scaleFactor: number } | { ok: false }
+      >;
+      colorEyedropperConfirm?: (hex: string) => Promise<{ ok: boolean }>;
+      colorEyedropperCancel?: () => Promise<{ ok: boolean }>;
       openCardViewer?: (payload: {
         cardIds: string[];
         startIndex?: number;

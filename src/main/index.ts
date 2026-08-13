@@ -44,6 +44,7 @@ import { applyStoredFeedbackShortcut, registerFeedbackIpc, unregisterFeedbackSho
 import { registerScreenshotIpc } from './screenshotCapture';
 import { destroyScreenshotOverlay, registerScreenshotPickerIpc } from './screenshotOverlay';
 import { destroyScreenshotWindowPicker, registerScreenshotWindowPickerIpc } from './screenshotWindowPicker';
+import { destroyColorEyedropper, registerColorEyedropperIpc } from './colorEyedropperOverlay';
 import { destroyCardViewerWindows, registerCardViewerIpc } from './cardViewerWindow';
 import {
   bindMainWindow,
@@ -230,6 +231,7 @@ app.whenReady().then(async () => {
   registerScreenshotIpc();
   registerScreenshotPickerIpc();
   registerScreenshotWindowPickerIpc();
+  registerColorEyedropperIpc();
   registerCardViewerIpc();
   registerOnboardingWindowModeIpc();
   registerFeedbackIpc();
@@ -300,6 +302,7 @@ if (!mcpStdioMode) {
     unregisterFeedbackShortcut();
     destroyScreenshotOverlay();
     destroyScreenshotWindowPicker();
+    destroyColorEyedropper();
     destroyCardViewerWindows();
     destroyLoadingSplash();
     shutdownAiWorker();
