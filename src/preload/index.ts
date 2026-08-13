@@ -143,9 +143,10 @@ contextBridge.exposeInMainWorld('arc', {
   colorSearchCards: (params: unknown) => ipcRenderer.invoke('arc:color-search-cards', params),
   aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
   aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),
-  storageGetCard: (cardId: string) => ipcRenderer.invoke('arc:storage-get-card', cardId),
-  storageEnsureCardMediaMeta: (cardId: string) =>
-    ipcRenderer.invoke('arc:storage-ensure-card-media-meta', cardId),
+  storageGetCard: (cardIdOrPayload: string | { cardId: string; libraryId?: string }) =>
+    ipcRenderer.invoke('arc:storage-get-card', cardIdOrPayload),
+  storageEnsureCardMediaMeta: (cardIdOrPayload: string | { cardId: string; libraryId?: string }) =>
+    ipcRenderer.invoke('arc:storage-ensure-card-media-meta', cardIdOrPayload),
   setVideoPreviewFrame: (cardId: string, frameMs: number) =>
     ipcRenderer.invoke('arc:set-video-preview-frame', { cardId, frameMs }),
   saveVideoFrameToCardFolder: (cardId: string, frameMs: number) =>
@@ -162,10 +163,23 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:storage-update-card', { cardId, patch }),
   storageInsertCardsMetadata: (cards: unknown) =>
     ipcRenderer.invoke('arc:storage-insert-cards-metadata', cards),
-  storageSoftDeleteCard: (cardId: string) => ipcRenderer.invoke('arc:storage-soft-delete-card', cardId),
-  storageRestoreCard: (cardId: string) => ipcRenderer.invoke('arc:storage-restore-card', cardId),
-  storagePermanentDeleteCard: (cardId: string, confirmToken: string) =>
-    ipcRenderer.invoke('arc:storage-permanent-delete-card', { cardId, confirmToken }),
+  storageSoftDeleteCard: (cardId: string, libraryId?: string) =>
+    ipcRenderer.invoke(
+      'arc:storage-soft-delete-card',
+      libraryId ? { cardId, libraryId } : cardId
+    ),
+  storageRestoreCard: (
+    payload:
+      | string
+      | {
+          cardId: string;
+          libraryId?: string;
+          destinationLibraryId?: string;
+          sourceLibraryRoot?: string;
+        }
+  ) => ipcRenderer.invoke('arc:storage-restore-card', payload),
+  storagePermanentDeleteCard: (cardId: string, confirmToken: string, libraryId?: string) =>
+    ipcRenderer.invoke('arc:storage-permanent-delete-card', { cardId, confirmToken, libraryId }),
   storageEmptyTrash: (confirmToken: string) =>
     ipcRenderer.invoke('arc:storage-empty-trash', confirmToken) as Promise<number>,
   storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
@@ -251,8 +265,11 @@ contextBridge.exposeInMainWorld('arc', {
   probeIncomingFile: (absolutePath: string) => ipcRenderer.invoke('arc:probe-incoming-file', absolutePath),
   scanDuplicatePairs: (payload?: { thresholdPct?: number; resetSession?: boolean }) =>
     ipcRenderer.invoke('arc:scan-duplicate-pairs', payload ?? {}),
-  runDuplicateScan: (payload?: { thresholdPct?: number; resetSession?: boolean }) =>
-    ipcRenderer.invoke('arc:duplicate-scan-run', payload ?? {}),
+  runDuplicateScan: (payload?: {
+    thresholdPct?: number;
+    resetSession?: boolean;
+    scope?: { mode: 'current' | 'all' | 'ids'; libraryIds?: string[] };
+  }) => ipcRenderer.invoke('arc:duplicate-scan-run', payload ?? {}),
   cancelDuplicateScan: () => ipcRenderer.invoke('arc:duplicate-scan-cancel'),
   onDuplicateScanProgress: (
     cb: (p: { scannedCards: number; totalCards: number; duplicatesFound: number; etaMs: number | null }) => void
@@ -261,14 +278,24 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:duplicate-scan-progress', fn);
     return () => ipcRenderer.removeListener('arc:duplicate-scan-progress', fn);
   },
-  duplicateSessionSkipPair: (idA: string, idB: string) =>
-    ipcRenderer.invoke('arc:duplicate-session-skip-pair', idA, idB),
+  duplicateSessionSkipPair: (
+    idAOrPayload: string | { cardIdA: string; cardIdB: string; libraryIdA?: string; libraryIdB?: string },
+    idB?: string
+  ) => ipcRenderer.invoke('arc:duplicate-session-skip-pair', idAOrPayload, idB),
+  duplicateAddSkippedPair: (payload: {
+    cardIdA: string;
+    cardIdB: string;
+    libraryIdA?: string;
+    libraryIdB?: string;
+  }) => ipcRenderer.invoke('arc:duplicate-add-skipped-pair', payload),
+  duplicateSoftDeleteCard: (payload: { cardId: string; libraryId?: string; confirmToken: string }) =>
+    ipcRenderer.invoke('arc:duplicate-soft-delete-card', payload),
   duplicateResetScanSession: () => ipcRenderer.invoke('arc:duplicate-reset-scan-session'),
   duplicateGetCachedPairs: () => ipcRenderer.invoke('arc:duplicate-get-cached-pairs'),
   replaceCardOriginal: (cardId: string, sourceAbs: string) =>
     ipcRenderer.invoke('arc:replace-card-original', { cardId, sourceAbs }),
-  mergeDuplicateCards: (primaryId: string, secondaryId: string) =>
-    ipcRenderer.invoke('arc:merge-duplicate-cards', { primaryId, secondaryId }),
+  mergeDuplicateCards: (primaryId: string, secondaryId: string, libraryId?: string) =>
+    ipcRenderer.invoke('arc:merge-duplicate-cards', { primaryId, secondaryId, libraryId }),
   onMigrationProgress: (cb: (p: unknown) => void) => {
     const fn = (_: unknown, payload: unknown) => cb(payload);
     ipcRenderer.on('arc:migration-progress', fn);
@@ -350,7 +377,7 @@ contextBridge.exposeInMainWorld('arc', {
       { ok: true } | { ok: false; error: string }
     >,
   requestDestructiveConfirm: (payload: {
-    kind: 'empty-trash' | 'permanent-delete-card' | 'delete-library-disk';
+    kind: 'empty-trash' | 'permanent-delete-card' | 'delete-library-disk' | 'duplicate-delete-card';
     binding?: string;
     uses?: number;
   }) =>

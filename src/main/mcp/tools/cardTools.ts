@@ -11,6 +11,8 @@ import {
   softDeleteCardFromStorage,
   updateCardInStorage
 } from '../../storage/libraryStorage';
+import { listLibrariesFromConfig } from '../../multiLibrary';
+import { emptySharedTrash } from '../../storage/sharedTrash';
 import { notifyRendererExtensionImport } from '../../importApi/notifyRenderer';
 import { refreshLibrarySessionSnapshotFromDisk } from '../../librarySessionSnapshot';
 import { getCardDisplayPalette, resolveCardMediaUrl } from '../cardMediaService';
@@ -246,7 +248,11 @@ export function registerCardTools(ctx: McpRegisterContext): void {
       { description: desc('arc_empty_trash'), inputSchema: {} },
       async () =>
         runMcpWrite(deps, async (root) => {
-          const count = await emptyTrashFromStorage(root);
+          const listed = listLibrariesFromConfig();
+          const count =
+            listed.length > 0
+              ? await emptySharedTrash(listed.map((lib) => ({ id: lib.id, name: lib.name, path: lib.path })))
+              : await emptyTrashFromStorage(root);
           void refreshLibrarySessionSnapshotFromDisk();
           return { deletedCount: count };
         })

@@ -28,6 +28,24 @@ export type ScannedDuplicatePair = {
   cardIdB: string;
   similarity: number;
   matchKind: 'exact' | 'similar';
+  libraryIdA?: string;
+  libraryIdB?: string;
+  libraryNameA?: string;
+  libraryNameB?: string;
+  libraryRootA?: string;
+  libraryRootB?: string;
+  previewAbsA?: string | null;
+  previewAbsB?: string | null;
   cardA: CardRecord | null;
   cardB: CardRecord | null;
 };
+
+export function isCrossLibraryPair(pair: Pick<ScannedDuplicatePair, 'libraryIdA' | 'libraryIdB'>): boolean {
+  return Boolean(pair.libraryIdA && pair.libraryIdB && pair.libraryIdA !== pair.libraryIdB);
+}
+
+export function scannedPairKey(pair: Pick<ScannedDuplicatePair, 'cardIdA' | 'cardIdB' | 'libraryIdA' | 'libraryIdB'>): string {
+  const a = `${pair.libraryIdA ?? ''}:${pair.cardIdA}`;
+  const b = `${pair.libraryIdB ?? ''}:${pair.cardIdB}`;
+  return a < b ? `${a}||${b}` : `${b}||${a}`;
+}

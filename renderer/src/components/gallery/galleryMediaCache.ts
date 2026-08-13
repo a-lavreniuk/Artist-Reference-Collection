@@ -59,8 +59,9 @@ let cachedMediaServerOrigin: string | undefined;
 
 const FALLBACK_MEDIA_ORIGIN = 'arc-media://localhost';
 
-function mediaCacheKey(rel: string, sect?: MediaSectionTab): string {
-  return sect ? `${sect}\0${rel}` : rel;
+function mediaCacheKey(rel: string, sect?: MediaSectionTab, libraryId?: string): string {
+  const lib = libraryId ? `lib:${libraryId}\0` : '';
+  return sect ? `${lib}${sect}\0${rel}` : `${lib}${rel}`;
 }
 
 function isUsableMediaOrigin(origin: string | null | undefined): origin is string {
@@ -108,18 +109,19 @@ export function refreshMediaServerOrigin(): string {
 export function buildLibraryMediaUrl(
   rel: string,
   sect?: MediaSectionTab,
-  cacheVersion?: string
+  cacheVersion?: string,
+  libraryId?: string
 ): string | null {
   if (!rel || rel === 'legacy') return null;
   const relStable = rel.replace(/\\/g, '/');
   if (!LIBRARY_CARD_MEDIA_REL.test(relStable)) return null;
   const origin = mediaServerOrigin();
-  const base = `${origin}/?rel=${encodeURIComponent(relStable)}`;
-  const withSect = sect ? `${base}&sect=${sect}` : base;
-  if (cacheVersion?.trim()) {
-    return `${withSect}&v=${encodeURIComponent(cacheVersion.trim())}`;
-  }
-  return withSect;
+  const params = new URLSearchParams();
+  params.set('rel', relStable);
+  if (libraryId) params.set('lib', libraryId);
+  if (sect) params.set('sect', sect);
+  if (cacheVersion?.trim()) params.set('v', cacheVersion.trim());
+  return `${origin}/?${params.toString()}`;
 }
 
 /** Абсолютный путь вне библиотеки — через staging-токен (?stg=), выданный main. */
@@ -143,17 +145,28 @@ function setMediaUrlCache(key: string, href: string): void {
   }
 }
 
-function rememberMediaUrl(rel: string, href: string, sect?: MediaSectionTab): void {
+function rememberMediaUrl(rel: string, href: string, sect?: MediaSectionTab, libraryId?: string): void {
   // Не кэшируем битые URL с fallback-origin — иначе они залипнут после появления реального origin.
   if (href.includes(FALLBACK_MEDIA_ORIGIN)) return;
-  const key = mediaCacheKey(rel, sect);
+  const key = mediaCacheKey(rel, sect, libraryId);
   setMediaUrlCache(key, href);
   const stable = rel.replace(/\\/g, '/');
-  if (stable !== rel) setMediaUrlCache(mediaCacheKey(stable, sect), href);
-  if (!sect) {
+  if (stable !== rel) setMediaUrlCache(mediaCacheKey(stable, sect, libraryId), href);
+  if (!sect && !libraryId) {
     setMediaUrlCache(rel, href);
     if (stable !== rel) setMediaUrlCache(stable, href);
   }
+}
+
+function peekCachedMediaUrl(rel: string, sect?: MediaSectionTab, libraryId?: string): string | null {
+  const stable = rel.replace(/\\/g, '/');
+  if (sect || libraryId) {
+    return (
+      readMediaUrlCache(mediaCacheKey(rel, sect, libraryId)) ??
+      readMediaUrlCache(mediaCacheKey(stable, sect, libraryId))
+    );
+  }
+  return readMediaUrlCache(rel) ?? readMediaUrlCache(stable);
 }
 
 function readMediaUrlCache(key: string): string | null {
@@ -161,16 +174,6 @@ function readMediaUrlCache(key: string): string | null {
   if (!href) return null;
   setMediaUrlCache(key, href);
   return href;
-}
-
-function peekCachedMediaUrl(rel: string, sect?: MediaSectionTab): string | null {
-  const stable = rel.replace(/\\/g, '/');
-  if (sect) {
-    return (
-      readMediaUrlCache(mediaCacheKey(rel, sect)) ?? readMediaUrlCache(mediaCacheKey(stable, sect))
-    );
-  }
-  return readMediaUrlCache(rel) ?? readMediaUrlCache(stable);
 }
 
 export function peekMediaUrl(rel: string): string | null {
@@ -194,18 +197,22 @@ export async function resolveCardDetailPreviewUrls(
 
   if (thumbRel) {
     const bust = card.dateModified;
-    const peeked = peekMediaUrl(thumbRel);
+    const peeked = peekCachedMediaUrl(thumbRel, undefined, card.libraryId) ?? peekMediaUrl(thumbRel);
     if (peeked) onThumb(peeked);
     else {
       const thumbHref =
-        buildLibraryMediaUrl(thumbRel, undefined, bust) ?? (await resolveMediaUrl(thumbRel));
+        buildLibraryMediaUrl(thumbRel, undefined, bust, card.libraryId) ??
+        (await resolveMediaUrl(thumbRel));
       if (thumbHref) onThumb(thumbHref);
     }
   }
 
   if (!originalRel) return null;
-  if (originalRel === thumbRel) return peekMediaUrl(originalRel) ?? resolveMediaUrl(originalRel);
-  return resolveMediaUrl(originalRel);
+  const originalHref = buildLibraryMediaUrl(originalRel, undefined, card.dateModified, card.libraryId);
+  if (originalRel === thumbRel) {
+    return peekCachedMediaUrl(originalRel, undefined, card.libraryId) ?? originalHref ?? resolveMediaUrl(originalRel);
+  }
+  return originalHref ?? resolveMediaUrl(originalRel);
 }
 
 export async function resolveMediaUrl(rel: string): Promise<string | null> {
@@ -236,7 +243,8 @@ export function peekCardsSrcMap(
     const rel = cardThumbRel(card, gridSize);
     if (!rel) continue;
     const href =
-      peekCachedMediaUrl(rel, sect) ?? buildLibraryMediaUrl(rel, sect, card.dateModified);
+      peekCachedMediaUrl(rel, sect, card.libraryId) ??
+      buildLibraryMediaUrl(rel, sect, card.dateModified, card.libraryId);
     if (href) next[card.id] = href;
   }
   return next;
@@ -249,11 +257,13 @@ export async function resolveCardsSrcMap(
 ): Promise<Record<string, string>> {
   const relByCard = new Map<string, string>();
   const bustByCard = new Map<string, string | undefined>();
+  const libByCard = new Map<string, string | undefined>();
   for (const card of cards) {
     const rel = cardThumbRel(card, gridSize);
     if (rel) {
       relByCard.set(card.id, rel);
       bustByCard.set(card.id, card.dateModified);
+      libByCard.set(card.id, card.libraryId);
     }
   }
 
@@ -261,14 +271,15 @@ export async function resolveCardsSrcMap(
   const needIpc: string[] = [];
 
   for (const [cardId, rel] of relByCard) {
-    const cached = peekCachedMediaUrl(rel, sect);
+    const libraryId = libByCard.get(cardId);
+    const cached = peekCachedMediaUrl(rel, sect, libraryId);
     if (cached) {
       next[cardId] = cached;
       continue;
     }
-    const local = buildLibraryMediaUrl(rel, sect, bustByCard.get(cardId));
+    const local = buildLibraryMediaUrl(rel, sect, bustByCard.get(cardId), libraryId);
     if (local) {
-      rememberMediaUrl(rel, local, sect);
+      rememberMediaUrl(rel, local, sect, libraryId);
       next[cardId] = local;
     } else {
       needIpc.push(rel);

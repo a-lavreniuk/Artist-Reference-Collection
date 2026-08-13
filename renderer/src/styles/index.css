@@ -3008,6 +3008,17 @@ body.arc-card-detail-open .arc-app-outlet {
   box-sizing: border-box;
 }
 
+.arc-card-detail-library-name {
+  margin: 0 0 var(--s-3);
+}
+
+.arc-restore-trash-dest-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin-top: var(--s-3);
+}
+
 .arc-card-detail-settings-scroll::-webkit-scrollbar {
   width: 0;
   height: 0;
@@ -6725,6 +6736,14 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   text-align: center;
 }
 
+.arc-duplicates-ready__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+}
+
 .arc-duplicates-ready__notice {
   margin: 0;
   color: var(--brand-400);
@@ -6945,6 +6964,11 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   text-overflow: ellipsis;
 }
 
+.arc-duplicates-row__libs {
+  margin: 0;
+  color: var(--text-elev-secondary);
+}
+
 .arc-duplicates-row__status {
   display: inline-flex;
   align-items: center;
@@ -7096,6 +7120,11 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
 .arc-duplicates-meta-overlay__row {
   display: flex;
   gap: var(--s-3);
+  color: var(--gray-50);
+}
+
+.arc-duplicates-meta-overlay__lib {
+  margin: 0;
   color: var(--gray-50);
 }
 

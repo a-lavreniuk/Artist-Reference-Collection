@@ -11,7 +11,7 @@ export default function ConfirmEmptyTrashModal({ onClose, onConfirm }: Props) {
   return (
     <ConfirmTypeToDeleteModal
       title="Очистить корзину?"
-      message="Все карточки в корзине будут удалены навсегда вместе с файлами. Это действие не обратимо. Пожалуйста, введите «Очистить», чтобы подтвердить очистку."
+      message="Все карточки в корзине всех библиотек контейнера будут удалены навсегда вместе с файлами. Это действие не обратимо. Пожалуйста, введите «Очистить», чтобы подтвердить очистку."
       confirmName={TRASH_CONFIRM_NAME}
       confirmLabel="Очистить"
       busyConfirmLabel="Очистка…"

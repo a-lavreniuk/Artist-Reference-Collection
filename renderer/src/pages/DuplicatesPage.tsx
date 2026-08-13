@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { EmptyState } from '../components/empty-state';
-import DuplicatesReadyState from '../components/duplicates/DuplicatesReadyState';
+import DuplicatesReadyState, { type DuplicatesScanScopeMode } from '../components/duplicates/DuplicatesReadyState';
 import DuplicatesSidebar from '../components/duplicates/DuplicatesSidebar';
 import DuplicatesResultsView from '../components/duplicates/DuplicatesResultsView';
+import ConfirmDuplicateTrashModal from '../components/duplicates/ConfirmDuplicateTrashModal';
 import {
   clampDuplicatesSidebarWidth,
   readDuplicatesSidebarWidth,
@@ -15,19 +15,20 @@ import type {
   DuplicatesCompareMode,
   ScannedDuplicatePair
 } from '../components/duplicates/duplicateCompareTypes';
+import { isCrossLibraryPair, scannedPairKey } from '../components/duplicates/duplicateCompareTypes';
 import {
   ARC_CARDS_CHANGED_EVENT,
-  addSkippedDuplicatePair,
   getDuplicateSimilarityThresholdPct,
-  setDuplicateSimilarityThresholdPct,
-  softDeleteCard
+  setDuplicateSimilarityThresholdPct
 } from '../services/db';
-import { EMPTY_STATE_COPY } from '../content/emptyStates';
+import { useLibraries } from '../hooks/useLibraries';
+import { requestDestructiveConfirm } from '../services/destructiveConfirm';
+import { showAppNotification } from '../services/notificationService';
 
 type Phase = 'ready' | 'scanning' | 'results';
 
 function pairKey(pair: ScannedDuplicatePair): string {
-  return `${pair.cardIdA}:${pair.cardIdB}`;
+  return scannedPairKey(pair);
 }
 
 function smallThumbRel(card: ScannedDuplicatePair['cardA']): string | null {
@@ -35,9 +36,20 @@ function smallThumbRel(card: ScannedDuplicatePair['cardA']): string | null {
   return card.thumbSRelativePath ?? card.thumbRelativePath ?? card.thumbMRelativePath ?? card.originalRelativePath;
 }
 
+function mediaPathForCard(root: string | null | undefined, abs: string | null | undefined, card: ScannedDuplicatePair['cardA']): string | null {
+  if (abs) return abs;
+  if (!card) return null;
+  const rel = cardPreviewRel(card);
+  if (!rel) return null;
+  if (!root) return rel;
+  const trimmedRoot = root.replace(/[\\/]+$/, '');
+  return `${trimmedRoot}/${rel.replace(/\\/g, '/')}`;
+}
+
 export default function DuplicatesPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { libraries } = useLibraries();
   const [phase, setPhase] = useState<Phase>('ready');
   const [threshold, setThreshold] = useState(85);
   const [busy, setBusy] = useState(false);
@@ -56,6 +68,9 @@ export default function DuplicatesPage() {
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   const [urlA, setUrlA] = useState<string | null>(null);
   const [urlB, setUrlB] = useState<string | null>(null);
+  const [scopeMode, setScopeMode] = useState<DuplicatesScanScopeMode>('current');
+  const [selectedLibraryIds, setSelectedLibraryIds] = useState<string[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<{ side: 'a' | 'b' } | null>(null);
 
   const alertHandledRef = useRef(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => readDuplicatesSidebarWidth());
@@ -90,6 +105,12 @@ export default function DuplicatesPage() {
     window.addEventListener('arc:library-changed', onLibraryChanged);
     return () => window.removeEventListener('arc:library-changed', onLibraryChanged);
   }, []);
+
+  useEffect(() => {
+    if (selectedLibraryIds.length > 0) return;
+    if (libraries.length === 0) return;
+    setSelectedLibraryIds(libraries.map((lib) => lib.id));
+  }, [libraries, selectedLibraryIds.length]);
 
   useEffect(() => {
     const onResize = () => {
@@ -129,15 +150,15 @@ export default function DuplicatesPage() {
       setScannedCards(stats.scannedCards);
       setSpaceSavedBytes(stats.spaceSavedBytes);
 
-      const rels = new Set<string>();
+      const paths = new Set<string>();
       for (const pair of scannedPairs) {
-        const a = smallThumbRel(pair.cardA);
-        const b = smallThumbRel(pair.cardB);
-        if (a) rels.add(a);
-        if (b) rels.add(b);
+        const a = pair.previewAbsA || smallThumbRel(pair.cardA);
+        const b = pair.previewAbsB || smallThumbRel(pair.cardB);
+        if (a) paths.add(a);
+        if (b) paths.add(b);
       }
-      if (window.arc?.toFileUrls && rels.size > 0) {
-        setThumbUrls(await window.arc.toFileUrls([...rels]));
+      if (window.arc?.toFileUrls && paths.size > 0) {
+        setThumbUrls(await window.arc.toFileUrls([...paths]));
       } else {
         setThumbUrls({});
       }
@@ -159,11 +180,17 @@ export default function DuplicatesPage() {
           setProgress(p);
         }) ?? (() => {});
 
-      // Lock без плашки «Идёт операция…» — статус поиска на кнопке страницы.
       const began = await arc.maintenanceBegin?.({ silentUi: true });
       const lockToken = began && 'token' in began ? began.token : undefined;
       try {
-        const res = await arc.runDuplicateScan({ thresholdPct: threshold, resetSession });
+        const scope =
+          libraries.length > 1
+            ? {
+                mode: scopeMode,
+                libraryIds: scopeMode === 'ids' ? selectedLibraryIds : undefined
+              }
+            : { mode: 'current' as const };
+        const res = await arc.runDuplicateScan({ thresholdPct: threshold, resetSession, scope });
         if (res.cancelled) {
           setPhase('ready');
           return;
@@ -181,11 +208,15 @@ export default function DuplicatesPage() {
         setPhase('ready');
       } finally {
         unsub();
-        await arc.maintenanceEnd?.(lockToken);
+        if (lockToken) await arc.maintenanceEnd?.(lockToken);
       }
     },
-    [threshold, applyResults]
+    [threshold, applyResults, libraries.length, scopeMode, selectedLibraryIds]
   );
+
+  const cancelScan = useCallback(() => {
+    void window.arc?.cancelDuplicateScan?.();
+  }, []);
 
   useEffect(() => {
     if (alertHandledRef.current) return;
@@ -205,8 +236,10 @@ export default function DuplicatesPage() {
         setUrlB(null);
         return;
       }
-      const a = currentPair.cardA ? await arc.toFileUrl(cardPreviewRel(currentPair.cardA)) : null;
-      const b = currentPair.cardB ? await arc.toFileUrl(cardPreviewRel(currentPair.cardB)) : null;
+      const aPath = mediaPathForCard(currentPair.libraryRootA ?? libraryRootAbs, currentPair.previewAbsA, currentPair.cardA);
+      const bPath = mediaPathForCard(currentPair.libraryRootB ?? libraryRootAbs, currentPair.previewAbsB, currentPair.cardB);
+      const a = aPath ? await arc.toFileUrl(aPath) : null;
+      const b = bPath ? await arc.toFileUrl(bPath) : null;
       if (cancelled) return;
       setUrlA(a);
       setUrlB(b);
@@ -214,7 +247,7 @@ export default function DuplicatesPage() {
     return () => {
       cancelled = true;
     };
-  }, [currentPair]);
+  }, [currentPair, libraryRootAbs]);
 
   const advanceSelection = useCallback(
     (fromIndex: number, updatedStatuses: Record<string, DuplicatePairStatus>) => {
@@ -244,6 +277,11 @@ export default function DuplicatesPage() {
           return next;
         });
         window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+      } catch (err) {
+        showAppNotification({
+          message: err instanceof Error ? err.message : 'Не удалось выполнить действие',
+          variant: 'danger'
+        });
       } finally {
         setBusy(false);
       }
@@ -251,21 +289,41 @@ export default function DuplicatesPage() {
     [currentPair, busy, selectedIndex, advanceSelection]
   );
 
+  const skipPayload = (pair: ScannedDuplicatePair) => ({
+    cardIdA: pair.cardIdA,
+    cardIdB: pair.cardIdB,
+    libraryIdA: pair.libraryIdA,
+    libraryIdB: pair.libraryIdB
+  });
+
   const handleNotDuplicate = () =>
     currentPair &&
-    resolvePair('notDuplicate', () => addSkippedDuplicatePair(currentPair.cardIdA, currentPair.cardIdB));
+    resolvePair('notDuplicate', async () => {
+      if (window.arc?.duplicateAddSkippedPair) {
+        await window.arc.duplicateAddSkippedPair(skipPayload(currentPair));
+        return;
+      }
+    });
 
   const handleSkip = () =>
     currentPair &&
     resolvePair('skipped', async () => {
-      await window.arc?.duplicateSessionSkipPair?.(currentPair.cardIdA, currentPair.cardIdB);
+      await window.arc?.duplicateSessionSkipPair?.(skipPayload(currentPair));
     });
 
-  const handleDelete = (cardId: string) =>
+  const handleDelete = (side: 'a' | 'b') =>
     currentPair &&
     resolvePair('replaced', async () => {
-      await softDeleteCard(cardId);
-      await window.arc?.duplicateSessionSkipPair?.(currentPair.cardIdA, currentPair.cardIdB);
+      const cardId = side === 'a' ? currentPair.cardIdA : currentPair.cardIdB;
+      const libraryId = side === 'a' ? currentPair.libraryIdA : currentPair.libraryIdB;
+      const token = await requestDestructiveConfirm({
+        kind: 'duplicate-delete-card',
+        binding: `${libraryId ?? ''}:${cardId}`
+      });
+      if (window.arc?.duplicateSoftDeleteCard) {
+        await window.arc.duplicateSoftDeleteCard({ cardId, libraryId, confirmToken: token });
+      }
+      await window.arc?.duplicateSessionSkipPair?.(skipPayload(currentPair));
       const key = pairKey(currentPair);
       setPairs((prev) =>
         prev.map((p) => {
@@ -281,8 +339,9 @@ export default function DuplicatesPage() {
 
   const handleMerge = (primaryId: string, secondaryId: string) =>
     currentPair &&
+    !isCrossLibraryPair(currentPair) &&
     resolvePair('replaced', async () => {
-      await window.arc?.mergeDuplicateCards?.(primaryId, secondaryId);
+      await window.arc?.mergeDuplicateCards?.(primaryId, secondaryId, currentPair.libraryIdA);
       const key = pairKey(currentPair);
       setPairs((prev) =>
         prev.map((p) => {
@@ -296,21 +355,18 @@ export default function DuplicatesPage() {
       );
     });
 
-  const dismissPair = useCallback(
-    (index: number) => {
-      setPairs((prev) => {
-        const next = prev.filter((_, i) => i !== index);
-        setSelectedIndex((sel) => {
-          if (next.length === 0) return 0;
-          if (index < sel) return sel - 1;
-          if (index === sel) return Math.min(sel, next.length - 1);
-          return sel;
-        });
-        return next;
+  const dismissPair = useCallback((index: number) => {
+    setPairs((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      setSelectedIndex((sel) => {
+        if (next.length === 0) return 0;
+        if (index < sel) return sel - 1;
+        if (index === sel) return Math.min(sel, next.length - 1);
+        return sel;
       });
-    },
-    []
-  );
+      return next;
+    });
+  }, []);
 
   const onThresholdChange = useCallback((value: number) => {
     setThreshold(value);
@@ -340,6 +396,13 @@ export default function DuplicatesPage() {
     return pairs.every((pair) => (statuses[pairKey(pair)] ?? 'queued') !== 'queued');
   }, [phase, pairs, statuses]);
 
+  const pendingLibraryName =
+    pendingDelete && currentPair
+      ? pendingDelete.side === 'a'
+        ? currentPair.libraryNameA ?? 'библиотека'
+        : currentPair.libraryNameB ?? 'библиотека'
+      : '';
+
   return (
     <div
       className="arc-duplicates-outlet arc-duplicates-page"
@@ -351,9 +414,17 @@ export default function DuplicatesPage() {
           threshold={threshold}
           onThresholdChange={onThresholdChange}
           onScan={() => void startScan(true)}
+          onCancelScan={cancelScan}
           scanning={phase === 'scanning'}
           noResultsNotice={noResultsNotice}
           progress={phase === 'scanning' ? progress : null}
+          libraries={libraries}
+          scopeMode={scopeMode}
+          onScopeModeChange={setScopeMode}
+          selectedLibraryIds={selectedLibraryIds}
+          onToggleLibraryId={(id) =>
+            setSelectedLibraryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+          }
         />
       ) : null}
 
@@ -391,18 +462,30 @@ export default function DuplicatesPage() {
             cardB={currentPair?.cardB ?? null}
             urlA={urlA}
             urlB={urlB}
-            libraryRootAbs={libraryRootAbs}
+            libraryRootA={currentPair?.libraryRootA ?? libraryRootAbs}
+            libraryRootB={currentPair?.libraryRootB ?? libraryRootAbs}
+            libraryNameA={currentPair?.libraryNameA}
+            libraryNameB={currentPair?.libraryNameB}
+            crossLibrary={currentPair ? isCrossLibraryPair(currentPair) : false}
             busy={busy}
             queueComplete={queueComplete}
             onGoToLibrary={() => navigate('/gallery')}
             onNotDuplicate={() => void handleNotDuplicate()}
             onSkip={() => void handleSkip()}
-            onDeleteA={() => currentPair && void handleDelete(currentPair.cardIdA)}
-            onDeleteB={() => currentPair && void handleDelete(currentPair.cardIdB)}
+            onDeleteA={() => setPendingDelete({ side: 'a' })}
+            onDeleteB={() => setPendingDelete({ side: 'b' })}
             onMergeA={() => currentPair && void handleMerge(currentPair.cardIdA, currentPair.cardIdB)}
             onMergeB={() => currentPair && void handleMerge(currentPair.cardIdB, currentPair.cardIdA)}
           />
         </div>
+      ) : null}
+
+      {pendingDelete && currentPair ? (
+        <ConfirmDuplicateTrashModal
+          libraryName={pendingLibraryName}
+          onClose={() => setPendingDelete(null)}
+          onConfirm={() => handleDelete(pendingDelete.side) ?? Promise.resolve()}
+        />
       ) : null}
     </div>
   );

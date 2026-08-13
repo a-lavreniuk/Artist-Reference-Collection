@@ -247,6 +247,64 @@ export function withLibraryDbReadonly<T>(libraryRoot: string, fn: (db: Database.
   }
 }
 
+export function getActiveLibraryRoot(): string | null {
+  return activeRoot;
+}
+
+/** Сохраняет активное соединение, если `fn` открывает другую библиотеку через `openLibraryDb`. */
+export async function withPreservedActiveDb<T>(fn: () => Promise<T>): Promise<T> {
+  const previous = activeRoot;
+  try {
+    return await fn();
+  } finally {
+    if (previous) {
+      try {
+        openLibraryDb(previous);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+/**
+ * Отдельное соединение без смены global `activeDb`.
+ * Для записи skip/служебных таблиц в неактивную библиотеку контейнера.
+ */
+export function withLibraryDb<T>(libraryRoot: string, fn: (db: Database.Database) => T): T | null {
+  const root = path.resolve(libraryRoot);
+  if (activeDb && activeRoot === root) {
+    return fn(activeDb);
+  }
+  const dbPath = indexDbPath(root);
+  try {
+    if (!existsSync(dbPath) && !existsSync(flatIndexDbPath(root))) return null;
+  } catch {
+    return null;
+  }
+  let db: Database.Database;
+  try {
+    db = new Database(dbPath);
+  } catch {
+    try {
+      db = new Database(flatIndexDbPath(root));
+    } catch {
+      return null;
+    }
+  }
+  try {
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
+    return fn(db);
+  } finally {
+    try {
+      db.close();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export function getLibraryDb(): Database.Database | null {
   return activeDb;
 }

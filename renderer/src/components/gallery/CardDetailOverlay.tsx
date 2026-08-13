@@ -23,6 +23,8 @@ import CardRatingStars from './CardRatingStars';
 import { useCardRatingShortcuts } from './useCardRatingShortcuts';
 import CardDetailImageViewport from './CardDetailImageViewport';
 import CardInfoModal from './CardInfoModal';
+import RestoreTrashDestinationModal from './RestoreTrashDestinationModal';
+import { useLibraries } from '../../hooks/useLibraries';
 import CardDetailVideoPlayer from './CardDetailVideoPlayer';
 import type { CardDetailVideoPlayerHandle } from './cardDetailVideoPlayerTypes';
 import { useCardDetailVideoShortcuts } from './useCardDetailVideoShortcuts';
@@ -189,6 +191,7 @@ export default function CardDetailOverlay({
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
+  const [restoreDestinationOpen, setRestoreDestinationOpen] = useState(false);
   const [confirmOverwriteDescription, setConfirmOverwriteDescription] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
@@ -222,13 +225,18 @@ export default function CardDetailOverlay({
 
   const libraryScope = parseLibraryScope(searchParams);
   const inTrash = libraryScope === 'trash';
+  const { libraries } = useLibraries();
+  const originLibraryMissing = Boolean(
+    card?.libraryId && !libraries.some((lib) => lib.id === card.libraryId)
+  );
   const cardIdRef = useRef(cardId);
   cardIdRef.current = cardId;
   const canGenerateDescription =
     aiCaptionEnabled && (card?.type === 'image' || card?.type === 'video');
 
   const reloadCard = useCallback(async (id: string) => {
-    let c = await getCardById(id);
+    const scopedLibraryId = cardRef.current?.id === id ? cardRef.current.libraryId : undefined;
+    let c = await getCardById(id, scopedLibraryId);
     if (c) {
       const draft = readCardDetailDraft(id);
       const patch: { name?: string; linkUrl?: string } = {};
@@ -237,7 +245,7 @@ export default function CardDetailOverlay({
       if (patch.name !== undefined || patch.linkUrl !== undefined) {
         await updateCardPayload(id, patch);
         clearCardDetailDraft(id);
-        c = (await getCardById(id)) ?? c;
+        c = (await getCardById(id, scopedLibraryId)) ?? c;
       }
       setDraftName(c.name ?? draft.name ?? '');
       setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
@@ -722,13 +730,36 @@ export default function CardDetailOverlay({
     }
   };
 
-  const handleRestore = async () => {
+  const restoreTrashOptions = (destinationLibraryId?: string) =>
+    card
+      ? {
+          libraryId: card.libraryId,
+          sourceLibraryRoot: card.libraryRoot,
+          destinationLibraryId
+        }
+      : undefined;
+
+  const finishRestore = async (destinationLibraryId?: string) => {
     if (!card || busy) return;
     setBusy(true);
     try {
       const id = card.id;
-      await restoreCard(id);
-      notifyRestoreWithUndo(id, onDeleted);
+      const result = await restoreCard(id, restoreTrashOptions(destinationLibraryId));
+      if (!result.ok) {
+        if (result.error === 'origin-missing') {
+          setRestoreDestinationOpen(true);
+          return;
+        }
+        setActionAlert({
+          message:
+            result.error === 'files-unavailable'
+              ? 'Файлы карточки недоступны — восстановить нельзя'
+              : 'Не удалось восстановить карточку',
+          variant: 'danger'
+        });
+        return;
+      }
+      notifyRestoreWithUndo(id, onDeleted, destinationLibraryId ?? card.libraryId);
       onDeleted();
       requestClose();
     } finally {
@@ -736,11 +767,20 @@ export default function CardDetailOverlay({
     }
   };
 
+  const handleRestore = async () => {
+    if (!card || busy) return;
+    if (originLibraryMissing) {
+      setRestoreDestinationOpen(true);
+      return;
+    }
+    await finishRestore();
+  };
+
   const handlePermanentDelete = async () => {
     if (!card || busy) return;
     setBusy(true);
     try {
-      await permanentDeleteCard(card.id);
+      await permanentDeleteCard(card.id, undefined, card.libraryId);
       notifyPermanentDelete(1);
       onDeleted();
       requestClose();
@@ -1627,6 +1667,9 @@ export default function CardDetailOverlay({
 
             <div ref={settingsScrollRef} className="arc-card-detail-settings-scroll">
               <div className="arc-card-detail-settings-scroll__pad">
+              {inTrash && card?.libraryName ? (
+                <p className="text-s arc-card-detail-library-name">{card.libraryName}</p>
+              ) : null}
               <CollapsibleSection title="Описание" footer={descriptionSectionFooter}>
                 <div
                   className="arc-card-detail-description-fields arc-ui-kit-scope"
@@ -2046,6 +2089,15 @@ export default function CardDetailOverlay({
             </footer>
           </section>
         </div>
+      ) : null}
+
+      {restoreDestinationOpen && card ? (
+        <RestoreTrashDestinationModal
+          libraries={libraries}
+          hostClassName="arc-modal-host--nested arc-modal-host--card-detail-nested"
+          onClose={() => setRestoreDestinationOpen(false)}
+          onConfirm={(destinationLibraryId) => finishRestore(destinationLibraryId)}
+        />
       ) : null}
 
       {removeMoodboardConfirm ? (

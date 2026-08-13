@@ -101,6 +101,7 @@ export function buildCardInfoSections(card: CardRecord): CardInfoRow[][] {
   pushRow(videoRows, 'Битрейт', formatBitrate(meta?.bitrate));
 
   const dateRows: CardInfoRow[] = [];
+  pushRow(dateRows, 'Библиотека', card.libraryName);
   pushRow(dateRows, 'Дата создания', formatInfoDate(card.fileCreatedAt));
   pushRow(dateRows, 'Дата добавления', formatInfoDate(card.addedAt));
   pushRow(dateRows, 'Дата изменения', formatInfoDate(card.dateModified));

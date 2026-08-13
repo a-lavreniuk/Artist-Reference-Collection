@@ -48,7 +48,7 @@ export default function CardInfoModal({ card, onClose }: Props) {
 
     void (async () => {
       try {
-        const enriched = await ensure(card.id);
+        const enriched = await ensure(card.libraryId ? { cardId: card.id, libraryId: card.libraryId } : card.id);
         if (!cancelled && enriched) {
           setDisplayCard((prev) => {
             if (prev.id !== card.id) return prev;

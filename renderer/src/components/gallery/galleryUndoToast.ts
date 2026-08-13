@@ -59,15 +59,21 @@ export function notifyGalleryMutation(options: {
   });
 }
 
-export function undoTrash(cardIds: readonly string[]): () => Promise<void> {
+export function undoTrash(
+  cardIds: readonly string[],
+  libraryIdByCard?: ReadonlyMap<string, string | undefined>
+): () => Promise<void> {
   return async () => {
-    await bulkRestore(cardIds);
+    await bulkRestore(cardIds, { libraryIdByCard });
   };
 }
 
-export function undoRestore(cardIds: readonly string[]): () => Promise<void> {
+export function undoRestore(
+  cardIds: readonly string[],
+  libraryIdByCard?: ReadonlyMap<string, string | undefined>
+): () => Promise<void> {
   return async () => {
-    await bulkSendToTrash(cardIds);
+    await bulkSendToTrash(cardIds, libraryIdByCard);
   };
 }
 
@@ -145,18 +151,28 @@ export async function applyMoodboardRemoveWithUndo(
   });
 }
 
-export function notifyTrashWithUndo(cardId: string, onAfterUndo?: GalleryUndoRefresh): void {
+export function notifyTrashWithUndo(
+  cardId: string,
+  onAfterUndo?: GalleryUndoRefresh,
+  libraryId?: string
+): void {
+  const libraryIdByCard = libraryId ? new Map([[cardId, libraryId]]) : undefined;
   notifyGalleryMutation({
     message: formatTrashToast(1),
-    undo: undoTrash([cardId]),
+    undo: undoTrash([cardId], libraryIdByCard),
     onAfterUndo
   });
 }
 
-export function notifyRestoreWithUndo(cardId: string, onAfterUndo?: GalleryUndoRefresh): void {
+export function notifyRestoreWithUndo(
+  cardId: string,
+  onAfterUndo?: GalleryUndoRefresh,
+  libraryId?: string
+): void {
+  const libraryIdByCard = libraryId ? new Map([[cardId, libraryId]]) : undefined;
   notifyGalleryMutation({
     message: formatRestoreToast(1),
-    undo: undoRestore([cardId]),
+    undo: undoRestore([cardId], libraryIdByCard),
     onAfterUndo
   });
 }

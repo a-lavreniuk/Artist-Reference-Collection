@@ -7,7 +7,8 @@ import { isVideoExt, VIDEO_EXT } from './ffmpeg';
 import {
   getArcMediaServerOrigin,
   setActiveMediaTabAndSync,
-  syncArcMediaServerLibraryRoot
+  syncArcMediaServerLibraryRoot,
+  syncArcMediaServerLibraryRoots
 } from './media/mediaServerHost';
 import { allowMediaStagingPaths, isAllowedStagingAbsPath, isTrashableAbsPath, registerMediaStagingToken } from './media/mediaStagingTokens';
 import { consumeDestructiveConfirm, issueDestructiveConfirm } from './destructiveConfirm';
@@ -67,6 +68,13 @@ function assertNotMaintenance(): void {
 
 async function finalizeLibraryPathChange(resolved: string, applyIcon: boolean): Promise<void> {
   syncArcMediaServerLibraryRoot(readLibraryRootSync());
+  try {
+    const roots: Record<string, string> = {};
+    for (const lib of listLibrariesFromConfig()) roots[lib.id] = lib.path;
+    syncArcMediaServerLibraryRoots(roots);
+  } catch {
+    /* media roots best-effort */
+  }
   resetLibraryStorageCache();
   const { getActiveLibraryEntry, readLibraryRootConfigSync } = await import('./librarySessionSnapshot');
   const { seedAutoImportFromLegacyIfNeeded } = await import('./appPreferences');
@@ -223,7 +231,8 @@ export function registerArcIpc(): void {
     const allowed: DestructiveConfirmKind[] = [
       'empty-trash',
       'permanent-delete-card',
-      'delete-library-disk'
+      'delete-library-disk',
+      'duplicate-delete-card'
     ];
     if (typeof kind !== 'string' || !allowed.includes(kind as DestructiveConfirmKind)) {
       return { ok: false as const, error: 'Некорректное действие' };

@@ -1,3 +1,4 @@
+import type { CardRecord } from '../../services/db';
 import {
   addCardToMoodboard,
   getCardById,
@@ -7,17 +8,41 @@ import {
   softDeleteCard,
   updateCardPayload
 } from '../../services/db';
+import { showAppNotification } from '../../services/notificationService';
 
-export async function bulkSendToTrash(cardIds: readonly string[]): Promise<string[]> {
+export function libraryMapsFromCards(
+  cardsById: ReadonlyMap<string, CardRecord>,
+  ids: readonly string[]
+): {
+  libraryIdByCard: Map<string, string | undefined>;
+  sourceRootByCard: Map<string, string | undefined>;
+} {
+  const libraryIdByCard = new Map<string, string | undefined>();
+  const sourceRootByCard = new Map<string, string | undefined>();
+  for (const id of ids) {
+    const card = cardsById.get(id);
+    libraryIdByCard.set(id, card?.libraryId);
+    sourceRootByCard.set(id, card?.libraryRoot);
+  }
+  return { libraryIdByCard, sourceRootByCard };
+}
+
+export async function bulkSendToTrash(
+  cardIds: readonly string[],
+  libraryIdByCard?: ReadonlyMap<string, string | undefined>
+): Promise<string[]> {
   const affected: string[] = [];
   for (const cardId of cardIds) {
-    await softDeleteCard(cardId);
+    await softDeleteCard(cardId, libraryIdByCard?.get(cardId));
     affected.push(cardId);
   }
   return affected;
 }
 
-export async function bulkPermanentDelete(cardIds: readonly string[]): Promise<string[]> {
+export async function bulkPermanentDelete(
+  cardIds: readonly string[],
+  libraryIdByCard?: ReadonlyMap<string, string | undefined>
+): Promise<string[]> {
   if (cardIds.length === 0) return [];
   const { requestDestructiveConfirm } = await import('../../services/destructiveConfirm');
   const token = await requestDestructiveConfirm({
@@ -26,17 +51,46 @@ export async function bulkPermanentDelete(cardIds: readonly string[]): Promise<s
   });
   const affected: string[] = [];
   for (const cardId of cardIds) {
-    await permanentDeleteCard(cardId, token);
+    await permanentDeleteCard(cardId, token, libraryIdByCard?.get(cardId));
     affected.push(cardId);
   }
   return affected;
 }
 
-export async function bulkRestore(cardIds: readonly string[]): Promise<string[]> {
+export async function bulkRestore(
+  cardIds: readonly string[],
+  options?: {
+    libraryIdByCard?: ReadonlyMap<string, string | undefined>;
+    sourceRootByCard?: ReadonlyMap<string, string | undefined>;
+  }
+): Promise<string[]> {
   const affected: string[] = [];
+  let originMissing = 0;
+  let filesUnavailable = 0;
+  let otherFail = 0;
   for (const cardId of cardIds) {
-    await restoreCard(cardId);
-    affected.push(cardId);
+    const result = await restoreCard(cardId, {
+      libraryId: options?.libraryIdByCard?.get(cardId),
+      sourceLibraryRoot: options?.sourceRootByCard?.get(cardId)
+    });
+    if (result.ok) {
+      affected.push(cardId);
+      continue;
+    }
+    if (result.error === 'origin-missing') originMissing += 1;
+    else if (result.error === 'files-unavailable') filesUnavailable += 1;
+    else otherFail += 1;
+  }
+  if (originMissing + filesUnavailable + otherFail > 0) {
+    showAppNotification({
+      message:
+        originMissing > 0
+          ? 'Часть карточек не восстановлена: библиотека недоступна. Откройте карточку, чтобы выбрать, куда восстановить.'
+          : filesUnavailable > 0
+            ? 'Часть карточек не восстановлена: файлы недоступны.'
+            : 'Не удалось восстановить часть карточек.',
+      variant: 'danger'
+    });
   }
   return affected;
 }

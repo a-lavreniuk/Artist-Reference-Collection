@@ -61,6 +61,10 @@ export type CardRecord = {
   fileSizeMb?: number;
   /** Расширенные метаданные для окна «Информация о файле». */
   mediaMeta?: CardMediaMetaV1;
+  /** Библиотека-источник (общая корзина контейнера). */
+  libraryId?: string;
+  libraryName?: string;
+  libraryRoot?: string;
 };
 
 export type CollectionRecord = {

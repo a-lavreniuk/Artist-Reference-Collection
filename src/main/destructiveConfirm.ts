@@ -3,7 +3,8 @@ import { randomBytes } from 'crypto';
 export type DestructiveConfirmKind =
   | 'empty-trash'
   | 'permanent-delete-card'
-  | 'delete-library-disk';
+  | 'delete-library-disk'
+  | 'duplicate-delete-card';
 
 type ConfirmEntry = {
   kind: DestructiveConfirmKind;

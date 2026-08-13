@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { formatBytes } from '../../utils/formatBytes';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import type { DuplicatePairStatus, DuplicatesCompareMode, ScannedDuplicatePair } from './duplicateCompareTypes';
+import { scannedPairKey } from './duplicateCompareTypes';
 
 type Props = {
   scannedCards: number;
@@ -25,12 +26,30 @@ const MODE_TABS: Array<{ id: DuplicatesCompareMode; label: string }> = [
 ];
 
 function pairKey(pair: ScannedDuplicatePair): string {
-  return `${pair.cardIdA}:${pair.cardIdB}`;
+  return scannedPairKey(pair);
 }
 
 function smallThumbRel(card: ScannedDuplicatePair['cardA']): string | null {
   if (!card) return null;
   return card.thumbSRelativePath ?? card.thumbRelativePath ?? card.thumbMRelativePath ?? card.originalRelativePath;
+}
+
+function lookupThumbUrl(thumbUrls: Record<string, string>, key: string | undefined): string | undefined {
+  if (!key) return undefined;
+  const slash = key.replace(/\\/g, '/');
+  return thumbUrls[key] ?? thumbUrls[slash] ?? thumbUrls[key.replace(/\//g, '\\')];
+}
+
+function thumbUrlForSide(
+  pair: ScannedDuplicatePair,
+  side: 'a' | 'b',
+  thumbUrls: Record<string, string>
+): string | undefined {
+  const abs = side === 'a' ? pair.previewAbsA : pair.previewAbsB;
+  const fromAbs = lookupThumbUrl(thumbUrls, abs);
+  if (fromAbs) return fromAbs;
+  const rel = smallThumbRel(side === 'a' ? pair.cardA : pair.cardB);
+  return lookupThumbUrl(thumbUrls, rel ?? undefined);
 }
 
 function StatusLabel({ status }: { status: DuplicatePairStatus }) {
@@ -162,10 +181,8 @@ export default function DuplicatesSidebar({
           const key = pairKey(pair);
           const status = statuses[key] ?? 'queued';
           const resolved = status !== 'queued';
-          const relA = smallThumbRel(pair.cardA);
-          const relB = smallThumbRel(pair.cardB);
-          const urlA = relA ? thumbUrls[relA] : undefined;
-          const urlB = relB ? thumbUrls[relB] : undefined;
+          const urlA = thumbUrlForSide(pair, 'a', thumbUrls);
+          const urlB = thumbUrlForSide(pair, 'b', thumbUrls);
           return (
             <div
               key={key}
@@ -192,6 +209,11 @@ export default function DuplicatesSidebar({
               </div>
               <div className="arc-duplicates-row__body">
                 <p className="text-m arc-duplicates-row__sim">{Math.round(pair.similarity)}% Похожесть</p>
+                {pair.libraryNameA || pair.libraryNameB ? (
+                  <p className="text-s arc-duplicates-row__libs">
+                    {[pair.libraryNameA, pair.libraryNameB].filter(Boolean).join(' · ')}
+                  </p>
+                ) : null}
                 <StatusLabel status={status} />
               </div>
               <button

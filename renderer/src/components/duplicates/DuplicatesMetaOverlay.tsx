@@ -4,15 +4,17 @@ import { formatFileMeta, toDisplayPath } from './duplicateCompareUtils';
 type Props = {
   card: CardRecord | null;
   libraryRootAbs: string | null;
+  libraryName?: string | null;
   align: 'left' | 'right';
 };
 
-export default function DuplicatesMetaOverlay({ card, libraryRootAbs, align }: Props) {
+export default function DuplicatesMetaOverlay({ card, libraryRootAbs, libraryName, align }: Props) {
   if (!card) return null;
   const meta = formatFileMeta(card);
   const path = toDisplayPath(libraryRootAbs, card.originalRelativePath);
   return (
     <div className={`arc-duplicates-meta-overlay arc-duplicates-meta-overlay--${align}`}>
+      {libraryName ? <p className="text-s arc-duplicates-meta-overlay__lib">{libraryName}</p> : null}
       <div className="arc-duplicates-meta-overlay__row text-m">
         <span>{meta.format}</span>
         <span>{meta.resolution}</span>
