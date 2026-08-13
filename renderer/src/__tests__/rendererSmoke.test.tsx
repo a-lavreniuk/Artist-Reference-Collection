@@ -112,6 +112,21 @@ describe('renderer UI smoke', () => {
     expect(state.error?.message).toBe('boundary-smoke');
   });
 
+  it('SearchPanelColorControls renders Pantone nearest-match chips', () => {
+    const html = renderToString(
+      <SearchPanelColorControls
+        colorHex="#E4002B"
+        tolerance={20}
+        onColorChange={() => undefined}
+        onToleranceChange={() => undefined}
+        pantoneMode
+      />
+    );
+    expect(html).toContain('arc-pantone-chip');
+    expect(html).toContain('Ближайшие совпадения');
+    expect(html).toContain('Solid Coated');
+  });
+
   it('SearchPanelColorControls renders eyedropper control', () => {
     const html = renderToString(
       <SearchPanelColorControls

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { findNearestPantones, formatPantoneCode } from '../../utils/pantoneColors';
+import { findNearestPantones, formatPantoneCode, PANTONE_LIBRARY } from '../../utils/pantoneColors';
 
 type PantoneNearestMatchesProps = {
   colorHex: string;
@@ -11,7 +11,7 @@ type PantoneNearestMatchesProps = {
 export default function PantoneNearestMatches({
   colorHex,
   onSelect,
-  count = 6
+  count = 4
 }: PantoneNearestMatchesProps) {
   const matches = useMemo(() => findNearestPantones(colorHex, count), [colorHex, count]);
   if (matches.length === 0) return null;
@@ -31,7 +31,8 @@ export default function PantoneNearestMatches({
           >
             <span className="arc-pantone-chip__swatch" style={{ background: entry.hex }} aria-hidden="true" />
             <span className="arc-pantone-chip__meta">
-              <span className="arc-pantone-chip__code">{formatPantoneCode(entry.code)}</span>
+              <span className="text-l arc-pantone-chip__code">{formatPantoneCode(entry.code)}</span>
+              <span className="text-s arc-pantone-chip__library">{PANTONE_LIBRARY}</span>
               <span className="text-s arc-pantone-chip__hex">{entry.hex}</span>
             </span>
           </button>
