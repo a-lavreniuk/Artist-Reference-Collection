@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { ToastAlertVariant } from '../../../components/alert/ToastAlert';
+import { showAppNotification } from '../../../services/notificationService';
 
 export type ReleaseNotesVersion = {
   version: string;
@@ -14,11 +14,6 @@ export type UpdatesCheckState =
   | 'updateAvailable'
   | 'downloading'
   | 'installing';
-
-type AlertState = {
-  message: string;
-  variant: ToastAlertVariant;
-} | null;
 
 function compareSemver(a: string, b: string): number {
   const pa = a.split('.').map((n) => parseInt(n, 10) || 0);
@@ -51,7 +46,6 @@ export function useSettingsUpdates() {
   const [checkState, setCheckState] = useState<UpdatesCheckState>('idle');
   const [availableVersion, setAvailableVersion] = useState<string | null>(null);
   const [downloadPercent, setDownloadPercent] = useState<number | null>(null);
-  const [alert, setAlert] = useState<AlertState>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -97,7 +91,10 @@ export function useSettingsUpdates() {
     const unsubError = arc.onUpdateError?.(({ message }) => {
       setCheckState('idle');
       setDownloadPercent(null);
-      setAlert({ message: String(message || 'Не удалось проверить обновления.'), variant: 'warning' });
+      showAppNotification({
+        message: String(message || 'Не удалось проверить обновления.'),
+        variant: 'warning'
+      });
     });
 
     return () => {
@@ -112,8 +109,6 @@ export function useSettingsUpdates() {
     [versions, selectedVersion]
   );
 
-  const dismissAlert = useCallback(() => setAlert(null), []);
-
   const checkUpdates = useCallback(async () => {
     const arc = window.arc;
     if (!arc?.checkForUpdates || !installedVersion) return;
@@ -127,13 +122,13 @@ export function useSettingsUpdates() {
     if (!res.ok) {
       setCheckState('idle');
       if (res.reason === 'dev') {
-        setAlert({
+        showAppNotification({
           message: 'Проверка обновлений доступна только в установленной версии приложения.',
           variant: 'warning'
         });
         return;
       }
-      setAlert({ message: 'Не удалось проверить обновления.', variant: 'warning' });
+      showAppNotification({ message: 'Не удалось проверить обновления.', variant: 'warning' });
       return;
     }
 
@@ -145,7 +140,7 @@ export function useSettingsUpdates() {
     }
 
     setCheckState('idle');
-    setAlert({ message: 'У вас установлена последняя версия.', variant: 'info' });
+    showAppNotification({ message: 'У вас установлена последняя версия.', variant: 'info' });
   }, [installedVersion]);
 
   const startUpdate = useCallback(async () => {
@@ -158,7 +153,7 @@ export function useSettingsUpdates() {
     if (!res?.ok) {
       setCheckState('updateAvailable');
       setDownloadPercent(null);
-      setAlert({ message: 'Не удалось загрузить обновление.', variant: 'warning' });
+      showAppNotification({ message: 'Не удалось загрузить обновление.', variant: 'warning' });
     }
   }, []);
 
@@ -175,8 +170,6 @@ export function useSettingsUpdates() {
     checkState,
     availableVersion,
     downloadPercent,
-    alert,
-    dismissAlert,
     checkUpdates,
     startUpdate,
     checking,

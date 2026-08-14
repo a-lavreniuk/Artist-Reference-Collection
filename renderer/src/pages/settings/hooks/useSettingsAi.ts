@@ -3,7 +3,6 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import {
   cancelAiDownload,
   deleteAiModel,
-  dismissAiAlert,
   downloadAiModel,
   getAiSettingsSnapshot,
   initAiSettingsSession,
@@ -65,8 +64,6 @@ export function useSettingsAi() {
     downloadOperation: snapshot.downloadOperation,
     indexEtaHint: snapshot.indexEtaHint,
     cudaPrompt: snapshot.cudaPrompt,
-    alert: snapshot.alert,
-    dismissAlert: dismissAiAlert,
     setEnabled: useCallback((enabled: boolean) => setAiEnabled(enabled), []),
     setCaptionEnabled: useCallback((enabled: boolean) => setAiCaptionEnabled(enabled), []),
     downloadModel: useCallback((tier: Parameters<typeof downloadAiModel>[0]) => downloadAiModel(tier), []),

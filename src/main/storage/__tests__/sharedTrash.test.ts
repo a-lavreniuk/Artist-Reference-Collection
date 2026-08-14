@@ -27,6 +27,7 @@ import {
   countSharedTrashCards,
   emptySharedTrash,
   listSharedTrashCards,
+  purgeExpiredTrash,
   restoreSharedTrashCard,
   type LibraryTrashSource
 } from '../sharedTrash';
@@ -57,9 +58,11 @@ async function seedCard(
   root: string,
   cardId: string,
   addedAt: string,
-  options?: { withFiles?: boolean; deleted?: boolean }
+  options?: { withFiles?: boolean; deleted?: boolean; deletedAt?: string | null }
 ): Promise<void> {
   const deleted = options?.deleted ?? true;
+  const deletedAt =
+    options && 'deletedAt' in options ? options.deletedAt ?? null : deleted ? addedAt : null;
   await mkdir(path.join(root, 'cards', cardId), { recursive: true });
   const db = openLibraryDb(root);
   db.prepare(
@@ -74,7 +77,7 @@ async function seedCard(
     `cards/${cardId}/thumb_m.webp`,
     `cards/${cardId}/thumb_l.webp`,
     deleted ? 1 : 0,
-    deleted ? addedAt : null
+    deletedAt
   );
   const json: CardJsonV1 = {
     version: 1,
@@ -85,7 +88,7 @@ async function seedCard(
     format: 'jpg',
     tagIds: [],
     collectionIds: [],
-    ...(deleted ? { deletedAt: addedAt } : {})
+    ...(deletedAt ? { deletedAt } : {})
   };
   await writeCardJson(root, json);
   if (options?.withFiles) {
@@ -200,6 +203,27 @@ describe.skipIf(!sqliteOk)('shared trash across libraries', () => {
     expect(result).toEqual({ ok: false, error: 'files-unavailable' });
     expect(existsSync(path.join(libA.path, 'cards', 'live-card', 'original.jpg'))).toBe(true);
     expect(getCardByIdIsolated(libB.path, 'live-card')?.id).toBeUndefined();
+  });
+
+  it('purges expired trash and skips missing deleted_at', async () => {
+    await seedCard(libA.path, 'old-trash', '2026-06-01T00:00:00.000Z', { withFiles: true, deleted: true });
+    await seedCard(libA.path, 'fresh-trash', '2026-08-13T00:00:00.000Z', { withFiles: true, deleted: true });
+    await seedCard(libA.path, 'no-deleted-at', '2026-01-01T00:00:00.000Z', {
+      withFiles: true,
+      deleted: true,
+      deletedAt: null
+    });
+    await seedCard(libA.path, 'alive', '2026-01-01T00:00:00.000Z', { withFiles: true, deleted: false });
+    closeLibraryDb();
+
+    const cutoff = '2026-07-15T12:00:00.000Z';
+    const n = await purgeExpiredTrash([libA], cutoff);
+    expect(n).toBe(1);
+    expect(getCardByIdIsolated(libA.path, 'old-trash')?.id).toBeUndefined();
+    expect(getCardByIdIsolated(libA.path, 'fresh-trash')?.id).toBe('fresh-trash');
+    expect(getCardByIdIsolated(libA.path, 'no-deleted-at')?.id).toBe('no-deleted-at');
+    expect(getCardByIdIsolated(libA.path, 'alive')?.id).toBe('alive');
+    expect(countSharedTrashCards([libA])).toBe(2);
   });
 });
 

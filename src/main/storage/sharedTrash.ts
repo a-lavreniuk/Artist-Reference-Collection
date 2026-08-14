@@ -17,6 +17,7 @@ import {
   getCardByIdIsolated,
   importExistingCardFolder,
   listCardsFromDbReadonly,
+  listExpiredTrashCardIds,
   restoreCardFromStorage
 } from './libraryStorage';
 import type { CardIndexRow, ListCardsParams } from './types';
@@ -126,6 +127,24 @@ export async function emptySharedTrash(libraries: readonly LibraryTrashSource[])
     for (const lib of libraries) {
       if (!existsSync(lib.path)) continue;
       n += await emptyTrashFromStorage(lib.path);
+    }
+    return n;
+  });
+}
+
+export async function purgeExpiredTrash(
+  libraries: readonly LibraryTrashSource[],
+  cutoffIso: string
+): Promise<number> {
+  return withPreservedActiveDb(async () => {
+    let n = 0;
+    for (const lib of libraries) {
+      if (!existsSync(lib.path)) continue;
+      const ids = listExpiredTrashCardIds(lib.path, cutoffIso);
+      for (const id of ids) {
+        await deleteCardFromStorage(lib.path, id);
+        n += 1;
+      }
     }
     return n;
   });

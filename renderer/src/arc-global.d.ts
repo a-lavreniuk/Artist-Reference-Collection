@@ -119,6 +119,9 @@ declare global {
       importFiles: (absolutePaths: string[]) => Promise<ArcImportFilesResponse>;
       abortImportFiles?: () => void;
       notifyImportQueueIdle?: () => void;
+      writeClipboardImageTemp?: () => Promise<{ ok: true; path: string } | { ok: false }>;
+      readClipboardFilePaths?: () => Promise<string[]>;
+      deleteClipboardImportTemp?: (absPath: string) => Promise<{ ok: true } | { ok: false }>;
       storageEnsureReady: () => Promise<{ ok: true } | { ok: false; error: string }>;
       storageListCards: (params: {
         offset: number;
@@ -183,6 +186,7 @@ declare global {
         libraryId?: string
       ) => Promise<void>;
       storageEmptyTrash: (confirmToken: string) => Promise<number>;
+      purgeExpiredTrash?: () => Promise<{ deleted: number }>;
       storageCountCards: (
         filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
       ) => Promise<number>;
@@ -523,6 +527,7 @@ declare global {
       aiPauseDownload?: () => Promise<{ ok: true }>;
       aiResumeDownload?: () => Promise<{ ok: true }>;
       aiSearch?: (query: string) => Promise<Array<{ cardId: string; score: number }>>;
+      rankTagsSemantic?: (query: string) => Promise<Array<{ tagId: string; score: number }>>;
       aiSearchCards?: (params:
         | string
         | {

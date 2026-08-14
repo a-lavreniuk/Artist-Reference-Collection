@@ -41,6 +41,7 @@ import {
 } from './db';
 import { ensureLibraryMetaDirLayout } from './libraryMetaLayout';
 import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
+import { isExpiredDeletedAt } from './trashRetention';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
 import { defaultMoodboard, defaultSystem, readMoodboard, readSystem, writeMoodboard, writeSystem } from './systemFiles';
 import { generateImageThumbnails, generateVideoThumbnailsFromFrame } from './thumbnails';
@@ -1017,6 +1018,17 @@ export async function emptyTrashFromStorage(libraryRoot: string): Promise<number
     await deleteCardFromStorage(root, id);
   }
   return ids.length;
+}
+
+export function listExpiredTrashCardIds(libraryRoot: string, cutoffIso: string): string[] {
+  const root = path.resolve(libraryRoot);
+  const rows =
+    withLibraryDbReadonly(root, (db) =>
+      db
+        .prepare('SELECT id, deleted_at FROM cards WHERE COALESCE(is_deleted, 0) = 1')
+        .all() as Array<{ id: string; deleted_at: string | null }>
+    ) ?? [];
+  return rows.filter((r) => isExpiredDeletedAt(r.deleted_at, cutoffIso)).map((r) => String(r.id));
 }
 
 // --- Categories (shared catalog) ---

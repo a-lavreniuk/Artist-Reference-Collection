@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import ToastAlert from '../../../components/alert/ToastAlert';
 import SettingsMcpToolRow from '../../../components/settings/SettingsMcpToolRow';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { AppPreferencesV1 } from '../../../services/appPreferences';
+import { showAppNotification } from '../../../services/notificationService';
 import {
   defaultMcpToolsEnabled,
   MCP_TOOL_GROUPS,
@@ -39,7 +39,6 @@ const MCP_PORT = 47897;
 /** Настройки локального MCP-сервера ARC */
 export default function SettingsMcpServerPanel() {
   const { prefs, ready, update } = useAppPreferences();
-  const [copyAlertKey, setCopyAlertKey] = useState(0);
   const [rotatedHint, setRotatedHint] = useState(false);
   const disabled = !ready;
   const mcpEnabled = prefs?.mcpServerEnabled === true;
@@ -65,7 +64,12 @@ export default function SettingsMcpServerPanel() {
         return true;
       })
       .then((ok) => {
-        if (ok) setCopyAlertKey((key) => key + 1);
+        if (ok) {
+          showAppNotification({
+            message: COPY_SUCCESS_MESSAGE,
+            variant: 'success'
+          });
+        }
       })
       .catch(() => {
         /* clipboard / IPC unavailable */
@@ -168,15 +172,6 @@ export default function SettingsMcpServerPanel() {
           </div>
         ) : null}
       </div>
-
-      {copyAlertKey > 0 ? (
-        <ToastAlert
-          key={`copy-${copyAlertKey}`}
-          message={COPY_SUCCESS_MESSAGE}
-          variant="success"
-          onClose={() => setCopyAlertKey(0)}
-        />
-      ) : null}
     </>
   );
 }

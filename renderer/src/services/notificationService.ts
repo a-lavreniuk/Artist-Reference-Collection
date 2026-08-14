@@ -2,6 +2,7 @@ import type { AlertVariant } from '../components/alert/types';
 import type { NotificationPrefKey } from './appPreferences';
 
 export const APP_NOTIFICATION_EVENT = 'arc:app-notification';
+export const APP_NOTIFICATION_DISMISS_EVENT = 'arc:app-notification-dismiss';
 
 /** Окно отмены для undo-toast (Gmail/Figma-подобный интервал). */
 export const UNDO_NOTIFICATION_DISMISS_MS = 16_000;
@@ -63,6 +64,36 @@ export function showAppNotification(payload: AppNotificationPayload): void {
       detail: { ...payload, id }
     })
   );
+}
+
+export function dismissAppNotification(id: string): void {
+  window.dispatchEvent(
+    new CustomEvent(APP_NOTIFICATION_DISMISS_EVENT, {
+      detail: { id }
+    })
+  );
+}
+
+export type NotificationStackItem = {
+  id: string;
+  actionId?: string;
+};
+
+/** Same id replaces the existing toast; otherwise the toast is appended. */
+export function upsertNotificationStack<T extends NotificationStackItem>(
+  prev: T[],
+  next: T
+): { next: T[]; droppedActionId?: string } {
+  const index = prev.findIndex((item) => item.id === next.id);
+  if (index < 0) {
+    return { next: [...prev, next] };
+  }
+  const previous = prev[index];
+  const droppedActionId =
+    previous.actionId && previous.actionId !== next.actionId ? previous.actionId : undefined;
+  const copy = prev.slice();
+  copy[index] = next;
+  return { next: copy, droppedActionId };
 }
 
 export type UndoableNotificationOptions = {

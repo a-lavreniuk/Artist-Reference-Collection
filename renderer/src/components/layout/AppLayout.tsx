@@ -10,6 +10,7 @@ import AutoImportHost from '../import/AutoImportHost';
 import ExtensionImportHost from '../import/ExtensionImportHost';
 import McpCatalogSyncHost from '../import/McpCatalogSyncHost';
 import NotificationHost from '../notifications/NotificationHost';
+import TrashPurgeHost from '../trash/TrashPurgeHost';
 import ScreenshotHost from '../screenshot/ScreenshotHost';
 import BugReportWidget from '../bug-report/BugReportWidget';
 import InterfaceTourHost from '../onboarding/InterfaceTourHost';
@@ -97,6 +98,7 @@ export default function AppLayout() {
     <ArcHistoryNavProvider>
     <ShortcutActionProvider>
     <NotificationHost>
+    <TrashPurgeHost />
     <ScreenshotHost>
     <ImportHost>
       <ShortcutImportRegistrar />

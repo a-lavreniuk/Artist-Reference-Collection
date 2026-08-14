@@ -53,4 +53,29 @@ describe('importQueue', () => {
     expect(formatImportEta(500)).toBe('~1 сек');
     expect(formatImportEta(90_000)).toBe('~2 мин');
   });
+
+  it('preserves paste flags when slicing a files job', () => {
+    const queue: ImportQueueJob[] = [];
+    const r = tryEnqueueImportJob(
+      queue,
+      {
+        kind: 'files',
+        paths: ['a.png', 'b.png'],
+        skipSourceFiles: true,
+        deleteAfterImport: true,
+        assignCollectionId: 'col-1'
+      },
+      { blocked: false, maxPaths: 1 }
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) throw new Error('expected limit');
+    expect(r.accepted).toBe(1);
+    expect(queue[0]).toMatchObject({
+      kind: 'files',
+      paths: ['a.png'],
+      skipSourceFiles: true,
+      deleteAfterImport: true,
+      assignCollectionId: 'col-1'
+    });
+  });
 });

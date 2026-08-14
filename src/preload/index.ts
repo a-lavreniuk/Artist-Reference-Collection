@@ -124,6 +124,16 @@ contextBridge.exposeInMainWorld('arc', {
       >;
       cancelled: boolean;
     }>,
+  writeClipboardImageTemp: () =>
+    ipcRenderer.invoke('arc:clipboard-import-write-temp') as Promise<
+      { ok: true; path: string } | { ok: false }
+    >,
+  readClipboardFilePaths: () =>
+    ipcRenderer.invoke('arc:clipboard-read-file-paths') as Promise<string[]>,
+  deleteClipboardImportTemp: (absPath: string) =>
+    ipcRenderer.invoke('arc:clipboard-import-delete-temp', absPath) as Promise<
+      { ok: true } | { ok: false }
+    >,
   abortImportFiles: () => {
     ipcRenderer.send('arc:import-files-abort');
   },
@@ -182,6 +192,8 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.invoke('arc:storage-permanent-delete-card', { cardId, confirmToken, libraryId }),
   storageEmptyTrash: (confirmToken: string) =>
     ipcRenderer.invoke('arc:storage-empty-trash', confirmToken) as Promise<number>,
+  purgeExpiredTrash: () =>
+    ipcRenderer.invoke('arc:purge-expired-trash') as Promise<{ deleted: number }>,
   storageCountCards: (payload: string | { filter: string; libraryScope?: string }) =>
     ipcRenderer.invoke('arc:storage-count-cards', payload),
   storageCountCardsWithTagIds: (tagIds: string[]) =>
@@ -435,6 +447,7 @@ contextBridge.exposeInMainWorld('arc', {
       closeToTrayOnWindowClose: boolean;
       importSourceFilesAction: 'ask' | 'trash';
       deleteCardsUseTrash: boolean;
+      trashRetentionDays: 7 | 30 | 90 | 0;
       screenshotsEnabled: boolean;
       screenshotFormat: 'png' | 'jpg' | 'webp';
       screenshotAskSaveLocation: boolean;
@@ -461,6 +474,7 @@ contextBridge.exposeInMainWorld('arc', {
       closeToTrayOnWindowClose: boolean;
       importSourceFilesAction: 'ask' | 'trash';
       deleteCardsUseTrash: boolean;
+      trashRetentionDays: 7 | 30 | 90 | 0;
       screenshotsEnabled: boolean;
       screenshotFormat: 'png' | 'jpg' | 'webp';
       screenshotAskSaveLocation: boolean;
@@ -613,6 +627,8 @@ contextBridge.exposeInMainWorld('arc', {
   aiPauseDownload: () => ipcRenderer.invoke('arc:ai-pause-download') as Promise<{ ok: true }>,
   aiResumeDownload: () => ipcRenderer.invoke('arc:ai-resume-download') as Promise<{ ok: true }>,
   aiSearch: (query: string) => ipcRenderer.invoke('arc:ai-search', query) as Promise<Array<{ cardId: string; score: number }>>,
+  rankTagsSemantic: (query: string) =>
+    ipcRenderer.invoke('arc:rank-tags-semantic', query) as Promise<Array<{ tagId: string; score: number }>>,
   aiSearchCards: (params:
     | string
     | {

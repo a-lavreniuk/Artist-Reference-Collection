@@ -1,4 +1,5 @@
 import type { CategoryRecord, TagRecord } from '../../services/db';
+import { tagFieldsMatchQuery } from '../../search/tagSynonymMap';
 
 export function normalizeSearchQuery(raw: string): string {
   return raw.trim().toLowerCase();
@@ -6,9 +7,7 @@ export function normalizeSearchQuery(raw: string): string {
 
 export function tagMatchesSearch(tag: TagRecord, q: string): boolean {
   if (!q) return true;
-  const name = tag.name.toLowerCase();
-  const desc = tag.description?.toLowerCase() ?? '';
-  return name.includes(q) || desc.includes(q);
+  return tagFieldsMatchQuery(tag.name, tag.description, q);
 }
 
 export function categoryHasSearchMatch(cat: CategoryRecord, tags: TagRecord[], q: string): boolean {

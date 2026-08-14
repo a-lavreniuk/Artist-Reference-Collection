@@ -744,6 +744,34 @@ export function registerArcIpc(): void {
     }
   });
 
+  ipcMain.handle('arc:clipboard-import-write-temp', async () => {
+    const { writeClipboardImageTemp } = await import('./clipboardImport');
+    try {
+      return await writeClipboardImageTemp();
+    } catch {
+      return { ok: false as const };
+    }
+  });
+
+  ipcMain.handle('arc:clipboard-read-file-paths', async () => {
+    const { readClipboardOsFilePaths } = await import('./clipboardImport');
+    try {
+      return readClipboardOsFilePaths();
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle('arc:clipboard-import-delete-temp', async (_e, absPath: unknown) => {
+    const { deleteClipboardImportTemp } = await import('./clipboardImport');
+    if (typeof absPath !== 'string') return { ok: false as const };
+    try {
+      return await deleteClipboardImportTemp(absPath);
+    } catch {
+      return { ok: false as const };
+    }
+  });
+
   ipcMain.handle('arc:read-history', async () => {
     const root = await readLibraryRootFromDisk();
     if (!root) return [];

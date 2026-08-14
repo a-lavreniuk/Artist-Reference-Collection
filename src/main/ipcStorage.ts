@@ -86,6 +86,7 @@ import {
   findCardAcrossLibraries,
   listSharedTrashCards,
   permanentDeleteSharedTrashCard,
+  purgeExpiredTrash,
   resolveLibrarySource,
   restoreSharedTrashCard,
   type LibraryTrashSource
@@ -634,6 +635,31 @@ export function registerStorageIpc(
       }
     }
     return n;
+  });
+
+  ipcMain.handle('arc:purge-expired-trash', async () => {
+    try {
+      assertNotMaintenance();
+    } catch {
+      return { deleted: 0 };
+    }
+    const { readAppPreferencesSync } = await import('./appPreferences');
+    const { trashCutoffIso } = await import('./storage/trashRetention');
+    const days = readAppPreferencesSync().trashRetentionDays;
+    const cutoff = trashCutoffIso(new Date(), days);
+    if (!cutoff) return { deleted: 0 };
+    const root = await readLibraryRoot();
+    if (!root) return { deleted: 0 };
+    const n = await purgeExpiredTrash(containerLibraries(root), cutoff);
+    if (n > 0) {
+      try {
+        const { appendHistory } = await import('./libraryHistory');
+        await appendHistory(root, `Автоочистка корзины: удалено ${n}`);
+      } catch {
+        /* ignore */
+      }
+    }
+    return { deleted: n };
   });
 
   ipcMain.handle('arc:storage-gallery-filter-stats', async (_e, payload: unknown) => {

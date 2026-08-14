@@ -4,6 +4,9 @@ export const IMPORT_QUEUE_MAX_PATHS = 500;
 export type ImportQueueFilesJob = {
   kind: 'files';
   paths: string[];
+  skipSourceFiles?: boolean;
+  assignCollectionId?: string;
+  deleteAfterImport?: boolean;
 };
 
 export type ImportQueueFoldersJob = {
@@ -63,7 +66,13 @@ export function tryEnqueueImportJob(
   }
 
   const acceptedPaths = job.paths.slice(0, room);
-  queue.push({ kind: 'files', paths: acceptedPaths });
+  queue.push({
+    kind: 'files',
+    paths: acceptedPaths,
+    skipSourceFiles: job.skipSourceFiles,
+    assignCollectionId: job.assignCollectionId,
+    deleteAfterImport: job.deleteAfterImport
+  });
   const accepted = acceptedPaths.length;
   const queuedTotal = used + accepted;
   if (accepted < job.paths.length) {

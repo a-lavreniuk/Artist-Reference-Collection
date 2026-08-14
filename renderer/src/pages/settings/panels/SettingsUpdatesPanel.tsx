@@ -1,4 +1,3 @@
-import ToastAlert from '../../../components/alert/ToastAlert';
 import ReleaseNotesContent from '../../../components/layout/ReleaseNotesContent';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import { useSettingsUpdates } from '../hooks/useSettingsUpdates';
@@ -15,8 +14,6 @@ export default function SettingsUpdatesPanel() {
     checkState,
     availableVersion,
     downloadPercent,
-    alert,
-    dismissAlert,
     checkUpdates,
     startUpdate,
     checking,
@@ -94,10 +91,6 @@ export default function SettingsUpdatesPanel() {
           )}
         </div>
       </div>
-
-      {alert ? (
-        <ToastAlert message={alert.message} variant={alert.variant} onClose={dismissAlert} />
-      ) : null}
     </>
   );
 }

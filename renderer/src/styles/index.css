@@ -6499,6 +6499,14 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
   list-style: none;
 }
 
+.arc-history-list__spacer {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+}
+
 .arc-history-row-sep {
   height: 0;
   margin: var(--s-3) 0;
