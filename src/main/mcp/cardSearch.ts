@@ -1,7 +1,11 @@
 import { openLibraryDb } from '../storage/db';
 import { buildFtsColumnMatchQuery } from '../storage/cardFts';
 import { getCardByIdFromDb } from '../storage/libraryStorage';
+import { rankMatchedHitsByLowerScoreAndRating } from '../shared/ratingSearchBoost';
 import type { CardIndexRow } from '../storage/types';
+
+/** Верхняя граница совпадений FTS до переранжирования с рейтингом (как у scored-search cache). */
+const FTS_RANK_CAP = 2500;
 
 function buildMultiColumnFtsMatch(query: string): string | null {
   const trimmed = query.trim();
@@ -27,17 +31,30 @@ export function searchCardsByText(
   const db = openLibraryDb(libraryRoot);
   const rows = db
     .prepare(
-      `SELECT c.id FROM cards c
+      `SELECT c.id AS id, COALESCE(c.rating, 0) AS rating, bm25(cards_fts) AS fts_rank
+       FROM cards c
        INNER JOIN cards_fts ON cards_fts.card_id = c.id
        WHERE cards_fts MATCH ? AND COALESCE(c.is_deleted, 0) = 0
-       ORDER BY c.added_at DESC
-       LIMIT ? OFFSET ?`
+       ORDER BY bm25(cards_fts) ASC
+       LIMIT ?`
     )
-    .all(match, limit, offset) as Array<{ id: string }>;
+    .all(match, FTS_RANK_CAP) as Array<{ id: string; rating: number; fts_rank: number }>;
 
+  const rankedIds = rankMatchedHitsByLowerScoreAndRating(
+    rows.map((row) => {
+      const rawScore = Number(row.fts_rank);
+      return {
+        id: String(row.id),
+        rawScore: Number.isFinite(rawScore) ? rawScore : 0,
+        rating: Number(row.rating) || 0
+      };
+    })
+  );
+
+  const pageIds = rankedIds.slice(Math.max(0, offset), Math.max(0, offset) + Math.max(1, limit));
   const cards: CardIndexRow[] = [];
-  for (const row of rows) {
-    const card = getCardByIdFromDb(libraryRoot, row.id);
+  for (const id of pageIds) {
+    const card = getCardByIdFromDb(libraryRoot, id);
     if (card) cards.push(card);
   }
   return cards;

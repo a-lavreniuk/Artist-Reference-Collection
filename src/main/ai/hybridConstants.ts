@@ -10,6 +10,7 @@ export const HYBRID_CAPTION_SUFFIX = '::caption';
 // caption 0.45 — усиливает описательные запросы;
 // tagsBoostMax 0.12 — мягкий буст без «ломания» выдачи.
 // captionTextBoostMax 0.18 — literal match по ai_caption (в т.ч. UI-текст на кадре).
+// Бонус рейтинга карточки (0–5 звёзд) использует ту же величину после отсечки.
 export const HYBRID_FUSION_WEIGHTS = {
   visual: 0.55,
   caption: 0.45,

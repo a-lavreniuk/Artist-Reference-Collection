@@ -1,7 +1,7 @@
 import type { AiSearchResult } from './types';
 import { HYBRID_FUSION_WEIGHTS } from './hybridConstants';
 import { computeCaptionTextBoost, computeTagsBoost } from './tagsBoost';
-import { applySearchCutoff, type SearchCutoffOptions } from './semanticSearch';
+import { applyRatingBoostAfterCutoff, applySearchCutoff, type SearchCutoffOptions } from './semanticSearch';
 import {
   cosineSimilarity,
   getCardTagNames,
@@ -72,5 +72,5 @@ export function searchHybridHeavy(
     .map(([cardId, score]) => ({ cardId, score }))
     .sort((a, b) => b.score - a.score);
 
-  return applySearchCutoff(allScored, { ...options, tier, strictness });
+  return applyRatingBoostAfterCutoff(db, applySearchCutoff(allScored, { ...options, tier, strictness }));
 }

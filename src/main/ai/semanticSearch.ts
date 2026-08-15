@@ -1,8 +1,12 @@
+import type Database from 'better-sqlite3';
+
 import type { AiSearchResult, ModelTier } from './types';
 
 import { resolveSearchCutoff } from './searchStrictness';
 import { HYBRID_FUSION_WEIGHTS } from './hybridConstants';
 import { computeTagsBoost } from './tagsBoost';
+import { applyRatingSearchBoost } from '../shared/ratingSearchBoost';
+import { getCardRatingsByIds } from '../storage/cardRatings';
 
 import {
   cosineSimilarity,
@@ -66,6 +70,19 @@ export function applySearchCutoff(
   return results;
 }
 
+/** Рейтинг только переставляет уже прошедшие отсечку хиты; слабые совпадения не добавляются. */
+export function applyRatingBoostAfterCutoff(
+  db: Database.Database,
+  results: AiSearchResult[]
+): AiSearchResult[] {
+  if (results.length === 0) return results;
+  const ratings = getCardRatingsByIds(
+    db,
+    results.map((item) => item.cardId)
+  );
+  return applyRatingSearchBoost(results, ratings);
+}
+
 export function searchByEmbedding(
   queryVector: Float32Array,
   modelId: string,
@@ -100,7 +117,10 @@ export function searchByEmbedding(
     })
     .sort((a, b) => b.score - a.score);
 
-  const results = applySearchCutoff(allScored, { ...options, tier, strictness });
+  const results = applyRatingBoostAfterCutoff(
+    db,
+    applySearchCutoff(allScored, { ...options, tier, strictness })
+  );
 
   if (useCache) {
     searchCache.set(key, {

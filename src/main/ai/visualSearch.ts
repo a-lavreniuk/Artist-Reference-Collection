@@ -1,5 +1,5 @@
 import type { AiSearchResult } from './types';
-import { applySearchCutoff, type SearchCutoffOptions } from './semanticSearch';
+import { applyRatingBoostAfterCutoff, applySearchCutoff, type SearchCutoffOptions } from './semanticSearch';
 import {
   cosineSimilarity,
   listEmbeddingsForModel,
@@ -40,5 +40,5 @@ export function searchByVisualEmbedding(
   const allScored = [...scored.entries()]
     .map(([cardId, score]) => ({ cardId, score }))
     .sort((a, b) => b.score - a.score);
-  return applySearchCutoff(allScored, { ...options, tier, strictness });
+  return applyRatingBoostAfterCutoff(db, applySearchCutoff(allScored, { ...options, tier, strictness }));
 }

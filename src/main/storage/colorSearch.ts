@@ -10,6 +10,7 @@ import {
 import { getGalleryFilterBoundaries } from './galleryFilterBoundariesCache';
 import { shuffleCardIds } from '../shared/shuffleCardIds';
 import { scorePaletteMinDeltaE } from '../shared/paletteCore';
+import { computeRatingSearchBoost, relevanceFromClampedDistance } from '../shared/ratingSearchBoost';
 import { openLibraryDb } from './db';
 import { indexCardRowsFromDb } from './libraryStorage';
 import { getOrBuildScoredSearchPage, stableSearchCacheKey } from './scoredSearchCache';
@@ -150,7 +151,7 @@ export function searchCardsByColor(libraryRoot: string, params: ColorSearchParam
     const maxDeltaE = accuracyToMaxDeltaE(params.accuracy);
     const scope = params.scopeCardIds;
 
-    const scored: Array<{ row: Record<string, unknown>; score: number }> = [];
+    const scored: Array<{ row: Record<string, unknown>; score: number; rankScore: number }> = [];
     for (const row of rows) {
       const id = String(row.id);
       if (scope && scope.size > 0 && !scope.has(id)) continue;
@@ -160,10 +161,12 @@ export function searchCardsByColor(libraryRoot: string, params: ColorSearchParam
       );
       const score = scorePalette(queryHex, palette);
       if (score == null || score > maxDeltaE) continue;
-      scored.push({ row, score });
+      const rankScore =
+        relevanceFromClampedDistance(score, maxDeltaE) + computeRatingSearchBoost(row.rating);
+      scored.push({ row, score, rankScore });
     }
 
-    scored.sort((a, b) => a.score - b.score);
+    scored.sort((a, b) => b.rankScore - a.rankScore);
 
     let orderedRows: Record<string, unknown>[];
     if (sort.field === 'shuffle') {
