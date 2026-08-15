@@ -7,7 +7,8 @@ import { isVideoExt, VIDEO_EXT } from './ffmpeg';
 import {
   getArcMediaServerOrigin,
   setActiveMediaTabAndSync,
-  syncArcMediaServerLibraryRoot
+  syncArcMediaServerLibraryRoot,
+  syncArcMediaServerLibraryRoots
 } from './media/mediaServerHost';
 import { allowMediaStagingPaths, isAllowedStagingAbsPath, isTrashableAbsPath, registerMediaStagingToken } from './media/mediaStagingTokens';
 import { consumeDestructiveConfirm, issueDestructiveConfirm } from './destructiveConfirm';
@@ -67,6 +68,13 @@ function assertNotMaintenance(): void {
 
 async function finalizeLibraryPathChange(resolved: string, applyIcon: boolean): Promise<void> {
   syncArcMediaServerLibraryRoot(readLibraryRootSync());
+  try {
+    const roots: Record<string, string> = {};
+    for (const lib of listLibrariesFromConfig()) roots[lib.id] = lib.path;
+    syncArcMediaServerLibraryRoots(roots);
+  } catch {
+    /* media roots best-effort */
+  }
   resetLibraryStorageCache();
   const { getActiveLibraryEntry, readLibraryRootConfigSync } = await import('./librarySessionSnapshot');
   const { seedAutoImportFromLegacyIfNeeded } = await import('./appPreferences');
@@ -223,7 +231,8 @@ export function registerArcIpc(): void {
     const allowed: DestructiveConfirmKind[] = [
       'empty-trash',
       'permanent-delete-card',
-      'delete-library-disk'
+      'delete-library-disk',
+      'duplicate-delete-card'
     ];
     if (typeof kind !== 'string' || !allowed.includes(kind as DestructiveConfirmKind)) {
       return { ok: false as const, error: 'Некорректное действие' };
@@ -732,6 +741,34 @@ export function registerArcIpc(): void {
         ok: false as const,
         error: 'Не удалось переместить в корзину'
       };
+    }
+  });
+
+  ipcMain.handle('arc:clipboard-import-write-temp', async () => {
+    const { writeClipboardImageTemp } = await import('./clipboardImport');
+    try {
+      return await writeClipboardImageTemp();
+    } catch {
+      return { ok: false as const };
+    }
+  });
+
+  ipcMain.handle('arc:clipboard-read-file-paths', async () => {
+    const { readClipboardOsFilePaths } = await import('./clipboardImport');
+    try {
+      return readClipboardOsFilePaths();
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle('arc:clipboard-import-delete-temp', async (_e, absPath: unknown) => {
+    const { deleteClipboardImportTemp } = await import('./clipboardImport');
+    if (typeof absPath !== 'string') return { ok: false as const };
+    try {
+      return await deleteClipboardImportTemp(absPath);
+    } catch {
+      return { ok: false as const };
     }
   });
 

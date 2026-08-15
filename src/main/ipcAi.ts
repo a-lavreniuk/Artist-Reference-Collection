@@ -849,6 +849,12 @@ export function registerAiIpc(): void {
     return suggestTagsForCard(cardId);
   });
 
+  ipcMain.handle('arc:rank-tags-semantic', async (_e, query: unknown) => {
+    const q = typeof query === 'string' ? query : '';
+    const { rankTagsSemantic } = await import('./ai/rankTagsSemantic');
+    return rankTagsSemantic(q);
+  });
+
   ipcMain.handle('arc:ai-generate-card-description', async (_e, payload: unknown) => {
     const cardId =
       typeof payload === 'string'

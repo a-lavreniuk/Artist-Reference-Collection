@@ -29,7 +29,7 @@ import { ARC_AI_SEARCH_LOADING_EVENT, dispatchAiSearchLoading } from '../../../s
 import { clearGallerySearchParams } from '../../../search/clearGallerySearch';
 import { ARC_SEARCH_QUERY_AI } from '../../../search/searchUrl';
 import { clearSimilarUploadPath } from '../../../search/similarSearchSession';
-import { rankTagsForQuery } from '../../../search/rankSearchTags';
+import { rankTagsForQuery, mergeSemanticTagHits } from '../../../search/rankSearchTags';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
 import {
   ARC_NAVBAR_SEARCH_MODE_CHANGED_EVENT,
@@ -39,6 +39,7 @@ import {
   writeNavbarSearchMode
 } from '../../../search/navbarSearchMode';
 import { useAiNavbarModesVisible } from '../../../hooks/useAiNavbarModesVisible';
+import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import {
   COLOR_SEARCH_PRESETS,
   DEFAULT_COLOR_SEARCH_TOLERANCE
@@ -109,6 +110,7 @@ export function NavbarSearchProvider({
   const [colorFormat, setColorFormatState] = useState<ColorFormat>(() => readColorSearchFormatPreference());
   const [searchIslandWidePinned, setSearchIslandWidePinned] = useState(false);
   const [createTagModal, setCreateTagModal] = useState<TagSettingsModalState | null>(null);
+  const [semanticTagHits, setSemanticTagHits] = useState<Array<{ tagId: string; score: number }>>([]);
 
   const searchAnchorRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
@@ -118,6 +120,12 @@ export function NavbarSearchProvider({
   const colorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { categories, tagsByCategoryRef, tagsVersion, loadIndex } = useNavbarSearchTagsIndex();
+  const { prefs } = useAppPreferences();
+  const qwenTagSearchOn = Boolean(
+    (prefs?.aiSearchEnabled || prefs?.aiSemanticSearchEnabled) &&
+      (prefs?.aiSearchModelId === 'qwen3-vl-embedding-2b' ||
+        prefs?.aiSearchModelId === 'qwen3-vl-embedding-8b')
+  );
   const similarSearch = useNavbarSimilarSearch(searchParams, setSearchParams, searchMode);
 
   const tagsIndex = useMemo(() => {
@@ -460,10 +468,37 @@ export function NavbarSearchProvider({
   );
 
   const q = normalizePrefix(draft);
-  const rankedTags = useMemo(
-    () => rankTagsForQuery(q, categories, tagsByCategoryRef.current),
-    [categories, q, tagsVersion, tagsByCategoryRef]
-  );
+  useEffect(() => {
+    if (searchMode !== 'tags' || !qwenTagSearchOn) {
+      setSemanticTagHits([]);
+      return;
+    }
+    const query = q.trim();
+    if (query.length < 2 || !window.arc?.rankTagsSemantic) {
+      setSemanticTagHits([]);
+      return;
+    }
+    let cancelled = false;
+    const handle = window.setTimeout(() => {
+      void window.arc
+        .rankTagsSemantic!(query)
+        .then((hits) => {
+          if (!cancelled) setSemanticTagHits(Array.isArray(hits) ? hits : []);
+        })
+        .catch(() => {
+          if (!cancelled) setSemanticTagHits([]);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(handle);
+    };
+  }, [q, qwenTagSearchOn, searchMode]);
+
+  const rankedTags = useMemo(() => {
+    const base = rankTagsForQuery(q, categories, tagsByCategoryRef.current);
+    return mergeSemanticTagHits(base, semanticTagHits, categories, tagsByCategoryRef.current);
+  }, [categories, q, semanticTagHits, tagsVersion, tagsByCategoryRef]);
   const suggestionMatchesDraft = q.length > 0 && rankedTags.length > 0;
 
   const onInputKeyDown = useCallback(

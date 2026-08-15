@@ -37,6 +37,10 @@ export function syncArcMediaServerLibraryRoot(libraryRoot: string | null): void 
   postToWorker({ type: 'library-root', libraryRoot });
 }
 
+export function syncArcMediaServerLibraryRoots(roots: Record<string, string>): void {
+  postToWorker({ type: 'library-roots', roots });
+}
+
 export function syncArcMediaServerActiveTab(tab: MediaSectionTab | null): void {
   postToWorker({
     type: 'active-tab',

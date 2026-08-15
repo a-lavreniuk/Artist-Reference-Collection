@@ -45,8 +45,11 @@ export async function storageListCards(params: StorageListCardsParams): Promise<
   return arc().storageListCards(params);
 }
 
-export async function storageGetCard(cardId: string): Promise<CardRecord | null> {
-  return arc().storageGetCard(cardId);
+export async function storageGetCard(
+  cardId: string,
+  libraryId?: string
+): Promise<CardRecord | null> {
+  return arc().storageGetCard(libraryId ? { cardId, libraryId } : cardId);
 }
 
 export async function storageSetVideoPreviewFrame(cardId: string, frameMs: number): Promise<CardRecord> {
@@ -95,16 +98,39 @@ export async function storageInsertCardsMetadata(
   return arc().storageInsertCardsMetadata(cards);
 }
 
-export async function storageSoftDeleteCard(cardId: string): Promise<void> {
-  return arc().storageSoftDeleteCard(cardId);
+export async function storageSoftDeleteCard(cardId: string, libraryId?: string): Promise<void> {
+  return arc().storageSoftDeleteCard(cardId, libraryId);
 }
 
-export async function storageRestoreCard(cardId: string): Promise<void> {
-  return arc().storageRestoreCard(cardId);
+export type RestoreCardOptions = {
+  libraryId?: string;
+  destinationLibraryId?: string;
+  sourceLibraryRoot?: string;
+};
+
+export type RestoreCardResult = { ok: true } | { ok: false; error: string };
+
+export async function storageRestoreCard(
+  cardId: string,
+  options?: RestoreCardOptions
+): Promise<RestoreCardResult> {
+  if (!options?.libraryId && !options?.destinationLibraryId && !options?.sourceLibraryRoot) {
+    return arc().storageRestoreCard(cardId);
+  }
+  return arc().storageRestoreCard({
+    cardId,
+    libraryId: options.libraryId,
+    destinationLibraryId: options.destinationLibraryId,
+    sourceLibraryRoot: options.sourceLibraryRoot
+  });
 }
 
-export async function storagePermanentDeleteCard(cardId: string, confirmToken: string): Promise<void> {
-  return arc().storagePermanentDeleteCard(cardId, confirmToken);
+export async function storagePermanentDeleteCard(
+  cardId: string,
+  confirmToken: string,
+  libraryId?: string
+): Promise<void> {
+  return arc().storagePermanentDeleteCard(cardId, confirmToken, libraryId);
 }
 
 export async function storageEmptyTrash(confirmToken: string): Promise<number> {

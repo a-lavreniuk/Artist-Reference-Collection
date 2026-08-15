@@ -8,10 +8,22 @@ type Props = {
   cardB: CardRecord | null;
   urlA: string | null;
   urlB: string | null;
-  libraryRootAbs: string | null;
+  libraryRootA: string | null;
+  libraryRootB: string | null;
+  libraryNameA?: string | null;
+  libraryNameB?: string | null;
 };
 
-export default function DuplicatesWipeCompare({ cardA, cardB, urlA, urlB, libraryRootAbs }: Props) {
+export default function DuplicatesWipeCompare({
+  cardA,
+  cardB,
+  urlA,
+  urlB,
+  libraryRootA,
+  libraryRootB,
+  libraryNameA,
+  libraryNameB
+}: Props) {
   const [pos, setPos] = useState(50);
   const wrapRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -69,8 +81,18 @@ export default function DuplicatesWipeCompare({ cardA, cardB, urlA, urlB, librar
           />
         ) : null}
 
-        <DuplicatesMetaOverlay card={cardA} libraryRootAbs={libraryRootAbs} align="left" />
-        <DuplicatesMetaOverlay card={cardB} libraryRootAbs={libraryRootAbs} align="right" />
+        <DuplicatesMetaOverlay
+          card={cardA}
+          libraryRootAbs={libraryRootA}
+          libraryName={libraryNameA}
+          align="left"
+        />
+        <DuplicatesMetaOverlay
+          card={cardB}
+          libraryRootAbs={libraryRootB}
+          libraryName={libraryNameB}
+          align="right"
+        />
       </div>
 
       <div className="arc-duplicates-wipe__split" style={{ left: `${pos}%` }}>

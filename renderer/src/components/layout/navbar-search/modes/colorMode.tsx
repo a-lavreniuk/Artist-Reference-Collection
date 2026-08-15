@@ -6,6 +6,7 @@ import SearchPanelSection from '../../SearchPanelSection';
 import SearchPanelRecentCards from '../../SearchPanelRecentCards';
 import ColorFormatInput from '../../ColorFormatInput';
 import { clearAllRecentViewedCardIds } from '../../../../search/recentViewedCards';
+import { useColorEyedropper } from '../hooks/useColorEyedropper';
 
 function ColorBarField({ ctx }: NavbarSearchBarFieldProps) {
   const { displayColorHex, openPanel, handlePanelColorChange, colorFormat, setColorFormat } = ctx;
@@ -38,9 +39,16 @@ function ColorPanelContent({ ctx }: NavbarSearchPanelContentProps) {
     recentViewedIds,
     setRecentTick,
     selectRecentCard,
-    colorFormat
+    colorFormat,
+    closePanel,
+    openPanel
   } = ctx;
   const showRecentViews = recentViewedIds.length > 0;
+  const eyedropper = useColorEyedropper({
+    closePanel,
+    openPanel,
+    onColorChange: handlePanelColorChange
+  });
 
   return (
     <>
@@ -49,6 +57,8 @@ function ColorPanelContent({ ctx }: NavbarSearchPanelContentProps) {
         tolerance={panelColorTolerance}
         onColorChange={handlePanelColorChange}
         onToleranceChange={handlePanelToleranceChange}
+        onEyedropper={() => void eyedropper.start()}
+        eyedropperBusy={eyedropper.busy}
         pantoneMode={colorFormat === 'pantone'}
       />
 

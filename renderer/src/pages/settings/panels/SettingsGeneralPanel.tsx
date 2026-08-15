@@ -5,7 +5,7 @@ import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
 import { requestInterfaceTourReplay } from '../../../components/onboarding/interfaceTourEvents';
 import { INTERFACE_TOUR_SETTINGS } from '../../../content/onboardingTour';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
-import type { GalleryCollectionsSortMode, UiThemePreference } from '../../../services/appPreferences';
+import type { GalleryCollectionsSortMode, TrashRetentionDays, UiThemePreference } from '../../../services/appPreferences';
 
 const LABEL_DESCRIPTION =
   'Здесь настраиваются оформление, запуск приложения и базовое поведение с файлами. Эти параметры действуют для всего ARC.';
@@ -15,6 +15,8 @@ const LABEL_CLOSE_TO_TRAY = 'При закрытии окна сворачива
 const LABEL_TRASH_SOURCES =
   'Удалять исходные файлы после добавления их в систему и формирования карточки. Эти файлы будут перенесены в системную корзину.';
 const LABEL_DELETE_TO_TRASH = 'Удаление карточек переносит их в корзину, а не удаляет из системы.';
+const LABEL_TRASH_RETENTION =
+  'Карточки в корзине удаляются безвозвратно по истечении срока. Очистка запускается при старте приложения и при смене библиотеки.';
 const LABEL_GALLERY_COLLECTIONS_STRIP = 'Показывать коллекции на экране библиотеки';
 
 const COLLECTIONS_SORT_OPTIONS: Array<{ value: GalleryCollectionsSortMode; label: string }> = [
@@ -27,6 +29,13 @@ const THEME_OPTIONS: Array<{ value: UiThemePreference; label: string }> = [
   { value: 'light', label: 'Светлая' },
   { value: 'dark', label: 'Тёмная' },
   { value: 'system', label: 'Автоматическая' }
+];
+
+const TRASH_RETENTION_OPTIONS: Array<{ value: TrashRetentionDays; label: string }> = [
+  { value: 7, label: '7 дней' },
+  { value: 30, label: '30 дней' },
+  { value: 90, label: '90 дней' },
+  { value: 0, label: 'Не удалять автоматически' }
 ];
 
 export default function SettingsGeneralPanel() {
@@ -126,6 +135,24 @@ export default function SettingsGeneralPanel() {
             disabled={disabled}
             onPressedChange={(deleteCardsUseTrash) => void update({ deleteCardsUseTrash })}
           />
+          {prefs?.deleteCardsUseTrash === true ? (
+            <>
+              <div className="arc-settings-desc-block">
+                <p className="text-m arc-settings-desc-block__text">{LABEL_TRASH_RETENTION}</p>
+              </div>
+              <div className="arc-settings-radio-stack" role="radiogroup" aria-label="Срок хранения корзины">
+                {TRASH_RETENTION_OPTIONS.map((option) => (
+                  <SettingsRadioRow
+                    key={option.value}
+                    label={option.label}
+                    checked={(prefs.trashRetentionDays ?? 30) === option.value}
+                    disabled={disabled}
+                    onCheckedChange={() => void update({ trashRetentionDays: option.value })}
+                  />
+                ))}
+              </div>
+            </>
+          ) : null}
         </SettingsSection>
 
         <SettingsSeparator />

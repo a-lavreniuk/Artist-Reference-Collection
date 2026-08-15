@@ -14,7 +14,8 @@ import {
   bulkRestore,
   bulkSendToTrash,
   bulkToggleCollectionForCards,
-  bulkToggleTagForCards
+  bulkToggleTagForCards,
+  libraryMapsFromCards
 } from './galleryBulkActions';
 import {
   formatCollectionAddToast,
@@ -185,18 +186,30 @@ export function useGalleryMultiSelect({
   const onTrashAction = useCallback(() => {
     if (scope.kind === 'trash') return;
     const ids = [...selectedIdsRef.current];
-    void runBulk(() => bulkSendToTrash(ids), formatTrashToast, undoTrash);
-  }, [runBulk, scope.kind]);
+    const maps = libraryMapsFromCards(cardsById, ids);
+    void runBulk(() => bulkSendToTrash(ids, maps.libraryIdByCard), formatTrashToast, (affected) =>
+      undoTrash(affected, libraryMapsFromCards(cardsById, affected).libraryIdByCard)
+    );
+  }, [runBulk, scope.kind, cardsById]);
 
   const onRestore = useCallback(() => {
     const ids = [...selectedIdsRef.current];
-    void runBulk(() => bulkRestore(ids), formatRestoreToast, undoRestore);
-  }, [runBulk]);
+    const maps = libraryMapsFromCards(cardsById, ids);
+    void runBulk(
+      () => bulkRestore(ids, maps),
+      formatRestoreToast,
+      (affected) => undoRestore(affected, libraryMapsFromCards(cardsById, affected).libraryIdByCard)
+    );
+  }, [runBulk, cardsById]);
 
   const onPermanentDelete = useCallback(() => {
     const ids = [...selectedIdsRef.current];
-    void runBulk(() => bulkPermanentDelete(ids), formatPermanentDeleteToast);
-  }, [runBulk]);
+    const maps = libraryMapsFromCards(cardsById, ids);
+    void runBulk(
+      () => bulkPermanentDelete(ids, maps.libraryIdByCard),
+      formatPermanentDeleteToast
+    );
+  }, [runBulk, cardsById]);
 
   const onCollectionAction = useCallback(() => {
     if (scope.kind === 'collection') {
@@ -219,13 +232,27 @@ export function useGalleryMultiSelect({
   const bulkHandlers = useMemo(
     () => ({
       onBulkSendToTrash: async (cardIds: string[]) => {
-        await runBulk(() => bulkSendToTrash(cardIds), formatTrashToast, undoTrash);
+        const maps = libraryMapsFromCards(cardsById, cardIds);
+        await runBulk(
+          () => bulkSendToTrash(cardIds, maps.libraryIdByCard),
+          formatTrashToast,
+          (affected) => undoTrash(affected, libraryMapsFromCards(cardsById, affected).libraryIdByCard)
+        );
       },
       onBulkRestore: async (cardIds: string[]) => {
-        await runBulk(() => bulkRestore(cardIds), formatRestoreToast, undoRestore);
+        const maps = libraryMapsFromCards(cardsById, cardIds);
+        await runBulk(
+          () => bulkRestore(cardIds, maps),
+          formatRestoreToast,
+          (affected) => undoRestore(affected, libraryMapsFromCards(cardsById, affected).libraryIdByCard)
+        );
       },
       onBulkPermanentDelete: async (cardIds: string[]) => {
-        await runBulk(() => bulkPermanentDelete(cardIds), formatPermanentDeleteToast);
+        const maps = libraryMapsFromCards(cardsById, cardIds);
+        await runBulk(
+          () => bulkPermanentDelete(cardIds, maps.libraryIdByCard),
+          formatPermanentDeleteToast
+        );
       },
       onBulkToggleMoodboard: async (cardIds: string[]) => {
         const allInMoodboard =
@@ -258,7 +285,7 @@ export function useGalleryMultiSelect({
         );
       }
     }),
-    [moodboardCardIds, runBulk, scope.kind]
+    [moodboardCardIds, runBulk, scope.kind, cardsById]
   );
 
   // Колбэки карточек держим со стабильной ссылкой: иначе memo плиток не работает

@@ -22,6 +22,9 @@ import {
 } from './ai/joyCaptionPrompt';
 import type { SearchModelId } from './ai/types';
 import { isSearchModelId } from './ai/types';
+import { sanitizeTrashRetentionDays, type TrashRetentionDays } from './storage/trashRetention';
+
+export type { TrashRetentionDays };
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
@@ -53,6 +56,8 @@ export type AppPreferencesV1 = {
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
   deleteCardsUseTrash: boolean;
+  /** Days to keep soft-deleted cards; 0 = never auto-purge. */
+  trashRetentionDays: TrashRetentionDays;
   screenshotsEnabled: boolean;
   screenshotFormat: ScreenshotFormat;
   screenshotAskSaveLocation: boolean;
@@ -143,6 +148,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
     deleteCardsUseTrash: true,
+    trashRetentionDays: 30,
     screenshotsEnabled: true,
     screenshotFormat: 'webp',
     screenshotAskSaveLocation: false,
@@ -347,6 +353,7 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
       typeof raw.closeToTrayOnWindowClose === 'boolean' ? raw.closeToTrayOnWindowClose : d.closeToTrayOnWindowClose,
     importSourceFilesAction: sanitizeImportAction(raw.importSourceFilesAction),
     deleteCardsUseTrash: typeof raw.deleteCardsUseTrash === 'boolean' ? raw.deleteCardsUseTrash : d.deleteCardsUseTrash,
+    trashRetentionDays: sanitizeTrashRetentionDays(raw.trashRetentionDays ?? d.trashRetentionDays),
     screenshotsEnabled: typeof raw.screenshotsEnabled === 'boolean' ? raw.screenshotsEnabled : d.screenshotsEnabled,
     screenshotFormat: sanitizeScreenshotFormat(raw.screenshotFormat),
     screenshotAskSaveLocation:
@@ -471,6 +478,9 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('deleteCardsUseTrash' in patch && typeof patch.deleteCardsUseTrash === 'boolean') {
     next.deleteCardsUseTrash = patch.deleteCardsUseTrash;
+  }
+  if ('trashRetentionDays' in patch) {
+    next.trashRetentionDays = sanitizeTrashRetentionDays(patch.trashRetentionDays);
   }
   if ('screenshotsEnabled' in patch && typeof patch.screenshotsEnabled === 'boolean') {
     next.screenshotsEnabled = patch.screenshotsEnabled;

@@ -10,7 +10,8 @@ import {
   type OnboardingSetupStep,
   type GalleryCollectionsSortMode,
   type ScreenshotFormat,
-  type UiThemePreference
+  type UiThemePreference,
+  sanitizeTrashRetentionDays
 } from './appPreferences';
 import { mergeMcpToolsEnabled } from '@arc-main-shared/mcpToolCatalog';
 
@@ -69,6 +70,9 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   }
   if ('deleteCardsUseTrash' in patch && typeof patch.deleteCardsUseTrash === 'boolean') {
     next.deleteCardsUseTrash = patch.deleteCardsUseTrash;
+  }
+  if ('trashRetentionDays' in patch) {
+    next.trashRetentionDays = sanitizeTrashRetentionDays(patch.trashRetentionDays);
   }
   if ('screenshotsEnabled' in patch && typeof patch.screenshotsEnabled === 'boolean') {
     next.screenshotsEnabled = patch.screenshotsEnabled;
@@ -254,6 +258,9 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('deleteCardsUseTrash' in patch && typeof patch.deleteCardsUseTrash === 'boolean') {
     next.deleteCardsUseTrash = patch.deleteCardsUseTrash;
+  }
+  if ('trashRetentionDays' in patch) {
+    next.trashRetentionDays = sanitizeTrashRetentionDays(patch.trashRetentionDays);
   }
   if ('screenshotsEnabled' in patch && typeof patch.screenshotsEnabled === 'boolean') {
     next.screenshotsEnabled = patch.screenshotsEnabled;

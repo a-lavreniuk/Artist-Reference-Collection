@@ -133,10 +133,10 @@ export async function listCardsInCollection(
   return list.slice(params.offset, params.offset + params.limit);
 }
 
-export async function getCardById(id: string): Promise<CardRecord | null> {
+export async function getCardById(id: string, libraryId?: string): Promise<CardRecord | null> {
   const b = await resolveBackend();
   if (b === 'file') {
-    return storage.storageGetCard(id);
+    return storage.storageGetCard(id, libraryId);
   }
   const all = await listCardsSorted('all');
   return all.find((c) => c.id === id) ?? null;
@@ -349,11 +349,11 @@ export async function updateCardPayload(
   notifyTagsChanged();
 }
 
-export async function softDeleteCard(cardId: string): Promise<void> {
+export async function softDeleteCard(cardId: string, libraryId?: string): Promise<void> {
   const b = await resolveBackend();
 
   if (b === 'file') {
-    await storage.storageSoftDeleteCard(cardId);
+    await storage.storageSoftDeleteCard(cardId, libraryId);
     notifyMoodboardBoardChanged();
   } else {
     const legacy = safeReadArray<{ id: string; type?: string }>(STORAGE_KEYS.cards);
@@ -374,27 +374,37 @@ export async function softDeleteCard(cardId: string): Promise<void> {
   notifyTagsChanged();
 }
 
-export async function restoreCard(cardId: string): Promise<void> {
+export async function restoreCard(
+  cardId: string,
+  options?: storage.RestoreCardOptions
+): Promise<storage.RestoreCardResult> {
   const b = await resolveBackend();
   if (b === 'file') {
-    await storage.storageRestoreCard(cardId);
+    const result = await storage.storageRestoreCard(cardId, options);
+    if (result && result.ok === false) return result;
   }
   const restored = historyCardAction('Восстановлена ', cardId);
   void tryAppendLibraryHistory(restored.message, restored.segments);
   notifyCardsChanged();
   notifyTagsChanged();
+  return { ok: true };
 }
 
-export async function permanentDeleteCard(cardId: string, confirmToken?: string): Promise<void> {
+export async function permanentDeleteCard(
+  cardId: string,
+  confirmToken?: string,
+  libraryId?: string
+): Promise<void> {
   const b = await resolveBackend();
 
   if (b === 'file') {
+    const binding = libraryId ? `${libraryId}:${cardId}` : cardId;
     const token =
       confirmToken ??
       (await import('../destructiveConfirm').then((m) =>
-        m.requestDestructiveConfirm({ kind: 'permanent-delete-card', binding: cardId })
+        m.requestDestructiveConfirm({ kind: 'permanent-delete-card', binding })
       ));
-    await storage.storagePermanentDeleteCard(cardId, token);
+    await storage.storagePermanentDeleteCard(cardId, token, libraryId);
     notifyMoodboardBoardChanged();
   } else {
     const legacy = safeReadArray<{ id: string; type?: string }>(STORAGE_KEYS.cards);

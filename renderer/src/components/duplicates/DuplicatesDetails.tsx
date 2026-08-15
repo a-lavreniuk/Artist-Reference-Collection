@@ -17,7 +17,10 @@ import { useDuplicatePairDetails } from './useDuplicatePairDetails';
 type Props = {
   cardA: CardRecord | null;
   cardB: CardRecord | null;
-  libraryRootAbs: string | null;
+  libraryRootA: string | null;
+  libraryRootB: string | null;
+  libraryNameA?: string | null;
+  libraryNameB?: string | null;
 };
 
 export type DuplicatesDetailSectionKey = 'details' | 'description' | 'tags' | 'collections';
@@ -142,6 +145,7 @@ function SectionFill({
 function DetailColumn({
   card,
   libraryRootAbs,
+  libraryName,
   categories,
   tagsByCategory,
   collectionsById,
@@ -154,6 +158,7 @@ function DetailColumn({
 }: {
   card: CardRecord | null;
   libraryRootAbs: string | null;
+  libraryName?: string | null;
   categories: CategoryRecord[];
   tagsByCategory: Map<string, TagRecord[]>;
   collectionsById: Map<string, CollectionRecord>;
@@ -205,6 +210,7 @@ function DetailColumn({
           <SectionFill sectionKey="details" minHeight={minHeights.details} measureRefs={measureRefs}>
             <InfoRows
               rows={[
+                ...(libraryName ? [{ label: 'Библиотека', value: libraryName }] : []),
                 { label: 'Формат', value: meta.format },
                 { label: 'Разрешение', value: meta.resolution },
                 { label: 'Размер', value: meta.size },
@@ -307,7 +313,14 @@ function heightsEqual(a: SectionMinHeights, b: SectionMinHeights): boolean {
   return SECTION_KEYS.every((key) => a[key] === b[key]);
 }
 
-export function DuplicatesDetailsPanels({ cardA, cardB, libraryRootAbs }: Props) {
+export function DuplicatesDetailsPanels({
+  cardA,
+  cardB,
+  libraryRootA,
+  libraryRootB,
+  libraryNameA,
+  libraryNameB
+}: Props) {
   const { categories, tagsByCategory, collectionsById } = useDuplicatePairDetails(cardA, cardB);
   const [sectionsOpen, setSectionsOpen] = useState<SectionsOpen>(() =>
     sectionsOpenForPair(cardA, cardB)
@@ -420,7 +433,8 @@ export function DuplicatesDetailsPanels({ cardA, cardB, libraryRootAbs }: Props)
       <div className="arc-duplicates-panel arc-duplicates-panel--details">
         <DetailColumn
           card={cardA}
-          libraryRootAbs={libraryRootAbs}
+          libraryRootAbs={libraryRootA}
+          libraryName={libraryNameA}
           categories={categories}
           tagsByCategory={tagsByCategory}
           collectionsById={collectionsById}
@@ -435,7 +449,8 @@ export function DuplicatesDetailsPanels({ cardA, cardB, libraryRootAbs }: Props)
       <div className="arc-duplicates-panel arc-duplicates-panel--details">
         <DetailColumn
           card={cardB}
-          libraryRootAbs={libraryRootAbs}
+          libraryRootAbs={libraryRootB}
+          libraryName={libraryNameB}
           categories={categories}
           tagsByCategory={tagsByCategory}
           collectionsById={collectionsById}

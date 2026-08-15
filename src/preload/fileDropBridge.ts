@@ -61,7 +61,8 @@ function pathsFromUriList(dt: DataTransfer): string[] {
   return paths;
 }
 
-export function pathsFromFileList(files: FileList): string[] {
+export function pathsFromFileList(files: FileList | null | undefined): string[] {
+  if (!files || typeof files.length !== 'number') return [];
   const paths: string[] = [];
   for (let i = 0; i < files.length; i++) {
     const file = files.item(i);
@@ -72,10 +73,15 @@ export function pathsFromFileList(files: FileList): string[] {
   return paths;
 }
 
-export function pathsFromDroppedDataTransfer(dt: DataTransfer): string[] {
-  const paths = pathsFromFileList(dt.files);
-  if (paths.length) return paths;
-  return pathsFromUriList(dt);
+export function pathsFromDroppedDataTransfer(dt: DataTransfer | null | undefined): string[] {
+  if (!dt) return [];
+  try {
+    const paths = pathsFromFileList(dt.files);
+    if (paths.length) return paths;
+    return pathsFromUriList(dt);
+  } catch {
+    return [];
+  }
 }
 
 function emitFileDrop(paths: string[]): void {

@@ -38,7 +38,7 @@ function extForFormat(format: ScreenshotFormat): string {
   return format === 'jpg' ? '.jpg' : format === 'png' ? '.png' : '.webp';
 }
 
-async function captureDisplayBuffer(
+export async function captureDisplayBuffer(
   display: Display
 ): Promise<{ buffer: Buffer; scaleFactor: number }> {
   const { width, height } = display.size;
@@ -66,6 +66,38 @@ async function captureDisplayBuffer(
 
 export async function capturePrimaryDisplayBuffer(): Promise<{ buffer: Buffer; scaleFactor: number }> {
   return captureDisplayBuffer(screen.getPrimaryDisplay());
+}
+
+export async function captureAllDisplays(): Promise<
+  Array<{
+    displayId: number;
+    bounds: { x: number; y: number; width: number; height: number };
+    scaleFactor: number;
+    buffer: Buffer;
+  }>
+> {
+  const displays = screen.getAllDisplays();
+  const frames: Array<{
+    displayId: number;
+    bounds: { x: number; y: number; width: number; height: number };
+    scaleFactor: number;
+    buffer: Buffer;
+  }> = [];
+  for (const display of displays) {
+    const { buffer, scaleFactor } = await captureDisplayBuffer(display);
+    frames.push({
+      displayId: display.id,
+      bounds: {
+        x: display.bounds.x,
+        y: display.bounds.y,
+        width: display.bounds.width,
+        height: display.bounds.height
+      },
+      scaleFactor,
+      buffer
+    });
+  }
+  return frames;
 }
 
 export async function captureDisplayAtCursorBuffer(): Promise<{ buffer: Buffer; scaleFactor: number }> {

@@ -4,10 +4,12 @@ import ToastAlert, { type ToastAlertVariant } from '../alert/ToastAlert';
 import type { NotificationPrefKey } from '../../services/appPreferences';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
 import {
+  APP_NOTIFICATION_DISMISS_EVENT,
   APP_NOTIFICATION_EVENT,
   consumeNotificationAction,
   createNotificationId,
   dropNotificationAction,
+  upsertNotificationStack,
   type AppNotificationPayload
 } from '../../services/notificationService';
 
@@ -51,9 +53,8 @@ export default function NotificationHost({ children }: { children: React.ReactNo
       }
 
       const id = detail.id ?? createNotificationId();
-      setAlerts((prev) => [
-        ...prev,
-        {
+      setAlerts((prev) => {
+        const { next, droppedActionId } = upsertNotificationStack(prev, {
           id,
           message: detail.message,
           variant: detail.variant ?? 'info',
@@ -62,13 +63,24 @@ export default function NotificationHost({ children }: { children: React.ReactNo
           navigateTo: detail.navigateTo,
           actionLabel: detail.actionLabel,
           actionId: detail.actionId
-        }
-      ]);
+        });
+        if (droppedActionId) dropNotificationAction(droppedActionId);
+        return next;
+      });
+    };
+
+    const onDismiss = (event: Event) => {
+      const id = (event as CustomEvent<{ id?: string }>).detail?.id;
+      if (id) dismiss(id);
     };
 
     window.addEventListener(APP_NOTIFICATION_EVENT, onNotify);
-    return () => window.removeEventListener(APP_NOTIFICATION_EVENT, onNotify);
-  }, []);
+    window.addEventListener(APP_NOTIFICATION_DISMISS_EVENT, onDismiss);
+    return () => {
+      window.removeEventListener(APP_NOTIFICATION_EVENT, onNotify);
+      window.removeEventListener(APP_NOTIFICATION_DISMISS_EVENT, onDismiss);
+    };
+  }, [dismiss]);
 
   useEffect(() => {
     if (!window.arc?.onDuplicatesFound) return undefined;

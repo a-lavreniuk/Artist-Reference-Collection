@@ -4,6 +4,7 @@ import {
   type CategoryWeight,
   type TagRecord
 } from '../services/db';
+import { synonymSearchKeys } from './tagSynonymMap';
 
 export type RankedSearchTag = {
   tag: TagRecord;
@@ -13,19 +14,43 @@ export type RankedSearchTag = {
 
 const NAME_PREFIX = 1000;
 const NAME_CONTAINS = 800;
+const SYNONYM_PREFIX = 700;
+const SYNONYM_CONTAINS = 600;
 const DESC_PREFIX = 400;
 const DESC_CONTAINS = 200;
+const SYNONYM_DESC_PREFIX = 350;
+const SYNONYM_DESC_CONTAINS = 150;
+const SEMANTIC_SCORE_BASE = 500;
+
+function scoreAgainstKey(
+  name: string,
+  desc: string,
+  boost: number,
+  key: string,
+  fromSynonym: boolean
+): number | null {
+  const prefix = fromSynonym ? SYNONYM_PREFIX : NAME_PREFIX;
+  const contains = fromSynonym ? SYNONYM_CONTAINS : NAME_CONTAINS;
+  const descPrefix = fromSynonym ? SYNONYM_DESC_PREFIX : DESC_PREFIX;
+  const descContains = fromSynonym ? SYNONYM_DESC_CONTAINS : DESC_CONTAINS;
+  if (name.startsWith(key)) return prefix + boost;
+  if (name.includes(key)) return contains + boost;
+  if (desc && desc.startsWith(key)) return descPrefix + boost;
+  if (desc && desc.includes(key)) return descContains + boost;
+  return null;
+}
 
 function scoreTagMatch(tag: TagRecord, weight: CategoryWeight, q: string): number | null {
   const name = tag.name.toLowerCase();
   const desc = tag.description?.trim().toLowerCase() ?? '';
   const boost = CATEGORY_WEIGHT_SCORE[weight];
-
-  if (name.startsWith(q)) return NAME_PREFIX + boost;
-  if (name.includes(q)) return NAME_CONTAINS + boost;
-  if (desc && desc.startsWith(q)) return DESC_PREFIX + boost;
-  if (desc && desc.includes(q)) return DESC_CONTAINS + boost;
-  return null;
+  let best: number | null = null;
+  for (const key of synonymSearchKeys(q)) {
+    const fromSynonym = key !== q;
+    const score = scoreAgainstKey(name, desc, boost, key, fromSynonym);
+    if (score != null && (best == null || score > best)) best = score;
+  }
+  return best;
 }
 
 /** Ранжирование меток для инвертированного поиска: имя → описание → вес категории. */
@@ -55,6 +80,42 @@ export function rankTagsForQuery(
   });
 
   return ranked;
+}
+
+export function mergeSemanticTagHits(
+  ranked: RankedSearchTag[],
+  hits: Array<{ tagId: string; score: number }>,
+  categories: CategoryRecord[],
+  tagsByCategory: Map<string, TagRecord[]>
+): RankedSearchTag[] {
+  if (hits.length === 0) return ranked;
+  const seen = new Set(ranked.map((row) => row.tag.id));
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const tagIndex = new Map<string, { tag: TagRecord; category: CategoryRecord }>();
+  for (const [categoryId, tags] of tagsByCategory) {
+    const category = categoryById.get(categoryId);
+    if (!category) continue;
+    for (const tag of tags) tagIndex.set(tag.id, { tag, category });
+  }
+  const extra: RankedSearchTag[] = [];
+  for (const hit of hits) {
+    if (seen.has(hit.tagId)) continue;
+    const found = tagIndex.get(hit.tagId);
+    if (!found) continue;
+    extra.push({
+      tag: found.tag,
+      category: found.category,
+      score: SEMANTIC_SCORE_BASE + hit.score * 100
+    });
+    seen.add(hit.tagId);
+  }
+  if (extra.length === 0) return ranked;
+  const merged = [...ranked, ...extra];
+  merged.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.tag.name.localeCompare(b.tag.name, 'ru');
+  });
+  return merged;
 }
 
 export type TagNameHighlightSegment = {

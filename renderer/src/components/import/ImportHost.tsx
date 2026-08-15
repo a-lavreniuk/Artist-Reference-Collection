@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   ARC_CARDS_CHANGED_EVENT,
   isLibraryConfigured,
@@ -11,8 +12,14 @@ import { getImportSourceFilesAction } from '../../import/importDefaults';
 import {
   pluralFilesRu,
   tryEnqueueImportJob,
+  type EnqueueImportResult,
   type ImportQueueJob
 } from '../../import/importQueue';
+import {
+  collectionIdFromPathname,
+  droppedPathsFromClipboard,
+  isPasteImportBlocked
+} from '../../import/pasteImport';
 import type { FolderImportPlan } from '../../import/folderImportPlan';
 import {
   folderBaseName,
@@ -20,7 +27,6 @@ import {
   SINGLE_FOLDER_IMPORT_PLAN
 } from '../../import/folderImportPlan';
 import { showAppNotification } from '../../services/notificationService';
-import ToastAlert from '../alert/ToastAlert';
 import SourceFilesModal from './SourceFilesModal';
 import ImportDuplicatesModal, { type ImportDuplicateConflict } from './ImportDuplicatesModal';
 import ImportFolderCollectionsModal, {
@@ -84,6 +90,7 @@ type ImportPhase =
   | 'cancel-keep-modal';
 
 export default function ImportHost({ children }: { children: ReactNode }) {
+  const location = useLocation();
   const [phase, setPhase] = useState<ImportPhase>('idle');
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const [libraryReady, setLibraryReady] = useState(false);
@@ -102,7 +109,6 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const [failuresAddedCount, setFailuresAddedCount] = useState(0);
   const [cancelKeepCount, setCancelKeepCount] = useState(0);
   const [cancelKeepIds, setCancelKeepIds] = useState<string[]>([]);
-  const [queueLimitToast, setQueueLimitToast] = useState<string | null>(null);
 
   const assignCollectionIdRef = useRef<string | null>(null);
   const emptyFolderResolverRef = useRef<(() => void) | null>(null);
@@ -211,8 +217,9 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   );
 
   const runImportBatch = useCallback(
-    async (rawPaths: string[]) => {
+    async (rawPaths: string[], options?: { skipSourceFiles?: boolean }) => {
       if (!window.arc || !libraryOpen) return;
+      const skipSourceFiles = Boolean(options?.skipSourceFiles);
       const paths = rawPaths.filter((p) => isImportableMediaPath(p));
       if (!paths.length) return;
 
@@ -352,7 +359,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
 
         const sourceAction = getImportSourceFilesAction();
         const sourcePaths = successes.map((s) => s.path);
-        if (n > 0 && sourcePaths.length > 0) {
+        if (!skipSourceFiles && n > 0 && sourcePaths.length > 0) {
           if (sourceAction === 'ask') {
             setSourceModalPaths(sourcePaths);
             setPhase('source-modal');
@@ -452,7 +459,21 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         cancelRequestedRef.current = false;
 
         if (job.kind === 'files') {
-          await runImportBatch(job.paths);
+          assignCollectionIdRef.current = job.assignCollectionId ?? null;
+          try {
+            await runImportBatch(job.paths, { skipSourceFiles: Boolean(job.skipSourceFiles) });
+          } finally {
+            assignCollectionIdRef.current = null;
+            if (job.deleteAfterImport) {
+              for (const abs of job.paths) {
+                try {
+                  await window.arc?.deleteClipboardImportTemp?.(abs);
+                } catch {
+                  /* ignore */
+                }
+              }
+            }
+          }
         } else {
           await executeFolderImports(
             job.folderPaths,
@@ -472,8 +493,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   }, [executeFolderImports, runImportBatch]);
 
   const enqueueJob = useCallback(
-    (job: ImportQueueJob) => {
-      if (!libraryOpen) return;
+    (job: ImportQueueJob): EnqueueImportResult | null => {
+      if (!libraryOpen) return null;
       const blocked =
         phaseRef.current === 'source-modal' ||
         phaseRef.current === 'duplicate-modal' ||
@@ -490,17 +511,21 @@ export default function ImportHost({ children }: { children: ReactNode }) {
           variant: 'warning',
           prefKey: 'notifyFilesAdded'
         });
-        return;
+        return result;
       }
       if (!result.ok && result.reason === 'limit') {
-        setQueueLimitToast(
-          result.accepted > 0
-            ? `В очередь принято ${result.accepted}, лимит ${result.queuedTotal} файлов`
-            : 'Очередь заполнена (лимит 500 файлов)'
-        );
-        if (result.accepted === 0) return;
+        showAppNotification({
+          message:
+            result.accepted > 0
+              ? `В очередь принято ${result.accepted}, лимит ${result.queuedTotal} файлов`
+              : 'Очередь заполнена (лимит 500 файлов)',
+          variant: 'warning',
+          withSound: false
+        });
+        if (result.accepted === 0) return result;
       }
       void drainQueue();
+      return result;
     },
     [drainQueue, emptyFolderName, libraryOpen]
   );
@@ -555,6 +580,61 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     },
     [emptyFolderName, enqueueJob, libraryOpen]
   );
+
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      if (!libraryOpen) return;
+      if (isPasteImportBlocked(event)) return;
+      const assignCollectionId = collectionIdFromPathname(location.pathname) ?? undefined;
+      const droppedPaths = droppedPathsFromClipboard(
+        window.arc?.getPathsForDroppedDataTransfer,
+        event.clipboardData
+      );
+      if (droppedPaths.length > 0) {
+        const importable = droppedPaths.filter((p) => isImportableMediaPath(p));
+        if (importable.length === 0) return;
+        event.preventDefault();
+        enqueueJob({
+          kind: 'files',
+          paths: importable,
+          skipSourceFiles: true,
+          assignCollectionId
+        });
+        return;
+      }
+      if (!window.arc?.writeClipboardImageTemp && !window.arc?.readClipboardFilePaths) return;
+      const arc = window.arc;
+      void (async () => {
+        const osRaw = await arc.readClipboardFilePaths?.();
+        const osPaths = Array.isArray(osRaw) ? osRaw : [];
+        if (osPaths.length > 0) {
+          const importableOs = osPaths.filter((p) => isImportableMediaPath(p));
+          if (importableOs.length === 0) return;
+          enqueueJob({
+            kind: 'files',
+            paths: importableOs,
+            skipSourceFiles: true,
+            assignCollectionId
+          });
+          return;
+        }
+        const written = await arc.writeClipboardImageTemp?.();
+        if (!written?.ok) return;
+        const queued = enqueueJob({
+          kind: 'files',
+          paths: [written.path],
+          skipSourceFiles: true,
+          deleteAfterImport: true,
+          assignCollectionId
+        });
+        if (!queued || queued.accepted === 0) {
+          await arc.deleteClipboardImportTemp?.(written.path);
+        }
+      })();
+    };
+    document.addEventListener('paste', onPaste, true);
+    return () => document.removeEventListener('paste', onPaste, true);
+  }, [enqueueJob, libraryOpen, location.pathname]);
 
   const closeDuplicateModal = useCallback(() => {
     setDuplicateConflicts([]);
@@ -806,15 +886,6 @@ export default function ImportHost({ children }: { children: ReactNode }) {
 
       {progress ? (
         <ImportQueueToast progress={progress} onCancel={requestCancelImport} />
-      ) : null}
-
-      {queueLimitToast ? (
-        <ToastAlert
-          message={queueLimitToast}
-          variant="warning"
-          withSound={false}
-          onClose={() => setQueueLimitToast(null)}
-        />
       ) : null}
 
       {sourceModalPaths && sourceModalPaths.length > 0 ? (

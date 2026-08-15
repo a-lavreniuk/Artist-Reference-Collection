@@ -2,8 +2,12 @@ import type { ToastAlertVariant } from '../../components/alert/ToastAlert';
 import { dispatchAiSetupChanged } from '../../search/aiSearchEvents';
 import type { AiModelRole, AiModelRef, AiIndexStatus, AiStatus } from '../../services/aiTypes';
 import { patchAppPreferences } from '../../services/appPreferencesRuntime';
+import { showAppNotification } from '../../services/notificationService';
 
-type AlertState = { message: string; variant: ToastAlertVariant } | null;
+function notifyAiAlert(message: string, variant: ToastAlertVariant): void {
+  showAppNotification({ message, variant });
+}
+
 export type DownloadPhase = 'runtime' | 'model' | 'finalize' | null;
 export type AiSetupPhase = 'off' | 'analyzing' | 'models' | 'ready';
 export type AiDownloadOperation = 'install' | 'update' | null;
@@ -43,7 +47,6 @@ type SessionState = {
   /** True only if runtime phase reported progress < 100 (actual download, not instant skip). */
   downloadReserveRuntimeBand: boolean;
   cudaPrompt: CudaPromptState;
-  alert: AlertState;
   busy: boolean;
   testingTier: string | null;
   downloadOperation: AiDownloadOperation;
@@ -75,7 +78,6 @@ let state: SessionState = {
   downloadPaused: false,
   downloadReserveRuntimeBand: false,
   cudaPrompt: null,
-  alert: null,
   busy: false,
   testingTier: null,
   downloadOperation: null,
@@ -839,24 +841,19 @@ export function initAiSettingsSession(): void {
     const indexed = typeof payload?.indexed === 'number' ? payload.indexed : state.status?.index.indexed ?? 0;
     const total = typeof payload?.total === 'number' ? payload.total : state.status?.index.total ?? 0;
     indexEtaSamples = [];
-    patchState({
-      indexEtaHint: null,
-      alert: {
-        message: `Индексация завершена: ${indexed} из ${total} карточек.`,
-        variant: 'success'
-      }
-    });
+    patchState({ indexEtaHint: null });
+    notifyAiAlert(`Индексация завершена: ${indexed} из ${total} карточек.`, 'success');
     void refreshAiSettings();
   });
 
   arc.onAiError?.(({ message, fallback }) => {
+    notifyAiAlert(
+      fallback
+        ? `${message}. Попробуйте лёгкую модель или проверьте подключение к Hugging Face.`
+        : message,
+      'warning'
+    );
     patchState({
-      alert: {
-        message: fallback
-          ? `${message}. Попробуйте лёгкую модель или проверьте подключение к Hugging Face.`
-          : message,
-        variant: 'warning'
-      },
       busy: false,
       ...clearDownloadUiState()
     });
@@ -941,13 +938,13 @@ export async function downloadAiModel(ref: AiModelRef): Promise<boolean> {
     }
 
     if (!ok) {
-      patchState({ alert: { message: error || 'Не удалось скачать модель.', variant: 'warning' } });
+      notifyAiAlert(error || 'Не удалось скачать модель.', 'warning');
     } else {
       installed = true;
       patchState({
-        alert: { message: 'Модель установлена.', variant: 'success' },
         ...clearDownloadUiState()
       });
+      notifyAiAlert('Модель установлена.', 'success');
       if (
         tier === 'search-clip' ||
         tier === 'light' ||
@@ -993,7 +990,8 @@ export async function deleteAiModel(ref: AiModelRef): Promise<void> {
   patchState({ busy: true });
   try {
     const next = (await arc.aiDeleteModel(tier)) as AiStatus;
-    patchState({ status: next, alert: { message: 'Модель удалена.', variant: 'info' } });
+    patchState({ status: next });
+    notifyAiAlert('Модель удалена.', 'info');
     dispatchAiSetupChanged();
   } finally {
     patchState({ busy: false });
@@ -1008,19 +1006,9 @@ export async function testAiModel(ref: AiModelRef): Promise<void> {
   patchState({ busy: true, testingTier: tier });
   try {
     const res = await arc.aiTestModel(tier);
-    patchState({
-      alert: {
-        message: res.message,
-        variant: res.ok ? 'success' : 'warning'
-      }
-    });
+    notifyAiAlert(res.message, res.ok ? 'success' : 'warning');
   } catch (err) {
-    patchState({
-      alert: {
-        message: err instanceof Error ? err.message : 'Не удалось проверить модель.',
-        variant: 'warning'
-      }
-    });
+    notifyAiAlert(err instanceof Error ? err.message : 'Не удалось проверить модель.', 'warning');
   } finally {
     patchState({ busy: false, testingTier: null });
   }
@@ -1037,9 +1025,7 @@ export async function setActiveAiModel(ref: AiModelRef): Promise<void> {
     patchState({ status: next });
     dispatchAiSetupChanged();
     if (previous && next.activeSearchModelId && previous !== next.activeSearchModelId) {
-      patchState({
-        alert: { message: 'Модель переключена. Запущена переиндексация библиотеки.', variant: 'info' }
-      });
+      notifyAiAlert('Модель переключена. Запущена переиндексация библиотеки.', 'info');
     }
   } finally {
     patchState({ busy: false });
@@ -1066,12 +1052,7 @@ export async function reindexAiLibrary(): Promise<void> {
   try {
     await arc.aiReindex();
   } catch (err) {
-    patchState({
-      alert: {
-        message: err instanceof Error ? err.message : 'Не удалось запустить индексацию.',
-        variant: 'warning'
-      }
-    });
+    notifyAiAlert(err instanceof Error ? err.message : 'Не удалось запустить индексацию.', 'warning');
   } finally {
     patchState({ busy: false });
   }
@@ -1155,12 +1136,12 @@ export async function updateAiModel(ref: AiModelRef): Promise<void> {
     }
 
     if (!res.ok) {
-      patchState({ alert: { message: res.error || 'Не удалось обновить модель.', variant: 'warning' } });
+      notifyAiAlert(res.error || 'Не удалось обновить модель.', 'warning');
     } else {
       patchState({
-        alert: { message: 'Модель обновлена. Запущена переиндексация.', variant: 'success' },
         ...clearDownloadUiState()
       });
+      notifyAiAlert('Модель обновлена. Запущена переиндексация.', 'success');
     }
   } finally {
     patchState({
@@ -1172,10 +1153,6 @@ export async function updateAiModel(ref: AiModelRef): Promise<void> {
     syncDownloadPoll();
     void refreshAiSettings();
   }
-}
-
-export function dismissAiAlert(): void {
-  patchState({ alert: null });
 }
 
 export async function cancelAiDownload(): Promise<void> {

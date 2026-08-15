@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import ToastAlert from '../../../components/alert/ToastAlert';
 import ValueSlider from '../../../components/range-slider/ValueSlider';
 import { Loader } from '../../../components/loader';
 import AiModelCard from '../../../components/settings/AiModelCard';
@@ -84,8 +83,6 @@ export default function SettingsAiSearchPanel() {
     phase,
     busy,
     cudaPrompt,
-    alert,
-    dismissAlert,
     setEnabled,
     setCaptionEnabled,
     downloadModel,
@@ -750,8 +747,6 @@ export default function SettingsAiSearchPanel() {
           )}
         </div>
       </div>
-
-      {alert ? <ToastAlert message={alert.message} variant={alert.variant} onClose={dismissAlert} /> : null}
 
       {cudaPrompt ? (
         <ConfirmModal

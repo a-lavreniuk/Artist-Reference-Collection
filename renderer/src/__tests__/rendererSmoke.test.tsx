@@ -10,6 +10,7 @@ import MasonryGrid from '../components/masonry/MasonryGrid';
 import GalleryCardTile from '../components/gallery/GalleryCardTile';
 import ToastAlert from '../components/alert/ToastAlert';
 import { ErrorBoundary, ErrorScreen } from '../components/error-boundary';
+import SearchPanelColorControls from '../components/layout/SearchPanelColorControls';
 
 const stubCard: CardRecord = {
   id: 'smoke-card',
@@ -109,5 +110,34 @@ describe('renderer UI smoke', () => {
   it('ErrorBoundary getDerivedStateFromError maps thrown error to state', () => {
     const state = ErrorBoundary.getDerivedStateFromError(new Error('boundary-smoke'));
     expect(state.error?.message).toBe('boundary-smoke');
+  });
+
+  it('SearchPanelColorControls renders Pantone nearest-match chips', () => {
+    const html = renderToString(
+      <SearchPanelColorControls
+        colorHex="#E4002B"
+        tolerance={20}
+        onColorChange={() => undefined}
+        onToleranceChange={() => undefined}
+        pantoneMode
+      />
+    );
+    expect(html).toContain('arc-pantone-chip');
+    expect(html).toContain('Ближайшие совпадения');
+    expect(html).toContain('Solid Coated');
+  });
+
+  it('SearchPanelColorControls renders eyedropper control', () => {
+    const html = renderToString(
+      <SearchPanelColorControls
+        colorHex="#E3B81A"
+        tolerance={20}
+        onColorChange={() => undefined}
+        onToleranceChange={() => undefined}
+        onEyedropper={() => undefined}
+      />
+    );
+    expect(html).toContain('arc-icon-eyedropper');
+    expect(html).toContain('Пипетка');
   });
 });

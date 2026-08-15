@@ -8,14 +8,21 @@ import {
   IMPORT_DUPLICATE_THRESHOLD_PCT,
   matchKindFromSimilarity,
   meetsImportThreshold,
-  meetsScanThreshold,
   pairKey,
-  similarityCombined
+  scopedPairKey
 } from './duplicateMatch';
+import {
+  collectDuplicatePairsFromIndex,
+  FALLBACK_SCAN_LIBRARY_ID,
+  similarityForPair,
+  type DuplicatePairDto,
+  type DuplicateScanIndexItem,
+  type DuplicateScanLibrary
+} from './duplicateScanPairs';
 import { readAppPreferencesSync } from './appPreferences';
 import { isVideoExt } from './ffmpeg';
 import { readLibraryRootSync } from './libraryRootConfig';
-import { openLibraryDb } from './storage/db';
+import { openLibraryDb, withLibraryDbReadonly } from './storage/db';
 import {
   getCardsWithPhash,
   getSystemData,
@@ -29,14 +36,15 @@ import {
   waitForNavigationIpc
 } from './ipcNavigationPriority';
 
-const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']);
+export type {
+  DuplicatePairDto,
+  DuplicateScanIndexItem,
+  DuplicateScanLibrary,
+  DuplicateScanScope
+} from './duplicateScanPairs';
+export { collectDuplicatePairsFromIndex, FALLBACK_SCAN_LIBRARY_ID } from './duplicateScanPairs';
 
-export type DuplicatePairDto = {
-  cardIdA: string;
-  cardIdB: string;
-  similarity: number;
-  matchKind: 'exact' | 'similar';
-};
+const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']);
 
 export type ImportDuplicateMatchDto = {
   path: string;
@@ -73,7 +81,15 @@ export function requestScanCancel(): void {
   scanCancelRequested = true;
 }
 
-export function addSessionSkippedPair(idA: string, idB: string): void {
+export function addSessionSkippedPair(
+  idA: string,
+  idB: string,
+  libraryIdA?: string,
+  libraryIdB?: string
+): void {
+  if (libraryIdA && libraryIdB) {
+    sessionSkippedPairs.add(scopedPairKey(libraryIdA, idA, libraryIdB, idB));
+  }
   sessionSkippedPairs.add(pairKey(idA, idB));
 }
 
@@ -134,16 +150,6 @@ export async function findExactDuplicateVideoCard(
     if (cardSha && cardSha === incomingSha) return card.id;
   }
   return null;
-}
-
-function isPairSkipped(
-  idA: string,
-  idB: string,
-  permanent: Set<string>,
-  session: Set<string>
-): boolean {
-  const key = pairKey(idA, idB);
-  return permanent.has(key) || session.has(key);
 }
 
 async function buildLibraryImageIndex(libraryRoot: string): Promise<
@@ -207,18 +213,93 @@ async function buildLibraryImageIndex(libraryRoot: string): Promise<
   return out;
 }
 
-function similarityForPair(
-  shaA: string | null,
-  shaB: string | null,
-  phashA: ImageDupFingerprint | null,
-  phashB: ImageDupFingerprint | null
-): { similarity: number; exactSha256: boolean } {
-  const exactSha256 = Boolean(shaA && shaB && shaA === shaB);
-  if (exactSha256) return { similarity: 100, exactSha256: true };
-  if (phashA && phashB) {
-    return { similarity: similarityCombined(phashA, phashB), exactSha256: false };
+function isIndexPairSkipped(
+  a: DuplicateScanIndexItem,
+  b: DuplicateScanIndexItem,
+  intraSkippedByLibrary: Map<string, Set<string>>,
+  crossSkipped: Set<string>,
+  session: Set<string>
+): boolean {
+  const scoped = scopedPairKey(a.libraryId, a.id, b.libraryId, b.id);
+  if (crossSkipped.has(scoped) || session.has(scoped)) return true;
+  if (a.libraryId === b.libraryId) {
+    const intra = intraSkippedByLibrary.get(a.libraryId);
+    if (intra?.has(pairKey(a.id, b.id))) return true;
+    if (session.has(pairKey(a.id, b.id))) return true;
   }
-  return { similarity: 0, exactSha256: false };
+  return false;
+}
+
+function parsePhashJson(raw: string | null): ImageDupFingerprint | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as ImageDupFingerprint;
+  } catch {
+    return null;
+  }
+}
+
+function buildScanIndexForLibrary(lib: DuplicateScanLibrary): DuplicateScanIndexItem[] {
+  const rows = withLibraryDbReadonly(lib.path, (db) => {
+    const images = db
+      .prepare(
+        `SELECT id, original_rel AS originalRel, width, height, file_size AS fileSize, phash_json AS phashJson
+         FROM cards WHERE type = 'image' AND COALESCE(is_deleted, 0) = 0`
+      )
+      .all() as Array<{
+      id: string;
+      originalRel: string;
+      width: number | null;
+      height: number | null;
+      fileSize: number | null;
+      phashJson: string | null;
+    }>;
+    const videos = db
+      .prepare(
+        `SELECT id, original_rel AS originalRel, file_size AS fileSize
+         FROM cards WHERE type = 'video' AND COALESCE(is_deleted, 0) = 0`
+      )
+      .all() as Array<{ id: string; originalRel: string; fileSize: number | null }>;
+    return { images, videos };
+  });
+  if (!rows) return [];
+
+  const out: DuplicateScanIndexItem[] = [];
+  for (const row of rows.images) {
+    const originalAbs = path.join(lib.path, row.originalRel.replace(/\//g, path.sep));
+    out.push({
+      libraryId: lib.id,
+      libraryName: lib.name,
+      libraryRoot: lib.path,
+      id: row.id,
+      type: 'image',
+      originalAbs,
+      phash: parsePhashJson(row.phashJson),
+      sha256: null,
+      fileSize: row.fileSize ?? undefined
+    });
+  }
+  for (const row of rows.videos) {
+    out.push({
+      libraryId: lib.id,
+      libraryName: lib.name,
+      libraryRoot: lib.path,
+      id: row.id,
+      type: 'video',
+      originalAbs: path.join(lib.path, row.originalRel.replace(/\//g, path.sep)),
+      phash: null,
+      sha256: null,
+      fileSize: row.fileSize ?? undefined
+    });
+  }
+  return out;
+}
+
+function normalizeScanLibraries(input: string | DuplicateScanLibrary[]): DuplicateScanLibrary[] {
+  if (typeof input === 'string') {
+    return [{ id: FALLBACK_SCAN_LIBRARY_ID, name: path.basename(input), path: input }];
+  }
+  return input.filter((lib) => typeof lib.path === 'string' && lib.path.trim().length > 0);
 }
 
 export async function checkImportDuplicates(
@@ -312,33 +393,42 @@ export async function isExactDuplicateIncomingFile(
  * освободит слияние). Экономия оценивается как сумма меньшего файла в паре.
  */
 export async function runDuplicateScan(
-  libraryRoot: string,
+  libraryRootOrLibraries: string | DuplicateScanLibrary[],
   thresholdPct: number,
   options?: {
     excludeSessionSkipped?: boolean;
     onProgress?: (progress: DuplicateScanProgress) => void;
     yieldToNavigation?: boolean;
+    intraSkippedByLibrary?: Map<string, Set<string>>;
+    crossSkipped?: Set<string>;
   }
 ): Promise<DuplicateScanResult> {
   scanCancelRequested = false;
-  const permanentSkipped = new Set(
-    listSkippedDuplicatePairs(libraryRoot).map(([a, b]) => pairKey(a, b))
-  );
+  const libraries = normalizeScanLibraries(libraryRootOrLibraries);
+  const intraSkippedByLibrary = options?.intraSkippedByLibrary ?? new Map<string, Set<string>>();
+  if (!options?.intraSkippedByLibrary && libraries.length === 1) {
+    const only = libraries[0]!;
+    intraSkippedByLibrary.set(
+      only.id,
+      new Set(listSkippedDuplicatePairs(only.path).map(([a, b]) => pairKey(a, b)))
+    );
+  }
+  const crossSkipped = options?.crossSkipped ?? new Set<string>();
   const session = options?.excludeSessionSkipped === false ? new Set<string>() : sessionSkippedPairs;
   const yieldToNavigation = options?.yieldToNavigation !== false;
 
-  const index = await buildLibraryImageIndex(libraryRoot);
+  const index: DuplicateScanIndexItem[] = [];
+  for (const lib of libraries) {
+    index.push(...buildScanIndexForLibrary(lib));
+  }
   const totalCards = index.length;
-  const sizeById = new Map<string, number>(index.map((c) => [c.id, c.fileSize ?? 0]));
-  const pairs: DuplicatePairDto[] = [];
+  const sizeByKey = new Map<string, number>(
+    index.map((c) => [`${c.libraryId}:${c.id}`, c.fileSize ?? 0])
+  );
   const navSnap = captureNavigationEpoch();
-
-  const shaCache = new Map<string, string | null>();
-  const phashCache = new Map<string, ImageDupFingerprint | null>();
 
   let scannedCards = 0;
   let cancelled = false;
-
   options?.onProgress?.({ scannedCards: 0, totalCards, duplicatesFound: 0 });
 
   for (let i = 0; i < index.length; i++) {
@@ -350,50 +440,37 @@ export async function runDuplicateScan(
       if (isNavigationEpochStale(navSnap)) break;
       await waitForNavigationIpc();
     }
-
-    const a = index[i]!;
-    if (!shaCache.has(a.id)) shaCache.set(a.id, await sha256File(a.originalAbs));
-    if (!phashCache.has(a.id)) phashCache.set(a.id, a.phash);
-
-    for (let j = i + 1; j < index.length; j++) {
-      const b = index[j]!;
-      if (isPairSkipped(a.id, b.id, permanentSkipped, session)) continue;
-
-      if (!shaCache.has(b.id)) shaCache.set(b.id, await sha256File(b.originalAbs));
-      if (!phashCache.has(b.id)) phashCache.set(b.id, b.phash);
-
-      const { similarity, exactSha256 } = similarityForPair(
-        shaCache.get(a.id) ?? null,
-        shaCache.get(b.id) ?? null,
-        phashCache.get(a.id) ?? null,
-        phashCache.get(b.id) ?? null
-      );
-
-      if (!meetsScanThreshold(similarity, exactSha256, thresholdPct)) continue;
-
-      pairs.push({
-        cardIdA: a.id,
-        cardIdB: b.id,
-        similarity: exactSha256 ? 100 : Math.round(similarity * 10) / 10,
-        matchKind: matchKindFromSimilarity(similarity, exactSha256)
-      });
-    }
-
+    const item = index[i]!;
+    item.sha256 = await sha256File(item.originalAbs);
     scannedCards = i + 1;
-    options?.onProgress?.({ scannedCards, totalCards, duplicatesFound: pairs.length });
+    options?.onProgress?.({ scannedCards, totalCards, duplicatesFound: 0 });
   }
 
-  pairs.sort((x, y) => y.similarity - x.similarity);
-  if (!cancelled) cachedScanPairs = pairs;
+  const pairs = cancelled
+    ? []
+    : collectDuplicatePairsFromIndex(index, thresholdPct, (a, b) =>
+        isIndexPairSkipped(a, b, intraSkippedByLibrary, crossSkipped, session)
+      );
+
+  if (!cancelled) {
+    options?.onProgress?.({ scannedCards: totalCards, totalCards, duplicatesFound: pairs.length });
+    cachedScanPairs = pairs;
+  }
 
   let spaceSavedBytes = 0;
   for (const pair of pairs) {
-    const sizeA = sizeById.get(pair.cardIdA) ?? 0;
-    const sizeB = sizeById.get(pair.cardIdB) ?? 0;
+    const sizeA = sizeByKey.get(`${pair.libraryIdA}:${pair.cardIdA}`) ?? 0;
+    const sizeB = sizeByKey.get(`${pair.libraryIdB}:${pair.cardIdB}`) ?? 0;
     spaceSavedBytes += Math.min(sizeA, sizeB);
   }
 
-  return { pairs, scannedCards: cancelled ? scannedCards : totalCards, totalCards, spaceSavedBytes, cancelled };
+  return {
+    pairs,
+    scannedCards: cancelled ? scannedCards : totalCards,
+    totalCards,
+    spaceSavedBytes,
+    cancelled
+  };
 }
 
 export async function scanDuplicatePairs(

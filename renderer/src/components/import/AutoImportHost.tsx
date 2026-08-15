@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ARC_CARDS_CHANGED_EVENT } from '../../services/db';
 import { getAutoImportSourceFilesAction } from '../../import/importDefaults';
-import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
-import { showAppNotification } from '../../services/notificationService';
-import ToastAlert from '../alert/ToastAlert';
+import {
+  dismissAppNotification,
+  showAppNotification
+} from '../../services/notificationService';
 import SourceFilesModal from './SourceFilesModal';
+
+const AUTO_IMPORT_PROGRESS_ID = 'arc-auto-import-progress';
 
 function formatImportedMessage(imported: number, attempted: number): string {
   if (imported <= 0) return '';
@@ -16,7 +19,6 @@ function formatImportedMessage(imported: number, attempted: number): string {
 }
 
 export default function AutoImportHost({ children }: { children: ReactNode }) {
-  const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const [sourceModalPaths, setSourceModalPaths] = useState<string[] | null>(null);
   const pendingSourcePathsRef = useRef<string[]>([]);
 
@@ -35,9 +37,15 @@ export default function AutoImportHost({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!window.arc?.onAutoImportProgress) return undefined;
     return window.arc.onAutoImportProgress((p) => {
-      if (getAppPreferencesSync().notifyAutoImport !== true) return;
       const msg = p.message ?? `Автоимпорт: добавлено ${p.current} из ${p.total}`;
-      setProgressMessage(msg);
+      showAppNotification({
+        id: AUTO_IMPORT_PROGRESS_ID,
+        message: msg,
+        variant: 'info',
+        autoDismissMs: 0,
+        withSound: false,
+        prefKey: 'notifyAutoImport'
+      });
     });
   }, []);
 
@@ -53,7 +61,7 @@ export default function AutoImportHost({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!window.arc?.onAutoImportFinished) return undefined;
     return window.arc.onAutoImportFinished((p) => {
-      setProgressMessage(null);
+      dismissAppNotification(AUTO_IMPORT_PROGRESS_ID);
 
       const sourcePaths = pendingSourcePathsRef.current;
       pendingSourcePathsRef.current = [];
@@ -95,24 +103,9 @@ export default function AutoImportHost({ children }: { children: ReactNode }) {
     closeSourceModal();
   };
 
-  const dismissProgress = useCallback(() => {
-    setProgressMessage(null);
-  }, []);
-
-  const showProgress = progressMessage && getAppPreferencesSync().notifyAutoImport === true;
-
   return (
     <>
       {children}
-      {showProgress ? (
-        <ToastAlert
-          message={progressMessage}
-          variant="info"
-          autoDismissMs={0}
-          withSound={false}
-          onClose={dismissProgress}
-        />
-      ) : null}
       {sourceModalPaths && sourceModalPaths.length > 0 ? (
         <SourceFilesModal
           fileCount={sourceModalPaths.length}

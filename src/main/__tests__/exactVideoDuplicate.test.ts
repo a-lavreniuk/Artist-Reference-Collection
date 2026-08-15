@@ -4,7 +4,8 @@ import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../storage/db', () => ({
-  openLibraryDb: vi.fn()
+  openLibraryDb: vi.fn(),
+  withLibraryDbReadonly: vi.fn()
 }));
 
 vi.mock('../storage/libraryStorage', () => ({

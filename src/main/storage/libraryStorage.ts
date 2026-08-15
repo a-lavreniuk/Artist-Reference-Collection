@@ -31,9 +31,17 @@ import {
   writeCardJson,
   CARDS_DIR
 } from './cardFolder';
-import { closeLibraryDb, indexDbPath, libraryUsesNewStorage, openLibraryDb, withLibraryDbReadonly } from './db';
+import {
+  closeLibraryDb,
+  indexDbPath,
+  libraryUsesNewStorage,
+  openLibraryDb,
+  withLibraryDb,
+  withLibraryDbReadonly
+} from './db';
 import { ensureLibraryMetaDirLayout } from './libraryMetaLayout';
 import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
+import { isExpiredDeletedAt } from './trashRetention';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
 import { defaultMoodboard, defaultSystem, readMoodboard, readSystem, writeMoodboard, writeSystem } from './systemFiles';
 import { generateImageThumbnails, generateVideoThumbnailsFromFrame } from './thumbnails';
@@ -635,8 +643,7 @@ export async function importMediaFile(
   }
 }
 
-export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): CardIndexRow[] {
-  const db = openLibraryDb(libraryRoot);
+function listCardsOnDb(db: Database.Database, params: ListCardsParams): CardIndexRow[] {
   const sort = params.sort ?? DEFAULT_GALLERY_SORT;
   const filters = params.advancedFilters ?? emptyGalleryAdvancedFilters();
   const boundaries = getGalleryFilterBoundaries(db, filters);
@@ -671,6 +678,16 @@ export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): C
 
   const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
   return indexCardRowsWithRelations(db, rows);
+}
+
+export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): CardIndexRow[] {
+  const db = openLibraryDb(libraryRoot);
+  return listCardsOnDb(db, params);
+}
+
+/** Список без переключения global `activeDb` — для корзины контейнера. */
+export function listCardsFromDbReadonly(libraryRoot: string, params: ListCardsParams): CardIndexRow[] {
+  return withLibraryDbReadonly(libraryRoot, (db) => listCardsOnDb(db, params)) ?? [];
 }
 
 export function getCardByIdFromDb(libraryRoot: string, cardId: string): CardIndexRow | null {
@@ -927,6 +944,60 @@ export async function restoreCardFromStorage(libraryRoot: string, cardId: string
   recomputeTagUsage(db);
 }
 
+/** Индексирует уже скопированную папку `cards/{id}` в библиотеке (восстановление в другую библиотеку). */
+export async function importExistingCardFolder(
+  destRoot: string,
+  cardJson: CardJsonV1,
+  sourceRow?: CardIndexRow | null
+): Promise<void> {
+  const root = path.resolve(destRoot);
+  const db = await ensureLibraryReady(root);
+  const cardId = cardJson.id;
+  const existing = loadCardRow(db, cardId);
+  if (existing) {
+    throw new Error('Карточка с таким id уже есть в выбранной библиотеке');
+  }
+
+  const ext = cardJson.format
+    ? `.${cardJson.format}`
+    : path.extname(cardJson.originalFileName);
+  const originalRel =
+    sourceRow?.originalRel ??
+    `cards/${cardId}/original${ext.startsWith('.') ? ext : `.${ext}`}`;
+  const thumbS = sourceRow?.thumbSRel ?? thumbSRelPath(cardId);
+  const thumbM = sourceRow?.thumbMRel ?? thumbMRelPath(cardId);
+  const thumbL = sourceRow?.thumbLRel ?? thumbLRelPath(cardId);
+
+  db.prepare(
+    `INSERT INTO cards (
+      id, type, added_at, date_modified, format, width, height, file_size, duration_ms, dominant_color, phash_json,
+      original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, name, link_url, rating, is_deleted, deleted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL)`
+  ).run(
+    cardId,
+    cardJson.type,
+    cardJson.addedAt,
+    cardJson.dateModified ?? null,
+    cardJson.format ?? sourceRow?.format ?? null,
+    cardJson.width ?? sourceRow?.width ?? null,
+    cardJson.height ?? sourceRow?.height ?? null,
+    cardJson.fileSize ?? sourceRow?.fileSize ?? null,
+    cardJson.durationMs ?? sourceRow?.durationMs ?? null,
+    cardJson.dominantColorHex ?? sourceRow?.dominantColor ?? null,
+    cardJson.phash ? JSON.stringify(cardJson.phash) : sourceRow?.phashJson ?? null,
+    originalRel,
+    thumbS,
+    thumbM,
+    thumbL,
+    cardJson.description ?? sourceRow?.description ?? null,
+    cardJson.name ?? sourceRow?.name ?? null,
+    cardJson.linkUrl ?? sourceRow?.linkUrl ?? null,
+    clampCardRating(cardJson.rating ?? sourceRow?.rating)
+  );
+  syncCardRelations(db, cardId, cardJson.tagIds ?? [], cardJson.collectionIds ?? []);
+  recomputeTagUsage(db);
+}
+
 export async function deleteCardFromStorage(libraryRoot: string, cardId: string): Promise<void> {
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
@@ -947,6 +1018,17 @@ export async function emptyTrashFromStorage(libraryRoot: string): Promise<number
     await deleteCardFromStorage(root, id);
   }
   return ids.length;
+}
+
+export function listExpiredTrashCardIds(libraryRoot: string, cutoffIso: string): string[] {
+  const root = path.resolve(libraryRoot);
+  const rows =
+    withLibraryDbReadonly(root, (db) =>
+      db
+        .prepare('SELECT id, deleted_at FROM cards WHERE COALESCE(is_deleted, 0) = 1')
+        .all() as Array<{ id: string; deleted_at: string | null }>
+    ) ?? [];
+  return rows.filter((r) => isExpiredDeletedAt(r.deleted_at, cutoffIso)).map((r) => String(r.id));
 }
 
 // --- Categories (shared catalog) ---
@@ -1762,8 +1844,7 @@ export async function mergeDuplicateCards(
   await softDeleteCardFromStorage(root, secondaryId);
 }
 
-export function listSkippedDuplicatePairs(libraryRoot: string): [string, string][] {
-  const db = openLibraryDb(libraryRoot);
+function skippedPairRowsFromDb(db: Database.Database): [string, string][] {
   return db
     .prepare('SELECT min_id, max_id FROM skipped_duplicate_pairs')
     .all()
@@ -1773,11 +1854,35 @@ export function listSkippedDuplicatePairs(libraryRoot: string): [string, string]
     });
 }
 
+export function listSkippedDuplicatePairs(libraryRoot: string): [string, string][] {
+  const db = openLibraryDb(libraryRoot);
+  return skippedPairRowsFromDb(db);
+}
+
+export function listSkippedDuplicatePairsReadonly(libraryRoot: string): [string, string][] {
+  return withLibraryDbReadonly(libraryRoot, skippedPairRowsFromDb) ?? [];
+}
+
+export function getCardByIdIsolated(libraryRoot: string, cardId: string): CardIndexRow | null {
+  return withLibraryDbReadonly(libraryRoot, (db) => loadCardRow(db, cardId)) ?? null;
+}
+
 export function addSkippedDuplicatePair(libraryRoot: string, idA: string, idB: string): void {
   const db = openLibraryDb(libraryRoot);
   const minId = idA < idB ? idA : idB;
   const maxId = idA < idB ? idB : idA;
   db.prepare('INSERT OR IGNORE INTO skipped_duplicate_pairs (min_id, max_id) VALUES (?, ?)').run(minId, maxId);
+}
+
+/** Пишет игнор в указанную библиотеку, не переключая активный `openLibraryDb`. */
+export function addSkippedDuplicatePairAtRoot(libraryRoot: string, idA: string, idB: string): void {
+  const minId = idA < idB ? idA : idB;
+  const maxId = idA < idB ? idB : idA;
+  const wrote = withLibraryDb(libraryRoot, (db) => {
+    db.prepare('INSERT OR IGNORE INTO skipped_duplicate_pairs (min_id, max_id) VALUES (?, ?)').run(minId, maxId);
+    return true as const;
+  });
+  if (!wrote) addSkippedDuplicatePair(libraryRoot, idA, idB);
 }
 
 export function getCardsWithPhash(libraryRoot: string): Array<{ id: string; phash: ImageDupFingerprint }> {

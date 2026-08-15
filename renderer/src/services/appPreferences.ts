@@ -6,6 +6,7 @@ export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
 export type AiModelTier = 'light' | 'heavy';
 export type GalleryCollectionsSortMode = 'chrono' | 'count' | 'random';
 export type UiThemePreference = 'dark' | 'light' | 'system';
+export type TrashRetentionDays = 7 | 30 | 90 | 0;
 
 export const JOY_CAPTION_TYPE_IDS = [
   'descriptive_casual',
@@ -95,6 +96,7 @@ export type AppPreferencesV1 = {
   closeToTrayOnWindowClose: boolean;
   importSourceFilesAction: ImportSourceFilesAction;
   deleteCardsUseTrash: boolean;
+  trashRetentionDays: TrashRetentionDays;
   screenshotsEnabled: boolean;
   screenshotFormat: ScreenshotFormat;
   screenshotAskSaveLocation: boolean;
@@ -165,6 +167,7 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     closeToTrayOnWindowClose: true,
     importSourceFilesAction: 'ask',
     deleteCardsUseTrash: true,
+    trashRetentionDays: 30,
     screenshotsEnabled: true,
     screenshotFormat: 'webp',
     screenshotAskSaveLocation: false,
@@ -274,6 +277,14 @@ function sanitizeUiTheme(raw: unknown): UiThemePreference {
   return 'dark';
 }
 
+export function sanitizeTrashRetentionDays(raw: unknown): TrashRetentionDays {
+  if (raw === 7 || raw === 30 || raw === 90 || raw === 0) return raw;
+  if (raw === '7' || raw === '30' || raw === '90' || raw === '0') {
+    return Number(raw) as TrashRetentionDays;
+  }
+  return 30;
+}
+
 /** Дополняет ответ IPC дефолтами — важно для новых полей prefs после обновления. */
 export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | undefined): AppPreferencesV1 {
   const d = defaultAppPreferences();
@@ -284,6 +295,7 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     ...raw,
     version: 1,
     importSourceFilesAction: sanitizeImportAction(raw.importSourceFilesAction ?? d.importSourceFilesAction),
+    trashRetentionDays: sanitizeTrashRetentionDays(raw.trashRetentionDays ?? d.trashRetentionDays),
     autoImportSourceFilesAction: sanitizeImportAction(
       raw.autoImportSourceFilesAction ?? d.autoImportSourceFilesAction
     ),

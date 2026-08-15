@@ -87,3 +87,10 @@ export function incomingIsBetter(incoming: QualityMetrics, existing: QualityMetr
 export function pairKey(idA: string, idB: string): string {
   return idA < idB ? `${idA}:${idB}` : `${idB}:${idA}`;
 }
+
+/** Порядок-независимый ключ пары с библиотеками (кросс-скан и контейнерный игнор). */
+export function scopedPairKey(libraryIdA: string, cardIdA: string, libraryIdB: string, cardIdB: string): string {
+  const a = `${libraryIdA}:${cardIdA}`;
+  const b = `${libraryIdB}:${cardIdB}`;
+  return a < b ? `${a}||${b}` : `${b}||${a}`;
+}

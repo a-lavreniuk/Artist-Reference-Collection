@@ -14,8 +14,8 @@ import {
   countCards,
   countCardsWithAnyTagIds,
   deleteCardFromStorage,
-  emptyTrashFromStorage,
   restoreCardFromStorage,
+  getCardByIdIsolated,
   softDeleteCardFromStorage,
   deleteCategoryFromDb,
   deleteCollectionFromDb,
@@ -78,6 +78,19 @@ import {
 import type { ArcMoodboardV1, ArcSystemV1, CardJsonV1, CategoryRow, CollectionRow, ListCardsParams, LibraryScope, TagRow } from './storage/types';
 import type { DeleteTagsUndo, MergeTagsTargetMetadata, MergeTagsUndo } from './storage/libraryStorage';
 import { readLibraryRootSync } from './libraryRootConfig';
+import { listLibrariesFromConfig } from './multiLibrary';
+import { syncArcMediaServerLibraryRoots } from './media/mediaServerHost';
+import {
+  countSharedTrashCards,
+  emptySharedTrash,
+  findCardAcrossLibraries,
+  listSharedTrashCards,
+  permanentDeleteSharedTrashCard,
+  purgeExpiredTrash,
+  resolveLibrarySource,
+  restoreSharedTrashCard,
+  type LibraryTrashSource
+} from './storage/sharedTrash';
 
 const MAX_LIST_CARDS_SYNC_LIMIT = 500;
 
@@ -111,7 +124,70 @@ function sanitizeListCardsParams(params: unknown): ListCardsParams {
 
 let storageIpcRegistered = false;
 
+function containerLibraries(fallbackRoot?: string | null): LibraryTrashSource[] {
+  try {
+    const listed = listLibrariesFromConfig().map((lib) => ({
+      id: lib.id,
+      name: lib.name,
+      path: lib.path
+    }));
+    if (listed.length > 0) return listed;
+  } catch {
+    /* config best-effort */
+  }
+  if (!fallbackRoot) return [];
+  return [{ id: 'active', name: path.basename(fallbackRoot), path: fallbackRoot }];
+}
+
+function syncMediaRootsFromLibraries(libraries: readonly LibraryTrashSource[]): void {
+  const roots: Record<string, string> = {};
+  for (const lib of libraries) roots[lib.id] = lib.path;
+  syncArcMediaServerLibraryRoots(roots);
+}
+
+function parseCardScopedPayload(payload: unknown): {
+  cardId: string | null;
+  libraryId?: string;
+  destinationLibraryId?: string;
+  sourceLibraryRoot?: string;
+  confirmToken?: unknown;
+} {
+  if (typeof payload === 'string') {
+    return { cardId: payload };
+  }
+  if (!payload || typeof payload !== 'object') {
+    return { cardId: null };
+  }
+  const body = payload as Record<string, unknown>;
+  return {
+    cardId: typeof body.cardId === 'string' ? body.cardId : typeof body.id === 'string' ? body.id : null,
+    libraryId: typeof body.libraryId === 'string' ? body.libraryId : undefined,
+    destinationLibraryId: typeof body.destinationLibraryId === 'string' ? body.destinationLibraryId : undefined,
+    sourceLibraryRoot: typeof body.sourceLibraryRoot === 'string' ? body.sourceLibraryRoot : undefined,
+    confirmToken: body.confirmToken
+  };
+}
+
+function libraryMetaOf(lib: LibraryTrashSource): {
+  libraryId: string;
+  libraryName: string;
+  libraryRoot: string;
+} {
+  return { libraryId: lib.id, libraryName: lib.name, libraryRoot: lib.path };
+}
+
 function queryListCards(root: string, p: ListCardsParams): ReturnType<typeof cardIndexToRenderer>[] {
+  if (p.libraryScope === 'trash') {
+    const libraries = containerLibraries(root);
+    syncMediaRootsFromLibraries(libraries);
+    return listSharedTrashCards(libraries, p).map((r) =>
+      cardIndexToRenderer(rowToCardRecord(r), {
+        libraryId: r.libraryId,
+        libraryName: r.libraryName,
+        libraryRoot: r.libraryRoot
+      })
+    );
+  }
   return listCardsFromDb(root, p).map((r) => cardIndexToRenderer(rowToCardRecord(r)));
 }
 
@@ -131,7 +207,10 @@ function broadcastImportProgress(payload: {
 /** Активный ручной импорт: отмена после текущего файла. */
 let activeImportAbort: AbortController | null = null;
 
-function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
+function cardIndexToRenderer(
+  row: ReturnType<typeof rowToCardRecord>,
+  library?: { libraryId: string; libraryName: string; libraryRoot: string }
+) {
   return {
     id: row.id,
     type: row.type,
@@ -155,7 +234,14 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
     name: row.name,
     linkUrl: row.linkUrl,
     durationMs: row.durationMs,
-    rating: row.rating ?? 0
+    rating: row.rating ?? 0,
+    ...(library
+      ? {
+          libraryId: library.libraryId,
+          libraryName: library.libraryName,
+          libraryRoot: library.libraryRoot
+        }
+      : {})
   };
 }
 
@@ -345,26 +431,55 @@ export function registerStorageIpc(
     }
   });
 
-  ipcMain.handle('arc:storage-get-card', async (_e, cardId: unknown) => {
+  ipcMain.handle('arc:storage-get-card', async (_e, payload: unknown) => {
     const root = await readLibraryRoot();
-    if (!root || typeof cardId !== 'string') return null;
+    const scoped = typeof payload === 'string' ? { cardId: payload } : parseCardScopedPayload(payload);
+    if (!root || !scoped.cardId) return null;
+    const libraries = containerLibraries(root);
+    const origin = resolveLibrarySource(libraries, scoped.libraryId);
+    if (origin) {
+      const row = getCardByIdIsolated(origin.path, scoped.cardId);
+      if (row) {
+        const base = cardIndexToRenderer(rowToCardRecord(row), libraryMetaOf(origin));
+        const cardJson = await readCardJson(origin.path, scoped.cardId);
+        return enrichCardFromJson(base, cardJson);
+      }
+    }
     await ensureLibraryReady(root);
-    const row = getCardByIdFromDb(root, cardId);
-    if (!row) return null;
-    const base = cardIndexToRenderer(rowToCardRecord(row));
-    const cardJson = await readCardJson(root, cardId);
+    const row = getCardByIdFromDb(root, scoped.cardId);
+    if (row) {
+      const base = cardIndexToRenderer(rowToCardRecord(row));
+      const cardJson = await readCardJson(root, scoped.cardId);
+      return enrichCardFromJson(base, cardJson);
+    }
+    const found = findCardAcrossLibraries(libraries, scoped.cardId);
+    if (!found) return null;
+    const base = cardIndexToRenderer(rowToCardRecord(found.row), libraryMetaOf(found.library));
+    const cardJson = await readCardJson(found.library.path, scoped.cardId);
     return enrichCardFromJson(base, cardJson);
   });
 
-  ipcMain.handle('arc:storage-ensure-card-media-meta', async (_e, cardId: unknown) => {
+  ipcMain.handle('arc:storage-ensure-card-media-meta', async (_e, payload: unknown) => {
     assertNotMaintenance();
     const root = await readLibraryRoot();
-    if (!root || typeof cardId !== 'string') return null;
-    await ensureLibraryReady(root);
-    const row = getCardByIdFromDb(root, cardId);
+    const scoped = typeof payload === 'string' ? { cardId: payload } : parseCardScopedPayload(payload);
+    if (!root || !scoped.cardId) return null;
+    const libraries = containerLibraries(root);
+    const origin =
+      resolveLibrarySource(libraries, scoped.libraryId) ??
+      findCardAcrossLibraries(libraries, scoped.cardId)?.library ??
+      null;
+    const cardRoot = origin?.path ?? root;
+    await ensureLibraryReady(cardRoot);
+    const row = origin
+      ? getCardByIdIsolated(cardRoot, scoped.cardId)
+      : getCardByIdFromDb(cardRoot, scoped.cardId);
     if (!row) return null;
-    const cardJson = await ensureCardMediaMeta(root, cardId);
-    const base = cardIndexToRenderer(rowToCardRecord(row));
+    const cardJson = await ensureCardMediaMeta(cardRoot, scoped.cardId);
+    const base = cardIndexToRenderer(
+      rowToCardRecord(row),
+      origin ? libraryMetaOf(origin) : undefined
+    );
     return enrichCardFromJson(base, cardJson);
   });
 
@@ -448,38 +563,52 @@ export function registerStorageIpc(
     await insertCardMetadata(root, cards as Parameters<typeof insertCardMetadata>[1]);
   });
 
-  ipcMain.handle('arc:storage-soft-delete-card', async (_e, cardId: unknown) => {
+  ipcMain.handle('arc:storage-soft-delete-card', async (_e, payload: unknown) => {
     assertNotMaintenance();
     const root = await readLibraryRoot();
-    if (!root || typeof cardId !== 'string') return;
-    await softDeleteCardFromStorage(root, cardId);
+    const scoped = typeof payload === 'string' ? { cardId: payload } : parseCardScopedPayload(payload);
+    if (!root || !scoped.cardId) return;
+    const origin = resolveLibrarySource(containerLibraries(root), scoped.libraryId);
+    const { withPreservedActiveDb } = await import('./storage/db');
+    await withPreservedActiveDb(async () => {
+      await softDeleteCardFromStorage(origin?.path ?? root, scoped.cardId as string);
+    });
   });
 
-  ipcMain.handle('arc:storage-restore-card', async (_e, cardId: unknown) => {
+  ipcMain.handle('arc:storage-restore-card', async (_e, payload: unknown) => {
     assertNotMaintenance();
     const root = await readLibraryRoot();
-    if (!root || typeof cardId !== 'string') return;
-    await restoreCardFromStorage(root, cardId);
+    const scoped = typeof payload === 'string' ? { cardId: payload } : parseCardScopedPayload(payload);
+    if (!root || !scoped.cardId) return { ok: false as const, error: 'Карточка не найдена' };
+    if (!scoped.libraryId && !scoped.destinationLibraryId) {
+      await restoreCardFromStorage(root, scoped.cardId);
+      return { ok: true as const };
+    }
+    return restoreSharedTrashCard({
+      cardId: scoped.cardId,
+      libraryId: scoped.libraryId,
+      destinationLibraryId: scoped.destinationLibraryId,
+      sourceLibraryRoot: scoped.sourceLibraryRoot,
+      libraries: containerLibraries(root)
+    });
   });
 
   ipcMain.handle('arc:storage-permanent-delete-card', async (_e, payload: unknown) => {
     assertNotMaintenance();
-    let cardId: string | null = null;
-    let confirmToken: unknown;
-    if (typeof payload === 'string') {
-      cardId = payload;
-    } else if (payload && typeof payload === 'object') {
-      const body = payload as { cardId?: unknown; confirmToken?: unknown };
-      if (typeof body.cardId === 'string') cardId = body.cardId;
-      confirmToken = body.confirmToken;
-    }
+    const scoped = parseCardScopedPayload(payload);
+    const cardId = scoped.cardId;
     if (!cardId) return;
-    if (!consumeDestructiveConfirm(confirmToken, 'permanent-delete-card', cardId)) {
+    const binding = scoped.libraryId ? `${scoped.libraryId}:${cardId}` : cardId;
+    if (!consumeDestructiveConfirm(scoped.confirmToken, 'permanent-delete-card', binding)) {
       throw new Error('Нужно подтверждение удаления');
     }
     const root = await readLibraryRoot();
     if (!root) return;
-    await deleteCardFromStorage(root, cardId);
+    if (scoped.libraryId) {
+      await permanentDeleteSharedTrashCard(containerLibraries(root), cardId, scoped.libraryId);
+    } else {
+      await deleteCardFromStorage(root, cardId);
+    }
     try {
       const { appendHistory } = await import('./libraryHistory');
       await appendHistory(root, 'Карточка удалена навсегда');
@@ -496,7 +625,7 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root) return 0;
     await ensureLibraryReady(root);
-    const n = await emptyTrashFromStorage(root);
+    const n = await emptySharedTrash(containerLibraries(root));
     if (n > 0) {
       try {
         const { appendHistory } = await import('./libraryHistory');
@@ -506,6 +635,31 @@ export function registerStorageIpc(
       }
     }
     return n;
+  });
+
+  ipcMain.handle('arc:purge-expired-trash', async () => {
+    try {
+      assertNotMaintenance();
+    } catch {
+      return { deleted: 0 };
+    }
+    const { readAppPreferencesSync } = await import('./appPreferences');
+    const { trashCutoffIso } = await import('./storage/trashRetention');
+    const days = readAppPreferencesSync().trashRetentionDays;
+    const cutoff = trashCutoffIso(new Date(), days);
+    if (!cutoff) return { deleted: 0 };
+    const root = await readLibraryRoot();
+    if (!root) return { deleted: 0 };
+    const n = await purgeExpiredTrash(containerLibraries(root), cutoff);
+    if (n > 0) {
+      try {
+        const { appendHistory } = await import('./libraryHistory');
+        await appendHistory(root, `Автоочистка корзины: удалено ${n}`);
+      } catch {
+        /* ignore */
+      }
+    }
+    return { deleted: n };
   });
 
   ipcMain.handle('arc:storage-gallery-filter-stats', async (_e, payload: unknown) => {
@@ -596,6 +750,9 @@ export function registerStorageIpc(
     const f = p.filter === 'images' || p.filter === 'videos' ? p.filter : 'all';
     const scope =
       p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
+    if (scope === 'trash') {
+      return countSharedTrashCards(containerLibraries(root), f);
+    }
     return countCards(root, f, scope);
   });
 

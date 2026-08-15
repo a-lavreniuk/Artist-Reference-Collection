@@ -7,6 +7,7 @@ import { app } from 'electron';
 
 import { isAllowedMediaExt, isInsideLibrary } from './arcMediaPath';
 import { syncStagingTokenToMediaWorker } from './mediaServerHost';
+import { readLibraryRootConfigSync } from '../librarySessionSnapshot';
 
 const TOKEN_TTL_MS = 2 * 60 * 60 * 1000;
 const MAX_TOKENS = 512;
@@ -78,6 +79,8 @@ export function allowMediaStagingPaths(paths: readonly string[]): void {
 export function isAllowedStagingAbsPath(absPath: string, libraryRoot: string | null): boolean {
   const resolved = path.resolve(absPath);
   if (libraryRoot && isInsideLibrary(libraryRoot, resolved)) return true;
+  const libs = readLibraryRootConfigSync().libraries ?? [];
+  if (libs.some((lib) => lib.path && isInsideLibrary(lib.path, resolved))) return true;
   if (isTrustedStagingRoot(resolved)) return true;
   pruneExpiredAllowlist();
   const entry = stagingAllowlist.get(resolved);

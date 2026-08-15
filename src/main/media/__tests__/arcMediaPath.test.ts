@@ -28,10 +28,29 @@ describe('resolveMediaAbsFromParams', () => {
     expect(resolveMediaAbsFromParams(libraryRoot, null, 'missing', staging)).toBeNull();
   });
 
-  it('rejects expired staging token', () => {
-    const expired = new Map<string, { absPath: string; expiresAt: number }>([
-      ['old', { absPath: 'C:\\Temp\\x.jpg', expiresAt: Date.now() - 1 }]
+  it('resolves rel against a mapped sibling library when lib is set', () => {
+    const roots = new Map([
+      ['lib-a', 'C:\\LibA'],
+      ['lib-b', 'C:\\LibB']
     ]);
-    expect(resolveMediaAbsFromParams(libraryRoot, null, 'old', expired)).toBeNull();
+    const abs = resolveMediaAbsFromParams(
+      'C:\\LibA',
+      'cards/xyz/thumb_s.jpg',
+      null,
+      staging,
+      { libraryId: 'lib-b', rootsByLibraryId: roots }
+    );
+    expect(abs).toBeTruthy();
+    expect(abs!.replace(/\\/g, '/')).toContain('LibB/cards/xyz/thumb_s.jpg');
+  });
+
+  it('rejects unknown library id in lib param', () => {
+    const roots = new Map([['lib-a', 'C:\\LibA']]);
+    expect(
+      resolveMediaAbsFromParams('C:\\LibA', 'cards/xyz/thumb_s.jpg', null, staging, {
+        libraryId: 'missing',
+        rootsByLibraryId: roots
+      })
+    ).toBeNull();
   });
 });

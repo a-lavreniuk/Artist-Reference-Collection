@@ -29,6 +29,7 @@ import {
   undoCollectionAdd,
   undoCollectionRemove
 } from './galleryUndoToast';
+import { showAppNotification } from '../../services/notificationService';
 
 type BulkHandlers = {
   onBulkSendToTrash?: (cardIds: string[]) => void | Promise<void>;
@@ -206,8 +207,23 @@ export function useGalleryCardContextMenu({
             await bulkHandlers?.onBulkRestore?.(targetIds);
             return;
           }
-          await restoreCard(menuCard.id);
-          notifyRestoreWithUndo(menuCard.id, onCardDeleted);
+          const result = await restoreCard(menuCard.id, {
+            libraryId: menuCard.libraryId,
+            sourceLibraryRoot: menuCard.libraryRoot
+          });
+          if (!result.ok) {
+            showAppNotification({
+              message:
+                result.error === 'origin-missing'
+                  ? 'Библиотека карточки недоступна. Откройте карточку, чтобы выбрать, куда восстановить.'
+                  : result.error === 'files-unavailable'
+                    ? 'Файлы карточки недоступны — восстановить нельзя'
+                    : 'Не удалось восстановить карточку',
+              variant: 'danger'
+            });
+            return;
+          }
+          notifyRestoreWithUndo(menuCard.id, onCardDeleted, menuCard.libraryId);
           await onCardDeleted();
         },
         onPermanentDelete: () => {
@@ -217,7 +233,7 @@ export function useGalleryCardContextMenu({
           }
           if (scope.kind === 'trash') {
             void (async () => {
-              await permanentDeleteCard(menuCard.id);
+              await permanentDeleteCard(menuCard.id, undefined, menuCard.libraryId);
               notifyPermanentDelete(1);
               await onCardDeleted();
             })();

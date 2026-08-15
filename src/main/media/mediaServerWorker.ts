@@ -16,6 +16,7 @@ type StagingEntry = {
 };
 
 let libraryRoot: string | null = null;
+let rootsByLibraryId = new Map<string, string>();
 let activeTab: MediaSectionTab | null = 'gallery';
 let mediaGeneration = 0;
 const stagingByToken = new Map<string, StagingEntry>();
@@ -127,7 +128,11 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
     libraryRoot,
     parsed.searchParams.get('rel'),
     parsed.searchParams.get('stg'),
-    stagingByToken
+    stagingByToken,
+    {
+      libraryId: parsed.searchParams.get('lib'),
+      rootsByLibraryId
+    }
   );
   if (!abs) {
     reject(res, 404);
@@ -168,6 +173,7 @@ process.parentPort.on('message', (event: { data: unknown }) => {
   const msg = event.data as
     | { type: 'init'; libraryRoot: string | null }
     | { type: 'library-root'; libraryRoot: string | null }
+    | { type: 'library-roots'; roots: Record<string, string> }
     | { type: 'active-tab'; tab: MediaSectionTab | null; generation: number }
     | { type: 'staging-register'; token: string; absPath: string; expiresAt: number };
 
@@ -177,6 +183,17 @@ process.parentPort.on('message', (event: { data: unknown }) => {
     if (typeof msg.token === 'string' && typeof msg.absPath === 'string' && typeof msg.expiresAt === 'number') {
       stagingByToken.set(msg.token, { absPath: msg.absPath, expiresAt: msg.expiresAt });
     }
+    return;
+  }
+
+  if (msg.type === 'library-roots') {
+    const next = new Map<string, string>();
+    if (msg.roots && typeof msg.roots === 'object') {
+      for (const [id, root] of Object.entries(msg.roots)) {
+        if (typeof root === 'string' && root.trim()) next.set(id, root);
+      }
+    }
+    rootsByLibraryId = next;
     return;
   }
 

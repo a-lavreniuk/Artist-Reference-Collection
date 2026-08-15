@@ -317,11 +317,12 @@
 }
 
 .arc-search-panel-color-preset {
-  width: 18px;
-  height: 18px;
+  width: var(--btn-h, 24px);
+  height: var(--btn-h, 24px);
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: calc(var(--radius-s) / 2);
+  border: 1px solid var(--button-outline-border-default, var(--gray-900));
+  border-radius: var(--btn-radius, var(--radius-s));
+  box-sizing: border-box;
   cursor: pointer;
   flex-shrink: 0;
   transition: box-shadow var(--transition-fast);

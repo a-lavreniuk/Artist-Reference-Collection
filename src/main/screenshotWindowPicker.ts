@@ -115,10 +115,13 @@ export function registerScreenshotWindowPickerIpc(): void {
   });
 }
 
-export function openScreenshotWindowPicker(): Promise<ScreenshotWindowPickerResult> {
+export async function openScreenshotWindowPicker(): Promise<ScreenshotWindowPickerResult> {
   if (resolvePicker) {
     finishPicker({ action: 'cancel' });
   }
+
+  const { destroyColorEyedropper } = await import('./colorEyedropperOverlay');
+  destroyColorEyedropper();
 
   return new Promise((resolve) => {
     resolvePicker = resolve;

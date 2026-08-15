@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 
-import ToastAlert from '../../../components/alert/ToastAlert';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
+import { showAppNotification } from '../../../services/notificationService';
 
 const LABEL_ENABLE = 'Принимать изображения от расширения';
 const HINT_INTRO =
@@ -22,7 +22,6 @@ const HINT_SECRET =
 export default function SettingsBrowserExtensionPanel() {
   const { prefs, ready, update } = useAppPreferences();
   const disabled = !ready;
-  const [copyAlertKey, setCopyAlertKey] = useState(0);
   const secret = prefs?.localApiSecret?.trim() ?? '';
   const importEnabled = prefs?.importApiEnabled === true;
 
@@ -30,7 +29,12 @@ export default function SettingsBrowserExtensionPanel() {
     if (!secret) return;
     try {
       await navigator.clipboard.writeText(secret);
-      setCopyAlertKey((k) => k + 1);
+      showAppNotification({
+        message: 'Секрет скопирован',
+        variant: 'success',
+        autoDismissMs: 2500,
+        withSound: false
+      });
     } catch {
       /* clipboard unavailable */
     }
@@ -84,16 +88,6 @@ export default function SettingsBrowserExtensionPanel() {
           )}
         </div>
       </div>
-      {copyAlertKey > 0 ? (
-        <ToastAlert
-          key={copyAlertKey}
-          message="Секрет скопирован"
-          variant="success"
-          autoDismissMs={2500}
-          withSound={false}
-          onClose={() => setCopyAlertKey(0)}
-        />
-      ) : null}
     </div>
   );
 }

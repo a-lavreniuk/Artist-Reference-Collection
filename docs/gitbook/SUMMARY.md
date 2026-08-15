@@ -70,7 +70,6 @@
   * [Уведомления](user-guide/settings/notifications.md)
   * [Горячие клавиши](user-guide/settings/hotkeys.md)
   * [Папка библиотеки](user-guide/settings/library-folder.md)
-  * [Резервная копия](user-guide/settings/backup.md)
   * [Проверка целостности](user-guide/settings/integrity-check.md)
   * [Автоимпорт](user-guide/settings/auto-import.md)
   * [AI Поиск](user-guide/settings/ai-search.md)

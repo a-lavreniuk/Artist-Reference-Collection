@@ -1,8 +1,11 @@
 import { BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
 
+import { consumeDestructiveConfirm } from './destructiveConfirm';
 import {
   addSessionSkippedPair,
   checkImportDuplicates,
+  FALLBACK_SCAN_LIBRARY_ID,
   getCachedDuplicatePairs,
   getDuplicateThresholdFromSystem,
   isExactDuplicateIncomingFile,
@@ -12,15 +15,30 @@ import {
   runDuplicateScan,
   scanDuplicatePairs,
   scanForDuplicateFilesAfterImport,
-  type DuplicatePairDto
+  type DuplicatePairDto,
+  type DuplicateScanLibrary,
+  type DuplicateScanScope
 } from './duplicateScanService';
+import { pairKey } from './duplicateMatch';
+import { allowMediaStagingPaths } from './media/mediaStagingTokens';
+import { listLibrariesFromConfig } from './multiLibrary';
+import { withPreservedActiveDb } from './storage/db';
+import {
+  addCrossSkippedPair,
+  loadCrossSkippedPairKeys,
+  resolveContainerPathForDuplicates
+} from './storage/containerSkippedDuplicates';
 import {
   addSkippedDuplicatePair,
+  addSkippedDuplicatePairAtRoot,
   ensureLibraryReady,
   getCardByIdFromDb,
+  getCardByIdIsolated,
+  listSkippedDuplicatePairsReadonly,
   mergeDuplicateCards,
   replaceCardOriginalFromFile,
-  rowToCardRecord
+  rowToCardRecord,
+  softDeleteCardFromStorage
 } from './storage/libraryStorage';
 
 let ipcRegistered = false;
@@ -52,16 +70,84 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   };
 }
 
-function enrichPairsWithCards(root: string, pairs: DuplicatePairDto[]) {
-  return pairs.map((pair) => {
-    const rowA = getCardByIdFromDb(root, pair.cardIdA);
-    const rowB = getCardByIdFromDb(root, pair.cardIdB);
+function previewAbsForRow(root: string, row: ReturnType<typeof rowToCardRecord>): string {
+  const rel = row.thumbSRel || row.thumbMRel || row.thumbLRel || row.originalRel;
+  return path.join(root, rel.replace(/\//g, path.sep));
+}
+
+function enrichPairsWithCards(pairs: DuplicatePairDto[]) {
+  const staging: string[] = [];
+  const enriched = pairs.map((pair) => {
+    const rootA = pair.libraryRootA;
+    const rootB = pair.libraryRootB;
+    const rowA = getCardByIdIsolated(rootA, pair.cardIdA);
+    const rowB = getCardByIdIsolated(rootB, pair.cardIdB);
+    const recA = rowA ? rowToCardRecord(rowA) : null;
+    const recB = rowB ? rowToCardRecord(rowB) : null;
+    const previewAbsA = recA ? previewAbsForRow(rootA, recA) : null;
+    const previewAbsB = recB ? previewAbsForRow(rootB, recB) : null;
+    if (previewAbsA) staging.push(previewAbsA);
+    if (previewAbsB) staging.push(previewAbsB);
+    if (recA) staging.push(path.join(rootA, recA.originalRel.replace(/\//g, path.sep)));
+    if (recB) staging.push(path.join(rootB, recB.originalRel.replace(/\//g, path.sep)));
     return {
       ...pair,
-      cardA: rowA ? cardIndexToRenderer(rowToCardRecord(rowA)) : null,
-      cardB: rowB ? cardIndexToRenderer(rowToCardRecord(rowB)) : null
+      previewAbsA,
+      previewAbsB,
+      cardA: recA ? cardIndexToRenderer(recA) : null,
+      cardB: recB ? cardIndexToRenderer(recB) : null
     };
   });
+  allowMediaStagingPaths(staging);
+  return enriched;
+}
+
+function parseScanScope(payload: unknown): DuplicateScanScope {
+  if (!payload || typeof payload !== 'object') return { mode: 'current' };
+  const p = payload as { scope?: unknown };
+  if (!p.scope || typeof p.scope !== 'object') return { mode: 'current' };
+  const s = p.scope as { mode?: unknown; libraryIds?: unknown };
+  if (s.mode === 'all') return { mode: 'all' };
+  if (s.mode === 'ids') {
+    const ids = Array.isArray(s.libraryIds) ? s.libraryIds.filter((id): id is string => typeof id === 'string') : [];
+    return { mode: 'ids', libraryIds: ids };
+  }
+  return { mode: 'current' };
+}
+
+function resolveScanLibraries(activeRoot: string, scope: DuplicateScanScope): DuplicateScanLibrary[] {
+  const listed = listLibrariesFromConfig();
+  const fallback: DuplicateScanLibrary = {
+    id: listed.find((l) => path.resolve(l.path) === path.resolve(activeRoot))?.id ?? FALLBACK_SCAN_LIBRARY_ID,
+    name: listed.find((l) => path.resolve(l.path) === path.resolve(activeRoot))?.name ?? path.basename(activeRoot),
+    path: activeRoot
+  };
+  if (listed.length === 0) return [fallback];
+  if (scope.mode === 'current') {
+    const active = listed.find((l) => l.active) ?? listed.find((l) => path.resolve(l.path) === path.resolve(activeRoot));
+    return active ? [{ id: active.id, name: active.name, path: active.path }] : [fallback];
+  }
+  if (scope.mode === 'ids') {
+    const wanted = new Set(scope.libraryIds ?? []);
+    const picked = listed.filter((l) => wanted.has(l.id)).map((l) => ({ id: l.id, name: l.name, path: l.path }));
+    return picked.length > 0 ? picked : [fallback];
+  }
+  return listed.map((l) => ({ id: l.id, name: l.name, path: l.path }));
+}
+
+function resolveLibraryById(libraryId: string | undefined, fallbackRoot: string | null): DuplicateScanLibrary | null {
+  const listed = listLibrariesFromConfig();
+  if (libraryId) {
+    const found = listed.find((l) => l.id === libraryId);
+    if (found) return { id: found.id, name: found.name, path: found.path };
+  }
+  if (fallbackRoot) {
+    const byPath = listed.find((l) => path.resolve(l.path) === path.resolve(fallbackRoot));
+    if (byPath) return { id: byPath.id, name: byPath.name, path: byPath.path };
+    return { id: FALLBACK_SCAN_LIBRARY_ID, name: path.basename(fallbackRoot), path: fallbackRoot };
+  }
+  const active = listed.find((l) => l.active) ?? listed[0];
+  return active ? { id: active.id, name: active.name, path: active.path } : null;
 }
 
 function broadcastDuplicatesFound(): void {
@@ -75,6 +161,29 @@ function broadcastDuplicatesFound(): void {
 export async function triggerDuplicateScanAfterImport(): Promise<void> {
   const found = await scanForDuplicateFilesAfterImport();
   if (found) broadcastDuplicatesFound();
+}
+
+function parseSkipSides(first: unknown, second?: unknown): {
+  cardIdA: string;
+  cardIdB: string;
+  libraryIdA?: string;
+  libraryIdB?: string;
+} | null {
+  if (first && typeof first === 'object' && !Array.isArray(first)) {
+    const p = first as Record<string, unknown>;
+    if (typeof p.cardIdA === 'string' && typeof p.cardIdB === 'string') {
+      return {
+        cardIdA: p.cardIdA,
+        cardIdB: p.cardIdB,
+        libraryIdA: typeof p.libraryIdA === 'string' ? p.libraryIdA : undefined,
+        libraryIdB: typeof p.libraryIdB === 'string' ? p.libraryIdB : undefined
+      };
+    }
+  }
+  if (typeof first === 'string' && typeof second === 'string') {
+    return { cardIdA: first, cardIdB: second };
+  }
+  return null;
 }
 
 export function registerDuplicateIpc(
@@ -93,8 +202,8 @@ export function registerDuplicateIpc(
     if (!root) return [];
     await ensureLibraryReady(root);
     const paths = absolutePaths as string[];
-    const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
-    allowMediaStagingPaths(paths);
+    const { allowMediaStagingPaths: allow } = await import('./media/mediaStagingTokens');
+    allow(paths);
     const matches = await checkImportDuplicates(root, paths);
     const out = [];
     for (const m of matches) {
@@ -112,15 +221,15 @@ export function registerDuplicateIpc(
     const root = await readLibraryRoot();
     if (!root) return false;
     await ensureLibraryReady(root);
-    const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
-    allowMediaStagingPaths([absolutePath]);
+    const { allowMediaStagingPaths: allow } = await import('./media/mediaStagingTokens');
+    allow([absolutePath]);
     return isExactDuplicateIncomingFile(root, absolutePath);
   });
 
   ipcMain.handle('arc:probe-incoming-file', async (_e, absolutePath: unknown) => {
     if (typeof absolutePath !== 'string') return null;
-    const { allowMediaStagingPaths } = await import('./media/mediaStagingTokens');
-    allowMediaStagingPaths([absolutePath]);
+    const { allowMediaStagingPaths: allow } = await import('./media/mediaStagingTokens');
+    allow([absolutePath]);
     return probeIncomingFileMetadata(absolutePath);
   });
 
@@ -145,9 +254,10 @@ export function registerDuplicateIpc(
     return { pairs, thresholdPct };
   });
 
-  ipcMain.handle('arc:duplicate-session-skip-pair', async (_e, idA: unknown, idB: unknown) => {
-    if (typeof idA !== 'string' || typeof idB !== 'string') return;
-    addSessionSkippedPair(idA, idB);
+  ipcMain.handle('arc:duplicate-session-skip-pair', async (_e, first: unknown, second: unknown) => {
+    const sides = parseSkipSides(first, second);
+    if (!sides) return;
+    addSessionSkippedPair(sides.cardIdA, sides.cardIdB, sides.libraryIdA, sides.libraryIdB);
   });
 
   ipcMain.handle('arc:duplicate-reset-scan-session', async () => {
@@ -177,24 +287,65 @@ export function registerDuplicateIpc(
 
   ipcMain.handle('arc:merge-duplicate-cards', async (_e, payload: unknown) => {
     assertNotMaintenance();
-    const root = await readLibraryRoot();
-    if (!root) throw new Error('Библиотека не выбрана');
+    const activeRoot = await readLibraryRoot();
     if (!payload || typeof payload !== 'object') throw new Error('Неверные параметры');
-    const p = payload as { primaryId?: unknown; secondaryId?: unknown };
+    const p = payload as { primaryId?: unknown; secondaryId?: unknown; libraryId?: unknown };
     if (typeof p.primaryId !== 'string' || typeof p.secondaryId !== 'string') {
       throw new Error('Неверные параметры');
     }
-    await ensureLibraryReady(root);
-    await mergeDuplicateCards(root, p.primaryId, p.secondaryId);
+    const lib = resolveLibraryById(typeof p.libraryId === 'string' ? p.libraryId : undefined, activeRoot);
+    if (!lib) throw new Error('Библиотека не выбрана');
+    await withPreservedActiveDb(async () => {
+      await ensureLibraryReady(lib.path);
+      await mergeDuplicateCards(lib.path, p.primaryId as string, p.secondaryId as string);
+    });
     const { queueCardsForIndexing } = await import('./ipcAi');
-    void queueCardsForIndexing([p.primaryId]);
+    void queueCardsForIndexing([p.primaryId as string]);
     const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
     void refreshLibrarySessionSnapshotFromDisk();
   });
 
+  ipcMain.handle('arc:duplicate-soft-delete-card', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    if (!payload || typeof payload !== 'object') throw new Error('Неверные параметры');
+    const p = payload as { cardId?: unknown; libraryId?: unknown; confirmToken?: unknown };
+    if (typeof p.cardId !== 'string') throw new Error('Неверные параметры');
+    const activeRoot = await readLibraryRoot();
+    const lib = resolveLibraryById(typeof p.libraryId === 'string' ? p.libraryId : undefined, activeRoot);
+    if (!lib) throw new Error('Библиотека не выбрана');
+    const binding = `${lib.id}:${p.cardId}`;
+    if (!consumeDestructiveConfirm(p.confirmToken, 'duplicate-delete-card', binding)) {
+      throw new Error('Нужно подтверждение удаления');
+    }
+    await withPreservedActiveDb(async () => {
+      await ensureLibraryReady(lib.path);
+      await softDeleteCardFromStorage(lib.path, p.cardId as string);
+    });
+    const { refreshLibrarySessionSnapshotFromDisk } = await import('./librarySessionSnapshot');
+    void refreshLibrarySessionSnapshotFromDisk();
+    return { ok: true as const };
+  });
+
+  ipcMain.handle('arc:duplicate-add-skipped-pair', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const sides = parseSkipSides(payload);
+    if (!sides) return;
+    const activeRoot = await readLibraryRoot();
+    const libA = resolveLibraryById(sides.libraryIdA, activeRoot);
+    const libB = resolveLibraryById(sides.libraryIdB ?? sides.libraryIdA, activeRoot);
+    if (!libA || !libB) return;
+    if (libA.id === libB.id) {
+      addSkippedDuplicatePairAtRoot(libA.path, sides.cardIdA, sides.cardIdB);
+      return;
+    }
+    const container = resolveContainerPathForDuplicates();
+    if (!container) {
+      throw new Error('Не удалось сохранить пару: контейнер библиотек недоступен');
+    }
+    addCrossSkippedPair(container, libA.id, sides.cardIdA, libB.id, sides.cardIdB);
+  });
+
   ipcMain.handle('arc:duplicate-scan-run', async (event, payload: unknown) => {
-    // Скан — это и есть операция обслуживания; блокировку держит рендерер (maintenanceBegin/End),
-    // поэтому здесь assertNotMaintenance не вызываем, иначе собственный лок отклонит запрос.
     const root = await readLibraryRoot();
     if (!root) {
       return {
@@ -220,10 +371,24 @@ export function registerDuplicateIpc(
     }
     if (resetSession) resetDuplicateScanSession();
 
+    const scope = parseScanScope(payload);
+    const libraries = resolveScanLibraries(root, scope);
+    const intraSkippedByLibrary = new Map<string, Set<string>>();
+    for (const lib of libraries) {
+      intraSkippedByLibrary.set(
+        lib.id,
+        new Set(listSkippedDuplicatePairsReadonly(lib.path).map(([a, b]) => pairKey(a, b)))
+      );
+    }
+    const container = resolveContainerPathForDuplicates();
+    const crossSkipped = container ? loadCrossSkippedPairKeys(container) : new Set<string>();
+
     const startedAt = Date.now();
     const sender = event.sender;
-    const result = await runDuplicateScan(root, thresholdPct, {
+    const result = await runDuplicateScan(libraries, thresholdPct, {
       yieldToNavigation: false,
+      intraSkippedByLibrary,
+      crossSkipped,
       onProgress: ({ scannedCards, totalCards, duplicatesFound }) => {
         if (sender.isDestroyed()) return;
         const elapsedMs = Date.now() - startedAt;
@@ -239,7 +404,7 @@ export function registerDuplicateIpc(
     });
 
     return {
-      pairs: enrichPairsWithCards(root, result.pairs),
+      pairs: enrichPairsWithCards(result.pairs),
       thresholdPct,
       scannedCards: result.scannedCards,
       totalCards: result.totalCards,

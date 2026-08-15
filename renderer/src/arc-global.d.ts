@@ -119,6 +119,9 @@ declare global {
       importFiles: (absolutePaths: string[]) => Promise<ArcImportFilesResponse>;
       abortImportFiles?: () => void;
       notifyImportQueueIdle?: () => void;
+      writeClipboardImageTemp?: () => Promise<{ ok: true; path: string } | { ok: false }>;
+      readClipboardFilePaths?: () => Promise<string[]>;
+      deleteClipboardImportTemp?: (absPath: string) => Promise<{ ok: true } | { ok: false }>;
       storageEnsureReady: () => Promise<{ ok: true } | { ok: false; error: string }>;
       storageListCards: (params: {
         offset: number;
@@ -131,8 +134,12 @@ declare global {
         advancedFilters?: GalleryAdvancedFilters;
         sort?: GallerySortState;
       }) => Promise<CardRecord[]>;
-      storageGetCard: (cardId: string) => Promise<CardRecord | null>;
-      storageEnsureCardMediaMeta: (cardId: string) => Promise<CardRecord | null>;
+      storageGetCard: (
+        cardIdOrPayload: string | { cardId: string; libraryId?: string }
+      ) => Promise<CardRecord | null>;
+      storageEnsureCardMediaMeta: (
+        cardIdOrPayload: string | { cardId: string; libraryId?: string }
+      ) => Promise<CardRecord | null>;
       setVideoPreviewFrame: (cardId: string, frameMs: number) => Promise<CardRecord>;
       saveVideoFrameToCardFolder: (cardId: string, frameMs: number) => Promise<{ relativePath: string }>;
       copyVideoFrameToClipboard: (cardId: string, frameMs: number) => Promise<{ ok: true }>;
@@ -162,10 +169,24 @@ declare global {
           dateModified?: string;
         }>
       ) => Promise<void>;
-      storageSoftDeleteCard: (cardId: string) => Promise<void>;
-      storageRestoreCard: (cardId: string) => Promise<void>;
-      storagePermanentDeleteCard: (cardId: string, confirmToken: string) => Promise<void>;
+      storageSoftDeleteCard: (cardId: string, libraryId?: string) => Promise<void>;
+      storageRestoreCard: (
+        payload:
+          | string
+          | {
+              cardId: string;
+              libraryId?: string;
+              destinationLibraryId?: string;
+              sourceLibraryRoot?: string;
+            }
+      ) => Promise<{ ok: true } | { ok: false; error: string }>;
+      storagePermanentDeleteCard: (
+        cardId: string,
+        confirmToken: string,
+        libraryId?: string
+      ) => Promise<void>;
       storageEmptyTrash: (confirmToken: string) => Promise<number>;
+      purgeExpiredTrash?: () => Promise<{ deleted: number }>;
       storageCountCards: (
         filterOrPayload: 'all' | 'images' | 'videos' | { filter: 'all' | 'images' | 'videos'; libraryScope?: 'all' | 'untagged' | 'trash' }
       ) => Promise<number>;
@@ -313,7 +334,7 @@ declare global {
       maintenanceBegin: (opts?: { silentUi?: boolean; reason?: string }) => Promise<{ ok: true; token: string }>;
       maintenanceEnd: (token: string) => Promise<{ ok: true } | { ok: false; error: string }>;
       requestDestructiveConfirm: (payload: {
-        kind: 'empty-trash' | 'permanent-delete-card' | 'delete-library-disk';
+        kind: 'empty-trash' | 'permanent-delete-card' | 'delete-library-disk' | 'duplicate-delete-card';
         binding?: string;
         uses?: number;
       }) => Promise<{ ok: true; token: string } | { ok: false; error: string }>;
@@ -361,6 +382,14 @@ declare global {
       }>;
       screenshotWindowPickerConfirm?: (payload: { title: string; nativeId?: number }) => Promise<{ ok: boolean }>;
       screenshotWindowPickerCancel?: () => Promise<{ ok: boolean }>;
+      colorEyedropperStart?: () => Promise<
+        { ok: true; hex: string } | { ok: false; cancelled?: boolean; error?: string }
+      >;
+      colorEyedropperGetFrame?: () => Promise<
+        { ok: true; dataUrl: string; scaleFactor: number } | { ok: false }
+      >;
+      colorEyedropperConfirm?: (hex: string) => Promise<{ ok: boolean }>;
+      colorEyedropperCancel?: () => Promise<{ ok: boolean }>;
       openCardViewer?: (payload: {
         cardIds: string[];
         startIndex?: number;
@@ -409,12 +438,21 @@ declare global {
       runDuplicateScan?: (payload?: {
         thresholdPct?: number;
         resetSession?: boolean;
+        scope?: { mode: 'current' | 'all' | 'ids'; libraryIds?: string[] };
       }) => Promise<{
         pairs: Array<{
           cardIdA: string;
           cardIdB: string;
           similarity: number;
           matchKind: 'exact' | 'similar';
+          libraryIdA?: string;
+          libraryIdB?: string;
+          libraryNameA?: string;
+          libraryNameB?: string;
+          libraryRootA?: string;
+          libraryRootB?: string;
+          previewAbsA?: string | null;
+          previewAbsB?: string | null;
           cardA: import('./services/arcSchema').CardRecord | null;
           cardB: import('./services/arcSchema').CardRecord | null;
         }>;
@@ -434,7 +472,21 @@ declare global {
           etaMs: number | null;
         }) => void
       ) => () => void;
-      duplicateSessionSkipPair?: (idA: string, idB: string) => Promise<void>;
+      duplicateSessionSkipPair?: (
+        idAOrPayload: string | { cardIdA: string; cardIdB: string; libraryIdA?: string; libraryIdB?: string },
+        idB?: string
+      ) => Promise<void>;
+      duplicateAddSkippedPair?: (payload: {
+        cardIdA: string;
+        cardIdB: string;
+        libraryIdA?: string;
+        libraryIdB?: string;
+      }) => Promise<void>;
+      duplicateSoftDeleteCard?: (payload: {
+        cardId: string;
+        libraryId?: string;
+        confirmToken: string;
+      }) => Promise<{ ok: true }>;
       duplicateResetScanSession?: () => Promise<void>;
       duplicateGetCachedPairs?: () => Promise<
         Array<{
@@ -445,7 +497,7 @@ declare global {
         }>
       >;
       replaceCardOriginal?: (cardId: string, sourceAbs: string) => Promise<void>;
-      mergeDuplicateCards?: (primaryId: string, secondaryId: string) => Promise<void>;
+      mergeDuplicateCards?: (primaryId: string, secondaryId: string, libraryId?: string) => Promise<void>;
       autoImportRescan?: () => Promise<{ ok: true }>;
       onAutoImportProgress?: (cb: (p: { current: number; total: number; message?: string }) => void) => () => void;
       onAutoImportBatchDone?: (
@@ -475,6 +527,7 @@ declare global {
       aiPauseDownload?: () => Promise<{ ok: true }>;
       aiResumeDownload?: () => Promise<{ ok: true }>;
       aiSearch?: (query: string) => Promise<Array<{ cardId: string; score: number }>>;
+      rankTagsSemantic?: (query: string) => Promise<Array<{ tagId: string; score: number }>>;
       aiSearchCards?: (params:
         | string
         | {
