@@ -13,6 +13,7 @@ import CardInspectModal from '../components/gallery/CardInspectModal';
 import { resolveCardFeedNeighbors } from '../components/gallery/cardFeedNeighbors';
 import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/gallery/GalleryFilterContext';
 import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
+import { DEFAULT_GALLERY_SORT, emptyGalleryAdvancedFilters } from '../components/gallery/galleryFilterTypes';
 import { listAllCardIdsForQuery } from '../components/gallery/gallerySelectAllIds';
 import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
@@ -123,9 +124,41 @@ export default function CollectionsPage() {
   });
 
   const feedCardIds = useMemo(() => feed.cards.map((card) => card.id), [feed.cards]);
+  const collectionQueueQuery = useMemo<GalleryFeedQuery>(
+    () => ({
+      libraryScope: 'all',
+      selectedTagIds: [],
+      cardIdExact: null,
+      collectionId: activeCollectionId,
+      advancedFilters: emptyGalleryAdvancedFilters(),
+      sort: DEFAULT_GALLERY_SORT
+    }),
+    [activeCollectionId]
+  );
+  const [previewQueueCardIds, setPreviewQueueCardIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!activeCollectionId) {
+      setPreviewQueueCardIds([]);
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      void listAllCardIdsForQuery(collectionQueueQuery).then((ids) => {
+        if (!cancelled) setPreviewQueueCardIds(ids);
+      });
+    };
+    load();
+    const unsubscribe = subscribeGalleryCardsChanged(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [activeCollectionId, collectionQueueQuery]);
+
   const detailNeighborCardIds = useMemo(
-    () => (openCardId ? resolveCardFeedNeighbors(openCardId, feedCardIds) : undefined),
-    [feedCardIds, openCardId]
+    () => (openCardId ? resolveCardFeedNeighbors(openCardId, previewQueueCardIds) : undefined),
+    [previewQueueCardIds, openCardId]
   );
 
   const { isRemoteSearchFeed, feedError } = feed;
@@ -500,6 +533,7 @@ export default function CollectionsPage() {
           moodboardRemoveConfirm="gallery"
           neighborCardIds={detailNeighborCardIds}
           viewerNavigationCardIds={feedCardIds}
+          previewQueueCardIds={previewQueueCardIds}
           viewerOpenContext={
             activeCollection
               ? { kind: 'collection', name: activeCollection.name }

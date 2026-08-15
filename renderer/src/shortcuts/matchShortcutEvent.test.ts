@@ -70,7 +70,7 @@ describe('matchesShortcut', () => {
   it('matches video player shortcuts', () => {
     expect(matchesShortcut(keyEvent({ key: ' ', code: 'Space' }), 'video.playPause')).toBe(true);
     expect(
-      matchesShortcut(keyEvent({ key: 'ArrowLeft', code: 'ArrowLeft', ctrlKey: true }), 'video.seekBack5')
+      matchesShortcut(keyEvent({ key: 'ArrowLeft', code: 'ArrowLeft', ctrlKey: true }), 'video.seekBack10')
     ).toBe(true);
     expect(matchesShortcut(keyEvent({ key: '[', code: 'BracketLeft' }), 'video.frameBack1')).toBe(true);
     expect(matchesShortcut(keyEvent({ key: ']', code: 'BracketRight' }), 'video.frameForward1')).toBe(true);

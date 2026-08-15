@@ -4,13 +4,7 @@ import type { ContextMenuRow } from '../context-menu';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import ValueSlider from '../range-slider/ValueSlider';
 import { Tooltip } from '../tooltip/Tooltip';
-import {
-  formatPlaybackRate,
-  formatVideoClock,
-  formatVideoFileSizeMb,
-  formatVideoResolution,
-  VIDEO_PLAYBACK_RATES
-} from './cardDetailVideoTime';
+import { formatPlaybackRate, formatVideoClock, VIDEO_PLAYBACK_RATES } from './cardDetailVideoTime';
 import type { CardDetailVideoPlayerProps } from './cardDetailVideoPlayerTypes';
 import { useCardDetailVideoPlayer } from './useCardDetailVideoPlayer';
 
@@ -22,15 +16,13 @@ const PLAYER_MENU_PROPS = {
 export default function CardDetailVideoPlayer({
   cardId,
   src,
-  videoNote,
-  videoWidth,
-  videoHeight,
-  fileSizeBytes,
   autoplay,
+  loop = false,
+  onLoopChange,
   onCardUpdated,
   onToast,
-  onOpenInfo,
-  playerRef
+  playerRef,
+  flushToQueue = false
 }: CardDetailVideoPlayerProps) {
   const controlsRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -39,6 +31,8 @@ export default function CardDetailVideoPlayer({
     cardId,
     src,
     autoplay,
+    loop,
+    onLoopChange,
     playerRef,
     onCardUpdated,
     onToast
@@ -52,12 +46,11 @@ export default function CardDetailVideoPlayer({
     player.frameMenuOpen,
     player.speedMenuOpen,
     player.muted,
-    player.volume
+    player.volume,
+    player.loop
   ]);
 
   const sliderMax = Math.max(player.durationMs, 1);
-  const resolutionLabel = formatVideoResolution(videoWidth, videoHeight);
-  const fileSizeLabel = formatVideoFileSizeMb(fileSizeBytes);
 
   const getTimelineTrackRect = () =>
     timelineRef.current?.querySelector('.arc-range-slider__track')?.getBoundingClientRect() ?? null;
@@ -113,21 +106,21 @@ export default function CardDetailVideoPlayer({
       {
         type: 'item',
         key: 'copy-frame',
-        label: 'Копировать кадр',
+        label: 'Копировать превью',
         iconClass: 'arc-icon-copy',
         onSelect: () => void player.copyFrame()
       },
       {
         type: 'item',
         key: 'save-frame',
-        label: 'Сохранить кадр',
+        label: 'Скачать превью',
         iconClass: 'arc-icon-download',
         onSelect: () => void player.saveFrame()
       },
       {
         type: 'item',
         key: 'set-preview',
-        label: 'Установить превью',
+        label: 'Установить кадр как превью',
         iconClass: 'arc-icon-image',
         onSelect: () => void player.setPreviewFrame()
       }
@@ -140,7 +133,7 @@ export default function CardDetailVideoPlayer({
   const volumeIconClass = player.muted || volumePct <= 0 ? 'arc-icon-volume-x' : 'arc-icon-volume';
 
   return (
-    <div className="arc-card-detail-video-player">
+    <div className={`arc-card-detail-video-player${flushToQueue ? ' arc-card-detail-video-player--flush' : ''}`}>
       <div className="arc-card-detail-media-fit">
         <video
           ref={player.videoRef}
@@ -149,6 +142,7 @@ export default function CardDetailVideoPlayer({
           crossOrigin="anonymous"
           preload="metadata"
           playsInline
+          loop={player.loop}
           onLoadedMetadata={player.onLoadedMetadata}
           onDurationChange={player.onDurationChange}
           onTimeUpdate={player.onTimeUpdate}
@@ -173,11 +167,75 @@ export default function CardDetailVideoPlayer({
 
       <div
         ref={controlsRef}
-        className="arc-card-detail-video-controls arc-ui-kit-scope"
-        data-elevation="sunken"
-        data-btn-size="m"
+        className="arc-card-detail-video-controls panel elevation-default arc-ui-kit-scope"
+        data-elevation="default"
+        data-btn-size="s"
       >
-        {videoNote ? <p className="text-s arc-card-detail-video-note">{videoNote}</p> : null}
+        <button
+          type="button"
+          className="btn btn-outline btn-icon-only btn-ds"
+          aria-label={player.playing ? 'Пауза' : 'Воспроизведение'}
+          onClick={player.togglePlay}
+        >
+          <span
+            className={`btn-icon-only__glyph ${player.playing ? 'arc-icon-pause' : 'arc-icon-play'}`}
+            aria-hidden="true"
+          />
+        </button>
+
+        <div className="arc-card-detail-video-skip-group">
+          <Tooltip content="−10 сек" position="top">
+            <button
+              type="button"
+              className="btn btn-outline btn-icon-only btn-ds arc-card-detail-video-skip-btn"
+              aria-label="Назад на 10 секунд"
+              onClick={() => player.seekBySeconds(-10)}
+            >
+              <span className="btn-icon-only__glyph arc-icon-go-backward" aria-hidden="true" />
+            </button>
+          </Tooltip>
+          <Tooltip content="+30 сек" position="top">
+            <button
+              type="button"
+              className="btn btn-outline btn-icon-only btn-ds arc-card-detail-video-skip-btn"
+              aria-label="Вперёд на 30 секунд"
+              onClick={() => player.seekBySeconds(30)}
+            >
+              <span className="btn-icon-only__glyph arc-icon-go-forward" aria-hidden="true" />
+            </button>
+          </Tooltip>
+        </div>
+
+        <div className="arc-card-detail-video-volume">
+          <button
+            type="button"
+            className={`btn btn-outline btn-icon-only btn-ds${player.muted ? ' is-active' : ''}`}
+            aria-label={volumeToggleLabel}
+            aria-pressed={player.muted}
+            onClick={player.toggleMute}
+          >
+            <span className={`btn-icon-only__glyph ${volumeIconClass}`} aria-hidden="true" />
+          </button>
+          <div className="arc-card-detail-video-volume__flyout">
+            <div className="arc-card-detail-video-volume__slider panel elevation-default">
+              <ValueSlider
+                min={0}
+                max={100}
+                step={1}
+                size="s"
+                value={volumePct}
+                formatValue={(v) => `${v}%`}
+                ariaLabel="Громкость"
+                showValue={false}
+                onChange={player.applyVolume}
+              />
+            </div>
+          </div>
+        </div>
+
+        <span className="text-code-s arc-card-detail-video-time" role="status" aria-live="polite">
+          {formatVideoClock(player.currentMs / 1000)}
+        </span>
 
         <div
           ref={timelineRef}
@@ -192,7 +250,7 @@ export default function CardDetailVideoPlayer({
             min={0}
             max={sliderMax}
             step={100}
-            size="m"
+            size="s"
             value={Math.min(player.currentMs, sliderMax)}
             showValue={false}
             disabled={sliderMax <= 1}
@@ -212,130 +270,50 @@ export default function CardDetailVideoPlayer({
           ) : null}
         </div>
 
-        <div className="arc-card-detail-video-transport">
-          <div className="arc-card-detail-video-transport__left">
-            <Tooltip content={player.playing ? 'Пауза' : 'Воспроизведение'} position="top">
-              <button
-                type="button"
-                className="btn btn-outline btn-icon-only btn-ds"
-                aria-label={player.playing ? 'Пауза' : 'Воспроизведение'}
-                onClick={player.togglePlay}
-              >
-                <span
-                  className={`btn-icon-only__glyph ${player.playing ? 'arc-icon-pause' : 'arc-icon-play'}`}
-                  aria-hidden="true"
-                />
-              </button>
-            </Tooltip>
+        <span className="text-code-s arc-card-detail-video-time">{formatVideoClock(player.durationMs / 1000)}</span>
 
-            <div className="arc-card-detail-video-skip-group">
-              <Tooltip content="−5 сек" position="top">
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds arc-card-detail-video-skip-btn"
-                  aria-label="Назад на 5 секунд"
-                  onClick={() => player.seekBySeconds(-5)}
-                >
-                  <span className="btn-icon-only__glyph arc-icon-skip-back" aria-hidden="true" />
-                </button>
-              </Tooltip>
-              <Tooltip content="+5 сек" position="top">
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds arc-card-detail-video-skip-btn"
-                  aria-label="Вперёд на 5 секунд"
-                  onClick={() => player.seekBySeconds(5)}
-                >
-                  <span className="btn-icon-only__glyph arc-icon-skip" aria-hidden="true" />
-                </button>
-              </Tooltip>
-            </div>
+        <Tooltip content={player.loop ? 'Выключить повтор' : 'Включить повтор'} position="top">
+          <button
+            type="button"
+            className={`btn btn-outline btn-icon-only btn-ds${player.loop ? ' is-active' : ''}`}
+            aria-label={player.loop ? 'Выключить повтор' : 'Включить повтор'}
+            aria-pressed={player.loop}
+            onClick={player.toggleLoop}
+          >
+            <span
+              className={`btn-icon-only__glyph ${player.loop ? 'arc-icon-repeat' : 'arc-icon-repeat-off'}`}
+              aria-hidden="true"
+            />
+          </button>
+        </Tooltip>
 
-            <div className="arc-card-detail-video-time-pill text-code-m" role="status" aria-live="polite">
-              {formatVideoClock(player.currentMs / 1000)}
-              <span className="arc-card-detail-video-time__sep"> / </span>
-              {formatVideoClock(player.durationMs / 1000)}
-            </div>
+        <Tooltip content="Скорость" position="top">
+          <button
+            ref={player.speedMenuAnchorRef}
+            type="button"
+            className="btn btn-outline btn-ds btn-s"
+            aria-haspopup="menu"
+            aria-expanded={player.speedMenuOpen}
+            onClick={() => player.setSpeedMenuOpen((open) => !open)}
+          >
+            <span className="btn-ds__icon arc-icon-forward" aria-hidden="true" />
+            <span className="btn-ds__value">{formatPlaybackRate(player.playbackRate)}</span>
+          </button>
+        </Tooltip>
 
-            <div className="arc-card-detail-video-volume">
-              <Tooltip content={volumeToggleLabel} position="top">
-                <button
-                  type="button"
-                  className={`btn btn-outline btn-icon-only btn-ds${player.muted ? ' is-active' : ''}`}
-                  aria-label={volumeToggleLabel}
-                  aria-pressed={player.muted}
-                  onClick={player.toggleMute}
-                >
-                  <span className={`btn-icon-only__glyph ${volumeIconClass}`} aria-hidden="true" />
-                </button>
-              </Tooltip>
-              <div className="arc-card-detail-video-volume__slider">
-                <ValueSlider
-                  min={0}
-                  max={100}
-                  step={1}
-                  size="m"
-                  value={volumePct}
-                  formatValue={(v) => `${v}%`}
-                  ariaLabel="Громкость"
-                  showValue={false}
-                  onChange={player.applyVolume}
-                />
-              </div>
-            </div>
-
-            <div className="arc-card-detail-video-meta">
-              <Tooltip content="Информация о файле" position="top">
-                <button
-                  type="button"
-                  className="btn btn-outline btn-icon-only btn-ds"
-                  aria-label="Информация о файле"
-                  onClick={() => onOpenInfo?.()}
-                >
-                  <span className="btn-icon-only__glyph arc-icon-info" aria-hidden="true" />
-                </button>
-              </Tooltip>
-              <div className="arc-card-detail-video-meta__item">
-                <span className="btn-ds__icon arc-icon-size" aria-hidden="true" />
-                <span className="text-m">{resolutionLabel}</span>
-              </div>
-              <div className="arc-card-detail-video-meta__item">
-                <span className="btn-ds__icon arc-icon-save" aria-hidden="true" />
-                <span className="text-m">{fileSizeLabel}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="arc-card-detail-video-transport__right">
-            <Tooltip content="Скорость" position="top">
-              <button
-                ref={player.speedMenuAnchorRef}
-                type="button"
-                className="btn btn-outline btn-ds btn-m"
-                aria-haspopup="menu"
-                aria-expanded={player.speedMenuOpen}
-                onClick={() => player.setSpeedMenuOpen((open) => !open)}
-              >
-                <span className="btn-ds__icon arc-icon-forward" aria-hidden="true" />
-                <span className="btn-ds__value">{formatPlaybackRate(player.playbackRate)}</span>
-              </button>
-            </Tooltip>
-
-            <Tooltip content="Кадр" position="top">
-              <button
-                ref={player.frameMenuAnchorRef}
-                type="button"
-                className="btn btn-outline btn-icon-only btn-ds"
-                aria-label="Действия с кадром"
-                aria-haspopup="menu"
-                aria-expanded={player.frameMenuOpen}
-                onClick={() => player.setFrameMenuOpen((open) => !open)}
-              >
-                <span className="btn-icon-only__glyph arc-icon-image" aria-hidden="true" />
-              </button>
-            </Tooltip>
-          </div>
-        </div>
+        <Tooltip content="Действия с превью" position="top">
+          <button
+            ref={player.frameMenuAnchorRef}
+            type="button"
+            className="btn btn-outline btn-icon-only btn-ds"
+            aria-label="Действия с превью"
+            aria-haspopup="menu"
+            aria-expanded={player.frameMenuOpen}
+            onClick={() => player.setFrameMenuOpen((open) => !open)}
+          >
+            <span className="btn-icon-only__glyph arc-icon-options" aria-hidden="true" />
+          </button>
+        </Tooltip>
       </div>
 
       <ContextMenu
@@ -351,7 +329,7 @@ export default function CardDetailVideoPlayer({
         open={player.frameMenuOpen}
         anchorRef={player.frameMenuAnchorRef}
         onClose={() => player.setFrameMenuOpen(false)}
-        ariaLabel="Действия с кадром"
+        ariaLabel="Действия с превью"
         rows={frameMenuRows}
         {...PLAYER_MENU_PROPS}
       />

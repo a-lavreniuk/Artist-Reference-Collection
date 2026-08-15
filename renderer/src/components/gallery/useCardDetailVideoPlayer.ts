@@ -9,6 +9,8 @@ type Options = {
   cardId: string;
   src: string;
   autoplay: boolean;
+  loop?: boolean;
+  onLoopChange?: (next: boolean) => void;
   playerRef?: React.RefObject<CardDetailVideoPlayerHandle | null>;
   onCardUpdated?: (card: import('../../services/arcSchema').CardRecord) => void;
   onToast?: (message: string) => void;
@@ -18,6 +20,8 @@ export function useCardDetailVideoPlayer({
   cardId,
   src,
   autoplay,
+  loop = false,
+  onLoopChange,
   playerRef,
   onCardUpdated,
   onToast
@@ -130,6 +134,15 @@ export function useCardDetailVideoPlayer({
     setPlaying(false);
     return ms;
   }, []);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (el) el.loop = loop;
+  }, [loop, src]);
+
+  const toggleLoop = useCallback(() => {
+    onLoopChange?.(!loop);
+  }, [loop, onLoopChange]);
 
   const togglePlay = useCallback(() => {
     const el = videoRef.current;
@@ -463,7 +476,9 @@ export function useCardDetailVideoPlayer({
     toggleMute,
     onSelectSpeed,
     seekToMs,
+    hideScrubPreview,
     onTimelinePointer,
-    hideScrubPreview
+    loop,
+    toggleLoop
   };
 }

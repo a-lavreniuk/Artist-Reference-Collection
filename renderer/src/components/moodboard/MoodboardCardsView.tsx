@@ -73,8 +73,8 @@ export default function MoodboardCardsView() {
 
   const feedCardIds = useMemo(() => feed.cards.map((card) => card.id), [feed.cards]);
   const detailNeighborCardIds = useMemo(
-    () => (openCardId ? resolveCardFeedNeighbors(openCardId, feedCardIds) : undefined),
-    [feedCardIds, openCardId]
+    () => (openCardId ? resolveCardFeedNeighbors(openCardId, mbIdsForScope) : undefined),
+    [mbIdsForScope, openCardId]
   );
 
   const { isRemoteSearchFeed, feedError } = feed;
@@ -247,6 +247,7 @@ export default function MoodboardCardsView() {
           moodboardRemoveConfirm="moodboard"
           neighborCardIds={detailNeighborCardIds}
           viewerNavigationCardIds={feedCardIds}
+          previewQueueCardIds={mbIdsForScope}
           viewerOpenContext={{ kind: 'moodboard' }}
         />
       ) : null}

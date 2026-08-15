@@ -50,8 +50,8 @@ export type ShortcutId =
   | 'detail.rating4'
   | 'detail.rating5'
   | 'video.playPause'
-  | 'video.seekBack5'
-  | 'video.seekForward5'
+  | 'video.seekBack10'
+  | 'video.seekForward30'
   | 'video.frameBack1'
   | 'video.frameForward1'
   | 'video.frameBack10'
@@ -441,17 +441,17 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     settingsVisible: true
   },
   {
-    id: 'video.seekBack5',
+    id: 'video.seekBack10',
     groupId: 'video',
-    label: 'Назад 5 секунд',
+    label: 'Назад 10 секунд',
     defaultAccelerator: 'CommandOrControl+Left',
     scope: 'renderer',
     settingsVisible: true
   },
   {
-    id: 'video.seekForward5',
+    id: 'video.seekForward30',
     groupId: 'video',
-    label: 'Вперёд 5 секунд',
+    label: 'Вперёд 30 секунд',
     defaultAccelerator: 'CommandOrControl+Right',
     scope: 'renderer',
     settingsVisible: true

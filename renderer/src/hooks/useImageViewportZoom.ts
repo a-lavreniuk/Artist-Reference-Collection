@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -91,7 +92,7 @@ export function useImageViewportZoom(resetKey: string) {
     );
   }, [fitScale, naturalSize, stageSize]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setNaturalSize(EMPTY_NATURAL);
     setViewport({ scale: 1, panX: 0, panY: 0 });
     panDragRef.current = null;
@@ -99,10 +100,12 @@ export function useImageViewportZoom(resetKey: string) {
     activePointersRef.current.clear();
   }, [resetKey]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (naturalSize.width <= 0 || naturalSize.height <= 0) return;
     setViewport({ scale: fitScale, panX: 0, panY: 0 });
-  }, [naturalSize.height, naturalSize.width, resetKey]);
+    // fitScale from this render matches the new natural size; stage resize is handled below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset to fit only when the image size arrives
+  }, [naturalSize.height, naturalSize.width]);
 
   useEffect(() => {
     if (naturalSize.width <= 0 || naturalSize.height <= 0 || stageSize.width <= 0) return;

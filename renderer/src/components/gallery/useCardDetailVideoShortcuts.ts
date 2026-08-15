@@ -22,14 +22,14 @@ export function useCardDetailVideoShortcuts({ enabled, playerRef }: Options) {
         player.togglePlay();
         return;
       }
-      if (matchesShortcut(e, 'video.seekBack5')) {
+      if (matchesShortcut(e, 'video.seekBack10')) {
         e.preventDefault();
-        player.seekBySeconds(-5);
+        player.seekBySeconds(-10);
         return;
       }
-      if (matchesShortcut(e, 'video.seekForward5')) {
+      if (matchesShortcut(e, 'video.seekForward30')) {
         e.preventDefault();
-        player.seekBySeconds(5);
+        player.seekBySeconds(30);
         return;
       }
       if (matchesShortcut(e, 'video.frameBack1')) {

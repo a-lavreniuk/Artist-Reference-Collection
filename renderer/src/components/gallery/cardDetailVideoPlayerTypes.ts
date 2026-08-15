@@ -14,13 +14,11 @@ export type CardDetailVideoPlayerHandle = {
 export type CardDetailVideoPlayerProps = {
   cardId: string;
   src: string;
-  videoNote?: string | null;
-  videoWidth?: number;
-  videoHeight?: number;
-  fileSizeBytes?: number;
   autoplay: boolean;
+  loop?: boolean;
+  onLoopChange?: (next: boolean) => void;
   onCardUpdated?: (card: CardRecord) => void;
   onToast?: (message: string) => void;
-  onOpenInfo?: () => void;
   playerRef?: RefObject<CardDetailVideoPlayerHandle | null>;
+  flushToQueue?: boolean;
 };

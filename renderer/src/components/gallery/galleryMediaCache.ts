@@ -338,8 +338,79 @@ export async function preloadDecodedImages(
   _mediaTab?: MainTabKey
 ): Promise<void> {}
 
+const MAX_PRELOADED_DETAIL_ORIGINALS = 32;
+const preloadedOriginalByCardId = new Map<string, string>();
+const decodedOriginalHrefs = new Set<string>();
+
+export function peekPreloadedCardDetailOriginal(cardId: string): string | undefined {
+  return preloadedOriginalByCardId.get(cardId);
+}
+
+function rememberPreloadedOriginal(cardId: string, href: string): void {
+  if (preloadedOriginalByCardId.has(cardId)) {
+    preloadedOriginalByCardId.delete(cardId);
+  }
+  preloadedOriginalByCardId.set(cardId, href);
+  while (preloadedOriginalByCardId.size > MAX_PRELOADED_DETAIL_ORIGINALS) {
+    const oldest = preloadedOriginalByCardId.keys().next().value;
+    if (oldest === undefined) break;
+    preloadedOriginalByCardId.delete(oldest);
+  }
+}
+
+async function decodeImageHref(href: string): Promise<void> {
+  if (decodedOriginalHrefs.has(href)) return;
+  if (typeof Image === 'undefined') return;
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = href;
+  try {
+    if (typeof img.decode === 'function') {
+      await img.decode();
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('image decode failed'));
+      });
+    }
+    decodedOriginalHrefs.add(href);
+    if (decodedOriginalHrefs.size > MAX_PRELOADED_DETAIL_ORIGINALS) {
+      const oldest = decodedOriginalHrefs.values().next().value;
+      if (oldest) decodedOriginalHrefs.delete(oldest);
+    }
+  } catch {
+    // Повторная попытка при следующем prefetch.
+  }
+}
+
+/** Реальный decode оригиналов для деталки (в отличие от no-op preloadDecodedImages). */
+export async function preloadCardDetailOriginals(
+  cards: readonly CardRecord[],
+  gridSize: GridSize
+): Promise<Record<string, string>> {
+  const next: Record<string, string> = {};
+  await Promise.all(
+    cards.map(async (card) => {
+      if (card.type !== 'image') return;
+      const peeked = preloadedOriginalByCardId.get(card.id);
+      if (peeked) {
+        next[card.id] = peeked;
+        return;
+      }
+      const href = await resolveCardDetailPreviewUrls(card, gridSize, () => undefined);
+      if (!href) return;
+      next[card.id] = href;
+      rememberPreloadedOriginal(card.id, href);
+      await decodeImageHref(href);
+    })
+  );
+  return next;
+}
+
 export function clearGalleryMediaUrlCache(): void {
   urlByRel.clear();
+  preloadedOriginalByCardId.clear();
+  decodedOriginalHrefs.clear();
   cachedMediaServerOrigin = undefined;
 }
 

@@ -5,6 +5,8 @@ import {
   buildLibraryMediaUrl,
   clearGalleryMediaUrlCache,
   peekCardsSrcMap,
+  peekPreloadedCardDetailOriginal,
+  preloadCardDetailOriginals,
   refreshMediaServerOrigin
 } from './galleryMediaCache';
 
@@ -84,5 +86,24 @@ describe('galleryMediaCache origin + sect', () => {
 
     const map = peekCardsSrcMap([cardStub()], 'm', 'gallery');
     expect(map['card-1']).toContain('sect=gallery');
+  });
+
+  it('preloadCardDetailOriginals декодирует оригинал и отдаёт его из peek', async () => {
+    const getOrigin = window.arc.getMediaServerOrigin as ReturnType<typeof vi.fn>;
+    getOrigin.mockReturnValue('http://127.0.0.1:5555');
+    const decode = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal(
+      'Image',
+      class {
+        decoding = '';
+        src = '';
+        decode = decode;
+      }
+    );
+
+    const hrefs = await preloadCardDetailOriginals([cardStub()], 'm');
+    expect(hrefs['card-1']).toContain('original.jpg');
+    expect(peekPreloadedCardDetailOriginal('card-1')).toBe(hrefs['card-1']);
+    expect(decode).toHaveBeenCalledTimes(1);
   });
 });

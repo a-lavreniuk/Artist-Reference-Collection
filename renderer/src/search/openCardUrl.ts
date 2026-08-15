@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { startTransition, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ARC_CARD_DETAIL_CLOSE_EVENT } from '../components/gallery/cardDetailEvents';
 import { ARC_SEARCH_QUERY_CARD, parseSearchCardId } from './searchUrl';
@@ -72,10 +72,15 @@ export function useOpenCardUrl(): OpenCardUrlApi {
     (cardId: string) => {
       const next = setDetailCardInParams(searchParams, cardId);
       const replacing = Boolean(parseDetailCardId(searchParams));
-      navigate(
-        { pathname: location.pathname, search: formatSearchQuery(next) },
-        { replace: replacing, state: null }
-      );
+      const dest = { pathname: location.pathname, search: formatSearchQuery(next) };
+      const opts = { replace: replacing, state: null };
+      if (replacing) {
+        startTransition(() => {
+          navigate(dest, opts);
+        });
+        return;
+      }
+      navigate(dest, opts);
     },
     [location.pathname, navigate, searchParams]
   );

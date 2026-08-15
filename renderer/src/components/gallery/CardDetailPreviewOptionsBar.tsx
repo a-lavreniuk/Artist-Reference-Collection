@@ -19,6 +19,9 @@ type Props = {
   isFitActive: boolean;
   isActualActive: boolean;
   disabled?: boolean;
+  showQueueToggle?: boolean;
+  queueOpen?: boolean;
+  onQueueToggle?: () => void;
   onInfoClick: () => void;
   onFitClick: () => void;
   onActualClick: () => void;
@@ -42,6 +45,9 @@ export default function CardDetailPreviewOptionsBar({
   isFitActive,
   isActualActive,
   disabled = false,
+  showQueueToggle = false,
+  queueOpen = false,
+  onQueueToggle,
   onInfoClick,
   onFitClick,
   onActualClick,
@@ -55,7 +61,7 @@ export default function CardDetailPreviewOptionsBar({
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [card.id, displayScalePct]);
+  }, [queueOpen, disabled, showQueueToggle]);
 
   const pctLabel = `${displayScalePct}%`;
 
@@ -82,17 +88,29 @@ export default function CardDetailPreviewOptionsBar({
     <div
       ref={rootRef}
       className="arc-card-detail-preview-options arc-ui-kit-scope"
-      data-btn-size="m"
-      data-input-size="m"
+      data-btn-size="s"
+      data-input-size="s"
       aria-label="Параметры превью"
     >
       <div className="arc-card-detail-preview-options__meta">
+        {showQueueToggle ? (
+          <Tooltip content={queueOpen ? 'Скрыть очередь' : 'Показать очередь'} position="top">
+            <button
+              type="button"
+              className={`btn btn-icon-only btn-ds${queueOpen ? ' btn-primary' : ' btn-outline'}${queueOpen ? ' is-active' : ''}`}
+              aria-label={queueOpen ? 'Скрыть очередь' : 'Показать очередь'}
+              aria-pressed={queueOpen}
+              onClick={onQueueToggle}
+            >
+              <span className="btn-icon-only__glyph arc-icon-gallery-thumbnails" aria-hidden="true" />
+            </button>
+          </Tooltip>
+        ) : null}
         <Tooltip content="Информация о файле" position="top">
           <button
             type="button"
             className="btn btn-outline btn-icon-only btn-ds"
             aria-label="Информация о файле"
-            disabled={disabled}
             onClick={onInfoClick}
           >
             <span className="btn-icon-only__glyph arc-icon-info" aria-hidden="true" />
@@ -100,7 +118,7 @@ export default function CardDetailPreviewOptionsBar({
         </Tooltip>
         <div className="arc-card-detail-preview-options__meta-item">
           <span
-            className="arc-card-detail-preview-options__meta-icon arc-icon-size"
+            className="arc-card-detail-preview-options__meta-icon arc-icon-aspect-ratio"
             data-arc-icon-size="m"
             aria-hidden="true"
           />
@@ -121,31 +139,37 @@ export default function CardDetailPreviewOptionsBar({
       </div>
 
       <div className="arc-card-detail-preview-options__zoom">
-        <Tooltip content="Вписать в экран" position="top">
-          <button
-            type="button"
-            className={`btn btn-outline btn-icon-only btn-ds${isFitActive ? ' is-active' : ''}`}
-            aria-label="Вписать в экран"
-            aria-pressed={isFitActive}
-            disabled={disabled}
-            onClick={onFitClick}
-          >
-            <span className="btn-icon-only__glyph arc-icon-shrink" aria-hidden="true" />
-          </button>
-        </Tooltip>
-        <Tooltip content="Реальный размер" position="top">
-          <button
-            type="button"
-            className={`btn btn-outline btn-icon-only btn-ds${isActualActive ? ' is-active' : ''}`}
-            aria-label="Реальный размер"
-            aria-pressed={isActualActive}
-            disabled={disabled}
-            onClick={onActualClick}
-          >
-            <span className="btn-icon-only__glyph arc-icon-maximize" data-arc-icon-size="m" aria-hidden="true" />
-          </button>
-        </Tooltip>
-        <Tooltip content="Уменьшить" position="top">
+        <div className="btn-group btn-group-ds" role="group" aria-label="Масштаб превью">
+          <Tooltip content="Вписать в экран" position="top">
+            <span className={disabled ? 'arc-tooltip-anchor-inline' : undefined}>
+              <button
+                type="button"
+                className={`btn btn-outline btn-icon-only btn-ds${isFitActive ? ' is-active' : ''}`}
+                aria-label="Вписать в экран"
+                aria-pressed={isFitActive}
+                disabled={disabled}
+                onClick={onFitClick}
+              >
+                <span className="btn-icon-only__glyph arc-icon-shrink" aria-hidden="true" />
+              </button>
+            </span>
+          </Tooltip>
+          <Tooltip content="Реальный размер" position="top">
+            <span className={disabled ? 'arc-tooltip-anchor-inline' : undefined}>
+              <button
+                type="button"
+                className={`btn btn-outline btn-icon-only btn-ds${isActualActive ? ' is-active' : ''}`}
+                aria-label="Реальный размер"
+                aria-pressed={isActualActive}
+                disabled={disabled}
+                onClick={onActualClick}
+              >
+                <span className="btn-icon-only__glyph arc-icon-actual-size" aria-hidden="true" />
+              </button>
+            </span>
+          </Tooltip>
+        </div>
+        <div className="arc-card-detail-preview-options__zoom-controls">
           <button
             type="button"
             className="btn btn-outline btn-icon-only btn-ds"
@@ -155,22 +179,20 @@ export default function CardDetailPreviewOptionsBar({
           >
             <span className="btn-icon-only__glyph arc-icon-minus" aria-hidden="true" />
           </button>
-        </Tooltip>
-        <div className="arc-card-detail-preview-options__slider">
-          <ValueSlider
-            min={DISPLAY_SCALE_PCT_MIN}
-            max={DISPLAY_SCALE_PCT_MAX}
-            step={1}
-            size="m"
-            value={Math.round(displayPctToZoomSliderValue(displayScalePct))}
-            formatValue={() => `${displayScalePct}%`}
-            ariaLabel="Масштаб изображения"
-            showValue={false}
-            disabled={disabled}
-            onChange={(sliderValue) => onDisplayPctChange(zoomSliderValueToDisplayPct(sliderValue))}
-          />
-        </div>
-        <Tooltip content="Увеличить" position="top">
+          <div className="arc-card-detail-preview-options__slider">
+            <ValueSlider
+              min={DISPLAY_SCALE_PCT_MIN}
+              max={DISPLAY_SCALE_PCT_MAX}
+              step={1}
+              size="s"
+              value={Math.round(displayPctToZoomSliderValue(displayScalePct))}
+              formatValue={() => `${displayScalePct}%`}
+              ariaLabel="Масштаб изображения"
+              showValue={false}
+              disabled={disabled}
+              onChange={(sliderValue) => onDisplayPctChange(zoomSliderValueToDisplayPct(sliderValue))}
+            />
+          </div>
           <button
             type="button"
             className="btn btn-outline btn-icon-only btn-ds"
@@ -180,7 +202,7 @@ export default function CardDetailPreviewOptionsBar({
           >
             <span className="btn-icon-only__glyph arc-icon-plus" aria-hidden="true" />
           </button>
-        </Tooltip>
+        </div>
         <label className="field input-live has-value arc-card-detail-preview-options__pct-field">
           <input
             type="text"

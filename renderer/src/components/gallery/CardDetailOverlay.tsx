@@ -1,5 +1,6 @@
 import {
   Fragment,
+  startTransition,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -22,6 +23,11 @@ import CollapsibleSection from './CollapsibleSection';
 import CardRatingStars from './CardRatingStars';
 import { useCardRatingShortcuts } from './useCardRatingShortcuts';
 import CardDetailImageViewport from './CardDetailImageViewport';
+import type { CardDetailImageChrome } from './CardDetailImageViewport';
+import CardDetailPreviewOptionsBar from './CardDetailPreviewOptionsBar';
+import CardDetailPreviewQueue, { peekQueueThumbSrcMap } from './CardDetailPreviewQueue';
+import { loadCardsInOrder } from './cardDetailQueueCards';
+import { getDetailQueueOpen, setDetailQueueOpen } from './cardDetailPreviewQueueSession';
 import CardInfoModal from './CardInfoModal';
 import RestoreTrashDestinationModal from './RestoreTrashDestinationModal';
 import { useLibraries } from '../../hooks/useLibraries';
@@ -75,7 +81,6 @@ import { startFindSimilarSearch } from '../../search/startVisualSimilarSearch';
 import { startColorSearch } from '../../search/startColorSearch';
 import { startTagSearch } from '../../search/startTagSearch';
 import { pushRecentViewedCardId, RECENT_VIEWED_MIN_MS } from '../../search/recentViewedCards';
-import { getVideoPlaybackTierFromPath, videoPlaybackDescription } from '../../media/canPlayInBrowser';
 import { gallerySkeletonStyle } from './gallerySkeleton';
 import {
   arcMotionTokens,
@@ -84,7 +89,14 @@ import {
   motionDuration,
   useOverlayMotionPair
 } from '../../motion';
-import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages, resolveCardDetailPreviewUrls } from './galleryMediaCache';
+import {
+  mergeCardsSrcMap,
+  peekCardsSrcMap,
+  peekPreloadedCardDetailOriginal,
+  preloadCardDetailOriginals,
+  resolveCardDetailPreviewUrls,
+  resolveCardsSrcMap
+} from './galleryMediaCache';
 import { ARC_THUMB_BUDGET_CHANGED_EVENT } from './galleryThumbBudget';
 import { clearCardDetailDraft, readCardDetailDraft } from './cardDetailDraft';
 import { readGridSize } from '../../layout/gridSizePreference';
@@ -113,7 +125,14 @@ import {
 } from './cardSettingsClipboard';
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
 import { isEditableTarget } from '../../shortcuts/shortcutGuards';
-import type { CardFeedNeighbors } from './cardFeedNeighbors';
+import {
+  collectDetailPrefetchCardIds,
+  resolveCardFeedNeighbors,
+  shouldShowDetailNavButtons,
+  type CardFeedNeighbors
+} from './cardFeedNeighbors';
+import { getShortcutById } from '../../shortcuts/shortcutRegistry';
+import { shortcutMenuLabel } from '../../shortcuts/shortcutLabels';
 import { openCardsInNewWindow, type CardViewerOpenContext } from '../../card-viewer/openCardsInNewWindow';
 
 type Props = {
@@ -126,6 +145,7 @@ type Props = {
   neighborCardIds?: CardFeedNeighbors;
   viewerNavigationCardIds?: readonly string[];
   viewerOpenContext?: CardViewerOpenContext;
+  previewQueueCardIds?: readonly string[];
 };
 
 const DESCRIPTION_SAVE_MS = 600;
@@ -139,15 +159,16 @@ function normalizeExternalUrl(raw: string): string | null {
 }
 
 export default function CardDetailOverlay({
-  cardId,
+  cardId: urlCardId,
   tagsIndex,
   onClose,
   onDeleted,
   onOpenCard,
   moodboardRemoveConfirm = 'gallery',
-  neighborCardIds,
+  neighborCardIds: neighborCardIdsFromUrl,
   viewerNavigationCardIds,
-  viewerOpenContext
+  viewerOpenContext,
+  previewQueueCardIds
 }: Props) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -165,6 +186,7 @@ export default function CardDetailOverlay({
 
   const [card, setCard] = useState<CardRecord | null>(null);
   const cardRef = useRef<CardRecord | null>(null);
+  const cardCacheRef = useRef<Map<string, CardRecord>>(new Map());
   const tagPatchQueueRef = useRef<Promise<void>>(Promise.resolve());
   const collectionPatchQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [thumbSrc, setThumbSrc] = useState<string | null>(null);
@@ -207,6 +229,11 @@ export default function CardDetailOverlay({
   const [busy, setBusy] = useState(false);
   const [copyAlertMessage, setCopyAlertMessage] = useState<string | null>(null);
   const [copySettingsMenuOpen, setCopySettingsMenuOpen] = useState(false);
+  const [videoLoop, setVideoLoop] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(getDetailQueueOpen);
+  const [imageChrome, setImageChrome] = useState<CardDetailImageChrome | null>(null);
+  const [queueCards, setQueueCards] = useState<CardRecord[]>([]);
+  const [queueSrcMap, setQueueSrcMap] = useState<Record<string, string>>({});
   const hasSettingsClipboard = useSyncExternalStore(
     subscribeCardSettingsClipboard,
     () => getCardSettingsClipboard() !== null,
@@ -229,7 +256,14 @@ export default function CardDetailOverlay({
   const originLibraryMissing = Boolean(
     card?.libraryId && !libraries.some((lib) => lib.id === card.libraryId)
   );
-  const cardIdRef = useRef(cardId);
+  const cardIdRef = useRef(urlCardId);
+  const [viewingCardId, setViewingCardId] = useState(urlCardId);
+  const [seenUrlCardId, setSeenUrlCardId] = useState(urlCardId);
+  if (urlCardId !== seenUrlCardId) {
+    setSeenUrlCardId(urlCardId);
+    setViewingCardId(urlCardId);
+  }
+  const cardId = urlCardId !== seenUrlCardId ? urlCardId : viewingCardId;
   cardIdRef.current = cardId;
   const canGenerateDescription =
     aiCaptionEnabled && (card?.type === 'image' || card?.type === 'video');
@@ -251,6 +285,7 @@ export default function CardDetailOverlay({
       setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
       setDescription(c.description ?? '');
       setRating(clampCardRating(c.rating));
+      cardCacheRef.current.set(c.id, c);
     } else {
       setDraftName('');
       setDraftLink('');
@@ -260,6 +295,51 @@ export default function CardDetailOverlay({
     setCard(c);
     return c;
   }, []);
+
+  const applyInstantCardPreview = useCallback((c: CardRecord) => {
+    const draft = readCardDetailDraft(c.id);
+    setDraftName(c.name ?? draft.name ?? '');
+    setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
+    setDescription(c.description ?? '');
+    setRating(clampCardRating(c.rating));
+    setCard(c);
+    cardRef.current = c;
+    const gridSize = readGridSize();
+    if (c.type === 'video') {
+      void resolveCardDetailPreviewUrls(c, gridSize, () => undefined).then((href) => {
+        if (cardIdRef.current === c.id && href) {
+          setSrc(href);
+          setThumbSrc(null);
+        }
+      });
+      return;
+    }
+    const prefetched = peekPreloadedCardDetailOriginal(c.id);
+    if (prefetched) {
+      setThumbSrc(null);
+      setSrc(prefetched);
+      return;
+    }
+    const thumb = peekCardsSrcMap([c], gridSize)[c.id];
+    if (thumb) {
+      setThumbSrc(thumb);
+      setSrc(thumb);
+    }
+  }, []);
+
+  const openViewingCard = useCallback(
+    (id: string) => {
+      if (!id || id === cardIdRef.current) return;
+      cardIdRef.current = id;
+      setViewingCardId(id);
+      const cached = cardCacheRef.current.get(id);
+      if (cached) applyInstantCardPreview(cached);
+      startTransition(() => {
+        onOpenCard(id);
+      });
+    },
+    [applyInstantCardPreview, onOpenCard]
+  );
 
   const refreshAiCaption = useCallback(async (id: string) => {
     const c = await getCardById(id);
@@ -273,6 +353,73 @@ export default function CardDetailOverlay({
     setConfirmOverwriteDescription(false);
     setGenerateDescriptionBusy(false);
   }, [cardId]);
+
+  useLayoutEffect(() => {
+    if (card?.type !== 'image') {
+      setImageChrome(null);
+      return;
+    }
+    setImageChrome((prev) =>
+      prev
+        ? {
+            ...prev,
+            displayScalePct: 100,
+            isFitActive: true,
+            isActualActive: false
+          }
+        : prev
+    );
+  }, [card?.id, card?.type]);
+
+  const canShowQueue = Boolean(previewQueueCardIds && previewQueueCardIds.length > 0);
+  const queueVisible = canShowQueue && queueOpen;
+  const feedIdsForNav =
+    previewQueueCardIds && previewQueueCardIds.length > 0
+      ? previewQueueCardIds
+      : viewerNavigationCardIds;
+  const neighborCardIds = useMemo(() => {
+    if (feedIdsForNav && feedIdsForNav.length > 0 && feedIdsForNav.includes(cardId)) {
+      return resolveCardFeedNeighbors(cardId, feedIdsForNav);
+    }
+    return neighborCardIdsFromUrl;
+  }, [cardId, feedIdsForNav, neighborCardIdsFromUrl]);
+  const showNavButtons = shouldShowDetailNavButtons(neighborCardIds);
+  const prevShortcut = getShortcutById('detail.previous');
+  const nextShortcut = getShortcutById('detail.next');
+  const prevNavLabel = prevShortcut?.label ?? 'Предыдущая карточка';
+  const nextNavLabel = nextShortcut?.label ?? 'Следующая карточка';
+  const prevNavHint = `${prevNavLabel} (${shortcutMenuLabel('detail.previous')})`;
+  const nextNavHint = `${nextNavLabel} (${shortcutMenuLabel('detail.next')})`;
+
+  useEffect(() => {
+    if (!canShowQueue || !previewQueueCardIds?.length) {
+      setQueueCards([]);
+      setQueueSrcMap({});
+      return;
+    }
+    let cancelled = false;
+    void loadCardsInOrder(previewQueueCardIds).then((rows) => {
+      if (cancelled) return;
+      for (const row of rows) cardCacheRef.current.set(row.id, row);
+      setQueueCards(rows);
+      const peek = peekQueueThumbSrcMap(rows);
+      setQueueSrcMap(peek);
+      void resolveCardsSrcMap(rows, 's').then((next) => {
+        if (!cancelled) setQueueSrcMap((prev) => ({ ...prev, ...next }));
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canShowQueue, previewQueueCardIds]);
+
+  const toggleQueueOpen = useCallback(() => {
+    setQueueOpen((prev) => {
+      const next = !prev;
+      setDetailQueueOpen(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -315,11 +462,10 @@ export default function CardDetailOverlay({
     confirmPermanentDelete,
     confirmOverwriteDescription,
     busy,
-    card,
-    similar,
+    card?.type,
+    similar.length,
     categoriesById,
     inMoodboard,
-    isBookmarkHovered,
     infoOpen,
     actionAlert,
     tagsModalOpen,
@@ -328,44 +474,44 @@ export default function CardDetailOverlay({
     aiCaptionEnabled,
     suggestTagsBusy,
     generateDescriptionBusy,
-    palette,
     settingsWidth,
-    thumbSrc,
-    draftName,
-    draftLink,
-    description
+    queueOpen,
+    queueCards.length,
+    videoLoop,
+    showNavButtons
   ]);
+
+  useLayoutEffect(() => {
+    const cached = cardCacheRef.current.get(cardId);
+    if (!cached || cardRef.current?.id === cardId) return;
+    applyInstantCardPreview(cached);
+  }, [applyInstantCardPreview, cardId, queueCards]);
+
+  useEffect(() => {
+    const ids = collectDetailPrefetchCardIds(cardId, neighborCardIds, previewQueueCardIds);
+    let cancelled = false;
+    void (async () => {
+      const images: CardRecord[] = [];
+      for (const id of ids) {
+        let cached = cardCacheRef.current.get(id);
+        if (!cached) {
+          cached = (await getCardById(id)) ?? undefined;
+          if (cached) cardCacheRef.current.set(cached.id, cached);
+        }
+        if (cancelled) return;
+        if (cached?.type === 'image') images.push(cached);
+      }
+      if (images.length === 0) return;
+      await preloadCardDetailOriginals(images, readGridSize());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cardId, neighborCardIds, previewQueueCardIds]);
 
   useEffect(() => {
     let cancelled = false;
-    setCard(null);
-    setThumbSrc(null);
-    setSrc(null);
-    setSimilar([]);
     void (async () => {
-      const c = await reloadCard(cardId);
-      if (cancelled) return;
-
-      if (c && window.arc) {
-        let lastThumbHref: string | null = null;
-        const gridSize = readGridSize();
-        const fullHref = await resolveCardDetailPreviewUrls(c, gridSize, (thumbHref) => {
-          lastThumbHref = thumbHref;
-          if (!cancelled) setThumbSrc(thumbHref);
-        });
-        if (cancelled) return;
-        if (fullHref && c.type === 'image') {
-          await preloadDecodedImages([fullHref], 1);
-        }
-        if (!cancelled) {
-          setSrc(fullHref);
-          if (fullHref && fullHref === lastThumbHref) setThumbSrc(null);
-        }
-      } else if (!cancelled) {
-        setThumbSrc(null);
-        setSrc(null);
-      }
-
       const cats = await getAllCategories();
       const cm = new Map<string, CategoryRecord>();
       for (const cat of cats) cm.set(cat.id, cat);
@@ -379,17 +525,54 @@ export default function CardDetailOverlay({
       if (!cancelled) setCollCounts(await getCollectionCardCounts());
       if (!cancelled) setCollectionPreviews(await getCollectionPreviewSlices(1));
 
+      const moodboardIds = await getMoodboardCardIds();
+      if (!cancelled) setMoodboardCardIds(new Set(moodboardIds));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setInMoodboard(moodboardCardIds.has(cardId));
+  }, [cardId, moodboardCardIds]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const c = await reloadCard(cardId);
+      if (cancelled) return;
+
+      if (c && window.arc) {
+        const prefetched = c.type === 'image' ? peekPreloadedCardDetailOriginal(c.id) : undefined;
+        if (prefetched) {
+          setThumbSrc(null);
+          setSrc(prefetched);
+        }
+        let lastThumbHref: string | null = null;
+        const gridSize = readGridSize();
+        const fullHref = await resolveCardDetailPreviewUrls(c, gridSize, (thumbHref) => {
+          if (prefetched) return;
+          lastThumbHref = thumbHref;
+          if (!cancelled) setThumbSrc(thumbHref);
+        });
+        if (cancelled) return;
+        if (!cancelled) {
+          setSrc(fullHref);
+          if (fullHref && (fullHref === lastThumbHref || fullHref === prefetched)) setThumbSrc(null);
+        }
+      } else if (!cancelled && !c) {
+        setThumbSrc(null);
+        setSrc(null);
+      }
+
       if (!cancelled) {
         if (c?.type === 'video') {
           setSimilar([]);
         } else {
-          setSimilar(await listSimilarCards(cardId, 15));
+          const rows = await listSimilarCards(cardId, 15);
+          if (!cancelled) setSimilar(rows);
         }
-      }
-      if (!cancelled) {
-        const moodboardIds = await getMoodboardCardIds();
-        setMoodboardCardIds(new Set(moodboardIds));
-        setInMoodboard(moodboardIds.includes(cardId));
       }
     })();
     return () => {
@@ -446,7 +629,7 @@ export default function CardDetailOverlay({
         if (!cancelled) setPalette(rows);
       })
       .catch(() => {
-        if (!cancelled) setPalette([]);
+        // Оставляем предыдущую палитру, пока не придёт ответ по новой карточке.
       });
     return () => {
       cancelled = true;
@@ -869,13 +1052,13 @@ export default function CardDetailOverlay({
 
       if (matchesShortcut(e, 'detail.previous') && neighborCardIds?.prev) {
         e.preventDefault();
-        onOpenCard(neighborCardIds.prev);
+        openViewingCard(neighborCardIds.prev);
         return;
       }
 
       if (matchesShortcut(e, 'detail.next') && neighborCardIds?.next) {
         e.preventDefault();
-        onOpenCard(neighborCardIds.next);
+        openViewingCard(neighborCardIds.next);
         return;
       }
 
@@ -892,7 +1075,7 @@ export default function CardDetailOverlay({
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [applySettingsClipboard, handleCopySettings, neighborCardIds, onOpenCard]);
+  }, [applySettingsClipboard, handleCopySettings, neighborCardIds, openViewingCard]);
 
   const copyId = async () => {
     if (!card) return;
@@ -1102,11 +1285,6 @@ export default function CardDetailOverlay({
     startColorSearch(navigate, searchParams, hex, { pathname: '/gallery' });
   };
 
-  const videoTier =
-    card?.type === 'video' && card.originalRelativePath
-      ? getVideoPlaybackTierFromPath(card.originalRelativePath)
-      : null;
-
   const bookmarkIconClass = inMoodboard
     ? isBookmarkHovered
       ? 'arc-icon-bookmark-off'
@@ -1172,7 +1350,7 @@ export default function CardDetailOverlay({
       scope: inTrash ? { kind: 'trash' } : { kind: 'library' },
       cards: similar,
       moodboardCardIds,
-      onOpenCard,
+      onOpenCard: openViewingCard,
       onToggleMoodboard: (id) => void handleSimilarToggleMoodboard(id),
       onFindSimilar: handleSimilarFind,
       onCardDeleted: async () => {
@@ -1401,61 +1579,143 @@ export default function CardDetailOverlay({
           className={`arc-card-detail-shell${card?.type !== 'video' && similar.length > 0 ? ' arc-card-detail-shell--has-similar' : ''}`}
         >
         <div className="arc-card-detail-main-row" style={mainRowStyle}>
-          <div className="arc-card-detail-preview arc-card-detail-preview--video panel elevation-sunken">
-            {src && card?.type === 'video' ? (
-              <CardDetailVideoPlayer
-                cardId={card.id}
-                src={src}
-                autoplay={true}
-                videoWidth={card.width}
-                videoHeight={card.height}
-                fileSizeBytes={card.fileSize}
-                onOpenInfo={() => setInfoOpen(true)}
-                videoNote={
-                  videoTier && videoTier !== 'html5' ? videoPlaybackDescription(videoTier) : null
-                }
-                playerRef={videoPlayerRef}
-                onCardUpdated={(updated) => {
-                  setCard(updated);
-                  cardRef.current = updated;
-                  setThumbBudgetEpoch((epoch) => epoch + 1);
-                  void reloadCard(updated.id);
-                  const paletteCardId = updated.id;
-                  void loadCardDetailPalette(paletteCardId)
-                    .then((rows) => {
-                      if (cardRef.current?.id === paletteCardId) setPalette(rows);
-                    })
-                    .catch(() => {
-                      if (cardRef.current?.id === paletteCardId) setPalette([]);
-                    });
-                }}
-                onToast={showCopyAlert}
-              />
-            ) : src || (thumbSrc && card?.type !== 'video') ? (
-              card?.type === 'image' && card ? (
-                <CardDetailImageViewport
-                  card={card}
-                  src={src ?? thumbSrc ?? ''}
-                  onInfoClick={() => setInfoOpen(true)}
+          <div
+            className={`arc-card-detail-preview arc-card-detail-preview--video panel elevation-sunken${queueVisible ? ' arc-card-detail-preview--queue-open' : ''}`}
+          >
+            <div className="arc-card-detail-preview__stage">
+              {src && card?.type === 'video' ? (
+                <CardDetailVideoPlayer
+                  cardId={card.id}
+                  src={src}
+                  autoplay={true}
+                  loop={videoLoop}
+                  onLoopChange={setVideoLoop}
+                  flushToQueue={queueVisible}
+                  playerRef={videoPlayerRef}
+                  onCardUpdated={(updated) => {
+                    setCard(updated);
+                    cardRef.current = updated;
+                    setThumbBudgetEpoch((epoch) => epoch + 1);
+                    void reloadCard(updated.id);
+                    const paletteCardId = updated.id;
+                    void loadCardDetailPalette(paletteCardId)
+                      .then((rows) => {
+                        if (cardRef.current?.id === paletteCardId) setPalette(rows);
+                      })
+                      .catch(() => {
+                        if (cardRef.current?.id === paletteCardId) setPalette([]);
+                      });
+                  }}
+                  onToast={showCopyAlert}
                 />
-              ) : (
-                <div className="arc-card-detail-media-fit">
-                  <img
-                    className="arc-card-detail-media"
+              ) : src || (thumbSrc && card?.type !== 'video') ? (
+                card?.type === 'image' && card ? (
+                  <CardDetailImageViewport
+                    card={card}
                     src={src ?? thumbSrc ?? ''}
-                    alt=""
-                    draggable={false}
+                    onChromeChange={setImageChrome}
                   />
-                </div>
-              )
-            ) : (
-              <div
-                className="arc-gallery-skeleton arc-card-detail-skeleton"
-                style={card ? gallerySkeletonStyle(card) : undefined}
-                aria-hidden
+                ) : (
+                  <div className="arc-card-detail-media-fit">
+                    <img
+                      className="arc-card-detail-media"
+                      src={src ?? thumbSrc ?? ''}
+                      alt=""
+                      draggable={false}
+                    />
+                  </div>
+                )
+              ) : (
+                <div
+                  className="arc-gallery-skeleton arc-card-detail-skeleton"
+                  style={card ? gallerySkeletonStyle(card) : undefined}
+                  aria-hidden
+                />
+              )}
+
+              {showNavButtons ? (
+                <>
+                  <div className="arc-card-detail-preview-nav arc-card-detail-preview-nav--prev">
+                    <Tooltip content={prevNavHint} position="right">
+                      <span className={!neighborCardIds?.prev ? 'arc-tooltip-anchor-inline' : undefined}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-icon-only btn-ds btn-l"
+                          aria-label={prevNavLabel}
+                          disabled={!neighborCardIds?.prev}
+                          onClick={() => {
+                            if (neighborCardIds?.prev) openViewingCard(neighborCardIds.prev);
+                          }}
+                        >
+                          <span
+                            className="btn-icon-only__glyph arc-icon-chevron arc-chevron-point-left"
+                            data-arc-icon-size="m"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </span>
+                    </Tooltip>
+                  </div>
+                  <div className="arc-card-detail-preview-nav arc-card-detail-preview-nav--next">
+                    <Tooltip content={nextNavHint} position="left">
+                      <span className={!neighborCardIds?.next ? 'arc-tooltip-anchor-inline' : undefined}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-icon-only btn-ds btn-l"
+                          aria-label={nextNavLabel}
+                          disabled={!neighborCardIds?.next}
+                          onClick={() => {
+                            if (neighborCardIds?.next) openViewingCard(neighborCardIds.next);
+                          }}
+                        >
+                          <span
+                            className="btn-icon-only__glyph arc-icon-chevron arc-chevron-point-right"
+                            data-arc-icon-size="m"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </span>
+                    </Tooltip>
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {queueVisible && queueCards.length > 0 && card ? (
+              <CardDetailPreviewQueue
+                cards={queueCards}
+                activeCardId={card.id}
+                srcMap={queueSrcMap}
+                onSelectCard={openViewingCard}
               />
-            )}
+            ) : null}
+
+            {card ? (
+              <CardDetailPreviewOptionsBar
+                card={card}
+                naturalSize={
+                  imageChrome?.naturalSize ?? {
+                    width: card.width ?? 0,
+                    height: card.height ?? 0
+                  }
+                }
+                displayScalePct={imageChrome?.displayScalePct ?? 100}
+                isFitActive={imageChrome?.isFitActive ?? true}
+                isActualActive={imageChrome?.isActualActive ?? false}
+                disabled={card.type === 'video'}
+                showQueueToggle={canShowQueue}
+                queueOpen={queueOpen}
+                onQueueToggle={toggleQueueOpen}
+                onInfoClick={() => setInfoOpen(true)}
+                onFitClick={() => imageChrome?.onFitClick()}
+                onActualClick={() => imageChrome?.onActualClick()}
+                onZoomOut={() => imageChrome?.onZoomOut()}
+                onZoomIn={() => imageChrome?.onZoomIn()}
+                onDisplayPctChange={(pct) => imageChrome?.onDisplayPctChange(pct)}
+              />
+            ) : null}
           </div>
+
 
           <button
             type="button"
@@ -1901,7 +2161,7 @@ export default function CardDetailOverlay({
               srcMap={similarSrcMap}
               moodboardCardIds={moodboardCardIds}
               inTrash={inTrash}
-              onOpenCard={onOpenCard}
+              onOpenCard={openViewingCard}
               onFindSimilar={(id) => void handleSimilarFind(id)}
               onToggleMoodboard={inTrash ? undefined : (id) => void handleSimilarToggleMoodboard(id)}
               onCardContextMenu={onSimilarCardContextMenu}

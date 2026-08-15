@@ -3,15 +3,27 @@ import type { CardRecord } from '../../services/arcSchema';
 import { ZOOM_WHEEL_FACTOR } from '../../hooks/imageViewportZoomMath';
 import { useImageViewportZoom } from '../../hooks/useImageViewportZoom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import CardDetailPreviewOptionsBar from './CardDetailPreviewOptionsBar';
+import type { NaturalImageSize } from './cardFileMetaFormat';
+
+export type CardDetailImageChrome = {
+  naturalSize: NaturalImageSize;
+  displayScalePct: number;
+  isFitActive: boolean;
+  isActualActive: boolean;
+  onFitClick: () => void;
+  onActualClick: () => void;
+  onZoomOut: () => void;
+  onZoomIn: () => void;
+  onDisplayPctChange: (pct: number) => void;
+};
 
 type Props = {
   card: CardRecord;
   src: string;
-  onInfoClick: () => void;
+  onChromeChange?: (chrome: CardDetailImageChrome) => void;
 };
 
-export default function CardDetailImageViewport({ card, src, onInfoClick }: Props) {
+export default function CardDetailImageViewport({ card, src, onChromeChange }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const {
     stageRef,
@@ -27,11 +39,38 @@ export default function CardDetailImageViewport({ card, src, onInfoClick }: Prop
     resetToFit,
     resetToActual,
     stageHandlers
-  } = useImageViewportZoom(`${card.id}:${src}`);
+  } = useImageViewportZoom(card.id);
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [card.id, displayScalePct]);
+  }, []);
+
+  const chromeReady = naturalSize.width > 0 && naturalSize.height > 0;
+
+  useLayoutEffect(() => {
+    onChromeChange?.({
+      naturalSize,
+      displayScalePct: chromeReady ? displayScalePct : 100,
+      isFitActive: chromeReady ? isFitActive : true,
+      isActualActive: chromeReady ? isActualActive : false,
+      onFitClick: resetToFit,
+      onActualClick: resetToActual,
+      onZoomOut: () => zoomCenterFactor(1 / ZOOM_WHEEL_FACTOR),
+      onZoomIn: () => zoomCenterFactor(ZOOM_WHEEL_FACTOR),
+      onDisplayPctChange: setDisplayPct
+    });
+  }, [
+    chromeReady,
+    displayScalePct,
+    isActualActive,
+    isFitActive,
+    naturalSize,
+    onChromeChange,
+    resetToActual,
+    resetToFit,
+    setDisplayPct,
+    zoomCenterFactor
+  ]);
 
   return (
     <div ref={rootRef} className="arc-card-detail-image-viewport">
@@ -42,7 +81,8 @@ export default function CardDetailImageViewport({ card, src, onInfoClick }: Prop
       >
         <div className="arc-card-detail-image-stage__layer">
           <img
-            className="arc-card-detail-image-stage__media"
+            key={card.id}
+            className="arc-card-detail-image-stage__media arc-card-detail-image-stage__media--fade"
             src={src}
             alt=""
             draggable={false}
@@ -54,20 +94,6 @@ export default function CardDetailImageViewport({ card, src, onInfoClick }: Prop
           />
         </div>
       </div>
-
-      <CardDetailPreviewOptionsBar
-        card={card}
-        naturalSize={naturalSize}
-        displayScalePct={displayScalePct}
-        isFitActive={isFitActive}
-        isActualActive={isActualActive}
-        onInfoClick={onInfoClick}
-        onFitClick={resetToFit}
-        onActualClick={resetToActual}
-        onZoomOut={() => zoomCenterFactor(1 / ZOOM_WHEEL_FACTOR)}
-        onZoomIn={() => zoomCenterFactor(ZOOM_WHEEL_FACTOR)}
-        onDisplayPctChange={setDisplayPct}
-      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import GalleryCardTile from '../components/gallery/GalleryCardTile';
 import ToastAlert from '../components/alert/ToastAlert';
 import { ErrorBoundary, ErrorScreen } from '../components/error-boundary';
 import SearchPanelColorControls from '../components/layout/SearchPanelColorControls';
+import CardDetailPreviewOptionsBar from '../components/gallery/CardDetailPreviewOptionsBar';
 
 const stubCard: CardRecord = {
   id: 'smoke-card',
@@ -139,5 +140,33 @@ describe('renderer UI smoke', () => {
     );
     expect(html).toContain('arc-icon-eyedropper');
     expect(html).toContain('Пипетка');
+  });
+
+  it('CardDetailPreviewOptionsBar renders queue toggle and zoom controls', () => {
+    const html = renderToString(
+      <CardDetailPreviewOptionsBar
+        card={stubCard}
+        naturalSize={{ width: 1920, height: 1080 }}
+        displayScalePct={100}
+        isFitActive
+        isActualActive={false}
+        showQueueToggle
+        queueOpen={false}
+        onQueueToggle={() => undefined}
+        onInfoClick={() => undefined}
+        onFitClick={() => undefined}
+        onActualClick={() => undefined}
+        onZoomOut={() => undefined}
+        onZoomIn={() => undefined}
+        onDisplayPctChange={() => undefined}
+      />
+    );
+    expect(html).toContain('arc-card-detail-preview-options');
+    expect(html).toContain('arc-icon-gallery-thumbnails');
+    expect(html).toContain('Показать очередь');
+    expect(html).toContain('btn-group btn-group-ds');
+    expect(html).toContain('arc-icon-aspect-ratio');
+    expect(html).toContain('arc-icon-actual-size');
+    expect(html).toContain('aria-label="Уменьшить"');
   });
 });
