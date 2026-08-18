@@ -44,6 +44,12 @@ export type ShortcutId =
   | 'detail.copySettings'
   | 'detail.pasteSettings'
   | 'detail.commentMode'
+  | 'detail.annotationNext'
+  | 'detail.annotationPrev'
+  | 'detail.annotationOpen'
+  | 'detail.annotationUndo'
+  | 'detail.annotationDuplicate'
+  | 'detail.annotationsVisible'
   | 'detail.rating0'
   | 'detail.rating1'
   | 'detail.rating2'
@@ -388,8 +394,56 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
   {
     id: 'detail.commentMode',
     groupId: 'detail',
-    label: 'Режим комментария',
+    label: 'Редактирование меток',
     defaultAccelerator: 'C',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.annotationNext',
+    groupId: 'detail',
+    label: 'Следующая аннотация',
+    defaultAccelerator: 'J',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.annotationPrev',
+    groupId: 'detail',
+    label: 'Предыдущая аннотация',
+    defaultAccelerator: 'K',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.annotationOpen',
+    groupId: 'detail',
+    label: 'Открыть аннотацию',
+    defaultAccelerator: 'Enter',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.annotationUndo',
+    groupId: 'detail',
+    label: 'Отменить изменение аннотации',
+    defaultAccelerator: 'CommandOrControl+Z',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.annotationDuplicate',
+    groupId: 'detail',
+    label: 'Дублировать аннотацию',
+    defaultAccelerator: 'CommandOrControl+D',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.annotationsVisible',
+    groupId: 'detail',
+    label: 'Показать или скрыть метки',
+    defaultAccelerator: 'H',
     scope: 'renderer',
     settingsVisible: true
   },

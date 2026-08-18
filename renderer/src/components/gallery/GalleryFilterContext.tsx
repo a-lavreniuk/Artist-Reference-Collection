@@ -26,6 +26,7 @@ import {
   writeGalleryFiltersSortTab,
   type GalleryFilterPersistTab
 } from './galleryFilterPersistence';
+import { GALLERY_FILTERS_RELOAD_EVENT } from './galleryFilterApplyFromDetail';
 import {
   countActiveFilterCategories,
   DEFAULT_GALLERY_SORT,
@@ -110,6 +111,18 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   filtersRef.current = filters;
   sortRef.current = sort;
   statsRef.current = stats;
+
+  useEffect(() => {
+    const onReload = () => {
+      const tab = resolveMainTab(location.pathname);
+      if (!isGalleryFilterPersistTab(tab)) return;
+      const snap = readGalleryFiltersSortTab(tab);
+      setFiltersState(snap.filters);
+      setSortState(snap.sort);
+    };
+    window.addEventListener(GALLERY_FILTERS_RELOAD_EVENT, onReload);
+    return () => window.removeEventListener(GALLERY_FILTERS_RELOAD_EVENT, onReload);
+  }, [location.pathname]);
 
   const filtersForPersist = useCallback((nextFilters: GalleryAdvancedFilters): GalleryAdvancedFilters => {
     let out = nextFilters;

@@ -24,14 +24,21 @@ type Props = {
   src: string;
   onChromeChange?: (chrome: CardDetailImageChrome) => void;
   commentMode?: boolean;
+  editMode?: boolean;
+  annotationsVisible?: boolean;
   annotations?: CardAnnotationV1[];
   selectedAnnotationId?: string | null;
+  focusedAnnotationId?: string | null;
+  sparkleAnnotationId?: string | null;
   composerAnchorId?: string | null;
   draftRect?: AnnotationDraftRect | null;
   draftIndex?: number;
   onSelectAnnotation?: (id: string) => void;
   onCreateAnnotation?: (rect: AnnotationDraftRect) => void;
-  onMoveAnnotation?: (id: string, x: number, y: number) => void;
+  onUpdateAnnotation?: (id: string, rect: AnnotationDraftRect) => void;
+  hoveredAnnotationId?: string | null;
+  onHoverAnnotation?: (id: string | null) => void;
+  onPeekAnnotation?: (anchorKey: string | null) => void;
 };
 
 export default function CardDetailImageViewport({
@@ -39,14 +46,21 @@ export default function CardDetailImageViewport({
   src,
   onChromeChange,
   commentMode = false,
+  editMode = false,
+  annotationsVisible = true,
   annotations = [],
   selectedAnnotationId = null,
+  focusedAnnotationId = null,
+  sparkleAnnotationId = null,
   composerAnchorId = null,
   draftRect = null,
   draftIndex,
   onSelectAnnotation,
   onCreateAnnotation,
-  onMoveAnnotation
+  onUpdateAnnotation,
+  hoveredAnnotationId = null,
+  onHoverAnnotation,
+  onPeekAnnotation
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const {
@@ -118,14 +132,21 @@ export default function CardDetailImageViewport({
             />
             <CardDetailAnnotationLayer
               annotations={annotations}
+              annotationsVisible={annotationsVisible}
+              editMode={editMode}
               commentMode={commentMode}
               selectedId={selectedAnnotationId}
+              focusedId={focusedAnnotationId}
+              hoveredId={hoveredAnnotationId}
+              sparkleId={sparkleAnnotationId}
               composerAnchorId={composerAnchorId}
               draftRect={draftRect}
               draftIndex={draftIndex}
               onSelect={onSelectAnnotation}
+              onHover={onHoverAnnotation}
+              onPeek={onPeekAnnotation}
               onCreate={onCreateAnnotation}
-              onMove={onMoveAnnotation}
+              onUpdate={onUpdateAnnotation}
             />
           </div>
         </div>

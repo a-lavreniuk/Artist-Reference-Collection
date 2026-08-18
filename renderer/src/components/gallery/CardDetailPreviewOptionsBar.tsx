@@ -121,15 +121,15 @@ export default function CardDetailPreviewOptionsBar({
           </button>
         </Tooltip>
         {onCommentModeToggle ? (
-          <Tooltip content={commentMode ? 'Выйти из режима комментария' : 'Режим комментария'} position="top">
+          <Tooltip content={commentMode ? 'Выйти из редактирования меток' : 'Редактирование меток'} position="top">
             <button
               type="button"
               className={`btn btn-outline btn-icon-only btn-ds${commentMode ? ' is-active' : ''}`}
-              aria-label={commentMode ? 'Выйти из режима комментария' : 'Режим комментария'}
+              aria-label={commentMode ? 'Выйти из редактирования меток' : 'Редактирование меток'}
               aria-pressed={commentMode}
               onClick={onCommentModeToggle}
             >
-              <span className="btn-icon-only__glyph arc-icon-highlighter" aria-hidden="true" />
+              <span className="btn-icon-only__glyph arc-icon-message" aria-hidden="true" />
             </button>
           </Tooltip>
         ) : null}

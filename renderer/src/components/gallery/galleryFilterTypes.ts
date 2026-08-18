@@ -214,7 +214,7 @@ export const FILTER_CHIP_META: Record<
   resolution: { label: 'Разрешение', iconClass: 'arc-icon-size' },
   duration: { label: 'Длительность', iconClass: 'arc-icon-clock' },
   rating: { label: 'Оценка', iconClass: 'arc-icon-star-stroke' },
-  annotations: { label: 'Аннотации', iconClass: 'arc-icon-highlighter' }
+  annotations: { label: 'Аннотации', iconClass: 'arc-icon-message' }
 };
 
 export const SORT_FIELD_LABELS: Record<GalleryOrderableSortField, string> = {

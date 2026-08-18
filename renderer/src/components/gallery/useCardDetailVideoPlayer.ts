@@ -478,6 +478,7 @@ export function useCardDetailVideoPlayer({
     onSelectSpeed,
     seekToMs,
     hideScrubPreview,
+    scheduleScrubPreview,
     onTimelinePointer,
     loop,
     toggleLoop

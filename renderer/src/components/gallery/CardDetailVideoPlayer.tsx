@@ -25,15 +25,23 @@ export default function CardDetailVideoPlayer({
   playerRef,
   flushToQueue = false,
   commentMode = false,
+  editMode = false,
+  annotationsVisible = true,
   annotations = [],
   selectedAnnotationId = null,
+  focusedAnnotationId = null,
+  sparkleAnnotationId = null,
   composerAnchorId = null,
   draftRect = null,
   draftIndex,
   onSelectAnnotation,
   onCreateAnnotation,
-  onMoveAnnotation,
-  onCurrentMsChange
+  onUpdateAnnotation,
+  onCurrentMsChange,
+  hoveredAnnotationId = null,
+  onHoverAnnotation,
+  onPeekAnnotation,
+  onAnnotationMarkerSelect
 }: CardDetailVideoPlayerProps) {
   const controlsRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -66,6 +74,14 @@ export default function CardDetailVideoPlayer({
   }, [onCurrentMsChange, player.currentMs]);
 
   const sliderMax = Math.max(player.durationMs, 1);
+
+  const annotationMarkers = useMemo(
+    () =>
+      annotations
+        .filter((item) => item.timeMs != null)
+        .map((item) => ({ id: item.id, timeMs: item.timeMs as number })),
+    [annotations]
+  );
 
   const getTimelineTrackRect = () =>
     timelineRef.current?.querySelector('.arc-range-slider__track')?.getBoundingClientRect() ?? null;
@@ -170,15 +186,22 @@ export default function CardDetailVideoPlayer({
           />
           <CardDetailAnnotationLayer
             annotations={annotations}
+            annotationsVisible={annotationsVisible}
+            editMode={editMode}
             commentMode={commentMode}
             currentMs={player.currentMs}
             selectedId={selectedAnnotationId}
+            focusedId={focusedAnnotationId}
+            hoveredId={hoveredAnnotationId}
+            sparkleId={sparkleAnnotationId}
             composerAnchorId={composerAnchorId}
             draftRect={draftRect}
             draftIndex={draftIndex}
             onSelect={onSelectAnnotation}
+            onHover={onHoverAnnotation}
+            onPeek={onPeekAnnotation}
             onCreate={onCreateAnnotation}
-            onMove={onMoveAnnotation}
+            onUpdate={onUpdateAnnotation}
           />
         </div>
         <video
@@ -275,6 +298,28 @@ export default function CardDetailVideoPlayer({
           onPointerCancel={onTimelinePointerUp}
           onPointerLeave={() => player.hideScrubPreview()}
         >
+          {annotationMarkers.length > 0 ? (
+            <div className="arc-card-detail-video-timeline-markers" aria-hidden="true">
+              {annotationMarkers.map((marker) => (
+                <button
+                  key={marker.id}
+                  type="button"
+                  className={[
+                    'arc-card-detail-video-timeline-marker',
+                    marker.timeMs <= player.currentMs ? 'is-passed' : '',
+                    selectedAnnotationId === marker.id ? 'is-selected' : ''
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  style={{ left: `${(marker.timeMs / sliderMax) * 100}%` }}
+                  aria-label="Аннотация на таймлайне"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onPointerEnter={() => player.scheduleScrubPreview(marker.timeMs / sliderMax)}
+                  onClick={() => onAnnotationMarkerSelect?.(marker.id)}
+                />
+              ))}
+            </div>
+          ) : null}
           <ValueSlider
             min={0}
             max={sliderMax}

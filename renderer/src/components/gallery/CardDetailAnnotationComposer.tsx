@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-
+import { positionAnnotationFloatingPanel } from './cardDetailAnnotationPeekPosition';
 export type AnnotationComposerMode = 'create' | 'edit';
 
 type Props = {
@@ -14,43 +14,6 @@ type Props = {
   /** Ключ `data-annot-anchor` на пине. */
   anchorKey: string;
 };
-
-function tokenPx(name: string, fallback: number): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const px = Number.parseFloat(raw);
-  return Number.isFinite(px) ? px : fallback;
-}
-
-function positionComposer(panel: HTMLElement, anchorKey: string) {
-  const anchor = document.querySelector<HTMLElement>(`[data-annot-anchor="${anchorKey}"]`);
-  const clampRoot =
-    document.querySelector<HTMLElement>('.arc-card-detail-preview') ??
-    document.querySelector<HTMLElement>('.arc-card-detail-preview__stage');
-  if (!anchor || !clampRoot) return;
-
-  const gap = tokenPx('--s-2', 8);
-  const pin = anchor.getBoundingClientRect();
-  const clamp = clampRoot.getBoundingClientRect();
-  const box = panel.getBoundingClientRect();
-  const width = box.width || 400;
-  const height = box.height || 152;
-
-  let left = pin.right + gap;
-  if (left + width > clamp.right) {
-    left = pin.left - gap - width;
-  }
-  left = Math.min(Math.max(left, clamp.left + gap), Math.max(clamp.left + gap, clamp.right - width - gap));
-
-  let top = pin.top;
-  if (top + height > clamp.bottom) {
-    top = clamp.bottom - height - gap;
-  }
-  top = Math.min(Math.max(top, clamp.top + gap), Math.max(clamp.top + gap, clamp.bottom - height - gap));
-
-  panel.style.left = `${Math.round(left)}px`;
-  panel.style.top = `${Math.round(top)}px`;
-  panel.style.visibility = 'visible';
-}
 
 export default function CardDetailAnnotationComposer({
   mode,
@@ -74,7 +37,7 @@ export default function CardDetailAnnotationComposer({
     if (!panel) return;
     let raf = 0;
     const tick = () => {
-      positionComposer(panel, anchorKey);
+      positionAnnotationFloatingPanel(panel, anchorKey);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -104,8 +67,8 @@ export default function CardDetailAnnotationComposer({
 
   return createPortal(
     <form
-      ref={panelRef}
-      className="arc-modal arc-card-detail-annot-composer"
+        ref={panelRef}
+        className="arc-modal arc-card-detail-annot-composer"
       data-elevation="raised"
       data-input-size="m"
       data-btn-size="s"
@@ -138,6 +101,11 @@ export default function CardDetailAnnotationComposer({
                   event.preventDefault();
                   event.stopPropagation();
                   onCancel();
+                  return;
+                }
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                  event.preventDefault();
+                  if (canSave) onSave();
                 }
               }}
             />

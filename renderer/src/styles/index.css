@@ -3331,6 +3331,23 @@ body.arc-card-detail-open .arc-app-outlet {
   margin: 0;
 }
 
+.arc-card-detail-annot-section-footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+}
+
+.arc-card-detail-annot-item-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-3);
+  flex-shrink: 0;
+}
+
 .arc-card-detail-tag-actions {
   display: flex;
   flex-direction: row;
@@ -3772,7 +3789,7 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   cursor: none;
 }
 
-.arc-card-detail-annot-layer.is-comment-mode .arc-card-detail-annot-pin {
+.arc-card-detail-annot-layer.is-comment-mode .arc-card-detail-annot-pin-chip {
   cursor: none;
 }
 
@@ -3790,47 +3807,82 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 .arc-card-detail-annot-region {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  border: 1px solid var(--background-brand-default);
-  background: color-mix(in srgb, var(--background-brand-default) 16%, transparent);
+  pointer-events: auto;
+  border: 1px dashed var(--background-brand-default);
+  background: transparent;
   opacity: 0;
+  cursor: move;
 }
 
 .arc-card-detail-annot-mark:hover .arc-card-detail-annot-region,
+.arc-card-detail-annot-mark.is-hovered .arc-card-detail-annot-region,
 .arc-card-detail-annot-mark.is-selected .arc-card-detail-annot-region,
 .arc-card-detail-annot-mark.is-composer .arc-card-detail-annot-region,
+.arc-card-detail-annot-mark.is-dragging .arc-card-detail-annot-region,
 .arc-card-detail-annot-region.is-visible {
   opacity: 1;
 }
 
-.arc-card-detail-annot-pin {
+.arc-card-detail-annot-pin-chip {
   position: absolute;
   top: 0;
   left: 0;
-  transform: translate(-35%, -35%);
+  transform: translate(-50%, -50%);
   min-width: var(--s-3);
-  height: var(--s-3);
+  min-height: var(--s-3);
+  max-height: var(--s-3);
   padding: 0 var(--s-1);
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
-  appearance: none;
-  font: inherit;
-  border: 0;
-  border-radius: var(--radius-s);
   background: var(--background-brand-default);
   color: var(--btn-brand-icon-default);
   pointer-events: auto;
   cursor: grab;
+  transition: background-color var(--transition-fast);
 }
 
-.arc-card-detail-annot-pin:active {
+.arc-card-detail-annot-mark:hover .arc-card-detail-annot-pin-chip,
+.arc-card-detail-annot-mark.is-hovered .arc-card-detail-annot-pin-chip {
+  background: var(--background-brand-hover);
+}
+
+.arc-card-detail-annot-pin-chip:active {
   cursor: grabbing;
 }
 
-.arc-card-detail-annot-mark.is-draft .arc-card-detail-annot-pin {
+.arc-card-detail-annot-mark.is-draft .arc-card-detail-annot-pin-chip {
   pointer-events: none;
   cursor: inherit;
+}
+
+.arc-card-detail-annot-resize-opposite {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--s-2);
+  height: var(--s-2);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--background-brand-default);
+  opacity: 0;
+  pointer-events: none;
+  cursor: nwse-resize;
+  transform: translate(50%, 50%);
+  transition: opacity var(--transition-fast), background-color var(--transition-fast);
+}
+
+.arc-card-detail-annot-mark--region:hover .arc-card-detail-annot-resize-opposite,
+.arc-card-detail-annot-mark--region.is-hovered .arc-card-detail-annot-resize-opposite,
+.arc-card-detail-annot-mark--region.is-selected .arc-card-detail-annot-resize-opposite,
+.arc-card-detail-annot-mark--region.is-composer .arc-card-detail-annot-resize-opposite,
+.arc-card-detail-annot-mark--region.is-dragging .arc-card-detail-annot-resize-opposite {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.arc-card-detail-annot-mark--region:hover .arc-card-detail-annot-resize-opposite:hover,
+.arc-card-detail-annot-mark--region.is-hovered .arc-card-detail-annot-resize-opposite:hover {
+  background: var(--background-brand-hover);
 }
 
 .arc-card-detail-annot-composer {
@@ -3838,6 +3890,145 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   z-index: 10050;
   margin: 0;
   visibility: hidden;
+}
+
+.arc-card-detail-annot-peek {
+  position: fixed;
+  z-index: 10049;
+  width: min(280px, calc(100vw - var(--s-6)));
+  max-width: 280px;
+  margin: 0;
+  padding: var(--s-2);
+  visibility: hidden;
+  pointer-events: auto;
+}
+
+.arc-card-detail-annot-peek__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-1);
+  color: var(--text-elev-secondary);
+}
+
+.arc-card-detail-annot-peek__body {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-elev-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.arc-card-detail-annot-peek__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.arc-card-detail-annot-peek__item {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  width: 100%;
+  margin: 0;
+  padding: var(--s-1) 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-elev-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.arc-card-detail-annot-peek__item-num {
+  flex-shrink: 0;
+  color: var(--text-elev-secondary);
+}
+
+.arc-card-detail-annot-pin-chip__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--s-2);
+  height: var(--s-2);
+  padding: 0 var(--s-1);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--btn-brand-icon-default) 24%, transparent);
+  font-size: var(--typo-p-s-size);
+  line-height: 1;
+}
+
+.arc-card-detail-annot-mark--region-only {
+  pointer-events: none;
+}
+
+.arc-card-detail-annot-mark--region-only .arc-card-detail-annot-region {
+  pointer-events: auto;
+}
+
+.arc-card-detail-annot-mark.is-focused .arc-card-detail-annot-pin-chip,
+.arc-card-detail-annot-mark.is-focused .arc-card-detail-annot-region.is-visible,
+.arc-card-detail-annot-mark--region-only.is-selected .arc-card-detail-annot-region {
+  opacity: 1;
+}
+
+.arc-card-detail-annot-mark.is-sparkle .arc-card-detail-annot-pin-chip {
+  animation: arc-card-detail-annot-pin-enter var(--transition-base) ease-out;
+}
+
+@keyframes arc-card-detail-annot-pin-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.arc-card-detail-video-timeline-markers {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.arc-card-detail-video-timeline-marker {
+  position: absolute;
+  top: 50%;
+  width: var(--s-1);
+  height: var(--s-3);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--background-brand-default);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  opacity: 0.88;
+}
+
+.arc-card-detail-video-timeline-marker.is-selected,
+.arc-card-detail-video-timeline-marker:hover {
+  background: var(--background-brand-hover);
+  opacity: 1;
+}
+
+.arc-card-detail-video-timeline-marker.is-passed {
+  background: var(--brand-100);
+  opacity: 1;
+}
+
+.arc-card-detail-video-timeline-marker.is-passed.is-selected,
+.arc-card-detail-video-timeline-marker.is-passed:hover {
+  background: var(--gray-200);
 }
 
 .arc-card-detail-annot-cursor {
@@ -3863,7 +4054,9 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   align-items: stretch;
 }
 
-.arc-card-detail-annot-item.is-selected.panel.elevation-sunken {
+.arc-card-detail-annot-item.is-active.panel.elevation-sunken,
+.arc-card-detail-annot-item.is-hovered.panel.elevation-sunken,
+.arc-card-detail-annot-item.is-focused.panel.elevation-sunken {
   background: var(--button-outline-hover);
 }
 
