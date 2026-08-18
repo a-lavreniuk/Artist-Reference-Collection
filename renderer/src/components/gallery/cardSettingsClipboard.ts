@@ -1,9 +1,10 @@
-export type CardSettingsField = 'name' | 'link' | 'description' | 'tags' | 'collections';
+export type CardSettingsField = 'name' | 'link' | 'description' | 'tags' | 'collections' | 'customFields';
 
 export const CARD_SETTINGS_FIELDS: CardSettingsField[] = [
   'name',
   'link',
   'description',
+  'customFields',
   'tags',
   'collections'
 ];
@@ -12,6 +13,7 @@ export const CARD_SETTINGS_FIELD_LABELS: Record<CardSettingsField, string> = {
   name: 'Имя',
   link: 'Ссылка',
   description: 'Описание',
+  customFields: 'Доп. поля',
   tags: 'Метки',
   collections: 'Коллекции'
 };
@@ -26,6 +28,7 @@ export type CardSettingsClipboard = {
     description?: string;
     tagIds?: string[];
     collectionIds?: string[];
+    customFields?: Record<string, string | string[]>;
   };
 };
 
@@ -35,7 +38,8 @@ export function createDefaultFieldSelection(): CardSettingsFieldSelection {
     link: true,
     description: true,
     tags: true,
-    collections: true
+    collections: true,
+    customFields: true
   };
 }
 
@@ -63,7 +67,8 @@ export function setCardSettingsClipboard(next: CardSettingsClipboard): void {
     values: {
       ...next.values,
       ...(next.values.tagIds !== undefined ? { tagIds: [...next.values.tagIds] } : {}),
-      ...(next.values.collectionIds !== undefined ? { collectionIds: [...next.values.collectionIds] } : {})
+      ...(next.values.collectionIds !== undefined ? { collectionIds: [...next.values.collectionIds] } : {}),
+      ...(next.values.customFields !== undefined ? { customFields: { ...next.values.customFields } } : {})
     }
   };
   lastFieldSelection = { ...next.fields };

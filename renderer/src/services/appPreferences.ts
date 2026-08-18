@@ -1,5 +1,9 @@
-import type { McpToolsEnabledMap } from '@arc-main-shared/mcpToolCatalog';
 import { defaultMcpToolsEnabled, sanitizeMcpToolsEnabled } from '@arc-main-shared/mcpToolCatalog';
+import {
+  defaultDetailCardTemplate,
+  sanitizeDetailCardTemplate,
+  type DetailCardTemplateV1
+} from '@arc-main-shared/detailCardTemplate';
 
 export type ImportSourceFilesAction = 'ask' | 'trash';
 export type ScreenshotFormat = 'png' | 'jpg' | 'webp';
@@ -142,6 +146,7 @@ export type AppPreferencesV1 = {
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
   uiTheme: UiThemePreference;
   videoAutoplay: boolean;
+  detailCardTemplate: DetailCardTemplateV1;
 };
 
 function sanitizeOnboardingSetupStep(raw: unknown): OnboardingSetupStep {
@@ -210,7 +215,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     galleryCollectionsStripEnabled: true,
     galleryCollectionsSortMode: 'chrono',
     uiTheme: 'dark',
-    videoAutoplay: true
+    videoAutoplay: true,
+    detailCardTemplate: defaultDetailCardTemplate()
   };
 }
 
@@ -372,7 +378,10 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
     aiCaptionType: sanitizeJoyCaptionType(raw.aiCaptionType ?? d.aiCaptionType),
     aiCaptionLengthLevel: sanitizeJoyCaptionLengthLevel(raw.aiCaptionLengthLevel ?? d.aiCaptionLengthLevel),
     aiCaptionExtraIds: sanitizeJoyCaptionExtraIds(raw.aiCaptionExtraIds ?? d.aiCaptionExtraIds),
-    videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay
+    videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay,
+    detailCardTemplate: sanitizeDetailCardTemplate(
+      (raw as { detailCardTemplate?: unknown }).detailCardTemplate ?? d.detailCardTemplate
+    )
   };
 }
 

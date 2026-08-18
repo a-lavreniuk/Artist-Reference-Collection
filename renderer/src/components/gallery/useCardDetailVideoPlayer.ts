@@ -224,13 +224,14 @@ export function useCardDetailVideoPlayer({
     () => ({
       togglePlay,
       seekBySeconds,
+      seekToMs,
       stepFrames,
       adjustSpeed,
       copyFrame,
       saveFrame,
       setPreviewFrame
     }),
-    [adjustSpeed, copyFrame, saveFrame, seekBySeconds, setPreviewFrame, stepFrames, togglePlay]
+    [adjustSpeed, copyFrame, saveFrame, seekBySeconds, seekToMs, setPreviewFrame, stepFrames, togglePlay]
   );
 
   const onLoadedMetadata = useCallback(

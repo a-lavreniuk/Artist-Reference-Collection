@@ -10,6 +10,11 @@ import {
 } from './ipcNavigationPriority';
 import { consumeDestructiveConfirm } from './destructiveConfirm';
 import {
+  parseJsonColumn,
+  sanitizeCardAnnotations,
+  sanitizeCustomFieldsMap
+} from './shared/detailCardTemplate';
+import {
   addSkippedDuplicatePair,
   countCards,
   countCardsWithAnyTagIds,
@@ -49,6 +54,7 @@ import {
   saveSystemData,
   setMigrationProgressCallback,
   updateCardInStorage,
+  wipeCustomFieldFromLibrary,
   upsertCategory,
   upsertCollection,
   upsertFilterPreset,
@@ -235,6 +241,8 @@ function cardIndexToRenderer(
     linkUrl: row.linkUrl,
     durationMs: row.durationMs,
     rating: row.rating ?? 0,
+    customFields: sanitizeCustomFieldsMap(parseJsonColumn(row.customFieldsJson, {})),
+    annotations: sanitizeCardAnnotations(parseJsonColumn(row.annotationsJson, [])),
     ...(library
       ? {
           libraryId: library.libraryId,
@@ -256,6 +264,8 @@ function enrichCardFromJson<T extends Record<string, unknown>>(
   videoHeight?: number;
   previewFrameMs?: number;
   mediaMeta?: CardJsonV1['mediaMeta'];
+  customFields?: CardJsonV1['customFields'];
+  annotations?: CardJsonV1['annotations'];
 } {
   if (!cardJson) return base;
   return {
@@ -266,7 +276,9 @@ function enrichCardFromJson<T extends Record<string, unknown>>(
     ...(typeof cardJson.videoWidth === 'number' ? { videoWidth: cardJson.videoWidth } : {}),
     ...(typeof cardJson.videoHeight === 'number' ? { videoHeight: cardJson.videoHeight } : {}),
     ...(typeof cardJson.previewFrameMs === 'number' ? { previewFrameMs: cardJson.previewFrameMs } : {}),
-    ...(cardJson.mediaMeta ? { mediaMeta: cardJson.mediaMeta } : {})
+    ...(cardJson.mediaMeta ? { mediaMeta: cardJson.mediaMeta } : {}),
+    ...(cardJson.customFields ? { customFields: sanitizeCustomFieldsMap(cardJson.customFields) } : {}),
+    ...(cardJson.annotations ? { annotations: sanitizeCardAnnotations(cardJson.annotations) } : {})
   };
 }
 
@@ -550,9 +562,25 @@ export function registerStorageIpc(
         name?: string;
         linkUrl?: string;
         rating?: number;
+        customFields?: Record<string, string | string[]>;
+        annotations?: unknown;
       };
     };
-    await updateCardInStorage(root, p.cardId, p.patch);
+    await updateCardInStorage(root, p.cardId, {
+      ...p.patch,
+      customFields:
+        p.patch.customFields !== undefined ? sanitizeCustomFieldsMap(p.patch.customFields) : undefined,
+      annotations: p.patch.annotations !== undefined ? sanitizeCardAnnotations(p.patch.annotations) : undefined
+    });
+  });
+
+  ipcMain.handle('arc:storage-wipe-custom-field', async (_e, fieldId: unknown) => {
+    assertNotMaintenance();
+    if (typeof fieldId !== 'string' || !fieldId.trim()) throw new Error('Неверные данные');
+    const listed = listLibrariesFromConfig();
+    for (const lib of listed) {
+      await wipeCustomFieldFromLibrary(lib.path, fieldId.trim());
+    }
   });
 
   ipcMain.handle('arc:storage-insert-cards-metadata', async (_e, cards: unknown) => {

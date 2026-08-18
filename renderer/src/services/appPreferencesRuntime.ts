@@ -14,6 +14,7 @@ import {
   sanitizeTrashRetentionDays
 } from './appPreferences';
 import { mergeMcpToolsEnabled } from '@arc-main-shared/mcpToolCatalog';
+import { sanitizeDetailCardTemplate } from '@arc-main-shared/detailCardTemplate';
 
 let cache: AppPreferencesV1 | null = null;
 let initPromise: Promise<AppPreferencesV1> | null = null;
@@ -234,6 +235,9 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
     next.videoAutoplay = patch.videoAutoplay;
   }
+  if ('detailCardTemplate' in patch) {
+    next.detailCardTemplate = sanitizeDetailCardTemplate(patch.detailCardTemplate);
+  }
 
   return next;
 }
@@ -421,6 +425,9 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
     next.videoAutoplay = patch.videoAutoplay;
+  }
+  if ('detailCardTemplate' in patch) {
+    next.detailCardTemplate = sanitizeDetailCardTemplate(patch.detailCardTemplate);
   }
 
   if (!next.launchAtLogin) {

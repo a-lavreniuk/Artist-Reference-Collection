@@ -64,6 +64,16 @@ import { ensureDimensionsBackfill, ensureVideoDurationBackfill } from './gallery
 import { ensureThumbGenerationBackfill } from './thumbBackfill';
 import { extractMediaFileMeta, isMediaMetaProbed } from './mediaFileMeta';
 import { clampCardRating, normalizeCardRating } from '../shared/cardRating';
+import {
+  parseJsonColumn,
+  sanitizeCardAnnotations,
+  sanitizeCustomFieldsMap,
+  serializeAnnotations,
+  serializeCustomFieldsMap,
+  omitCustomFieldKey,
+  type CardAnnotationV1,
+  type CustomFieldsMap
+} from '../shared/detailCardTemplate';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
@@ -144,7 +154,10 @@ function dbRowToIndex(row: Record<string, unknown>, tagIds: string[], collection
     name: row.name ? String(row.name) : undefined,
     linkUrl: row.link_url ? String(row.link_url) : undefined,
     durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined,
-    rating: normalizeCardRating(row.rating)
+    rating: normalizeCardRating(row.rating),
+    customFieldsJson: row.custom_fields_json ? String(row.custom_fields_json) : undefined,
+    annotationsJson: row.annotations_json ? String(row.annotations_json) : undefined,
+    annotationsText: row.annotations_text ? String(row.annotations_text) : undefined
   };
 }
 
@@ -807,6 +820,8 @@ export async function updateCardInStorage(
     name?: string;
     linkUrl?: string;
     rating?: number;
+    customFields?: CustomFieldsMap;
+    annotations?: CardAnnotationV1[];
   }
 ): Promise<void> {
   const root = path.resolve(libraryRoot);
@@ -841,6 +856,16 @@ export async function updateCardInStorage(
     if (rating > 0) cardJson.rating = rating;
     else delete cardJson.rating;
   }
+  if (patch.customFields !== undefined) {
+    const next = sanitizeCustomFieldsMap(patch.customFields);
+    if (Object.keys(next).length) cardJson.customFields = next;
+    else delete cardJson.customFields;
+  }
+  if (patch.annotations !== undefined) {
+    const next = sanitizeCardAnnotations(patch.annotations);
+    if (next.length) cardJson.annotations = next;
+    else delete cardJson.annotations;
+  }
   cardJson.dateModified = new Date().toISOString();
   await writeCardJson(root, cardJson);
 
@@ -862,6 +887,17 @@ export async function updateCardInStorage(
     sets.push('rating = ?');
     vals.push(cardJson.rating ?? 0);
   }
+  if (patch.customFields !== undefined) {
+    sets.push('custom_fields_json = ?');
+    vals.push(serializeCustomFieldsMap(cardJson.customFields ?? {}));
+  }
+  if (patch.annotations !== undefined) {
+    const packed = serializeAnnotations(cardJson.annotations ?? []);
+    sets.push('annotations_json = ?');
+    vals.push(packed.json);
+    sets.push('annotations_text = ?');
+    vals.push(packed.text);
+  }
   vals.push(cardId);
   db.prepare(`UPDATE cards SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
 
@@ -870,8 +906,34 @@ export async function updateCardInStorage(
     recomputeTagUsage(db);
   }
 
-  // Счётчики фильтра «Оценка» кэшируются до смены библиотеки — иначе останутся старыми.
-  if (patch.rating !== undefined) invalidateGalleryFilterStatsCache();
+  // Счётчики фильтра «Оценка» / аннотаций кэшируются до смены библиотеки — иначе останутся старыми.
+  if (patch.rating !== undefined || patch.annotations !== undefined) invalidateGalleryFilterStatsCache();
+}
+
+export async function wipeCustomFieldFromLibrary(libraryRoot: string, fieldId: string): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const db = await ensureLibraryReady(root);
+  const rows = db.prepare('SELECT id, custom_fields_json FROM cards').all() as Array<{
+    id: string;
+    custom_fields_json: string | null;
+  }>;
+  const upd = db.prepare('UPDATE cards SET custom_fields_json = ?, date_modified = ? WHERE id = ?');
+  const now = new Date().toISOString();
+  for (const row of rows) {
+    const parsed = sanitizeCustomFieldsMap(parseJsonColumn(row.custom_fields_json, {}));
+    if (!(fieldId in parsed)) continue;
+    const next = omitCustomFieldKey(parsed, fieldId);
+    const json = serializeCustomFieldsMap(next);
+    upd.run(json, now, row.id);
+    const cardJson = await readCardJson(root, row.id);
+    if (!cardJson) continue;
+    const fromFile = sanitizeCustomFieldsMap(cardJson.customFields ?? {});
+    const wiped = omitCustomFieldKey(fromFile, fieldId);
+    if (Object.keys(wiped).length) cardJson.customFields = wiped;
+    else delete cardJson.customFields;
+    cardJson.dateModified = now;
+    await writeCardJson(root, cardJson);
+  }
 }
 
 export async function insertCardMetadata(
@@ -971,8 +1033,9 @@ export async function importExistingCardFolder(
   db.prepare(
     `INSERT INTO cards (
       id, type, added_at, date_modified, format, width, height, file_size, duration_ms, dominant_color, phash_json,
-      original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, name, link_url, rating, is_deleted, deleted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL)`
+      original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, name, link_url, rating, is_deleted, deleted_at,
+      custom_fields_json, annotations_json, annotations_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)`
   ).run(
     cardId,
     cardJson.type,
@@ -992,7 +1055,10 @@ export async function importExistingCardFolder(
     cardJson.description ?? sourceRow?.description ?? null,
     cardJson.name ?? sourceRow?.name ?? null,
     cardJson.linkUrl ?? sourceRow?.linkUrl ?? null,
-    clampCardRating(cardJson.rating ?? sourceRow?.rating)
+    clampCardRating(cardJson.rating ?? sourceRow?.rating),
+    serializeCustomFieldsMap(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
+    serializeAnnotations(sanitizeCardAnnotations(cardJson.annotations ?? [])).json,
+    serializeAnnotations(sanitizeCardAnnotations(cardJson.annotations ?? [])).text
   );
   syncCardRelations(db, cardId, cardJson.tagIds ?? [], cardJson.collectionIds ?? []);
   recomputeTagUsage(db);
@@ -1927,11 +1993,13 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
     const thumbL = thumbLRelPath(cardIdNorm);
 
     const isDeleted = cardJson.deletedAt ? 1 : 0;
+    const packed = serializeAnnotations(sanitizeCardAnnotations(cardJson.annotations ?? []));
     db.prepare(
       `INSERT INTO cards (
         id, type, added_at, date_modified, format, width, height, file_size, dominant_color, phash_json,
-        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, rating, is_deleted, deleted_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, rating, is_deleted, deleted_at,
+        custom_fields_json, annotations_json, annotations_text
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardIdNorm,
       cardJson.type,
@@ -1950,7 +2018,10 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
       cardJson.description ?? null,
       clampCardRating(cardJson.rating),
       isDeleted,
-      cardJson.deletedAt ?? null
+      cardJson.deletedAt ?? null,
+      serializeCustomFieldsMap(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
+      packed.json,
+      packed.text
     );
     syncCardRelations(db, cardIdNorm, cardJson.tagIds, cardJson.collectionIds);
   }

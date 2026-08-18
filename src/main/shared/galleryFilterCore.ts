@@ -10,7 +10,8 @@ export const GALLERY_FILTER_IDS = [
   'fileWeight',
   'resolution',
   'duration',
-  'rating'
+  'rating',
+  'annotations'
 ] as const;
 
 export type GalleryFilterId = (typeof GALLERY_FILTER_IDS)[number];
@@ -37,6 +38,7 @@ export type GallerySortState = {
 export type AspectRatioFilterValue = 'horizontal' | 'vertical' | 'square' | 'panoramic';
 export type DescriptionFilterValue = { mode: 'has' | 'missing'; keywords?: string };
 export type LinkFilterValue = { mode: 'has' | 'missing'; keywords?: string };
+export type AnnotationsFilterValue = { mode: 'has' | 'missing'; keywords?: string };
 /** Наличие любых меток на карточке (≥1). */
 export type TagPresenceFilterValue = 'tagged' | 'untagged';
 export type DateAddedPreset =
@@ -81,6 +83,7 @@ export type GalleryAdvancedFilters = {
   resolution: ResolutionFilterValue[];
   duration: DurationFilterValue[];
   rating: RatingFilterValue[];
+  annotations: AnnotationsFilterValue | null;
 };
 
 export type GalleryFilterLayoutItem = {
@@ -113,7 +116,8 @@ export function emptyGalleryAdvancedFilters(): GalleryAdvancedFilters {
     fileWeight: [],
     resolution: [],
     duration: [],
-    rating: []
+    rating: [],
+    annotations: null
   };
 }
 
@@ -137,6 +141,7 @@ export function countActiveFilterCategories(filters: GalleryAdvancedFilters): nu
   if (filters.resolution.length) n++;
   if (filters.duration.length) n++;
   if (filters.rating.length) n++;
+  if (filters.annotations) n++;
   return n;
 }
 

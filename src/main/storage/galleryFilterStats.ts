@@ -26,6 +26,7 @@ export type GalleryFilterStats = {
   fileExtensions: Record<string, number>;
   description: { has: number; missing: number };
   link: { has: number; missing: number };
+  annotations: { has: number; missing: number };
   tagPresence: { tagged: number; untagged: number };
   dateAdded: Record<string, number>;
   fileWeight: Record<string, number>;
@@ -209,6 +210,10 @@ export function getGalleryFilterStats(
     has: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') != '')`], [], boundaries),
     missing: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') = '')`], [], boundaries)
   };
+  const annotations = {
+    has: countWithExtra(db, ctx, [`(COALESCE(c.annotations_text,'') != '')`], [], boundaries),
+    missing: countWithExtra(db, ctx, [`(COALESCE(c.annotations_text,'') = '')`], [], boundaries)
+  };
   const tagPresence = {
     tagged: countWithExtra(
       db,
@@ -265,6 +270,7 @@ export function getGalleryFilterStats(
     fileExtensions,
     description,
     link,
+    annotations,
     tagPresence,
     dateAdded,
     fileWeight,
@@ -343,6 +349,11 @@ export async function getGalleryFilterStatsAsync(
     missing: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') = '')`], [], boundaries)
   };
   await cooperativeYield(shouldAbort);
+  const annotations = {
+    has: countWithExtra(db, ctx, [`(COALESCE(c.annotations_text,'') != '')`], [], boundaries),
+    missing: countWithExtra(db, ctx, [`(COALESCE(c.annotations_text,'') = '')`], [], boundaries)
+  };
+  await cooperativeYield(shouldAbort);
   const tagPresence = {
     tagged: countWithExtra(
       db,
@@ -400,6 +411,7 @@ export async function getGalleryFilterStatsAsync(
     fileExtensions,
     description,
     link,
+    annotations,
     tagPresence,
     dateAdded,
     fileWeight,

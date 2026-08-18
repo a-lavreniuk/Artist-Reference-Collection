@@ -3088,6 +3088,14 @@ body.arc-card-detail-open .arc-app-outlet {
   flex-shrink: 0;
 }
 
+.arc-card-detail-section-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-1);
+  flex-shrink: 0;
+}
+
 .arc-card-detail-section-body {
   display: flex;
   flex-direction: column;
@@ -3102,6 +3110,47 @@ body.arc-card-detail-open .arc-app-outlet {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+}
+
+.arc-card-detail-field-view {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.arc-card-detail-field-view__label {
+  color: var(--text-elev-secondary);
+  flex-shrink: 0;
+}
+
+.arc-card-detail-field-view__value {
+  color: var(--text-elev-primary);
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.arc-detail-custom-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+}
+
+.arc-detail-template-editor {
+  min-width: 0;
+}
+
+.arc-detail-template-editor__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-3) var(--s-3);
+}
+
+.arc-detail-template-editor__options {
+  margin: 0 var(--s-3) var(--s-2);
 }
 
 .arc-card-detail-description-editor {
@@ -3704,6 +3753,134 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   overflow: hidden;
 }
 
+.arc-card-detail-video-frame {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  max-height: 100%;
+  line-height: 0;
+}
+
+.arc-card-detail-annot-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.arc-card-detail-annot-layer.is-comment-mode {
+  pointer-events: auto;
+  cursor: none;
+}
+
+.arc-card-detail-annot-layer.is-comment-mode .arc-card-detail-annot-pin {
+  cursor: none;
+}
+
+.arc-card-detail-annot-mark {
+  position: absolute;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.arc-card-detail-annot-mark--point {
+  width: 0;
+  height: 0;
+}
+
+.arc-card-detail-annot-region {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid var(--background-brand-default);
+  background: color-mix(in srgb, var(--background-brand-default) 16%, transparent);
+  opacity: 0;
+}
+
+.arc-card-detail-annot-mark:hover .arc-card-detail-annot-region,
+.arc-card-detail-annot-mark.is-selected .arc-card-detail-annot-region,
+.arc-card-detail-annot-mark.is-composer .arc-card-detail-annot-region,
+.arc-card-detail-annot-region.is-visible {
+  opacity: 1;
+}
+
+.arc-card-detail-annot-pin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-35%, -35%);
+  min-width: var(--s-3);
+  height: var(--s-3);
+  padding: 0 var(--s-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  appearance: none;
+  font: inherit;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--background-brand-default);
+  color: var(--btn-brand-icon-default);
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.arc-card-detail-annot-pin:active {
+  cursor: grabbing;
+}
+
+.arc-card-detail-annot-mark.is-draft .arc-card-detail-annot-pin {
+  pointer-events: none;
+  cursor: inherit;
+}
+
+.arc-card-detail-annot-composer {
+  position: fixed;
+  z-index: 10050;
+  margin: 0;
+  visibility: hidden;
+}
+
+.arc-card-detail-annot-cursor {
+  position: fixed;
+  z-index: 10051;
+  width: calc(var(--s-3) + var(--s-2));
+  height: calc(var(--s-3) + var(--s-2));
+  pointer-events: none;
+  transform: translate(-37.5%, -96%);
+  filter: drop-shadow(0 3px 3px color-mix(in srgb, var(--gray-1000) 24%, transparent));
+}
+
+.arc-card-detail-annot-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.arc-card-detail-annot-item {
+  align-items: stretch;
+}
+
+.arc-card-detail-annot-item.is-selected.panel.elevation-sunken {
+  background: var(--button-outline-hover);
+}
+
+.arc-card-detail-annot-item__text {
+  margin: 0;
+  overflow: visible;
+  white-space: normal;
+}
+
+.arc-card-detail-annot-item__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  min-width: 0;
+  color: var(--text-elev-secondary);
+}
+
 .arc-card-detail-media {
   max-width: 100%;
   max-height: 100%;
@@ -3736,20 +3913,31 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   cursor: grabbing;
 }
 
+.arc-card-detail-image-stage--comment {
+  cursor: none;
+}
+
 .arc-card-detail-image-stage__layer {
   position: absolute;
   inset: 0;
   overflow: hidden;
 }
 
-.arc-card-detail-image-stage__media {
+.arc-card-detail-image-stage__transformed {
   position: absolute;
   top: 0;
   left: 0;
+  transform-origin: top left;
+}
+
+.arc-card-detail-image-stage__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   max-width: none;
   max-height: none;
-  object-fit: contain;
-  transform-origin: top left;
+  object-fit: fill;
 }
 
 .arc-card-detail-image-stage__media--fade {

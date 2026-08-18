@@ -23,6 +23,7 @@ type Props = {
   collapsible?: boolean;
   children: ReactNode;
   footer?: ReactNode;
+  headerActions?: ReactNode;
 };
 
 export default function CollapsibleSection({
@@ -35,7 +36,8 @@ export default function CollapsibleSection({
   animated = true,
   collapsible = true,
   children,
-  footer
+  footer,
+  headerActions
 }: Props) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const open = collapsible ? (openProp ?? uncontrolledOpen) : true;
@@ -49,6 +51,7 @@ export default function CollapsibleSection({
   const panelId = useId();
   const headId = useId();
   const toggleScopeRef = useRef<HTMLSpanElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   useAccordionMotion(animated ? open : true, animated ? bodyRef : { current: null });
@@ -61,6 +64,7 @@ export default function CollapsibleSection({
 
   useLayoutEffect(() => {
     if (toggleScopeRef.current) void hydrateArcNavbarIcons(toggleScopeRef.current);
+    if (actionsRef.current) void hydrateArcNavbarIcons(actionsRef.current);
   }, [open, collapsible]);
 
   return (
@@ -73,6 +77,11 @@ export default function CollapsibleSection({
           <p className={titleClassName}>{title}</p>
           {count !== undefined ? <span className="text-s arc-card-detail-section-count">{count}</span> : null}
         </div>
+        {headerActions ? (
+          <div ref={actionsRef} className="arc-card-detail-section-actions arc-ui-kit-scope" data-btn-size="s">
+            {headerActions}
+          </div>
+        ) : null}
         {collapsible ? (
           <Tooltip content={open ? 'Свернуть' : 'Развернуть'} position="top">
             <span

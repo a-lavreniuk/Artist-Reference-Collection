@@ -1,9 +1,11 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { CardRecord } from '../../services/arcSchema';
+import type { CardAnnotationV1 } from '@arc-main-shared/detailCardTemplate';
 import { ZOOM_WHEEL_FACTOR } from '../../hooks/imageViewportZoomMath';
 import { useImageViewportZoom } from '../../hooks/useImageViewportZoom';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import type { NaturalImageSize } from './cardFileMetaFormat';
+import CardDetailAnnotationLayer, { type AnnotationDraftRect } from './CardDetailAnnotationLayer';
 
 export type CardDetailImageChrome = {
   naturalSize: NaturalImageSize;
@@ -21,9 +23,31 @@ type Props = {
   card: CardRecord;
   src: string;
   onChromeChange?: (chrome: CardDetailImageChrome) => void;
+  commentMode?: boolean;
+  annotations?: CardAnnotationV1[];
+  selectedAnnotationId?: string | null;
+  composerAnchorId?: string | null;
+  draftRect?: AnnotationDraftRect | null;
+  draftIndex?: number;
+  onSelectAnnotation?: (id: string) => void;
+  onCreateAnnotation?: (rect: AnnotationDraftRect) => void;
+  onMoveAnnotation?: (id: string, x: number, y: number) => void;
 };
 
-export default function CardDetailImageViewport({ card, src, onChromeChange }: Props) {
+export default function CardDetailImageViewport({
+  card,
+  src,
+  onChromeChange,
+  commentMode = false,
+  annotations = [],
+  selectedAnnotationId = null,
+  composerAnchorId = null,
+  draftRect = null,
+  draftIndex,
+  onSelectAnnotation,
+  onCreateAnnotation,
+  onMoveAnnotation
+}: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const {
     stageRef,
@@ -76,22 +100,34 @@ export default function CardDetailImageViewport({ card, src, onChromeChange }: P
     <div ref={rootRef} className="arc-card-detail-image-viewport">
       <div
         ref={stageRef}
-        className={`arc-card-detail-image-stage${panEnabled ? ' arc-card-detail-image-stage--pannable' : ''}`}
-        {...stageHandlers}
+        className={`arc-card-detail-image-stage${panEnabled && !commentMode ? ' arc-card-detail-image-stage--pannable' : ''}${commentMode ? ' arc-card-detail-image-stage--comment' : ''}`}
+        {...(commentMode ? {} : stageHandlers)}
       >
         <div className="arc-card-detail-image-stage__layer">
-          <img
-            key={card.id}
-            className="arc-card-detail-image-stage__media arc-card-detail-image-stage__media--fade"
-            src={src}
-            alt=""
-            draggable={false}
-            style={mediaTransformStyle}
-            onLoad={(event) => {
-              const el = event.currentTarget;
-              onImageLoad(el.naturalWidth, el.naturalHeight);
-            }}
-          />
+          <div className="arc-card-detail-image-stage__transformed" style={mediaTransformStyle}>
+            <img
+              key={card.id}
+              className="arc-card-detail-image-stage__media arc-card-detail-image-stage__media--fade"
+              src={src}
+              alt=""
+              draggable={false}
+              onLoad={(event) => {
+                const el = event.currentTarget;
+                onImageLoad(el.naturalWidth, el.naturalHeight);
+              }}
+            />
+            <CardDetailAnnotationLayer
+              annotations={annotations}
+              commentMode={commentMode}
+              selectedId={selectedAnnotationId}
+              composerAnchorId={composerAnchorId}
+              draftRect={draftRect}
+              draftIndex={draftIndex}
+              onSelect={onSelectAnnotation}
+              onCreate={onCreateAnnotation}
+              onMove={onMoveAnnotation}
+            />
+          </div>
         </div>
       </div>
     </div>

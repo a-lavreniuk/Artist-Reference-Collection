@@ -7,6 +7,7 @@ export type CardSettingsApplyPatch = {
   description?: string;
   tagIds?: string[];
   collectionIds?: string[];
+  customFields?: Record<string, string | string[]>;
 };
 
 export function buildCardSettingsApplyPatch(
@@ -34,6 +35,9 @@ export function buildCardSettingsApplyPatch(
   if (fields.collections) {
     patch.collectionIds = (values.collectionIds ?? []).filter((id) => options.validCollectionIds.has(id));
   }
+  if (fields.customFields) {
+    patch.customFields = { ...(values.customFields ?? {}) };
+  }
 
   return patch;
 }
@@ -44,11 +48,13 @@ export function syncCardDetailDraftsFromPatch(
     setDraftName: (value: string) => void;
     setDraftLink: (value: string) => void;
     setDescription: (value: string) => void;
+    setCustomFields?: (value: Record<string, string | string[]>) => void;
   }
 ): void {
   if (patch.name !== undefined) setters.setDraftName(patch.name);
   if (patch.linkUrl !== undefined) setters.setDraftLink(patch.linkUrl);
   if (patch.description !== undefined) setters.setDescription(patch.description);
+  if (patch.customFields !== undefined) setters.setCustomFields?.(patch.customFields);
 }
 
 export function buildCardSettingsSnapshot(
@@ -58,6 +64,7 @@ export function buildCardSettingsSnapshot(
     draftLink: string;
     description: string;
     card: CardRecord;
+    customFields?: Record<string, string | string[]>;
   }
 ): CardSettingsClipboard['values'] {
   const values: CardSettingsClipboard['values'] = {};
@@ -67,6 +74,7 @@ export function buildCardSettingsSnapshot(
   if (fields.description) values.description = source.description;
   if (fields.tags) values.tagIds = [...source.card.tagIds];
   if (fields.collections) values.collectionIds = [...source.card.collectionIds];
+  if (fields.customFields) values.customFields = { ...(source.customFields ?? source.card.customFields ?? {}) };
 
   return values;
 }

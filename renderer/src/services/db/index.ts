@@ -87,6 +87,7 @@ export {
   listSimilarCards,
   insertImportedCards,
   updateCardPayload,
+  wipeCustomFieldValues,
   softDeleteCard,
   restoreCard,
   permanentDeleteCard,

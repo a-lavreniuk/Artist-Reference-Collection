@@ -23,6 +23,11 @@ import {
 import type { SearchModelId } from './ai/types';
 import { isSearchModelId } from './ai/types';
 import { sanitizeTrashRetentionDays, type TrashRetentionDays } from './storage/trashRetention';
+import {
+  defaultDetailCardTemplate,
+  sanitizeDetailCardTemplate,
+  type DetailCardTemplateV1
+} from './shared/detailCardTemplate';
 
 export type { TrashRetentionDays };
 
@@ -114,6 +119,7 @@ export type AppPreferencesV1 = {
   galleryCollectionsSortMode: GalleryCollectionsSortMode;
   uiTheme: UiThemePreference;
   videoAutoplay: boolean;
+  detailCardTemplate: DetailCardTemplateV1;
 };
 
 const FILENAME = 'arc-app-preferences.json';
@@ -191,7 +197,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     galleryCollectionsStripEnabled: true,
     galleryCollectionsSortMode: 'chrono',
     uiTheme: 'dark',
-    videoAutoplay: true
+    videoAutoplay: true,
+    detailCardTemplate: defaultDetailCardTemplate()
   };
 }
 
@@ -434,7 +441,8 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         ? raw.onboardingTourCompleted
         : d.onboardingTourCompleted,
     onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep),
-    videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay
+    videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay,
+    detailCardTemplate: sanitizeDetailCardTemplate(raw.detailCardTemplate ?? d.detailCardTemplate)
   };
 
   if (!sanitized.launchAtLogin) {
@@ -645,6 +653,9 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
     next.videoAutoplay = patch.videoAutoplay;
+  }
+  if ('detailCardTemplate' in patch) {
+    next.detailCardTemplate = sanitizeDetailCardTemplate(patch.detailCardTemplate);
   }
 
   return next;

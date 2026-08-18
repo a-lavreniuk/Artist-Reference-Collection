@@ -43,6 +43,7 @@ export type ShortcutId =
   | 'detail.next'
   | 'detail.copySettings'
   | 'detail.pasteSettings'
+  | 'detail.commentMode'
   | 'detail.rating0'
   | 'detail.rating1'
   | 'detail.rating2'
@@ -381,6 +382,14 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'detail',
     label: 'Вставить настройки',
     defaultAccelerator: 'CommandOrControl+Shift+V',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'detail.commentMode',
+    groupId: 'detail',
+    label: 'Режим комментария',
+    defaultAccelerator: 'C',
     scope: 'renderer',
     settingsVisible: true
   },

@@ -221,6 +221,9 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
         case 'link':
           patchFilters({ link: null });
           break;
+        case 'annotations':
+          patchFilters({ annotations: null });
+          break;
         case 'dateAdded':
           patchFilters({ dateAdded: [] });
           break;

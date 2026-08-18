@@ -76,9 +76,15 @@ export async function storageUpdateCard(
     name?: string;
     linkUrl?: string;
     rating?: number;
+    customFields?: Record<string, string | string[]>;
+    annotations?: CardRecord['annotations'];
   }
 ): Promise<void> {
   return arc().storageUpdateCard(cardId, patch);
+}
+
+export async function storageWipeCustomField(fieldId: string): Promise<void> {
+  return arc().storageWipeCustomField(fieldId);
 }
 
 export async function storageInsertCardsMetadata(

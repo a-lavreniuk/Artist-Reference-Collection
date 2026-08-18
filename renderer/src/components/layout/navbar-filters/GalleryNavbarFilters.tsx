@@ -123,8 +123,10 @@ export default function NavbarFiltersMenu() {
   const [presetModal, setPresetModal] = useState<PresetModalState>(null);
   const [descKeywords, setDescKeywords] = useState('');
   const [linkKeywords, setLinkKeywords] = useState('');
+  const [annotKeywords, setAnnotKeywords] = useState('');
   const descKeywordsDebounced = useDebouncedValue(descKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
   const linkKeywordsDebounced = useDebouncedValue(linkKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
+  const annotKeywordsDebounced = useDebouncedValue(annotKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
   const [customWeight, setCustomWeight] = useState({ min: 0, max: 10 });
   const customWeightDebounced = useDebouncedValue(customWeight, FILTER_RANGE_DEBOUNCE_MS);
   const [customRes, setCustomRes] = useState(DEFAULT_RESOLUTION_RANGE);
@@ -143,12 +145,21 @@ export default function NavbarFiltersMenu() {
   }, [openMenu, filters.link?.keywords]);
 
   useEffect(() => {
+    if (openMenu !== 'annotations') return;
+    setAnnotKeywords(filters.annotations?.keywords ?? '');
+  }, [openMenu, filters.annotations?.keywords]);
+
+  useEffect(() => {
     if (filters.description === null) setDescKeywords('');
   }, [filters.description]);
 
   useEffect(() => {
     if (filters.link === null) setLinkKeywords('');
   }, [filters.link]);
+
+  useEffect(() => {
+    if (filters.annotations === null) setAnnotKeywords('');
+  }, [filters.annotations]);
 
   useEffect(() => {
     if (filters.description?.mode !== 'has') return;
@@ -163,6 +174,13 @@ export default function NavbarFiltersMenu() {
     if (linkKeywordsDebounced === applied) return;
     patchFilters({ link: { mode: 'has', keywords: linkKeywordsDebounced } });
   }, [linkKeywordsDebounced, filters.link?.keywords, filters.link?.mode, patchFilters]);
+
+  useEffect(() => {
+    if (filters.annotations?.mode !== 'has') return;
+    const applied = filters.annotations.keywords ?? '';
+    if (annotKeywordsDebounced === applied) return;
+    patchFilters({ annotations: { mode: 'has', keywords: annotKeywordsDebounced } });
+  }, [annotKeywordsDebounced, filters.annotations?.keywords, filters.annotations?.mode, patchFilters]);
 
   useEffect(() => {
     if (!stats?.fileWeightMeta.maxMb) return;
@@ -503,6 +521,56 @@ export default function NavbarFiltersMenu() {
     );
   };
 
+  const buildAnnotationsMenu = () => {
+    const keywordsEnabled = filters.annotations?.mode === 'has';
+    return (
+      <>
+        <ContextMenuItem
+          label="Есть"
+          counter={stats?.annotations.has}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={keywordsEnabled}
+          onSelect={() => {
+            if (filters.annotations?.mode === 'has') {
+              patchFilters({ annotations: null });
+              return;
+            }
+            patchFilters({
+              annotations: {
+                mode: 'has',
+                keywords: annotKeywords || filters.annotations?.keywords || ''
+              }
+            });
+          }}
+        />
+        <ContextMenuItem
+          label="Нет"
+          counter={stats?.annotations.missing}
+          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+          selected={filters.annotations?.mode === 'missing'}
+          onSelect={() => {
+            if (filters.annotations?.mode === 'missing') {
+              patchFilters({ annotations: null });
+              return;
+            }
+            patchFilters({ annotations: { mode: 'missing' } });
+          }}
+        />
+        <ContextMenuSeparator />
+        <ContextMenuInput
+          variant="textarea"
+          placeholder={FILTER_KEYWORDS_PLACEHOLDER}
+          value={annotKeywords}
+          disabled={!keywordsEnabled}
+          onChange={(v) => {
+            if (!keywordsEnabled) return;
+            setAnnotKeywords(v);
+          }}
+        />
+      </>
+    );
+  };
+
   const buildLinkMenu = () => {
     const keywordsEnabled = filters.link?.mode === 'has';
     return (
@@ -776,6 +844,9 @@ export default function NavbarFiltersMenu() {
         break;
       case 'link':
         children = buildLinkMenu();
+        break;
+      case 'annotations':
+        children = buildAnnotationsMenu();
         break;
       case 'dateAdded':
         rows = buildDateRows();

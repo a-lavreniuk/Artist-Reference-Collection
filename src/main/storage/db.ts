@@ -145,6 +145,15 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'cards', 'rating')) {
     db.exec('ALTER TABLE cards ADD COLUMN rating INTEGER NOT NULL DEFAULT 0');
   }
+  if (!tableHasColumn(db, 'cards', 'custom_fields_json')) {
+    db.exec('ALTER TABLE cards ADD COLUMN custom_fields_json TEXT');
+  }
+  if (!tableHasColumn(db, 'cards', 'annotations_json')) {
+    db.exec('ALTER TABLE cards ADD COLUMN annotations_json TEXT');
+  }
+  if (!tableHasColumn(db, 'cards', 'annotations_text')) {
+    db.exec('ALTER TABLE cards ADD COLUMN annotations_text TEXT');
+  }
   if (!tableHasColumn(db, 'categories', 'description')) {
     db.exec('ALTER TABLE categories ADD COLUMN description TEXT');
   }

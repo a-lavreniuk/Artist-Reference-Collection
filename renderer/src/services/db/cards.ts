@@ -301,6 +301,8 @@ export async function updateCardPayload(
     name?: string;
     linkUrl?: string;
     rating?: number;
+    customFields?: Record<string, string | string[]>;
+    annotations?: CardRecord['annotations'];
   }
 ): Promise<void> {
   const b = await resolveBackend();
@@ -341,12 +343,26 @@ export async function updateCardPayload(
         if (rating > 0) updated.rating = rating;
         else delete updated.rating;
       }
+      if (patch.customFields !== undefined) {
+        updated.customFields = patch.customFields;
+      }
+      if (patch.annotations !== undefined) {
+        updated.annotations = patch.annotations;
+      }
       return updated;
     });
     safeWriteArray(STORAGE_KEYS.cards, next);
   }
   notifyCardsChanged();
   notifyTagsChanged();
+}
+
+export async function wipeCustomFieldValues(fieldId: string): Promise<void> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    await storage.storageWipeCustomField(fieldId);
+  }
+  notifyCardsChanged();
 }
 
 export async function softDeleteCard(cardId: string, libraryId?: string): Promise<void> {

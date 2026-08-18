@@ -433,6 +433,15 @@ export function buildGalleryFilterWhere(
     }
   }
 
+  if (f.annotations) {
+    if (f.annotations.mode === 'missing') {
+      wh.push(`(COALESCE(${alias}.annotations_text, '') = '')`);
+    } else {
+      wh.push(`(COALESCE(${alias}.annotations_text, '') != '')`);
+      appendKeywordsCondition(wh, binds, alias, 'annotations_text', f.annotations.keywords);
+    }
+  }
+
   if (f.dateAdded.length) {
     const dateParts: string[] = [];
     for (const d of f.dateAdded) {

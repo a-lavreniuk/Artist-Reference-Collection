@@ -153,8 +153,20 @@ declare global {
           name?: string;
           linkUrl?: string;
           rating?: number;
+          customFields?: Record<string, string | string[]>;
+          annotations?: Array<{
+            id: string;
+            x: number;
+            y: number;
+            w: number;
+            h: number;
+            text: string;
+            createdAt: string;
+            timeMs?: number;
+          }>;
         }
       ) => Promise<void>;
+      storageWipeCustomField: (fieldId: string) => Promise<void>;
       storageInsertCardsMetadata: (
         cards: Array<{
           id: string;

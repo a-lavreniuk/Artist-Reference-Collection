@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, useEffect } from 'react';
 import { ContextMenu } from '../context-menu';
 import type { ContextMenuRow } from '../context-menu';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
@@ -7,6 +7,7 @@ import { Tooltip } from '../tooltip/Tooltip';
 import { formatPlaybackRate, formatVideoClock, VIDEO_PLAYBACK_RATES } from './cardDetailVideoTime';
 import type { CardDetailVideoPlayerProps } from './cardDetailVideoPlayerTypes';
 import { useCardDetailVideoPlayer } from './useCardDetailVideoPlayer';
+import CardDetailAnnotationLayer from './CardDetailAnnotationLayer';
 
 const PLAYER_MENU_PROPS = {
   anchorPlacement: 'aboveAnchor' as const,
@@ -22,7 +23,17 @@ export default function CardDetailVideoPlayer({
   onCardUpdated,
   onToast,
   playerRef,
-  flushToQueue = false
+  flushToQueue = false,
+  commentMode = false,
+  annotations = [],
+  selectedAnnotationId = null,
+  composerAnchorId = null,
+  draftRect = null,
+  draftIndex,
+  onSelectAnnotation,
+  onCreateAnnotation,
+  onMoveAnnotation,
+  onCurrentMsChange
 }: CardDetailVideoPlayerProps) {
   const controlsRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -49,6 +60,10 @@ export default function CardDetailVideoPlayer({
     player.volume,
     player.loop
   ]);
+
+  useEffect(() => {
+    onCurrentMsChange?.(player.currentMs);
+  }, [onCurrentMsChange, player.currentMs]);
 
   const sliderMax = Math.max(player.durationMs, 1);
 
@@ -135,23 +150,37 @@ export default function CardDetailVideoPlayer({
   return (
     <div className={`arc-card-detail-video-player${flushToQueue ? ' arc-card-detail-video-player--flush' : ''}`}>
       <div className="arc-card-detail-media-fit">
-        <video
-          ref={player.videoRef}
-          className="arc-card-detail-media"
-          src={src}
-          crossOrigin="anonymous"
-          preload="metadata"
-          playsInline
-          loop={player.loop}
-          onLoadedMetadata={player.onLoadedMetadata}
-          onDurationChange={player.onDurationChange}
-          onTimeUpdate={player.onTimeUpdate}
-          onSeeked={player.onSeeked}
-          onPlay={player.onPlayState}
-          onPause={player.onPlayState}
-          onEnded={player.onPlayState}
-          onVolumeChange={player.onPlayState}
-        />
+        <div className="arc-card-detail-video-frame">
+          <video
+            ref={player.videoRef}
+            className="arc-card-detail-media"
+            src={src}
+            crossOrigin="anonymous"
+            preload="metadata"
+            playsInline
+            loop={player.loop}
+            onLoadedMetadata={player.onLoadedMetadata}
+            onDurationChange={player.onDurationChange}
+            onTimeUpdate={player.onTimeUpdate}
+            onSeeked={player.onSeeked}
+            onPlay={player.onPlayState}
+            onPause={player.onPlayState}
+            onEnded={player.onPlayState}
+            onVolumeChange={player.onPlayState}
+          />
+          <CardDetailAnnotationLayer
+            annotations={annotations}
+            commentMode={commentMode}
+            currentMs={player.currentMs}
+            selectedId={selectedAnnotationId}
+            composerAnchorId={composerAnchorId}
+            draftRect={draftRect}
+            draftIndex={draftIndex}
+            onSelect={onSelectAnnotation}
+            onCreate={onCreateAnnotation}
+            onMove={onMoveAnnotation}
+          />
+        </div>
         <video
           ref={player.scrubVideoRef}
           className="arc-card-detail-video-scrub-src"

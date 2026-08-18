@@ -171,6 +171,8 @@ contextBridge.exposeInMainWorld('arc', {
     >,
   storageUpdateCard: (cardId: string, patch: unknown) =>
     ipcRenderer.invoke('arc:storage-update-card', { cardId, patch }),
+  storageWipeCustomField: (fieldId: string) =>
+    ipcRenderer.invoke('arc:storage-wipe-custom-field', fieldId),
   storageInsertCardsMetadata: (cards: unknown) =>
     ipcRenderer.invoke('arc:storage-insert-cards-metadata', cards),
   storageSoftDeleteCard: (cardId: string, libraryId?: string) =>

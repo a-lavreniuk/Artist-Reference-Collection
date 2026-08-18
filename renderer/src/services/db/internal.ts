@@ -1,5 +1,6 @@
 import { normalizeHex } from '../../utils/colorPicker';
 import { normalizeCardRating } from '@arc-main-shared/cardRating';
+import { sanitizeCardAnnotations, sanitizeCustomFieldsMap } from '@arc-main-shared/detailCardTemplate';
 import type { CardRecord, CollectionRecord } from '../arcSchema';
 import type { CategoryRecord, CategoryWeight, TagRecord } from './types';
 
@@ -173,6 +174,8 @@ export function normalizeCardRecord(item: unknown): CardRecord | null {
     ...(name ? { name } : {}),
     ...(linkUrl ? { linkUrl } : {}),
     ...(rating !== undefined ? { rating } : {}),
+    customFields: sanitizeCustomFieldsMap(r.customFields),
+    annotations: sanitizeCardAnnotations(r.annotations),
     ...(fileSize !== undefined ? { fileSize } : {}),
     ...(fileSizeMb !== undefined ? { fileSizeMb } : {})
   };

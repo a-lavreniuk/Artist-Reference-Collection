@@ -2,7 +2,7 @@
 
 import type { GalleryAdvancedFilters, GallerySortState } from './galleryFilters';
 
-export const STORAGE_SCHEMA_VERSION = 11;
+export const STORAGE_SCHEMA_VERSION = 12;
 
 /** Виртуальная библиотека в галерее: вся / без меток / корзина. */
 export type LibraryScope = 'all' | 'untagged' | 'trash';
@@ -71,6 +71,19 @@ export type CardJsonV1 = {
   videoHeight?: number;
   /** Расширенные метаданные для окна «Информация о файле». */
   mediaMeta?: CardMediaMetaV1;
+  /** Произвольные поля шаблона деталки: fieldId → значение. */
+  customFields?: Record<string, string | string[]>;
+  /** Аннотации на превью (нормализованный прямоугольник 0–1). */
+  annotations?: Array<{
+    id: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    text: string;
+    createdAt: string;
+    timeMs?: number;
+  }>;
 };
 
 export type CategoryRow = {
@@ -133,6 +146,9 @@ export type CardIndexRow = {
   linkUrl?: string;
   durationMs?: number;
   rating?: number;
+  customFieldsJson?: string;
+  annotationsJson?: string;
+  annotationsText?: string;
 };
 
 export type ArcSystemV1 = {

@@ -28,6 +28,8 @@ type Props = {
   onZoomOut: () => void;
   onZoomIn: () => void;
   onDisplayPctChange: (pct: number) => void;
+  commentMode?: boolean;
+  onCommentModeToggle?: () => void;
 };
 
 function parseDisplayPctInput(raw: string): number | null {
@@ -53,7 +55,9 @@ export default function CardDetailPreviewOptionsBar({
   onActualClick,
   onZoomOut,
   onZoomIn,
-  onDisplayPctChange
+  onDisplayPctChange,
+  commentMode = false,
+  onCommentModeToggle
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [pctDraft, setPctDraft] = useState('');
@@ -61,7 +65,7 @@ export default function CardDetailPreviewOptionsBar({
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [queueOpen, disabled, showQueueToggle]);
+  }, [queueOpen, disabled, showQueueToggle, commentMode]);
 
   const pctLabel = `${displayScalePct}%`;
 
@@ -116,6 +120,19 @@ export default function CardDetailPreviewOptionsBar({
             <span className="btn-icon-only__glyph arc-icon-info" aria-hidden="true" />
           </button>
         </Tooltip>
+        {onCommentModeToggle ? (
+          <Tooltip content={commentMode ? 'Выйти из режима комментария' : 'Режим комментария'} position="top">
+            <button
+              type="button"
+              className={`btn btn-outline btn-icon-only btn-ds${commentMode ? ' is-active' : ''}`}
+              aria-label={commentMode ? 'Выйти из режима комментария' : 'Режим комментария'}
+              aria-pressed={commentMode}
+              onClick={onCommentModeToggle}
+            >
+              <span className="btn-icon-only__glyph arc-icon-highlighter" aria-hidden="true" />
+            </button>
+          </Tooltip>
+        ) : null}
         <div className="arc-card-detail-preview-options__meta-item">
           <span
             className="arc-card-detail-preview-options__meta-icon arc-icon-aspect-ratio"

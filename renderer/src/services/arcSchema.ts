@@ -57,6 +57,19 @@ export type CardRecord = {
   linkUrl?: string;
   /** Оценка карточки: целое 1–5; нет поля = без оценки. */
   rating?: number;
+  /** Произвольные поля шаблона деталки. */
+  customFields?: Record<string, string | string[]>;
+  /** Аннотации на превью. */
+  annotations?: Array<{
+    id: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    text: string;
+    createdAt: string;
+    timeMs?: number;
+  }>;
   fileSize?: number;
   fileSizeMb?: number;
   /** Расширенные метаданные для окна «Информация о файле». */

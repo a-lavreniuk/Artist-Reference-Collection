@@ -18,6 +18,7 @@ export type {
   TagPresenceFilterValue,
   DescriptionFilterValue,
   LinkFilterValue,
+  AnnotationsFilterValue,
   DateAddedPreset,
   DateAddedFilterValue,
   FileWeightPreset,
@@ -83,6 +84,7 @@ export type GalleryFilterStats = {
   fileExtensions: Record<string, number>;
   description: { has: number; missing: number };
   link: { has: number; missing: number };
+  annotations: { has: number; missing: number };
   tagPresence: { tagged: number; untagged: number };
   dateAdded: Record<string, number>;
   fileWeight: Record<string, number>;
@@ -154,6 +156,7 @@ export function migrateGalleryAdvancedFilters(filters: GalleryAdvancedFilters): 
   return {
     ...filters,
     tagPresence: filters.tagPresence ?? null,
+    annotations: filters.annotations ?? null,
     rating: migrateRatingFilterValues(filters.rating),
     duration: filters.duration.map(migrateDurationFilterValue),
     resolution: filters.resolution
@@ -210,7 +213,8 @@ export const FILTER_CHIP_META: Record<
   fileWeight: { label: 'Вес файла', iconClass: 'arc-icon-file' },
   resolution: { label: 'Разрешение', iconClass: 'arc-icon-size' },
   duration: { label: 'Длительность', iconClass: 'arc-icon-clock' },
-  rating: { label: 'Оценка', iconClass: 'arc-icon-star-stroke' }
+  rating: { label: 'Оценка', iconClass: 'arc-icon-star-stroke' },
+  annotations: { label: 'Аннотации', iconClass: 'arc-icon-highlighter' }
 };
 
 export const SORT_FIELD_LABELS: Record<GalleryOrderableSortField, string> = {
@@ -310,6 +314,12 @@ export function countFilterCategorySelections(
       return filters.duration.length;
     case 'rating':
       return filters.rating.length;
+    case 'annotations': {
+      if (!filters.annotations) return 0;
+      let n = 1;
+      if (filters.annotations.keywords?.trim()) n++;
+      return n;
+    }
     default:
       return 0;
   }

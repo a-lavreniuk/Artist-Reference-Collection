@@ -20,12 +20,19 @@ import ToastAlert, { type ToastAlertVariant } from '../alert/ToastAlert';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TagTooltipBody } from '../tooltip/TagTooltipBody';
 import CollapsibleSection from './CollapsibleSection';
-import CardRatingStars from './CardRatingStars';
 import { useCardRatingShortcuts } from './useCardRatingShortcuts';
 import CardDetailImageViewport from './CardDetailImageViewport';
 import type { CardDetailImageChrome } from './CardDetailImageViewport';
 import CardDetailPreviewOptionsBar from './CardDetailPreviewOptionsBar';
 import CardDetailPreviewQueue, { peekQueueThumbSrcMap } from './CardDetailPreviewQueue';
+import CardDetailDescriptionFields from './CardDetailDescriptionFields';
+import CardDetailAnnotationsSection from './CardDetailAnnotationsSection';
+import CardDetailAnnotationComposer from './CardDetailAnnotationComposer';
+import CardDetailCommentCursor from './CardDetailCommentCursor';
+import type { AnnotationDraftRect } from './CardDetailAnnotationLayer';
+import DetailTemplateEditor from './DetailTemplateEditor';
+import { ContextMenu } from '../context-menu';
+import ContextMenuHeader from '../context-menu/ContextMenuHeader';
 import { loadCardsInOrder } from './cardDetailQueueCards';
 import { getDetailQueueOpen, setDetailQueueOpen } from './cardDetailPreviewQueueSession';
 import CardInfoModal from './CardInfoModal';
@@ -57,7 +64,8 @@ import {
   listSimilarCards,
   isCardOnBoard,
   removeCardFromMoodboard,
-  updateCardPayload
+  updateCardPayload,
+  wipeCustomFieldValues
 } from '../../services/db';
 import {
   formatCollectionAddToast,
@@ -109,6 +117,7 @@ import {
 } from './cardDetailSettingsWidth';
 import { measureCardDetailToolbarMinWidth } from './measureCardDetailToolbarMinWidth';
 import { getAppPreferences } from '../../services/appPreferences';
+import { useAppPreferences } from '../../hooks/useAppPreferences';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 import CopyCardSettingsMenu from './CopyCardSettingsMenu';
 import {
@@ -134,6 +143,13 @@ import {
 import { getShortcutById } from '../../shortcuts/shortcutRegistry';
 import { shortcutMenuLabel } from '../../shortcuts/shortcutLabels';
 import { openCardsInNewWindow, type CardViewerOpenContext } from '../../card-viewer/openCardsInNewWindow';
+import {
+  defaultDetailCardTemplate,
+  sanitizeCardAnnotations,
+  sanitizeCustomFieldsMap,
+  type CardAnnotationV1,
+  type CustomFieldsMap
+} from '@arc-main-shared/detailCardTemplate';
 
 type Props = {
   cardId: string;
@@ -158,6 +174,13 @@ function normalizeExternalUrl(raw: string): string | null {
   return `https://${trimmed}`;
 }
 
+function newAnnotationId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `ann-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default function CardDetailOverlay({
   cardId: urlCardId,
   tagsIndex,
@@ -180,8 +203,11 @@ export default function CardDetailOverlay({
   const descriptionFitLockRef = useRef(false);
   const nameSaveTimerRef = useRef<number | null>(null);
   const linkSaveTimerRef = useRef<number | null>(null);
+  const customFieldsSaveTimerRef = useRef<number | null>(null);
+  const annotationsSaveTimerRef = useRef<number | null>(null);
   const copyAlertTimerRef = useRef<number | null>(null);
   const copySettingsAnchorRef = useRef<HTMLButtonElement>(null);
+  const templateMenuAnchorRef = useRef<HTMLButtonElement>(null);
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const [card, setCard] = useState<CardRecord | null>(null);
@@ -205,6 +231,23 @@ export default function CardDetailOverlay({
   const [draftName, setDraftName] = useState('');
   const [draftLink, setDraftLink] = useState('');
   const [description, setDescription] = useState('');
+  const [customFields, setCustomFields] = useState<CustomFieldsMap>({});
+  const customFieldsRef = useRef<CustomFieldsMap>({});
+  const [annotations, setAnnotations] = useState<CardAnnotationV1[]>([]);
+  const annotationsRef = useRef<CardAnnotationV1[]>([]);
+  const lastAnnotationsCardIdRef = useRef<string>('');
+  const [descriptionEditMode, setDescriptionEditMode] = useState(false);
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+  const [commentMode, setCommentMode] = useState(false);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+  const [annotationComposer, setAnnotationComposer] = useState<
+    { mode: 'create'; rect: AnnotationDraftRect; timeMs?: number } | { mode: 'edit'; id: string } | null
+  >(null);
+  const [composerText, setComposerText] = useState('');
+  const [commentCursor, setCommentCursor] = useState<{ x: number; y: number } | null>(null);
+  const [videoCurrentMs, setVideoCurrentMs] = useState(0);
+  const [annotationsOpen, setAnnotationsOpen] = useState(true);
+  const [pendingDeleteFieldId, setPendingDeleteFieldId] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
@@ -268,6 +311,9 @@ export default function CardDetailOverlay({
   const canGenerateDescription =
     aiCaptionEnabled && (card?.type === 'image' || card?.type === 'video');
 
+  const { prefs, update: updatePrefs } = useAppPreferences();
+  const detailTemplate = prefs?.detailCardTemplate ?? defaultDetailCardTemplate();
+
   const reloadCard = useCallback(async (id: string) => {
     const scopedLibraryId = cardRef.current?.id === id ? cardRef.current.libraryId : undefined;
     let c = await getCardById(id, scopedLibraryId);
@@ -284,12 +330,23 @@ export default function CardDetailOverlay({
       setDraftName(c.name ?? draft.name ?? '');
       setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
       setDescription(c.description ?? '');
+      setCustomFields(sanitizeCustomFieldsMap(c.customFields));
+      customFieldsRef.current = sanitizeCustomFieldsMap(c.customFields);
+      if (annotationsSaveTimerRef.current == null) {
+        const nextAnnot = sanitizeCardAnnotations(c.annotations);
+        annotationsRef.current = nextAnnot;
+        setAnnotations(nextAnnot);
+      }
       setRating(clampCardRating(c.rating));
       cardCacheRef.current.set(c.id, c);
     } else {
       setDraftName('');
       setDraftLink('');
       setDescription('');
+      setCustomFields({});
+      customFieldsRef.current = {};
+      annotationsRef.current = [];
+      setAnnotations([]);
       setRating(0);
     }
     setCard(c);
@@ -301,6 +358,13 @@ export default function CardDetailOverlay({
     setDraftName(c.name ?? draft.name ?? '');
     setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
     setDescription(c.description ?? '');
+    setCustomFields(sanitizeCustomFieldsMap(c.customFields));
+    customFieldsRef.current = sanitizeCustomFieldsMap(c.customFields);
+    if (annotationsSaveTimerRef.current == null) {
+      const nextAnnot = sanitizeCardAnnotations(c.annotations);
+      annotationsRef.current = nextAnnot;
+      setAnnotations(nextAnnot);
+    }
     setRating(clampCardRating(c.rating));
     setCard(c);
     cardRef.current = c;
@@ -349,9 +413,40 @@ export default function CardDetailOverlay({
   }, []);
 
   useEffect(() => {
+    const ids = new Set(
+      detailTemplate.fields.filter((field) => field.kind === 'custom').map((field) => field.id)
+    );
+    setCustomFields((prev) => {
+      let changed = false;
+      const next: CustomFieldsMap = {};
+      for (const [key, value] of Object.entries(prev)) {
+        if (ids.has(key)) next[key] = value;
+        else changed = true;
+      }
+      if (changed) customFieldsRef.current = next;
+      return changed ? next : prev;
+    });
+  }, [detailTemplate]);
+
+  useEffect(() => {
+    const previousId = lastAnnotationsCardIdRef.current;
+    if (previousId && previousId !== cardId && annotationsSaveTimerRef.current) {
+      window.clearTimeout(annotationsSaveTimerRef.current);
+      annotationsSaveTimerRef.current = null;
+      void updateCardPayload(previousId, { annotations: annotationsRef.current });
+    }
+    lastAnnotationsCardIdRef.current = cardId;
     setPendingTagSearchIds([]);
     setConfirmOverwriteDescription(false);
     setGenerateDescriptionBusy(false);
+    setDescriptionEditMode(false);
+    setCommentMode(false);
+    setSelectedAnnotationId(null);
+    setAnnotationComposer(null);
+    setComposerText('');
+    setCommentCursor(null);
+    setTemplateMenuOpen(false);
+    setVideoCurrentMs(0);
   }, [cardId]);
 
   useLayoutEffect(() => {
@@ -478,7 +573,9 @@ export default function CardDetailOverlay({
     queueOpen,
     queueCards.length,
     videoLoop,
-    showNavButtons
+    showNavButtons,
+    annotations.length,
+    inTrash
   ]);
 
   useLayoutEffect(() => {
@@ -652,6 +749,13 @@ export default function CardDetailOverlay({
       }
       if (actionAlert) setActionAlert(null);
       else if (copySettingsMenuOpen) setCopySettingsMenuOpen(false);
+      else if (templateMenuOpen) setTemplateMenuOpen(false);
+      else if (pendingDeleteFieldId) setPendingDeleteFieldId(null);
+      else if (annotationComposer) {
+        setAnnotationComposer(null);
+        setComposerText('');
+      }
+      else if (commentMode) setCommentMode(false);
       else if (collectionsModalOpen) setCollectionsModalOpen(false);
       else if (tagsModalOpen) setTagsModalOpen(false);
       else if (infoOpen) setInfoOpen(false);
@@ -671,7 +775,11 @@ export default function CardDetailOverlay({
     actionAlert,
     tagsModalOpen,
     collectionsModalOpen,
-    copySettingsMenuOpen
+    copySettingsMenuOpen,
+    templateMenuOpen,
+    pendingDeleteFieldId,
+    annotationComposer,
+    commentMode
   ]);
 
   useEffect(() => {
@@ -679,6 +787,12 @@ export default function CardDetailOverlay({
       if (descriptionSaveTimerRef.current) window.clearTimeout(descriptionSaveTimerRef.current);
       if (nameSaveTimerRef.current) window.clearTimeout(nameSaveTimerRef.current);
       if (linkSaveTimerRef.current) window.clearTimeout(linkSaveTimerRef.current);
+      if (customFieldsSaveTimerRef.current) window.clearTimeout(customFieldsSaveTimerRef.current);
+      if (annotationsSaveTimerRef.current) {
+        window.clearTimeout(annotationsSaveTimerRef.current);
+        annotationsSaveTimerRef.current = null;
+        void updateCardPayload(lastAnnotationsCardIdRef.current, { annotations: annotationsRef.current });
+      }
       if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
     };
   }, []);
@@ -785,6 +899,175 @@ export default function CardDetailOverlay({
     },
     [cardId, reloadCard]
   );
+
+  const scheduleCustomFieldsSave = useCallback(
+    (next: CustomFieldsMap) => {
+      if (customFieldsSaveTimerRef.current) window.clearTimeout(customFieldsSaveTimerRef.current);
+      customFieldsSaveTimerRef.current = window.setTimeout(() => {
+        customFieldsSaveTimerRef.current = null;
+        void updateCardPayload(cardId, { customFields: customFieldsRef.current }).then(() => reloadCard(cardId));
+      }, FIELD_SAVE_MS);
+    },
+    [cardId, reloadCard]
+  );
+
+  const scheduleAnnotationsSave = useCallback(
+    (next: CardAnnotationV1[]) => {
+      annotationsRef.current = next;
+      if (annotationsSaveTimerRef.current) window.clearTimeout(annotationsSaveTimerRef.current);
+      annotationsSaveTimerRef.current = window.setTimeout(() => {
+        annotationsSaveTimerRef.current = null;
+        const payload = annotationsRef.current;
+        void updateCardPayload(cardId, { annotations: payload });
+      }, FIELD_SAVE_MS);
+    },
+    [cardId]
+  );
+
+  const handleCustomFieldChange = useCallback(
+    (fieldId: string, value: string | string[]) => {
+      setCustomFields((prev) => {
+        const next = { ...prev, [fieldId]: value };
+        customFieldsRef.current = next;
+        scheduleCustomFieldsSave(next);
+        return next;
+      });
+    },
+    [scheduleCustomFieldsSave]
+  );
+
+  const commitAnnotations = useCallback(
+    (updater: (prev: CardAnnotationV1[]) => CardAnnotationV1[]) => {
+      setAnnotations((prev) => {
+        const next = updater(prev);
+        annotationsRef.current = next;
+        scheduleAnnotationsSave(next);
+        return next;
+      });
+    },
+    [scheduleAnnotationsSave]
+  );
+
+  const cancelAnnotationComposer = useCallback(() => {
+    setAnnotationComposer(null);
+    setComposerText('');
+  }, []);
+
+  const handleCreateAnnotation = useCallback(
+    (rect: AnnotationDraftRect) => {
+      setCommentMode(true);
+      setSelectedAnnotationId(null);
+      setComposerText('');
+      setAnnotationComposer({
+        mode: 'create',
+        rect,
+        ...(card?.type === 'video' ? { timeMs: videoCurrentMs } : {})
+      });
+      setAnnotationsOpen(true);
+    },
+    [card?.type, videoCurrentMs]
+  );
+
+  const handleSelectAnnotation = useCallback(
+    (id: string) => {
+      const annot = annotations.find((item) => item.id === id);
+      if (!annot) return;
+      setSelectedAnnotationId(id);
+      setComposerText(annot.text);
+      setAnnotationComposer({ mode: 'edit', id });
+      setAnnotationsOpen(true);
+      if (annot.timeMs != null && card?.type === 'video') {
+        videoPlayerRef.current?.seekToMs(annot.timeMs);
+      }
+    },
+    [annotations, card?.type]
+  );
+
+  const handleMoveAnnotation = useCallback(
+    (id: string, x: number, y: number) => {
+      commitAnnotations((prev) => prev.map((item) => (item.id === id ? { ...item, x, y } : item)));
+    },
+    [commitAnnotations]
+  );
+
+  const saveAnnotationComposer = useCallback(() => {
+    const text = composerText.trim();
+    const composer = annotationComposer;
+    if (!text || !composer) return;
+    if (composer.mode === 'create') {
+      const id = newAnnotationId();
+      const annot: CardAnnotationV1 = {
+        id,
+        x: composer.rect.x,
+        y: composer.rect.y,
+        w: composer.rect.w,
+        h: composer.rect.h,
+        text,
+        createdAt: new Date().toISOString(),
+        ...(composer.timeMs != null ? { timeMs: composer.timeMs } : {})
+      };
+      commitAnnotations((prev) => [...prev, annot]);
+      setSelectedAnnotationId(id);
+    } else {
+      const editId = composer.id;
+      commitAnnotations((prev) => prev.map((item) => (item.id === editId ? { ...item, text } : item)));
+      setSelectedAnnotationId(editId);
+    }
+    setAnnotationComposer(null);
+    setComposerText('');
+  }, [annotationComposer, composerText, commitAnnotations]);
+
+  const deleteAnnotation = useCallback(
+    (id: string) => {
+      commitAnnotations((prev) => prev.filter((item) => item.id !== id));
+      if (selectedAnnotationId === id) setSelectedAnnotationId(null);
+      if (annotationComposer?.mode === 'edit' && annotationComposer.id === id) {
+        setAnnotationComposer(null);
+        setComposerText('');
+      }
+    },
+    [annotationComposer, commitAnnotations, selectedAnnotationId]
+  );
+
+  useEffect(() => {
+    if (commentMode) return;
+    setAnnotationComposer((prev) => (prev?.mode === 'create' ? null : prev));
+  }, [commentMode]);
+
+  useEffect(() => {
+    if (!annotationComposer) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const path = event.composedPath();
+      const inside = path.some(
+        (node) =>
+          node instanceof Element &&
+          (node.closest('.arc-card-detail-annot-composer') ||
+            node.closest('[data-annot-pin]') ||
+            node.closest('[data-annot-item]'))
+      );
+      if (inside) return;
+      cancelAnnotationComposer();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [annotationComposer, cancelAnnotationComposer]);
+
+  useEffect(() => {
+    if (!commentMode || inTrash || annotationComposer) {
+      setCommentCursor(null);
+      return;
+    }
+    const onMove = (event: PointerEvent) => {
+      const el = document.elementFromPoint(event.clientX, event.clientY);
+      if (!el?.closest('.arc-card-detail-annot-layer')) {
+        setCommentCursor(null);
+        return;
+      }
+      setCommentCursor({ x: event.clientX, y: event.clientY });
+    };
+    window.addEventListener('pointermove', onMove);
+    return () => window.removeEventListener('pointermove', onMove);
+  }, [annotationComposer, commentMode, inTrash]);
 
   const applyRating = useCallback(
     (next: number) => {
@@ -979,12 +1262,13 @@ export default function CardDetailOverlay({
         draftName,
         draftLink,
         description,
-        card
+        card,
+        customFields
       });
       setCardSettingsClipboard({ fields, values });
       showCopyAlert('Настройки скопированы');
     },
-    [card, draftName, draftLink, description, showCopyAlert]
+    [card, customFields, draftName, draftLink, description, showCopyAlert]
   );
 
   const applySettingsClipboard = useCallback(async () => {
@@ -1003,6 +1287,10 @@ export default function CardDetailOverlay({
       window.clearTimeout(linkSaveTimerRef.current);
       linkSaveTimerRef.current = null;
     }
+    if (customFieldsSaveTimerRef.current) {
+      window.clearTimeout(customFieldsSaveTimerRef.current);
+      customFieldsSaveTimerRef.current = null;
+    }
 
     const patch = buildCardSettingsApplyPatch(clipboard, {
       validTagIds: new Set(tagsIndex.keys()),
@@ -1013,7 +1301,11 @@ export default function CardDetailOverlay({
     syncCardDetailDraftsFromPatch(patch, {
       setDraftName,
       setDraftLink,
-      setDescription
+      setDescription,
+      setCustomFields: (value) => {
+        customFieldsRef.current = value;
+        setCustomFields(value);
+      }
     });
 
     if (patch.collectionIds !== undefined) {
@@ -1036,6 +1328,9 @@ export default function CardDetailOverlay({
     tagsModalOpen ||
     collectionsModalOpen ||
     copySettingsMenuOpen ||
+    templateMenuOpen ||
+    pendingDeleteFieldId !== null ||
+    annotationComposer !== null ||
     confirmDelete ||
     confirmPermanentDelete ||
     confirmOverwriteDescription ||
@@ -1071,11 +1366,17 @@ export default function CardDetailOverlay({
       if (matchesShortcut(e, 'detail.pasteSettings')) {
         e.preventDefault();
         void applySettingsClipboard();
+        return;
+      }
+
+      if (matchesShortcut(e, 'detail.commentMode') && !inTrash) {
+        e.preventDefault();
+        setCommentMode((prev) => !prev);
       }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [applySettingsClipboard, handleCopySettings, neighborCardIds, openViewingCard]);
+  }, [applySettingsClipboard, handleCopySettings, inTrash, neighborCardIds, openViewingCard]);
 
   const copyId = async () => {
     if (!card) return;
@@ -1470,7 +1771,8 @@ export default function CardDetailOverlay({
     }
   };
 
-  const descriptionSectionFooter = canGenerateDescription ? (
+  const descriptionSectionFooter =
+    descriptionEditMode && canGenerateDescription ? (
     <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
       <div className="btn-group btn-group-ds arc-card-detail-desc-gen">
         <button
@@ -1508,6 +1810,10 @@ export default function CardDetailOverlay({
       </div>
     </div>
   ) : null;
+
+  const pendingDeleteLabel =
+    detailTemplate.fields.find((field) => field.id === pendingDeleteFieldId && field.kind === 'custom')
+      ?.label ?? 'поле';
 
   const tagsSectionFooter = (
     <div
@@ -1556,6 +1862,11 @@ export default function CardDetailOverlay({
     </div>
   );
 
+  const composerAnchorId =
+    annotationComposer?.mode === 'create' ? 'draft' : annotationComposer?.mode === 'edit' ? annotationComposer.id : null;
+  const draftRect = annotationComposer?.mode === 'create' ? annotationComposer.rect : null;
+  const draftIndex = annotations.length + 1;
+
   const overlay = (
     <>
       <div ref={backdropRef} className="arc-card-detail-backdrop" aria-hidden="true" />
@@ -1592,6 +1903,16 @@ export default function CardDetailOverlay({
                   onLoopChange={setVideoLoop}
                   flushToQueue={queueVisible}
                   playerRef={videoPlayerRef}
+                  commentMode={!inTrash && commentMode}
+                  annotations={annotations}
+                  selectedAnnotationId={selectedAnnotationId}
+                  composerAnchorId={composerAnchorId}
+                  draftRect={draftRect}
+                  draftIndex={draftIndex}
+                  onSelectAnnotation={inTrash ? undefined : handleSelectAnnotation}
+                  onCreateAnnotation={inTrash ? undefined : handleCreateAnnotation}
+                  onMoveAnnotation={inTrash ? undefined : handleMoveAnnotation}
+                  onCurrentMsChange={setVideoCurrentMs}
                   onCardUpdated={(updated) => {
                     setCard(updated);
                     cardRef.current = updated;
@@ -1614,6 +1935,15 @@ export default function CardDetailOverlay({
                     card={card}
                     src={src ?? thumbSrc ?? ''}
                     onChromeChange={setImageChrome}
+                    commentMode={!inTrash && commentMode}
+                    annotations={annotations}
+                    selectedAnnotationId={selectedAnnotationId}
+                    composerAnchorId={composerAnchorId}
+                    draftRect={draftRect}
+                    draftIndex={draftIndex}
+                    onSelectAnnotation={inTrash ? undefined : handleSelectAnnotation}
+                    onCreateAnnotation={inTrash ? undefined : handleCreateAnnotation}
+                    onMoveAnnotation={inTrash ? undefined : handleMoveAnnotation}
                   />
                 ) : (
                   <div className="arc-card-detail-media-fit">
@@ -1712,6 +2042,8 @@ export default function CardDetailOverlay({
                 onZoomOut={() => imageChrome?.onZoomOut()}
                 onZoomIn={() => imageChrome?.onZoomIn()}
                 onDisplayPctChange={(pct) => imageChrome?.onDisplayPctChange(pct)}
+                commentMode={!inTrash && commentMode}
+                onCommentModeToggle={inTrash ? undefined : () => setCommentMode((prev) => !prev)}
               />
             ) : null}
           </div>
@@ -1930,114 +2262,98 @@ export default function CardDetailOverlay({
               {inTrash && card?.libraryName ? (
                 <p className="text-s arc-card-detail-library-name">{card.libraryName}</p>
               ) : null}
-              <CollapsibleSection title="Описание" footer={descriptionSectionFooter}>
-                <div
-                  className="arc-card-detail-description-fields arc-ui-kit-scope"
-                  data-input-size="m"
-                  data-btn-size="m"
-                >
-                  <CardRatingStars value={rating} onChange={applyRating} disabled={!card || inTrash} />
-                  {palette.length > 0 ? (
-                    <div className="arc-card-detail-palette">
-                      {palette.map((swatch, index) => (
-                        <Tooltip
-                          key={`${swatch.hex}-${index}`}
-                          content={`Поиск по цвету · ${swatch.hex.toUpperCase()} (${swatch.pct}%)`}
-                          position="top"
-                        >
-                          <button
-                            type="button"
-                            className="arc-card-detail-palette-swatch"
-                            style={{ backgroundColor: swatch.hex }}
-                            aria-label={`Поиск по цвету ${swatch.hex}, ${swatch.pct} процентов`}
-                            onClick={() => openPaletteColorSearch(swatch.hex)}
-                          />
-                        </Tooltip>
-                      ))}
-                    </div>
-                  ) : null}
-                  <label
-                    className={`field input-live${draftName.trim() ? ' has-value' : ''}`}
-                    data-live-input
-                  >
-                    <input
-                      className="input"
-                      type="text"
-                      placeholder="Имя"
-                      value={draftName}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setDraftName(v);
-                        scheduleNameSave(v);
-                      }}
-                    />
-                    <button
-                      className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
-                      type="button"
-                      aria-label="Очистить"
-                      onClick={(ev) => {
-                        ev.preventDefault();
-                        ev.stopPropagation();
-                        setDraftName('');
-                        scheduleNameSave('');
-                      }}
-                    />
-                  </label>
-                  <div className="arc-card-detail-link-row">
-                    <label
-                      className={`field input-live arc-card-detail-link-field${draftLink.trim() ? ' has-value' : ''}`}
-                      data-live-input
-                    >
-                      <input
-                        className="input"
-                        type="text"
-                        placeholder="Ссылка"
-                        value={draftLink}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setDraftLink(v);
-                          scheduleLinkSave(v);
-                        }}
-                      />
-                      <button
-                        className="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close"
-                        type="button"
-                        aria-label="Очистить"
-                        onClick={(ev) => {
-                          ev.preventDefault();
-                          ev.stopPropagation();
-                          setDraftLink('');
-                          scheduleLinkSave('');
-                        }}
-                      />
-                    </label>
-                    <Tooltip content="Открыть ссылку" position="top">
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-icon-only btn-ds"
-                        aria-label="Открыть ссылку"
-                        disabled={!normalizeExternalUrl(draftLink)}
-                        onClick={openDraftLink}
+              <CollapsibleSection
+                title="Описание"
+                footer={descriptionSectionFooter}
+                headerActions={
+                  !inTrash ? (
+                    <>
+                      <Tooltip
+                        content={descriptionEditMode ? 'Просмотр' : 'Редактировать'}
+                        position="top"
                       >
-                        <span className="btn-icon-only__glyph arc-icon-external-link" aria-hidden="true" />
-                      </button>
-                    </Tooltip>
-                  </div>
-                  <label className="field">
-                    <textarea
-                      ref={descriptionTextareaRef}
-                      className="input textarea arc-card-detail-description-textarea"
-                      placeholder="Описание"
-                      rows={4}
-                      value={description}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setDescription(v);
-                        scheduleDescriptionSave(v);
-                      }}
-                    />
-                  </label>
-                </div>
+                        <button
+                          type="button"
+                          className={`btn btn-outline btn-icon-only btn-ds${descriptionEditMode ? ' is-active' : ''}`}
+                          aria-label={descriptionEditMode ? 'Просмотр' : 'Редактировать'}
+                          aria-pressed={descriptionEditMode}
+                          onClick={() => setDescriptionEditMode((prev) => !prev)}
+                        >
+                          <span
+                            className={`btn-icon-only__glyph ${descriptionEditMode ? 'arc-icon-eye' : 'arc-icon-pencil'}`}
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Поля описания" position="top">
+                        <button
+                          ref={templateMenuAnchorRef}
+                          type="button"
+                          className={`btn btn-outline btn-icon-only btn-ds${templateMenuOpen ? ' is-active' : ''}`}
+                          aria-label="Поля описания"
+                          aria-pressed={templateMenuOpen}
+                          onClick={() => setTemplateMenuOpen((prev) => !prev)}
+                        >
+                          <span className="btn-icon-only__glyph arc-icon-layout-list" aria-hidden="true" />
+                        </button>
+                      </Tooltip>
+                    </>
+                  ) : undefined
+                }
+              >
+                <CardDetailDescriptionFields
+                  template={detailTemplate}
+                  editMode={descriptionEditMode && !inTrash}
+                  inTrash={inTrash}
+                  rating={rating}
+                  onRatingChange={applyRating}
+                  palette={palette}
+                  onPaletteClick={openPaletteColorSearch}
+                  draftName={draftName}
+                  onNameChange={(value) => {
+                    setDraftName(value);
+                    scheduleNameSave(value);
+                  }}
+                  draftLink={draftLink}
+                  onLinkChange={(value) => {
+                    setDraftLink(value);
+                    scheduleLinkSave(value);
+                  }}
+                  onOpenLink={openDraftLink}
+                  canOpenLink={Boolean(normalizeExternalUrl(draftLink))}
+                  description={description}
+                  onDescriptionChange={(value) => {
+                    setDescription(value);
+                    scheduleDescriptionSave(value);
+                  }}
+                  descriptionTextareaRef={descriptionTextareaRef}
+                  customFields={customFields}
+                  onCustomFieldChange={handleCustomFieldChange}
+                />
+              </CollapsibleSection>
+
+              <div className="arc-card-detail-section-sep" role="separator" />
+
+              <CollapsibleSection
+                title="Аннотации"
+                count={annotations.length}
+                collapsible={annotations.length > 0}
+                open={annotationsOpen}
+                onOpenChange={setAnnotationsOpen}
+                footer={
+                  !inTrash
+                    ? addRowButton('Оставить аннотацию', 'arc-icon-highlighter', () => setCommentMode(true))
+                    : undefined
+                }
+              >
+                <CardDetailAnnotationsSection
+                  annotations={annotations}
+                  selectedId={selectedAnnotationId}
+                  isVideo={card?.type === 'video'}
+                  readOnly={inTrash}
+                  onSelect={handleSelectAnnotation}
+                  onDelete={deleteAnnotation}
+                />
               </CollapsibleSection>
 
               <div className="arc-card-detail-section-sep" role="separator" />
@@ -2425,6 +2741,94 @@ export default function CardDetailOverlay({
         />
       ) : null}
 
+      {!inTrash ? (
+        <ContextMenu
+          open={templateMenuOpen}
+          anchorRef={templateMenuAnchorRef}
+          onClose={() => setTemplateMenuOpen(false)}
+          ariaLabel="Поля описания"
+          aboveModal
+        >
+          <ContextMenuHeader>Поля описания</ContextMenuHeader>
+          <DetailTemplateEditor
+            variant="menu"
+            template={detailTemplate}
+            onChange={(next) => void updatePrefs({ detailCardTemplate: next })}
+            onDeleteCustomField={(fieldId) => {
+              setTemplateMenuOpen(false);
+              setPendingDeleteFieldId(fieldId);
+            }}
+          />
+        </ContextMenu>
+      ) : null}
+
+      {pendingDeleteFieldId ? (
+        <div
+          className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
+          aria-hidden="false"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setPendingDeleteFieldId(null);
+          }}
+        >
+          <section
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="s"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcCardDeleteFieldTitle"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="arc-modal__header arc-modal__header--title">
+              <h3 className="arc-modal__title" id="arcCardDeleteFieldTitle">
+                Удалить поле?
+              </h3>
+              <button
+                type="button"
+                className="arc-modal__close"
+                aria-label="Закрыть"
+                onClick={() => setPendingDeleteFieldId(null)}
+              >
+                <span className="tab-icon arc-icon-close" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="arc-modal__body">
+              <div className="arc-modal__slot">
+                <p className="arc-modal__slot-text">
+                  Поле «{pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех
+                  карточках.
+                </p>
+              </div>
+            </div>
+            <footer className="arc-modal__footer arc-modal__footer--actions-2">
+              <button
+                type="button"
+                className="btn btn-outline btn-ds btn-s"
+                onClick={() => setPendingDeleteFieldId(null)}
+              >
+                <span className="btn-ds__value">Отмена</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-ds btn-s"
+                onClick={() => {
+                  const fieldId = pendingDeleteFieldId;
+                  setPendingDeleteFieldId(null);
+                  void (async () => {
+                    await wipeCustomFieldValues(fieldId);
+                    const nextFields = detailTemplate.fields.filter((field) => field.id !== fieldId);
+                    await updatePrefs({ detailCardTemplate: { version: 1, fields: nextFields } });
+                  })();
+                }}
+              >
+                <span className="btn-ds__value">Удалить</span>
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
       {copyAlertMessage ? (
         <ToastAlert
           message={copyAlertMessage}
@@ -2433,6 +2837,22 @@ export default function CardDetailOverlay({
           onClose={() => setCopyAlertMessage(null)}
         />
       ) : null}
+
+      {annotationComposer ? (
+        <CardDetailAnnotationComposer
+          mode={annotationComposer.mode}
+          text={composerText}
+          onTextChange={setComposerText}
+          onSave={saveAnnotationComposer}
+          onCancel={cancelAnnotationComposer}
+          onDelete={
+            annotationComposer.mode === 'edit' ? () => deleteAnnotation(annotationComposer.id) : undefined
+          }
+          anchorKey={composerAnchorId ?? 'draft'}
+        />
+      ) : null}
+
+      {commentCursor ? <CardDetailCommentCursor x={commentCursor.x} y={commentCursor.y} /> : null}
 
       {similarContextMenuLayer}
     </>
