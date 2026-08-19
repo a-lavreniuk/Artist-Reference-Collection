@@ -28,8 +28,6 @@ type Props = {
   onZoomOut: () => void;
   onZoomIn: () => void;
   onDisplayPctChange: (pct: number) => void;
-  commentMode?: boolean;
-  onCommentModeToggle?: () => void;
 };
 
 function parseDisplayPctInput(raw: string): number | null {
@@ -55,9 +53,7 @@ export default function CardDetailPreviewOptionsBar({
   onActualClick,
   onZoomOut,
   onZoomIn,
-  onDisplayPctChange,
-  commentMode = false,
-  onCommentModeToggle
+  onDisplayPctChange
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [pctDraft, setPctDraft] = useState('');
@@ -65,7 +61,7 @@ export default function CardDetailPreviewOptionsBar({
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [queueOpen, disabled, showQueueToggle, commentMode]);
+  }, [queueOpen, disabled, showQueueToggle]);
 
   const pctLabel = `${displayScalePct}%`;
 
@@ -98,17 +94,15 @@ export default function CardDetailPreviewOptionsBar({
     >
       <div className="arc-card-detail-preview-options__meta">
         {showQueueToggle ? (
-          <Tooltip content={queueOpen ? 'Скрыть очередь' : 'Показать очередь'} position="top">
-            <button
-              type="button"
-              className={`btn btn-icon-only btn-ds${queueOpen ? ' btn-primary' : ' btn-outline'}${queueOpen ? ' is-active' : ''}`}
-              aria-label={queueOpen ? 'Скрыть очередь' : 'Показать очередь'}
-              aria-pressed={queueOpen}
-              onClick={onQueueToggle}
-            >
-              <span className="btn-icon-only__glyph arc-icon-gallery-thumbnails" aria-hidden="true" />
-            </button>
-          </Tooltip>
+          <button
+            type="button"
+            className={`btn btn-icon-only btn-ds${queueOpen ? ' btn-primary' : ' btn-outline'}${queueOpen ? ' is-active' : ''}`}
+            aria-label={queueOpen ? 'Скрыть очередь' : 'Показать очередь'}
+            aria-pressed={queueOpen}
+            onClick={onQueueToggle}
+          >
+            <span className="btn-icon-only__glyph arc-icon-gallery-thumbnails" aria-hidden="true" />
+          </button>
         ) : null}
         <Tooltip content="Информация о файле" position="top">
           <button
@@ -120,19 +114,6 @@ export default function CardDetailPreviewOptionsBar({
             <span className="btn-icon-only__glyph arc-icon-info" aria-hidden="true" />
           </button>
         </Tooltip>
-        {onCommentModeToggle ? (
-          <Tooltip content={commentMode ? 'Выйти из редактирования меток' : 'Редактирование меток'} position="top">
-            <button
-              type="button"
-              className={`btn btn-outline btn-icon-only btn-ds${commentMode ? ' is-active' : ''}`}
-              aria-label={commentMode ? 'Выйти из редактирования меток' : 'Редактирование меток'}
-              aria-pressed={commentMode}
-              onClick={onCommentModeToggle}
-            >
-              <span className="btn-icon-only__glyph arc-icon-message" aria-hidden="true" />
-            </button>
-          </Tooltip>
-        ) : null}
         <div className="arc-card-detail-preview-options__meta-item">
           <span
             className="arc-card-detail-preview-options__meta-icon arc-icon-aspect-ratio"

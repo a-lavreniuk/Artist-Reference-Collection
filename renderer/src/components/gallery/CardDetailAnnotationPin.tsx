@@ -1,4 +1,4 @@
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from 'react';
 
 type Props = {
   number: number;
@@ -7,6 +7,8 @@ type Props = {
   ariaLabel: string;
   interactive?: boolean;
   onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onMouseEnter?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onMouseLeave?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
 };
 
 /** Номер аннотации: chip без маркера и счётчика, фон brand. */
@@ -16,7 +18,9 @@ export default function CardDetailAnnotationPin({
   anchorId,
   ariaLabel,
   interactive = true,
-  onPointerDown
+  onPointerDown,
+  onMouseEnter,
+  onMouseLeave
 }: Props) {
   const label =
     clusterCount != null && clusterCount > 1 ? (
@@ -48,6 +52,8 @@ export default function CardDetailAnnotationPin({
       data-annot-anchor={anchorId}
       aria-label={ariaLabel}
       onPointerDown={onPointerDown}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {label}
     </button>

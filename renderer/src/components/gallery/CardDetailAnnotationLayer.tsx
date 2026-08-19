@@ -159,7 +159,8 @@ export default function CardDetailAnnotationLayer({
     moved: boolean;
   } | null>(null);
 
-  const canEditGeometry = editMode && commentMode;
+  const canEditGeometry = editMode;
+  const canCreate = commentMode && editMode;
 
   const schedulePeek = (id: string | null) => {
     if (peekTimerRef.current) window.clearTimeout(peekTimerRef.current);
@@ -189,7 +190,7 @@ export default function CardDetailAnnotationLayer({
   };
 
   const onLayerPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!canEditGeometry || e.button !== 0 || !rootRef.current) return;
+    if (!canCreate || e.button !== 0 || !rootRef.current) return;
     if (isInteractiveTarget(e.target)) return;
     if (composerAnchorId) return;
     e.preventDefault();
@@ -317,6 +318,7 @@ export default function CardDetailAnnotationLayer({
 
   const onRegionPointerDown = (e: ReactPointerEvent<HTMLDivElement>, annot: CardAnnotationV1) => {
     if (e.button !== 0 || isPointAnnotation(annot) || !canEditGeometry) return;
+    e.stopPropagation();
     beginDrag(e, {
       kind: 'region-move',
       id: annot.id,
@@ -378,7 +380,6 @@ export default function CardDetailAnnotationLayer({
         }}
         onMouseEnter={() => {
           onHover?.(annot.id);
-          schedulePeek(annot.id);
         }}
         onMouseLeave={() => {
           if (dragRef.current?.id !== annot.id) onHover?.(null);
@@ -407,6 +408,11 @@ export default function CardDetailAnnotationLayer({
           anchorId={annot.id}
           ariaLabel={`Аннотация ${index + 1}`}
           onPointerDown={(event) => onPinPointerDown(event, annot)}
+          onMouseEnter={() => schedulePeek(annot.id)}
+          onMouseLeave={() => {
+            clearPeekTimer();
+            onPeek?.(null);
+          }}
         />
       </div>
     );
@@ -462,7 +468,6 @@ export default function CardDetailAnnotationLayer({
         style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
         onMouseEnter={() => {
           onHover?.(primary.annot.id);
-          schedulePeek(anchorId);
         }}
         onMouseLeave={() => {
           onHover?.(null);
@@ -479,6 +484,11 @@ export default function CardDetailAnnotationLayer({
             if (event.button !== 0) return;
             clearPeekTimer();
             onSelect?.(primary.annot.id);
+          }}
+          onMouseEnter={() => schedulePeek(anchorId)}
+          onMouseLeave={() => {
+            clearPeekTimer();
+            onPeek?.(null);
           }}
         />
       </div>

@@ -602,6 +602,7 @@ export default function CardDetailOverlay({
     videoLoop,
     showNavButtons,
     annotations.length,
+    annotationsVisible,
     inTrash
   ]);
 
@@ -1036,6 +1037,7 @@ export default function CardDetailOverlay({
         ...(card?.type === 'video' ? { timeMs: videoCurrentMs } : {})
       });
       setAnnotationsOpen(true);
+      setAnnotationsVisible(true);
     },
     [card?.type, videoCurrentMs]
   );
@@ -1178,7 +1180,10 @@ export default function CardDetailOverlay({
     }
     const onMove = (event: PointerEvent) => {
       const el = document.elementFromPoint(event.clientX, event.clientY);
-      if (!el?.closest('.arc-card-detail-annot-layer')) {
+      if (
+        !el?.closest('.arc-card-detail-annot-layer') ||
+        el.closest('[data-annot-pin], [data-annot-region], [data-annot-resize-opposite]')
+      ) {
         setCommentCursor(null);
         return;
       }
@@ -1841,20 +1846,22 @@ export default function CardDetailOverlay({
   const annotationsSectionFooter = !inTrash ? (
     <div className="arc-card-detail-annot-section-footer arc-ui-kit-scope" data-btn-size="m">
       {addRowButton('Оставить аннотацию', 'arc-icon-message', () => setCommentMode(true))}
-      <Tooltip content={annotationsVisible ? 'Скрыть метки' : 'Показать метки'} position="top">
-        <button
-          type="button"
-          className={`btn btn-outline btn-icon-only btn-ds${annotationsVisible ? '' : ' is-active'}`}
-          aria-label={annotationsVisible ? 'Скрыть метки' : 'Показать метки'}
-          aria-pressed={!annotationsVisible}
-          onClick={() => setAnnotationsVisible((prev) => !prev)}
-        >
-          <span
-            className={`btn-icon-only__glyph ${annotationsVisible ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
-            aria-hidden="true"
-          />
-        </button>
-      </Tooltip>
+      {annotations.length > 0 ? (
+        <Tooltip content={annotationsVisible ? 'Скрыть метки' : 'Показать метки'} position="top">
+          <button
+            type="button"
+            className={`btn btn-outline btn-icon-only btn-ds${annotationsVisible ? '' : ' is-active'}`}
+            aria-label={annotationsVisible ? 'Скрыть метки' : 'Показать метки'}
+            aria-pressed={!annotationsVisible}
+            onClick={() => setAnnotationsVisible((prev) => !prev)}
+          >
+            <span
+              className={`btn-icon-only__glyph ${annotationsVisible ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
+              aria-hidden="true"
+            />
+          </button>
+        </Tooltip>
+      ) : null}
     </div>
   ) : undefined;
 
@@ -2091,7 +2098,7 @@ export default function CardDetailOverlay({
                   flushToQueue={queueVisible}
                   playerRef={videoPlayerRef}
                   commentMode={!inTrash && commentMode}
-                  editMode={!inTrash && commentMode}
+                  editMode={!inTrash}
                   annotationsVisible={annotationsVisible}
                   annotations={annotations}
                   selectedAnnotationId={selectedAnnotationId}
@@ -2131,7 +2138,7 @@ export default function CardDetailOverlay({
                     src={src ?? thumbSrc ?? ''}
                     onChromeChange={setImageChrome}
                     commentMode={!inTrash && commentMode}
-                    editMode={!inTrash && commentMode}
+                    editMode={!inTrash}
                     annotationsVisible={annotationsVisible}
                     annotations={annotations}
                     selectedAnnotationId={selectedAnnotationId}
@@ -2244,8 +2251,6 @@ export default function CardDetailOverlay({
                 onZoomOut={() => imageChrome?.onZoomOut()}
                 onZoomIn={() => imageChrome?.onZoomIn()}
                 onDisplayPctChange={(pct) => imageChrome?.onDisplayPctChange(pct)}
-                commentMode={!inTrash && commentMode}
-                onCommentModeToggle={inTrash ? undefined : () => setCommentMode((prev) => !prev)}
               />
             ) : null}
           </div>

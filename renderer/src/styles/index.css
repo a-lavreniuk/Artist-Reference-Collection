@@ -3335,7 +3335,7 @@ body.arc-card-detail-open .arc-app-outlet {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--s-3);
   width: 100%;
 }
@@ -3412,9 +3412,10 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-card-detail-collection-stack-box {
+  --arc-collection-stack-h: 46px;
   flex-shrink: 0;
-  width: 129px;
-  height: 46px;
+  width: calc(var(--arc-collection-stack-h) * 16 / 9);
+  height: var(--arc-collection-stack-h);
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -3436,8 +3437,8 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-card-detail-collection-stack-layer--single {
-  width: 129px;
-  height: 46px;
+  width: calc(var(--arc-collection-stack-h, 46px) * 16 / 9);
+  height: var(--arc-collection-stack-h, 46px);
 }
 
 .arc-card-detail-collection-stack-img,
@@ -3811,6 +3812,10 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   border: 1px dashed var(--background-brand-default);
   background: transparent;
   opacity: 0;
+  cursor: default;
+}
+
+.arc-card-detail-annot-layer.is-edit-mode .arc-card-detail-annot-region {
   cursor: move;
 }
 
@@ -3836,8 +3841,12 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
   background: var(--background-brand-default);
   color: var(--btn-brand-icon-default);
   pointer-events: auto;
-  cursor: grab;
+  cursor: default;
   transition: background-color var(--transition-fast);
+}
+
+.arc-card-detail-annot-layer.is-edit-mode .arc-card-detail-annot-pin-chip {
+  cursor: grab;
 }
 
 .arc-card-detail-annot-mark:hover .arc-card-detail-annot-pin-chip,
@@ -4069,7 +4078,7 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 .arc-card-detail-annot-item__facts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
+  gap: var(--s-3);
   min-width: 0;
   color: var(--text-elev-secondary);
 }
