@@ -5,6 +5,7 @@ import { libraryScopeLabel, parseLibraryScope } from '../search/libraryScopeUrl'
 
 const SETTINGS_TITLES: Record<string, string> = {
   '/settings/general': 'Общие',
+  '/settings/detail-template': 'Шаблон деталки',
   '/settings/screenshots': 'Скриншоты',
   '/settings/notifications': 'Уведомления',
   '/settings/shortcuts': 'Горячие клавиши',

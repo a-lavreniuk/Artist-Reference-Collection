@@ -5,6 +5,7 @@ import SettingsScreenshotsPanel from './SettingsScreenshotsPanel';
 import SettingsShortcutsPanel from './SettingsShortcutsPanel';
 
 export { SettingsGeneralPanel };
+export { default as SettingsDetailTemplatePanel } from './SettingsDetailTemplatePanel';
 
 export function SettingsScreenshotsPanelRoute() {
   return <SettingsScreenshotsPanel />;

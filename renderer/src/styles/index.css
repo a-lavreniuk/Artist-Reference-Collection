@@ -3119,8 +3119,9 @@ body.arc-card-detail-open .arc-app-outlet {
 }
 
 .arc-card-detail-prop-row {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 36%) minmax(0, 1fr);
+  grid-template-columns: 140px minmax(0, 1fr);
   gap: var(--s-3);
   align-items: start;
 }
@@ -3133,8 +3134,26 @@ body.arc-card-detail-open .arc-app-outlet {
   opacity: 0.4;
 }
 
-.arc-card-detail-prop-row.is-drop-before {
-  box-shadow: inset 0 2px 0 0 var(--panel-border);
+.arc-card-detail-prop-row.is-drop-before::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--brand-500);
+  border-radius: var(--radius-xs);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.arc-card-detail-prop-list.is-drop-end::after {
+  content: '';
+  display: block;
+  height: 2px;
+  background: var(--brand-500);
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
 }
 
 .arc-card-detail-prop-row__name {
@@ -3142,20 +3161,20 @@ body.arc-card-detail-open .arc-app-outlet {
   align-items: center;
   gap: var(--s-1);
   min-width: 0;
+  height: var(--input-h);
+  min-height: var(--input-h);
+  max-height: var(--input-h);
+  padding: 0 var(--s-2);
+  box-sizing: border-box;
   overflow: hidden;
+  border-radius: var(--radius-s);
+  background: var(--input-fill-default);
+  transition: background var(--transition-fast);
 }
 
-.arc-card-detail-prop-row__handle {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text-elev-secondary);
-  cursor: grab;
+.arc-card-detail-prop-row__name:hover,
+.arc-card-detail-prop-row__name:has(.arc-card-detail-prop-row__label[aria-expanded='true']) {
+  background: var(--background-tertiary-hover);
 }
 
 .arc-card-detail-prop-row__label {
@@ -3164,18 +3183,35 @@ body.arc-card-detail-open .arc-app-outlet {
   gap: var(--s-1);
   flex: 1;
   min-width: 0;
+  height: 100%;
   overflow: hidden;
   margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--text-elev-secondary);
+  color: var(--typography-black-bg-primary-default);
+  font-size: var(--typo-p-m-size);
+  line-height: var(--typo-p-m-line);
+  font-weight: var(--typo-p-m-weight);
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
+  user-select: none;
+}
+
+.arc-card-detail-prop-row.is-dragging .arc-card-detail-prop-row__label {
+  cursor: grabbing;
 }
 
 .arc-card-detail-prop-row__label .tab-icon {
   flex-shrink: 0;
+  color: var(--icons-black-bg-default);
+}
+
+.arc-card-detail-prop-row__name:hover .arc-card-detail-prop-row__label .tab-icon,
+.arc-card-detail-prop-row__name:has(.arc-card-detail-prop-row__label[aria-expanded='true'])
+  .arc-card-detail-prop-row__label
+  .tab-icon {
+  color: var(--icons-black-bg-hover);
 }
 
 span.arc-card-detail-prop-row__label {
@@ -3200,8 +3236,12 @@ span.arc-card-detail-prop-row__label {
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--text-elev-secondary);
+  color: var(--icons-black-bg-default);
   cursor: pointer;
+}
+
+.arc-card-detail-prop-row__name:hover .arc-card-detail-prop-row__visibility {
+  color: var(--icons-black-bg-hover);
 }
 
 .arc-card-detail-prop-row__value {
@@ -3229,10 +3269,48 @@ span.arc-card-detail-prop-row__label {
   color: var(--text-elev-primary);
 }
 
-.arc-detail-custom-chips {
+.arc-detail-multiselect.input.search-multiselect {
+  height: auto;
+  min-height: var(--input-h);
+  max-height: none;
+  padding: var(--s-1);
+  gap: var(--s-1);
+  flex-wrap: nowrap;
+  overflow: hidden;
+  align-items: center;
+  cursor: pointer;
+}
+
+.arc-detail-multiselect.input.search-multiselect:not(:has(.chip)) {
+  height: var(--input-h);
+  max-height: var(--input-h);
+  padding: 0 var(--input-pad-x);
+}
+
+.arc-detail-multiselect[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.arc-detail-multiselect__chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--s-1);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-detail-multiselect .chip {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.arc-detail-multiselect .selector-actions.slot-trailing {
+  margin-left: 0;
+}
+
+.arc-detail-multiselect .selector-value {
+  color: var(--input-value-default);
 }
 
 .arc-detail-template-editor {
@@ -3259,6 +3337,13 @@ span.arc-card-detail-prop-row__label {
   flex-direction: column;
   align-items: stretch;
   gap: var(--s-1);
+}
+
+.arc-detail-template-editor__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
 }
 
 .arc-detail-template-editor__add-btn {
@@ -3448,7 +3533,7 @@ span.arc-card-detail-prop-row__label {
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: var(--s-3);
+  gap: var(--s-2);
   width: 100%;
 }
 
@@ -3566,6 +3651,9 @@ span.arc-card-detail-prop-row__label {
 }
 
 .arc-card-detail-collection-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
   flex: 1 1 auto;
   min-width: 0;
 }

@@ -289,6 +289,7 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
   if (field.type === 'multiSelect') {
     return (
       <MultiSelectValue
+        label={label}
         options={field.options ?? []}
         selected={multi}
         disabled={disabled}
@@ -308,41 +309,103 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
 }
 
 function MultiSelectValue({
+  label,
   options,
   selected,
   disabled,
   onChange
 }: {
+  label: string;
   options: string[];
   selected: string[];
   disabled: boolean;
   onChange: (next: string[]) => void;
 }) {
-  if (options.length === 0) {
-    return (
-      <label className="field input-live" data-live-input>
-        <input className="input" placeholder={EMPTY_PLACEHOLDER} disabled />
-      </label>
-    );
-  }
+  const [open, setOpen] = useState(false);
+  const fieldRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const filled = selected.length > 0;
+
+  useLayoutEffect(() => {
+    if (fieldRef.current) void hydrateArcNavbarIcons(fieldRef.current);
+  }, [filled, open, selected]);
+
+  const toggleOption = (option: string) => {
+    onChange(selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option]);
+  };
+
   return (
-    <div className="arc-detail-custom-chips">
-      {options.map((option) => {
-        const isOn = selected.includes(option);
-        return (
-          <button
-            key={option}
-            type="button"
-            className={isOn ? 'chip chip-active' : 'chip'}
-            disabled={disabled}
-            onClick={() => {
-              onChange(isOn ? selected.filter((item) => item !== option) : [...selected, option]);
-            }}
-          >
-            {option}
-          </button>
-        );
-      })}
+    <div ref={fieldRef} className={`field selector-field${filled ? ' has-value' : ''}`}>
+      <div
+        ref={anchorRef}
+        role="combobox"
+        tabIndex={disabled ? -1 : 0}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={label}
+        aria-disabled={disabled || undefined}
+        className="input input-slots search-multiselect arc-detail-multiselect"
+        onClick={() => {
+          if (disabled || options.length === 0) return;
+          setOpen((prev) => !prev);
+        }}
+        onKeyDown={(e) => {
+          if (disabled || options.length === 0) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen((prev) => !prev);
+          }
+        }}
+      >
+        {filled ? (
+          <span className="arc-detail-multiselect__chips">
+            {selected.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className="chip chip-active"
+                disabled={disabled}
+                aria-label={`Убрать ${option}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onChange(selected.filter((item) => item !== option));
+                }}
+              >
+                <span>{option}</span>
+                <span className="chip-remove" aria-hidden="true">
+                  ✕
+                </span>
+              </button>
+            ))}
+          </span>
+        ) : (
+          <span className="selector-value slot-value">{EMPTY_PLACEHOLDER}</span>
+        )}
+        <span className="selector-actions slot-trailing">
+          <span
+            className="selector-caret arc-icon-chevron arc-selector-dropdown-caret"
+            aria-hidden="true"
+          />
+        </span>
+      </div>
+      <ContextMenu
+        open={open && !disabled && options.length > 0}
+        anchorRef={anchorRef}
+        onClose={() => setOpen(false)}
+        ariaLabel={label}
+        aboveModal
+        anchorPlacement="belowAnchor"
+        anchorAlign="start"
+        rows={options.map((option) => ({
+          type: 'item' as const,
+          key: option,
+          label: option,
+          selected: selected.includes(option),
+          closeOnSelect: false,
+          onSelect: () => toggleOption(option)
+        }))}
+      />
     </div>
   );
 }

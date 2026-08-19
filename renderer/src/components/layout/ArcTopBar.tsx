@@ -69,7 +69,7 @@ export default function ArcTopBar() {
           <span className="arc-topbar-btn__glyph arc-icon-minimize" data-arc-icon-size="s" aria-hidden="true" />
         </button>
         <button type="button" className="arc-topbar-btn" aria-label="Развернуть окно" onClick={toggleMaximize}>
-          <span className="arc-topbar-btn__glyph arc-icon-maximize" data-arc-icon-size="s" aria-hidden="true" />
+          <span className="arc-topbar-btn__glyph arc-icon-square" data-arc-icon-size="s" aria-hidden="true" />
         </button>
         <button
           type="button"

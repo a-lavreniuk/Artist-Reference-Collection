@@ -81,7 +81,7 @@ describe('template helpers', () => {
       fields: [{ id: 'name', kind: 'builtin', visible: true }]
     });
     expect(missingBuiltinFieldIds(template)).toEqual(['link', 'description']);
-    expect(templateFieldIconClass(template.fields[0]!)).toBe('arc-icon-type');
+    expect(templateFieldIconClass(template.fields[0]!)).toBe('arc-icon-text-short');
   });
 
   it('reorders only visible fields', () => {
@@ -137,7 +137,7 @@ describe('custom field values and annotations', () => {
 describe('createCustomTemplateField', () => {
   it('uses type label and empty select options', () => {
     const field = createCustomTemplateField('select', 'id-1');
-    expect(field.label).toBe('Селектор');
+    expect(field.label).toBe('Выбор');
     expect(field.options).toEqual([]);
   });
 

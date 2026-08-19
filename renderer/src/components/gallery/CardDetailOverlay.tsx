@@ -1838,20 +1838,24 @@ export default function CardDetailOverlay({
     <div className="arc-card-detail-annot-section-footer arc-ui-kit-scope" data-btn-size="m">
       {addRowButton('Оставить аннотацию', 'arc-icon-message', () => setCommentMode(true))}
       {annotations.length > 0 ? (
-        <Tooltip content={annotationsVisible ? 'Скрыть метки' : 'Показать метки'} position="top">
-          <button
-            type="button"
-            className={`btn btn-outline btn-icon-only btn-ds${annotationsVisible ? '' : ' is-active'}`}
-            aria-label={annotationsVisible ? 'Скрыть метки' : 'Показать метки'}
-            aria-pressed={!annotationsVisible}
-            onClick={() => setAnnotationsVisible((prev) => !prev)}
-          >
-            <span
-              className={`btn-icon-only__glyph ${annotationsVisible ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
-              aria-hidden="true"
-            />
-          </button>
-        </Tooltip>
+        <button
+          type="button"
+          className="btn btn-outline btn-ds"
+          aria-pressed={!annotationsVisible}
+          aria-label={
+            annotationsVisible
+              ? `Скрыть аннотации, ${annotations.length}`
+              : `Показать скрытые аннотации, ${annotations.length}`
+          }
+          onClick={() => setAnnotationsVisible((prev) => !prev)}
+        >
+          <span className="btn-ds__value">{annotationsVisible ? 'Скрыть' : 'Скрыто'}</span>
+          <span className="btn-ds__counter">{annotations.length}</span>
+          <span
+            className={`btn-ds__icon ${annotationsVisible ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
+            aria-hidden="true"
+          />
+        </button>
       ) : null}
     </div>
   ) : undefined;
@@ -2464,7 +2468,7 @@ export default function CardDetailOverlay({
                 <p className="text-s arc-card-detail-library-name">{card.libraryName}</p>
               ) : null}
               <CollapsibleSection
-                title="Описание"
+                title="Детали"
                 footer={descriptionSectionFooter}
               >
                 <CardDetailDescriptionFields
@@ -2509,18 +2513,20 @@ export default function CardDetailOverlay({
                 onOpenChange={setAnnotationsOpen}
                 footer={annotationsSectionFooter}
               >
-                <CardDetailAnnotationsSection
-                  annotations={annotations}
-                  activeId={activeAnnotationListId}
-                  hoveredId={hoveredAnnotationId}
-                  focusedId={focusedAnnotationId}
-                  isVideo={card?.type === 'video'}
-                  readOnly={inTrash}
-                  onSelect={handleSelectAnnotation}
-                  onHover={setHoveredAnnotationId}
-                  onDelete={requestDeleteAnnotation}
-                  onDuplicate={duplicateAnnotation}
-                />
+                {annotationsVisible ? (
+                  <CardDetailAnnotationsSection
+                    annotations={annotations}
+                    activeId={activeAnnotationListId}
+                    hoveredId={hoveredAnnotationId}
+                    focusedId={focusedAnnotationId}
+                    isVideo={card?.type === 'video'}
+                    readOnly={inTrash}
+                    onSelect={handleSelectAnnotation}
+                    onHover={setHoveredAnnotationId}
+                    onDelete={requestDeleteAnnotation}
+                    onDuplicate={duplicateAnnotation}
+                  />
+                ) : null}
               </CollapsibleSection>
 
               <div className="arc-card-detail-section-sep" role="separator" />

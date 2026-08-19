@@ -6,10 +6,10 @@ export type DetailBuiltinFieldId = (typeof DETAIL_BUILTIN_FIELD_IDS)[number];
 export const CUSTOM_FIELD_TYPES = [
   'shortText',
   'longText',
-  'url',
-  'date',
   'select',
-  'multiSelect'
+  'multiSelect',
+  'date',
+  'url'
 ] as const;
 export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
 
@@ -21,11 +21,11 @@ export const DETAIL_BUILTIN_FIELD_LABELS: Record<DetailBuiltinFieldId, string> =
 
 export const CUSTOM_FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
   shortText: 'Короткий текст',
-  longText: 'Текстовый блок',
+  longText: 'Длинный текст',
   url: 'Ссылка',
   date: 'Дата',
-  select: 'Селектор',
-  multiSelect: 'Мультивыбор'
+  select: 'Выбор',
+  multiSelect: 'Мульти-выбор'
 };
 
 export type DetailTemplateBuiltinField = {
@@ -192,19 +192,19 @@ export function templateFieldTypeLabel(field: DetailTemplateField): string {
   return CUSTOM_FIELD_TYPE_LABELS[field.type];
 }
 
-/** Иконка типа свойства — только существующие `arc-icon-*`. */
+/** Иконка типа свойства — `arc-icon-*` из UI-Kit. */
 export function templateFieldIconClass(field: DetailTemplateField): string {
   if (field.kind === 'builtin') {
-    if (field.id === 'name') return 'arc-icon-type';
+    if (field.id === 'name') return 'arc-icon-text-short';
     if (field.id === 'link') return 'arc-icon-link';
-    return 'arc-icon-description';
+    return 'arc-icon-textarea';
   }
-  if (field.type === 'shortText') return 'arc-icon-type';
-  if (field.type === 'longText') return 'arc-icon-description';
+  if (field.type === 'shortText') return 'arc-icon-text-short';
+  if (field.type === 'longText') return 'arc-icon-textarea';
   if (field.type === 'url') return 'arc-icon-link';
   if (field.type === 'date') return 'arc-icon-calendar';
-  if (field.type === 'select') return 'arc-icon-check-hexagon';
-  return 'arc-icon-layout-list';
+  if (field.type === 'select') return 'arc-icon-check-circle';
+  return 'arc-icon-list';
 }
 
 export function customFieldTypeIconClass(type: CustomFieldType): string {

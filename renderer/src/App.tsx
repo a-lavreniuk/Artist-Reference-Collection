@@ -15,6 +15,11 @@ const UiKitPage = lazy(() => import('./ui-kit/UiKitPage'));
 const SettingsGeneralPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({ default: m.SettingsGeneralPanel }))
 );
+const SettingsDetailTemplatePanel = lazy(() =>
+  import('./pages/settings/panels/settingsProductPanels').then((m) => ({
+    default: m.SettingsDetailTemplatePanel
+  }))
+);
 const SettingsScreenshotsPanel = lazy(() =>
   import('./pages/settings/panels/settingsProductPanels').then((m) => ({
     default: m.SettingsScreenshotsPanelRoute
@@ -77,6 +82,7 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />}>
             <Route index element={<Navigate to="general" replace />} />
             <Route path="general" element={<SettingsGeneralPanel />} />
+            <Route path="detail-template" element={<SettingsDetailTemplatePanel />} />
             <Route path="screenshots" element={<SettingsScreenshotsPanel />} />
             <Route path="video-playback" element={<Navigate to="/settings/general" replace />} />
             <Route path="notifications" element={<SettingsNotificationsPanel />} />

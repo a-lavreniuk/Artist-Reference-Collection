@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CUSTOM_FIELD_TYPES,
@@ -49,6 +49,8 @@ type Props = {
   renderValue?: (field: DetailTemplateField) => ReactNode;
 };
 
+const DRAG_THRESHOLD_PX = 4;
+
 function newFieldId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -68,11 +70,13 @@ export default function DetailTemplateEditor({
   const rootRef = useRef<HTMLDivElement>(null);
   const addBtnRef = useRef<HTMLButtonElement>(null);
   const fieldMenuAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const skipClickRef = useRef(false);
   const nameDraftRef = useRef('');
   const optionsDraftRef = useRef<Record<string, string>>({});
   const [drag, setDrag] = useState<DragState | null>(null);
   const [optionsDraft, setOptionsDraft] = useState<Record<string, string>>({});
   const [addOpen, setAddOpen] = useState(false);
+  const [hiddenFieldsExpanded, setHiddenFieldsExpanded] = useState(false);
   const [menuFieldId, setMenuFieldId] = useState<string | null>(null);
   const [menuView, setMenuView] = useState<MenuView>('field');
   const [nameDraft, setNameDraft] = useState('');
@@ -82,14 +86,24 @@ export default function DetailTemplateEditor({
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [template.fields, drag, variant, readOnly, menuFieldId, addOpen]);
+  }, [template.fields, drag, variant, readOnly, menuFieldId, addOpen, hiddenFieldsExpanded]);
+
+  useLayoutEffect(() => {
+    if (hiddenFieldsExpanded && !template.fields.some((field) => !field.visible)) {
+      setHiddenFieldsExpanded(false);
+    }
+  }, [template.fields, hiddenFieldsExpanded]);
 
   const commit = (fields: DetailTemplateField[]) => {
     onChange(sanitizeDetailCardTemplate({ version: 1, fields }));
   };
 
+  const hiddenFields = variant === 'card' ? template.fields.filter((field) => !field.visible) : [];
+  const showHiddenInList = variant === 'card' && hiddenFieldsExpanded && hiddenFields.length > 0;
   const listFields =
-    variant === 'card' ? template.fields.filter((field) => field.visible) : template.fields;
+    variant === 'card' && !showHiddenInList
+      ? template.fields.filter((field) => field.visible)
+      : template.fields;
 
   const menuField = menuFieldId
     ? template.fields.find((field) => field.id === menuFieldId)
@@ -258,12 +272,58 @@ export default function DetailTemplateEditor({
           break;
         }
       }
-      if (variant === 'card') {
+      if (variant === 'card' && !showHiddenInList) {
         commit(reorderVisibleTemplateFields(template.fields, args.id, nextInsert));
       } else {
         commit(reorderTemplateFields(template.fields, args.id, nextInsert));
       }
       setDrag(null);
+      const swallowClick = (ev: MouseEvent) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        skipClickRef.current = false;
+        window.removeEventListener('click', swallowClick, true);
+      };
+      window.addEventListener('click', swallowClick, true);
+      window.setTimeout(() => {
+        window.removeEventListener('click', swallowClick, true);
+        skipClickRef.current = false;
+      }, 0);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  const bindLabelPointerDown = (field: DetailTemplateField, label: string) => (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (readOnly || e.button !== 0) return;
+    const labelEl = e.currentTarget;
+    const rowEl = labelEl.closest('[data-template-field-row]') as HTMLElement | null;
+    if (!rowEl) return;
+    const originX = e.clientX;
+    const originY = e.clientY;
+    let started = false;
+
+    const onMove = (ev: PointerEvent) => {
+      if (started) return;
+      if (Math.hypot(ev.clientX - originX, ev.clientY - originY) < DRAG_THRESHOLD_PX) return;
+      started = true;
+      skipClickRef.current = true;
+      setAddOpen(false);
+      try {
+        labelEl.setPointerCapture(ev.pointerId);
+      } catch {
+        /* already released */
+      }
+      startDrag({
+        id: field.id,
+        label,
+        handleEl: labelEl,
+        rowEl
+      });
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -276,7 +336,12 @@ export default function DetailTemplateEditor({
 
   return (
     <div ref={rootRef} className={`arc-detail-template-editor arc-detail-template-editor--${variant}`}>
-      <div ref={listRef} className={`arc-card-detail-prop-list${drag ? ' is-drop-end' : ''}`}>
+      <div
+        ref={listRef}
+        className={`arc-card-detail-prop-list${
+          drag != null && drag.insertIndex === listFields.length ? ' is-drop-end' : ''
+        }`}
+      >
         {listFields.map((field, rowIndex) => {
           const label = templateFieldLabel(field);
           const insertBefore = drag != null && drag.insertIndex === rowIndex && drag.dragId !== field.id;
@@ -290,32 +355,8 @@ export default function DetailTemplateEditor({
               data-template-field-row={field.id}
             >
               <div className="arc-card-detail-prop-row__name">
-                {!readOnly ? (
-                  <button
-                    type="button"
-                    className="arc-card-detail-prop-row__handle"
-                    aria-label={`Переместить ${label}`}
-                    onPointerDown={(e) => {
-                      if (e.button !== 0) return;
-                      e.preventDefault();
-                      e.stopPropagation();
-                      startDrag({
-                        id: field.id,
-                        label,
-                        handleEl: e.currentTarget,
-                        rowEl: e.currentTarget.closest('[data-template-field-row]') as HTMLElement
-                      });
-                    }}
-                  >
-                    <span
-                      className="tab-icon arc-icon-chevrons-up-down"
-                      data-arc-icon-size="m"
-                      aria-hidden="true"
-                    />
-                  </button>
-                ) : null}
                 {readOnly ? (
-                  <span className="arc-card-detail-prop-row__label text-s">
+                  <span className="arc-card-detail-prop-row__label">
                     <span
                       className={`tab-icon ${templateFieldIconClass(field)}`}
                       data-arc-icon-size="m"
@@ -326,10 +367,18 @@ export default function DetailTemplateEditor({
                 ) : (
                   <button
                     type="button"
-                    className="arc-card-detail-prop-row__label text-s"
+                    className="arc-card-detail-prop-row__label"
                     aria-haspopup="menu"
                     aria-expanded={menuOpen}
-                    onClick={(e) => openFieldMenu(field, e.currentTarget)}
+                    aria-label={label}
+                    onPointerDown={bindLabelPointerDown(field, label)}
+                    onClick={(e) => {
+                      if (skipClickRef.current) {
+                        skipClickRef.current = false;
+                        return;
+                      }
+                      openFieldMenu(field, e.currentTarget);
+                    }}
                   >
                     <span
                       className={`tab-icon ${templateFieldIconClass(field)}`}
@@ -363,20 +412,46 @@ export default function DetailTemplateEditor({
         })}
       </div>
       {!readOnly ? (
-        <button
-          ref={addBtnRef}
-          type="button"
-          className="btn btn-ghost btn-ds arc-detail-template-editor__add-btn"
-          aria-haspopup="menu"
-          aria-expanded={addOpen}
-          onClick={() => {
-            if (menuFieldId) closeFieldMenu();
-            setAddOpen(true);
-          }}
-        >
-          <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
-          <span className="btn-ds__value">Добавить свойство</span>
-        </button>
+        <div className="arc-detail-template-editor__footer">
+          <button
+            ref={addBtnRef}
+            type="button"
+            className="btn btn-outline btn-ds arc-detail-template-editor__add-btn"
+            aria-haspopup="menu"
+            aria-expanded={addOpen}
+            onClick={() => {
+              if (menuFieldId) closeFieldMenu();
+              setAddOpen(true);
+            }}
+          >
+            <span className="btn-ds__value">Добавить свойство</span>
+            <span className="btn-ds__icon arc-icon-plus-square" aria-hidden="true" />
+          </button>
+          {hiddenFields.length > 0 ? (
+            <button
+              type="button"
+              className="btn btn-outline btn-ds"
+              aria-pressed={showHiddenInList}
+              aria-label={
+                showHiddenInList
+                  ? `Скрыть поля, ${hiddenFields.length}`
+                  : `Показать скрытые поля, ${hiddenFields.length}`
+              }
+              onClick={() => {
+                if (menuFieldId) closeFieldMenu();
+                setAddOpen(false);
+                setHiddenFieldsExpanded((prev) => !prev);
+              }}
+            >
+              <span className="btn-ds__value">{showHiddenInList ? 'Скрыть' : 'Скрыто'}</span>
+              <span className="btn-ds__counter">{hiddenFields.length}</span>
+              <span
+                className={`btn-ds__icon ${showHiddenInList ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
+                aria-hidden="true"
+              />
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       <ContextMenu
@@ -419,9 +494,7 @@ export default function DetailTemplateEditor({
             <ContextMenuHeader>Тип свойства</ContextMenuHeader>
             <ContextMenuItem
               label={templateFieldTypeLabel(menuField)}
-              iconClass={
-                menuField.kind === 'custom' ? 'arc-icon-chevron-right' : templateFieldIconClass(menuField)
-              }
+              iconClass={templateFieldIconClass(menuField)}
               disabled={menuField.kind !== 'custom'}
               onSelect={() => {
                 if (menuField.kind !== 'custom') return;

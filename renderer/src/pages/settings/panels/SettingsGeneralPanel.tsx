@@ -2,15 +2,10 @@ import SettingsRadioRow from '../../../components/settings/SettingsRadioRow';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
-import DetailTemplateEditor from '../../../components/gallery/DetailTemplateEditor';
 import { requestInterfaceTourReplay } from '../../../components/onboarding/interfaceTourEvents';
 import { INTERFACE_TOUR_SETTINGS } from '../../../content/onboardingTour';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { GalleryCollectionsSortMode, TrashRetentionDays, UiThemePreference } from '../../../services/appPreferences';
-import { defaultDetailCardTemplate, templateFieldLabel } from '@arc-main-shared/detailCardTemplate';
-import { wipeCustomFieldValues } from '../../../services/db';
-import ConfirmModal from '../ConfirmModal';
-import { useState } from 'react';
 
 const LABEL_DESCRIPTION =
   'Здесь настраиваются оформление, запуск приложения и базовое поведение с файлами. Эти параметры действуют для всего ARC.';
@@ -23,8 +18,6 @@ const LABEL_DELETE_TO_TRASH = 'Удаление карточек перенос�
 const LABEL_TRASH_RETENTION =
   'Карточки в корзине удаляются безвозвратно по истечении срока. Очистка запускается при старте приложения и при смене библиотеки.';
 const LABEL_GALLERY_COLLECTIONS_STRIP = 'Показывать коллекции на экране библиотеки';
-const LABEL_DETAIL_TEMPLATE =
-  'Поля блока «Описание» на карточке. Один шаблон для всех библиотек. Удаление своего поля стирает значения на карточках. Системные поля только убираются из шаблона.';
 
 const COLLECTIONS_SORT_OPTIONS: Array<{ value: GalleryCollectionsSortMode; label: string }> = [
   { value: 'chrono', label: 'По хронологии' },
@@ -48,11 +41,6 @@ const TRASH_RETENTION_OPTIONS: Array<{ value: TrashRetentionDays; label: string 
 export default function SettingsGeneralPanel() {
   const { prefs, ready, update } = useAppPreferences();
   const disabled = !ready;
-  const [pendingDeleteFieldId, setPendingDeleteFieldId] = useState<string | null>(null);
-  const template = prefs?.detailCardTemplate ?? defaultDetailCardTemplate();
-  const pendingField = template.fields.find((field) => field.id === pendingDeleteFieldId);
-  const pendingDeleteLabel = pendingField ? templateFieldLabel(pendingField) : 'поле';
-  const pendingDeleteIsCustom = pendingField?.kind === 'custom';
 
   return (
     <div className="arc-settings-main__scroll">
@@ -190,46 +178,7 @@ export default function SettingsGeneralPanel() {
             </div>
           ) : null}
         </SettingsSection>
-
-        <SettingsSeparator />
-
-        <SettingsSection title="Шаблон деталки">
-          <div className="arc-settings-desc-block">
-            <p className="text-m arc-settings-desc-block__text">{LABEL_DETAIL_TEMPLATE}</p>
-          </div>
-          <div className="arc-ui-kit-scope" data-btn-size="s" data-input-size="m">
-            <DetailTemplateEditor
-              variant="settings"
-              template={template}
-              readOnly={disabled}
-              onChange={(detailCardTemplate) => void update({ detailCardTemplate })}
-              onRequestDelete={(fieldId) => setPendingDeleteFieldId(fieldId)}
-            />
-          </div>
-        </SettingsSection>
       </div>
-      {pendingDeleteFieldId ? (
-        <ConfirmModal
-          title="Удалить поле?"
-          message={
-            pendingDeleteIsCustom
-              ? `Поле «${pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках.`
-              : `Поле «${pendingDeleteLabel}» будет убрано из шаблона. Данные на карточках сохранятся.`
-          }
-          confirmLabel="Удалить"
-          confirmVariant="danger"
-          onCancel={() => setPendingDeleteFieldId(null)}
-          onConfirm={() => {
-            const fieldId = pendingDeleteFieldId;
-            setPendingDeleteFieldId(null);
-            void (async () => {
-              if (pendingDeleteIsCustom) await wipeCustomFieldValues(fieldId);
-              const nextFields = template.fields.filter((field) => field.id !== fieldId);
-              await update({ detailCardTemplate: { version: 1, fields: nextFields } });
-            })();
-          }}
-        />
-      ) : null}
     </div>
   );
 }
