@@ -7,7 +7,7 @@ import { requestInterfaceTourReplay } from '../../../components/onboarding/inter
 import { INTERFACE_TOUR_SETTINGS } from '../../../content/onboardingTour';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import type { GalleryCollectionsSortMode, TrashRetentionDays, UiThemePreference } from '../../../services/appPreferences';
-import { defaultDetailCardTemplate } from '@arc-main-shared/detailCardTemplate';
+import { defaultDetailCardTemplate, templateFieldLabel } from '@arc-main-shared/detailCardTemplate';
 import { wipeCustomFieldValues } from '../../../services/db';
 import ConfirmModal from '../ConfirmModal';
 import { useState } from 'react';
@@ -24,7 +24,7 @@ const LABEL_TRASH_RETENTION =
   'Карточки в корзине удаляются безвозвратно по истечении срока. Очистка запускается при старте приложения и при смене библиотеки.';
 const LABEL_GALLERY_COLLECTIONS_STRIP = 'Показывать коллекции на экране библиотеки';
 const LABEL_DETAIL_TEMPLATE =
-  'Поля блока «Описание» на карточке. Один шаблон для всех библиотек. Удаление поля стирает его значения на карточках.';
+  'Поля блока «Описание» на карточке. Один шаблон для всех библиотек. Удаление своего поля стирает значения на карточках. Системные поля только убираются из шаблона.';
 
 const COLLECTIONS_SORT_OPTIONS: Array<{ value: GalleryCollectionsSortMode; label: string }> = [
   { value: 'chrono', label: 'По хронологии' },
@@ -50,9 +50,9 @@ export default function SettingsGeneralPanel() {
   const disabled = !ready;
   const [pendingDeleteFieldId, setPendingDeleteFieldId] = useState<string | null>(null);
   const template = prefs?.detailCardTemplate ?? defaultDetailCardTemplate();
-  const pendingDeleteLabel =
-    template.fields.find((field) => field.id === pendingDeleteFieldId && field.kind === 'custom')?.label ??
-    'поле';
+  const pendingField = template.fields.find((field) => field.id === pendingDeleteFieldId);
+  const pendingDeleteLabel = pendingField ? templateFieldLabel(pendingField) : 'поле';
+  const pendingDeleteIsCustom = pendingField?.kind === 'custom';
 
   return (
     <div className="arc-settings-main__scroll">
@@ -201,8 +201,9 @@ export default function SettingsGeneralPanel() {
             <DetailTemplateEditor
               variant="settings"
               template={template}
+              readOnly={disabled}
               onChange={(detailCardTemplate) => void update({ detailCardTemplate })}
-              onDeleteCustomField={(fieldId) => setPendingDeleteFieldId(fieldId)}
+              onRequestDelete={(fieldId) => setPendingDeleteFieldId(fieldId)}
             />
           </div>
         </SettingsSection>
@@ -210,7 +211,11 @@ export default function SettingsGeneralPanel() {
       {pendingDeleteFieldId ? (
         <ConfirmModal
           title="Удалить поле?"
-          message={`Поле «${pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках.`}
+          message={
+            pendingDeleteIsCustom
+              ? `Поле «${pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках.`
+              : `Поле «${pendingDeleteLabel}» будет убрано из шаблона. Данные на карточках сохранятся.`
+          }
           confirmLabel="Удалить"
           confirmVariant="danger"
           onCancel={() => setPendingDeleteFieldId(null)}
@@ -218,7 +223,7 @@ export default function SettingsGeneralPanel() {
             const fieldId = pendingDeleteFieldId;
             setPendingDeleteFieldId(null);
             void (async () => {
-              await wipeCustomFieldValues(fieldId);
+              if (pendingDeleteIsCustom) await wipeCustomFieldValues(fieldId);
               const nextFields = template.fields.filter((field) => field.id !== fieldId);
               await update({ detailCardTemplate: { version: 1, fields: nextFields } });
             })();

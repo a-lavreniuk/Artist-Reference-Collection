@@ -2,7 +2,12 @@ import type Database from 'better-sqlite3';
 
 const FTS_TABLE = 'cards_fts';
 
-export type FtsTextColumn = 'description' | 'link_url' | 'ai_caption' | 'annotations_text';
+export type FtsTextColumn =
+  | 'description'
+  | 'link_url'
+  | 'ai_caption'
+  | 'annotations_text'
+  | 'custom_fields_text';
 
 function ftsTableExists(db: Database.Database): boolean {
   const row = db
@@ -25,17 +30,19 @@ function createFtsSchema(db: Database.Database): void {
       link_url,
       ai_caption,
       annotations_text,
+      custom_fields_text,
       tokenize='unicode61'
     );
 
     CREATE TRIGGER cards_fts_ai AFTER INSERT ON cards BEGIN
-      INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text)
+      INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text, custom_fields_text)
       VALUES (
         new.id,
         COALESCE(new.description, ''),
         COALESCE(new.link_url, ''),
         COALESCE(new.ai_caption, ''),
-        COALESCE(new.annotations_text, '')
+        COALESCE(new.annotations_text, ''),
+        COALESCE(new.custom_fields_text, '')
       );
     END;
 
@@ -45,25 +52,27 @@ function createFtsSchema(db: Database.Database): void {
 
     CREATE TRIGGER cards_fts_au AFTER UPDATE ON cards BEGIN
       DELETE FROM ${FTS_TABLE} WHERE card_id = old.id;
-      INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text)
+      INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text, custom_fields_text)
       VALUES (
         new.id,
         COALESCE(new.description, ''),
         COALESCE(new.link_url, ''),
         COALESCE(new.ai_caption, ''),
-        COALESCE(new.annotations_text, '')
+        COALESCE(new.annotations_text, ''),
+        COALESCE(new.custom_fields_text, '')
       );
     END;
   `);
 
   db.exec(`
-    INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text)
+    INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text, custom_fields_text)
     SELECT
       id,
       COALESCE(description, ''),
       COALESCE(link_url, ''),
       COALESCE(ai_caption, ''),
-      COALESCE(annotations_text, '')
+      COALESCE(annotations_text, ''),
+      COALESCE(custom_fields_text, '')
     FROM cards;
   `);
 }
@@ -80,7 +89,12 @@ function rebuildFtsSchema(db: Database.Database): void {
 
 /** Создаёт FTS5-индекс карточек и триггеры синхронизации с `cards`. */
 export function ensureCardsFtsSchema(db: Database.Database): void {
-  if (!ftsTableExists(db) || !ftsHasColumn(db, 'ai_caption') || !ftsHasColumn(db, 'annotations_text')) {
+  if (
+    !ftsTableExists(db) ||
+    !ftsHasColumn(db, 'ai_caption') ||
+    !ftsHasColumn(db, 'annotations_text') ||
+    !ftsHasColumn(db, 'custom_fields_text')
+  ) {
     rebuildFtsSchema(db);
   }
 }
@@ -89,16 +103,24 @@ export function upsertCardAiCaptionFts(db: Database.Database, cardId: string, ai
   ensureCardsFtsSchema(db);
   db.prepare(`DELETE FROM ${FTS_TABLE} WHERE card_id = ?`).run(cardId);
   const row = db
-    .prepare('SELECT description, link_url, annotations_text FROM cards WHERE id = ?')
-    .get(cardId) as { description?: string; link_url?: string; annotations_text?: string } | undefined;
+    .prepare('SELECT description, link_url, annotations_text, custom_fields_text FROM cards WHERE id = ?')
+    .get(cardId) as
+    | {
+        description?: string;
+        link_url?: string;
+        annotations_text?: string;
+        custom_fields_text?: string;
+      }
+    | undefined;
   db.prepare(
-    `INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text) VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO ${FTS_TABLE}(card_id, description, link_url, ai_caption, annotations_text, custom_fields_text) VALUES (?, ?, ?, ?, ?, ?)`
   ).run(
     cardId,
     row?.description ?? '',
     row?.link_url ?? '',
     aiCaption,
-    row?.annotations_text ?? ''
+    row?.annotations_text ?? '',
+    row?.custom_fields_text ?? ''
   );
 }
 
@@ -118,4 +140,15 @@ export function buildFtsColumnMatchQuery(
     return `"${escaped}"*`;
   });
   return `${column} : (${terms.join(' AND ')})`;
+}
+
+export function buildFtsColumnsOrMatchQuery(
+  columns: FtsTextColumn[],
+  keywords: string | undefined
+): string | null {
+  const parts = columns
+    .map((column) => buildFtsColumnMatchQuery(column, keywords))
+    .filter((part): part is string => Boolean(part));
+  if (!parts.length) return null;
+  return parts.join(' OR ');
 }

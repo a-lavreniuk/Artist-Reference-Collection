@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   createCustomTemplateField,
+  customFieldsMapToSearchText,
   defaultDetailCardTemplate,
+  missingBuiltinFieldIds,
   omitCustomFieldKey,
+  reorderVisibleTemplateFields,
   sanitizeCardAnnotations,
   sanitizeCustomFieldsMap,
   sanitizeDetailCardTemplate,
@@ -10,16 +13,18 @@ import {
   isAnnotationVisibleAtTime,
   isPointAnnotation,
   serializeAnnotations,
+  templateFieldIconClass,
+  templateFieldLabel,
   VIDEO_ANNOTATION_TIME_EPS_MS
 } from '../detailCardTemplate';
 
 describe('sanitizeDetailCardTemplate', () => {
-  it('fills missing builtin fields and keeps custom id on rename', () => {
+  it('keeps custom-only templates without restoring builtins', () => {
     const sanitized = sanitizeDetailCardTemplate({
       version: 1,
       fields: [{ id: 'abc', kind: 'custom', type: 'shortText', label: 'Клиент', visible: true }]
     });
-    expect(sanitized.fields.map((f) => f.id)).toEqual(['abc', 'name', 'link', 'description']);
+    expect(sanitized.fields.map((f) => f.id)).toEqual(['abc']);
     const renamed = sanitizeDetailCardTemplate({
       version: 1,
       fields: sanitized.fields.map((f) =>
@@ -29,6 +34,27 @@ describe('sanitizeDetailCardTemplate', () => {
     const custom = renamed.fields.find((f) => f.kind === 'custom');
     expect(custom?.id).toBe('abc');
     expect(custom && custom.kind === 'custom' ? custom.label : null).toBe('Проект');
+  });
+
+  it('keeps an empty fields list', () => {
+    expect(sanitizeDetailCardTemplate({ version: 1, fields: [] }).fields).toEqual([]);
+  });
+
+  it('falls back to default when fields is missing', () => {
+    expect(sanitizeDetailCardTemplate({ version: 1 }).fields.map((f) => f.id)).toEqual([
+      'name',
+      'link',
+      'description'
+    ]);
+  });
+
+  it('keeps builtin label override', () => {
+    const sanitized = sanitizeDetailCardTemplate({
+      version: 1,
+      fields: [{ id: 'name', kind: 'builtin', visible: true, label: 'Название' }]
+    });
+    const name = sanitized.fields[0];
+    expect(name && name.kind === 'builtin' ? templateFieldLabel(name) : null).toBe('Название');
   });
 
   it('drops unknown types and duplicate ids', () => {
@@ -48,6 +74,30 @@ describe('sanitizeDetailCardTemplate', () => {
   });
 });
 
+describe('template helpers', () => {
+  it('lists missing builtins and icons', () => {
+    const template = sanitizeDetailCardTemplate({
+      version: 1,
+      fields: [{ id: 'name', kind: 'builtin', visible: true }]
+    });
+    expect(missingBuiltinFieldIds(template)).toEqual(['link', 'description']);
+    expect(templateFieldIconClass(template.fields[0]!)).toBe('arc-icon-type');
+  });
+
+  it('reorders only visible fields', () => {
+    const fields = sanitizeDetailCardTemplate({
+      version: 1,
+      fields: [
+        { id: 'name', kind: 'builtin', visible: true },
+        { id: 'link', kind: 'builtin', visible: false },
+        { id: 'description', kind: 'builtin', visible: true }
+      ]
+    }).fields;
+    const next = reorderVisibleTemplateFields(fields, 'description', 0);
+    expect(next.map((f) => f.id)).toEqual(['description', 'link', 'name']);
+  });
+});
+
 describe('custom field values and annotations', () => {
   it('omitting a key does not drop other values', () => {
     const next = omitCustomFieldKey({ a: '1', b: '2' }, 'a');
@@ -59,6 +109,12 @@ describe('custom field values and annotations', () => {
       a: 'x',
       b: ['one', 'two']
     });
+  });
+
+  it('flattens custom fields for search', () => {
+    expect(customFieldsMapToSearchText({ a: 'Клиент', b: ['план', 'ветка'], c: '  ' })).toBe(
+      'Клиент\nплан\nветка'
+    );
   });
 
   it('builds search text and time visibility', () => {
@@ -83,5 +139,9 @@ describe('createCustomTemplateField', () => {
     const field = createCustomTemplateField('select', 'id-1');
     expect(field.label).toBe('Селектор');
     expect(field.options).toEqual([]);
+  });
+
+  it('default template still has builtins', () => {
+    expect(defaultDetailCardTemplate().fields.map((f) => f.id)).toEqual(['name', 'link', 'description']);
   });
 });

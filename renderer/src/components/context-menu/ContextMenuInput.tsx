@@ -1,11 +1,19 @@
+import type { KeyboardEvent } from 'react';
+
 type Props = {
   variant: 'live' | 'search' | 'textarea';
   label?: string;
   placeholder?: string;
   value?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
   onChange?: (value: string) => void;
 };
+
+/** Шорткаты окна (Space и др.) не должны перехватывать ввод в меню. */
+function stopMenuInputKeys(e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  e.stopPropagation();
+}
 
 export default function ContextMenuInput({
   variant,
@@ -13,6 +21,7 @@ export default function ContextMenuInput({
   placeholder,
   value,
   disabled,
+  autoFocus,
   onChange
 }: Props) {
   if (variant === 'search') {
@@ -24,6 +33,8 @@ export default function ContextMenuInput({
             className="search-inner slot-value"
             placeholder={placeholder ?? 'Search'}
             value={value}
+            autoFocus={autoFocus}
+            onKeyDown={stopMenuInputKeys}
             onChange={(e) => onChange?.(e.target.value)}
           />
         </div>
@@ -40,6 +51,8 @@ export default function ContextMenuInput({
             placeholder={placeholder ?? label ?? 'Ключевые слова'}
             value={value}
             disabled={disabled}
+            autoFocus={autoFocus}
+            onKeyDown={stopMenuInputKeys}
             onChange={(e) => onChange?.(e.target.value)}
           />
         </label>
@@ -55,6 +68,8 @@ export default function ContextMenuInput({
           placeholder={placeholder ?? label}
           value={value}
           disabled={disabled}
+          autoFocus={autoFocus}
+          onKeyDown={stopMenuInputKeys}
           onChange={(e) => onChange?.(e.target.value)}
         />
       </label>

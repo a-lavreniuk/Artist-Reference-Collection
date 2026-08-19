@@ -70,6 +70,7 @@ import {
   sanitizeCustomFieldsMap,
   serializeAnnotations,
   serializeCustomFieldsMap,
+  customFieldsMapToSearchText,
   omitCustomFieldKey,
   type CardAnnotationV1,
   type CustomFieldsMap
@@ -890,6 +891,8 @@ export async function updateCardInStorage(
   if (patch.customFields !== undefined) {
     sets.push('custom_fields_json = ?');
     vals.push(serializeCustomFieldsMap(cardJson.customFields ?? {}));
+    sets.push('custom_fields_text = ?');
+    vals.push(customFieldsMapToSearchText(cardJson.customFields ?? {}));
   }
   if (patch.annotations !== undefined) {
     const packed = serializeAnnotations(cardJson.annotations ?? []);
@@ -917,14 +920,16 @@ export async function wipeCustomFieldFromLibrary(libraryRoot: string, fieldId: s
     id: string;
     custom_fields_json: string | null;
   }>;
-  const upd = db.prepare('UPDATE cards SET custom_fields_json = ?, date_modified = ? WHERE id = ?');
+  const upd = db.prepare(
+    'UPDATE cards SET custom_fields_json = ?, custom_fields_text = ?, date_modified = ? WHERE id = ?'
+  );
   const now = new Date().toISOString();
   for (const row of rows) {
     const parsed = sanitizeCustomFieldsMap(parseJsonColumn(row.custom_fields_json, {}));
     if (!(fieldId in parsed)) continue;
     const next = omitCustomFieldKey(parsed, fieldId);
     const json = serializeCustomFieldsMap(next);
-    upd.run(json, now, row.id);
+    upd.run(json, customFieldsMapToSearchText(next), now, row.id);
     const cardJson = await readCardJson(root, row.id);
     if (!cardJson) continue;
     const fromFile = sanitizeCustomFieldsMap(cardJson.customFields ?? {});
@@ -1034,8 +1039,8 @@ export async function importExistingCardFolder(
     `INSERT INTO cards (
       id, type, added_at, date_modified, format, width, height, file_size, duration_ms, dominant_color, phash_json,
       original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, name, link_url, rating, is_deleted, deleted_at,
-      custom_fields_json, annotations_json, annotations_text
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?)`
+      custom_fields_json, custom_fields_text, annotations_json, annotations_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?, ?, ?)`
   ).run(
     cardId,
     cardJson.type,
@@ -1057,6 +1062,7 @@ export async function importExistingCardFolder(
     cardJson.linkUrl ?? sourceRow?.linkUrl ?? null,
     clampCardRating(cardJson.rating ?? sourceRow?.rating),
     serializeCustomFieldsMap(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
+    customFieldsMapToSearchText(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
     serializeAnnotations(sanitizeCardAnnotations(cardJson.annotations ?? [])).json,
     serializeAnnotations(sanitizeCardAnnotations(cardJson.annotations ?? [])).text
   );
@@ -1998,8 +2004,8 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
       `INSERT INTO cards (
         id, type, added_at, date_modified, format, width, height, file_size, dominant_color, phash_json,
         original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, rating, is_deleted, deleted_at,
-        custom_fields_json, annotations_json, annotations_text
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        custom_fields_json, custom_fields_text, annotations_json, annotations_text
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       cardIdNorm,
       cardJson.type,
@@ -2020,6 +2026,7 @@ export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<voi
       isDeleted,
       cardJson.deletedAt ?? null,
       serializeCustomFieldsMap(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
+      customFieldsMapToSearchText(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
       packed.json,
       packed.text
     );

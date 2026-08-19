@@ -1,4 +1,4 @@
-import { buildFtsColumnMatchQuery, type FtsTextColumn } from './cardFts';
+import { buildFtsColumnMatchQuery, buildFtsColumnsOrMatchQuery, type FtsTextColumn } from './cardFts';
 import type { DurationMeta, FileWeightMeta, ResolutionMeta } from './filterBucketLabels';
 import {
   buildDurationSegments,
@@ -328,10 +328,12 @@ function appendKeywordsCondition(
   wh: string[],
   binds: unknown[],
   alias: string,
-  column: FtsTextColumn,
+  column: FtsTextColumn | FtsTextColumn[],
   keywords: string | undefined
 ): void {
-  const match = buildFtsColumnMatchQuery(column, keywords);
+  const match = Array.isArray(column)
+    ? buildFtsColumnsOrMatchQuery(column, keywords)
+    : buildFtsColumnMatchQuery(column, keywords);
   if (!match) return;
   wh.push(`${alias}.id IN (SELECT card_id FROM cards_fts WHERE cards_fts MATCH ?)`);
   binds.push(match);
@@ -420,7 +422,7 @@ export function buildGalleryFilterWhere(
       wh.push(`(COALESCE(${alias}.description, '') = '')`);
     } else {
       wh.push(`(COALESCE(${alias}.description, '') != '')`);
-      appendKeywordsCondition(wh, binds, alias, 'description', f.description.keywords);
+      appendKeywordsCondition(wh, binds, alias, ['description', 'custom_fields_text'], f.description.keywords);
     }
   }
 

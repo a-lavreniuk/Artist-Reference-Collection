@@ -1,18 +1,33 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CUSTOM_FIELD_TYPES,
   CUSTOM_FIELD_TYPE_LABELS,
+  DETAIL_BUILTIN_FIELD_LABELS,
+  createBuiltinTemplateField,
   createCustomTemplateField,
+  customFieldTypeIconClass,
+  missingBuiltinFieldIds,
   reorderTemplateFields,
+  reorderVisibleTemplateFields,
   sanitizeDetailCardTemplate,
+  templateFieldIconClass,
   templateFieldLabel,
+  templateFieldTypeLabel,
   type CustomFieldType,
+  type DetailBuiltinFieldId,
   type DetailCardTemplateV1,
+  type DetailTemplateCustomField,
   type DetailTemplateField
 } from '@arc-main-shared/detailCardTemplate';
+import {
+  ContextMenu,
+  ContextMenuHeader,
+  ContextMenuInput,
+  ContextMenuItem,
+  ContextMenuSeparator
+} from '../context-menu';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import { Tooltip } from '../tooltip/Tooltip';
 
 type DragState = {
   dragId: string;
@@ -23,11 +38,15 @@ type DragState = {
   label: string;
 };
 
+type MenuView = 'field' | 'type';
+
 type Props = {
   template: DetailCardTemplateV1;
   onChange: (next: DetailCardTemplateV1) => void;
-  onDeleteCustomField?: (fieldId: string) => void;
-  variant?: 'menu' | 'settings';
+  onRequestDelete?: (fieldId: string) => void;
+  variant?: 'card' | 'settings';
+  readOnly?: boolean;
+  renderValue?: (field: DetailTemplateField) => ReactNode;
 };
 
 function newFieldId(): string {
@@ -40,49 +59,148 @@ function newFieldId(): string {
 export default function DetailTemplateEditor({
   template,
   onChange,
-  onDeleteCustomField,
-  variant = 'menu'
+  onRequestDelete,
+  variant = 'settings',
+  readOnly = false,
+  renderValue
 }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const addBtnRef = useRef<HTMLButtonElement>(null);
+  const fieldMenuAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const nameDraftRef = useRef('');
+  const optionsDraftRef = useRef<Record<string, string>>({});
   const [drag, setDrag] = useState<DragState | null>(null);
   const [optionsDraft, setOptionsDraft] = useState<Record<string, string>>({});
+  const [addOpen, setAddOpen] = useState(false);
+  const [menuFieldId, setMenuFieldId] = useState<string | null>(null);
+  const [menuView, setMenuView] = useState<MenuView>('field');
+  const [nameDraft, setNameDraft] = useState('');
+
+  nameDraftRef.current = nameDraft;
+  optionsDraftRef.current = optionsDraft;
 
   useLayoutEffect(() => {
-    if (listRef.current) void hydrateArcNavbarIcons(listRef.current);
-  }, [template.fields, drag, variant]);
+    if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
+  }, [template.fields, drag, variant, readOnly, menuFieldId, addOpen]);
 
   const commit = (fields: DetailTemplateField[]) => {
     onChange(sanitizeDetailCardTemplate({ version: 1, fields }));
   };
 
+  const listFields =
+    variant === 'card' ? template.fields.filter((field) => field.visible) : template.fields;
+
+  const menuField = menuFieldId
+    ? template.fields.find((field) => field.id === menuFieldId)
+    : undefined;
+
+  const applyFieldMenuEdits = (
+    fields: DetailTemplateField[],
+    fieldId: string,
+    patch?: { visible?: boolean; type?: CustomFieldType }
+  ): DetailTemplateField[] => {
+    const trimmed = nameDraftRef.current.trim();
+    const rawOptions = optionsDraftRef.current[fieldId];
+    return fields.map((field) => {
+      if (field.id !== fieldId) return field;
+      const visible = patch?.visible ?? field.visible;
+      if (field.kind === 'builtin') {
+        if (!trimmed) return { id: field.id, kind: 'builtin' as const, visible };
+        return { ...field, label: trimmed, visible };
+      }
+      const type = patch?.type ?? field.type;
+      const next: DetailTemplateCustomField = {
+        ...field,
+        type,
+        label: trimmed || CUSTOM_FIELD_TYPE_LABELS[type],
+        visible
+      };
+      if (type === 'select' || type === 'multiSelect') {
+        next.options =
+          rawOptions != null
+            ? rawOptions
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+            : (field.options ?? []);
+      } else {
+        delete next.options;
+      }
+      return next;
+    });
+  };
+
+  const persistFieldMenuEdits = (fieldId: string) => {
+    commit(applyFieldMenuEdits(template.fields, fieldId));
+  };
+
+  const closeFieldMenuOnly = () => {
+    setMenuFieldId(null);
+    setMenuView('field');
+    fieldMenuAnchorRef.current = null;
+  };
+
+  const closeFieldMenu = () => {
+    if (menuFieldId) persistFieldMenuEdits(menuFieldId);
+    closeFieldMenuOnly();
+  };
+
+  const openFieldMenu = (field: DetailTemplateField, anchor: HTMLButtonElement) => {
+    if (menuFieldId && menuFieldId !== field.id) persistFieldMenuEdits(menuFieldId);
+    setAddOpen(false);
+    fieldMenuAnchorRef.current = anchor;
+    setMenuFieldId(field.id);
+    setMenuView('field');
+    setNameDraft(templateFieldLabel(field));
+    if (field.kind === 'custom' && (field.type === 'select' || field.type === 'multiSelect')) {
+      setOptionsDraft((prev) => ({
+        ...prev,
+        [field.id]: prev[field.id] ?? (field.options ?? []).join('\n')
+      }));
+    }
+  };
+
   const toggleVisible = (id: string) => {
-    commit(
-      template.fields.map((field) => (field.id === id ? { ...field, visible: !field.visible } : field))
-    );
+    const current = template.fields.find((field) => field.id === id);
+    if (!current) return;
+    const fields =
+      menuFieldId === id
+        ? applyFieldMenuEdits(template.fields, id, { visible: !current.visible })
+        : template.fields.map((field) =>
+            field.id === id ? { ...field, visible: !field.visible } : field
+          );
+    commit(fields);
   };
 
-  const addField = (type: CustomFieldType) => {
+  const changeCustomType = (id: string, type: CustomFieldType) => {
+    commit(applyFieldMenuEdits(template.fields, id, { type }));
+    setMenuView('field');
+  };
+
+  const duplicateField = (field: DetailTemplateCustomField) => {
+    const fields = applyFieldMenuEdits(template.fields, field.id);
+    const source = fields.find((item) => item.id === field.id);
+    if (!source || source.kind !== 'custom') return;
+    const copy = createCustomTemplateField(source.type, newFieldId());
+    copy.label = templateFieldLabel(source);
+    copy.visible = source.visible;
+    if (source.options) copy.options = [...source.options];
+    const index = fields.findIndex((item) => item.id === field.id);
+    const next = [...fields];
+    next.splice(index < 0 ? next.length : index + 1, 0, copy);
+    commit(next);
+  };
+
+  const addCustom = (type: CustomFieldType) => {
     commit([...template.fields, createCustomTemplateField(type, newFieldId())]);
+    setAddOpen(false);
   };
 
-  const rename = (id: string, label: string) => {
-    commit(
-      template.fields.map((field) =>
-        field.kind === 'custom' && field.id === id ? { ...field, label } : field
-      )
-    );
-  };
-
-  const commitOptions = (id: string, raw: string) => {
-    const options = raw
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    commit(
-      template.fields.map((field) =>
-        field.kind === 'custom' && field.id === id ? { ...field, options } : field
-      )
-    );
+  const addBuiltin = (id: DetailBuiltinFieldId) => {
+    if (template.fields.some((field) => field.id === id)) return;
+    commit([...template.fields, createBuiltinTemplateField(id)]);
+    setAddOpen(false);
   };
 
   const startDrag = (args: {
@@ -91,6 +209,7 @@ export default function DetailTemplateEditor({
     handleEl: HTMLElement;
     rowEl: HTMLElement;
   }) => {
+    if (readOnly) return;
     const listEl = listRef.current;
     if (!listEl) return;
     const rowRect = args.rowEl.getBoundingClientRect();
@@ -139,132 +258,255 @@ export default function DetailTemplateEditor({
           break;
         }
       }
-      commit(reorderTemplateFields(template.fields, args.id, nextInsert));
+      if (variant === 'card') {
+        commit(reorderVisibleTemplateFields(template.fields, args.id, nextInsert));
+      } else {
+        commit(reorderTemplateFields(template.fields, args.id, nextInsert));
+      }
       setDrag(null);
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
   };
 
+  const missingBuiltins = missingBuiltinFieldIds(template);
+  const showSelectOptions =
+    menuField?.kind === 'custom' &&
+    (menuField.type === 'select' || menuField.type === 'multiSelect');
+
   return (
-    <>
-      <div
-        ref={listRef}
-        className={`context-menu__filter-options-list${variant === 'settings' ? ' arc-detail-template-editor' : ''}${drag ? ' is-drop-end' : ''}`}
-      >
-        {template.fields.map((field, rowIndex) => {
+    <div ref={rootRef} className={`arc-detail-template-editor arc-detail-template-editor--${variant}`}>
+      <div ref={listRef} className={`arc-card-detail-prop-list${drag ? ' is-drop-end' : ''}`}>
+        {listFields.map((field, rowIndex) => {
           const label = templateFieldLabel(field);
-          const visible = field.visible;
           const insertBefore = drag != null && drag.insertIndex === rowIndex && drag.dragId !== field.id;
+          const menuOpen = menuFieldId === field.id;
           return (
             <div
               key={field.id}
-              className={`context-menu__filter-row${drag?.dragId === field.id ? ' is-dragging' : ''}${insertBefore ? ' is-drop-before' : ''}`}
+              className={`arc-card-detail-prop-row${variant === 'card' ? '' : ' arc-card-detail-prop-row--schema'}${
+                drag?.dragId === field.id ? ' is-dragging' : ''
+              }${insertBefore ? ' is-drop-before' : ''}`}
               data-template-field-row={field.id}
             >
-              <div className="context-menu__filter-row-inner">
-                <button
-                  type="button"
-                  className="context-menu__filter-row-handle"
-                  aria-label={`Переместить ${label}`}
-                  onPointerDown={(e) => {
-                    if (e.button !== 0) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    startDrag({
-                      id: field.id,
-                      label,
-                      handleEl: e.currentTarget,
-                      rowEl: e.currentTarget.closest('[data-template-field-row]') as HTMLElement
-                    });
-                  }}
-                >
-                  <span
-                    className="context-menu__filter-row-handle-icon tab-icon arc-icon-chevrons-up-down"
-                    data-arc-icon-size="m"
-                    aria-hidden="true"
-                  />
-                </button>
-                {variant === 'settings' && field.kind === 'custom' ? (
-                  <label className={`field input-live${field.label.trim() ? ' has-value' : ''}`} data-live-input>
-                    <input
-                      className="input"
-                      type="text"
-                      placeholder={CUSTOM_FIELD_TYPE_LABELS[field.type]}
-                      value={field.label}
-                      onChange={(e) => rename(field.id, e.target.value)}
+              <div className="arc-card-detail-prop-row__name">
+                {!readOnly ? (
+                  <button
+                    type="button"
+                    className="arc-card-detail-prop-row__handle"
+                    aria-label={`Переместить ${label}`}
+                    onPointerDown={(e) => {
+                      if (e.button !== 0) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      startDrag({
+                        id: field.id,
+                        label,
+                        handleEl: e.currentTarget,
+                        rowEl: e.currentTarget.closest('[data-template-field-row]') as HTMLElement
+                      });
+                    }}
+                  >
+                    <span
+                      className="tab-icon arc-icon-chevrons-up-down"
+                      data-arc-icon-size="m"
+                      aria-hidden="true"
                     />
-                  </label>
+                  </button>
+                ) : null}
+                {readOnly ? (
+                  <span className="arc-card-detail-prop-row__label text-s">
+                    <span
+                      className={`tab-icon ${templateFieldIconClass(field)}`}
+                      data-arc-icon-size="m"
+                      aria-hidden="true"
+                    />
+                    <span className="arc-card-detail-prop-row__label-text">{label}</span>
+                  </span>
                 ) : (
-                  <span className="context-menu__filter-row-label">{label}</span>
+                  <button
+                    type="button"
+                    className="arc-card-detail-prop-row__label text-s"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                    onClick={(e) => openFieldMenu(field, e.currentTarget)}
+                  >
+                    <span
+                      className={`tab-icon ${templateFieldIconClass(field)}`}
+                      data-arc-icon-size="m"
+                      aria-hidden="true"
+                    />
+                    <span className="arc-card-detail-prop-row__label-text">{label}</span>
+                  </button>
                 )}
-                <button
-                  type="button"
-                  className="context-menu__filter-row-visibility"
-                  aria-label={visible ? `Скрыть ${label}` : `Показать ${label}`}
-                  aria-pressed={visible}
-                  onClick={() => toggleVisible(field.id)}
-                >
-                  <span
-                    className={`context-menu__filter-row-visibility-icon tab-icon ${visible ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
-                    data-arc-icon-size="m"
-                    aria-hidden="true"
-                  />
-                </button>
-                {field.kind === 'custom' && onDeleteCustomField ? (
-                  <Tooltip content="Удалить поле" position="top">
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-icon-only btn-ds"
-                      aria-label={`Удалить ${label}`}
-                      onClick={() => onDeleteCustomField(field.id)}
-                    >
-                      <span className="btn-icon-only__glyph arc-icon-close" aria-hidden="true" />
-                    </button>
-                  </Tooltip>
+                {variant === 'settings' ? (
+                  <button
+                    type="button"
+                    className="arc-card-detail-prop-row__visibility"
+                    aria-label={field.visible ? `Скрыть ${label}` : `Показать ${label}`}
+                    aria-pressed={field.visible}
+                    onClick={() => toggleVisible(field.id)}
+                  >
+                    <span
+                      className={`tab-icon ${field.visible ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
+                      aria-hidden="true"
+                      data-arc-icon-size="m"
+                    />
+                  </button>
                 ) : null}
               </div>
-              {variant === 'settings' &&
-              field.kind === 'custom' &&
-              (field.type === 'select' || field.type === 'multiSelect') ? (
-                <label className="field arc-detail-template-editor__options">
-                  <textarea
-                    className="input textarea"
-                    rows={3}
-                    placeholder="Варианты, каждый с новой строки"
-                    value={optionsDraft[field.id] ?? (field.options ?? []).join('\n')}
-                    onChange={(e) => setOptionsDraft((prev) => ({ ...prev, [field.id]: e.target.value }))}
-                    onBlur={(e) => commitOptions(field.id, e.target.value)}
-                  />
-                </label>
+              {variant === 'card' && renderValue ? (
+                <div className="arc-card-detail-prop-row__value">{renderValue(field)}</div>
               ) : null}
             </div>
           );
         })}
       </div>
-      <div className="arc-detail-template-editor__add">
-        {CUSTOM_FIELD_TYPES.map((type) => (
-          <button
-            key={type}
-            type="button"
-            className="btn btn-outline btn-ds btn-s"
-            onClick={() => addField(type)}
-          >
-            <span className="btn-ds__value">{CUSTOM_FIELD_TYPE_LABELS[type]}</span>
-          </button>
+      {!readOnly ? (
+        <button
+          ref={addBtnRef}
+          type="button"
+          className="btn btn-ghost btn-ds arc-detail-template-editor__add-btn"
+          aria-haspopup="menu"
+          aria-expanded={addOpen}
+          onClick={() => {
+            if (menuFieldId) closeFieldMenu();
+            setAddOpen(true);
+          }}
+        >
+          <span className="btn-ds__icon arc-icon-plus" aria-hidden="true" />
+          <span className="btn-ds__value">Добавить свойство</span>
+        </button>
+      ) : null}
+
+      <ContextMenu
+        open={Boolean(menuField) && !readOnly}
+        anchorRef={fieldMenuAnchorRef}
+        onClose={closeFieldMenu}
+        ariaLabel="Параметры свойства"
+        aboveModal
+        anchorAlign="start"
+        anchorPlacement="belowAnchor"
+      >
+        {menuField && menuView === 'type' && menuField.kind === 'custom' ? (
+          <>
+            <ContextMenuItem
+              label="Назад"
+              iconClass="arc-icon-chevron-left"
+              onSelect={() => setMenuView('field')}
+            />
+            <ContextMenuHeader>Тип свойства</ContextMenuHeader>
+            {CUSTOM_FIELD_TYPES.map((type) => (
+              <ContextMenuItem
+                key={type}
+                label={CUSTOM_FIELD_TYPE_LABELS[type]}
+                iconClass={customFieldTypeIconClass(type)}
+                selected={menuField.type === type}
+                onSelect={() => changeCustomType(menuField.id, type)}
+              />
+            ))}
+          </>
+        ) : null}
+        {menuField && menuView === 'field' ? (
+          <>
+            <ContextMenuInput
+              variant="live"
+              placeholder={templateFieldTypeLabel(menuField)}
+              value={nameDraft}
+              autoFocus
+              onChange={setNameDraft}
+            />
+            <ContextMenuHeader>Тип свойства</ContextMenuHeader>
+            <ContextMenuItem
+              label={templateFieldTypeLabel(menuField)}
+              iconClass={
+                menuField.kind === 'custom' ? 'arc-icon-chevron-right' : templateFieldIconClass(menuField)
+              }
+              disabled={menuField.kind !== 'custom'}
+              onSelect={() => {
+                if (menuField.kind !== 'custom') return;
+                setMenuView('type');
+              }}
+            />
+            {showSelectOptions ? (
+              <ContextMenuInput
+                variant="textarea"
+                placeholder="Каждый вариант с новой строки"
+                value={optionsDraft[menuField.id] ?? (menuField.options ?? []).join('\n')}
+                onChange={(value) => setOptionsDraft((prev) => ({ ...prev, [menuField.id]: value }))}
+              />
+            ) : null}
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              label={menuField.visible ? 'Скрыть' : 'Показать'}
+              iconClass={menuField.visible ? 'arc-icon-eye-off' : 'arc-icon-eye'}
+              onSelect={() => {
+                const wasVisible = menuField.visible;
+                toggleVisible(menuField.id);
+                if (variant === 'card' && wasVisible) closeFieldMenuOnly();
+              }}
+            />
+            {menuField.kind === 'custom' ? (
+              <ContextMenuItem
+                label="Создать копию"
+                iconClass="arc-icon-copy"
+                onSelect={() => duplicateField(menuField)}
+              />
+            ) : null}
+            {onRequestDelete ? (
+              <ContextMenuItem
+                label="Удалить"
+                iconClass="arc-icon-trash"
+                onSelect={() => {
+                  const id = menuField.id;
+                  closeFieldMenu();
+                  onRequestDelete(id);
+                }}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </ContextMenu>
+
+      <ContextMenu
+        open={addOpen && !readOnly}
+        anchorRef={addBtnRef}
+        onClose={() => setAddOpen(false)}
+        ariaLabel="Добавить свойство"
+        aboveModal
+        anchorAlign="start"
+        anchorPlacement="belowAnchor"
+      >
+        <ContextMenuHeader>Тип свойства</ContextMenuHeader>
+        {missingBuiltins.map((id) => (
+          <ContextMenuItem
+            key={id}
+            label={DETAIL_BUILTIN_FIELD_LABELS[id]}
+            iconClass={templateFieldIconClass(createBuiltinTemplateField(id))}
+            onSelect={() => addBuiltin(id)}
+          />
         ))}
-      </div>
+        {CUSTOM_FIELD_TYPES.map((type) => (
+          <ContextMenuItem
+            key={type}
+            label={CUSTOM_FIELD_TYPE_LABELS[type]}
+            iconClass={customFieldTypeIconClass(type)}
+            onSelect={() => addCustom(type)}
+          />
+        ))}
+      </ContextMenu>
+
       {drag
         ? createPortal(
             <div
-              className="context-menu__filter-row-ghost"
+              className="arc-card-detail-prop-row-ghost"
               style={{ left: drag.ghostX, top: drag.ghostY, width: drag.ghostWidth }}
             >
-              <span className="context-menu__filter-row-label">{drag.label}</span>
+              <span className="text-s">{drag.label}</span>
             </div>,
             document.body
           )
         : null}
-    </>
+    </div>
   );
 }

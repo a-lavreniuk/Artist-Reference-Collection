@@ -32,6 +32,8 @@ export type DetailTemplateBuiltinField = {
   id: DetailBuiltinFieldId;
   kind: 'builtin';
   visible: boolean;
+  /** Пользовательское имя; пустое — подпись по умолчанию. */
+  label?: string;
 };
 
 export type DetailTemplateCustomField = {
@@ -122,18 +124,20 @@ export function sanitizeDetailCardTemplate(raw: unknown): DetailCardTemplateV1 {
   const fallback = defaultDetailCardTemplate();
   if (!raw || typeof raw !== 'object') return fallback;
   const rec = raw as Record<string, unknown>;
-  const list = Array.isArray(rec.fields) ? rec.fields : [];
+  if (!Array.isArray(rec.fields)) return fallback;
   const fields: DetailTemplateField[] = [];
   const seen = new Set<string>();
 
-  for (const item of list) {
+  for (const item of rec.fields) {
     if (!item || typeof item !== 'object') continue;
     const row = item as Record<string, unknown>;
     if (row.kind === 'builtin' && typeof row.id === 'string' && BUILTIN_SET.has(row.id)) {
       const id = row.id as DetailBuiltinFieldId;
       if (seen.has(id)) continue;
       seen.add(id);
-      fields.push({ id, kind: 'builtin', visible: row.visible !== false });
+      const builtin: DetailTemplateBuiltinField = { id, kind: 'builtin', visible: row.visible !== false };
+      if (typeof row.label === 'string' && row.label.trim()) builtin.label = row.label.trim();
+      fields.push(builtin);
       continue;
     }
     if (row.kind === 'custom') {
@@ -141,12 +145,6 @@ export function sanitizeDetailCardTemplate(raw: unknown): DetailCardTemplateV1 {
       if (!custom || seen.has(custom.id) || BUILTIN_SET.has(custom.id)) continue;
       seen.add(custom.id);
       fields.push(custom);
-    }
-  }
-
-  for (const id of DETAIL_BUILTIN_FIELD_IDS) {
-    if (!seen.has(id)) {
-      fields.push({ id, kind: 'builtin', visible: true });
     }
   }
 
@@ -165,9 +163,58 @@ export function createCustomTemplateField(type: CustomFieldType, id: string): De
   return field;
 }
 
+export function createBuiltinTemplateField(id: DetailBuiltinFieldId): DetailTemplateBuiltinField {
+  return { id, kind: 'builtin', visible: true };
+}
+
+export function missingBuiltinFieldIds(template: DetailCardTemplateV1): DetailBuiltinFieldId[] {
+  const have = new Set(
+    template.fields.filter((field): field is DetailTemplateBuiltinField => field.kind === 'builtin').map((field) => field.id)
+  );
+  return DETAIL_BUILTIN_FIELD_IDS.filter((id) => !have.has(id));
+}
+
 export function templateFieldLabel(field: DetailTemplateField): string {
-  if (field.kind === 'builtin') return DETAIL_BUILTIN_FIELD_LABELS[field.id];
+  if (field.kind === 'builtin') {
+    return field.label?.trim() ? field.label.trim() : DETAIL_BUILTIN_FIELD_LABELS[field.id];
+  }
   return field.label;
+}
+
+const BUILTIN_TYPE_LABELS: Record<DetailBuiltinFieldId, string> = {
+  name: CUSTOM_FIELD_TYPE_LABELS.shortText,
+  link: CUSTOM_FIELD_TYPE_LABELS.url,
+  description: CUSTOM_FIELD_TYPE_LABELS.longText
+};
+
+export function templateFieldTypeLabel(field: DetailTemplateField): string {
+  if (field.kind === 'builtin') return BUILTIN_TYPE_LABELS[field.id];
+  return CUSTOM_FIELD_TYPE_LABELS[field.type];
+}
+
+/** Иконка типа свойства — только существующие `arc-icon-*`. */
+export function templateFieldIconClass(field: DetailTemplateField): string {
+  if (field.kind === 'builtin') {
+    if (field.id === 'name') return 'arc-icon-type';
+    if (field.id === 'link') return 'arc-icon-link';
+    return 'arc-icon-description';
+  }
+  if (field.type === 'shortText') return 'arc-icon-type';
+  if (field.type === 'longText') return 'arc-icon-description';
+  if (field.type === 'url') return 'arc-icon-link';
+  if (field.type === 'date') return 'arc-icon-calendar';
+  if (field.type === 'select') return 'arc-icon-check-hexagon';
+  return 'arc-icon-layout-list';
+}
+
+export function customFieldTypeIconClass(type: CustomFieldType): string {
+  return templateFieldIconClass({
+    id: 'preview',
+    kind: 'custom',
+    type,
+    label: CUSTOM_FIELD_TYPE_LABELS[type],
+    visible: true
+  });
 }
 
 export function clampUnit(value: number): number {
@@ -274,6 +321,32 @@ export function serializeCustomFieldsMap(map: CustomFieldsMap): string | null {
   return JSON.stringify(map);
 }
 
+export function customFieldsMapToSearchText(map: CustomFieldsMap): string {
+  const parts: string[] = [];
+  for (const value of Object.values(map)) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) parts.push(trimmed);
+      continue;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const trimmed = item.trim();
+        if (trimmed) parts.push(trimmed);
+      }
+    }
+  }
+  return parts.join('\n');
+}
+
+export function customFieldsJsonToSearchText(raw: unknown): string {
+  if (raw == null || raw === '') return '';
+  if (typeof raw === 'string') {
+    return customFieldsMapToSearchText(sanitizeCustomFieldsMap(parseJsonColumn(raw, {})));
+  }
+  return customFieldsMapToSearchText(sanitizeCustomFieldsMap(raw));
+}
+
 export function reorderTemplateFields(
   fields: DetailTemplateField[],
   id: string,
@@ -288,6 +361,18 @@ export function reorderTemplateFields(
   to = Math.max(0, Math.min(next.length, to));
   next.splice(to, 0, item);
   return next;
+}
+
+/** Перестановка только среди видимых полей; скрытые остаются на своих местах. */
+export function reorderVisibleTemplateFields(
+  fields: DetailTemplateField[],
+  id: string,
+  insertIndex: number
+): DetailTemplateField[] {
+  const visible = fields.filter((field) => field.visible);
+  const nextVisible = reorderTemplateFields(visible, id, insertIndex);
+  let index = 0;
+  return fields.map((field) => (field.visible ? nextVisible[index++]! : field));
 }
 
 export function serializeAnnotations(annotations: CardAnnotationV1[]): {

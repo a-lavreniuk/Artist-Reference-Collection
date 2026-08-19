@@ -10,7 +10,7 @@ const FTS_RANK_CAP = 2500;
 function buildMultiColumnFtsMatch(query: string): string | null {
   const trimmed = query.trim();
   if (!trimmed) return null;
-  const columns = ['description', 'link_url', 'ai_caption'] as const;
+  const columns = ['description', 'link_url', 'ai_caption', 'custom_fields_text'] as const;
   const parts = columns
     .map((col) => buildFtsColumnMatchQuery(col, trimmed))
     .filter((p): p is string => Boolean(p));

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
-import { isEditableTarget } from '../../shortcuts/shortcutGuards';
+import { isContextMenuOpen, isEditableTarget } from '../../shortcuts/shortcutGuards';
 import type { CardDetailVideoPlayerHandle } from './cardDetailVideoPlayerTypes';
 
 type Options = {
@@ -13,7 +13,7 @@ export function useCardDetailVideoShortcuts({ enabled, playerRef }: Options) {
     if (!enabled) return;
 
     const onKey = (e: KeyboardEvent) => {
-      if (isEditableTarget(e.target)) return;
+      if (isEditableTarget(e.target) || isContextMenuOpen()) return;
       const player = playerRef.current;
       if (!player) return;
 

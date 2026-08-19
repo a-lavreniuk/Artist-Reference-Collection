@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import { INDEX_DB_FILENAME, libraryMetaFileAbs } from '../libraryFilenames';
+import { customFieldsJsonToSearchText } from '../shared/detailCardTemplate';
 import { ensureCardsFtsSchema } from './cardFts';
 import { ensureCardEmbeddingsSchema } from './cardEmbeddings';
 import { ensureShuffleSqlFunctions } from './shuffleOrder';
@@ -147,6 +148,18 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   }
   if (!tableHasColumn(db, 'cards', 'custom_fields_json')) {
     db.exec('ALTER TABLE cards ADD COLUMN custom_fields_json TEXT');
+  }
+  if (!tableHasColumn(db, 'cards', 'custom_fields_text')) {
+    db.exec("ALTER TABLE cards ADD COLUMN custom_fields_text TEXT NOT NULL DEFAULT ''");
+    const rows = db.prepare('SELECT id, custom_fields_json FROM cards').all() as Array<{
+      id: string;
+      custom_fields_json: string | null;
+    }>;
+    const upd = db.prepare('UPDATE cards SET custom_fields_text = ? WHERE id = ?');
+    for (const row of rows) {
+      const text = customFieldsJsonToSearchText(row.custom_fields_json);
+      if (text) upd.run(text, row.id);
+    }
   }
   if (!tableHasColumn(db, 'cards', 'annotations_json')) {
     db.exec('ALTER TABLE cards ADD COLUMN annotations_json TEXT');

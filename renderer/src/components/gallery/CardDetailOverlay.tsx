@@ -32,9 +32,6 @@ import CardDetailCommentCursor from './CardDetailCommentCursor';
 import CardDetailAnnotationPeek from './CardDetailAnnotationPeek';
 import { clusterAnnotations } from './annotationCluster';
 import type { AnnotationDraftRect } from './CardDetailAnnotationLayer';
-import DetailTemplateEditor from './DetailTemplateEditor';
-import { ContextMenu } from '../context-menu';
-import ContextMenuHeader from '../context-menu/ContextMenuHeader';
 import { loadCardsInOrder } from './cardDetailQueueCards';
 import { getDetailQueueOpen, setDetailQueueOpen } from './cardDetailPreviewQueueSession';
 import CardInfoModal from './CardInfoModal';
@@ -135,7 +132,7 @@ import {
   type CardSettingsFieldSelection
 } from './cardSettingsClipboard';
 import { matchesShortcut } from '../../shortcuts/matchShortcutEvent';
-import { isEditableTarget } from '../../shortcuts/shortcutGuards';
+import { isContextMenuOpen, isEditableTarget } from '../../shortcuts/shortcutGuards';
 import {
   collectDetailPrefetchCardIds,
   resolveCardFeedNeighbors,
@@ -151,6 +148,7 @@ import {
   clampUnit,
   sanitizeCardAnnotations,
   sanitizeCustomFieldsMap,
+  templateFieldLabel,
   type CardAnnotationV1,
   type CustomFieldsMap
 } from '@arc-main-shared/detailCardTemplate';
@@ -211,7 +209,6 @@ export default function CardDetailOverlay({
   const annotationsSaveTimerRef = useRef<number | null>(null);
   const copyAlertTimerRef = useRef<number | null>(null);
   const copySettingsAnchorRef = useRef<HTMLButtonElement>(null);
-  const templateMenuAnchorRef = useRef<HTMLButtonElement>(null);
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const [card, setCard] = useState<CardRecord | null>(null);
@@ -240,8 +237,6 @@ export default function CardDetailOverlay({
   const [annotations, setAnnotations] = useState<CardAnnotationV1[]>([]);
   const annotationsRef = useRef<CardAnnotationV1[]>([]);
   const lastAnnotationsCardIdRef = useRef<string>('');
-  const [descriptionEditMode, setDescriptionEditMode] = useState(false);
-  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
   const [commentMode, setCommentMode] = useState(false);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
   const [hoveredAnnotationId, setHoveredAnnotationId] = useState<string | null>(null);
@@ -466,13 +461,11 @@ export default function CardDetailOverlay({
     setPendingTagSearchIds([]);
     setConfirmOverwriteDescription(false);
     setGenerateDescriptionBusy(false);
-    setDescriptionEditMode(false);
     setCommentMode(false);
     setSelectedAnnotationId(null);
     setAnnotationComposer(null);
     setComposerText('');
     setCommentCursor(null);
-    setTemplateMenuOpen(false);
     setVideoCurrentMs(0);
   }, [cardId]);
 
@@ -771,13 +764,13 @@ export default function CardDetailOverlay({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (isContextMenuOpen()) return;
       if (pendingTagSearchIdsRef.current.length > 0) {
         setPendingTagSearchIds([]);
         return;
       }
       if (actionAlert) setActionAlert(null);
       else if (copySettingsMenuOpen) setCopySettingsMenuOpen(false);
-      else if (templateMenuOpen) setTemplateMenuOpen(false);
       else if (pendingDeleteFieldId) setPendingDeleteFieldId(null);
       else if (pendingDeleteAnnotationId) setPendingDeleteAnnotationId(null);
       else if (annotationComposer) cancelAnnotationComposer();
@@ -802,7 +795,6 @@ export default function CardDetailOverlay({
     tagsModalOpen,
     collectionsModalOpen,
     copySettingsMenuOpen,
-    templateMenuOpen,
     pendingDeleteFieldId,
     pendingDeleteAnnotationId,
     annotationComposer,
@@ -1452,7 +1444,6 @@ export default function CardDetailOverlay({
     tagsModalOpen ||
     collectionsModalOpen ||
     copySettingsMenuOpen ||
-    templateMenuOpen ||
     pendingDeleteFieldId !== null ||
     pendingDeleteAnnotationId !== null ||
     annotationComposer !== null ||
@@ -1468,7 +1459,7 @@ export default function CardDetailOverlay({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isEditableTarget(e.target)) return;
+      if (isEditableTarget(e.target) || isContextMenuOpen()) return;
 
       if (matchesShortcut(e, 'detail.previous') && neighborCardIds?.prev) {
         e.preventDefault();
@@ -1964,8 +1955,11 @@ export default function CardDetailOverlay({
     }
   };
 
+  const descriptionFieldVisible = detailTemplate.fields.some(
+    (field) => field.id === 'description' && field.visible
+  );
   const descriptionSectionFooter =
-    descriptionEditMode && canGenerateDescription ? (
+    descriptionFieldVisible && canGenerateDescription ? (
     <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
       <div className="btn-group btn-group-ds arc-card-detail-desc-gen">
         <button
@@ -2004,9 +1998,9 @@ export default function CardDetailOverlay({
     </div>
   ) : null;
 
-  const pendingDeleteLabel =
-    detailTemplate.fields.find((field) => field.id === pendingDeleteFieldId && field.kind === 'custom')
-      ?.label ?? 'поле';
+  const pendingDeleteField = detailTemplate.fields.find((field) => field.id === pendingDeleteFieldId);
+  const pendingDeleteLabel = pendingDeleteField ? templateFieldLabel(pendingDeleteField) : 'поле';
+  const pendingDeleteIsCustom = pendingDeleteField?.kind === 'custom';
 
   const tagsSectionFooter = (
     <div
@@ -2472,45 +2466,9 @@ export default function CardDetailOverlay({
               <CollapsibleSection
                 title="Описание"
                 footer={descriptionSectionFooter}
-                headerActions={
-                  !inTrash ? (
-                    <>
-                      <Tooltip
-                        content={descriptionEditMode ? 'Просмотр' : 'Редактировать'}
-                        position="top"
-                      >
-                        <button
-                          type="button"
-                          className={`btn btn-outline btn-icon-only btn-ds${descriptionEditMode ? ' is-active' : ''}`}
-                          aria-label={descriptionEditMode ? 'Просмотр' : 'Редактировать'}
-                          aria-pressed={descriptionEditMode}
-                          onClick={() => setDescriptionEditMode((prev) => !prev)}
-                        >
-                          <span
-                            className={`btn-icon-only__glyph ${descriptionEditMode ? 'arc-icon-eye' : 'arc-icon-pencil'}`}
-                            aria-hidden="true"
-                          />
-                        </button>
-                      </Tooltip>
-                      <Tooltip content="Поля описания" position="top">
-                        <button
-                          ref={templateMenuAnchorRef}
-                          type="button"
-                          className={`btn btn-outline btn-icon-only btn-ds${templateMenuOpen ? ' is-active' : ''}`}
-                          aria-label="Поля описания"
-                          aria-pressed={templateMenuOpen}
-                          onClick={() => setTemplateMenuOpen((prev) => !prev)}
-                        >
-                          <span className="btn-icon-only__glyph arc-icon-layout-list" aria-hidden="true" />
-                        </button>
-                      </Tooltip>
-                    </>
-                  ) : undefined
-                }
               >
                 <CardDetailDescriptionFields
                   template={detailTemplate}
-                  editMode={descriptionEditMode && !inTrash}
                   inTrash={inTrash}
                   rating={rating}
                   onRatingChange={applyRating}
@@ -2536,6 +2494,8 @@ export default function CardDetailOverlay({
                   descriptionTextareaRef={descriptionTextareaRef}
                   customFields={customFields}
                   onCustomFieldChange={handleCustomFieldChange}
+                  onTemplateChange={(next) => void updatePrefs({ detailCardTemplate: next })}
+                  onRequestDeleteField={(fieldId) => setPendingDeleteFieldId(fieldId)}
                 />
               </CollapsibleSection>
 
@@ -2948,27 +2908,6 @@ export default function CardDetailOverlay({
         />
       ) : null}
 
-      {!inTrash ? (
-        <ContextMenu
-          open={templateMenuOpen}
-          anchorRef={templateMenuAnchorRef}
-          onClose={() => setTemplateMenuOpen(false)}
-          ariaLabel="Поля описания"
-          aboveModal
-        >
-          <ContextMenuHeader>Поля описания</ContextMenuHeader>
-          <DetailTemplateEditor
-            variant="menu"
-            template={detailTemplate}
-            onChange={(next) => void updatePrefs({ detailCardTemplate: next })}
-            onDeleteCustomField={(fieldId) => {
-              setTemplateMenuOpen(false);
-              setPendingDeleteFieldId(fieldId);
-            }}
-          />
-        </ContextMenu>
-      ) : null}
-
       {pendingDeleteFieldId ? (
         <div
           className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
@@ -3003,8 +2942,9 @@ export default function CardDetailOverlay({
             <div className="arc-modal__body">
               <div className="arc-modal__slot">
                 <p className="arc-modal__slot-text">
-                  Поле «{pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех
-                  карточках.
+                  {pendingDeleteIsCustom
+                    ? `Поле «${pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках.`
+                    : `Поле «${pendingDeleteLabel}» будет убрано из шаблона. Данные на карточках сохранятся.`}
                 </p>
               </div>
             </div>
@@ -3023,7 +2963,7 @@ export default function CardDetailOverlay({
                   const fieldId = pendingDeleteFieldId;
                   setPendingDeleteFieldId(null);
                   void (async () => {
-                    await wipeCustomFieldValues(fieldId);
+                    if (pendingDeleteIsCustom) await wipeCustomFieldValues(fieldId);
                     const nextFields = detailTemplate.fields.filter((field) => field.id !== fieldId);
                     await updatePrefs({ detailCardTemplate: { version: 1, fields: nextFields } });
                   })();
