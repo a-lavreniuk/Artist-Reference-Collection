@@ -5,7 +5,7 @@ alwaysApply: true
 
 # UI-Kit / Design System Guard (ARC)
 
-Источник правды: `renderer/public/ui/arc-ui/arc-ui.html`, `renderer/src/ui-kit/arcUiKitMain.html`, `UiKitPage.tsx`, классы в `arc-ui.css`. При конфликте — **классы из Figma и UI-Kit важнее** локальной интерпретации. Детали элементов — в glob-rules и skill `arc-ui-dev`.
+Источник правды: `renderer/public/ui/arc-ui/arc-ui.html`, `renderer/src/ui-kit/arcUiKitMain.html`, `UiKitPage.tsx`, классы в `arc-ui.css`. При конфликте — **классы из Figma и UI-Kit важнее** локальной интерпретации. Детали элементов — в glob-rules и skill `arc-ui-dev`. Вкус/motion Emil и Jakub — glob-rule `Taste-Skills-ARC.mdc` (не чужие токены и не новые библиотеки).
 
 ## Gate перед новым UI в renderer
 

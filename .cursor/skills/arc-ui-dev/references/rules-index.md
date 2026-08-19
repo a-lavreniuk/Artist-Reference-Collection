@@ -14,6 +14,7 @@ Rules в `.cursor/rules/` применяются автоматически (alw
 
 | Rule | Когда читать |
 |------|--------------|
+| `Taste-Skills-ARC.mdc` | Renderer UI: motion, polish, a11y-вкус Emil/Jakub; не чужие токены/библиотеки |
 | `EmptyState-ARC.mdc` | Пустые разделы, «не найдено», заглушки in-development |
 | `Tooltip-ARC.mdc` | Иконки без подписи, disabled-кнопки, rich-метки |
 | `ContextMenu-ARC.mdc` | Dropdown сортировки/сетки/фильтров, ПКМ-меню |
@@ -43,5 +44,5 @@ Rules в `.cursor/rules/` применяются автоматически (alw
 ## Иерархия при конфликте
 
 ```
-ARC rule (.mdc)  >  Figma ARC-2  >  UI-Kit в коде  >  Vercel web-guidelines  >  generic React/AI design
+ARC rule (.mdc)  >  Figma ARC-2  >  UI-Kit в коде  >  Taste-Skills-ARC (Emil/Jakub, адаптировано)  >  Vercel web-guidelines  >  generic React/AI design
 ```

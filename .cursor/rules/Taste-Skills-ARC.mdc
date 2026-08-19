@@ -1,0 +1,44 @@
+---
+description: Адаптер вкуса Emil/Jakub под ARC — motion, a11y, polish без чужих библиотек и токенов
+globs: renderer/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Taste skills (ARC)
+
+Внешние навыки Emil Kowalski и Jakub Krehel — **справочник вкуса**, не замена UI-Kit. При конфликте: **ARC rule → Figma ARC-2 → UI-Kit → эти принципы**.
+
+Полные тексты: `.agents/skills/`. Ниже — только то, что безопасно для ARC, и когда читать какой навык.
+
+## Когда читать навык
+
+| Задача | Навык | Как применять в ARC |
+|---|---|---|
+| Новая анимация | `animate` | Длительности только токены 150 / 250 / 350. Overlay — `useOverlayMotion*`, не Motion/Framer |
+| Ревью motion | `review-animations` | Те же токены; `ease-in` на вход — дефект |
+| Где уместен motion | `find-animation-opportunities` | Только по запросу; клавиатурные действия не предлагать |
+| Аудит motion | `improve-animations` | План, без новых библиотек |
+| Полировка UI | `better-ui` | Без новых теней/`#hex`/`scale` на кнопке, если нет в Figma |
+| A11y | `better-accessibility` | Паттерны ARC: Tooltip, ContextMenu, `field-error` |
+| Текст в UI | `better-writing` | Copy из `emptyStates.ts` и соседних экранов |
+| Контраст цвета | `better-colors` | Только проверка существующих токенов, не новая палитра |
+| Ревью diff UI | `interface-review` | Сначала этот файл + `UI-Kit-DS-Guard` |
+
+**Только по явной просьбе пользователя:** `pick-ui-library`, `ask-sonner`, `prototype`, `apple-design`. **Не использовать в ARC:** `animate-expo` (React Native).
+
+Не ставить Sonner, Motion, base-ui и любые npm-пакеты из этих навыков. Тосты — существующий `ToastAlert`.
+
+## Безопасные принципы
+
+1. Клавиатура и действия «сто раз в день» — без анимации.
+2. У motion должна быть цель: отклик, откуда пришло, смена состояния, чтобы не дёргалось. «Выглядит круто» — не цель.
+3. Вход: `ease-out`, не `ease-in`. Не анимировать `all`. Не `scale(0)` — старт с небольшого scale + opacity.
+4. Анимировать только `transform` и `opacity`. Hover/press — CSS transition (можно прервать). Overlay enter/exit — текущие GSAP-хуки, не подменять.
+5. `prefers-reduced-motion`: убрать перемещение.
+6. Радиусы концентрические через существующие токены, без новых px.
+7. Оптическое выравнивание иконок — только если не расходится с Figma.
+8. Тень = `elevation-*`; бордер = структура или состояние. Не хардкодить shadow.
+9. Нативные элементы, видимый `:focus-visible`, полный путь с клавиатуры (Tab / Enter / Escape).
+10. Тексты короткие и как на соседних экранах; empty state — только `emptyStates.ts`.
+11. Цвет, отступ, типографика — только токены и классы UI-Kit (`text-s` / `text-m` / `text-l`).
+12. Не добавлять `scale` на press, outline на картинках, stagger и «delight», если этого нет в макете.

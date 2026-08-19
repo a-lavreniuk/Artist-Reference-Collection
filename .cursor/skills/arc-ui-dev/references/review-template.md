@@ -48,10 +48,18 @@
 
 ## 3. Дополнительно (по запросу)
 
+Вкус Emil/Jakub — только через `Taste-Skills-ARC.mdc` (не копировать длительности, hex, библиотеки):
+
+- клавиатурные / частые действия без анимации
+- вход: `ease-out`, не `ease-in`; не `transition: all`; не `scale(0)`
+- только `transform` / `opacity`; overlay — существующий GSAP
+- `prefers-reduced-motion`
+- нативные контролы, `:focus-visible`, полный keyboard path
+- copy как на соседних экранах; empty state из `emptyStates.ts`
+
 Web Interface Guidelines (Vercel) — только пункты **без** эквивалента в ARC rules:
 
 - semantic HTML, aria-labels
-- `prefers-reduced-motion`
 - touch targets, `touch-action`
 - URL/state (если веб-навигация в renderer)
 

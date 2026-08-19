@@ -24,7 +24,7 @@ Skill для разработки и ревью UI в репозитории **A
 | Дизайн-система | ARC-2 (Figma), UI-Kit: `renderer/src/ui-kit/` |
 | Маршруты / страницы | `renderer/src/pages/` |
 
-**Не применять без запроса:** Next.js-паттерны, Vercel deploy, React Native, «креативный» frontend-design с произвольной палитрой, новые npm-зависимости.
+**Не применять без запроса:** Next.js-паттерны, Vercel deploy, React Native, «креативный» frontend-design с произвольной палитрой, новые npm-зависимости, Sonner, Motion/Framer, base-ui.
 
 ## Приоритет источников
 
@@ -32,7 +32,8 @@ Skill для разработки и ревью UI в репозитории **A
 2. Макет Figma ARC-2 — конкретный node для задачи
 3. UI-Kit в приложении (`renderer/src/ui-kit/arcUiKitMain.html`, `UiKitPage.tsx`)
 4. Эталонные экраны в коде (см. [component-map.md](references/component-map.md))
-5. Общие практики React (composition, perf) — только если не противоречат п.1–4
+5. Адаптированный вкус Emil/Jakub — rule `Taste-Skills-ARC.mdc` и навыки в `.agents/skills/` (только то, что не спорит с п.1–4)
+6. Общие практики React (composition, perf) — только если не противоречат п.1–5
 
 ## Workflow: перед правками
 
@@ -108,6 +109,8 @@ Skill для разработки и ревью UI в репозитории **A
 
 Только системные: `--s-*`, `--brand-*`, `--typo-*`, `--transition-fast|base|slow`. Transitions: 150 / 250 / 350 ms.
 
+Вкус и motion: rule `Taste-Skills-ARC.mdc`. Перед новой анимацией читать `.agents/skills/animate/SKILL.md`, но **не** копировать оттуда длительности, `cubic-bezier` и библиотеку Motion. Overlay — только существующие `useOverlayMotion*` / GSAP (см. `Critical-UX-Regression-Check.mdc`).
+
 ## Workflow: перед завершением
 
 ```
@@ -162,10 +165,12 @@ Skill для разработки и ревью UI в репозитории **A
 
 Когда пользователь просит ревью UI / a11y / UX:
 
-1. Прочитать [rules-index.md](references/rules-index.md)
+1. Прочитать [rules-index.md](references/rules-index.md) и `Taste-Skills-ARC.mdc`
 2. Пройти [review-template.md](references/review-template.md)
-3. Опционально: сверить с Web Interface Guidelines (Vercel) — **только** там, где нет ARC rule; findings в формате `file:line — issue`
-4. Generic `frontend-design` (Anthropic) **не** использовать для ARC — есть фиксированная дизайн-система
+3. По теме дополнительно: `better-accessibility`, `better-ui`, `better-writing`; для motion — `review-animations` (длительности маппить на токены ARC)
+4. Опционально: сверить с Web Interface Guidelines (Vercel) — **только** там, где нет ARC rule; findings в формате `file:line — issue`
+5. Generic `frontend-design` (Anthropic) **не** использовать для ARC — есть фиксированная дизайн-система
+6. Не вызывать `pick-ui-library` / `ask-sonner` / `apple-design` / `prototype` в ревью, если пользователь это не просил
 
 ## Code review (PR / diff)
 
@@ -182,6 +187,8 @@ Skill для разработки и ревью UI в репозитории **A
 ## Связанные rules
 
 Always-applied: `Base.mdc`, `UI-Kit-DS-Guard.mdc`, `Critical-UX-Regression-Check.mdc`.
+
+По globs на renderer: `Taste-Skills-ARC.mdc` — адаптер Emil/Jakub.
 
 Полный индекс (включая globs): [references/rules-index.md](references/rules-index.md).
 
