@@ -279,13 +279,10 @@ export default function CardDetailOverlay({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
   const [restoreDestinationOpen, setRestoreDestinationOpen] = useState(false);
-  const [confirmOverwriteDescription, setConfirmOverwriteDescription] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [tagsModalOpen, setTagsModalOpen] = useState(false);
   const [suggestTagsBusy, setSuggestTagsBusy] = useState(false);
-  const [generateDescriptionBusy, setGenerateDescriptionBusy] = useState(false);
   const [autoTagEnabled, setAutoTagEnabled] = useState(false);
-  const [aiCaptionEnabled, setAiCaptionEnabled] = useState(false);
   const [pendingTagSearchIds, setPendingTagSearchIds] = useState<string[]>([]);
   const pendingTagSearchIdsRef = useRef<string[]>([]);
   pendingTagSearchIdsRef.current = pendingTagSearchIds;
@@ -330,8 +327,6 @@ export default function CardDetailOverlay({
   }
   const cardId = urlCardId !== seenUrlCardId ? urlCardId : viewingCardId;
   cardIdRef.current = cardId;
-  const canGenerateDescription =
-    aiCaptionEnabled && (card?.type === 'image' || card?.type === 'video');
 
   const { prefs, update: updatePrefs } = useAppPreferences();
   const detailTemplate = prefs?.detailCardTemplate ?? defaultDetailCardTemplate();
@@ -427,13 +422,6 @@ export default function CardDetailOverlay({
     [applyInstantCardPreview, onOpenCard]
   );
 
-  const refreshAiCaption = useCallback(async (id: string) => {
-    const c = await getCardById(id);
-    if (!c) return null;
-    setCard((prev) => (prev?.id === id ? { ...prev, aiCaption: c.aiCaption } : prev));
-    return c;
-  }, []);
-
   useEffect(() => {
     const ids = new Set(
       detailTemplate.fields.filter((field) => field.kind === 'custom').map((field) => field.id)
@@ -459,8 +447,6 @@ export default function CardDetailOverlay({
     }
     lastAnnotationsCardIdRef.current = cardId;
     setPendingTagSearchIds([]);
-    setConfirmOverwriteDescription(false);
-    setGenerateDescriptionBusy(false);
     setCommentMode(false);
     setSelectedAnnotationId(null);
     setAnnotationComposer(null);
@@ -541,7 +527,6 @@ export default function CardDetailOverlay({
     void getAppPreferences().then((prefs) => {
       if (!cancelled) {
         setAutoTagEnabled(Boolean(prefs.aiAutoTagEnabled));
-        setAiCaptionEnabled(Boolean(prefs.aiCaptionEnabled));
       }
     });
     return () => {
@@ -549,33 +534,11 @@ export default function CardDetailOverlay({
     };
   }, []);
 
-  useEffect(() => {
-    const onProgress = window.arc?.onAiIndexProgress?.((payload) => {
-      if (payload.currentCardId !== cardId) return;
-      if ((payload.currentCardProgress ?? 0) < 55) return;
-      void refreshAiCaption(cardId);
-    });
-    const onComplete = window.arc?.onAiIndexComplete?.(() => {
-      void refreshAiCaption(cardId);
-    });
-    // Видео-caption после импорта шлёт quiet extension-import — подтянуть скрытый aiCaption в модели карточки.
-    const onImportSaved = window.arc?.onExtensionImportSaved?.(({ cardIds }) => {
-      if (!cardIds.includes(cardId)) return;
-      void refreshAiCaption(cardId);
-    });
-    return () => {
-      onProgress?.();
-      onComplete?.();
-      onImportSaved?.();
-    };
-  }, [cardId, refreshAiCaption]);
-
   useLayoutEffect(() => {
     if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
   }, [
     confirmDelete,
     confirmPermanentDelete,
-    confirmOverwriteDescription,
     busy,
     card?.type,
     similar.length,
@@ -586,9 +549,7 @@ export default function CardDetailOverlay({
     tagsModalOpen,
     collectionsModalOpen,
     autoTagEnabled,
-    aiCaptionEnabled,
     suggestTagsBusy,
-    generateDescriptionBusy,
     settingsWidth,
     queueOpen,
     queueCards.length,
@@ -1449,7 +1410,6 @@ export default function CardDetailOverlay({
     annotationComposer !== null ||
     confirmDelete ||
     confirmPermanentDelete ||
-    confirmOverwriteDescription ||
     removeMoodboardConfirm !== null;
 
   useCardRatingShortcuts({
@@ -1860,55 +1820,6 @@ export default function CardDetailOverlay({
     </div>
   ) : undefined;
 
-  const runGenerateDescription = async () => {
-    if (!card || generateDescriptionBusy) return;
-    if (!window.arc?.aiGenerateCardDescription) {
-      setActionAlert({ message: 'Генерация описания недоступна', variant: 'danger' });
-      return;
-    }
-    if (descriptionSaveTimerRef.current != null) {
-      window.clearTimeout(descriptionSaveTimerRef.current);
-      descriptionSaveTimerRef.current = null;
-    }
-    const requestCardId = card.id;
-    setGenerateDescriptionBusy(true);
-    try {
-      const result = await window.arc.aiGenerateCardDescription(requestCardId);
-      if (cardIdRef.current !== requestCardId) return;
-      if (!result.ok) {
-        setActionAlert({ message: result.error, variant: 'danger' });
-        return;
-      }
-      setDescription(result.description);
-      setCard((prev) =>
-        prev && prev.id === requestCardId ? { ...prev, description: result.description } : prev
-      );
-      setActionAlert({ message: 'Описание сгенерировано', variant: 'brand' });
-    } catch (err) {
-      if (cardIdRef.current !== requestCardId) return;
-      setActionAlert({
-        message: err instanceof Error ? err.message : 'Не удалось сгенерировать описание',
-        variant: 'danger'
-      });
-    } finally {
-      if (cardIdRef.current === requestCardId) setGenerateDescriptionBusy(false);
-    }
-  };
-
-  const handleGenerateDescriptionClick = () => {
-    if (!card || generateDescriptionBusy) return;
-    if (description.trim()) {
-      setConfirmOverwriteDescription(true);
-      return;
-    }
-    void runGenerateDescription();
-  };
-
-  const handleConfirmOverwriteDescription = () => {
-    setConfirmOverwriteDescription(false);
-    void runGenerateDescription();
-  };
-
   const handleSuggestTags = async () => {
     if (!card || suggestTagsBusy) return;
     if (!window.arc?.aiSuggestTags) {
@@ -1958,49 +1869,6 @@ export default function CardDetailOverlay({
       setSuggestTagsBusy(false);
     }
   };
-
-  const descriptionFieldVisible = detailTemplate.fields.some(
-    (field) => field.id === 'description' && field.visible
-  );
-  const descriptionSectionFooter =
-    descriptionFieldVisible && canGenerateDescription ? (
-    <div className="arc-card-detail-add-row-scope arc-ui-kit-scope" data-btn-size="m">
-      <div className="btn-group btn-group-ds arc-card-detail-desc-gen">
-        <button
-          type="button"
-          className="btn btn-outline btn-ds"
-          aria-label={generateDescriptionBusy ? 'Генерация описания' : 'Сгенерировать описание'}
-          disabled={busy || generateDescriptionBusy}
-          onClick={handleGenerateDescriptionClick}
-        >
-          {generateDescriptionBusy ? (
-            <>
-              <span className="btn-ds__icon" aria-hidden="true">
-                <Loader decorative />
-              </span>
-              <span className="btn-ds__value">Генерирую…</span>
-            </>
-          ) : (
-            <>
-              <span className="btn-ds__value">Сгенерировать описание</span>
-              <span className="btn-ds__icon arc-icon-description" aria-hidden="true" />
-            </>
-          )}
-        </button>
-        <Tooltip content="Настройки AI Описания" position="top" as="span">
-          <button
-            type="button"
-            className="btn btn-outline btn-icon-only"
-            aria-label="Настройки AI Описания"
-            disabled={busy || generateDescriptionBusy}
-            onClick={() => navigate('/settings/ai?tab=caption')}
-          >
-            <span className="btn-icon-only__glyph arc-icon-options" aria-hidden="true" />
-          </button>
-        </Tooltip>
-      </div>
-    </div>
-  ) : null;
 
   const pendingDeleteField = detailTemplate.fields.find((field) => field.id === pendingDeleteFieldId);
   const pendingDeleteLabel = pendingDeleteField ? templateFieldLabel(pendingDeleteField) : 'поле';
@@ -2467,10 +2335,7 @@ export default function CardDetailOverlay({
               {inTrash && card?.libraryName ? (
                 <p className="text-s arc-card-detail-library-name">{card.libraryName}</p>
               ) : null}
-              <CollapsibleSection
-                title="Детали"
-                footer={descriptionSectionFooter}
-              >
+              <CollapsibleSection title="Детали">
                 <CardDetailDescriptionFields
                   template={detailTemplate}
                   inTrash={inTrash}
@@ -2659,69 +2524,6 @@ export default function CardDetailOverlay({
         ) : null}
         </div>
       </div>
-
-      {confirmOverwriteDescription ? (
-        <div
-          className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-          aria-hidden="false"
-          onClick={(event) => {
-            if (event.target === event.currentTarget && !generateDescriptionBusy) {
-              setConfirmOverwriteDescription(false);
-            }
-          }}
-        >
-          <section
-            className="arc-modal"
-            data-elevation="raised"
-            data-input-size="s"
-            data-btn-size="s"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="arcCardOverwriteDescriptionTitle"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="arc-modal__header arc-modal__header--title">
-              <h3 className="arc-modal__title" id="arcCardOverwriteDescriptionTitle">
-                Заменить описание?
-              </h3>
-              <button
-                type="button"
-                className="arc-modal__close"
-                aria-label="Закрыть"
-                onClick={() => setConfirmOverwriteDescription(false)}
-                disabled={generateDescriptionBusy}
-              >
-                <span className="tab-icon arc-icon-close" aria-hidden="true" />
-              </button>
-            </header>
-            <div className="arc-modal__body">
-              <div className="arc-modal__slot">
-                <p className="arc-modal__slot-text">
-                  Текущее описание будет удалено и заменено сгенерированным текстом.
-                </p>
-              </div>
-            </div>
-            <footer className="arc-modal__footer arc-modal__footer--actions-2">
-              <button
-                type="button"
-                className="btn btn-outline btn-ds btn-s"
-                onClick={() => setConfirmOverwriteDescription(false)}
-                disabled={generateDescriptionBusy}
-              >
-                <span className="btn-ds__value">Отмена</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-brand btn-ds btn-s"
-                onClick={handleConfirmOverwriteDescription}
-                disabled={busy || generateDescriptionBusy}
-              >
-                <span className="btn-ds__value">Заменить</span>
-              </button>
-            </footer>
-          </section>
-        </div>
-      ) : null}
 
       {confirmDelete ? (
         <div

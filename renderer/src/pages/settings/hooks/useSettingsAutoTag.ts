@@ -44,15 +44,6 @@ export function useSettingsAutoTag() {
   const onImport = prefs?.aiAutoTagOnImport === true;
   const createNew = (prefs?.aiAutoTagCatalogMode ?? 'reuse') === 'reuse_create';
 
-  const [videoCaptionOnImport, setVideoCaptionLocal] = useState(
-    () => prefs?.aiVideoCaptionOnImport === true
-  );
-
-  useEffect(() => {
-    if (!prefs) return;
-    setVideoCaptionLocal(prefs.aiVideoCaptionOnImport === true);
-  }, [prefs]);
-
   const setEnabled = useCallback(
     async (next: boolean) => {
       if (enableDisabled && next) return;
@@ -85,15 +76,6 @@ export function useSettingsAutoTag() {
     [baseDisabled, update]
   );
 
-  const setVideoCaptionOnImport = useCallback(
-    async (next: boolean) => {
-      if (baseDisabled) return;
-      setVideoCaptionLocal(next);
-      await update({ aiVideoCaptionOnImport: next });
-    },
-    [baseDisabled, update]
-  );
-
   return {
     ready,
     libraryReady,
@@ -104,11 +86,9 @@ export function useSettingsAutoTag() {
     volume,
     onImport,
     createNew,
-    videoCaptionOnImport,
     setEnabled,
     setVolume,
     setOnImport,
-    setCreateNew,
-    setVideoCaptionOnImport
+    setCreateNew
   };
 }

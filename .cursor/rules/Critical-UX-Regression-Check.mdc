@@ -47,6 +47,7 @@ npm test
 - `useOverlayMotionPair(!closing)` + `if (!render) return null` + `createPortal` — при первом открытии `render=true`.
 - `onExitComplete` / `onClose` при закрытии (в т.ч. если entrance не успел).
 - Побочные правки не блокируют mount overlay; `body`-класс overlay не снимать раньше exit-анимации.
+- **Удаление state/UI:** после снятия `useState` в overlay (особенно `CardDetailOverlay.tsx`) — grep по файлу на `setИмя` и имя state в `useEffect` / `useLayoutEffect` deps / агрегатах вроде `detailLayerOpen`. Нет вызовов setter без объявления → иначе `ReferenceError` при открытии деталки. Затем `npm run verify:renderer-ui`.
 
 ## 5. Когда можно пропустить
 

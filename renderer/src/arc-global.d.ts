@@ -596,9 +596,6 @@ declare global {
           }
         | { ok: false; error: string }
       >;
-      aiGenerateCardDescription?: (
-        cardId: string
-      ) => Promise<{ ok: true; description: string } | { ok: false; error: string }>;
       onAutoTagApplied?: (
         cb: (detail: { cards: number; tags: number; created: number }) => void
       ) => () => void;

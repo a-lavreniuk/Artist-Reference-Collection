@@ -226,9 +226,7 @@ export type AiModelCardInfo = {
 
 export type AiStatus = {
   enabled: boolean;
-  captionEnabled: boolean;
   activeSearchModelId: SearchModelId | null;
-  activeCaptionModelId: CaptionModelId | null;
   /** @deprecated use activeSearchModelId */
   activeTier: ModelTier | null;
   /** @deprecated use activeSearchModelId */

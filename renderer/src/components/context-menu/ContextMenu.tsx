@@ -31,6 +31,8 @@ type Props = {
   /** belowAnchor — под якорем; belowIsland — под navbar-island; aboveAnchor — над якорем. */
   anchorPlacement?: ContextMenuAnchorPlacement;
   panelClassName?: string;
+  /** Размер инпутов в слотах меню; по умолчанию s. */
+  inputSize?: 's' | 'm';
   /**
    * Меню поверх модалок (z-index выше ArcAnimatedModalHost ~10050).
    * Нужно, когда якорь внутри модалки (настройки метки, color format в modal и т.п.).
@@ -95,6 +97,7 @@ export default function ContextMenu({
   anchorAlign = 'end',
   anchorPlacement = 'belowIsland',
   panelClassName = '',
+  inputSize = 's',
   aboveModal = false
 }: Props) {
   const menuId = useId();
@@ -255,7 +258,7 @@ export default function ContextMenu({
         className={panelClass}
         data-elevation="raised"
         data-typo-tone="white"
-        data-input-size="s"
+        data-input-size={inputSize}
         data-btn-size="m"
         style={{
           top: panelTop,

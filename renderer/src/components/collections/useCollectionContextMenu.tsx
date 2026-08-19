@@ -30,9 +30,6 @@ export function useCollectionContextMenu({ resolveCollection, onOpen, onEdit, on
 
   const openAtCollection = useCallback(
     (collectionId: string, event: React.MouseEvent) => {
-      if (event.target instanceof Element && event.target.closest('.arc-tags-sidebar-row-handle')) {
-        return;
-      }
       menu.openAt(event);
       setMenuCollectionId(collectionId);
     },

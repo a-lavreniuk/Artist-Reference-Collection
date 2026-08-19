@@ -189,8 +189,6 @@ async function finalizeModelInstall(
   options?: {
     withHybridClip?: boolean;
     setActiveSearch?: boolean;
-    /** When installing caption manually from settings — turn on AI Описание toggle. Default true. */
-    enableCaptionToggle?: boolean;
     onComplete?: () => void | Promise<void>;
   }
 ): Promise<void> {
@@ -217,17 +215,15 @@ async function finalizeModelInstall(
   cursor = recordEnd;
 
   await progress.run(cursor, cursor + 12, async () => {
-    if (role === 'caption') {
-      if (options?.enableCaptionToggle !== false) {
-        await writeAppPreferences({ aiCaptionEnabled: true });
+    if (role !== 'caption') {
+      if (options?.setActiveSearch !== false && SEARCH_MODEL_IDS.includes(entry.id as SearchModelId)) {
+        await writeAppPreferences({
+          aiSearchModelId: entry.id as SearchModelId,
+          aiSearchEnabled: true,
+          aiSemanticSearchEnabled: true
+        });
+        setActiveSearchModel(entry.id as SearchModelId);
       }
-    } else if (options?.setActiveSearch !== false && SEARCH_MODEL_IDS.includes(entry.id as SearchModelId)) {
-      await writeAppPreferences({
-        aiSearchModelId: entry.id as SearchModelId,
-        aiSearchEnabled: true,
-        aiSemanticSearchEnabled: true
-      });
-      setActiveSearchModel(entry.id as SearchModelId);
     }
   });
   cursor += 12;
@@ -238,8 +234,7 @@ async function finalizeModelInstall(
 }
 
 /**
- * After any search model install/update, ensure JoyCaption is on disk (for hybrid / on-demand).
- * Does not enable the user-facing AI Описание toggle.
+ * After any search model install/update, ensure JoyCaption is on disk for hybrid search indexing.
  */
 async function downloadCaptionModelIfMissing(userData: string): Promise<void> {
   if (await isModelInstalled(userData, 'caption')) return;
@@ -284,7 +279,6 @@ async function downloadCaptionModelIfMissing(userData: string): Promise<void> {
       throw new Error('Файлы JoyCaption не найдены после загрузки.');
     }
     await finalizeModelInstall(role, userData, entry, entry.id, {
-      enableCaptionToggle: false,
       setActiveSearch: false,
       onComplete: () => scheduleIdleIndexing()
     });
@@ -404,15 +398,11 @@ export async function buildAiStatus(): Promise<AiStatus> {
   const activeTier =
     activeSearchId === 'qwen3-vl-embedding-8b' || activeSearchId === 'qwen3-vl-embedding-2b'
       ? ('heavy' as const)
-      : prefs.aiCaptionEnabled
-        ? ('heavy' as const)
-        : ('light' as const);
+      : ('light' as const);
 
   return {
     enabled: searchEnabled,
-    captionEnabled: prefs.aiCaptionEnabled,
     activeSearchModelId: activeSearchId,
-    activeCaptionModelId: prefs.aiCaptionEnabled ? 'joycaption-beta-one' : null,
     activeTier,
     activeModelId: activeSearchId,
     hardware,
@@ -583,9 +573,7 @@ export function registerAiIpc(): void {
     }
     await shutdownLlamaBridge();
     const prefs = await readAppPreferences();
-    if (role === 'caption') {
-      await writeAppPreferences({ aiCaptionEnabled: false });
-    } else if (prefs.aiSearchModelId === MODEL_CATALOG[role].id) {
+    if (role !== 'caption' && prefs.aiSearchModelId === MODEL_CATALOG[role].id) {
       setActiveSearchModel(null);
     }
     clearAiSearchCache();
@@ -595,7 +583,6 @@ export function registerAiIpc(): void {
   ipcMain.handle('arc:ai-set-active-model', async (_e, payloadRaw: unknown) => {
     const role = resolveRoleFromPayload(payloadRaw);
     if (role === 'caption') {
-      await writeAppPreferences({ aiCaptionEnabled: true });
       scheduleIdleIndexing();
       return buildAiStatus();
     }
@@ -855,23 +842,10 @@ export function registerAiIpc(): void {
     return rankTagsSemantic(q);
   });
 
-  ipcMain.handle('arc:ai-generate-card-description', async (_e, payload: unknown) => {
-    const cardId =
-      typeof payload === 'string'
-        ? payload.trim()
-        : typeof (payload as { cardId?: unknown })?.cardId === 'string'
-          ? String((payload as { cardId: string }).cardId).trim()
-          : '';
-    if (!cardId) return { ok: false as const, error: 'Не указана карточка.' };
-    const { generateCardDescription } = await import('./ai/generateCardDescription');
-    return generateCardDescription(cardId);
-  });
-
   ipcMain.handle('arc:ai-set-enabled', async (_e, payload: unknown) => {
     const p = payload as {
       enabled?: boolean;
       searchEnabled?: boolean;
-      captionEnabled?: boolean;
       searchModelId?: SearchModelId;
       tier?: string;
       threads?: number;
@@ -893,12 +867,10 @@ export function registerAiIpc(): void {
       patch.aiSearchEnabled = p.searchEnabled;
       patch.aiSemanticSearchEnabled = p.searchEnabled;
     }
-    if (typeof p.captionEnabled === 'boolean') patch.aiCaptionEnabled = p.captionEnabled;
     if (p.searchModelId) patch.aiSearchModelId = sanitizeSearchModelId(p.searchModelId);
     if (p.tier) {
       const role = sanitizeModelRole(p.tier);
-      if (role === 'caption') patch.aiCaptionEnabled = true;
-      else if (role) patch.aiSearchModelId = MODEL_CATALOG[role].id;
+      if (role && role !== 'caption') patch.aiSearchModelId = MODEL_CATALOG[role].id;
     }
     if (typeof p.resourcePreset === 'number') {
       const preset = Math.max(10, Math.min(100, Math.round(p.resourcePreset)));

@@ -10,6 +10,7 @@ import { notifyRendererExtensionImport } from '../importApi/notifyRenderer';
 import { isModelInstalled } from './modelManager';
 import { generateJoyCaption } from './joyCaption';
 import { buildIndexCaptionPrompt } from './joyCaptionPrompt';
+import { isQwenSearchModel } from './aiEmbeddingService';
 import { resolveVisionFrames } from './visionFrames';
 
 /**
@@ -125,11 +126,12 @@ export async function generateAndStoreVideoAiCaption(
 }
 
 /**
- * После импорта видео: AI-описание из суммы кадров (если включено в настройках).
+ * После импорта видео: скрытое AI-описание для гибридного поиска Qwen.
  */
 export async function applyVideoCaptionsAfterImport(cardIds: string[]): Promise<number> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiVideoCaptionOnImport) return 0;
+  const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
+  if (!searchOn || !isQwenSearchModel(prefs.aiSearchModelId)) return 0;
   if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) return 0;
 
   const root = await readLibraryRootFromDisk();

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CategoryRecord, TagRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { bindArcTagsSidebarRowPointerDown } from '../shared/arcTagsSidebarRowDragPointer';
 import { Tooltip } from '../tooltip/Tooltip';
 import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import TagCategoryDropSurface from './TagCategoryDropSurface';
@@ -45,6 +46,7 @@ export default function TagsPageSidebar({
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const skipSelectClickRef = useRef(false);
 
   const handleReorder = useCallback(
     (id: string, insertIndex: number) => {
@@ -137,35 +139,26 @@ export default function TagsPageSidebar({
                   <div className="context-menu__item-inner arc-tags-sidebar-row-inner">
                     <button
                       type="button"
-                      className="arc-tags-sidebar-row-handle"
-                      aria-label={`Изменить порядок «${category.name}»`}
-                      onPointerDown={(e) => {
-                        if (e.button !== 0 || !listRef.current) return;
-                        const rowEl = e.currentTarget.closest('[data-tags-category-row]');
-                        if (!(rowEl instanceof HTMLElement)) return;
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        startDrag({
+                      className="arc-tags-sidebar-row-select"
+                      onPointerDown={(e) =>
+                        bindArcTagsSidebarRowPointerDown({
+                          e,
+                          listEl: listRef.current,
+                          rowSelector: '[data-tags-category-row]',
                           id: category.id,
                           label: category.name,
                           count,
-                          handleEl: e.currentTarget,
-                          rowEl,
-                          listEl: listRef.current
-                        });
+                          onStartDrag: startDrag,
+                          skipClickRef: skipSelectClickRef
+                        })
+                      }
+                      onClick={() => {
+                        if (skipSelectClickRef.current) {
+                          skipSelectClickRef.current = false;
+                          return;
+                        }
+                        onSelectCategory(category.id);
                       }}
-                    >
-                      <span
-                        className="context-menu__item-icon tab-icon arc-icon-chevrons-up-down"
-                        data-arc-icon-size="m"
-                        aria-hidden="true"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      className="arc-tags-sidebar-row-select"
-                      onClick={() => onSelectCategory(category.id)}
                     >
                       <span className="context-menu__item-label-cluster">
                         <TruncatedTextWithTooltip
