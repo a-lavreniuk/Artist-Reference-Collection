@@ -1271,7 +1271,13 @@ body[data-input-size="s"],
   transition: color var(--transition-fast);
 }
 
-.btn-icon-svg {
+.btn-icon-svg,
+.input-icon-svg,
+.search-icon > .arc-navbar-icon-svg,
+.input-inline-icon > .arc-navbar-icon-svg,
+.selector-clear > .arc-navbar-icon-svg,
+.selector-caret > .arc-navbar-icon-svg,
+.dropdown-row-check > .arc-navbar-icon-svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -1357,6 +1363,8 @@ button.input {
 .input[disabled] .uploader-value,
 .input[disabled] .color-prepend,
 .input[disabled] .color-value,
+.input[disabled] .link-prepend,
+.input[disabled] .link-value,
 .input[disabled] .selector-value,
 .input[disabled] .selector-caret,
 .input[disabled] .selector-clear,
@@ -1384,7 +1392,8 @@ button.input {
 }
 
 .input.search-field:focus-within:not(.is-disabled),
-.input.search-multiselect:focus-within {
+.input.search-multiselect:focus-within,
+.input.link-input:focus-within:not(.is-disabled) {
   outline: none;
   border-color: var(--input-border-focus);
   box-shadow: none;
@@ -3050,6 +3059,87 @@ button.input {
 
 .color-prepend {
   color: var(--input-value-default);
+}
+
+.link-input {
+  justify-content: flex-start;
+}
+
+.link-prepend {
+  color: var(--input-value-default);
+}
+
+.link-value {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+}
+
+.link-value::placeholder {
+  color: var(--input-value-default);
+}
+
+.link-input.has-value .link-value {
+  color: var(--input-value-entered);
+}
+
+.link-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--input-gap, 8px);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.link-actions .arc-tooltip-wrapper {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.link-input .input-clear-btn,
+.link-input .link-open-btn,
+.link-input .link-lock {
+  display: none;
+}
+
+.link-input.has-value:not(.is-disabled) .link-open-btn {
+  display: inline-flex;
+}
+
+.link-input.has-value:hover:not(.is-disabled) .input-clear-btn,
+.link-input.has-value:focus-within:not(.is-disabled) .input-clear-btn {
+  display: inline-flex;
+}
+
+.link-input.is-disabled .link-lock {
+  display: inline-flex;
+}
+
+.link-input.is-disabled {
+  background: var(--input-fill-disabled);
+  color: var(--input-value-disabled);
+  border-color: var(--input-border-disabled);
+  cursor: not-allowed;
+}
+
+.link-input.is-disabled .link-prepend,
+.link-input.is-disabled .link-value,
+.link-input.is-disabled .link-value::placeholder,
+.link-input.is-disabled .link-lock {
+  color: var(--input-value-disabled);
+}
+
+.link-lock {
+  cursor: default;
+  pointer-events: none;
 }
 
 .color-value {
@@ -4845,7 +4935,9 @@ body[data-elevation="raised"],
   transition: color var(--transition-fast), background var(--transition-fast);
 }
 
-.arc-datepicker:hover:not(.arc-datepicker--disabled) .arc-datepicker__trigger {
+.arc-datepicker:hover:not(.arc-datepicker--disabled):not(.arc-datepicker--error) .arc-datepicker__trigger,
+.arc-datepicker:focus-within:not(.arc-datepicker--disabled):not(.arc-datepicker--error) .arc-datepicker__trigger,
+.arc-datepicker__trigger:hover:not(:disabled) {
   color: var(--input-icon-hover);
 }
 
@@ -4869,7 +4961,13 @@ body[data-elevation="raised"],
   height: var(--arc-datepicker-icon-size);
   min-width: var(--arc-datepicker-icon-size);
   min-height: var(--arc-datepicker-icon-size);
-  color: var(--input-icon-default);
+  color: inherit;
+}
+
+.arc-datepicker:hover:not(.arc-datepicker--disabled):not(.arc-datepicker--error) .arc-datepicker__icon,
+.arc-datepicker:focus-within:not(.arc-datepicker--disabled):not(.arc-datepicker--error) .arc-datepicker__icon,
+.arc-datepicker__trigger:hover:not(:disabled) .arc-datepicker__icon {
+  color: var(--input-icon-hover);
 }
 
 .arc-datepicker__icon > .arc-navbar-icon-svg {

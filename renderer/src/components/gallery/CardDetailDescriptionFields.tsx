@@ -10,6 +10,7 @@ import { ContextMenu } from '../context-menu';
 import ContextMenuItem from '../context-menu/ContextMenuItem';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
+import LinkInput from '../ui/LinkInput';
 import CardRatingStars from './CardRatingStars';
 import DetailTemplateEditor from './DetailTemplateEditor';
 import type { PaletteSwatch } from './cardDetailPalette';
@@ -193,29 +194,15 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
   }
 
   if (field.kind === 'builtin' && field.id === 'link') {
-    const empty = !props.draftLink.trim();
     return (
-      <div className="arc-card-detail-link-row">
-        <TextValue
-          label={label}
-          value={props.draftLink}
-          disabled={disabled}
-          onChange={props.onLinkChange}
-        />
-        {!empty ? (
-          <Tooltip content="Открыть ссылку" position="top">
-            <button
-              type="button"
-              className="btn btn-outline btn-icon-only btn-ds"
-              aria-label="Открыть ссылку"
-              disabled={!props.canOpenLink}
-              onClick={props.onOpenLink}
-            >
-              <span className="btn-icon-only__glyph arc-icon-external-link" aria-hidden="true" />
-            </button>
-          </Tooltip>
-        ) : null}
-      </div>
+      <LinkInput
+        value={props.draftLink}
+        disabled={disabled}
+        ariaLabel={label}
+        onChange={props.onLinkChange}
+        onOpen={props.onOpenLink}
+        canOpen={props.canOpenLink}
+      />
     );
   }
 

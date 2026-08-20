@@ -9,7 +9,10 @@
 .btn-icon-only__glyph,
 .tab-icon,
 .search-icon,
-.input-inline-icon {
+.input-inline-icon,
+.selector-clear,
+.selector-caret,
+.dropdown-row-check {
   overflow: visible;
 }
 
@@ -17,7 +20,10 @@
 .btn-icon-only__glyph > .arc-navbar-icon-svg,
 .tab-icon > .arc-navbar-icon-svg,
 .search-icon > .arc-navbar-icon-svg,
-.input-inline-icon > .arc-navbar-icon-svg {
+.input-inline-icon > .arc-navbar-icon-svg,
+.selector-clear > .arc-navbar-icon-svg,
+.selector-caret > .arc-navbar-icon-svg,
+.dropdown-row-check > .arc-navbar-icon-svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -3422,18 +3428,6 @@ span.arc-card-detail-prop-row__label {
 
 .context-menu__item:hover:not(:disabled):not(.is-disabled) .arc-filter-rating-stars {
   color: var(--menu-row-icon-hover);
-}
-
-.arc-card-detail-link-row {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: var(--s-3);
-}
-
-.arc-card-detail-link-field {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .arc-card-detail-tags {

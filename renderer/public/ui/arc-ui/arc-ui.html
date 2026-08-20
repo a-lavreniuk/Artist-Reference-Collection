@@ -272,13 +272,50 @@
         <div class="inputs-column">
           <label class="field input-live" data-live-input>
             <input class="input" placeholder="Введите значение..." />
-            <button class="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close" type="button" aria-label="Очистить"></button>
+            <button class="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close" type="button" aria-label="Очистить"></button>
           </label>
           <label class="field field-error input-live" data-live-input>
             <input class="input" value="Неверный формат" placeholder="Введите значение..." />
-            <button class="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close" type="button" aria-label="Очистить"></button>
+            <button class="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close" type="button" aria-label="Очистить"></button>
           </label>
           <label class="field"><input class="input" placeholder="Недоступно" disabled /></label>
+        </div>
+      </div>
+      <hr class="separator" />
+
+      <div class="inputs-group">
+        <div class="id-tag">EL-INP-GROUP-LINK</div>
+        <h3 class="h3">Link</h3>
+        <div id="uikit-link-input-live" class="inputs-column">
+          <label class="field" data-live-link>
+            <div class="input link-input input-slots">
+              <span class="link-prepend slot-prepend">https://</span>
+              <input class="link-value slot-value" placeholder="example.com" />
+              <span class="link-actions slot-trailing">
+                <button class="input-inline-icon input-clear-btn input-inline-icon--close arc-icon-close" type="button" aria-label="Очистить"></button>
+                <button class="input-inline-icon link-open-btn arc-icon-external-link" type="button" aria-label="Открыть ссылку"></button>
+              </span>
+            </div>
+          </label>
+          <label class="field has-value" data-live-link>
+            <div class="input link-input input-slots has-value">
+              <span class="link-prepend slot-prepend">https://</span>
+              <input class="link-value slot-value" value="example.com" placeholder="example.com" />
+              <span class="link-actions slot-trailing">
+                <button class="input-inline-icon input-clear-btn input-inline-icon--close arc-icon-close" type="button" aria-label="Очистить"></button>
+                <button class="input-inline-icon link-open-btn arc-icon-external-link" type="button" aria-label="Открыть ссылку"></button>
+              </span>
+            </div>
+          </label>
+          <div class="field">
+            <div class="input link-input input-slots is-disabled has-value">
+              <span class="link-prepend slot-prepend">https://</span>
+              <input class="link-value slot-value" value="example.com" placeholder="example.com" disabled />
+              <span class="link-actions slot-trailing">
+                <span class="input-inline-icon link-lock arc-icon-lock" aria-hidden="true"></span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
       <hr class="separator" />
@@ -291,33 +328,33 @@
             <button class="input pseudo-select input-slots" type="button" data-selector-trigger aria-expanded="false">
               <span class="selector-value slot-value">Выберите значение</span>
               <span class="selector-actions slot-trailing">
-                <span class="selector-clear" aria-hidden="true"></span>
-                <span class="selector-caret" aria-hidden="true"></span>
+                <span class="selector-clear arc-icon-close" aria-hidden="true"></span>
+                <span class="selector-caret arc-icon-chevron" aria-hidden="true"></span>
               </span>
             </button>
             <div class="selector-dropdown" hidden>
               <div class="input search-field selector-search search-live input-slots">
-                <span class="search-icon slot-leading" aria-hidden="true"></span>
+                <span class="search-icon slot-leading arc-icon-search" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
-                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close arc-icon-close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
-                <button class="dropdown-row" type="button"><span>Landscape</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Portrait</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row is-checked" type="button"><span>Animation</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Character</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Creature</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Environment</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Hard Surface</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Props</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>UI</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Storyboard</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Color Script</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Concept Art</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Lighting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Compositing</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Landscape</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Portrait</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row is-checked" type="button"><span>Animation</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Character</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Creature</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Environment</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Hard Surface</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Props</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>UI</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Storyboard</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Color Script</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Concept Art</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Lighting</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Compositing</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
               <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
@@ -327,33 +364,33 @@
             <button class="input pseudo-select input-slots" type="button" data-selector-trigger aria-expanded="false">
               <span class="selector-value slot-value">Неверный выбор</span>
               <span class="selector-actions slot-trailing">
-                <span class="selector-clear" aria-hidden="true"></span>
-                <span class="selector-caret" aria-hidden="true"></span>
+                <span class="selector-clear arc-icon-close" aria-hidden="true"></span>
+                <span class="selector-caret arc-icon-chevron" aria-hidden="true"></span>
               </span>
             </button>
             <div class="selector-dropdown" hidden>
               <div class="input search-field selector-search search-live input-slots">
-                <span class="search-icon slot-leading" aria-hidden="true"></span>
+                <span class="search-icon slot-leading arc-icon-search" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
-                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close arc-icon-close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
-                <button class="dropdown-row" type="button"><span>Landscape</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Portrait</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row is-checked" type="button"><span>Animation</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Character</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Creature</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Environment</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Hard Surface</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Props</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>UI</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Storyboard</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Color Script</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Concept Art</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Lighting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Compositing</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Landscape</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Portrait</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row is-checked" type="button"><span>Animation</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Character</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Creature</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Environment</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Hard Surface</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Props</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>UI</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Storyboard</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Color Script</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Concept Art</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Lighting</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Compositing</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Matte Painting</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
               <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
@@ -362,7 +399,7 @@
           <div class="field">
             <button class="input pseudo-select input-slots" type="button" disabled>
               <span class="slot-value">Недоступно</span>
-              <span class="selector-caret slot-trailing" aria-hidden="true"></span>
+              <span class="selector-caret arc-icon-chevron slot-trailing" aria-hidden="true"></span>
             </button>
           </div>
         </div>
@@ -387,7 +424,7 @@
             <div class="arc-datepicker arc-datepicker--l input-slots" data-input-size="l">
               <input class="arc-datepicker__input slot-value" type="text" placeholder="ДД.ММ.ГГГГ — ДД.ММ.ГГГГ" aria-label="Дата L placeholder" />
               <span class="selector-actions slot-trailing arc-datepicker__actions">
-                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear" aria-hidden="true"></span></button>
+                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear arc-icon-close" aria-hidden="true"></span></button>
                 <button type="button" class="arc-datepicker__trigger" aria-label="Открыть календарь" disabled tabindex="-1">
                   <span class="arc-datepicker__icon" aria-hidden="true"><svg class="btn-icon-svg" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 5.5H14.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 2.5H14.5V14.5H1.5L1.5 2.5Z" stroke="currentColor"/></svg></span>
                 </button>
@@ -398,7 +435,7 @@
             <div class="arc-datepicker arc-datepicker--l arc-datepicker--has-value input-slots" data-input-size="l">
               <input class="arc-datepicker__input slot-value" type="text" value="12.06.2025 — 18.06.2025" aria-label="Дата L value" />
               <span class="selector-actions slot-trailing arc-datepicker__actions">
-                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear" aria-hidden="true"></span></button>
+                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear arc-icon-close" aria-hidden="true"></span></button>
                 <button type="button" class="arc-datepicker__trigger" aria-label="Открыть календарь" disabled tabindex="-1">
                   <span class="arc-datepicker__icon" aria-hidden="true"><svg class="btn-icon-svg" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 5.5H14.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 2.5H14.5V14.5H1.5L1.5 2.5Z" stroke="currentColor"/></svg></span>
                 </button>
@@ -409,7 +446,7 @@
             <div class="arc-datepicker arc-datepicker--m input-slots" data-input-size="m">
               <input class="arc-datepicker__input slot-value" type="text" placeholder="ДД.ММ.ГГГГ" aria-label="Дата M placeholder" />
               <span class="selector-actions slot-trailing arc-datepicker__actions">
-                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear" aria-hidden="true"></span></button>
+                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear arc-icon-close" aria-hidden="true"></span></button>
                 <button type="button" class="arc-datepicker__trigger" aria-label="Открыть календарь" disabled tabindex="-1">
                   <span class="arc-datepicker__icon" aria-hidden="true"><svg class="btn-icon-svg" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 5.5H14.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 2.5H14.5V14.5H1.5L1.5 2.5Z" stroke="currentColor"/></svg></span>
                 </button>
@@ -420,7 +457,7 @@
             <div class="arc-datepicker arc-datepicker--m arc-datepicker--has-value arc-datepicker--error input-slots" data-input-size="m">
               <input class="arc-datepicker__input slot-value" type="text" value="99.99.9999" aria-invalid="true" aria-label="Дата M error" />
               <span class="selector-actions slot-trailing arc-datepicker__actions">
-                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear" aria-hidden="true"></span></button>
+                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled tabindex="-1"><span class="selector-clear arc-icon-close" aria-hidden="true"></span></button>
                 <button type="button" class="arc-datepicker__trigger" aria-label="Открыть календарь" disabled tabindex="-1">
                   <span class="arc-datepicker__icon" aria-hidden="true"><svg class="btn-icon-svg" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 5.5H14.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 2.5H14.5V14.5H1.5L1.5 2.5Z" stroke="currentColor"/></svg></span>
                 </button>
@@ -431,7 +468,7 @@
             <div class="arc-datepicker arc-datepicker--s arc-datepicker--disabled input-slots" data-input-size="s">
               <input class="arc-datepicker__input slot-value" type="text" placeholder="ДД.ММ.ГГГГ — ДД.ММ.ГГГГ" disabled aria-label="Дата S disabled" />
               <span class="selector-actions slot-trailing arc-datepicker__actions">
-                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled><span class="selector-clear" aria-hidden="true"></span></button>
+                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled><span class="selector-clear arc-icon-close" aria-hidden="true"></span></button>
                 <button type="button" class="arc-datepicker__trigger" aria-label="Открыть календарь" disabled>
                   <span class="arc-datepicker__icon" aria-hidden="true"><svg class="btn-icon-svg" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 4.5H10.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 2.5H10.5V10.5H1.5V2.5Z" stroke="currentColor"/></svg></span>
                 </button>
@@ -442,7 +479,7 @@
             <div class="arc-datepicker arc-datepicker--m input-slots" data-input-size="m">
               <input class="arc-datepicker__input slot-value" type="text" placeholder="ДД.ММ.ГГГГ — ДД.ММ.ГГГГ" aria-label="Дата интерактивная" />
               <span class="selector-actions slot-trailing arc-datepicker__actions">
-                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled><span class="selector-clear" aria-hidden="true"></span></button>
+                <button type="button" class="arc-datepicker__clear" aria-label="Очистить" disabled><span class="selector-clear arc-icon-close" aria-hidden="true"></span></button>
                 <button type="button" class="arc-datepicker__trigger" data-datepicker-open aria-label="Открыть календарь">
                   <span class="arc-datepicker__icon" aria-hidden="true"><svg class="btn-icon-svg" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 1.5V3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 5.5H14.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.5 2.5H14.5V14.5H1.5L1.5 2.5Z" stroke="currentColor"/></svg></span>
                 </button>
@@ -461,7 +498,7 @@
             <button class="input uploader input-slots" type="button" aria-label="Загрузить файл">
               <span class="uploader-prepend slot-prepend">Выберите файл</span>
               <span class="uploader-value slot-value">Файл не выбран</span>
-              <span class="input-inline-icon input-inline-icon--trash uploader-clear slot-trailing" aria-hidden="true"></span>
+              <span class="input-inline-icon input-inline-icon--trash arc-icon-trash uploader-clear slot-trailing" aria-hidden="true"></span>
             </button>
             <input class="uploader-file-input" type="file" hidden />
           </div>
@@ -469,7 +506,7 @@
             <button class="input uploader input-slots" type="button" aria-label="Загрузить файл">
               <span class="uploader-prepend slot-prepend">Выберите файл</span>
               <span class="uploader-value slot-value">document.psd</span>
-              <span class="input-inline-icon input-inline-icon--trash uploader-clear slot-trailing" aria-hidden="true"></span>
+              <span class="input-inline-icon input-inline-icon--trash arc-icon-trash uploader-clear slot-trailing" aria-hidden="true"></span>
             </button>
             <input class="uploader-file-input" type="file" hidden />
           </div>
@@ -489,16 +526,16 @@
         <div class="inputs-column">
           <label class="field search-live" data-live-search>
             <div class="input search-field input-slots">
-              <span class="search-icon slot-leading" aria-hidden="true"></span>
+              <span class="search-icon slot-leading arc-icon-search" aria-hidden="true"></span>
               <input class="search-inner slot-value" placeholder="Search" />
-              <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
+              <button class="input-inline-icon search-clear-btn input-inline-icon--close arc-icon-close slot-trailing" type="button" aria-label="Очистить"></button>
             </div>
           </label>
           <label class="field field-error search-live" data-live-search>
             <div class="input search-field input-slots">
-              <span class="search-icon slot-leading" aria-hidden="true"></span>
+              <span class="search-icon slot-leading arc-icon-search" aria-hidden="true"></span>
               <input class="search-inner slot-value" value="Ошибка запроса" placeholder="Search" />
-              <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
+              <button class="input-inline-icon search-clear-btn input-inline-icon--close arc-icon-close slot-trailing" type="button" aria-label="Очистить"></button>
             </div>
           </label>
         </div>
@@ -510,12 +547,12 @@
         <h3 class="h3">Search Multiselect</h3>
         <div class="field field-full search-multiselect-live" data-live-search-multi>
           <div class="input search-multiselect input--size-l input-slots">
-            <span class="search-icon slot-leading" aria-hidden="true"></span>
+            <span class="search-icon slot-leading arc-icon-search" aria-hidden="true"></span>
             <span class="chip chip-active"><span class="chip-color" aria-hidden="true"></span><span>Value</span><span class="chip-count">128</span><span class="chip-remove">✕</span></span>
             <span class="chip chip-active"><span class="chip-color" aria-hidden="true"></span><span>Value</span><span class="chip-count">128</span><span class="chip-remove">✕</span></span>
             <span class="chip chip-active"><span class="chip-color" aria-hidden="true"></span><span>Value</span><span class="chip-count">128</span><span class="chip-remove">✕</span></span>
             <input class="search-inner slot-value" placeholder="Value" />
-            <button class="input-inline-icon search-multiselect-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
+            <button class="input-inline-icon search-multiselect-clear-btn input-inline-icon--close arc-icon-close slot-trailing" type="button" aria-label="Очистить"></button>
           </div>
         </div>
       </div>
@@ -778,7 +815,7 @@
         <div class="arc-modal__slot">
           <label class="field input-live" data-live-input>
             <input class="input" placeholder="Value" />
-            <button class="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close" type="button" aria-label="Очистить"></button>
+            <button class="input-inline-icon input-inline-icon-floating input-clear-btn input-inline-icon--close arc-icon-close" type="button" aria-label="Очистить"></button>
           </label>
         </div>
         <div class="arc-modal__slot">
@@ -786,20 +823,20 @@
             <button class="input pseudo-select input-slots" type="button" data-selector-trigger aria-expanded="false">
               <span class="selector-value slot-value">Value</span>
               <span class="selector-actions slot-trailing">
-                <span class="selector-clear" aria-hidden="true"></span>
-                <span class="selector-caret" aria-hidden="true"></span>
+                <span class="selector-clear arc-icon-close" aria-hidden="true"></span>
+                <span class="selector-caret arc-icon-chevron" aria-hidden="true"></span>
               </span>
             </button>
             <div class="selector-dropdown" hidden>
               <div class="input search-field selector-search search-live input-slots">
-                <span class="search-icon slot-leading" aria-hidden="true"></span>
+                <span class="search-icon slot-leading arc-icon-search" aria-hidden="true"></span>
                 <input class="search-inner slot-value" placeholder="Search" />
-                <button class="input-inline-icon search-clear-btn input-inline-icon--close slot-trailing" type="button" aria-label="Очистить"></button>
+                <button class="input-inline-icon search-clear-btn input-inline-icon--close arc-icon-close slot-trailing" type="button" aria-label="Очистить"></button>
               </div>
               <div class="dropdown-separator"></div>
               <div class="dropdown-list">
-                <button class="dropdown-row is-checked" type="button"><span>Один</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
-                <button class="dropdown-row" type="button"><span>Два</span><span class="dropdown-row-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row is-checked" type="button"><span>Один</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
+                <button class="dropdown-row" type="button"><span>Два</span><span class="dropdown-row-check arc-icon-check" aria-hidden="true"></span></button>
               </div>
               <div class="dropdown-separator"></div>
               <button class="btn btn-ghost btn-ds selector-reset" type="button">Очистить</button>
@@ -811,7 +848,7 @@
             <button class="input uploader input-slots" type="button" aria-label="Загрузить файл">
               <span class="uploader-prepend slot-prepend">Выберите файл</span>
               <span class="uploader-value slot-value">Файл не выбран</span>
-              <span class="input-inline-icon input-inline-icon--trash uploader-clear slot-trailing" aria-hidden="true"></span>
+              <span class="input-inline-icon input-inline-icon--trash arc-icon-trash uploader-clear slot-trailing" aria-hidden="true"></span>
             </button>
             <input class="uploader-file-input" type="file" hidden />
           </div>
@@ -1007,6 +1044,9 @@
         const closeIconMarkup = '<svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5.5 5.5L18.5 18.5M18.5 5.5L5.5 18.5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         const closeNodes = document.querySelectorAll(".btn-ds__icon, .btn-icon-only__glyph, .tab-icon");
         closeNodes.forEach(function (node) {
+          if (Array.prototype.some.call(node.classList, function (c) {
+            return c.indexOf("arc-icon-") === 0;
+          })) return;
           if (!node.querySelector("svg")) {
             node.innerHTML = closeIconMarkup;
           }
@@ -1110,10 +1150,12 @@
       }
 
       function injectSvgFromComputedVar(el, varName) {
+        if (el.querySelector("svg")) return Promise.resolve();
         const rawFromEl = getComputedStyle(el).getPropertyValue(varName).trim();
         const rawFromBody = getComputedStyle(document.body).getPropertyValue(varName).trim();
         const href = cssUrlValue(rawFromEl || rawFromBody);
         if (!href) return Promise.resolve();
+        const fillBased = varName === "--input-icon-close-url" || varName === "--input-icon-check-url";
         return getSvgText(href).then(function (text) {
           const cleaned = text.replace(/<\?xml[^?]*\?>/, "").trim();
           const unique = uniquifySvgText(cleaned, nextGlyphSuffix());
@@ -1121,16 +1163,29 @@
           wrap.innerHTML = unique;
           const svg = wrap.querySelector("svg");
           if (!svg) return;
-          svg.setAttribute("class", "btn-icon-svg");
+          // Close/check — fill-глифы. .btn-icon-svg { fill: none; stroke } делает крестик «мутным».
+          svg.setAttribute("class", fillBased ? "input-icon-svg" : "btn-icon-svg");
           svg.setAttribute("aria-hidden", "true");
           svg.removeAttribute("width");
           svg.removeAttribute("height");
+          if (fillBased) {
+            svg.querySelectorAll("[fill]").forEach(function (node) {
+              const fill = node.getAttribute("fill");
+              if (!fill || fill === "none") return;
+              node.setAttribute("fill", "currentColor");
+            });
+          }
           el.textContent = "";
           el.appendChild(svg);
         });
       }
 
       function hydrateInputGlyphs() {
+        /* In-app UI-Kit: тот же пайплайн, что у приложения (`arc-icon-*` + hydrateArcNavbarIcons).
+           Standalone arc-ui.html: fallback через CSS-переменные --input-icon-*-url. */
+        if (typeof hydrateArcNavbarIcons === "function") {
+          return Promise.resolve(hydrateArcNavbarIcons(body));
+        }
         const tasks = [];
         document.querySelectorAll(".search-icon").forEach(function (el) {
           tasks.push(injectSvgFromComputedVar(el, "--input-icon-search-url"));
@@ -1940,6 +1995,31 @@
         });
 
         syncInputState();
+      });
+
+      const liveLinkFields = Array.from(document.querySelectorAll("[data-live-link]"));
+      liveLinkFields.forEach(function (field) {
+        const box = field.querySelector(".link-input");
+        const input = field.querySelector(".link-value");
+        const clearBtn = field.querySelector(".input-clear-btn");
+        if (!box || !input) return;
+
+        function syncLinkState() {
+          const filled = input.value.length > 0;
+          field.classList.toggle("has-value", filled);
+          box.classList.toggle("has-value", filled);
+        }
+
+        input.addEventListener("input", syncLinkState);
+        if (clearBtn) {
+          clearBtn.addEventListener("click", function () {
+            input.value = "";
+            syncLinkState();
+            input.focus();
+          });
+        }
+
+        syncLinkState();
       });
 
       const liveSearchInputs = Array.from(document.querySelectorAll("[data-live-search]"));

@@ -2,7 +2,6 @@
 /** Generated from renderer/public/ui/arc-ui/arc-ui.html — demo logic scoped to .arc-ui-kit-scope. Regenerate: node scripts/gen-ui-kit-boot.mjs */
 
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
-import { playModalHostEnter, playModalHostExit, playToastEnter } from '../motion/playModalHostMotion';
 
 const arcUiKitGlyphHydrators = new WeakMap<HTMLElement, () => Promise<unknown>>();
 
@@ -33,6 +32,9 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         const closeIconMarkup = '<svg class="btn-icon-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5.5 5.5L18.5 18.5M18.5 5.5L5.5 18.5" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         const closeNodes = scope.querySelectorAll(".btn-ds__icon, .btn-icon-only__glyph, .tab-icon");
         closeNodes.forEach(function (node) {
+          if (Array.prototype.some.call(node.classList, function (c) {
+            return c.indexOf("arc-icon-") === 0;
+          })) return;
           if (!node.querySelector("svg")) {
             node.innerHTML = closeIconMarkup;
           }
@@ -136,10 +138,12 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
       }
 
       function injectSvgFromComputedVar(el, varName) {
+        if (el.querySelector("svg")) return Promise.resolve();
         const rawFromEl = getComputedStyle(el).getPropertyValue(varName).trim();
         const rawFromBody = getComputedStyle(body).getPropertyValue(varName).trim();
         const href = cssUrlValue(rawFromEl || rawFromBody);
         if (!href) return Promise.resolve();
+        const fillBased = varName === "--input-icon-close-url" || varName === "--input-icon-check-url";
         return getSvgText(href).then(function (text) {
           const cleaned = text.replace(/<\?xml[^?]*\?>/, "").trim();
           const unique = uniquifySvgText(cleaned, nextGlyphSuffix());
@@ -147,16 +151,29 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           wrap.innerHTML = unique;
           const svg = wrap.querySelector("svg");
           if (!svg) return;
-          svg.setAttribute("class", "btn-icon-svg");
+          // Close/check — fill-глифы. .btn-icon-svg { fill: none; stroke } делает крестик «мутным».
+          svg.setAttribute("class", fillBased ? "input-icon-svg" : "btn-icon-svg");
           svg.setAttribute("aria-hidden", "true");
           svg.removeAttribute("width");
           svg.removeAttribute("height");
+          if (fillBased) {
+            svg.querySelectorAll("[fill]").forEach(function (node) {
+              const fill = node.getAttribute("fill");
+              if (!fill || fill === "none") return;
+              node.setAttribute("fill", "currentColor");
+            });
+          }
           el.textContent = "";
           el.appendChild(svg);
         });
       }
 
       function hydrateInputGlyphs() {
+        /* In-app UI-Kit: тот же пайплайн, что у приложения (`arc-icon-*` + hydrateArcNavbarIcons).
+           Standalone arc-ui.html: fallback через CSS-переменные --input-icon-*-url. */
+        if (typeof hydrateArcNavbarIcons === "function") {
+          return Promise.resolve(hydrateArcNavbarIcons(body));
+        }
         const tasks = [];
         scope.querySelectorAll(".search-icon").forEach(function (el) {
           tasks.push(injectSvgFromComputedVar(el, "--input-icon-search-url"));
@@ -369,7 +386,6 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           }
           applyModalState(host, modalCommittedState.get(hostId));
           syncDirtyIndicator(host);
-          playModalHostEnter(host);
           document.dispatchEvent(new CustomEvent("arc-modal:open", { detail: { host: host, trigger: trigger || null } }));
           const dialog = host.querySelector(".arc-modal");
           const focusables = dialog ? getFocusable(dialog) : [];
@@ -387,18 +403,15 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           if (!closingHost) return;
           const saved = closingHost.getAttribute("data-arc-modal-saved") === "true";
           closingHost.removeAttribute("data-arc-modal-saved");
+          closingHost.hidden = true;
+          closingHost.setAttribute("aria-hidden", "true");
           const t = triggerOverride || lastTrigger;
-          const finishClose = function () {
-            closingHost.hidden = true;
-            closingHost.setAttribute("aria-hidden", "true");
-            document.dispatchEvent(new CustomEvent("arc-modal:close", { detail: { host: closingHost, trigger: t || null, saved: saved } }));
-            activeHost = null;
-            lastTrigger = null;
-            if (t && typeof t.focus === "function") {
-              t.focus();
-            }
-          };
-          playModalHostExit(closingHost, finishClose);
+          document.dispatchEvent(new CustomEvent("arc-modal:close", { detail: { host: closingHost, trigger: t || null, saved: saved } }));
+          activeHost = null;
+          lastTrigger = null;
+          if (t && typeof t.focus === "function") {
+            t.focus();
+          }
         }
 
         scope.querySelectorAll("[data-arc-modal-open]").forEach(function (btn) {
@@ -731,7 +744,6 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         const alertCopy = {
           success: "Операция успешно завершена",
           info: "Изменения применяются, это может занять несколько секунд",
-          brand: "Карточка добавлена в мудборд",
           warning: "Не все данные заполнены, проверьте обязательные поля",
           danger: "Не удалось завершить операцию, попробуйте снова"
         };
@@ -775,7 +787,6 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             }, docOpts);
           }
           host.appendChild(alertNode);
-          playToastEnter(alertNode);
           closeTimer = window.setTimeout(closeAlert, 6400);
         }
 
@@ -974,6 +985,31 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         syncInputState();
       });
 
+      const liveLinkFields = Array.from(scope.querySelectorAll("[data-live-link]"));
+      liveLinkFields.forEach(function (field) {
+        const box = field.querySelector(".link-input");
+        const input = field.querySelector(".link-value");
+        const clearBtn = field.querySelector(".input-clear-btn");
+        if (!box || !input) return;
+
+        function syncLinkState() {
+          const filled = input.value.length > 0;
+          field.classList.toggle("has-value", filled);
+          box.classList.toggle("has-value", filled);
+        }
+
+        input.addEventListener("input", syncLinkState, docOpts);
+        if (clearBtn) {
+          clearBtn.addEventListener("click", function () {
+            input.value = "";
+            syncLinkState();
+            input.focus();
+          }, docOpts);
+        }
+
+        syncLinkState();
+      });
+
       const liveSearchInputs = Array.from(scope.querySelectorAll("[data-live-search]"));
       liveSearchInputs.forEach(function (field) {
         const input = field.querySelector(".search-inner");
@@ -1092,84 +1128,90 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         syncUploaderState();
       });
 
-      function initContextMenuDemo() {
-        const trigger = scope.querySelector("[data-context-menu-trigger]");
-        if (!trigger || !(trigger instanceof HTMLButtonElement)) return;
+      function initDatepickerDemo() {
+        const host = scope.querySelector("#arcModalDatepickerDemo");
+        const liveField = scope.querySelector("[data-live-datepicker]");
+        const picker = liveField ? liveField.querySelector(".arc-datepicker") : null;
+        const input = liveField ? liveField.querySelector(".arc-datepicker__input") : null;
+        const clearBtn = picker ? picker.querySelector(".arc-datepicker__clear") : null;
+        if (!host || !input || !picker) return;
 
-        let menuEl = null;
-        let backdropEl = null;
-
-        function closeMenu() {
-          if (menuEl) menuEl.remove();
-          if (backdropEl) backdropEl.remove();
-          menuEl = null;
-          backdropEl = null;
-          trigger.setAttribute("aria-expanded", "false");
+        function syncDatepickerValueState() {
+          const hasValue = input.value.trim().length > 0;
+          picker.classList.toggle("arc-datepicker--has-value", hasValue);
+          if (clearBtn) clearBtn.disabled = !hasValue;
         }
 
-        document.querySelectorAll("[data-arc-ui-kit-context-menu]").forEach(function (node) {
-          node.remove();
+        function openModal() {
+          host.hidden = false;
+          host.setAttribute("aria-hidden", "false");
+        }
+
+        function closeModal() {
+          host.hidden = true;
+          host.setAttribute("aria-hidden", "true");
+        }
+
+        input.addEventListener("input", syncDatepickerValueState, docOpts);
+
+        if (clearBtn) {
+          clearBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            input.value = "";
+            syncDatepickerValueState();
+            input.focus();
+          }, docOpts);
+        }
+
+        scope.querySelectorAll("[data-datepicker-open]").forEach(function (btn) {
+          btn.addEventListener("click", function (event) {
+            event.preventDefault();
+            openModal();
+          }, docOpts);
         });
 
-        function openMenu() {
-          closeMenu();
-          const rect = trigger.getBoundingClientRect();
-          backdropEl = document.createElement("button");
-          backdropEl.type = "button";
-          backdropEl.className = "context-menu-backdrop";
-          backdropEl.dataset.arcUiKitContextMenu = "backdrop";
-          backdropEl.setAttribute("aria-label", "Закрыть меню");
-          backdropEl.addEventListener("click", closeMenu, docOpts);
+        host.querySelectorAll("[data-datepicker-demo-close]").forEach(function (btn) {
+          btn.addEventListener("click", closeModal, docOpts);
+        });
 
-          menuEl = document.createElement("div");
-          menuEl.className = "context-menu panel elevation-raised arc-ui-kit-scope";
-          menuEl.dataset.arcUiKitContextMenu = "panel";
-          menuEl.setAttribute("role", "menu");
-          menuEl.setAttribute("aria-label", "Демо меню");
-          menuEl.dataset.elevation = "raised";
-          menuEl.dataset.typoTone = "white";
-          menuEl.dataset.inputSize = "s";
-          menuEl.dataset.btnSize = "m";
-          menuEl.style.top = rect.bottom + 8 + "px";
-          menuEl.style.left = Math.max(8, rect.right - 250) + "px";
-          menuEl.style.width = "250px";
-          menuEl.innerHTML =
-            '<div class="context-menu__list">' +
-            '<button type="button" class="context-menu__item" role="menuitem"><span class="context-menu__item-inner"><span class="context-menu__item-label">Действие</span></span></button>' +
-            '<button type="button" class="context-menu__item" role="menuitem"><span class="context-menu__item-inner"><span class="context-menu__item-label">Ещё пункт</span><span class="context-menu__item-shortcut">Ctrl+K</span></span></button>' +
-            "</div>";
-
-          menuEl.querySelectorAll(".context-menu__item").forEach(function (item) {
-            item.addEventListener("click", closeMenu, docOpts);
-          });
-
-          document.body.appendChild(backdropEl);
-          document.body.appendChild(menuEl);
-          trigger.setAttribute("aria-expanded", "true");
+        const clearModalBtn = host.querySelector("[data-datepicker-demo-clear]");
+        if (clearModalBtn) {
+          clearModalBtn.addEventListener("click", function () {
+            input.value = "";
+            syncDatepickerValueState();
+            closeModal();
+          }, docOpts);
         }
 
-        trigger.addEventListener("click", function () {
-          if (menuEl) closeMenu();
-          else openMenu();
+        const applyBtn = host.querySelector("[data-datepicker-demo-apply]");
+        if (applyBtn) {
+          applyBtn.addEventListener("click", function () {
+            input.value = "11.06.2025 — 17.06.2025";
+            syncDatepickerValueState();
+            closeModal();
+          }, docOpts);
+        }
+
+        host.addEventListener("click", function (event) {
+          if (event.target === host) closeModal();
         }, docOpts);
 
-        window.addEventListener("keydown", function (e) {
-          if (e.key === "Escape") closeMenu();
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && !host.hidden) closeModal();
         }, docOpts);
 
-        mountAc.signal.addEventListener("abort", closeMenu, { once: true });
+        syncDatepickerValueState();
       }
+
+      initDatepickerDemo();
 
       arcUiKitGlyphHydrators.set(scope, hydrateInputGlyphs);
 
       initArcModals();
-      initContextMenuDemo();
       initModalColorPickers();
       initDemoAlerts();
 
       injectButtonIcons();
-      const staticMenu = scope.querySelector(".context-menu--static");
-      if (staticMenu) void hydrateArcNavbarIcons(staticMenu);
       hydrateInputGlyphs().catch(function (err) {
         if (typeof console !== "undefined" && console.warn) {
           console.warn("[arc-ui] hydrateInputGlyphs:", err);

@@ -3,10 +3,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useSearchParams } from 'react-router-dom';
 import arcUiKitMainHtml from './arcUiKitMain.html?raw';
 import { mountArcUiKitDemo, refreshArcUiKitGlyphs } from './arcUiKitBoot';
+import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 import UiKitRangeSliderDemo from './UiKitRangeSliderDemo';
 import UiKitControlsDemo from './UiKitControlsDemo';
 import UiKitProductPatternsDemo from './UiKitProductPatternsDemo';
 import UiKitButtonIconSplitDemo from './UiKitButtonIconSplitDemo';
+import UiKitLinkInputDemo from './UiKitLinkInputDemo';
 import {
   applyUiKitScopeDataset,
   parseUiKitElevation,
@@ -20,6 +22,7 @@ export default function UiKitPage() {
   const controlsRootRef = useRef<Root | null>(null);
   const productPatternsRootRef = useRef<Root | null>(null);
   const buttonIconSplitRootRef = useRef<Root | null>(null);
+  const linkInputRootRef = useRef<Root | null>(null);
   const [searchParams] = useSearchParams();
 
   /** Один и тот же объект — иначе при каждом ререндере React снова ставит innerHTML и стирает SVG из injectButtonIcons. */
@@ -58,6 +61,14 @@ export default function UiKitPage() {
       buttonIconSplitRootRef.current.render(<UiKitButtonIconSplitDemo />);
     }
 
+    const linkEl = scope.querySelector('#uikit-link-input-live');
+    if (linkEl) {
+      linkInputRootRef.current = createRoot(linkEl);
+      linkInputRootRef.current.render(<UiKitLinkInputDemo />);
+    }
+
+    void hydrateArcNavbarIcons(scope);
+
     return () => {
       ac.abort();
       rangeSliderRootRef.current?.unmount();
@@ -68,6 +79,8 @@ export default function UiKitPage() {
       productPatternsRootRef.current = null;
       buttonIconSplitRootRef.current?.unmount();
       buttonIconSplitRootRef.current = null;
+      linkInputRootRef.current?.unmount();
+      linkInputRootRef.current = null;
     };
   }, []);
 
@@ -75,6 +88,7 @@ export default function UiKitPage() {
     const scope = scopeRef.current;
     if (!scope) return;
     applyUiKitScopeDataset(scope, elevation, size);
+    void hydrateArcNavbarIcons(scope);
     refreshArcUiKitGlyphs(scope)?.catch(function (err) {
       if (typeof console !== 'undefined' && console.warn) {
         console.warn('[arc-ui] hydrateInputGlyphs:', err);
