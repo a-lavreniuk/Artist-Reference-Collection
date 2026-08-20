@@ -888,25 +888,6 @@ export async function setAiEnabled(enabled: boolean): Promise<void> {
   }
 }
 
-export async function setAiCaptionEnabled(enabled: boolean): Promise<void> {
-  const arc = window.arc;
-  if (!arc?.aiSetEnabled) return;
-
-  patchState({ busy: true });
-  try {
-    const next = (await arc.aiSetEnabled({ captionEnabled: enabled })) as AiStatus;
-    patchState({ ...applyAiStatusFromServer(next) });
-    await patchAppPreferences({ aiCaptionEnabled: enabled });
-    dispatchAiSetupChanged();
-    if (enabled) {
-      await refreshAiSettings();
-    }
-  } finally {
-    patchState({ busy: false });
-    syncDownloadPoll();
-    syncIndexPoll(state.status);
-  }
-}
 
 export async function downloadAiModel(ref: AiModelRef): Promise<boolean> {
   const arc = window.arc;

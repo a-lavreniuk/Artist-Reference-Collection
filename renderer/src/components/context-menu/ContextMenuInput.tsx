@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react';
+import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 
 type Props = {
   variant: 'live' | 'search' | 'textarea';
@@ -7,6 +7,10 @@ type Props = {
   value?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  slotClassName?: string;
+  autoGrow?: boolean;
+  autoGrowMinPx?: number;
+  autoGrowMaxPx?: number;
   onChange?: (value: string) => void;
 };
 
@@ -22,11 +26,35 @@ export default function ContextMenuInput({
   value,
   disabled,
   autoFocus,
+  slotClassName = '',
+  autoGrow = false,
+  autoGrowMinPx = 64,
+  autoGrowMaxPx = 234,
   onChange
 }: Props) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const slotClass = ['context-menu__slot', slotClassName].filter(Boolean).join(' ');
+
+  const syncTextareaHeight = () => {
+    const el = textareaRef.current;
+    if (!el || !autoGrow) return;
+    el.style.height = 'auto';
+    el.classList.remove('is-scrollable');
+    const scrollH = el.scrollHeight;
+    const next = Math.min(autoGrowMaxPx, Math.max(autoGrowMinPx, scrollH));
+    el.style.height = `${next}px`;
+    if (scrollH > autoGrowMaxPx) {
+      el.classList.add('is-scrollable');
+    }
+  };
+
+  useLayoutEffect(() => {
+    syncTextareaHeight();
+  }, [value, autoGrow, autoGrowMinPx, autoGrowMaxPx]);
+
   if (variant === 'search') {
     return (
-      <div className="context-menu__slot">
+      <div className={slotClass}>
         <div className="input search-field input-slots">
           <span className="search-icon slot-leading" aria-hidden="true" />
           <input
@@ -44,16 +72,20 @@ export default function ContextMenuInput({
 
   if (variant === 'textarea') {
     return (
-      <div className="context-menu__slot arc-filter-menu-slot">
+      <div className={slotClass}>
         <label className="field">
           <textarea
-            className="input textarea"
+            ref={textareaRef}
+            className={`input textarea${autoGrow ? ' arc-context-menu-textarea-autogrow' : ''}`}
             placeholder={placeholder ?? label ?? 'Ключевые слова'}
             value={value}
             disabled={disabled}
             autoFocus={autoFocus}
             onKeyDown={stopMenuInputKeys}
-            onChange={(e) => onChange?.(e.target.value)}
+            onChange={(e) => {
+              onChange?.(e.target.value);
+              syncTextareaHeight();
+            }}
           />
         </label>
       </div>
@@ -61,8 +93,8 @@ export default function ContextMenuInput({
   }
 
   return (
-    <div className="context-menu__slot">
-      <label className="field input-live">
+    <div className={slotClass}>
+      <label className={`field input-live${value && value.length > 0 ? ' has-value' : ''}`}>
         <input
           className="input"
           placeholder={placeholder ?? label}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ValueSlider from '../../../components/range-slider/ValueSlider';
 import { Loader } from '../../../components/loader';
@@ -7,15 +7,10 @@ import SettingsHardwareRow from '../../../components/settings/SettingsHardwareRo
 import SettingsOptionCard from '../../../components/settings/SettingsOptionCard';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
 import SettingsToggleRow from '../../../components/settings/SettingsToggleRow';
-import { useAppPreferences } from '../../../hooks/useAppPreferences';
-import type { JoyCaptionExtraId, JoyCaptionTypeId } from '../../../services/appPreferences';
-import { sanitizeJoyCaptionLengthLevel } from '../../../services/appPreferences';
 import type { AiModelCardInfo, AiModelRef, AiStatus } from '../../../services/aiTypes';
 import ConfirmModal from '../ConfirmModal';
 import {
   AI_INTRO_TEXT,
-  captionLengthHint,
-  captionLengthLabel,
   formatCpuLabel,
   formatGpuLabel,
   formatRamGb,
@@ -23,10 +18,6 @@ import {
   modelCardTitle,
   strictnessHint
 } from '../aiSettingsFormatters';
-import {
-  JOY_CAPTION_EXTRA_OPTIONS,
-  JOY_CAPTION_TYPE_OPTIONS
-} from '../joyCaptionSettingsCopy';
 import {
   isActiveModelInstalled,
   isAiDownloading,
@@ -38,10 +29,10 @@ import { useSettingsArcHint } from '../hooks/useSettingsArcHint';
 import { useSettingsAi } from '../hooks/useSettingsAi';
 import { useSettingsAutoTag } from '../hooks/useSettingsAutoTag';
 
-type AiSettingsTab = 'search' | 'caption' | 'tags';
+type AiSettingsTab = 'search' | 'tags';
 
 function parseAiSettingsTab(raw: string | null): AiSettingsTab {
-  if (raw === 'caption' || raw === 'tags' || raw === 'search') return raw;
+  if (raw === 'tags') return 'tags';
   return 'search';
 }
 
@@ -72,10 +63,9 @@ function isCardDownloading(
   );
 }
 
-/** Единый раздел AI: общие ресурсы + табы Поиск / Описание / Теги. */
+/** Единый раздел AI: общие ресурсы + табы Поиск / Теги. */
 export default function SettingsAiSearchPanel() {
   const arcHint = useSettingsArcHint();
-  const { prefs, ready: prefsReady, update: updatePrefs } = useAppPreferences();
   const {
     snapshot,
     loading,
@@ -84,7 +74,6 @@ export default function SettingsAiSearchPanel() {
     busy,
     cudaPrompt,
     setEnabled,
-    setCaptionEnabled,
     downloadModel,
     deleteModel,
     testModel,
@@ -103,7 +92,6 @@ export default function SettingsAiSearchPanel() {
   const autoTag = useSettingsAutoTag();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = parseAiSettingsTab(searchParams.get('tab'));
-  const captionPanelRef = useRef<HTMLDivElement>(null);
 
   const setTab = (next: AiSettingsTab) => {
     setSearchParams(
@@ -117,15 +105,7 @@ export default function SettingsAiSearchPanel() {
     );
   };
 
-  useEffect(() => {
-    if (tab !== 'caption') return;
-    const frame = window.requestAnimationFrame(() => {
-      captionPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [tab]);
-
-  const [captionDownloadOwner, setCaptionDownloadOwner] = useState<'caption' | 'tags' | null>(null);
+  const [captionDownloadingForTags, setCaptionDownloadingForTags] = useState(false);
 
   const isDownloading = isAiDownloading(snapshot);
   const cardProgress = resolveModelCardProgress(snapshot);
@@ -150,57 +130,6 @@ export default function SettingsAiSearchPanel() {
     isDownloading &&
     (downloadRole === 'caption' || downloadRole === 'heavy' || downloadRole === 'joycaption-beta-one');
   const searchDownloading = isDownloading && !captionDownloading;
-
-  const [captionType, setCaptionTypeState] = useState<JoyCaptionTypeId>(
-    () => prefs?.aiCaptionType ?? 'descriptive_casual'
-  );
-  const [captionLengthLevel, setCaptionLengthState] = useState(
-    () => prefs?.aiCaptionLengthLevel ?? 80
-  );
-  const [captionExtraIds, setCaptionExtraIdsState] = useState<JoyCaptionExtraId[]>(
-    () => prefs?.aiCaptionExtraIds ?? []
-  );
-  const captionRef = useRef({
-    type: captionType,
-    length: captionLengthLevel,
-    extras: captionExtraIds
-  });
-  captionRef.current = {
-    type: captionType,
-    length: captionLengthLevel,
-    extras: captionExtraIds
-  };
-
-  useEffect(() => {
-    if (!prefs) return;
-    setCaptionTypeState(prefs.aiCaptionType);
-    setCaptionLengthState(prefs.aiCaptionLengthLevel);
-    setCaptionExtraIdsState(prefs.aiCaptionExtraIds);
-  }, [prefs]);
-
-  const captionExtraSet = new Set(captionExtraIds);
-  const captionControlsDisabled = !prefsReady || !status?.captionEnabled;
-
-  const persistCaption = (partial: {
-    type?: JoyCaptionTypeId;
-    length?: number;
-    extras?: JoyCaptionExtraId[];
-  }) => {
-    const next = {
-      type: partial.type ?? captionRef.current.type,
-      length: sanitizeJoyCaptionLengthLevel(partial.length ?? captionRef.current.length),
-      extras: partial.extras ?? captionRef.current.extras
-    };
-    captionRef.current = next;
-    setCaptionTypeState(next.type);
-    setCaptionLengthState(next.length);
-    setCaptionExtraIdsState(next.extras);
-    void updatePrefs({
-      aiCaptionType: next.type,
-      aiCaptionLengthLevel: next.length,
-      aiCaptionExtraIds: next.extras
-    });
-  };
 
   const resolveCardProgress = (downloading: boolean) => {
     if (!downloading) return null;
@@ -302,7 +231,7 @@ export default function SettingsAiSearchPanel() {
     );
   };
 
-  /** Временная плашка JoyCaption только на время скачивания (табы Описание / Метки). */
+  /** Временная плашка JoyCaption только на время скачивания (таб Теги). */
   const renderCaptionDownloadCard = () => {
     if (!status) return null;
     const card = status.captionModelCard;
@@ -323,28 +252,6 @@ export default function SettingsAiSearchPanel() {
     );
   };
 
-  const handleCaptionToggle = async (enabled: boolean) => {
-    if (!enabled) {
-      await setCaptionEnabled(false);
-      return;
-    }
-
-    if (captionInstalled) {
-      await setCaptionEnabled(true);
-      return;
-    }
-
-    setCaptionDownloadOwner('caption');
-    try {
-      const installed = await downloadModel('caption');
-      if (installed) await setCaptionEnabled(true);
-    } catch {
-      // Ошибка уже показывается общей AI-сессией; режим остаётся выключенным.
-    } finally {
-      setCaptionDownloadOwner(null);
-    }
-  };
-
   const handleAutoTagToggle = async (enabled: boolean) => {
     if (!enabled) {
       await autoTag.setEnabled(false);
@@ -355,14 +262,14 @@ export default function SettingsAiSearchPanel() {
       return;
     }
 
-    setCaptionDownloadOwner('tags');
+    setCaptionDownloadingForTags(true);
     try {
       const installed = await downloadModel('caption');
       if (installed) await autoTag.setEnabled(true);
     } catch {
       // Ошибка уже показывается общей AI-сессией; режим остаётся выключенным.
     } finally {
-      setCaptionDownloadOwner(null);
+      setCaptionDownloadingForTags(false);
     }
   };
 
@@ -475,7 +382,6 @@ export default function SettingsAiSearchPanel() {
                 {(
                   [
                     { key: 'search' as const, label: 'Поиск' },
-                    { key: 'caption' as const, label: 'Описание' },
                     { key: 'tags' as const, label: 'Теги' }
                   ] as const
                 ).map((item) => (
@@ -498,7 +404,7 @@ export default function SettingsAiSearchPanel() {
                     <p className="text-m arc-settings-desc-block__text">
                       Поиск на естественном языке сравнивает запрос с содержимым карточек. Выберите модель по
                       скорости и качеству: CLIP работает быстрее, Qwen точнее понимает сложные визуальные запросы.
-                      Вместе с AI Описанием Qwen также учитывает текст на изображениях (кнопки, заголовки UI).
+                      При индексации Qwen также учитывает текст на изображениях (кнопки, заголовки UI).
                     </p>
                     <SettingsToggleRow
                       label="Включить AI Поиск"
@@ -569,101 +475,6 @@ export default function SettingsAiSearchPanel() {
                 </div>
               ) : null}
 
-              {tab === 'caption' ? (
-                <div className="arc-settings-ai-tab-panel" role="tabpanel" ref={captionPanelRef}>
-                  <div className="arc-settings-ai-tab-block">
-                    <p className="text-m arc-settings-desc-block__text">
-                      Включает кнопку «Сгенерировать описание» в деталке карточки. Описание можно править вручную.
-                      Отдельно при индексации поиска JoyCaption создаёт скрытый текст для гибридного поиска (Qwen) —
-                      он не показывается в интерфейсе.
-                    </p>
-                    <SettingsToggleRow
-                      label="Включить AI Описание"
-                      pressed={status.captionEnabled || captionDownloadOwner === 'caption'}
-                      disabled={disabled || isDownloading}
-                      onPressedChange={(on) => void handleCaptionToggle(on)}
-                    />
-                  </div>
-
-                  {status.captionEnabled || captionDownloadOwner === 'caption' ? (
-                    <>
-                      {captionDownloadOwner === 'caption' ||
-                      (captionDownloading && captionDownloadOwner === null)
-                        ? renderCaptionDownloadCard()
-                        : null}
-
-                      {captionInstalled && !captionDownloading ? (
-                        <>
-                          <div className="arc-settings-ai-tab-block arc-settings-ai-slider-col">
-                            <SectionLabel>
-                              Длина описания — {captionLengthLabel(captionLengthLevel)}
-                            </SectionLabel>
-                            <ValueSlider
-                              size="s"
-                              min={0}
-                              max={100}
-                              step={20}
-                              value={captionLengthLevel}
-                              showValue={false}
-                              disabled={captionControlsDisabled}
-                              formatValue={(v) => `${v}`}
-                              onChange={(value) => persistCaption({ length: value })}
-                              ariaLabel="Длина описания"
-                            />
-                            <p className="text-m arc-settings-ai-slider-col__hint">
-                              {captionLengthHint(captionLengthLevel)}
-                            </p>
-                          </div>
-
-                          <div className="arc-settings-ai-tab-block">
-                            <SectionLabel>Тип описания</SectionLabel>
-                            <div
-                              className="arc-settings-ai-option-stack"
-                              role="radiogroup"
-                              aria-label="Тип описания"
-                            >
-                              {JOY_CAPTION_TYPE_OPTIONS.map((opt) => (
-                                <SettingsOptionCard
-                                  key={opt.id}
-                                  variant="radio"
-                                  label={opt.label}
-                                  description={opt.description}
-                                  checked={captionType === opt.id}
-                                  disabled={captionControlsDisabled}
-                                  onCheckedChange={() => persistCaption({ type: opt.id })}
-                                />
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="arc-settings-ai-tab-block">
-                            <SectionLabel>Дополнительные настройки</SectionLabel>
-                            <div className="arc-settings-ai-option-stack">
-                              {JOY_CAPTION_EXTRA_OPTIONS.map((opt) => (
-                                <SettingsOptionCard
-                                  key={opt.id}
-                                  variant="toggle"
-                                  label={opt.label}
-                                  description={opt.description}
-                                  checked={captionExtraSet.has(opt.id)}
-                                  disabled={captionControlsDisabled}
-                                  onCheckedChange={(checked) => {
-                                    const extras = checked
-                                      ? [...captionRef.current.extras.filter((x) => x !== opt.id), opt.id]
-                                      : captionRef.current.extras.filter((x) => x !== opt.id);
-                                    persistCaption({ extras });
-                                  }}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-              ) : null}
-
               {tab === 'tags' ? (
                 <div className="arc-settings-ai-tab-panel" role="tabpanel">
                   <div className="arc-settings-ai-tab-block">
@@ -673,15 +484,15 @@ export default function SettingsAiSearchPanel() {
                     </p>
                     <SettingsToggleRow
                       label="Включить автотегирование"
-                      pressed={autoTag.enabled || captionDownloadOwner === 'tags'}
+                      pressed={autoTag.enabled || captionDownloadingForTags}
                       disabled={autoTag.enableDisabled || isDownloading}
                       onPressedChange={(on) => void handleAutoTagToggle(on)}
                     />
                   </div>
 
-                  {autoTag.enabled || captionDownloadOwner === 'tags' ? (
+                  {autoTag.enabled || captionDownloadingForTags ? (
                     <>
-                      {captionDownloadOwner === 'tags' ? renderCaptionDownloadCard() : null}
+                      {captionDownloadingForTags ? renderCaptionDownloadCard() : null}
 
                       {captionInstalled && !captionDownloading ? (
                         <>
@@ -726,14 +537,6 @@ export default function SettingsAiSearchPanel() {
                                 checked={autoTag.createNew}
                                 disabled={autoTag.baseDisabled}
                                 onCheckedChange={(on) => void autoTag.setCreateNew(on)}
-                              />
-                              <SettingsOptionCard
-                                variant="toggle"
-                                label="AI описание видео после импорта"
-                                description="После импорта видео — до трёх кадров и одно описание из суммы подписей JoyCaption"
-                                checked={autoTag.videoCaptionOnImport}
-                                disabled={autoTag.baseDisabled}
-                                onCheckedChange={(on) => void autoTag.setVideoCaptionOnImport(on)}
                               />
                             </div>
                           </div>

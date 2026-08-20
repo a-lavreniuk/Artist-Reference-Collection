@@ -30,9 +30,6 @@ export function useTagCategoryContextMenu({ resolveCategory, onOpen, onEdit, onD
 
   const openAtCategory = useCallback(
     (categoryId: string, event: React.MouseEvent) => {
-      if (event.target instanceof Element && event.target.closest('.arc-tags-sidebar-row-handle')) {
-        return;
-      }
       menu.openAt(event);
       setMenuCategoryId(categoryId);
     },

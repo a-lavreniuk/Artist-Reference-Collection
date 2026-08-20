@@ -162,17 +162,6 @@ export default function UiKitProductPatternsDemo() {
                   <div className="context-menu__item-inner arc-tags-sidebar-row-inner">
                     <button
                       type="button"
-                      className="arc-tags-sidebar-row-handle"
-                      aria-label={`Изменить порядок «${row.name}»`}
-                    >
-                      <span
-                        className="context-menu__item-icon tab-icon arc-icon-chevrons-up-down"
-                        data-arc-icon-size="m"
-                        aria-hidden="true"
-                      />
-                    </button>
-                    <button
-                      type="button"
                       className="arc-tags-sidebar-row-select"
                       onClick={() => setSidebarActive(row.id)}
                     >

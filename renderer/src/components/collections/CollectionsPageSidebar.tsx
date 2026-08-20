@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CollectionRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { bindArcTagsSidebarRowPointerDown } from '../shared/arcTagsSidebarRowDragPointer';
 import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import CollectionsSidebarGhost from './CollectionsSidebarGhost';
 import { useCollectionsDrag } from './useCollectionsDrag';
@@ -30,6 +31,7 @@ export default function CollectionsPageSidebar({
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const skipSelectClickRef = useRef(false);
 
   const handleReorder = useCallback(
     (id: string, insertIndex: number) => {
@@ -105,35 +107,26 @@ export default function CollectionsPageSidebar({
                   <div className="context-menu__item-inner arc-tags-sidebar-row-inner">
                     <button
                       type="button"
-                      className="arc-tags-sidebar-row-handle"
-                      aria-label={`Изменить порядок «${collection.name}»`}
-                      onPointerDown={(e) => {
-                        if (e.button !== 0 || !listRef.current) return;
-                        const rowEl = e.currentTarget.closest('[data-collections-row]');
-                        if (!(rowEl instanceof HTMLElement)) return;
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        startDrag({
+                      className="arc-tags-sidebar-row-select"
+                      onPointerDown={(e) =>
+                        bindArcTagsSidebarRowPointerDown({
+                          e,
+                          listEl: listRef.current,
+                          rowSelector: '[data-collections-row]',
                           id: collection.id,
                           label: collection.name,
                           count,
-                          handleEl: e.currentTarget,
-                          rowEl,
-                          listEl: listRef.current
-                        });
+                          onStartDrag: startDrag,
+                          skipClickRef: skipSelectClickRef
+                        })
+                      }
+                      onClick={() => {
+                        if (skipSelectClickRef.current) {
+                          skipSelectClickRef.current = false;
+                          return;
+                        }
+                        onSelectCollection(collection.id);
                       }}
-                    >
-                      <span
-                        className="context-menu__item-icon tab-icon arc-icon-chevrons-up-down"
-                        data-arc-icon-size="m"
-                        aria-hidden="true"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      className="arc-tags-sidebar-row-select"
-                      onClick={() => onSelectCollection(collection.id)}
                     >
                       <span className="context-menu__item-label-cluster">
                         <TruncatedTextWithTooltip

@@ -28,6 +28,7 @@ import {
   ContextMenuSeparator
 } from '../context-menu';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import { resolveDetailFieldSubmenuPosition } from './detailFieldSubmenuPosition';
 
 type DragState = {
   dragId: string;
@@ -38,7 +39,66 @@ type DragState = {
   label: string;
 };
 
-type MenuView = 'field' | 'type';
+const FIELD_TYPE_ROW_KEY = 'field-type';
+const FIELD_MENU_SLOT_CLASS = 'arc-detail-field-menu-slot';
+const FIELD_MENU_NAME_SLOT_CLASS = `${FIELD_MENU_SLOT_CLASS} arc-detail-field-menu-slot--after-type`;
+
+function officialFieldLabel(field: DetailTemplateField): string {
+  if (field.kind === 'builtin') return DETAIL_BUILTIN_FIELD_LABELS[field.id];
+  return CUSTOM_FIELD_TYPE_LABELS[field.type];
+}
+
+function readNameDraftFromField(field: DetailTemplateField): string {
+  const official = officialFieldLabel(field);
+  const current = templateFieldLabel(field).trim();
+  return current === official ? '' : current;
+}
+
+type DetailFieldTypeRowProps = {
+  field: DetailTemplateField;
+  submenuOpen?: boolean;
+  onOpenSubmenu?: () => void;
+};
+
+function DetailFieldTypeRow({ field, submenuOpen = false, onOpenSubmenu }: DetailFieldTypeRowProps) {
+  const label = templateFieldTypeLabel(field);
+  const iconClass = templateFieldIconClass(field);
+  const canOpen = field.kind === 'custom';
+
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={`context-menu__item arc-detail-field-menu-type-row${
+        canOpen ? '' : ' is-disabled'
+      }${submenuOpen ? ' is-active' : ''}`}
+      data-context-menu-key={FIELD_TYPE_ROW_KEY}
+      disabled={!canOpen}
+      onClick={() => {
+        if (!canOpen) return;
+        onOpenSubmenu?.();
+      }}
+    >
+      <span className="context-menu__item-inner">
+        <span
+          className={`arc-detail-field-menu-type-row__lead tab-icon ${iconClass}`}
+          data-arc-icon-size="m"
+          aria-hidden="true"
+        />
+        <span className="context-menu__item-label-cluster">
+          <span className="context-menu__item-label">{label}</span>
+        </span>
+        {canOpen ? (
+          <span
+            className="context-menu__item-icon tab-icon arc-icon-chevron arc-chevron-point-right"
+            data-arc-icon-size="m"
+            aria-hidden="true"
+          />
+        ) : null}
+      </span>
+    </button>
+  );
+}
 
 type Props = {
   template: DetailCardTemplateV1;
@@ -78,7 +138,10 @@ export default function DetailTemplateEditor({
   const [addOpen, setAddOpen] = useState(false);
   const [hiddenFieldsExpanded, setHiddenFieldsExpanded] = useState(false);
   const [menuFieldId, setMenuFieldId] = useState<string | null>(null);
-  const [menuView, setMenuView] = useState<MenuView>('field');
+  const [typeSubmenuOpen, setTypeSubmenuOpen] = useState(false);
+  const [typeSubmenuPosition, setTypeSubmenuPosition] = useState<{ x: number; y: number } | null>(
+    null
+  );
   const [nameDraft, setNameDraft] = useState('');
 
   nameDraftRef.current = nameDraft;
@@ -149,9 +212,14 @@ export default function DetailTemplateEditor({
     commit(applyFieldMenuEdits(template.fields, fieldId));
   };
 
+  const closeTypeSubmenu = () => {
+    setTypeSubmenuOpen(false);
+    setTypeSubmenuPosition(null);
+  };
+
   const closeFieldMenuOnly = () => {
     setMenuFieldId(null);
-    setMenuView('field');
+    closeTypeSubmenu();
     fieldMenuAnchorRef.current = null;
   };
 
@@ -165,8 +233,8 @@ export default function DetailTemplateEditor({
     setAddOpen(false);
     fieldMenuAnchorRef.current = anchor;
     setMenuFieldId(field.id);
-    setMenuView('field');
-    setNameDraft(templateFieldLabel(field));
+    closeTypeSubmenu();
+    setNameDraft(readNameDraftFromField(field));
     if (field.kind === 'custom' && (field.type === 'select' || field.type === 'multiSelect')) {
       setOptionsDraft((prev) => ({
         ...prev,
@@ -189,7 +257,23 @@ export default function DetailTemplateEditor({
 
   const changeCustomType = (id: string, type: CustomFieldType) => {
     commit(applyFieldMenuEdits(template.fields, id, { type }));
-    setMenuView('field');
+    closeTypeSubmenu();
+    if (type === 'select' || type === 'multiSelect') {
+      const field = template.fields.find((item) => item.id === id);
+      if (field?.kind === 'custom') {
+        setOptionsDraft((prev) => ({
+          ...prev,
+          [id]: prev[id] ?? (field.options ?? []).join('\n')
+        }));
+      }
+    }
+  };
+
+  const openTypeSubmenu = () => {
+    const pos = resolveDetailFieldSubmenuPosition(FIELD_TYPE_ROW_KEY);
+    if (!pos) return;
+    setTypeSubmenuPosition(pos);
+    setTypeSubmenuOpen(true);
   };
 
   const duplicateField = (field: DetailTemplateCustomField) => {
@@ -462,54 +546,39 @@ export default function DetailTemplateEditor({
         aboveModal
         anchorAlign="start"
         anchorPlacement="belowAnchor"
+        panelClassName="arc-detail-field-menu"
+        inputSize="m"
       >
-        {menuField && menuView === 'type' && menuField.kind === 'custom' ? (
+        {menuField ? (
           <>
-            <ContextMenuItem
-              label="Назад"
-              iconClass="arc-icon-chevron-left"
-              onSelect={() => setMenuView('field')}
-            />
             <ContextMenuHeader>Тип свойства</ContextMenuHeader>
-            {CUSTOM_FIELD_TYPES.map((type) => (
-              <ContextMenuItem
-                key={type}
-                label={CUSTOM_FIELD_TYPE_LABELS[type]}
-                iconClass={customFieldTypeIconClass(type)}
-                selected={menuField.type === type}
-                onSelect={() => changeCustomType(menuField.id, type)}
-              />
-            ))}
-          </>
-        ) : null}
-        {menuField && menuView === 'field' ? (
-          <>
+            <DetailFieldTypeRow
+              field={menuField}
+              submenuOpen={typeSubmenuOpen}
+              onOpenSubmenu={openTypeSubmenu}
+            />
             <ContextMenuInput
               variant="live"
-              placeholder={templateFieldTypeLabel(menuField)}
+              slotClassName={FIELD_MENU_NAME_SLOT_CLASS}
+              placeholder={officialFieldLabel(menuField)}
               value={nameDraft}
               autoFocus
               onChange={setNameDraft}
             />
-            <ContextMenuHeader>Тип свойства</ContextMenuHeader>
-            <ContextMenuItem
-              label={templateFieldTypeLabel(menuField)}
-              iconClass={templateFieldIconClass(menuField)}
-              disabled={menuField.kind !== 'custom'}
-              onSelect={() => {
-                if (menuField.kind !== 'custom') return;
-                setMenuView('type');
-              }}
-            />
             {showSelectOptions ? (
               <ContextMenuInput
                 variant="textarea"
-                placeholder="Каждый вариант с новой строки"
+                slotClassName={FIELD_MENU_SLOT_CLASS}
+                placeholder="Перечислите каждый вариант с новой строки"
                 value={optionsDraft[menuField.id] ?? (menuField.options ?? []).join('\n')}
+                autoGrow
+                autoGrowMinPx={64}
+                autoGrowMaxPx={234}
                 onChange={(value) => setOptionsDraft((prev) => ({ ...prev, [menuField.id]: value }))}
               />
             ) : null}
             <ContextMenuSeparator />
+            <ContextMenuHeader>Опции</ContextMenuHeader>
             <ContextMenuItem
               label={menuField.visible ? 'Скрыть' : 'Показать'}
               iconClass={menuField.visible ? 'arc-icon-eye-off' : 'arc-icon-eye'}
@@ -537,6 +606,35 @@ export default function DetailTemplateEditor({
                 }}
               />
             ) : null}
+          </>
+        ) : null}
+      </ContextMenu>
+
+      <ContextMenu
+        open={
+          typeSubmenuOpen &&
+          Boolean(menuField) &&
+          menuField?.kind === 'custom' &&
+          !readOnly &&
+          typeSubmenuPosition != null
+        }
+        position={typeSubmenuPosition}
+        onClose={closeTypeSubmenu}
+        ariaLabel="Список свойств"
+        aboveModal
+      >
+        {menuField?.kind === 'custom' ? (
+          <>
+            <ContextMenuHeader>Список свойств</ContextMenuHeader>
+            {CUSTOM_FIELD_TYPES.map((type) => (
+              <ContextMenuItem
+                key={type}
+                label={CUSTOM_FIELD_TYPE_LABELS[type]}
+                iconClass={customFieldTypeIconClass(type)}
+                selected={menuField.type === type}
+                onSelect={() => changeCustomType(menuField.id, type)}
+              />
+            ))}
           </>
         ) : null}
       </ContextMenu>

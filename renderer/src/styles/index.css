@@ -235,10 +235,6 @@ html[data-theme="light"] .arc-app-outlet {
   padding: var(--s-1) 0;
 }
 
-.arc-tags-page-sidebar .context-menu__item.is-active .arc-tags-sidebar-row-handle .context-menu__item-icon {
-  color: var(--tab-active-icon-default);
-}
-
 .arc-tags-page-main {
   flex: 1 1 0;
   min-width: 0;
@@ -429,30 +425,6 @@ html[data-theme="light"] .arc-app-outlet {
   border-radius: var(--radius-s);
 }
 
-.arc-tags-sidebar-row-handle {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: grab;
-}
-
-.arc-tags-sidebar-row-handle:active {
-  cursor: grabbing;
-}
-
-.arc-tags-sidebar-row-handle:focus-visible {
-  outline: 2px solid var(--input-border-focus);
-  outline-offset: 2px;
-  border-radius: var(--radius-s);
-}
-
 .arc-tags-sidebar-row-select {
   flex: 1 1 auto;
   display: flex;
@@ -465,7 +437,13 @@ html[data-theme="light"] .arc-app-outlet {
   color: inherit;
   font: inherit;
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.arc-tags-sidebar-row.is-dragging .arc-tags-sidebar-row-select {
+  cursor: grabbing;
 }
 
 .arc-tags-sidebar-row-select:focus-visible {
@@ -1755,10 +1733,6 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   padding: 0;
 }
 
-.arc-collections-page-sidebar .context-menu__item.is-active .arc-tags-sidebar-row-handle .context-menu__item-icon {
-  color: var(--tab-active-icon-default);
-}
-
 .arc-collections-page-main {
   flex: 1 1 0;
   min-width: 0;
@@ -1913,6 +1887,24 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
 .arc-error-screen__details-summary {
   cursor: pointer;
   color: var(--text-elev-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  list-style: none;
+}
+
+.arc-error-screen__details-summary::-webkit-details-marker {
+  display: none;
+}
+
+.arc-error-screen__details-summary-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-error-screen__copy {
+  flex: 0 0 auto;
 }
 
 .arc-error-screen__details-body {
@@ -3261,6 +3253,11 @@ span.arc-card-detail-prop-row__label {
   width: 100%;
 }
 
+/* Datepicker M в свойствах — тот же radius, что у input M в scope (8px / --radius-s). */
+.arc-card-detail-prop-row__value .arc-datepicker {
+  --arc-datepicker-radius: var(--input-radius);
+}
+
 .arc-card-detail-prop-row-ghost {
   position: fixed;
   z-index: 10000;
@@ -3326,6 +3323,59 @@ span.arc-card-detail-prop-row__label {
   gap: var(--s-2);
 }
 
+/* В деталке — как отступ footer у «Метки» / «Коллекции» (section-body gap s-3). */
+.arc-detail-template-editor--card {
+  gap: var(--s-3);
+}
+
+/* Настройки шаблона — hover/active как у пунктов меню настроек (brand). */
+.arc-detail-template-editor--settings .arc-card-detail-prop-row__name:hover:not(
+    :has(.arc-card-detail-prop-row__label[aria-expanded='true'])
+  ) {
+  background: var(--menu-row-fill-hover);
+}
+
+.arc-detail-template-editor--settings
+  .arc-card-detail-prop-row__name:has(.arc-card-detail-prop-row__label[aria-expanded='true']) {
+  background: var(--tab-active-fill-default);
+}
+
+.arc-detail-template-editor--settings
+  .arc-card-detail-prop-row__name:hover:not(:has(.arc-card-detail-prop-row__label[aria-expanded='true']))
+  .arc-card-detail-prop-row__label {
+  color: var(--menu-row-label-hover);
+}
+
+.arc-detail-template-editor--settings
+  .arc-card-detail-prop-row__name:has(.arc-card-detail-prop-row__label[aria-expanded='true'])
+  .arc-card-detail-prop-row__label {
+  color: var(--tab-active-value-default);
+}
+
+.arc-detail-template-editor--settings
+  .arc-card-detail-prop-row__name:hover:not(:has(.arc-card-detail-prop-row__label[aria-expanded='true']))
+  .arc-card-detail-prop-row__label
+  .tab-icon {
+  color: var(--menu-row-icon-hover);
+}
+
+.arc-detail-template-editor--settings
+  .arc-card-detail-prop-row__name:has(.arc-card-detail-prop-row__label[aria-expanded='true'])
+  .arc-card-detail-prop-row__label
+  .tab-icon {
+  color: var(--tab-active-icon-default);
+}
+
+.arc-detail-template-editor--settings .arc-card-detail-prop-row__name:hover .arc-card-detail-prop-row__visibility {
+  color: var(--menu-row-icon-hover);
+}
+
+.arc-detail-template-editor--settings
+  .arc-card-detail-prop-row__name:has(.arc-card-detail-prop-row__label[aria-expanded='true'])
+  .arc-card-detail-prop-row__visibility {
+  color: var(--tab-active-icon-default);
+}
+
 .arc-detail-template-editor__panel {
   display: flex;
   flex-direction: column;
@@ -3354,6 +3404,69 @@ span.arc-card-detail-prop-row__label {
 
 .arc-detail-template-editor__add-btn {
   align-self: flex-start;
+}
+
+/* Меню параметров свойства в деталке — отступы 8px по макету. */
+.arc-detail-field-menu {
+  --menu-content-inset-x: var(--s-2);
+}
+
+.arc-detail-field-menu .context-menu__sep {
+  margin: 0;
+}
+
+.arc-detail-field-menu-slot.context-menu__slot {
+  padding: 0 var(--s-2) var(--s-2);
+}
+
+.arc-detail-field-menu-slot.context-menu__slot:last-child {
+  padding-bottom: var(--s-2);
+}
+
+.arc-detail-field-menu-slot--after-type.context-menu__slot {
+  padding-top: var(--s-2);
+}
+
+.arc-detail-field-menu-type-row .context-menu__item-label-cluster {
+  order: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-detail-field-menu-type-row__lead {
+  order: -1;
+  flex-shrink: 0;
+  color: var(--menu-row-icon-default);
+}
+
+.arc-detail-field-menu-type-row:hover:not(:disabled):not(.is-disabled) .arc-detail-field-menu-type-row__lead,
+.arc-detail-field-menu-type-row.is-active:not(:disabled):not(.is-disabled) .arc-detail-field-menu-type-row__lead {
+  color: var(--menu-row-icon-hover);
+}
+
+.arc-detail-field-menu-type-row.is-active:not(:disabled):not(.is-disabled) .arc-detail-field-menu-type-row__lead {
+  color: var(--tab-active-icon-default);
+}
+
+.arc-detail-field-menu-type-row.is-active:not(:disabled):not(.is-disabled):hover
+  .arc-detail-field-menu-type-row__lead {
+  color: var(--tab-active-icon-hover);
+}
+
+.arc-detail-field-menu-type-row .arc-chevron-point-right > .arc-navbar-icon-svg {
+  transform: rotate(-90deg);
+}
+
+.arc-context-menu-textarea-autogrow {
+  height: auto;
+  min-height: 64px;
+  max-height: 234px;
+  resize: none;
+  overflow-y: hidden;
+}
+
+.arc-context-menu-textarea-autogrow.is-scrollable {
+  overflow-y: auto;
 }
 
 .arc-card-detail-description-editor {

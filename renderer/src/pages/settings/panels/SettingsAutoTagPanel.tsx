@@ -25,12 +25,10 @@ export default function SettingsAutoTagPanel() {
     volume,
     onImport,
     createNew,
-    videoCaptionOnImport,
     setEnabled,
     setVolume,
     setOnImport,
-    setCreateNew,
-    setVideoCaptionOnImport
+    setCreateNew
   } = useSettingsAutoTag();
 
   return (
@@ -94,21 +92,6 @@ export default function SettingsAutoTagPanel() {
               </div>
             </>
           ) : null}
-
-          <div className="arc-settings-ai-option-stack">
-            <SettingsOptionCard
-              variant="toggle"
-              label="AI описание видео после импорта"
-              description={
-                heavyInstalled
-                  ? 'После импорта видео — до трёх кадров и одно описание из суммы подписей JoyCaption'
-                  : 'После импорта видео — до трёх кадров и одно описание из суммы подписей JoyCaption. Для работы нужна установленная тяжёлая модель (Настройки → AI Поиск)'
-              }
-              checked={videoCaptionOnImport}
-              disabled={baseDisabled}
-              onCheckedChange={(on) => void setVideoCaptionOnImport(on)}
-            />
-          </div>
 
           {!window.arc && arcHint ? <div className="hint arc-settings-electron-hint">{arcHint}</div> : null}
         </div>

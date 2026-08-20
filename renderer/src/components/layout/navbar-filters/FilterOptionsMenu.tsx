@@ -86,7 +86,7 @@ export default function FilterOptionsMenu({
               isDragging={dragState?.dragId === id}
               insertBefore={insertBefore}
               onToggleVisibility={handleToggleVisibility}
-              onHandlePointerDown={(args) => {
+              onRowPointerDown={(args) => {
                 if (!listRef.current) return;
                 startDrag({ ...args, listEl: listRef.current });
               }}

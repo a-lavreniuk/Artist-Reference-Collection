@@ -72,9 +72,7 @@ export type AiDownloadStatus = {
 
 export type AiStatus = {
   enabled: boolean;
-  captionEnabled: boolean;
   activeSearchModelId: AiSearchModelId | null;
-  activeCaptionModelId: string | null;
   /** @deprecated */
   activeTier: AiModelTier | null;
   /** @deprecated */
