@@ -87,6 +87,17 @@ export async function storageWipeCustomField(fieldId: string): Promise<void> {
   return arc().storageWipeCustomField(fieldId);
 }
 
+export async function storageGetLibrarySettings() {
+  return arc().storageGetLibrarySettings();
+}
+
+export async function storagePatchLibrarySettings(payload: {
+  detailCardTemplate?: unknown;
+  systemFilterLayout?: unknown;
+}) {
+  return arc().storagePatchLibrarySettings(payload);
+}
+
 export async function storageInsertCardsMetadata(
   cards: Array<{
     id: string;

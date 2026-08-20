@@ -1400,7 +1400,8 @@ button.input {
 }
 
 .field-error .input.search-field:focus-within:not(.is-disabled),
-.field-error .input.search-multiselect:focus-within {
+.field-error .input.search-multiselect:focus-within,
+.field-error .input.link-input:focus-within:not(.is-disabled) {
   outline: none;
   border-color: var(--input-border-error);
   box-shadow: none;

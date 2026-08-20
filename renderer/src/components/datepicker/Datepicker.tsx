@@ -110,7 +110,7 @@ export default function Datepicker({
     const parsed = parseDateRangeText(debouncedText, mode);
     if (parsed === 'empty') {
       setInternalError(false);
-      onChange?.(null);
+      if (value?.from) onChange?.(null);
       return;
     }
     if (parsed === null) {
@@ -118,8 +118,10 @@ export default function Datepicker({
       return;
     }
     setInternalError(false);
+    const currentTo = value?.to ?? value?.from;
+    if (value?.from === parsed.from && currentTo === parsed.to) return;
     onChange?.(parsed);
-  }, [debouncedText, text, formattedValue, mode, onChange, disabled]);
+  }, [debouncedText, text, formattedValue, mode, onChange, disabled, value?.from, value?.to]);
 
   const handleClear = () => {
     if (disabled) return;

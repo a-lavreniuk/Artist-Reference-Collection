@@ -1,4 +1,9 @@
-import { buildFtsColumnMatchQuery, buildFtsColumnsOrMatchQuery, type FtsTextColumn } from './cardFts';
+import type { DetailCardTemplateV1 } from '../shared/detailCardTemplate';
+import {
+  buildFtsColumnMatchQuery,
+  buildFtsColumnsOrMatchQuery,
+  type FtsTextColumn
+} from './cardFts';
 import type { DurationMeta, FileWeightMeta, ResolutionMeta } from './filterBucketLabels';
 import {
   buildDurationSegments,
@@ -16,6 +21,13 @@ import type {
   GalleryAdvancedFilters,
   GallerySortState
 } from '../shared/galleryFilterCore';
+import { isCustomDateFilter, parseCustomSortFieldId } from '../shared/galleryFilterCore';
+import {
+  appendCustomFieldFilterSql,
+  customFieldSortSql,
+  fieldValueSql,
+  templateFieldById
+} from './galleryCustomFieldSql';
 
 export {
   GALLERY_FILTER_IDS,
@@ -60,6 +72,7 @@ export type GalleryFilterQueryContext = {
   moodboardCardIds?: string[] | null;
   filters: GalleryAdvancedFilters;
   sort: GallerySortState;
+  template?: DetailCardTemplateV1;
 };
 
 export type GalleryFilterBoundaries = {
@@ -249,6 +262,13 @@ function startOfLocalDay(d: Date): Date {
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+function formatLocalDateOnly(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /** Custom dateAdded bounds in local calendar days → ISO (same convention as presets). */
 export function customDateAddedBounds(fromRaw: string, toRaw: string): { from: string; to: string } {
   const parseStart = (raw: string): Date => {
@@ -417,24 +437,6 @@ export function buildGalleryFilterWhere(
     binds.push(...exts);
   }
 
-  if (f.description) {
-    if (f.description.mode === 'missing') {
-      wh.push(`(COALESCE(${alias}.description, '') = '')`);
-    } else {
-      wh.push(`(COALESCE(${alias}.description, '') != '')`);
-      appendKeywordsCondition(wh, binds, alias, ['description', 'custom_fields_text'], f.description.keywords);
-    }
-  }
-
-  if (f.link) {
-    if (f.link.mode === 'missing') {
-      wh.push(`(COALESCE(${alias}.link_url, '') = '')`);
-    } else {
-      wh.push(`(COALESCE(${alias}.link_url, '') != '')`);
-      appendKeywordsCondition(wh, binds, alias, 'link_url', f.link.keywords);
-    }
-  }
-
   if (f.annotations) {
     if (f.annotations.mode === 'missing') {
       wh.push(`(COALESCE(${alias}.annotations_text, '') = '')`);
@@ -442,6 +444,32 @@ export function buildGalleryFilterWhere(
       wh.push(`(COALESCE(${alias}.annotations_text, '') != '')`);
       appendKeywordsCondition(wh, binds, alias, 'annotations_text', f.annotations.keywords);
     }
+  }
+
+  const custom = f.custom ?? {};
+  for (const [fieldId, value] of Object.entries(custom)) {
+    const field = templateFieldById(ctx.template, fieldId);
+    if (!field) continue;
+    if (isCustomDateFilter(value) && value.ranges.length) {
+      const expr = fieldValueSql(field, alias);
+      if (!expr) continue;
+      const parts: string[] = [];
+      for (const d of value.ranges) {
+        if (d.preset === 'custom') {
+          const from = (d.from ?? '').slice(0, 10);
+          const to = (d.to ?? d.from ?? '').slice(0, 10);
+          parts.push(`(${expr} >= ? AND ${expr} <= ?)`);
+          binds.push(from, to);
+          continue;
+        }
+        const range = dateRangeForPreset(d.preset);
+        parts.push(`(${expr} >= ? AND ${expr} <= ?)`);
+        binds.push(formatLocalDateOnly(range.from), formatLocalDateOnly(range.to));
+      }
+      if (parts.length) wh.push(`(${parts.join(' OR ')})`);
+      continue;
+    }
+    appendCustomFieldFilterSql(field, value, alias, wh, binds);
   }
 
   if (f.dateAdded.length) {
@@ -571,8 +599,21 @@ export function buildGalleryFilterWhere(
   return { wh, binds };
 }
 
-export function buildGallerySortSql(sort: GallerySortState, alias = 'c'): string {
+export function buildGallerySortSql(
+  sort: GallerySortState,
+  alias = 'c',
+  template?: DetailCardTemplateV1
+): string {
   const dir = sort.direction === 'asc' ? 'ASC' : 'DESC';
+  const customId = parseCustomSortFieldId(sort.field);
+  if (customId) {
+    const field = templateFieldById(template, customId);
+    if (field) {
+      const sql = customFieldSortSql(field, dir, alias);
+      if (sql) return sql;
+    }
+    return `ORDER BY ${alias}.added_at DESC`;
+  }
   switch (sort.field) {
     case 'fileType':
       return `ORDER BY ${alias}.type ${dir}, ${alias}.format ${dir}, ${alias}.added_at DESC`;

@@ -134,6 +134,16 @@ describe.skipIf(!sqliteOk)('shared trash across libraries', () => {
     expect(page[0]?.id).toBe('card-b');
   });
 
+  it('lists trash when a library index has no library_settings table', async () => {
+    await seedTrashedCard(libA.path, 'card-a', '2026-01-01T00:00:00.000Z');
+    const db = openLibraryDb(libA.path);
+    db.exec('DROP TABLE IF EXISTS library_settings');
+    closeLibraryDb();
+
+    const listed = listSharedTrashCards([libA], { offset: 0, limit: 50 });
+    expect(listed.map((row) => row.id)).toEqual(['card-a']);
+  });
+
   it('restores a card into the origin library', async () => {
     await seedTrashedCard(libA.path, 'card-a', '2026-01-01T00:00:00.000Z');
     await seedTrashedCard(libB.path, 'card-b', '2026-02-01T00:00:00.000Z');

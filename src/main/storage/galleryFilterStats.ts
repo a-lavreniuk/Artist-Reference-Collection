@@ -16,6 +16,9 @@ import {
 } from './galleryFilters';
 import { getOrComputeGalleryFilterBoundaries } from './galleryFilterBoundariesCache';
 import type { LibraryScope } from './types';
+import { readLibraryDetailTemplate } from './librarySettings';
+import { fieldHasValueSql, fieldMissingValueSql, fieldValueSql } from './galleryCustomFieldSql';
+import type { DetailCardTemplateV1 } from '../shared/detailCardTemplate';
 
 export type GalleryFilterStats = {
   fileWeightMeta: FileWeightMeta;
@@ -24,8 +27,6 @@ export type GalleryFilterStats = {
   hasVideo: boolean;
   aspectRatio: Record<AspectRatioFilterValue, number>;
   fileExtensions: Record<string, number>;
-  description: { has: number; missing: number };
-  link: { has: number; missing: number };
   annotations: { has: number; missing: number };
   tagPresence: { tagged: number; untagged: number };
   dateAdded: Record<string, number>;
@@ -33,7 +34,54 @@ export type GalleryFilterStats = {
   resolution: Record<string, number>;
   duration: Record<string, number>;
   rating: Record<string, number>;
+  customPresence: Record<string, { has: number; missing: number }>;
+  customSelect: Record<string, Record<string, number>>;
 };
+
+function collectCustomFieldStats(
+  db: Database.Database,
+  ctx: GalleryFilterQueryContext,
+  boundaries: GalleryFilterBoundaries,
+  template: DetailCardTemplateV1
+): {
+  customPresence: Record<string, { has: number; missing: number }>;
+  customSelect: Record<string, Record<string, number>>;
+} {
+  const customPresence: Record<string, { has: number; missing: number }> = {};
+  const customSelect: Record<string, Record<string, number>> = {};
+  for (const field of template.fields) {
+    if (!field.showInFilters) continue;
+    const hasSql = fieldHasValueSql(field, 'c');
+    const missSql = fieldMissingValueSql(field, 'c');
+    if (!hasSql || !missSql) continue;
+    const has = countWithExtra(db, ctx, [hasSql], [], boundaries);
+    const missing = countWithExtra(db, ctx, [missSql], [], boundaries);
+    customPresence[field.id] = { has, missing };
+    if (field.type !== 'select' && field.type !== 'multiSelect') continue;
+    const counts: Record<string, number> = {};
+    const expr = fieldValueSql(field, 'c');
+    for (const opt of field.options ?? []) {
+      if (field.type === 'multiSelect') {
+        counts[opt] = countWithExtra(
+          db,
+          ctx,
+          [
+            `EXISTS (
+              SELECT 1 FROM json_each(json_extract(c.custom_fields_json, '$.${field.id}'))
+              WHERE json_each.value = ?
+            )`
+          ],
+          [opt],
+          boundaries
+        );
+      } else if (expr) {
+        counts[opt] = countWithExtra(db, ctx, [`(${expr} = ?)`], [opt], boundaries);
+      }
+    }
+    customSelect[field.id] = counts;
+  }
+  return { customPresence, customSelect };
+}
 
 function baseContext(
   libraryScope: LibraryScope,
@@ -169,13 +217,17 @@ export function getGalleryFilterStats(
   }
 ): GalleryFilterStats {
   const db = openLibraryDb(libraryRoot);
-  const ctx = baseContext(
-    opts.libraryScope ?? 'all',
-    opts.selectedTagIds ?? [],
-    opts.cardIdExact ?? null,
-    opts.collectionId ?? null,
-    opts.moodboardCardIds ?? null
-  );
+  const template = readLibraryDetailTemplate(db);
+  const ctx = {
+    ...baseContext(
+      opts.libraryScope ?? 'all',
+      opts.selectedTagIds ?? [],
+      opts.cardIdExact ?? null,
+      opts.collectionId ?? null,
+      opts.moodboardCardIds ?? null
+    ),
+    template
+  };
   const boundaries = getOrComputeGalleryFilterBoundaries(db);
   const hasVideo = hasAnyVideo(db);
 
@@ -202,14 +254,6 @@ export function getGalleryFilterStats(
     );
   }
 
-  const description = {
-    has: countWithExtra(db, ctx, [`(COALESCE(c.description,'') != '')`], [], boundaries),
-    missing: countWithExtra(db, ctx, [`(COALESCE(c.description,'') = '')`], [], boundaries)
-  };
-  const link = {
-    has: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') != '')`], [], boundaries),
-    missing: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') = '')`], [], boundaries)
-  };
   const annotations = {
     has: countWithExtra(db, ctx, [`(COALESCE(c.annotations_text,'') != '')`], [], boundaries),
     missing: countWithExtra(db, ctx, [`(COALESCE(c.annotations_text,'') = '')`], [], boundaries)
@@ -260,6 +304,7 @@ export function getGalleryFilterStats(
   }
 
   const rating = countRatings(db, ctx, boundaries);
+  const customStats = collectCustomFieldStats(db, ctx, boundaries, template);
 
   return {
     fileWeightMeta: boundaries.fileWeight,
@@ -268,15 +313,14 @@ export function getGalleryFilterStats(
     hasVideo,
     aspectRatio,
     fileExtensions,
-    description,
-    link,
     annotations,
     tagPresence,
     dateAdded,
     fileWeight,
     resolution,
     duration,
-    rating
+    rating,
+    ...customStats
   };
 }
 
@@ -304,13 +348,17 @@ export async function getGalleryFilterStatsAsync(
   shouldAbort: () => boolean
 ): Promise<GalleryFilterStats> {
   const db = openLibraryDb(libraryRoot);
-  const ctx = baseContext(
-    opts.libraryScope ?? 'all',
-    opts.selectedTagIds ?? [],
-    opts.cardIdExact ?? null,
-    opts.collectionId ?? null,
-    opts.moodboardCardIds ?? null
-  );
+  const template = readLibraryDetailTemplate(db);
+  const ctx = {
+    ...baseContext(
+      opts.libraryScope ?? 'all',
+      opts.selectedTagIds ?? [],
+      opts.cardIdExact ?? null,
+      opts.collectionId ?? null,
+      opts.moodboardCardIds ?? null
+    ),
+    template
+  };
 
   await cooperativeYield(shouldAbort);
   const boundaries = getOrComputeGalleryFilterBoundaries(db);
@@ -339,15 +387,6 @@ export async function getGalleryFilterStatsAsync(
       boundaries
     );
   }
-  await cooperativeYield(shouldAbort);
-  const description = {
-    has: countWithExtra(db, ctx, [`(COALESCE(c.description,'') != '')`], [], boundaries),
-    missing: countWithExtra(db, ctx, [`(COALESCE(c.description,'') = '')`], [], boundaries)
-  };
-  const link = {
-    has: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') != '')`], [], boundaries),
-    missing: countWithExtra(db, ctx, [`(COALESCE(c.link_url,'') = '')`], [], boundaries)
-  };
   await cooperativeYield(shouldAbort);
   const annotations = {
     has: countWithExtra(db, ctx, [`(COALESCE(c.annotations_text,'') != '')`], [], boundaries),
@@ -401,6 +440,7 @@ export async function getGalleryFilterStatsAsync(
 
   await cooperativeYield(shouldAbort);
   const rating = countRatings(db, ctx, boundaries);
+  const customStats = collectCustomFieldStats(db, ctx, boundaries, template);
 
   return {
     fileWeightMeta: boundaries.fileWeight,
@@ -409,15 +449,14 @@ export async function getGalleryFilterStatsAsync(
     hasVideo,
     aspectRatio,
     fileExtensions,
-    description,
-    link,
     annotations,
     tagPresence,
     dateAdded,
     fileWeight,
     resolution,
     duration,
-    rating
+    rating,
+    ...customStats
   };
 }
 

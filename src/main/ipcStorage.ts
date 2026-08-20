@@ -55,6 +55,10 @@ import {
   setMigrationProgressCallback,
   updateCardInStorage,
   wipeCustomFieldFromLibrary,
+  getLibraryDetailTemplateFromDb,
+  saveLibraryDetailTemplate,
+  getSystemFilterLayoutFromDb,
+  saveSystemFilterLayout,
   upsertCategory,
   upsertCollection,
   upsertFilterPreset,
@@ -577,10 +581,42 @@ export function registerStorageIpc(
   ipcMain.handle('arc:storage-wipe-custom-field', async (_e, fieldId: unknown) => {
     assertNotMaintenance();
     if (typeof fieldId !== 'string' || !fieldId.trim()) throw new Error('Неверные данные');
-    const listed = listLibrariesFromConfig();
-    for (const lib of listed) {
-      await wipeCustomFieldFromLibrary(lib.path, fieldId.trim());
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    await wipeCustomFieldFromLibrary(root, fieldId.trim());
+  });
+
+  ipcMain.handle('arc:storage-get-library-settings', async () => {
+    const root = await readLibraryRoot();
+    if (!root) return null;
+    await ensureLibraryReady(root);
+    return {
+      detailCardTemplate: getLibraryDetailTemplateFromDb(root),
+      systemFilterLayout: getSystemFilterLayoutFromDb(root)
+    };
+  });
+
+  ipcMain.handle('arc:storage-patch-library-settings', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    await ensureLibraryReady(root);
+    const p = (payload ?? {}) as {
+      detailCardTemplate?: unknown;
+      systemFilterLayout?: unknown;
+    };
+    if (p.detailCardTemplate !== undefined) {
+      const { sanitizeDetailCardTemplate } = await import('./shared/detailCardTemplate');
+      saveLibraryDetailTemplate(root, sanitizeDetailCardTemplate(p.detailCardTemplate));
     }
+    if (p.systemFilterLayout !== undefined) {
+      const { sanitizeSystemFilterLayout } = await import('./storage/librarySettings');
+      saveSystemFilterLayout(root, sanitizeSystemFilterLayout(p.systemFilterLayout));
+    }
+    return {
+      detailCardTemplate: getLibraryDetailTemplateFromDb(root),
+      systemFilterLayout: getSystemFilterLayoutFromDb(root)
+    };
   });
 
   ipcMain.handle('arc:storage-insert-cards-metadata', async (_e, cards: unknown) => {

@@ -13,6 +13,7 @@ import { scorePaletteMinDeltaE } from '../shared/paletteCore';
 import { computeRatingSearchBoost, relevanceFromClampedDistance } from '../shared/ratingSearchBoost';
 import { openLibraryDb } from './db';
 import { indexCardRowsFromDb } from './libraryStorage';
+import { readLibraryDetailTemplate } from './librarySettings';
 import { getOrBuildScoredSearchPage, stableSearchCacheKey } from './scoredSearchCache';
 import { computeImagePalette, normalizeHex, parsePaletteJson, type PaletteSwatch } from './palette';
 import type { CardIndexRow, LibraryScope } from './types';
@@ -138,7 +139,8 @@ export function searchCardsByColor(libraryRoot: string, params: ColorSearchParam
         collectionId: params.collectionId,
         moodboardCardIds: params.moodboardCardIds,
         filters,
-        sort
+        sort,
+        template: readLibraryDetailTemplate(db)
       },
       'c',
       boundaries

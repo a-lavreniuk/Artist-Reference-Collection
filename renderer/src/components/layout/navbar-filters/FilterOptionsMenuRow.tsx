@@ -1,20 +1,19 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
-import type { GalleryFilterId } from '../../gallery/galleryFilterTypes';
 import type { FilterOptionsDragState } from './useFilterOptionsDrag';
 
 const DRAG_THRESHOLD_PX = 4;
 
 type Props = {
-  id: GalleryFilterId;
+  id: string;
   label: string;
   visible: boolean;
   showEyeOff: boolean;
   visibilityDisabled: boolean;
   isDragging: boolean;
   insertBefore: boolean;
-  onToggleVisibility: (id: GalleryFilterId) => void;
+  onToggleVisibility: (id: string) => void;
   onRowPointerDown: (args: {
-    id: GalleryFilterId;
+    id: string;
     label: string;
     visible: boolean;
     handleEl: HTMLElement;

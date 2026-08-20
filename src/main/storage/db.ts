@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from 'fs';
 import path from 'path';
 import { INDEX_DB_FILENAME, libraryMetaFileAbs } from '../libraryFilenames';
 import { customFieldsJsonToSearchText } from '../shared/detailCardTemplate';
+import { ensureLibrarySettingsSchema } from './librarySettings';
 import { ensureCardsFtsSchema } from './cardFts';
 import { ensureCardEmbeddingsSchema } from './cardEmbeddings';
 import { ensureShuffleSqlFunctions } from './shuffleOrder';
@@ -73,6 +74,11 @@ CREATE TABLE IF NOT EXISTS saved_filters (
   name TEXT NOT NULL,
   payload_json TEXT NOT NULL,
   created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS library_settings (
+  key TEXT PRIMARY KEY NOT NULL,
+  value_json TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS skipped_duplicate_pairs (
@@ -194,6 +200,7 @@ function migrateLibraryDbSchema(db: Database.Database): void {
 
   ensureCardsFtsSchema(db);
   ensureCardEmbeddingsSchema(db);
+  ensureLibrarySettingsSchema(db);
 
   // .gif classified as video per product spec
   db.prepare("UPDATE cards SET type = 'video' WHERE LOWER(COALESCE(format, '')) = 'gif' AND type = 'image'").run();

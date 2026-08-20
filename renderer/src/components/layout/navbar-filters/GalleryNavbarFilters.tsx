@@ -19,20 +19,35 @@ import ContextMenuItem from '../../context-menu/ContextMenuItem';
 import ContextMenuSeparator from '../../context-menu/ContextMenuSeparator';
 import { Datepicker } from '../../datepicker';
 import { useGalleryFilters } from '../../gallery/GalleryFilterContext';
+import { useLibrarySettings } from '../../../hooks/useLibrarySettings';
 import {
   FILTER_CHIP_META,
   IMAGE_FILE_EXTENSIONS,
   VIDEO_FILE_EXTENSIONS,
+  countCustomFilterSelections,
   countFilterCategorySelections,
+  isCustomDateFilter,
+  isCustomPresenceFilter,
+  isCustomSelectFilter,
   type AspectRatioFilterValue,
+  type CustomFieldFilterValue,
   type DateAddedFilterValue,
   type DurationFilterValue,
   type FileWeightFilterValue,
   type GalleryFilterId,
   type RatingFilterValue,
   type ResolutionFilterValue,
-  type SavedFilterPreset
+  type SavedFilterPreset,
+  isUserFilterBarVisible
 } from '../../gallery/galleryFilterTypes';
+import { setUserFilterVisibility } from '../../gallery/galleryFilterLayout';
+import {
+  customFilterMenuKey,
+  listedUserFilterFields,
+  parseCustomFilterMenuKey,
+  userFilterChipMeta
+} from '../../gallery/userFilterFields';
+import { templateFieldLabel, type DetailTemplateField } from '@arc-main-shared/detailCardTemplate';
 import { hydrateArcNavbarIcons } from '../navbarIconHydrate';
 import FilterCustomRangeSection from './FilterCustomRangeSection';
 import FilterResolutionCustomSection from './FilterResolutionCustomSection';
@@ -99,7 +114,6 @@ export default function NavbarFiltersMenu() {
     filters,
     patchFilters,
     clearFilters,
-    clearFilterCategory,
     layout,
     reorderFilter,
     toggleFilterVisibility,
@@ -112,6 +126,11 @@ export default function NavbarFiltersMenu() {
     renamePreset,
     activeCategoryCount
   } = useGalleryFilters();
+  const { template, update: updateLibrarySettings } = useLibrarySettings();
+  const userFilterFields = listedUserFilterFields(template, stats?.customPresence);
+  const userFilterBarFields = userFilterFields.filter((field) =>
+    isUserFilterBarVisible(layout, field.id)
+  );
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
@@ -121,12 +140,10 @@ export default function NavbarFiltersMenu() {
   }, [openMenu, refreshStats]);
 
   const [presetModal, setPresetModal] = useState<PresetModalState>(null);
-  const [descKeywords, setDescKeywords] = useState('');
-  const [linkKeywords, setLinkKeywords] = useState('');
   const [annotKeywords, setAnnotKeywords] = useState('');
-  const descKeywordsDebounced = useDebouncedValue(descKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
-  const linkKeywordsDebounced = useDebouncedValue(linkKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
   const annotKeywordsDebounced = useDebouncedValue(annotKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
+  const [customKeywords, setCustomKeywords] = useState('');
+  const customKeywordsDebounced = useDebouncedValue(customKeywords, FILTER_KEYWORDS_DEBOUNCE_MS);
   const [customWeight, setCustomWeight] = useState({ min: 0, max: 10 });
   const customWeightDebounced = useDebouncedValue(customWeight, FILTER_RANGE_DEBOUNCE_MS);
   const [customRes, setCustomRes] = useState(DEFAULT_RESOLUTION_RANGE);
@@ -135,45 +152,46 @@ export default function NavbarFiltersMenu() {
   const customDurationDebounced = useDebouncedValue(customDuration, FILTER_RANGE_DEBOUNCE_MS);
 
   useEffect(() => {
-    if (openMenu !== 'description') return;
-    setDescKeywords(filters.description?.keywords ?? '');
-  }, [openMenu, filters.description?.keywords]);
-
-  useEffect(() => {
-    if (openMenu !== 'link') return;
-    setLinkKeywords(filters.link?.keywords ?? '');
-  }, [openMenu, filters.link?.keywords]);
-
-  useEffect(() => {
     if (openMenu !== 'annotations') return;
     setAnnotKeywords(filters.annotations?.keywords ?? '');
   }, [openMenu, filters.annotations?.keywords]);
 
   useEffect(() => {
-    if (filters.description === null) setDescKeywords('');
-  }, [filters.description]);
-
-  useEffect(() => {
-    if (filters.link === null) setLinkKeywords('');
-  }, [filters.link]);
-
-  useEffect(() => {
     if (filters.annotations === null) setAnnotKeywords('');
   }, [filters.annotations]);
 
-  useEffect(() => {
-    if (filters.description?.mode !== 'has') return;
-    const applied = filters.description.keywords ?? '';
-    if (descKeywordsDebounced === applied) return;
-    patchFilters({ description: { mode: 'has', keywords: descKeywordsDebounced } });
-  }, [descKeywordsDebounced, filters.description?.keywords, filters.description?.mode, patchFilters]);
+  const openCustomFieldId = parseCustomFilterMenuKey(openMenu ?? '');
+
+  const patchCustomFilter = useCallback(
+    (fieldId: string, value: CustomFieldFilterValue | null) => {
+      const current = filters.custom[fieldId];
+      if (value == null) {
+        if (!(fieldId in filters.custom)) return;
+      } else if (current && JSON.stringify(current) === JSON.stringify(value)) {
+        return;
+      }
+      const custom = { ...filters.custom };
+      if (value == null) delete custom[fieldId];
+      else custom[fieldId] = value;
+      patchFilters({ custom });
+    },
+    [filters.custom, patchFilters]
+  );
 
   useEffect(() => {
-    if (filters.link?.mode !== 'has') return;
-    const applied = filters.link.keywords ?? '';
-    if (linkKeywordsDebounced === applied) return;
-    patchFilters({ link: { mode: 'has', keywords: linkKeywordsDebounced } });
-  }, [linkKeywordsDebounced, filters.link?.keywords, filters.link?.mode, patchFilters]);
+    if (!openCustomFieldId) return;
+    const val = filters.custom[openCustomFieldId];
+    setCustomKeywords(isCustomPresenceFilter(val) ? (val.keywords ?? '') : '');
+  }, [openCustomFieldId, filters.custom]);
+
+  useEffect(() => {
+    if (!openCustomFieldId) return;
+    const val = filters.custom[openCustomFieldId];
+    if (!isCustomPresenceFilter(val) || val.mode !== 'has') return;
+    const applied = val.keywords ?? '';
+    if (customKeywordsDebounced === applied) return;
+    patchCustomFilter(openCustomFieldId, { mode: 'has', keywords: customKeywordsDebounced });
+  }, [customKeywordsDebounced, filters.custom, openCustomFieldId, patchCustomFilter]);
 
   useEffect(() => {
     if (filters.annotations?.mode !== 'has') return;
@@ -360,6 +378,11 @@ export default function NavbarFiltersMenu() {
   const resolutionRangeUserChangeRef = useRef(false);
   const durationRangeUserChangeRef = useRef(false);
 
+  useEffect(() => {
+    if (!mainOpen) return;
+    void refreshStats();
+  }, [mainOpen, refreshStats]);
+
   useLayoutEffect(() => {
     if (rowRef.current) void hydrateArcNavbarIcons(rowRef.current);
   }, [layout, filters, openMenu, mainOpen, activeCategoryCount, stats]);
@@ -471,152 +494,173 @@ export default function NavbarFiltersMenu() {
     </>
   );
 
-  const buildDescriptionMenu = () => {
-    const keywordsEnabled = filters.description?.mode === 'has';
+  const buildPresenceMenu = (
+    value: { mode: 'has' | 'missing'; keywords?: string } | null | undefined,
+    counters: { has?: number; missing?: number } | undefined,
+    keywords: string,
+    setKeywords: (next: string) => void,
+    onChange: (next: { mode: 'has' | 'missing'; keywords?: string } | null) => void
+  ) => {
+    const keywordsEnabled = value?.mode === 'has';
     return (
       <>
         <ContextMenuItem
           label="Есть"
-          counter={stats?.description.has}
+          counter={counters?.has}
           slotOrder={FILTER_COUNTER_ITEM_SLOTS}
           selected={keywordsEnabled}
           onSelect={() => {
-            if (filters.description?.mode === 'has') {
-              patchFilters({ description: null });
+            if (value?.mode === 'has') {
+              onChange(null);
               return;
             }
-            patchFilters({
-              description: {
-                mode: 'has',
-                keywords: descKeywords || filters.description?.keywords || ''
-              }
+            onChange({
+              mode: 'has',
+              keywords: keywords || value?.keywords || ''
             });
           }}
         />
         <ContextMenuItem
           label="Нет"
-          counter={stats?.description.missing}
+          counter={counters?.missing}
           slotOrder={FILTER_COUNTER_ITEM_SLOTS}
-          selected={filters.description?.mode === 'missing'}
+          selected={value?.mode === 'missing'}
           onSelect={() => {
-            if (filters.description?.mode === 'missing') {
-              patchFilters({ description: null });
+            if (value?.mode === 'missing') {
+              onChange(null);
               return;
             }
-            patchFilters({ description: { mode: 'missing' } });
+            onChange({ mode: 'missing' });
           }}
         />
         <ContextMenuSeparator />
         <ContextMenuInput
           variant="textarea"
           placeholder={FILTER_KEYWORDS_PLACEHOLDER}
-          value={descKeywords}
+          value={keywords}
           disabled={!keywordsEnabled}
           onChange={(v) => {
             if (!keywordsEnabled) return;
-            setDescKeywords(v);
+            setKeywords(v);
           }}
         />
       </>
     );
   };
 
-  const buildAnnotationsMenu = () => {
-    const keywordsEnabled = filters.annotations?.mode === 'has';
+  const buildCustomSelectMenu = (field: DetailTemplateField) => {
+    const current = filters.custom[field.id];
+    const selected = isCustomSelectFilter(current) ? current.values : [];
+    const counts = stats?.customSelect[field.id] ?? {};
     return (
       <>
-        <ContextMenuItem
-          label="Есть"
-          counter={stats?.annotations.has}
-          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
-          selected={keywordsEnabled}
-          onSelect={() => {
-            if (filters.annotations?.mode === 'has') {
-              patchFilters({ annotations: null });
-              return;
-            }
-            patchFilters({
-              annotations: {
-                mode: 'has',
-                keywords: annotKeywords || filters.annotations?.keywords || ''
-              }
-            });
-          }}
-        />
-        <ContextMenuItem
-          label="Нет"
-          counter={stats?.annotations.missing}
-          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
-          selected={filters.annotations?.mode === 'missing'}
-          onSelect={() => {
-            if (filters.annotations?.mode === 'missing') {
-              patchFilters({ annotations: null });
-              return;
-            }
-            patchFilters({ annotations: { mode: 'missing' } });
-          }}
-        />
-        <ContextMenuSeparator />
-        <ContextMenuInput
-          variant="textarea"
-          placeholder={FILTER_KEYWORDS_PLACEHOLDER}
-          value={annotKeywords}
-          disabled={!keywordsEnabled}
-          onChange={(v) => {
-            if (!keywordsEnabled) return;
-            setAnnotKeywords(v);
-          }}
-        />
+        {(field.options ?? [])
+          .filter((option) => (counts[option] ?? 0) > 0)
+          .map((option) => (
+            <ContextMenuItem
+              key={option}
+              label={option}
+              counter={counts[option]}
+              slotOrder={FILTER_COUNTER_ITEM_SLOTS}
+              selected={selected.includes(option)}
+              onSelect={() => {
+                const next = toggleInList(selected, option);
+                patchCustomFilter(field.id, next.length ? { values: next } : null);
+              }}
+            />
+          ))}
       </>
     );
   };
 
-  const buildLinkMenu = () => {
-    const keywordsEnabled = filters.link?.mode === 'has';
-    return (
-      <>
-        <ContextMenuItem
-          label="Есть"
-          counter={stats?.link.has}
-          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
-          selected={keywordsEnabled}
-          onSelect={() => {
-            if (filters.link?.mode === 'has') {
-              patchFilters({ link: null });
-              return;
-            }
-            patchFilters({
-              link: { mode: 'has', keywords: linkKeywords || filters.link?.keywords || '' }
-            });
-          }}
-        />
-        <ContextMenuItem
-          label="Нет"
-          counter={stats?.link.missing}
-          slotOrder={FILTER_COUNTER_ITEM_SLOTS}
-          selected={filters.link?.mode === 'missing'}
-          onSelect={() => {
-            if (filters.link?.mode === 'missing') {
-              patchFilters({ link: null });
-              return;
-            }
-            patchFilters({ link: { mode: 'missing' } });
-          }}
-        />
-        <ContextMenuSeparator />
-        <ContextMenuInput
-          variant="textarea"
-          placeholder={FILTER_KEYWORDS_PLACEHOLDER}
-          value={linkKeywords}
-          disabled={!keywordsEnabled}
-          onChange={(v) => {
-            if (!keywordsEnabled) return;
-            setLinkKeywords(v);
-          }}
-        />
-      </>
-    );
+  const buildCustomDateMenu = (field: DetailTemplateField) => {
+    const current = filters.custom[field.id];
+    const ranges = isCustomDateFilter(current) ? current.ranges : [];
+    const presets: { key: DateAddedFilterValue['preset']; label: string }[] = [
+      { key: 'today', label: 'Сегодня' },
+      { key: 'yesterday', label: 'Вчера' },
+      { key: 'week', label: 'Неделя' },
+      { key: 'month', label: 'Месяц' },
+      { key: 'threeMonths', label: 'Три месяца' },
+      { key: 'year', label: 'Год' }
+    ];
+    const rows: ContextMenuRow[] = presets.map((p) => ({
+      type: 'item' as const,
+      key: p.key,
+      label: p.label,
+      selected: ranges.some((d) => d.preset === p.key),
+      closeOnSelect: false,
+      onSelect: () => {
+        const has = ranges.some((d) => d.preset === p.key);
+        const next = has
+          ? ranges.filter((d) => d.preset !== p.key)
+          : [...ranges, { preset: p.key } as DateAddedFilterValue];
+        patchCustomFilter(field.id, next.length ? { ranges: next } : null);
+      }
+    }));
+    const custom = ranges.find((d) => d.preset === 'custom');
+    return {
+      rows,
+      children: (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuHeader>Другой период</ContextMenuHeader>
+          <div className="context-menu__slot arc-filter-menu-slot arc-ui-kit-scope arc-navbar-no-drag" data-input-size="s">
+            <Datepicker
+              size="s"
+              mode="optional_range"
+              value={custom && custom.preset === 'custom' ? { from: custom.from, to: custom.to } : null}
+              aria-label="Другой период"
+              onChange={(value) => {
+                const withoutCustom = ranges.filter((d) => d.preset !== 'custom');
+                if (!value) {
+                  patchCustomFilter(field.id, withoutCustom.length ? { ranges: withoutCustom } : null);
+                  return;
+                }
+                patchCustomFilter(field.id, {
+                  ranges: [
+                    ...withoutCustom,
+                    { preset: 'custom', from: value.from, to: value.to ?? value.from }
+                  ]
+                });
+              }}
+            />
+          </div>
+        </>
+      )
+    };
   };
+
+  const buildCustomFieldMenu = (field: DetailTemplateField) => {
+    if (field.type === 'select' || field.type === 'multiSelect') {
+      return { rows: null as ContextMenuRow[] | null, children: buildCustomSelectMenu(field), label: templateFieldLabel(field) };
+    }
+    if (field.type === 'date') {
+      const built = buildCustomDateMenu(field);
+      return { rows: built.rows, children: built.children, label: templateFieldLabel(field) };
+    }
+    const presence = filters.custom[field.id];
+    return {
+      rows: null as ContextMenuRow[] | null,
+      children: buildPresenceMenu(
+        isCustomPresenceFilter(presence) ? presence : null,
+        stats?.customPresence[field.id],
+        customKeywords,
+        setCustomKeywords,
+        (next) => patchCustomFilter(field.id, next)
+      ),
+      label: templateFieldLabel(field)
+    };
+  };
+
+  const buildAnnotationsMenu = () =>
+    buildPresenceMenu(
+      filters.annotations,
+      stats?.annotations,
+      annotKeywords,
+      setAnnotKeywords,
+      (next) => patchFilters({ annotations: next })
+    );
 
   const customDateValue = useMemo(() => {
     const custom = filters.dateAdded.find((d) => d.preset === 'custom');
@@ -627,15 +671,26 @@ export default function NavbarFiltersMenu() {
   const handleCustomDateChange = useCallback(
     (value: { from: string; to: string } | null) => {
       if (!value) {
+        if (!filters.dateAdded.some((d) => d.preset === 'custom')) return;
         patchFilters({
           dateAdded: filters.dateAdded.filter((d) => d.preset !== 'custom')
         });
         return;
       }
+      const current = filters.dateAdded.find((d) => d.preset === 'custom');
+      const nextTo = value.to ?? value.from;
+      if (
+        current &&
+        current.preset === 'custom' &&
+        current.from === value.from &&
+        (current.to ?? current.from) === nextTo
+      ) {
+        return;
+      }
       patchFilters({
         dateAdded: [
           ...filters.dateAdded.filter((d) => d.preset !== 'custom'),
-          { preset: 'custom', from: value.from, to: value.to ?? value.from }
+          { preset: 'custom', from: value.from, to: nextTo }
         ]
       });
     },
@@ -839,12 +894,6 @@ export default function NavbarFiltersMenu() {
       case 'tagPresence':
         children = buildTagPresenceMenu();
         break;
-      case 'description':
-        children = buildDescriptionMenu();
-        break;
-      case 'link':
-        children = buildLinkMenu();
-        break;
       case 'annotations':
         children = buildAnnotationsMenu();
         break;
@@ -913,7 +962,7 @@ export default function NavbarFiltersMenu() {
   };
 
   const filterMainRows = useMemo<ContextMenuRow[]>(() => {
-    const items: ContextMenuRow[] = [{ type: 'header', key: 'filters-h', label: 'Список фильтров' }];
+    const items: ContextMenuRow[] = [{ type: 'header', key: 'filters-sys', label: 'Системные' }];
     for (const id of visibleChips) {
       const meta = FILTER_CHIP_META[id];
       const selectionCount = countFilterCategorySelections(filters, id);
@@ -928,6 +977,25 @@ export default function NavbarFiltersMenu() {
         closeOnSelect: false,
         onSelect: () => placeFilterSubmenu(`filter-${id}`, id)
       });
+    }
+    if (userFilterBarFields.length > 0) {
+      items.push({ type: 'separator', key: 'filters-sep-user' });
+      items.push({ type: 'header', key: 'filters-user', label: 'Пользовательские' });
+      for (const field of userFilterBarFields) {
+        const menuId = customFilterMenuKey(field.id);
+        const meta = userFilterChipMeta(field);
+        const selectionCount = countCustomFilterSelections(filters, field.id);
+        items.push({
+          type: 'item',
+          key: `filter-${menuId}`,
+          label: meta.label,
+          iconClass: meta.iconClass,
+          counter: selectionCount > 0 ? selectionCount : undefined,
+          slotOrder: ['label', 'counter', 'icon'],
+          closeOnSelect: false,
+          onSelect: () => placeFilterSubmenu(`filter-${menuId}`, menuId)
+        });
+      }
     }
     items.push({ type: 'separator', key: 'filters-sep-1' });
     items.push({
@@ -962,12 +1030,26 @@ export default function NavbarFiltersMenu() {
       });
     }
     return items;
-  }, [activeCategoryCount, clearFilters, closeAllMenus, filters, placeFilterSubmenu, visibleChips]);
+  }, [
+    activeCategoryCount,
+    clearFilters,
+    closeAllMenus,
+    filters,
+    placeFilterSubmenu,
+    userFilterBarFields,
+    visibleChips
+  ]);
 
   const activeFilterSubmenu = useMemo(() => {
     if (!openMenu || openMenu === 'options' || openMenu === 'presets') return null;
+    const customId = parseCustomFilterMenuKey(openMenu);
+    if (customId) {
+      const field = template.fields.find((item) => item.id === customId);
+      if (!field) return null;
+      return buildCustomFieldMenu(field);
+    }
     return buildFilterSubmenu(openMenu as GalleryFilterId);
-  }, [openMenu, filters, stats, customWeight, customRes, customDuration, layout]);
+  }, [openMenu, filters, stats, customWeight, customRes, customDuration, layout, template, customKeywords]);
 
   const presetNames = useMemo(
     () => new Set(presets.map((p) => p.name.trim().toLowerCase())),
@@ -1063,9 +1145,21 @@ export default function NavbarFiltersMenu() {
         >
           <FilterOptionsMenu
             layout={layout}
+            template={template}
+            stats={stats}
             hasVideo={stats?.hasVideo ?? true}
             onReorder={reorderFilter}
             onToggleVisibility={toggleFilterVisibility}
+            onReorderUserFields={(next) => void updateLibrarySettings({ detailCardTemplate: next })}
+            onToggleUserFilter={(fieldId) => {
+              void updateLibrarySettings({
+                systemFilterLayout: setUserFilterVisibility(
+                  layout,
+                  fieldId,
+                  !isUserFilterBarVisible(layout, fieldId)
+                )
+              });
+            }}
           />
         </ContextMenu>
 

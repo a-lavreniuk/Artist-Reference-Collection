@@ -85,12 +85,13 @@ describe('galleryCardDisplayName', () => {
     collectionIds: []
   };
 
-  it('prefers user name', () => {
-    expect(galleryCardDisplayName({ ...base, name: '  Portrait  ' })).toBe('Portrait');
+  it('shows the library-relative original path', () => {
+    expect(galleryCardDisplayName({ ...base, name: '  Portrait  ' })).toBe('cards/c1/original.jpg');
+    expect(galleryCardDisplayName(base)).toBe('cards/c1/original.jpg');
   });
 
-  it('falls back to card id when name is empty', () => {
-    expect(galleryCardDisplayName(base)).toBe('c1');
-    expect(galleryCardDisplayName({ ...base, name: '   ' })).toBe('c1');
+  it('falls back to card id when path is empty', () => {
+    expect(galleryCardDisplayName({ ...base, originalRelativePath: '' })).toBe('c1');
+    expect(galleryCardDisplayName({ ...base, originalRelativePath: '   ' })).toBe('c1');
   });
 });

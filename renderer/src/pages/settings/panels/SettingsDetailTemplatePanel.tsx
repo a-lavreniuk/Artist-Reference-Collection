@@ -1,22 +1,31 @@
 import { useState } from 'react';
 import DetailTemplateEditor from '../../../components/gallery/DetailTemplateEditor';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
-import { useAppPreferences } from '../../../hooks/useAppPreferences';
-import { defaultDetailCardTemplate, templateFieldLabel } from '@arc-main-shared/detailCardTemplate';
+import { useLibrarySettings } from '../../../hooks/useLibrarySettings';
+import {
+  applyDetailFieldType,
+  CUSTOM_FIELD_TYPE_LABELS,
+  templateFieldLabel,
+  type CustomFieldType
+} from '@arc-main-shared/detailCardTemplate';
 import { wipeCustomFieldValues } from '../../../services/db';
 import ConfirmModal from '../ConfirmModal';
 
 const LABEL_DETAIL_TEMPLATE =
-  'Поля блока «Детали» на карточке. Один шаблон для всех библиотек. Удаление своего поля стирает значения на карточках. Системные поля только убираются из шаблона.';
+  'Поля блока «Детали» на карточке. Шаблон действует только в открытой библиотеке. Удаление поля или смена типа стирает значения на карточках этой библиотеки.';
+
+type PendingAction =
+  | { kind: 'delete'; fieldId: string }
+  | { kind: 'type'; fieldId: string; type: CustomFieldType };
 
 export default function SettingsDetailTemplatePanel() {
-  const { prefs, ready, update } = useAppPreferences();
+  const { template, ready, update } = useLibrarySettings();
   const disabled = !ready;
-  const [pendingDeleteFieldId, setPendingDeleteFieldId] = useState<string | null>(null);
-  const template = prefs?.detailCardTemplate ?? defaultDetailCardTemplate();
-  const pendingField = template.fields.find((field) => field.id === pendingDeleteFieldId);
-  const pendingDeleteLabel = pendingField ? templateFieldLabel(pendingField) : 'поле';
-  const pendingDeleteIsCustom = pendingField?.kind === 'custom';
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const pendingField = pending
+    ? template.fields.find((field) => field.id === pending.fieldId)
+    : undefined;
+  const pendingLabel = pendingField ? templateFieldLabel(pendingField) : 'поле';
 
   return (
     <div className="arc-settings-main__scroll">
@@ -33,28 +42,45 @@ export default function SettingsDetailTemplatePanel() {
             template={template}
             readOnly={disabled}
             onChange={(detailCardTemplate) => void update({ detailCardTemplate })}
-            onRequestDelete={(fieldId) => setPendingDeleteFieldId(fieldId)}
+            onRequestDelete={(fieldId) => setPending({ kind: 'delete', fieldId })}
+            onRequestTypeChange={(fieldId, type) => setPending({ kind: 'type', fieldId, type })}
           />
         </div>
       </div>
-      {pendingDeleteFieldId ? (
+      {pending?.kind === 'delete' ? (
         <ConfirmModal
           title="Удалить поле?"
-          message={
-            pendingDeleteIsCustom
-              ? `Поле «${pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках.`
-              : `Поле «${pendingDeleteLabel}» будет убрано из шаблона. Данные на карточках сохранятся.`
-          }
+          message={`Поле «${pendingLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках этой библиотеки.`}
           confirmLabel="Удалить"
           confirmVariant="danger"
-          onCancel={() => setPendingDeleteFieldId(null)}
+          onCancel={() => setPending(null)}
           onConfirm={() => {
-            const fieldId = pendingDeleteFieldId;
-            setPendingDeleteFieldId(null);
+            const fieldId = pending.fieldId;
+            setPending(null);
             void (async () => {
-              if (pendingDeleteIsCustom) await wipeCustomFieldValues(fieldId);
+              await wipeCustomFieldValues(fieldId);
               const nextFields = template.fields.filter((field) => field.id !== fieldId);
               await update({ detailCardTemplate: { version: 1, fields: nextFields } });
+            })();
+          }}
+        />
+      ) : null}
+      {pending?.kind === 'type' ? (
+        <ConfirmModal
+          title="Сменить тип поля?"
+          message={`Тип поля «${pendingLabel}» станет «${CUSTOM_FIELD_TYPE_LABELS[pending.type]}». Значения поля сотрутся на всех карточках этой библиотеки.`}
+          confirmLabel="Сменить тип"
+          confirmVariant="danger"
+          onCancel={() => setPending(null)}
+          onConfirm={() => {
+            const fieldId = pending.fieldId;
+            const type = pending.type;
+            setPending(null);
+            void (async () => {
+              await wipeCustomFieldValues(fieldId);
+              await update({
+                detailCardTemplate: applyDetailFieldType(template, fieldId, type)
+              });
             })();
           }}
         />

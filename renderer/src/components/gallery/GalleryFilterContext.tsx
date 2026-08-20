@@ -13,11 +13,13 @@ import {
 } from 'react';
 import { useLocation } from 'react-router-dom';
 import { resolveMainTab } from '../layout/navbarLayout';
+import { LIBRARY_SETTINGS_CHANGED_EVENT, useLibrarySettings } from '../../hooks/useLibrarySettings';
+import { subscribeGalleryCardsChanged } from './galleryFeedCardsChanged';
 import {
+  consumeLegacyGalleryFilterLayout,
+  clearLegacyGalleryFilterLayout,
   reorderFilterInLayout,
-  readGalleryFilterLayout,
-  setFilterVisibility,
-  writeGalleryFilterLayout
+  setFilterVisibility
 } from './galleryFilterLayout';
 import {
   defaultGalleryFiltersSortTabState,
@@ -33,7 +35,10 @@ import {
   emptyGalleryAdvancedFilters,
   layoutToPresetItems,
   migrateGalleryAdvancedFilters,
+  omitCustomFieldFromSort,
+  parseCustomSortFieldId,
   presetItemsToLayout,
+  pruneCustomFiltersMissingFromTemplate,
   type DurationFilterValue,
   type GalleryAdvancedFilters,
   type GalleryFeedScope,
@@ -89,6 +94,13 @@ function initialTabState(pathname: string) {
 export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const mainTabRef = useRef(resolveMainTab(location.pathname));
+  const {
+    layout,
+    template,
+    ready: libraryReady,
+    update: updateLibrarySettings
+  } = useLibrarySettings();
+  const migratedLayoutRef = useRef(false);
 
   const [filters, setFiltersState] = useState<GalleryAdvancedFilters>(
     () => initialTabState(location.pathname).filters
@@ -96,7 +108,6 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   const [sort, setSortState] = useState<GallerySortState>(
     () => initialTabState(location.pathname).sort
   );
-  const [layout, setLayoutState] = useState<GalleryFilterLayoutState>(() => readGalleryFilterLayout());
   const [feedScope, setFeedScope] = useState<GalleryFeedScope>({ libraryScope: 'all' });
   const [stats, setStats] = useState<GalleryFilterStats | null>(null);
   const [presets, setPresets] = useState<SavedFilterPreset[]>([]);
@@ -123,6 +134,23 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     window.addEventListener(GALLERY_FILTERS_RELOAD_EVENT, onReload);
     return () => window.removeEventListener(GALLERY_FILTERS_RELOAD_EVENT, onReload);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!libraryReady || migratedLayoutRef.current) return;
+    const legacy = consumeLegacyGalleryFilterLayout();
+    if (!legacy) {
+      migratedLayoutRef.current = true;
+      return;
+    }
+    void updateLibrarySettings({ systemFilterLayout: legacy })
+      .then(() => {
+        migratedLayoutRef.current = true;
+        clearLegacyGalleryFilterLayout();
+      })
+      .catch(() => {
+        /* Ключ localStorage оставляем, пока запись в библиотеку не удастся. */
+      });
+  }, [libraryReady, updateLibrarySettings]);
 
   const filtersForPersist = useCallback((nextFilters: GalleryAdvancedFilters): GalleryAdvancedFilters => {
     let out = nextFilters;
@@ -151,10 +179,31 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     [filtersForPersist]
   );
 
-  const setLayout = useCallback((next: GalleryFilterLayoutState) => {
-    setLayoutState(next);
-    writeGalleryFilterLayout(next);
-  }, []);
+  const setLayout = useCallback(
+    (next: GalleryFilterLayoutState) => {
+      void updateLibrarySettings({ systemFilterLayout: next });
+    },
+    [updateLibrarySettings]
+  );
+
+  useEffect(() => {
+    const templateIds = new Set(template.fields.map((field) => field.id));
+    const pruned = pruneCustomFiltersMissingFromTemplate(filtersRef.current, templateIds);
+    if (pruned !== filtersRef.current) {
+      filtersRef.current = pruned;
+      setFiltersState(pruned);
+      const tab = mainTabRef.current;
+      if (isGalleryFilterPersistTab(tab)) persistTabState(tab, pruned, sortRef.current);
+    }
+    const sortFieldId = parseCustomSortFieldId(sortRef.current.field);
+    if (sortFieldId && !templateIds.has(sortFieldId)) {
+      const nextSort = omitCustomFieldFromSort(sortRef.current, sortFieldId);
+      sortRef.current = nextSort;
+      setSortState(nextSort);
+      const tab = mainTabRef.current;
+      if (isGalleryFilterPersistTab(tab)) persistTabState(tab, filtersRef.current, nextSort);
+    }
+  }, [persistTabState, template]);
 
   const setFilters = useCallback(
     (next: GalleryAdvancedFilters) => {
@@ -228,12 +277,6 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
         case 'tagPresence':
           patchFilters({ tagPresence: null });
           break;
-        case 'description':
-          patchFilters({ description: null });
-          break;
-        case 'link':
-          patchFilters({ link: null });
-          break;
         case 'annotations':
           patchFilters({ annotations: null });
           break;
@@ -295,7 +338,10 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
     }
   }, [location.pathname, persistTabState]);
 
+  const statsRequestIdRef = useRef(0);
+
   const refreshStats = useCallback(async () => {
+    const requestId = ++statsRequestIdRef.current;
     try {
       const data = await storage.storageGalleryFilterStats({
         libraryScope: feedScope.libraryScope,
@@ -304,8 +350,10 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
         collectionId: feedScope.collectionId,
         moodboardCardIds: feedScope.moodboardCardIds
       });
+      if (requestId !== statsRequestIdRef.current) return;
       setStats(data);
     } catch {
+      if (requestId !== statsRequestIdRef.current) return;
       setStats(null);
     }
   }, [feedScope]);
@@ -322,6 +370,24 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refreshPresets();
   }, [refreshPresets]);
+
+  useEffect(() => {
+    void refreshStats();
+  }, [refreshStats]);
+
+  useEffect(() => {
+    return subscribeGalleryCardsChanged(() => {
+      void refreshStats();
+    });
+  }, [refreshStats]);
+
+  useEffect(() => {
+    const onSettings = () => {
+      void refreshStats();
+    };
+    window.addEventListener(LIBRARY_SETTINGS_CHANGED_EVENT, onSettings);
+    return () => window.removeEventListener(LIBRARY_SETTINGS_CHANGED_EVENT, onSettings);
+  }, [refreshStats]);
 
   useEffect(() => {
     if (!stats || stats.hasVideo || filters.duration.length === 0) return;
@@ -413,10 +479,10 @@ export function GalleryFilterProvider({ children }: { children: ReactNode }) {
       if (isGalleryFilterPersistTab(tab)) {
         persistTabState(tab, nextFilters, nextSort);
       }
-      const nextLayout = presetItemsToLayout(preset.payload.layout);
+      const nextLayout = presetItemsToLayout(preset.payload.layout, layout);
       setLayout(nextLayout);
     },
-    [persistTabState, setLayout]
+    [layout, persistTabState, setLayout]
   );
 
   const deletePreset = useCallback(

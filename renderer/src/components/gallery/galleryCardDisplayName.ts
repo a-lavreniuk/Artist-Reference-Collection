@@ -1,8 +1,8 @@
 import type { CardRecord } from '../../services/arcSchema';
 
-/** Имя для List/подписей: пользовательское name, иначе уникальный id карточки. */
+/** Имя для List: внутренний путь файла в библиотеке. */
 export function galleryCardDisplayName(card: CardRecord): string {
-  const named = card.name?.trim();
-  if (named) return named;
+  const rel = card.originalRelativePath?.trim();
+  if (rel) return rel;
   return card.id;
 }

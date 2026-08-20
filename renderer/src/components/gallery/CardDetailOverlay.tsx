@@ -116,8 +116,9 @@ import {
 } from './cardDetailSettingsWidth';
 import { measureCardDetailToolbarMinWidth } from './measureCardDetailToolbarMinWidth';
 import { getAppPreferences } from '../../services/appPreferences';
-import { useAppPreferences } from '../../hooks/useAppPreferences';
+import { useLibrarySettings } from '../../hooks/useLibrarySettings';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
+import { toOpenableLinkUrl } from '../../utils/linkInput';
 import CopyCardSettingsMenu from './CopyCardSettingsMenu';
 import {
   buildCardSettingsSnapshot,
@@ -143,13 +144,16 @@ import { getShortcutById } from '../../shortcuts/shortcutRegistry';
 import { shortcutMenuLabel } from '../../shortcuts/shortcutLabels';
 import { openCardsInNewWindow, type CardViewerOpenContext } from '../../card-viewer/openCardsInNewWindow';
 import {
-  defaultDetailCardTemplate,
+  applyDetailFieldType,
+  CUSTOM_FIELD_TYPE_LABELS,
   isPointAnnotation,
+  isStarterFieldId,
   clampUnit,
   sanitizeCardAnnotations,
   sanitizeCustomFieldsMap,
   templateFieldLabel,
   type CardAnnotationV1,
+  type CustomFieldType,
   type CustomFieldsMap
 } from '@arc-main-shared/detailCardTemplate';
 
@@ -168,13 +172,6 @@ type Props = {
 
 const DESCRIPTION_SAVE_MS = 600;
 const FIELD_SAVE_MS = 600;
-
-function normalizeExternalUrl(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
 
 function newAnnotationId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -232,8 +229,46 @@ export default function CardDetailOverlay({
   const [draftName, setDraftName] = useState('');
   const [draftLink, setDraftLink] = useState('');
   const [description, setDescription] = useState('');
+  const draftNameRef = useRef('');
+  const draftLinkRef = useRef('');
+  const descriptionRef = useRef('');
+  draftNameRef.current = draftName;
+  draftLinkRef.current = draftLink;
+  descriptionRef.current = description;
   const [customFields, setCustomFields] = useState<CustomFieldsMap>({});
   const customFieldsRef = useRef<CustomFieldsMap>({});
+  const flushPendingDetailFieldsRef = useRef<(targetId: string) => void>(() => undefined);
+  flushPendingDetailFieldsRef.current = (targetId: string) => {
+    if (!targetId) return;
+    const patch: {
+      name?: string;
+      linkUrl?: string;
+      description?: string;
+      customFields?: CustomFieldsMap;
+    } = {};
+    if (nameSaveTimerRef.current) {
+      window.clearTimeout(nameSaveTimerRef.current);
+      nameSaveTimerRef.current = null;
+      patch.name = draftNameRef.current;
+    }
+    if (linkSaveTimerRef.current) {
+      window.clearTimeout(linkSaveTimerRef.current);
+      linkSaveTimerRef.current = null;
+      patch.linkUrl = draftLinkRef.current;
+    }
+    if (descriptionSaveTimerRef.current) {
+      window.clearTimeout(descriptionSaveTimerRef.current);
+      descriptionSaveTimerRef.current = null;
+      patch.description = descriptionRef.current;
+    }
+    if (customFieldsSaveTimerRef.current) {
+      window.clearTimeout(customFieldsSaveTimerRef.current);
+      customFieldsSaveTimerRef.current = null;
+      patch.customFields = customFieldsRef.current;
+    }
+    if (Object.keys(patch).length === 0) return;
+    void updateCardPayload(targetId, patch);
+  };
   const [annotations, setAnnotations] = useState<CardAnnotationV1[]>([]);
   const annotationsRef = useRef<CardAnnotationV1[]>([]);
   const lastAnnotationsCardIdRef = useRef<string>('');
@@ -270,6 +305,10 @@ export default function CardDetailOverlay({
   }, [blurAnnotationUi]);
 
   const [pendingDeleteFieldId, setPendingDeleteFieldId] = useState<string | null>(null);
+  const [pendingTypeChange, setPendingTypeChange] = useState<{
+    fieldId: string;
+    type: CustomFieldType;
+  } | null>(null);
   const [rating, setRating] = useState(0);
   const [palette, setPalette] = useState<PaletteSwatch[]>([]);
   const [settingsWidth, setSettingsWidth] = useState(readCardDetailSettingsWidth);
@@ -328,10 +367,11 @@ export default function CardDetailOverlay({
   const cardId = urlCardId !== seenUrlCardId ? urlCardId : viewingCardId;
   cardIdRef.current = cardId;
 
-  const { prefs, update: updatePrefs } = useAppPreferences();
-  const detailTemplate = prefs?.detailCardTemplate ?? defaultDetailCardTemplate();
+  const { template: detailTemplate, update: updateLibrarySettings } = useLibrarySettings();
 
   const reloadCard = useCallback(async (id: string) => {
+    const previousId = cardRef.current?.id;
+    if (previousId && previousId !== id) flushPendingDetailFieldsRef.current(previousId);
     const scopedLibraryId = cardRef.current?.id === id ? cardRef.current.libraryId : undefined;
     let c = await getCardById(id, scopedLibraryId);
     if (c) {
@@ -371,6 +411,8 @@ export default function CardDetailOverlay({
   }, []);
 
   const applyInstantCardPreview = useCallback((c: CardRecord) => {
+    const previousId = cardRef.current?.id;
+    if (previousId && previousId !== c.id) flushPendingDetailFieldsRef.current(previousId);
     const draft = readCardDetailDraft(c.id);
     setDraftName(c.name ?? draft.name ?? '');
     setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
@@ -424,7 +466,7 @@ export default function CardDetailOverlay({
 
   useEffect(() => {
     const ids = new Set(
-      detailTemplate.fields.filter((field) => field.kind === 'custom').map((field) => field.id)
+      detailTemplate.fields.filter((field) => !isStarterFieldId(field.id)).map((field) => field.id)
     );
     setCustomFields((prev) => {
       let changed = false;
@@ -440,10 +482,13 @@ export default function CardDetailOverlay({
 
   useEffect(() => {
     const previousId = lastAnnotationsCardIdRef.current;
-    if (previousId && previousId !== cardId && annotationsSaveTimerRef.current) {
-      window.clearTimeout(annotationsSaveTimerRef.current);
-      annotationsSaveTimerRef.current = null;
-      void updateCardPayload(previousId, { annotations: annotationsRef.current });
+    if (previousId && previousId !== cardId) {
+      flushPendingDetailFieldsRef.current(previousId);
+      if (annotationsSaveTimerRef.current) {
+        window.clearTimeout(annotationsSaveTimerRef.current);
+        annotationsSaveTimerRef.current = null;
+        void updateCardPayload(previousId, { annotations: annotationsRef.current });
+      }
     }
     lastAnnotationsCardIdRef.current = cardId;
     setPendingTagSearchIds([]);
@@ -732,6 +777,7 @@ export default function CardDetailOverlay({
       }
       if (actionAlert) setActionAlert(null);
       else if (copySettingsMenuOpen) setCopySettingsMenuOpen(false);
+      else if (pendingTypeChange) setPendingTypeChange(null);
       else if (pendingDeleteFieldId) setPendingDeleteFieldId(null);
       else if (pendingDeleteAnnotationId) setPendingDeleteAnnotationId(null);
       else if (annotationComposer) cancelAnnotationComposer();
@@ -757,6 +803,7 @@ export default function CardDetailOverlay({
     collectionsModalOpen,
     copySettingsMenuOpen,
     pendingDeleteFieldId,
+    pendingTypeChange,
     pendingDeleteAnnotationId,
     annotationComposer,
     commentMode,
@@ -765,6 +812,7 @@ export default function CardDetailOverlay({
 
   useEffect(() => {
     return () => {
+      flushPendingDetailFieldsRef.current(cardIdRef.current);
       if (descriptionSaveTimerRef.current) window.clearTimeout(descriptionSaveTimerRef.current);
       if (nameSaveTimerRef.current) window.clearTimeout(nameSaveTimerRef.current);
       if (linkSaveTimerRef.current) window.clearTimeout(linkSaveTimerRef.current);
@@ -908,6 +956,14 @@ export default function CardDetailOverlay({
   const handleCustomFieldChange = useCallback(
     (fieldId: string, value: string | string[]) => {
       setCustomFields((prev) => {
+        const current = prev[fieldId];
+        if (Array.isArray(current) && Array.isArray(value)) {
+          if (current.length === value.length && current.every((item, i) => item === value[i])) {
+            return prev;
+          }
+        } else if (current === value) {
+          return prev;
+        }
         const next = { ...prev, [fieldId]: value };
         customFieldsRef.current = next;
         scheduleCustomFieldsSave(next);
@@ -1406,6 +1462,7 @@ export default function CardDetailOverlay({
     collectionsModalOpen ||
     copySettingsMenuOpen ||
     pendingDeleteFieldId !== null ||
+    pendingTypeChange !== null ||
     pendingDeleteAnnotationId !== null ||
     annotationComposer !== null ||
     confirmDelete ||
@@ -1516,7 +1573,7 @@ export default function CardDetailOverlay({
   };
 
   const openDraftLink = () => {
-    const url = normalizeExternalUrl(draftLink);
+    const url = toOpenableLinkUrl(draftLink);
     if (!url) return;
     if (window.arc?.openExternalUrl) {
       void window.arc.openExternalUrl(url);
@@ -1872,7 +1929,10 @@ export default function CardDetailOverlay({
 
   const pendingDeleteField = detailTemplate.fields.find((field) => field.id === pendingDeleteFieldId);
   const pendingDeleteLabel = pendingDeleteField ? templateFieldLabel(pendingDeleteField) : 'поле';
-  const pendingDeleteIsCustom = pendingDeleteField?.kind === 'custom';
+  const pendingTypeField = pendingTypeChange
+    ? detailTemplate.fields.find((field) => field.id === pendingTypeChange.fieldId)
+    : undefined;
+  const pendingTypeLabel = pendingTypeField ? templateFieldLabel(pendingTypeField) : 'поле';
 
   const tagsSectionFooter = (
     <div
@@ -2337,6 +2397,7 @@ export default function CardDetailOverlay({
               ) : null}
               <CollapsibleSection title="Детали">
                 <CardDetailDescriptionFields
+                  cardId={card?.id ?? cardId}
                   template={detailTemplate}
                   inTrash={inTrash}
                   rating={rating}
@@ -2354,7 +2415,7 @@ export default function CardDetailOverlay({
                     scheduleLinkSave(value);
                   }}
                   onOpenLink={openDraftLink}
-                  canOpenLink={Boolean(normalizeExternalUrl(draftLink))}
+                  canOpenLink={Boolean(toOpenableLinkUrl(draftLink))}
                   description={description}
                   onDescriptionChange={(value) => {
                     setDescription(value);
@@ -2363,8 +2424,9 @@ export default function CardDetailOverlay({
                   descriptionTextareaRef={descriptionTextareaRef}
                   customFields={customFields}
                   onCustomFieldChange={handleCustomFieldChange}
-                  onTemplateChange={(next) => void updatePrefs({ detailCardTemplate: next })}
+                  onTemplateChange={(next) => void updateLibrarySettings({ detailCardTemplate: next })}
                   onRequestDeleteField={(fieldId) => setPendingDeleteFieldId(fieldId)}
+                  onRequestTypeChange={(fieldId, type) => setPendingTypeChange({ fieldId, type })}
                 />
               </CollapsibleSection>
 
@@ -2750,9 +2812,7 @@ export default function CardDetailOverlay({
             <div className="arc-modal__body">
               <div className="arc-modal__slot">
                 <p className="arc-modal__slot-text">
-                  {pendingDeleteIsCustom
-                    ? `Поле «${pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках.`
-                    : `Поле «${pendingDeleteLabel}» будет убрано из шаблона. Данные на карточках сохранятся.`}
+                  Поле «{pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках этой библиотеки.
                 </p>
               </div>
             </div>
@@ -2771,13 +2831,81 @@ export default function CardDetailOverlay({
                   const fieldId = pendingDeleteFieldId;
                   setPendingDeleteFieldId(null);
                   void (async () => {
-                    if (pendingDeleteIsCustom) await wipeCustomFieldValues(fieldId);
+                    await wipeCustomFieldValues(fieldId);
                     const nextFields = detailTemplate.fields.filter((field) => field.id !== fieldId);
-                    await updatePrefs({ detailCardTemplate: { version: 1, fields: nextFields } });
+                    await updateLibrarySettings({ detailCardTemplate: { version: 1, fields: nextFields } });
                   })();
                 }}
               >
                 <span className="btn-ds__value">Удалить</span>
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
+      {pendingTypeChange ? (
+        <div
+          className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
+          aria-hidden="false"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setPendingTypeChange(null);
+          }}
+        >
+          <section
+            className="arc-modal"
+            data-elevation="raised"
+            data-input-size="s"
+            data-btn-size="s"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcCardChangeFieldTypeTitle"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="arc-modal__header arc-modal__header--title">
+              <h3 className="arc-modal__title" id="arcCardChangeFieldTypeTitle">
+                Сменить тип поля?
+              </h3>
+              <button
+                type="button"
+                className="arc-modal__close"
+                aria-label="Закрыть"
+                onClick={() => setPendingTypeChange(null)}
+              >
+                <span className="tab-icon arc-icon-close" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="arc-modal__body">
+              <div className="arc-modal__slot">
+                <p className="arc-modal__slot-text">
+                  Тип поля «{pendingTypeLabel}» станет «{CUSTOM_FIELD_TYPE_LABELS[pendingTypeChange.type]}».
+                  Значения поля сотрутся на всех карточках этой библиотеки.
+                </p>
+              </div>
+            </div>
+            <footer className="arc-modal__footer arc-modal__footer--actions-2">
+              <button
+                type="button"
+                className="btn btn-outline btn-ds btn-s"
+                onClick={() => setPendingTypeChange(null)}
+              >
+                <span className="btn-ds__value">Отмена</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-ds btn-s"
+                onClick={() => {
+                  const { fieldId, type } = pendingTypeChange;
+                  setPendingTypeChange(null);
+                  void (async () => {
+                    await wipeCustomFieldValues(fieldId);
+                    await updateLibrarySettings({
+                      detailCardTemplate: applyDetailFieldType(detailTemplate, fieldId, type)
+                    });
+                  })();
+                }}
+              >
+                <span className="btn-ds__value">Сменить тип</span>
               </button>
             </footer>
           </section>

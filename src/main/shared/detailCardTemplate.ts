@@ -1,4 +1,4 @@
-/** Шаблон блока «Описание» деталки и значения/аннотации карточки. */
+/** Шаблон блока «Детали» и значения/аннотации карточки. */
 
 export const DETAIL_BUILTIN_FIELD_IDS = ['name', 'link', 'description'] as const;
 export type DetailBuiltinFieldId = (typeof DETAIL_BUILTIN_FIELD_IDS)[number];
@@ -13,10 +13,19 @@ export const CUSTOM_FIELD_TYPES = [
 ] as const;
 export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
 
+export const FIELD_VISIBILITY_MODES = ['always', 'alwaysHidden', 'hiddenIfEmpty'] as const;
+export type FieldVisibilityMode = (typeof FIELD_VISIBILITY_MODES)[number];
+
 export const DETAIL_BUILTIN_FIELD_LABELS: Record<DetailBuiltinFieldId, string> = {
   name: 'Имя',
   link: 'Ссылка',
   description: 'Описание'
+};
+
+export const STARTER_FIELD_TYPES: Record<DetailBuiltinFieldId, CustomFieldType> = {
+  name: 'shortText',
+  link: 'url',
+  description: 'longText'
 };
 
 export const CUSTOM_FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
@@ -28,24 +37,25 @@ export const CUSTOM_FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
   multiSelect: 'Мульти-выбор'
 };
 
-export type DetailTemplateBuiltinField = {
-  id: DetailBuiltinFieldId;
-  kind: 'builtin';
-  visible: boolean;
-  /** Пользовательское имя; пустое — подпись по умолчанию. */
-  label?: string;
+export const FIELD_VISIBILITY_LABELS: Record<FieldVisibilityMode, string> = {
+  always: 'Видно всегда',
+  alwaysHidden: 'Всегда скрыто',
+  hiddenIfEmpty: 'Скрыто если пусто'
 };
 
-export type DetailTemplateCustomField = {
+export type DetailTemplateField = {
   id: string;
-  kind: 'custom';
   type: CustomFieldType;
   label: string;
-  visible: boolean;
+  visibility: FieldVisibilityMode;
+  showInFilters: boolean;
   options?: string[];
 };
 
-export type DetailTemplateField = DetailTemplateBuiltinField | DetailTemplateCustomField;
+/** @deprecated Старый формат; sanitize приводит к DetailTemplateField. */
+export type DetailTemplateBuiltinField = DetailTemplateField & { kind?: 'builtin' };
+/** @deprecated Старый формат; sanitize приводит к DetailTemplateField. */
+export type DetailTemplateCustomField = DetailTemplateField & { kind?: 'custom' };
 
 export type DetailCardTemplateV1 = {
   version: 1;
@@ -70,16 +80,21 @@ export type CardAnnotationV1 = {
 export const VIDEO_ANNOTATION_TIME_EPS_MS = 250;
 
 const CUSTOM_TYPE_SET = new Set<string>(CUSTOM_FIELD_TYPES);
-const BUILTIN_SET = new Set<string>(DETAIL_BUILTIN_FIELD_IDS);
+const STARTER_SET = new Set<string>(DETAIL_BUILTIN_FIELD_IDS);
+const VISIBILITY_SET = new Set<string>(FIELD_VISIBILITY_MODES);
+
+export function isStarterFieldId(id: string): id is DetailBuiltinFieldId {
+  return STARTER_SET.has(id);
+}
+
+export function isSafeFieldId(id: string): boolean {
+  return /^[a-zA-Z0-9_-]+$/.test(id);
+}
 
 export function defaultDetailCardTemplate(): DetailCardTemplateV1 {
   return {
     version: 1,
-    fields: DETAIL_BUILTIN_FIELD_IDS.map((id) => ({
-      id,
-      kind: 'builtin' as const,
-      visible: true
-    }))
+    fields: DETAIL_BUILTIN_FIELD_IDS.map((id) => createStarterTemplateField(id))
   };
 }
 
@@ -101,20 +116,44 @@ function sanitizeOptions(raw: unknown): string[] {
   return out;
 }
 
-function sanitizeCustomField(raw: unknown): DetailTemplateCustomField | null {
+function sanitizeVisibility(raw: unknown, visibleFallback?: unknown): FieldVisibilityMode {
+  if (typeof raw === 'string' && VISIBILITY_SET.has(raw)) return raw as FieldVisibilityMode;
+  if (visibleFallback === false) return 'alwaysHidden';
+  return 'always';
+}
+
+function starterTypeForId(id: string): CustomFieldType | null {
+  if (id === 'name' || id === 'link' || id === 'description') return STARTER_FIELD_TYPES[id];
+  return null;
+}
+
+function sanitizeTemplateField(raw: unknown): DetailTemplateField | null {
   if (!raw || typeof raw !== 'object') return null;
   const rec = raw as Record<string, unknown>;
   if (typeof rec.id !== 'string' || !rec.id.trim()) return null;
-  if (!isCustomFieldType(rec.type)) return null;
-  const label = typeof rec.label === 'string' && rec.label.trim() ? rec.label.trim() : CUSTOM_FIELD_TYPE_LABELS[rec.type];
-  const field: DetailTemplateCustomField = {
-    id: rec.id.trim(),
-    kind: 'custom',
-    type: rec.type,
+  const id = rec.id.trim();
+  if (!isSafeFieldId(id)) return null;
+
+  let type: CustomFieldType | null = null;
+  if (rec.kind === 'builtin' && isStarterFieldId(id)) {
+    type = STARTER_FIELD_TYPES[id];
+  } else if (isCustomFieldType(rec.type)) {
+    type = rec.type;
+  } else if (isStarterFieldId(id)) {
+    type = STARTER_FIELD_TYPES[id];
+  }
+  if (!type) return null;
+
+  const defaultLabel = isStarterFieldId(id) ? DETAIL_BUILTIN_FIELD_LABELS[id] : CUSTOM_FIELD_TYPE_LABELS[type];
+  const label = typeof rec.label === 'string' && rec.label.trim() ? rec.label.trim() : defaultLabel;
+  const field: DetailTemplateField = {
+    id,
+    type,
     label,
-    visible: rec.visible !== false
+    visibility: sanitizeVisibility(rec.visibility, rec.visible),
+    showInFilters: rec.showInFilters !== false
   };
-  if (rec.type === 'select' || rec.type === 'multiSelect') {
+  if (type === 'select' || type === 'multiSelect') {
     field.options = sanitizeOptions(rec.options);
   }
   return field;
@@ -129,76 +168,94 @@ export function sanitizeDetailCardTemplate(raw: unknown): DetailCardTemplateV1 {
   const seen = new Set<string>();
 
   for (const item of rec.fields) {
-    if (!item || typeof item !== 'object') continue;
-    const row = item as Record<string, unknown>;
-    if (row.kind === 'builtin' && typeof row.id === 'string' && BUILTIN_SET.has(row.id)) {
-      const id = row.id as DetailBuiltinFieldId;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const builtin: DetailTemplateBuiltinField = { id, kind: 'builtin', visible: row.visible !== false };
-      if (typeof row.label === 'string' && row.label.trim()) builtin.label = row.label.trim();
-      fields.push(builtin);
-      continue;
-    }
-    if (row.kind === 'custom') {
-      const custom = sanitizeCustomField(row);
-      if (!custom || seen.has(custom.id) || BUILTIN_SET.has(custom.id)) continue;
-      seen.add(custom.id);
-      fields.push(custom);
-    }
+    const field = sanitizeTemplateField(item);
+    if (!field || seen.has(field.id)) continue;
+    seen.add(field.id);
+    fields.push(field);
   }
 
   return { version: 1, fields };
 }
 
-export function createCustomTemplateField(type: CustomFieldType, id: string): DetailTemplateCustomField {
-  const field: DetailTemplateCustomField = {
+export function createCustomTemplateField(type: CustomFieldType, id: string): DetailTemplateField {
+  const field: DetailTemplateField = {
     id,
-    kind: 'custom',
     type,
     label: CUSTOM_FIELD_TYPE_LABELS[type],
-    visible: true
+    visibility: 'always',
+    showInFilters: true
   };
   if (type === 'select' || type === 'multiSelect') field.options = [];
   return field;
 }
 
-export function createBuiltinTemplateField(id: DetailBuiltinFieldId): DetailTemplateBuiltinField {
-  return { id, kind: 'builtin', visible: true };
+export function createStarterTemplateField(id: DetailBuiltinFieldId): DetailTemplateField {
+  return {
+    id,
+    type: STARTER_FIELD_TYPES[id],
+    label: DETAIL_BUILTIN_FIELD_LABELS[id],
+    visibility: 'always',
+    showInFilters: true
+  };
+}
+
+export function applyDetailFieldType(
+  template: DetailCardTemplateV1,
+  fieldId: string,
+  type: CustomFieldType
+): DetailCardTemplateV1 {
+  return sanitizeDetailCardTemplate({
+    version: 1,
+    fields: template.fields.map((field) => {
+      if (field.id !== fieldId) return field;
+      const next: DetailTemplateField = { ...field, type };
+      if (type === 'select' || type === 'multiSelect') {
+        next.options = field.options ?? [];
+      } else {
+        delete next.options;
+      }
+      return next;
+    })
+  });
+}
+
+/** @deprecated Используйте createStarterTemplateField. */
+export function createBuiltinTemplateField(id: DetailBuiltinFieldId): DetailTemplateField {
+  return createStarterTemplateField(id);
 }
 
 export function missingBuiltinFieldIds(template: DetailCardTemplateV1): DetailBuiltinFieldId[] {
-  const have = new Set(
-    template.fields.filter((field): field is DetailTemplateBuiltinField => field.kind === 'builtin').map((field) => field.id)
-  );
+  const have = new Set(template.fields.map((field) => field.id));
   return DETAIL_BUILTIN_FIELD_IDS.filter((id) => !have.has(id));
 }
 
 export function templateFieldLabel(field: DetailTemplateField): string {
-  if (field.kind === 'builtin') {
-    return field.label?.trim() ? field.label.trim() : DETAIL_BUILTIN_FIELD_LABELS[field.id];
-  }
-  return field.label;
+  const trimmed = field.label.trim();
+  if (trimmed) return trimmed;
+  if (isStarterFieldId(field.id)) return DETAIL_BUILTIN_FIELD_LABELS[field.id];
+  return CUSTOM_FIELD_TYPE_LABELS[field.type];
 }
 
-const BUILTIN_TYPE_LABELS: Record<DetailBuiltinFieldId, string> = {
-  name: CUSTOM_FIELD_TYPE_LABELS.shortText,
-  link: CUSTOM_FIELD_TYPE_LABELS.url,
-  description: CUSTOM_FIELD_TYPE_LABELS.longText
-};
+/** Подпись в меню свойства. Стартовые Имя/Ссылка/Описание — value, не placeholder типа. */
+export function fieldEditorNameDraft(field: DetailTemplateField): string {
+  const current = templateFieldLabel(field).trim();
+  const typeLabel = CUSTOM_FIELD_TYPE_LABELS[field.type];
+  if (isStarterFieldId(field.id) && current === DETAIL_BUILTIN_FIELD_LABELS[field.id]) {
+    return current;
+  }
+  return current === typeLabel ? '' : current;
+}
+
+export function fieldLabelFromEditorDraft(draft: string, type: CustomFieldType): string {
+  return draft.trim() || CUSTOM_FIELD_TYPE_LABELS[type];
+}
 
 export function templateFieldTypeLabel(field: DetailTemplateField): string {
-  if (field.kind === 'builtin') return BUILTIN_TYPE_LABELS[field.id];
   return CUSTOM_FIELD_TYPE_LABELS[field.type];
 }
 
 /** Иконка типа свойства — `arc-icon-*` из UI-Kit. */
 export function templateFieldIconClass(field: DetailTemplateField): string {
-  if (field.kind === 'builtin') {
-    if (field.id === 'name') return 'arc-icon-text-short';
-    if (field.id === 'link') return 'arc-icon-link';
-    return 'arc-icon-textarea';
-  }
   if (field.type === 'shortText') return 'arc-icon-text-short';
   if (field.type === 'longText') return 'arc-icon-textarea';
   if (field.type === 'url') return 'arc-icon-link';
@@ -210,11 +267,27 @@ export function templateFieldIconClass(field: DetailTemplateField): string {
 export function customFieldTypeIconClass(type: CustomFieldType): string {
   return templateFieldIconClass({
     id: 'preview',
-    kind: 'custom',
     type,
     label: CUSTOM_FIELD_TYPE_LABELS[type],
-    visible: true
+    visibility: 'always',
+    showInFilters: true
   });
+}
+
+export function isFieldInMainList(field: DetailTemplateField, hasValue: boolean): boolean {
+  if (field.visibility === 'always') return true;
+  if (field.visibility === 'alwaysHidden') return false;
+  return hasValue;
+}
+
+export function customFieldValueIsFilled(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.some((item) => typeof item === 'string' && item.trim().length > 0);
+  return false;
+}
+
+export function starterTypeForFieldId(id: string): CustomFieldType | null {
+  return starterTypeForId(id);
 }
 
 export function clampUnit(value: number): number {
@@ -363,16 +436,39 @@ export function reorderTemplateFields(
   return next;
 }
 
-/** Перестановка только среди видимых полей; скрытые остаются на своих местах. */
+/** Перестановка только среди полей, для которых listed=true; остальные остаются на местах. */
 export function reorderVisibleTemplateFields(
   fields: DetailTemplateField[],
   id: string,
-  insertIndex: number
+  insertIndex: number,
+  listed?: (field: DetailTemplateField) => boolean
 ): DetailTemplateField[] {
-  const visible = fields.filter((field) => field.visible);
+  const isListed = listed ?? ((field: DetailTemplateField) => field.visibility === 'always');
+  const visible = fields.filter(isListed);
   const nextVisible = reorderTemplateFields(visible, id, insertIndex);
   let index = 0;
-  return fields.map((field) => (field.visible ? nextVisible[index++]! : field));
+  return fields.map((field) => (isListed(field) ? nextVisible[index++]! : field));
+}
+
+/** Переставить подпоследовательность id внутри полного списка, не трогая остальные слоты. */
+export function mergeSubsequenceOrder<T extends { id: string }>(
+  all: T[],
+  newSubsequenceOrder: string[]
+): T[] {
+  const wanted = new Set(newSubsequenceOrder);
+  const slots: number[] = [];
+  for (let i = 0; i < all.length; i++) {
+    if (wanted.has(all[i]!.id)) slots.push(i);
+  }
+  if (slots.length !== newSubsequenceOrder.length) return all;
+  const byId = new Map(all.map((item) => [item.id, item]));
+  const next = [...all];
+  for (let i = 0; i < slots.length; i++) {
+    const item = byId.get(newSubsequenceOrder[i]!);
+    if (!item) return all;
+    next[slots[i]!] = item;
+  }
+  return next;
 }
 
 export function serializeAnnotations(annotations: CardAnnotationV1[]): {

@@ -111,7 +111,7 @@ export default function CardViewerApp() {
   const showNavigation =
     cardViewerContextAllowsNavigation(launch.context) && session.cardIds.length > 1;
 
-  const cardTitle = session.card?.name?.trim() || session.card?.id || 'Просмотр';
+  const cardTitle = session.card?.id || 'Просмотр';
 
   const breadcrumb = useMemo(() => {
     if (launch.context.kind === 'moodboard') {

@@ -52,7 +52,11 @@ function normalizeSort(raw: unknown): GallerySortState {
     'rating',
     'shuffle'
   ]);
-  if (typeof field !== 'string' || !knownFields.has(field)) return { ...DEFAULT_GALLERY_SORT };
+  const isCustom =
+    typeof field === 'string' && /^custom:[a-zA-Z0-9_-]+$/.test(field);
+  if (typeof field !== 'string' || (!knownFields.has(field) && !isCustom)) {
+    return { ...DEFAULT_GALLERY_SORT };
+  }
   if (direction !== 'asc' && direction !== 'desc') return { ...DEFAULT_GALLERY_SORT };
   const sort: GallerySortState = {
     field: field as GallerySortState['field'],

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GalleryFilterId } from '../../gallery/galleryFilterTypes';
 
 export type FilterOptionsDragState = {
-  dragId: GalleryFilterId;
+  dragId: string;
   insertIndex: number;
   ghostX: number;
   ghostY: number;
@@ -12,7 +11,7 @@ export type FilterOptionsDragState = {
 };
 
 type RowMetrics = {
-  id: GalleryFilterId;
+  id: string;
   top: number;
   height: number;
 };
@@ -28,14 +27,14 @@ function resolveInsertIndex(clientY: number, rows: RowMetrics[]): number {
 function collectRowMetrics(listEl: HTMLElement): RowMetrics[] {
   const nodes = listEl.querySelectorAll<HTMLElement>('[data-filter-options-row]');
   return Array.from(nodes).map((node) => ({
-    id: node.dataset.filterOptionsRow as GalleryFilterId,
+    id: node.dataset.filterOptionsRow as string,
     top: node.getBoundingClientRect().top,
     height: node.getBoundingClientRect().height
   }));
 }
 
 type StartDragArgs = {
-  id: GalleryFilterId;
+  id: string;
   label: string;
   visible: boolean;
   handleEl: HTMLElement;
@@ -43,10 +42,10 @@ type StartDragArgs = {
   listEl: HTMLElement;
 };
 
-export function useFilterOptionsDrag(onReorder: (id: GalleryFilterId, insertIndex: number) => void) {
+export function useFilterOptionsDrag(onReorder: (id: string, insertIndex: number) => void) {
   const [dragState, setDragState] = useState<FilterOptionsDragState | null>(null);
   const dragRef = useRef<{
-    id: GalleryFilterId;
+    id: string;
     label: string;
     visible: boolean;
     listEl: HTMLElement;

@@ -8,6 +8,7 @@ export type ParsedLinkInput = {
 export const DEFAULT_LINK_PROTOCOL: LinkProtocol = 'https://';
 
 const PROTOCOL_RE = /^(https?:\/\/)/i;
+const IPV4_RE = /^(?:\d{1,3}\.){3}\d{1,3}$/;
 
 function stripEdgeSlashes(value: string): string {
   return value.replace(/^\/+/, '').replace(/\/+$/, '');
@@ -41,4 +42,31 @@ export function hostDraftToStoredValue(protocol: LinkProtocol, hostDraft: string
     return normalizeLinkInputValue(trimmed);
   }
   return normalizeLinkInputValue(`${protocol}${trimmed}`);
+}
+
+function isHttpHostname(host: string): boolean {
+  if (!host || host.includes(' ')) return false;
+  if (host === 'localhost') return true;
+  if (host.includes(':')) return true;
+  if (IPV4_RE.test(host)) return true;
+  return host.includes('.');
+}
+
+/** Пустое значение допустимо. Непустая строка должна быть http(s)-ссылкой с хостом. */
+export function isValidLinkInputValue(raw: string): boolean {
+  const normalized = normalizeLinkInputValue(raw);
+  if (!normalized) return true;
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    return isHttpHostname(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+export function toOpenableLinkUrl(raw: string): string | null {
+  const normalized = normalizeLinkInputValue(raw);
+  if (!normalized || !isValidLinkInputValue(normalized)) return null;
+  return normalized;
 }

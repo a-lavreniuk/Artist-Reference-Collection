@@ -44,6 +44,15 @@ import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
 import { isExpiredDeletedAt } from './trashRetention';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
 import { defaultMoodboard, defaultSystem, readMoodboard, readSystem, writeMoodboard, writeSystem } from './systemFiles';
+import {
+  hasLibrarySetting,
+  LIBRARY_SETTING_TEMPLATE,
+  readLibraryDetailTemplate,
+  seedLibrarySettingsIfNeeded,
+  writeLibraryDetailTemplate,
+  writeSystemFilterLayout,
+  readSystemFilterLayout
+} from './librarySettings';
 import { generateImageThumbnails, generateVideoThumbnailsFromFrame } from './thumbnails';
 import {
   buildGalleryFilterWhere,
@@ -72,9 +81,17 @@ import {
   serializeCustomFieldsMap,
   customFieldsMapToSearchText,
   omitCustomFieldKey,
+  isStarterFieldId,
   type CardAnnotationV1,
-  type CustomFieldsMap
+  type CustomFieldsMap,
+  type DetailCardTemplateV1
 } from '../shared/detailCardTemplate';
+import {
+  migrateGalleryAdvancedFiltersShape,
+  omitCustomFieldFromFilters,
+  omitCustomFieldFromSort,
+  type GalleryFilterLayoutState
+} from '../shared/galleryFilterCore';
 import type {
   ArcMoodboardV1,
   ArcSystemV1,
@@ -438,6 +455,19 @@ async function ensureLibraryReadyInner(root: string): Promise<Database.Database>
 
   readyRoots.add(root);
   currentRoot = root;
+  const db = openLibraryDb(root);
+  if (!hasLibrarySetting(db, LIBRARY_SETTING_TEMPLATE)) {
+    let prefsTemplate: unknown;
+    try {
+      const { readAppPreferencesSync } = await import('../appPreferences');
+      prefsTemplate = readAppPreferencesSync().detailCardTemplate;
+    } catch {
+      prefsTemplate = undefined;
+    }
+    seedLibrarySettingsIfNeeded(db, { template: prefsTemplate, useDefaultTemplate: false });
+  } else {
+    seedLibrarySettingsIfNeeded(db, { useDefaultTemplate: true });
+  }
   // Backfill не на горячем пути: ffmpeg/SQLite на main ломают IPC list-cards (~1.5s/видео).
   setTimeout(() => {
     void (async () => {
@@ -469,7 +499,8 @@ async function initEmptyLibrary(root: string): Promise<void> {
     await writeMoodboard(root, defaultMoodboard());
   }
   if (!(await fileExists(indexDbPath(root)))) {
-    openLibraryDb(root);
+    const db = openLibraryDb(root);
+    seedLibrarySettingsIfNeeded(db, { useDefaultTemplate: true });
     closeLibraryDb();
   }
 }
@@ -659,7 +690,8 @@ export async function importMediaFile(
 
 function listCardsOnDb(db: Database.Database, params: ListCardsParams): CardIndexRow[] {
   const sort = params.sort ?? DEFAULT_GALLERY_SORT;
-  const filters = params.advancedFilters ?? emptyGalleryAdvancedFilters();
+  const filters = migrateGalleryAdvancedFiltersShape(params.advancedFilters ?? emptyGalleryAdvancedFilters());
+  const template = readLibraryDetailTemplate(db);
   const boundaries = getGalleryFilterBoundaries(db, filters);
   const { wh, binds } = buildGalleryFilterWhere(
     {
@@ -669,7 +701,8 @@ function listCardsOnDb(db: Database.Database, params: ListCardsParams): CardInde
       collectionId: params.collectionId,
       moodboardCardIds: params.moodboardCardIds,
       filters,
-      sort
+      sort,
+      template
     },
     'c',
     boundaries
@@ -687,7 +720,7 @@ function listCardsOnDb(db: Database.Database, params: ListCardsParams): CardInde
     return indexCardRowsWithRelations(db, rows);
   }
 
-  sql += ` ${buildGallerySortSql(sort, 'c')} LIMIT ? OFFSET ?`;
+  sql += ` ${buildGallerySortSql(sort, 'c', template)} LIMIT ? OFFSET ?`;
   binds.push(params.limit, params.offset);
 
   const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
@@ -909,13 +942,34 @@ export async function updateCardInStorage(
     recomputeTagUsage(db);
   }
 
-  // Счётчики фильтра «Оценка» / аннотаций кэшируются до смены библиотеки — иначе останутся старыми.
-  if (patch.rating !== undefined || patch.annotations !== undefined) invalidateGalleryFilterStatsCache();
+  // Счётчики фильтров (в т.ч. пользовательских полей) кэшируются в IPC — без сброса список не обновится.
+  invalidateGalleryFilterStatsCache();
 }
 
 export async function wipeCustomFieldFromLibrary(libraryRoot: string, fieldId: string): Promise<void> {
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
+  const now = new Date().toISOString();
+  if (isStarterFieldId(fieldId)) {
+    const column = fieldId === 'name' ? 'name' : fieldId === 'link' ? 'link_url' : 'description';
+    const jsonKey = fieldId === 'link' ? 'linkUrl' : fieldId;
+    db.prepare(`UPDATE cards SET ${column} = NULL, date_modified = ? WHERE COALESCE(${column}, '') != ''`).run(
+      now
+    );
+    const ids = db.prepare('SELECT id FROM cards').all() as Array<{ id: string }>;
+    for (const row of ids) {
+      const cardJson = await readCardJson(root, row.id);
+      if (!cardJson) continue;
+      const rec = cardJson as unknown as Record<string, unknown>;
+      if (rec[jsonKey] == null || rec[jsonKey] === '') continue;
+      delete rec[jsonKey];
+      cardJson.dateModified = now;
+      await writeCardJson(root, cardJson);
+    }
+    stripFieldFromLibraryPresets(db, fieldId);
+    invalidateGalleryFilterStatsCache();
+    return;
+  }
   const rows = db.prepare('SELECT id, custom_fields_json FROM cards').all() as Array<{
     id: string;
     custom_fields_json: string | null;
@@ -923,7 +977,6 @@ export async function wipeCustomFieldFromLibrary(libraryRoot: string, fieldId: s
   const upd = db.prepare(
     'UPDATE cards SET custom_fields_json = ?, custom_fields_text = ?, date_modified = ? WHERE id = ?'
   );
-  const now = new Date().toISOString();
   for (const row of rows) {
     const parsed = sanitizeCustomFieldsMap(parseJsonColumn(row.custom_fields_json, {}));
     if (!(fieldId in parsed)) continue;
@@ -939,6 +992,51 @@ export async function wipeCustomFieldFromLibrary(libraryRoot: string, fieldId: s
     cardJson.dateModified = now;
     await writeCardJson(root, cardJson);
   }
+  stripFieldFromLibraryPresets(db, fieldId);
+  invalidateGalleryFilterStatsCache();
+}
+
+function stripFieldFromLibraryPresets(db: Database.Database, fieldId: string): void {
+  const rows = db
+    .prepare('SELECT id, payload_json FROM saved_filters')
+    .all() as Array<{ id: string; payload_json: string }>;
+  const upd = db.prepare('UPDATE saved_filters SET payload_json = ? WHERE id = ?');
+  for (const row of rows) {
+    let payload: { filters?: unknown; sort?: unknown; layout?: unknown };
+    try {
+      payload = JSON.parse(row.payload_json) as { filters?: unknown; sort?: unknown; layout?: unknown };
+    } catch {
+      continue;
+    }
+    const filters = omitCustomFieldFromFilters(migrateGalleryAdvancedFiltersShape(payload.filters), fieldId);
+    const sort =
+      payload.sort && typeof payload.sort === 'object'
+        ? omitCustomFieldFromSort(payload.sort as { field: string; direction: 'asc' | 'desc' }, fieldId)
+        : undefined;
+    const next = { ...payload, filters, ...(sort ? { sort } : {}) };
+    upd.run(JSON.stringify(next), row.id);
+  }
+}
+
+export function getLibraryDetailTemplateFromDb(libraryRoot: string): DetailCardTemplateV1 {
+  const db = openLibraryDb(libraryRoot);
+  return readLibraryDetailTemplate(db);
+}
+
+export function saveLibraryDetailTemplate(libraryRoot: string, template: DetailCardTemplateV1): void {
+  const db = openLibraryDb(libraryRoot);
+  writeLibraryDetailTemplate(db, template);
+  invalidateGalleryFilterStatsCache();
+}
+
+export function getSystemFilterLayoutFromDb(libraryRoot: string): GalleryFilterLayoutState {
+  const db = openLibraryDb(libraryRoot);
+  return readSystemFilterLayout(db);
+}
+
+export function saveSystemFilterLayout(libraryRoot: string, layout: GalleryFilterLayoutState): void {
+  const db = openLibraryDb(libraryRoot);
+  writeSystemFilterLayout(db, layout);
 }
 
 export async function insertCardMetadata(
@@ -993,6 +1091,7 @@ export async function softDeleteCardFromStorage(libraryRoot: string, cardId: str
   );
   await removeCardFromMoodboard(root, cardId);
   recomputeTagUsage(db);
+  invalidateGalleryFilterStatsCache();
 }
 
 export async function restoreCardFromStorage(libraryRoot: string, cardId: string): Promise<void> {
@@ -1009,6 +1108,7 @@ export async function restoreCardFromStorage(libraryRoot: string, cardId: string
     cardId
   );
   recomputeTagUsage(db);
+  invalidateGalleryFilterStatsCache();
 }
 
 /** Индексирует уже скопированную папку `cards/{id}` в библиотеке (восстановление в другую библиотеку). */

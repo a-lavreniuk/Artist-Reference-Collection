@@ -83,7 +83,7 @@ describe('galleryFilterPersistence', () => {
       sort: { field: 'shuffle', direction: 'asc' }
     });
     writeGalleryFiltersSortTab('moodboard', {
-      filters: { ...emptyGalleryAdvancedFilters(), link: { mode: 'has' } },
+      filters: { ...emptyGalleryAdvancedFilters(), custom: { link: { mode: 'has' } } },
       sort: { ...DEFAULT_GALLERY_SORT }
     });
 
@@ -91,7 +91,7 @@ describe('galleryFilterPersistence', () => {
 
     expect(readGalleryFiltersSortTab('gallery').filters.aspectRatios).toEqual([]);
     expect(readGalleryFiltersSortTab('gallery').sort.field).toBe('addedAt');
-    expect(readGalleryFiltersSortTab('moodboard').filters.link).toEqual({ mode: 'has' });
+    expect(readGalleryFiltersSortTab('moodboard').filters.custom.link).toEqual({ mode: 'has' });
   });
 
   it('ignores corrupt storage', () => {
@@ -101,6 +101,18 @@ describe('galleryFilterPersistence', () => {
 
     store.set(GALLERY_FILTERS_SORT_STORAGE_KEY, JSON.stringify({ version: 99, byTab: {} }));
     expect(readGalleryFiltersSortTab('collections')).toEqual(defaultGalleryFiltersSortTabState());
+  });
+
+  it('keeps custom sort field', () => {
+    stubDom();
+    writeGalleryFiltersSortTab('gallery', {
+      filters: emptyGalleryAdvancedFilters(),
+      sort: { field: 'custom:client', direction: 'asc' }
+    });
+    expect(readGalleryFiltersSortTab('gallery').sort).toEqual({
+      field: 'custom:client',
+      direction: 'asc'
+    });
   });
 
   it('keeps custom dateAdded ranges', () => {

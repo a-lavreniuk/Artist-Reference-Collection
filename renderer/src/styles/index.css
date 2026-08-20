@@ -3427,6 +3427,18 @@ span.arc-card-detail-prop-row__label {
   padding-top: var(--s-2);
 }
 
+/* Native <input class="input"> inherits display:inline-flex from UI-Kit (для div-инпутов).
+   На текстовом поле это обрезает значение не с края, а внутри поля. */
+.arc-detail-field-menu input.input {
+  display: block;
+  width: 100%;
+}
+
+.arc-detail-field-menu .input-live .input,
+.arc-detail-field-menu .input-live.has-value .input {
+  padding-right: var(--input-pad-x, 12px);
+}
+
 .arc-detail-field-menu-type-row .context-menu__item-label-cluster {
   order: 0;
   flex: 1 1 auto;

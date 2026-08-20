@@ -1,16 +1,19 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
+  customFieldValueIsFilled,
   templateFieldLabel,
   type CustomFieldsMap,
   type DetailCardTemplateV1,
   type DetailTemplateField
 } from '@arc-main-shared/detailCardTemplate';
 import { Datepicker } from '../datepicker';
+import { todayLocalDateOnly } from '../datepicker/dateRangeText';
 import { ContextMenu } from '../context-menu';
 import ContextMenuItem from '../context-menu/ContextMenuItem';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
 import LinkInput from '../ui/LinkInput';
+import { toOpenableLinkUrl } from '../../utils/linkInput';
 import CardRatingStars from './CardRatingStars';
 import DetailTemplateEditor from './DetailTemplateEditor';
 import type { PaletteSwatch } from './cardDetailPalette';
@@ -18,6 +21,7 @@ import type { PaletteSwatch } from './cardDetailPalette';
 const EMPTY_PLACEHOLDER = 'Пусто';
 
 type Props = {
+  cardId: string;
   template: DetailCardTemplateV1;
   inTrash: boolean;
   rating: number;
@@ -37,20 +41,33 @@ type Props = {
   onCustomFieldChange: (fieldId: string, value: string | string[]) => void;
   onTemplateChange: (next: DetailCardTemplateV1) => void;
   onRequestDeleteField: (fieldId: string) => void;
+  onRequestTypeChange?: (fieldId: string, type: DetailTemplateField['type']) => void;
 };
+
+function openExternalUrl(raw: string): void {
+  const url = toOpenableLinkUrl(raw);
+  if (!url) return;
+  if (window.arc?.openExternalUrl) {
+    void window.arc.openExternalUrl(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
 
 function CustomSelect({
   label,
   value,
   options,
   disabled,
-  onChange
+  onChange,
+  onRequestEditField
 }: {
   label: string;
   value: string;
   options: string[];
   disabled: boolean;
   onChange: (next: string) => void;
+  onRequestEditField?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -103,17 +120,28 @@ function CustomSelect({
         anchorPlacement="belowAnchor"
         anchorAlign="start"
       >
-        {options.map((option) => (
+        {options.length === 0 ? (
           <ContextMenuItem
-            key={option}
-            label={option}
-            selected={option === value}
+            label="Добавить варианты"
+            iconClass="arc-icon-plus"
             onSelect={() => {
-              onChange(option);
               setOpen(false);
+              onRequestEditField?.();
             }}
           />
-        ))}
+        ) : (
+          options.map((option) => (
+            <ContextMenuItem
+              key={option}
+              label={option}
+              selected={option === value}
+              onSelect={() => {
+                onChange(option);
+                setOpen(false);
+              }}
+            />
+          ))
+        )}
       </ContextMenu>
     </div>
   );
@@ -125,6 +153,7 @@ function TextValue({
   disabled,
   multiline,
   textareaRef,
+  placeholder = EMPTY_PLACEHOLDER,
   onChange
 }: {
   label: string;
@@ -132,6 +161,7 @@ function TextValue({
   disabled: boolean;
   multiline?: boolean;
   textareaRef?: React.Ref<HTMLTextAreaElement>;
+  placeholder?: string;
   onChange: (next: string) => void;
 }) {
   if (multiline) {
@@ -140,7 +170,7 @@ function TextValue({
         <textarea
           ref={textareaRef}
           className="input textarea arc-card-detail-description-textarea"
-          placeholder={EMPTY_PLACEHOLDER}
+          placeholder={placeholder}
           aria-label={label}
           rows={3}
           value={value}
@@ -155,7 +185,7 @@ function TextValue({
       <input
         className="input"
         type="text"
-        placeholder={EMPTY_PLACEHOLDER}
+        placeholder={placeholder}
         aria-label={label}
         value={value}
         disabled={disabled}
@@ -177,12 +207,51 @@ function TextValue({
   );
 }
 
-function PropertyValue(props: Props & { field: DetailTemplateField }) {
+function DateFieldValue({
+  instanceKey,
+  label,
+  value,
+  disabled,
+  onChange
+}: {
+  instanceKey: string;
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (next: string) => void;
+}) {
+  const today = todayLocalDateOnly();
+  const seededForKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (disabled) return;
+    if (seededForKeyRef.current === instanceKey) return;
+    seededForKeyRef.current = instanceKey;
+    if (value.trim()) return;
+    onChange(today);
+  }, [disabled, instanceKey, value, today, onChange]);
+
+  const trimmed = value.trim();
+  return (
+    <Datepicker
+      size="m"
+      mode="single"
+      placeholder={EMPTY_PLACEHOLDER}
+      value={trimmed ? { from: trimmed } : null}
+      disabled={disabled}
+      onChange={(next) => onChange(next?.from?.trim() ?? '')}
+      aria-label={label}
+    />
+  );
+}
+
+function PropertyValue(
+  props: Props & { field: DetailTemplateField; onRequestEditField?: () => void }
+) {
   const { field } = props;
   const label = templateFieldLabel(field);
   const disabled = props.inTrash;
 
-  if (field.kind === 'builtin' && field.id === 'name') {
+  if (field.id === 'name') {
     return (
       <TextValue
         label={label}
@@ -193,20 +262,7 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
     );
   }
 
-  if (field.kind === 'builtin' && field.id === 'link') {
-    return (
-      <LinkInput
-        value={props.draftLink}
-        disabled={disabled}
-        ariaLabel={label}
-        onChange={props.onLinkChange}
-        onOpen={props.onOpenLink}
-        canOpen={props.canOpenLink}
-      />
-    );
-  }
-
-  if (field.kind === 'builtin' && field.id === 'description') {
+  if (field.id === 'description') {
     return (
       <TextValue
         label={label}
@@ -219,10 +275,24 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
     );
   }
 
-  if (field.kind !== 'custom') return null;
   const raw = props.customFields[field.id];
   const text = typeof raw === 'string' ? raw : '';
   const multi = Array.isArray(raw) ? raw : [];
+
+  if (field.id === 'link' || field.type === 'url') {
+    const value = field.id === 'link' ? props.draftLink : text;
+    const canOpen = field.id === 'link' ? props.canOpenLink : Boolean(toOpenableLinkUrl(value));
+    return (
+      <LinkInput
+        value={value}
+        disabled={disabled}
+        ariaLabel={label}
+        onChange={field.id === 'link' ? props.onLinkChange : (next) => props.onCustomFieldChange(field.id, next)}
+        onOpen={field.id === 'link' ? props.onOpenLink : () => openExternalUrl(value)}
+        canOpen={canOpen}
+      />
+    );
+  }
 
   if (field.type === 'longText') {
     return (
@@ -236,7 +306,7 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
     );
   }
 
-  if (field.type === 'url' || field.type === 'shortText') {
+  if (field.type === 'shortText') {
     return (
       <TextValue
         label={label}
@@ -249,14 +319,12 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
 
   if (field.type === 'date') {
     return (
-      <Datepicker
-        size="m"
-        mode="single"
-        placeholder={EMPTY_PLACEHOLDER}
-        value={text ? { from: text } : null}
+      <DateFieldValue
+        instanceKey={`${props.cardId}:${field.id}`}
+        label={label}
+        value={text}
         disabled={disabled}
-        onChange={(next) => props.onCustomFieldChange(field.id, next?.from ?? '')}
-        aria-label={label}
+        onChange={(next) => props.onCustomFieldChange(field.id, next)}
       />
     );
   }
@@ -269,6 +337,7 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
         options={field.options ?? []}
         disabled={disabled}
         onChange={(next) => props.onCustomFieldChange(field.id, next)}
+        onRequestEditField={props.onRequestEditField}
       />
     );
   }
@@ -281,6 +350,7 @@ function PropertyValue(props: Props & { field: DetailTemplateField }) {
         selected={multi}
         disabled={disabled}
         onChange={(next) => props.onCustomFieldChange(field.id, next)}
+        onRequestEditField={props.onRequestEditField}
       />
     );
   }
@@ -300,13 +370,15 @@ function MultiSelectValue({
   options,
   selected,
   disabled,
-  onChange
+  onChange,
+  onRequestEditField
 }: {
   label: string;
   options: string[];
   selected: string[];
   disabled: boolean;
   onChange: (next: string[]) => void;
+  onRequestEditField?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -333,11 +405,11 @@ function MultiSelectValue({
         aria-disabled={disabled || undefined}
         className="input input-slots search-multiselect arc-detail-multiselect"
         onClick={() => {
-          if (disabled || options.length === 0) return;
+          if (disabled) return;
           setOpen((prev) => !prev);
         }}
         onKeyDown={(e) => {
-          if (disabled || options.length === 0) return;
+          if (disabled) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             setOpen((prev) => !prev);
@@ -377,21 +449,36 @@ function MultiSelectValue({
         </span>
       </div>
       <ContextMenu
-        open={open && !disabled && options.length > 0}
+        open={open && !disabled}
         anchorRef={anchorRef}
         onClose={() => setOpen(false)}
         ariaLabel={label}
         aboveModal
         anchorPlacement="belowAnchor"
         anchorAlign="start"
-        rows={options.map((option) => ({
-          type: 'item' as const,
-          key: option,
-          label: option,
-          selected: selected.includes(option),
-          closeOnSelect: false,
-          onSelect: () => toggleOption(option)
-        }))}
+        rows={
+          options.length === 0
+            ? [
+                {
+                  type: 'item' as const,
+                  key: 'add-options',
+                  label: 'Добавить варианты',
+                  iconClass: 'arc-icon-plus',
+                  onSelect: () => {
+                    setOpen(false);
+                    onRequestEditField?.();
+                  }
+                }
+              ]
+            : options.map((option) => ({
+                type: 'item' as const,
+                key: option,
+                label: option,
+                selected: selected.includes(option),
+                closeOnSelect: false,
+                onSelect: () => toggleOption(option)
+              }))
+        }
       />
     </div>
   );
@@ -427,7 +514,16 @@ export default function CardDetailDescriptionFields(props: Props) {
         readOnly={props.inTrash}
         onChange={props.onTemplateChange}
         onRequestDelete={props.inTrash ? undefined : props.onRequestDeleteField}
-        renderValue={(field) => <PropertyValue {...props} field={field} />}
+        onRequestTypeChange={props.inTrash ? undefined : props.onRequestTypeChange}
+        fieldHasValue={(field) => {
+          if (field.id === 'name') return props.draftName.trim().length > 0;
+          if (field.id === 'link') return props.draftLink.trim().length > 0;
+          if (field.id === 'description') return props.description.trim().length > 0;
+          return customFieldValueIsFilled(props.customFields[field.id]);
+        }}
+        renderValue={(field, { openFieldMenu }) => (
+          <PropertyValue {...props} field={field} onRequestEditField={openFieldMenu} />
+        )}
       />
     </div>
   );

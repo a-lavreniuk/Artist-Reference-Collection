@@ -5,7 +5,25 @@ export {
   emptyGalleryAdvancedFilters,
   defaultGalleryFilterLayout,
   countActiveFilterCategories,
-  isGalleryShuffleSort
+  isGalleryShuffleSort,
+  isCustomPresenceFilter,
+  isCustomSelectFilter,
+  isCustomDateFilter,
+  isCustomFieldFilterActive,
+  customSortFieldId,
+  parseCustomSortFieldId,
+  migrateGalleryAdvancedFiltersShape,
+  omitCustomFieldFromFilters,
+  omitCustomFieldFromSort,
+  pruneCustomFiltersMissingFromTemplate,
+  isUserFilterBarVisible
+} from '@arc-main-shared/galleryFilterCore';
+import {
+  GALLERY_FILTER_IDS,
+  isCustomDateFilter,
+  isCustomPresenceFilter,
+  isCustomSelectFilter,
+  migrateGalleryAdvancedFiltersShape
 } from '@arc-main-shared/galleryFilterCore';
 
 export type {
@@ -28,6 +46,10 @@ export type {
   DurationPreset,
   DurationFilterValue,
   RatingFilterValue,
+  CustomFieldFilterValue,
+  CustomPresenceFilterValue,
+  CustomSelectFilterValue,
+  CustomDateFilterValue,
   GalleryAdvancedFilters,
   GalleryFilterLayoutItem,
   GalleryFilterPresetPayload,
@@ -82,8 +104,6 @@ export type GalleryFilterStats = {
   hasVideo: boolean;
   aspectRatio: Record<AspectRatioFilterValue, number>;
   fileExtensions: Record<string, number>;
-  description: { has: number; missing: number };
-  link: { has: number; missing: number };
   annotations: { has: number; missing: number };
   tagPresence: { tagged: number; untagged: number };
   dateAdded: Record<string, number>;
@@ -91,6 +111,8 @@ export type GalleryFilterStats = {
   resolution: Record<string, number>;
   duration: Record<string, number>;
   rating: Record<string, number>;
+  customPresence: Record<string, { has: number; missing: number }>;
+  customSelect: Record<string, Record<string, number>>;
 };
 
 const LEGACY_DURATION_PRESETS: Record<string, DurationPreset> = {
@@ -153,13 +175,14 @@ function migrateRatingFilterValues(values: unknown): RatingFilterValue[] {
 }
 
 export function migrateGalleryAdvancedFilters(filters: GalleryAdvancedFilters): GalleryAdvancedFilters {
+  const shaped = migrateGalleryAdvancedFiltersShape(filters);
   return {
-    ...filters,
-    tagPresence: filters.tagPresence ?? null,
-    annotations: filters.annotations ?? null,
-    rating: migrateRatingFilterValues(filters.rating),
-    duration: filters.duration.map(migrateDurationFilterValue),
-    resolution: filters.resolution
+    ...shaped,
+    tagPresence: shaped.tagPresence ?? null,
+    annotations: shaped.annotations ?? null,
+    rating: migrateRatingFilterValues(shaped.rating),
+    duration: shaped.duration.map(migrateDurationFilterValue),
+    resolution: shaped.resolution
       .map(migrateResolutionFilterValue)
       .filter((r): r is ResolutionFilterValue => r !== null)
   };
@@ -207,8 +230,6 @@ export const FILTER_CHIP_META: Record<
   aspectRatio: { label: 'Соотношение сторон', iconClass: 'arc-icon-aspect-ratio' },
   fileType: { label: 'Тип файла', iconClass: 'arc-icon-images' },
   tagPresence: { label: 'Метки', iconClass: 'arc-icon-tag' },
-  description: { label: 'Описание', iconClass: 'arc-icon-description' },
-  link: { label: 'Ссылка', iconClass: 'arc-icon-link' },
   dateAdded: { label: 'Дата добавления', iconClass: 'arc-icon-calendar' },
   fileWeight: { label: 'Вес файла', iconClass: 'arc-icon-file' },
   resolution: { label: 'Разрешение', iconClass: 'arc-icon-size' },
@@ -292,18 +313,6 @@ export function countFilterCategorySelections(
       return filters.fileExtensions.length;
     case 'tagPresence':
       return filters.tagPresence ? 1 : 0;
-    case 'description': {
-      if (!filters.description) return 0;
-      let n = 1;
-      if (filters.description.keywords?.trim()) n++;
-      return n;
-    }
-    case 'link': {
-      if (!filters.link) return 0;
-      let n = 1;
-      if (filters.link.keywords?.trim()) n++;
-      return n;
-    }
     case 'dateAdded':
       return filters.dateAdded.length;
     case 'fileWeight':
@@ -325,19 +334,43 @@ export function countFilterCategorySelections(
   }
 }
 
+export function countCustomFilterSelections(
+  filters: GalleryAdvancedFilters,
+  fieldId: string
+): number {
+  const value = filters.custom?.[fieldId];
+  if (!value) return 0;
+  if (isCustomPresenceFilter(value)) {
+    let n = 1;
+    if (value.keywords?.trim()) n++;
+    return n;
+  }
+  if (isCustomSelectFilter(value)) return value.values.length;
+  if (isCustomDateFilter(value)) return value.ranges.length;
+  return 0;
+}
+
 export function layoutToPresetItems(layout: GalleryFilterLayoutState): GalleryFilterLayoutItem[] {
   return layout.order.map((id) => ({ id, visible: layout.visible[id] }));
 }
 
-export function presetItemsToLayout(items: GalleryFilterLayoutItem[]): GalleryFilterLayoutState {
-  const order = items.map((i) => i.id);
-  const visible = Object.fromEntries(items.map((i) => [i.id, i.visible])) as Record<
+export function presetItemsToLayout(
+  items: GalleryFilterLayoutItem[],
+  current?: GalleryFilterLayoutState
+): GalleryFilterLayoutState {
+  const order: GalleryFilterId[] = [];
+  const visible = Object.fromEntries(GALLERY_FILTER_IDS.map((id) => [id, true])) as Record<
     GalleryFilterId,
     boolean
   >;
+  for (const item of items) {
+    if (!(GALLERY_FILTER_IDS as readonly string[]).includes(item.id)) continue;
+    if (order.includes(item.id)) continue;
+    order.push(item.id);
+    visible[item.id] = item.visible !== false;
+  }
   for (const id of GALLERY_FILTER_IDS) {
-    if (!(id in visible)) visible[id] = true;
     if (!order.includes(id)) order.push(id);
   }
-  return { order, visible };
+  return current?.userVisible ? { order, visible, userVisible: current.userVisible } : { order, visible };
 }

@@ -2,11 +2,10 @@ import { useLayoutEffect, useRef } from 'react';
 import { arcMotionTokens, motionDuration } from './arcMotionTokens';
 import { ensureGsapSetup } from './gsapSetup';
 import { getPrefersReducedMotion } from './prefersReducedMotion';
-import type { GalleryFilterId } from '../components/gallery/galleryFilterTypes';
 
 type Args = {
   listRef: React.RefObject<HTMLDivElement | null>;
-  order: GalleryFilterId[];
+  order: string[];
   isDragging: boolean;
 };
 

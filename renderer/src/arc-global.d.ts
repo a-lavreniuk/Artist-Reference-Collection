@@ -167,6 +167,23 @@ declare global {
         }
       ) => Promise<void>;
       storageWipeCustomField: (fieldId: string) => Promise<void>;
+      storageGetLibrarySettings: () => Promise<{
+        detailCardTemplate: import('../../src/main/shared/detailCardTemplate').DetailCardTemplateV1;
+        systemFilterLayout: {
+          order: string[];
+          visible: Record<string, boolean>;
+        };
+      } | null>;
+      storagePatchLibrarySettings: (payload: {
+        detailCardTemplate?: unknown;
+        systemFilterLayout?: unknown;
+      }) => Promise<{
+        detailCardTemplate: import('../../src/main/shared/detailCardTemplate').DetailCardTemplateV1;
+        systemFilterLayout: {
+          order: string[];
+          visible: Record<string, boolean>;
+        };
+      }>;
       storageInsertCardsMetadata: (
         cards: Array<{
           id: string;

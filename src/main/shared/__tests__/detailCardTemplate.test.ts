@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   createCustomTemplateField,
+  createStarterTemplateField,
   customFieldsMapToSearchText,
   defaultDetailCardTemplate,
+  fieldEditorNameDraft,
+  fieldLabelFromEditorDraft,
+  isFieldInMainList,
+  mergeSubsequenceOrder,
   missingBuiltinFieldIds,
   omitCustomFieldKey,
   reorderVisibleTemplateFields,
@@ -27,13 +32,12 @@ describe('sanitizeDetailCardTemplate', () => {
     expect(sanitized.fields.map((f) => f.id)).toEqual(['abc']);
     const renamed = sanitizeDetailCardTemplate({
       version: 1,
-      fields: sanitized.fields.map((f) =>
-        f.kind === 'custom' && f.id === 'abc' ? { ...f, label: 'Проект' } : f
-      )
+      fields: sanitized.fields.map((f) => (f.id === 'abc' ? { ...f, label: 'Проект' } : f))
     });
-    const custom = renamed.fields.find((f) => f.kind === 'custom');
-    expect(custom?.id).toBe('abc');
-    expect(custom && custom.kind === 'custom' ? custom.label : null).toBe('Проект');
+    const custom = renamed.fields.find((f) => f.id === 'abc');
+    expect(custom?.label).toBe('Проект');
+    expect(custom?.showInFilters).toBe(true);
+    expect(custom?.visibility).toBe('always');
   });
 
   it('keeps an empty fields list', () => {
@@ -48,13 +52,13 @@ describe('sanitizeDetailCardTemplate', () => {
     ]);
   });
 
-  it('keeps builtin label override', () => {
+  it('keeps starter label override and maps visible:false to alwaysHidden', () => {
     const sanitized = sanitizeDetailCardTemplate({
       version: 1,
       fields: [{ id: 'name', kind: 'builtin', visible: true, label: 'Название' }]
     });
-    const name = sanitized.fields[0];
-    expect(name && name.kind === 'builtin' ? templateFieldLabel(name) : null).toBe('Название');
+    expect(templateFieldLabel(sanitized.fields[0]!)).toBe('Название');
+    expect(sanitized.fields[0]?.type).toBe('shortText');
   });
 
   it('drops unknown types and duplicate ids', () => {
@@ -67,10 +71,11 @@ describe('sanitizeDetailCardTemplate', () => {
       ]
     });
     expect(sanitized.fields.filter((f) => f.id === 'name')).toHaveLength(1);
-    expect(sanitized.fields.find((f) => f.id === 'name')?.visible).toBe(false);
+    expect(sanitized.fields.find((f) => f.id === 'name')?.visibility).toBe('alwaysHidden');
     expect(sanitized.fields.some((f) => f.id === 'x')).toBe(false);
     const date = sanitized.fields.find((f) => f.id === 'ok');
-    expect(date && date.kind === 'custom' ? date.label : null).toBe('Дата съёмки');
+    expect(date?.label).toBe('Дата съёмки');
+    expect(date?.visibility).toBe('alwaysHidden');
   });
 });
 
@@ -95,6 +100,22 @@ describe('template helpers', () => {
     }).fields;
     const next = reorderVisibleTemplateFields(fields, 'description', 0);
     expect(next.map((f) => f.id)).toEqual(['description', 'link', 'name']);
+  });
+
+  it('merges subsequence order without moving hidden slots', () => {
+    const fields = defaultDetailCardTemplate().fields;
+    const next = mergeSubsequenceOrder(fields, ['description', 'name']);
+    expect(next.map((f) => f.id)).toEqual(['description', 'link', 'name']);
+  });
+
+  it('hides alwaysHidden and empty hiddenIfEmpty from the main list', () => {
+    const hidden = createCustomTemplateField('shortText', 'a');
+    hidden.visibility = 'alwaysHidden';
+    const empty = createCustomTemplateField('shortText', 'b');
+    empty.visibility = 'hiddenIfEmpty';
+    expect(isFieldInMainList(hidden, true)).toBe(false);
+    expect(isFieldInMainList(empty, false)).toBe(false);
+    expect(isFieldInMainList(empty, true)).toBe(true);
   });
 });
 
@@ -141,7 +162,23 @@ describe('createCustomTemplateField', () => {
     expect(field.options).toEqual([]);
   });
 
-  it('default template still has builtins', () => {
+  it('default template still has starter fields', () => {
     expect(defaultDetailCardTemplate().fields.map((f) => f.id)).toEqual(['name', 'link', 'description']);
+  });
+});
+
+describe('fieldEditorNameDraft', () => {
+  it('keeps starter names as values and type names as placeholders', () => {
+    expect(fieldEditorNameDraft(createStarterTemplateField('name'))).toBe('Имя');
+    expect(fieldEditorNameDraft(createStarterTemplateField('description'))).toBe('Описание');
+    expect(fieldEditorNameDraft(createStarterTemplateField('link'))).toBe('Ссылка');
+    expect(fieldEditorNameDraft(createCustomTemplateField('shortText', 'x'))).toBe('');
+    expect(fieldLabelFromEditorDraft('', 'shortText')).toBe('Короткий текст');
+    expect(fieldLabelFromEditorDraft('  Клиент  ', 'shortText')).toBe('Клиент');
+  });
+
+  it('hides a starter name that was cleared back to the type label', () => {
+    const cleared = { ...createStarterTemplateField('name'), label: 'Короткий текст' };
+    expect(fieldEditorNameDraft(cleared)).toBe('');
   });
 });

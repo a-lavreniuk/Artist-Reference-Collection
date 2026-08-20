@@ -4,9 +4,14 @@ import {
   CUSTOM_FIELD_TYPES,
   CUSTOM_FIELD_TYPE_LABELS,
   DETAIL_BUILTIN_FIELD_LABELS,
+  FIELD_VISIBILITY_LABELS,
+  FIELD_VISIBILITY_MODES,
   createBuiltinTemplateField,
   createCustomTemplateField,
   customFieldTypeIconClass,
+  fieldEditorNameDraft,
+  fieldLabelFromEditorDraft,
+  isFieldInMainList,
   missingBuiltinFieldIds,
   reorderTemplateFields,
   reorderVisibleTemplateFields,
@@ -17,8 +22,8 @@ import {
   type CustomFieldType,
   type DetailBuiltinFieldId,
   type DetailCardTemplateV1,
-  type DetailTemplateCustomField,
-  type DetailTemplateField
+  type DetailTemplateField,
+  type FieldVisibilityMode
 } from '@arc-main-shared/detailCardTemplate';
 import {
   ContextMenu,
@@ -40,19 +45,9 @@ type DragState = {
 };
 
 const FIELD_TYPE_ROW_KEY = 'field-type';
+const FIELD_VISIBILITY_ROW_KEY = 'field-visibility';
 const FIELD_MENU_SLOT_CLASS = 'arc-detail-field-menu-slot';
 const FIELD_MENU_NAME_SLOT_CLASS = `${FIELD_MENU_SLOT_CLASS} arc-detail-field-menu-slot--after-type`;
-
-function officialFieldLabel(field: DetailTemplateField): string {
-  if (field.kind === 'builtin') return DETAIL_BUILTIN_FIELD_LABELS[field.id];
-  return CUSTOM_FIELD_TYPE_LABELS[field.type];
-}
-
-function readNameDraftFromField(field: DetailTemplateField): string {
-  const official = officialFieldLabel(field);
-  const current = templateFieldLabel(field).trim();
-  return current === official ? '' : current;
-}
 
 type DetailFieldTypeRowProps = {
   field: DetailTemplateField;
@@ -63,7 +58,7 @@ type DetailFieldTypeRowProps = {
 function DetailFieldTypeRow({ field, submenuOpen = false, onOpenSubmenu }: DetailFieldTypeRowProps) {
   const label = templateFieldTypeLabel(field);
   const iconClass = templateFieldIconClass(field);
-  const canOpen = field.kind === 'custom';
+  const canOpen = Boolean(onOpenSubmenu);
 
   return (
     <button
@@ -100,13 +95,50 @@ function DetailFieldTypeRow({ field, submenuOpen = false, onOpenSubmenu }: Detai
   );
 }
 
+function DetailFieldVisibilityRow({
+  field,
+  submenuOpen = false,
+  onOpenSubmenu
+}: {
+  field: DetailTemplateField;
+  submenuOpen?: boolean;
+  onOpenSubmenu?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className={`context-menu__item arc-detail-field-menu-type-row${submenuOpen ? ' is-active' : ''}`}
+      data-context-menu-key={FIELD_VISIBILITY_ROW_KEY}
+      onClick={() => onOpenSubmenu?.()}
+    >
+      <span className="context-menu__item-inner">
+        <span className="context-menu__item-label-cluster">
+          <span className="context-menu__item-label">Видимость</span>
+        </span>
+        <span className="context-menu__item-shortcut">{FIELD_VISIBILITY_LABELS[field.visibility]}</span>
+        <span
+          className="context-menu__item-icon tab-icon arc-icon-chevron arc-chevron-point-right"
+          data-arc-icon-size="m"
+          aria-hidden="true"
+        />
+      </span>
+    </button>
+  );
+}
+
 type Props = {
   template: DetailCardTemplateV1;
   onChange: (next: DetailCardTemplateV1) => void;
   onRequestDelete?: (fieldId: string) => void;
   variant?: 'card' | 'settings';
   readOnly?: boolean;
-  renderValue?: (field: DetailTemplateField) => ReactNode;
+  renderValue?: (
+    field: DetailTemplateField,
+    helpers: { openFieldMenu: () => void }
+  ) => ReactNode;
+  fieldHasValue?: (field: DetailTemplateField) => boolean;
+  onRequestTypeChange?: (fieldId: string, type: CustomFieldType) => void;
 };
 
 const DRAG_THRESHOLD_PX = 4;
@@ -124,7 +156,9 @@ export default function DetailTemplateEditor({
   onRequestDelete,
   variant = 'settings',
   readOnly = false,
-  renderValue
+  renderValue,
+  fieldHasValue,
+  onRequestTypeChange
 }: Props) {
   const listRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -142,6 +176,11 @@ export default function DetailTemplateEditor({
   const [typeSubmenuPosition, setTypeSubmenuPosition] = useState<{ x: number; y: number } | null>(
     null
   );
+  const [visibilitySubmenuOpen, setVisibilitySubmenuOpen] = useState(false);
+  const [visibilitySubmenuPosition, setVisibilitySubmenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [nameDraft, setNameDraft] = useState('');
 
   nameDraftRef.current = nameDraft;
@@ -152,20 +191,34 @@ export default function DetailTemplateEditor({
   }, [template.fields, drag, variant, readOnly, menuFieldId, addOpen, hiddenFieldsExpanded]);
 
   useLayoutEffect(() => {
-    if (hiddenFieldsExpanded && !template.fields.some((field) => !field.visible)) {
+    if (
+      hiddenFieldsExpanded &&
+      !template.fields.some((field) => !isFieldInMainList(field, fieldHasValue?.(field) ?? true))
+    ) {
       setHiddenFieldsExpanded(false);
     }
-  }, [template.fields, hiddenFieldsExpanded]);
+  }, [template.fields, hiddenFieldsExpanded, fieldHasValue]);
 
   const commit = (fields: DetailTemplateField[]) => {
     onChange(sanitizeDetailCardTemplate({ version: 1, fields }));
   };
 
-  const hiddenFields = variant === 'card' ? template.fields.filter((field) => !field.visible) : [];
+  useLayoutEffect(() => {
+    if (!menuFieldId || !listRef.current) return;
+    const btn = listRef.current.querySelector<HTMLButtonElement>(
+      `[data-template-field-row="${menuFieldId}"] button.arc-card-detail-prop-row__label`
+    );
+    if (btn) fieldMenuAnchorRef.current = btn;
+  }, [template.fields, menuFieldId, hiddenFieldsExpanded]);
+
+  const hiddenFields =
+    variant === 'card'
+      ? template.fields.filter((field) => !isFieldInMainList(field, fieldHasValue?.(field) ?? true))
+      : [];
   const showHiddenInList = variant === 'card' && hiddenFieldsExpanded && hiddenFields.length > 0;
   const listFields =
     variant === 'card' && !showHiddenInList
-      ? template.fields.filter((field) => field.visible)
+      ? template.fields.filter((field) => isFieldInMainList(field, fieldHasValue?.(field) ?? true))
       : template.fields;
 
   const menuField = menuFieldId
@@ -175,23 +228,19 @@ export default function DetailTemplateEditor({
   const applyFieldMenuEdits = (
     fields: DetailTemplateField[],
     fieldId: string,
-    patch?: { visible?: boolean; type?: CustomFieldType }
+    patch?: { visibility?: FieldVisibilityMode; type?: CustomFieldType; showInFilters?: boolean }
   ): DetailTemplateField[] => {
     const trimmed = nameDraftRef.current.trim();
     const rawOptions = optionsDraftRef.current[fieldId];
     return fields.map((field) => {
       if (field.id !== fieldId) return field;
-      const visible = patch?.visible ?? field.visible;
-      if (field.kind === 'builtin') {
-        if (!trimmed) return { id: field.id, kind: 'builtin' as const, visible };
-        return { ...field, label: trimmed, visible };
-      }
       const type = patch?.type ?? field.type;
-      const next: DetailTemplateCustomField = {
+      const next: DetailTemplateField = {
         ...field,
         type,
-        label: trimmed || CUSTOM_FIELD_TYPE_LABELS[type],
-        visible
+        label: fieldLabelFromEditorDraft(trimmed, type),
+        visibility: patch?.visibility ?? field.visibility,
+        showInFilters: patch?.showInFilters ?? field.showInFilters
       };
       if (type === 'select' || type === 'multiSelect') {
         next.options =
@@ -217,9 +266,15 @@ export default function DetailTemplateEditor({
     setTypeSubmenuPosition(null);
   };
 
+  const closeVisibilitySubmenu = () => {
+    setVisibilitySubmenuOpen(false);
+    setVisibilitySubmenuPosition(null);
+  };
+
   const closeFieldMenuOnly = () => {
     setMenuFieldId(null);
     closeTypeSubmenu();
+    closeVisibilitySubmenu();
     fieldMenuAnchorRef.current = null;
   };
 
@@ -234,8 +289,9 @@ export default function DetailTemplateEditor({
     fieldMenuAnchorRef.current = anchor;
     setMenuFieldId(field.id);
     closeTypeSubmenu();
-    setNameDraft(readNameDraftFromField(field));
-    if (field.kind === 'custom' && (field.type === 'select' || field.type === 'multiSelect')) {
+    closeVisibilitySubmenu();
+    setNameDraft(fieldEditorNameDraft(field));
+    if (field.type === 'select' || field.type === 'multiSelect') {
       setOptionsDraft((prev) => ({
         ...prev,
         [field.id]: prev[field.id] ?? (field.options ?? []).join('\n')
@@ -243,24 +299,34 @@ export default function DetailTemplateEditor({
     }
   };
 
-  const toggleVisible = (id: string) => {
+  const setVisibility = (id: string, visibility: FieldVisibilityMode) => {
+    const current = template.fields.find((field) => field.id === id);
+    const hasValue = current ? (fieldHasValue?.(current) ?? true) : true;
+    if (current && !isFieldInMainList({ ...current, visibility }, hasValue)) {
+      setHiddenFieldsExpanded(true);
+    }
+    commit(applyFieldMenuEdits(template.fields, id, { visibility }));
+    closeVisibilitySubmenu();
+  };
+
+  const toggleShowInFilters = (id: string) => {
     const current = template.fields.find((field) => field.id === id);
     if (!current) return;
-    const fields =
-      menuFieldId === id
-        ? applyFieldMenuEdits(template.fields, id, { visible: !current.visible })
-        : template.fields.map((field) =>
-            field.id === id ? { ...field, visible: !field.visible } : field
-          );
-    commit(fields);
+    commit(applyFieldMenuEdits(template.fields, id, { showInFilters: !current.showInFilters }));
   };
 
   const changeCustomType = (id: string, type: CustomFieldType) => {
+    const current = template.fields.find((item) => item.id === id);
+    if (current && current.type !== type && onRequestTypeChange) {
+      closeTypeSubmenu();
+      onRequestTypeChange(id, type);
+      return;
+    }
     commit(applyFieldMenuEdits(template.fields, id, { type }));
     closeTypeSubmenu();
     if (type === 'select' || type === 'multiSelect') {
       const field = template.fields.find((item) => item.id === id);
-      if (field?.kind === 'custom') {
+      if (field) {
         setOptionsDraft((prev) => ({
           ...prev,
           [id]: prev[id] ?? (field.options ?? []).join('\n')
@@ -276,13 +342,21 @@ export default function DetailTemplateEditor({
     setTypeSubmenuOpen(true);
   };
 
-  const duplicateField = (field: DetailTemplateCustomField) => {
+  const openVisibilitySubmenu = () => {
+    const pos = resolveDetailFieldSubmenuPosition(FIELD_VISIBILITY_ROW_KEY);
+    if (!pos) return;
+    setVisibilitySubmenuPosition(pos);
+    setVisibilitySubmenuOpen(true);
+  };
+
+  const duplicateField = (field: DetailTemplateField) => {
     const fields = applyFieldMenuEdits(template.fields, field.id);
     const source = fields.find((item) => item.id === field.id);
-    if (!source || source.kind !== 'custom') return;
+    if (!source) return;
     const copy = createCustomTemplateField(source.type, newFieldId());
     copy.label = templateFieldLabel(source);
-    copy.visible = source.visible;
+    copy.visibility = source.visibility;
+    copy.showInFilters = source.showInFilters;
     if (source.options) copy.options = [...source.options];
     const index = fields.findIndex((item) => item.id === field.id);
     const next = [...fields];
@@ -357,7 +431,11 @@ export default function DetailTemplateEditor({
         }
       }
       if (variant === 'card' && !showHiddenInList) {
-        commit(reorderVisibleTemplateFields(template.fields, args.id, nextInsert));
+        commit(
+          reorderVisibleTemplateFields(template.fields, args.id, nextInsert, (field) =>
+            isFieldInMainList(field, fieldHasValue?.(field) ?? true)
+          )
+        );
       } else {
         commit(reorderTemplateFields(template.fields, args.id, nextInsert));
       }
@@ -414,9 +492,7 @@ export default function DetailTemplateEditor({
   };
 
   const missingBuiltins = missingBuiltinFieldIds(template);
-  const showSelectOptions =
-    menuField?.kind === 'custom' &&
-    (menuField.type === 'select' || menuField.type === 'multiSelect');
+  const showSelectOptions = menuField?.type === 'select' || menuField?.type === 'multiSelect';
 
   return (
     <div ref={rootRef} className={`arc-detail-template-editor arc-detail-template-editor--${variant}`}>
@@ -472,24 +548,18 @@ export default function DetailTemplateEditor({
                     <span className="arc-card-detail-prop-row__label-text">{label}</span>
                   </button>
                 )}
-                {variant === 'settings' ? (
-                  <button
-                    type="button"
-                    className="arc-card-detail-prop-row__visibility"
-                    aria-label={field.visible ? `Скрыть ${label}` : `Показать ${label}`}
-                    aria-pressed={field.visible}
-                    onClick={() => toggleVisible(field.id)}
-                  >
-                    <span
-                      className={`tab-icon ${field.visible ? 'arc-icon-eye' : 'arc-icon-eye-off'}`}
-                      aria-hidden="true"
-                      data-arc-icon-size="m"
-                    />
-                  </button>
-                ) : null}
               </div>
               {variant === 'card' && renderValue ? (
-                <div className="arc-card-detail-prop-row__value">{renderValue(field)}</div>
+                <div className="arc-card-detail-prop-row__value">
+                  {renderValue(field, {
+                    openFieldMenu: () => {
+                      const btn = listRef.current?.querySelector<HTMLButtonElement>(
+                        `[data-template-field-row="${field.id}"] button.arc-card-detail-prop-row__label`
+                      );
+                      if (btn) openFieldMenu(field, btn);
+                    }
+                  })}
+                </div>
               ) : null}
             </div>
           );
@@ -560,7 +630,7 @@ export default function DetailTemplateEditor({
             <ContextMenuInput
               variant="live"
               slotClassName={FIELD_MENU_NAME_SLOT_CLASS}
-              placeholder={officialFieldLabel(menuField)}
+              placeholder={CUSTOM_FIELD_TYPE_LABELS[menuField.type]}
               value={nameDraft}
               autoFocus
               onChange={setNameDraft}
@@ -579,22 +649,21 @@ export default function DetailTemplateEditor({
             ) : null}
             <ContextMenuSeparator />
             <ContextMenuHeader>Опции</ContextMenuHeader>
-            <ContextMenuItem
-              label={menuField.visible ? 'Скрыть' : 'Показать'}
-              iconClass={menuField.visible ? 'arc-icon-eye-off' : 'arc-icon-eye'}
-              onSelect={() => {
-                const wasVisible = menuField.visible;
-                toggleVisible(menuField.id);
-                if (variant === 'card' && wasVisible) closeFieldMenuOnly();
-              }}
+            <DetailFieldVisibilityRow
+              field={menuField}
+              submenuOpen={visibilitySubmenuOpen}
+              onOpenSubmenu={openVisibilitySubmenu}
             />
-            {menuField.kind === 'custom' ? (
-              <ContextMenuItem
-                label="Создать копию"
-                iconClass="arc-icon-copy"
-                onSelect={() => duplicateField(menuField)}
-              />
-            ) : null}
+            <ContextMenuItem
+              label="Показывать в фильтрах"
+              selected={menuField.showInFilters}
+              onSelect={() => toggleShowInFilters(menuField.id)}
+            />
+            <ContextMenuItem
+              label="Создать копию"
+              iconClass="arc-icon-copy"
+              onSelect={() => duplicateField(menuField)}
+            />
             {onRequestDelete ? (
               <ContextMenuItem
                 label="Удалить"
@@ -611,19 +680,13 @@ export default function DetailTemplateEditor({
       </ContextMenu>
 
       <ContextMenu
-        open={
-          typeSubmenuOpen &&
-          Boolean(menuField) &&
-          menuField?.kind === 'custom' &&
-          !readOnly &&
-          typeSubmenuPosition != null
-        }
+        open={typeSubmenuOpen && Boolean(menuField) && !readOnly && typeSubmenuPosition != null}
         position={typeSubmenuPosition}
         onClose={closeTypeSubmenu}
         ariaLabel="Список свойств"
         aboveModal
       >
-        {menuField?.kind === 'custom' ? (
+        {menuField ? (
           <>
             <ContextMenuHeader>Список свойств</ContextMenuHeader>
             {CUSTOM_FIELD_TYPES.map((type) => (
@@ -633,6 +696,30 @@ export default function DetailTemplateEditor({
                 iconClass={customFieldTypeIconClass(type)}
                 selected={menuField.type === type}
                 onSelect={() => changeCustomType(menuField.id, type)}
+              />
+            ))}
+          </>
+        ) : null}
+      </ContextMenu>
+
+      <ContextMenu
+        open={
+          visibilitySubmenuOpen && Boolean(menuField) && !readOnly && visibilitySubmenuPosition != null
+        }
+        position={visibilitySubmenuPosition}
+        onClose={closeVisibilitySubmenu}
+        ariaLabel="Видимость"
+        aboveModal
+      >
+        {menuField ? (
+          <>
+            <ContextMenuHeader>Видимость</ContextMenuHeader>
+            {FIELD_VISIBILITY_MODES.map((mode) => (
+              <ContextMenuItem
+                key={mode}
+                label={FIELD_VISIBILITY_LABELS[mode]}
+                selected={menuField.visibility === mode}
+                onSelect={() => setVisibility(menuField.id, mode)}
               />
             ))}
           </>

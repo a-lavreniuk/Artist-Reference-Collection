@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { Tooltip } from '../tooltip/Tooltip';
-import { hostDraftToStoredValue, parseLinkInput } from '../../utils/linkInput';
+import { hostDraftToStoredValue, isValidLinkInputValue, parseLinkInput } from '../../utils/linkInput';
 
 const PLACEHOLDER = 'example.com';
 
@@ -27,15 +27,18 @@ export default function LinkInput({
   const fieldRef = useRef<HTMLLabelElement>(null);
   const parsed = parseLinkInput(value);
   const filled = Boolean(parsed.host);
+  const invalid = filled && !isValidLinkInputValue(value);
+  const showError = !disabled && invalid;
+  const openEnabled = Boolean(onOpen) && canOpen && !invalid;
 
   useLayoutEffect(() => {
     if (fieldRef.current) void hydrateArcNavbarIcons(fieldRef.current);
-  }, [filled, disabled]);
+  }, [filled, disabled, showError]);
 
   return (
     <label
       ref={fieldRef}
-      className={`field${filled ? ' has-value' : ''}`}
+      className={`field${filled ? ' has-value' : ''}${showError ? ' field-error' : ''}`}
     >
       <div
         className={`input link-input input-slots${filled ? ' has-value' : ''}${disabled ? ' is-disabled' : ''}`}
@@ -46,6 +49,7 @@ export default function LinkInput({
           type="text"
           placeholder={placeholder}
           aria-label={ariaLabel}
+          aria-invalid={showError || undefined}
           value={parsed.host}
           disabled={disabled}
           onChange={(e) => onChange(hostDraftToStoredValue(parsed.protocol, e.target.value))}
@@ -71,10 +75,11 @@ export default function LinkInput({
                     type="button"
                     className="input-inline-icon link-open-btn arc-icon-external-link"
                     aria-label="Открыть ссылку"
-                    disabled={!canOpen}
+                    disabled={!openEnabled}
                     onClick={(ev) => {
                       ev.preventDefault();
                       ev.stopPropagation();
+                      if (!openEnabled) return;
                       onOpen();
                     }}
                   />

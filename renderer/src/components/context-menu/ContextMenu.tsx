@@ -131,11 +131,14 @@ export default function ContextMenu({
       }
 
       if (!anchorRef?.current) {
-        setLayout((prev) => (prev === null ? prev : null));
         return;
       }
 
       const rect = anchorRef.current.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return;
+      }
+
       const rawTop =
         anchorPlacement === 'aboveAnchor'
           ? rect.top - CONTEXT_MENU_ANCHOR_GAP - menuHeight
@@ -167,6 +170,8 @@ export default function ContextMenu({
       if (!anchorRef?.current) return;
 
       const rect = anchorRef.current.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
       const rawTop =
         anchorPlacement === 'aboveAnchor'
           ? rect.top - CONTEXT_MENU_ANCHOR_GAP - menuHeight
