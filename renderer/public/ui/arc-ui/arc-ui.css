@@ -1188,7 +1188,7 @@ body[data-input-size="s"],
   --input-icon-check-url: url("../icons/check/check_s.svg");
 }
 
-/* Док: EL-INP-GROUP-SEARCH-MULTI всегда L — не зависит от глобального data-input-size */
+/* Док: EL-INP-GROUP-SEARCH-MULTI / MULTISELECT — размер на контроле, не от тулбара UI-Kit */
 .input.input--size-l {
   --input-h: 40px;
   --input-radius: var(--radius-m);
@@ -1203,6 +1203,38 @@ body[data-input-size="s"],
   --input-icon-trash-url: url("../icons/trash/trash_m.svg");
   --input-icon-chevron-url: url("../icons/chevron/chevron_m.svg");
   --input-icon-check-url: url("../icons/check/check_m.svg");
+}
+
+.input.input--size-m {
+  --input-h: 32px;
+  --input-radius: var(--radius-s);
+  --input-pad-x: var(--s-2);
+  --input-gap: 8px;
+  --input-icon-size: 16px;
+  --textarea-h: 83px;
+  --input-font-size: var(--typo-p-m-size);
+  --input-line-height: var(--typo-p-m-line);
+  --input-icon-search-url: url("../icons/search/search_m.svg");
+  --input-icon-close-url: url("../icons/close/close_m.svg");
+  --input-icon-trash-url: url("../icons/trash/trash_m.svg");
+  --input-icon-chevron-url: url("../icons/chevron/chevron_m.svg");
+  --input-icon-check-url: url("../icons/check/check_m.svg");
+}
+
+.input.input--size-s {
+  --input-h: 24px;
+  --input-radius: 8px;
+  --input-pad-x: 6px;
+  --input-gap: 6px;
+  --input-icon-size: 12px;
+  --textarea-h: 58px;
+  --input-font-size: var(--typo-p-s-size);
+  --input-line-height: var(--typo-p-s-line);
+  --input-icon-search-url: url("../icons/search/search_s.svg");
+  --input-icon-close-url: url("../icons/close/close_s.svg");
+  --input-icon-trash-url: url("../icons/trash/trash_s.svg");
+  --input-icon-chevron-url: url("../icons/chevron/chevron_s.svg");
+  --input-icon-check-url: url("../icons/check/check_s.svg");
 }
 
 .btn-ds {
@@ -1342,12 +1374,15 @@ button.input {
   box-shadow: none;
 }
 
-.input:hover:not(:disabled):not([disabled]):not(.is-disabled) {
+.input:hover:not(:disabled):not([disabled]):not(.is-disabled),
+.input.state-hover:not(:disabled):not([disabled]):not(.is-disabled) {
   border-color: var(--input-border-focus);
 }
 
 .input:disabled,
-.input[disabled] {
+.input[disabled],
+.input.is-disabled,
+.input[aria-disabled='true'] {
   background: var(--input-fill-disabled);
   color: var(--input-value-disabled);
   border-color: var(--input-border-disabled);
@@ -1355,7 +1390,11 @@ button.input {
 }
 
 .input:disabled::placeholder,
-.input[disabled]::placeholder {
+.input[disabled]::placeholder,
+.input.is-disabled .search-inner,
+.input.is-disabled .search-inner::placeholder,
+.input[aria-disabled='true'] .search-inner,
+.input[aria-disabled='true'] .search-inner::placeholder {
   color: var(--input-value-disabled);
 }
 
@@ -1381,7 +1420,8 @@ button.input {
   border-color: var(--input-border-error);
 }
 
-.field-error .input:hover:not(:disabled):not([disabled]):not(.is-disabled) {
+.field-error .input:hover:not(:disabled):not([disabled]):not(.is-disabled),
+.field-error .input.state-hover:not(:disabled):not([disabled]):not(.is-disabled) {
   border-color: var(--input-border-error-hover);
 }
 
@@ -1393,6 +1433,7 @@ button.input {
 
 .input.search-field:focus-within:not(.is-disabled),
 .input.search-multiselect:focus-within,
+.input.input-multiselect:focus-within:not(.is-disabled):not([aria-disabled='true']),
 .input.link-input:focus-within:not(.is-disabled) {
   outline: none;
   border-color: var(--input-border-focus);
@@ -1401,6 +1442,7 @@ button.input {
 
 .field-error .input.search-field:focus-within:not(.is-disabled),
 .field-error .input.search-multiselect:focus-within,
+.field-error .input.input-multiselect:focus-within,
 .field-error .input.link-input:focus-within:not(.is-disabled) {
   outline: none;
   border-color: var(--input-border-error);
@@ -2633,6 +2675,20 @@ button.input {
   max-width: none;
 }
 
+.inputs-panel .input-multiselect-demo {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s-2);
+  width: 100%;
+}
+
+.inputs-panel .input-multiselect-demo .field {
+  flex: none;
+  max-width: none;
+  min-width: 0;
+  width: 100%;
+}
+
 .input-slots {
   display: flex;
   align-items: center;
@@ -3046,6 +3102,110 @@ button.input {
 
 .search-multiselect .chip {
   cursor: default;
+}
+
+/* Figma 2274:20300 — мультиселект: чипы без цвета, геометрия от размера поля */
+.input.input-multiselect {
+  --input-multiselect-pad: 5px;
+  --input-multiselect-gap: 5px;
+  --input-multiselect-chip-h: 22px;
+  --input-multiselect-chip-pad-x: var(--s-2);
+  --input-multiselect-chip-gap: var(--s-1);
+  --input-multiselect-chip-radius: 5px;
+  height: auto;
+  min-height: var(--input-h);
+  padding: var(--input-multiselect-pad);
+  gap: var(--input-multiselect-gap);
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  cursor: text;
+}
+
+body[data-input-size="l"] .input-multiselect,
+.arc-ui-kit-scope[data-input-size="l"] .input-multiselect {
+  --input-multiselect-pad: var(--s-2);
+  --input-multiselect-gap: var(--s-2);
+  --input-multiselect-chip-h: 24px;
+  --input-multiselect-chip-pad-x: var(--s-2);
+  --input-multiselect-chip-gap: var(--s-1);
+  --input-multiselect-chip-radius: var(--radius-s);
+}
+
+body[data-input-size="s"] .input-multiselect,
+.arc-modal[data-input-size="s"] .input-multiselect,
+.arc-ui-kit-scope[data-input-size="s"] .input-multiselect {
+  --input-multiselect-pad: 3px;
+  --input-multiselect-gap: 3px;
+  --input-multiselect-chip-h: 18px;
+  --input-multiselect-chip-pad-x: var(--s-1);
+  --input-multiselect-chip-gap: 4px;
+  --input-multiselect-chip-radius: 5px;
+}
+
+body[data-input-size="m"] .input-multiselect,
+.arc-modal[data-input-size="m"] .input-multiselect,
+.arc-ui-kit-scope[data-input-size="m"] .input-multiselect {
+  --input-multiselect-pad: 5px;
+  --input-multiselect-gap: 5px;
+  --input-multiselect-chip-h: 22px;
+  --input-multiselect-chip-pad-x: var(--s-2);
+  --input-multiselect-chip-gap: var(--s-1);
+  --input-multiselect-chip-radius: 5px;
+}
+
+.input.input-multiselect.input--size-l {
+  --input-multiselect-pad: var(--s-2);
+  --input-multiselect-gap: var(--s-2);
+  --input-multiselect-chip-h: 24px;
+  --input-multiselect-chip-pad-x: var(--s-2);
+  --input-multiselect-chip-gap: var(--s-1);
+  --input-multiselect-chip-radius: var(--radius-s);
+}
+
+.input.input-multiselect.input--size-m {
+  --input-multiselect-pad: 5px;
+  --input-multiselect-gap: 5px;
+  --input-multiselect-chip-h: 22px;
+  --input-multiselect-chip-pad-x: var(--s-2);
+  --input-multiselect-chip-gap: var(--s-1);
+  --input-multiselect-chip-radius: 5px;
+}
+
+.input.input-multiselect.input--size-s {
+  --input-multiselect-pad: 3px;
+  --input-multiselect-gap: 3px;
+  --input-multiselect-chip-h: 18px;
+  --input-multiselect-chip-pad-x: var(--s-1);
+  --input-multiselect-chip-gap: 4px;
+  --input-multiselect-chip-radius: 5px;
+}
+
+.input-multiselect .chip {
+  flex-shrink: 0;
+  min-height: var(--input-multiselect-chip-h);
+  max-height: var(--input-multiselect-chip-h);
+  padding: 0 var(--input-multiselect-chip-pad-x);
+  gap: var(--input-multiselect-chip-gap);
+  border-radius: var(--input-multiselect-chip-radius);
+  cursor: pointer;
+}
+
+.input-multiselect .search-inner {
+  flex: 1 1 48px;
+  min-width: 48px;
+  width: auto;
+}
+
+.input-multiselect.is-disabled,
+.input-multiselect[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.input-multiselect.is-disabled .chip,
+.input-multiselect[aria-disabled='true'] .chip {
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 .color-picker {

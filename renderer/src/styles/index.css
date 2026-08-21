@@ -3272,50 +3272,6 @@ span.arc-card-detail-prop-row__label {
   color: var(--text-elev-primary);
 }
 
-.arc-detail-multiselect.input.search-multiselect {
-  height: auto;
-  min-height: var(--input-h);
-  max-height: none;
-  padding: var(--s-1);
-  gap: var(--s-1);
-  flex-wrap: nowrap;
-  overflow: hidden;
-  align-items: center;
-  cursor: pointer;
-}
-
-.arc-detail-multiselect.input.search-multiselect:not(:has(.chip)) {
-  height: var(--input-h);
-  max-height: var(--input-h);
-  padding: 0 var(--input-pad-x);
-}
-
-.arc-detail-multiselect[aria-disabled='true'] {
-  cursor: not-allowed;
-}
-
-.arc-detail-multiselect__chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-1);
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.arc-detail-multiselect .chip {
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.arc-detail-multiselect .selector-actions.slot-trailing {
-  margin-left: 0;
-}
-
-.arc-detail-multiselect .selector-value {
-  color: var(--input-value-default);
-}
-
 .arc-detail-template-editor {
   min-width: 0;
   display: flex;

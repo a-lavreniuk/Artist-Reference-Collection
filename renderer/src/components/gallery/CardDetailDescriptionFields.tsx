@@ -384,72 +384,113 @@ function MultiSelectValue({
   onRequestEditField?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const fieldRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
   const anchorRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const filled = selected.length > 0;
+  const queryNorm = query.trim().toLowerCase();
+  const filtered = queryNorm
+    ? options.filter((option) => option.toLowerCase().includes(queryNorm))
+    : options;
 
-  useLayoutEffect(() => {
-    if (fieldRef.current) void hydrateArcNavbarIcons(fieldRef.current);
-  }, [filled, open, selected]);
+  const openMenu = () => {
+    if (disabled) return;
+    setOpen(true);
+  };
+
+  const focusInput = () => {
+    inputRef.current?.focus();
+  };
+
+  const skipFieldClickRef = useRef(false);
 
   const toggleOption = (option: string) => {
     onChange(selected.includes(option) ? selected.filter((item) => item !== option) : [...selected, option]);
+    setQuery('');
+  };
+
+  const removeOption = (option: string) => {
+    onChange(selected.filter((item) => item !== option));
   };
 
   return (
-    <div ref={fieldRef} className={`field selector-field${filled ? ' has-value' : ''}`}>
+    <div className={`field${filled ? ' has-value' : ''}`}>
       <div
         ref={anchorRef}
         role="combobox"
-        tabIndex={disabled ? -1 : 0}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={label}
         aria-disabled={disabled || undefined}
-        className="input input-slots search-multiselect arc-detail-multiselect"
-        onClick={() => {
+        className={`input input-multiselect input-slots${disabled ? ' is-disabled' : ''}`}
+        onClick={(e) => {
           if (disabled) return;
-          setOpen((prev) => !prev);
-        }}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setOpen((prev) => !prev);
+          if (skipFieldClickRef.current) {
+            skipFieldClickRef.current = false;
+            return;
           }
+          if ((e.target as HTMLElement).closest('.chip')) return;
+          focusInput();
+          openMenu();
         }}
       >
-        {filled ? (
-          <span className="arc-detail-multiselect__chips">
-            {selected.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className="chip chip-active"
-                disabled={disabled}
-                aria-label={`Убрать ${option}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onChange(selected.filter((item) => item !== option));
-                }}
-              >
-                <span>{option}</span>
-                <span className="chip-remove" aria-hidden="true">
-                  ✕
-                </span>
-              </button>
-            ))}
-          </span>
-        ) : (
-          <span className="selector-value slot-value">{EMPTY_PLACEHOLDER}</span>
-        )}
-        <span className="selector-actions slot-trailing">
-          <span
-            className="selector-caret arc-icon-chevron arc-selector-dropdown-caret"
-            aria-hidden="true"
-          />
-        </span>
+        {selected.map((option) => (
+          <button
+            key={option}
+            type="button"
+            className="chip chip-active"
+            disabled={disabled}
+            aria-label={`Убрать ${option}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              skipFieldClickRef.current = true;
+              window.setTimeout(() => {
+                skipFieldClickRef.current = false;
+              }, 0);
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (disabled) return;
+              removeOption(option);
+            }}
+          >
+            <span>{option}</span>
+            <span className="chip-remove" aria-hidden="true">
+              ✕
+            </span>
+          </button>
+        ))}
+        <input
+          ref={inputRef}
+          className="search-inner slot-value"
+          type="text"
+          placeholder={filled ? '' : EMPTY_PLACEHOLDER}
+          aria-label={label}
+          value={query}
+          disabled={disabled}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            openMenu();
+          }}
+          onFocus={openMenu}
+          onKeyDown={(e) => {
+            if (disabled) return;
+            if (e.key === 'Backspace' && query === '' && selected.length > 0) {
+              e.preventDefault();
+              onChange(selected.slice(0, -1));
+              openMenu();
+              return;
+            }
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const first = filtered[0];
+              if (first) toggleOption(first);
+              else openMenu();
+            }
+          }}
+        />
       </div>
       <ContextMenu
         open={open && !disabled}
@@ -473,7 +514,7 @@ function MultiSelectValue({
                   }
                 }
               ]
-            : options.map((option) => ({
+            : filtered.map((option) => ({
                 type: 'item' as const,
                 key: option,
                 label: option,
