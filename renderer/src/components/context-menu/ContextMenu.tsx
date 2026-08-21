@@ -273,7 +273,7 @@ export default function ContextMenu({
           pointerEvents: isPositioned ? undefined : 'none'
         }}
       >
-        <div className="context-menu__list">
+        <div className="context-menu__list context-menu__scroll">
           {rows?.map((row) => renderRow(row, onClose))}
           {children}
         </div>

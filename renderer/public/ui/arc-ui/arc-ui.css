@@ -1470,54 +1470,6 @@ button.input {
   overflow-y: auto;
   overflow-x: hidden;
   color: var(--input-value-entered);
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-}
-
-.textarea::-webkit-scrollbar {
-  -webkit-appearance: none;
-  width: 2px !important;
-  height: 2px !important;
-}
-
-.textarea::-webkit-scrollbar-button {
-  width: 0;
-  height: 0;
-  display: none !important;
-}
-
-.textarea::-webkit-scrollbar-button:single-button,
-.textarea::-webkit-scrollbar-button:start,
-.textarea::-webkit-scrollbar-button:end,
-.textarea::-webkit-scrollbar-button:increment,
-.textarea::-webkit-scrollbar-button:decrement {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-}
-
-.textarea::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.textarea::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 999px;
-}
-
-.field:hover .textarea,
-.field:focus-within .textarea {
-  scrollbar-color: color-mix(in srgb, var(--input-icon-default) 45%, transparent) transparent;
-}
-
-.field:hover .textarea::-webkit-scrollbar-thumb,
-.field:focus-within .textarea::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--input-icon-default) 45%, transparent);
-}
-
-.field:hover .textarea::-webkit-scrollbar-thumb:hover,
-.field:focus-within .textarea::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--input-icon-hover) 55%, transparent);
 }
 
 .pseudo-select {
@@ -1710,61 +1662,125 @@ button.input {
 
 .dropdown-list {
   display: grid;
-  max-height: calc(var(--input-h) * 8);
+  min-height: 0;
+  max-height: calc(var(--input-h, 32px) * 8);
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
 }
 
-.selector-dropdown .dropdown-list::-webkit-scrollbar {
+.textarea::-webkit-scrollbar,
+.dropdown-list::-webkit-scrollbar,
+.context-menu__scroll::-webkit-scrollbar {
   -webkit-appearance: none;
-  width: 2px !important;
-  height: 2px !important;
+  width: calc(4px + var(--s-1) * 2);
+  height: calc(4px + var(--s-1) * 2);
 }
 
-.selector-dropdown .dropdown-list::-webkit-scrollbar-button {
+.textarea::-webkit-scrollbar-button,
+.textarea::-webkit-scrollbar-button:single-button,
+.textarea::-webkit-scrollbar-button:start,
+.textarea::-webkit-scrollbar-button:end,
+.textarea::-webkit-scrollbar-button:increment,
+.textarea::-webkit-scrollbar-button:decrement,
+.textarea::-webkit-scrollbar-button:vertical:start:increment,
+.textarea::-webkit-scrollbar-button:vertical:start:decrement,
+.textarea::-webkit-scrollbar-button:vertical:end:increment,
+.textarea::-webkit-scrollbar-button:vertical:end:decrement,
+.textarea::-webkit-scrollbar-button:horizontal:start:increment,
+.textarea::-webkit-scrollbar-button:horizontal:start:decrement,
+.textarea::-webkit-scrollbar-button:horizontal:end:increment,
+.textarea::-webkit-scrollbar-button:horizontal:end:decrement,
+.dropdown-list::-webkit-scrollbar-button,
+.dropdown-list::-webkit-scrollbar-button:single-button,
+.dropdown-list::-webkit-scrollbar-button:start,
+.dropdown-list::-webkit-scrollbar-button:end,
+.dropdown-list::-webkit-scrollbar-button:increment,
+.dropdown-list::-webkit-scrollbar-button:decrement,
+.dropdown-list::-webkit-scrollbar-button:vertical:start:increment,
+.dropdown-list::-webkit-scrollbar-button:vertical:start:decrement,
+.dropdown-list::-webkit-scrollbar-button:vertical:end:increment,
+.dropdown-list::-webkit-scrollbar-button:vertical:end:decrement,
+.dropdown-list::-webkit-scrollbar-button:horizontal:start:increment,
+.dropdown-list::-webkit-scrollbar-button:horizontal:start:decrement,
+.dropdown-list::-webkit-scrollbar-button:horizontal:end:increment,
+.dropdown-list::-webkit-scrollbar-button:horizontal:end:decrement,
+.context-menu__scroll::-webkit-scrollbar-button,
+.context-menu__scroll::-webkit-scrollbar-button:single-button,
+.context-menu__scroll::-webkit-scrollbar-button:start,
+.context-menu__scroll::-webkit-scrollbar-button:end,
+.context-menu__scroll::-webkit-scrollbar-button:increment,
+.context-menu__scroll::-webkit-scrollbar-button:decrement,
+.context-menu__scroll::-webkit-scrollbar-button:vertical:start:increment,
+.context-menu__scroll::-webkit-scrollbar-button:vertical:start:decrement,
+.context-menu__scroll::-webkit-scrollbar-button:vertical:end:increment,
+.context-menu__scroll::-webkit-scrollbar-button:vertical:end:decrement,
+.context-menu__scroll::-webkit-scrollbar-button:horizontal:start:increment,
+.context-menu__scroll::-webkit-scrollbar-button:horizontal:start:decrement,
+.context-menu__scroll::-webkit-scrollbar-button:horizontal:end:increment,
+.context-menu__scroll::-webkit-scrollbar-button:horizontal:end:decrement {
   width: 0;
   height: 0;
-  display: none !important;
-}
-
-.selector-dropdown .dropdown-list::-webkit-scrollbar-button:single-button,
-.selector-dropdown .dropdown-list::-webkit-scrollbar-button:start,
-.selector-dropdown .dropdown-list::-webkit-scrollbar-button:end,
-.selector-dropdown .dropdown-list::-webkit-scrollbar-button:increment,
-.selector-dropdown .dropdown-list::-webkit-scrollbar-button:decrement {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-}
-
-.selector-dropdown .dropdown-list::-webkit-scrollbar-track {
+  display: none;
   background: transparent;
 }
 
-.selector-dropdown .dropdown-list::-webkit-scrollbar-thumb {
+.textarea::-webkit-scrollbar-track,
+.dropdown-list::-webkit-scrollbar-track,
+.context-menu__scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.textarea::-webkit-scrollbar-thumb,
+.dropdown-list::-webkit-scrollbar-thumb,
+.context-menu__scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  background-clip: padding-box;
+  border: var(--s-1) solid transparent;
   border-radius: 999px;
+  transition: background-color var(--transition-fast);
 }
 
-.selector-dropdown .dropdown-list::-webkit-scrollbar-corner {
-  background: transparent !important;
+.textarea::-webkit-scrollbar-corner,
+.dropdown-list::-webkit-scrollbar-corner,
+.context-menu__scroll::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
-.selector-dropdown:hover .dropdown-list,
-.selector-dropdown:focus-within .dropdown-list {
-  scrollbar-color: color-mix(in srgb, var(--input-icon-default) 45%, transparent) transparent;
-}
-
+.field:hover .textarea::-webkit-scrollbar-thumb,
+.field:focus-within .textarea::-webkit-scrollbar-thumb,
 .selector-dropdown:hover .dropdown-list::-webkit-scrollbar-thumb,
-.selector-dropdown:focus-within .dropdown-list::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--input-icon-default) 45%, transparent);
+.selector-dropdown:focus-within .dropdown-list::-webkit-scrollbar-thumb,
+.context-menu:hover .context-menu__scroll::-webkit-scrollbar-thumb,
+.context-menu:focus-within .context-menu__scroll::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--input-icon-default) 45%, transparent);
 }
 
+.field:hover .textarea::-webkit-scrollbar-thumb:hover,
+.field:focus-within .textarea::-webkit-scrollbar-thumb:hover,
 .selector-dropdown:hover .dropdown-list::-webkit-scrollbar-thumb:hover,
-.selector-dropdown:focus-within .dropdown-list::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--input-icon-hover) 55%, transparent);
+.selector-dropdown:focus-within .dropdown-list::-webkit-scrollbar-thumb:hover,
+.context-menu:hover .context-menu__scroll::-webkit-scrollbar-thumb:hover,
+.context-menu:focus-within .context-menu__scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--input-icon-hover) 55%, transparent);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .textarea,
+  .dropdown-list,
+  .context-menu__scroll {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color var(--transition-fast);
+  }
+
+  .field:hover .textarea,
+  .field:focus-within .textarea,
+  .selector-dropdown:hover .dropdown-list,
+  .selector-dropdown:focus-within .dropdown-list,
+  .context-menu:hover .context-menu__scroll,
+  .context-menu:focus-within .context-menu__scroll {
+    scrollbar-color: color-mix(in srgb, var(--input-icon-default) 45%, transparent) transparent;
+  }
 }
 
 .dropdown-row {
@@ -1857,7 +1873,7 @@ button.input {
   box-sizing: border-box;
   padding: var(--s-2) 0;
   border-radius: var(--radius-l);
-  overflow-x: hidden;
+  overflow: hidden;
   --menu-content-inset-x: var(--s-3);
 }
 
@@ -1878,6 +1894,13 @@ button.input {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.context-menu__scroll {
+  max-height: calc(var(--btn-h, 32px) * 8);
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .context-menu__header {
@@ -5238,7 +5261,8 @@ body[data-elevation="raised"],
 }
 
 .arc-calendar__selector-dropdown .dropdown-list {
-  max-height: calc(var(--input-h) * 5);
+  min-height: 0;
+  max-height: calc(var(--input-h, 32px) * 5);
 }
 
 .arc-calendar-day {
