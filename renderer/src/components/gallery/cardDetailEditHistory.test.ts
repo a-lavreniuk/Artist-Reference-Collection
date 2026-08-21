@@ -70,6 +70,16 @@ describe('cardDetailEditHistory', () => {
     expect(patchesEqual({ name: 'A' }, { name: 'A' })).toBe(true);
   });
 
+  it('clears undo and redo so a new card session starts empty', () => {
+    const history = createCardDetailEditHistory();
+    history.push({ cardId: 'card-1', before: { name: 'A' }, after: { name: 'B' } });
+    history.undo();
+    history.clear();
+
+    expect(history.undo()).toBeNull();
+    expect(history.redo()).toBeNull();
+  });
+
   it('drops the oldest entries when the stack is full', () => {
     const history = createCardDetailEditHistory(2);
     history.push({ cardId: 'card-1', before: { rating: 0 }, after: { rating: 1 } });

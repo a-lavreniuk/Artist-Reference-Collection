@@ -393,7 +393,7 @@ export default function CardDetailOverlay({
 
   const reloadCard = useCallback(async (id: string) => {
     const previousId = cardRef.current?.id;
-    if (previousId && previousId !== id) flushPendingDetailFieldsRef.current(previousId);
+    if (previousId && previousId !== id) flushPendingDetailFieldsRef.current(previousId, false);
     const scopedLibraryId = cardRef.current?.id === id ? cardRef.current.libraryId : undefined;
     let c = await getCardById(id, scopedLibraryId);
     if (c) {
@@ -448,7 +448,7 @@ export default function CardDetailOverlay({
 
   const applyInstantCardPreview = useCallback((c: CardRecord) => {
     const previousId = cardRef.current?.id;
-    if (previousId && previousId !== c.id) flushPendingDetailFieldsRef.current(previousId);
+    if (previousId && previousId !== c.id) flushPendingDetailFieldsRef.current(previousId, false);
     const draft = readCardDetailDraft(c.id);
     const nextName = c.name ?? draft.name ?? '';
     const nextLink = c.linkUrl ?? draft.linkUrl ?? '';
@@ -532,12 +532,14 @@ export default function CardDetailOverlay({
   useEffect(() => {
     const previousId = lastAnnotationsCardIdRef.current;
     if (previousId && previousId !== cardId) {
-      flushPendingDetailFieldsRef.current(previousId);
+      flushPendingDetailFieldsRef.current(previousId, false);
       if (annotationsSaveTimerRef.current) {
         window.clearTimeout(annotationsSaveTimerRef.current);
         annotationsSaveTimerRef.current = null;
         void updateCardPayload(previousId, { annotations: annotationsRef.current });
       }
+      // Сессия undo/redo привязана к открытой карточке: переход обнуляет стек.
+      editHistoryRef.current.clear();
     }
     lastAnnotationsCardIdRef.current = cardId;
     setPendingTagSearchIds([]);
@@ -1368,6 +1370,7 @@ export default function CardDetailOverlay({
       persistPendingAnnotations();
       const entry = direction === 'undo' ? editHistoryRef.current.undo() : editHistoryRef.current.redo();
       if (!entry) return;
+      if (entry.cardId !== cardIdRef.current) return;
       const patch = direction === 'undo' ? entry.before : entry.after;
       applyEditPatchLocal(entry.cardId, patch);
       void updateCardPayload(entry.cardId, patch);
