@@ -114,9 +114,8 @@ function DetailFieldVisibilityRow({
     >
       <span className="context-menu__item-inner">
         <span className="context-menu__item-label-cluster">
-          <span className="context-menu__item-label">Видимость</span>
+          <span className="context-menu__item-label">{FIELD_VISIBILITY_LABELS[field.visibility]}</span>
         </span>
-        <span className="context-menu__item-shortcut">{FIELD_VISIBILITY_LABELS[field.visibility]}</span>
         <span
           className="context-menu__item-icon tab-icon arc-icon-chevron arc-chevron-point-right"
           data-arc-icon-size="m"
@@ -656,6 +655,7 @@ export default function DetailTemplateEditor({
             />
             <ContextMenuItem
               label="Показывать в фильтрах"
+              iconClass="arc-icon-filter"
               selected={menuField.showInFilters}
               onSelect={() => toggleShowInFilters(menuField.id)}
             />
