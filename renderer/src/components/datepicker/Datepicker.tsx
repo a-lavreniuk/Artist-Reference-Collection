@@ -83,8 +83,8 @@ export default function Datepicker({
     }
   }, [showError, disabled, size, text]);
 
-  useEffect(() => {
-    setText(formattedValue);
+  useLayoutEffect(() => {
+    setText((prev) => (prev === formattedValue ? prev : formattedValue));
     setInternalError(false);
   }, [formattedValue]);
 

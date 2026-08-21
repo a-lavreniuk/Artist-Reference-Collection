@@ -87,6 +87,9 @@ describe('template helpers', () => {
     });
     expect(missingBuiltinFieldIds(template)).toEqual(['link', 'description']);
     expect(templateFieldIconClass(template.fields[0]!)).toBe('arc-icon-text-short');
+    expect(templateFieldIconClass(createCustomTemplateField('multiSelect', 'tags'))).toBe(
+      'arc-icon-list-check'
+    );
   });
 
   it('reorders only visible fields', () => {

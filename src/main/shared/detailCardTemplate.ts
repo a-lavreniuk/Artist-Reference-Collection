@@ -261,6 +261,7 @@ export function templateFieldIconClass(field: DetailTemplateField): string {
   if (field.type === 'url') return 'arc-icon-link';
   if (field.type === 'date') return 'arc-icon-calendar';
   if (field.type === 'select') return 'arc-icon-check-circle';
+  if (field.type === 'multiSelect') return 'arc-icon-list-check';
   return 'arc-icon-list';
 }
 

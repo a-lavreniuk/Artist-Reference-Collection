@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import {
   customFieldValueIsFilled,
   templateFieldLabel,
@@ -221,24 +221,27 @@ function DateFieldValue({
   onChange: (next: string) => void;
 }) {
   const today = todayLocalDateOnly();
-  const seededForKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (disabled) return;
-    if (seededForKeyRef.current === instanceKey) return;
-    seededForKeyRef.current = instanceKey;
-    if (value.trim()) return;
-    onChange(today);
-  }, [disabled, instanceKey, value, today, onChange]);
-
+  const [clearedKey, setClearedKey] = useState<string | null>(null);
   const trimmed = value.trim();
+  const userCleared = clearedKey === instanceKey;
+
+  useLayoutEffect(() => {
+    if (disabled || userCleared || trimmed) return;
+    onChange(today);
+  }, [disabled, userCleared, trimmed, today, onChange]);
+
   return (
     <Datepicker
       size="m"
       mode="single"
       placeholder={EMPTY_PLACEHOLDER}
-      value={trimmed ? { from: trimmed } : null}
+      value={trimmed ? { from: trimmed } : userCleared || disabled ? null : { from: today }}
       disabled={disabled}
-      onChange={(next) => onChange(next?.from?.trim() ?? '')}
+      onChange={(next) => {
+        const nextVal = next?.from?.trim() ?? '';
+        setClearedKey(nextVal ? null : instanceKey);
+        onChange(nextVal);
+      }}
       aria-label={label}
     />
   );
