@@ -156,6 +156,17 @@ import {
   type CustomFieldType,
   type CustomFieldsMap
 } from '@arc-main-shared/detailCardTemplate';
+import {
+  applyPatchToCommitted,
+  cloneAnnotations,
+  cloneCommitted,
+  cloneCustomFields,
+  createCardDetailEditHistory,
+  diffAgainstCommitted,
+  EMPTY_CARD_DETAIL_COMMITTED,
+  type CardDetailCommitted,
+  type CardDetailEditPatch
+} from './cardDetailEditHistory';
 
 type Props = {
   cardId: string;
@@ -237,15 +248,26 @@ export default function CardDetailOverlay({
   descriptionRef.current = description;
   const [customFields, setCustomFields] = useState<CustomFieldsMap>({});
   const customFieldsRef = useRef<CustomFieldsMap>({});
-  const flushPendingDetailFieldsRef = useRef<(targetId: string) => void>(() => undefined);
-  flushPendingDetailFieldsRef.current = (targetId: string) => {
+  const committedRef = useRef<CardDetailCommitted>(cloneCommitted(EMPTY_CARD_DETAIL_COMMITTED));
+  const committedCardIdRef = useRef('');
+  const editHistoryRef = useRef(createCardDetailEditHistory());
+  const recordCommittedSave = (targetId: string, patch: CardDetailEditPatch) => {
+    if (!targetId || committedCardIdRef.current !== targetId) return;
+    const diff = diffAgainstCommitted(committedRef.current, patch);
+    if (!diff) return;
+    editHistoryRef.current.push({ cardId: targetId, before: diff.before, after: diff.after });
+    committedRef.current = applyPatchToCommitted(committedRef.current, diff.after);
+  };
+  const assignCommitted = (targetId: string, value: CardDetailCommitted) => {
+    committedCardIdRef.current = targetId;
+    committedRef.current = cloneCommitted(value);
+  };
+  const flushPendingDetailFieldsRef = useRef<(targetId: string, recordHistory?: boolean) => void>(
+    () => undefined
+  );
+  flushPendingDetailFieldsRef.current = (targetId: string, recordHistory = true) => {
     if (!targetId) return;
-    const patch: {
-      name?: string;
-      linkUrl?: string;
-      description?: string;
-      customFields?: CustomFieldsMap;
-    } = {};
+    const patch: CardDetailEditPatch = {};
     if (nameSaveTimerRef.current) {
       window.clearTimeout(nameSaveTimerRef.current);
       nameSaveTimerRef.current = null;
@@ -267,6 +289,7 @@ export default function CardDetailOverlay({
       patch.customFields = customFieldsRef.current;
     }
     if (Object.keys(patch).length === 0) return;
+    if (recordHistory) recordCommittedSave(targetId, patch);
     void updateCardPayload(targetId, patch);
   };
   const [annotations, setAnnotations] = useState<CardAnnotationV1[]>([]);
@@ -279,7 +302,6 @@ export default function CardDetailOverlay({
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
   const [peekAnchorKey, setPeekAnchorKey] = useState<string | null>(null);
   const [sparkleAnnotationId, setSparkleAnnotationId] = useState<string | null>(null);
-  const annotationUndoRef = useRef<CardAnnotationV1[][]>([]);
   const [pendingDeleteAnnotationId, setPendingDeleteAnnotationId] = useState<string | null>(null);
   const [annotationComposer, setAnnotationComposer] = useState<
     { mode: 'create'; rect: AnnotationDraftRect; timeMs?: number } | { mode: 'edit'; id: string } | null
@@ -384,17 +406,30 @@ export default function CardDetailOverlay({
         clearCardDetailDraft(id);
         c = (await getCardById(id, scopedLibraryId)) ?? c;
       }
-      setDraftName(c.name ?? draft.name ?? '');
-      setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
-      setDescription(c.description ?? '');
-      setCustomFields(sanitizeCustomFieldsMap(c.customFields));
-      customFieldsRef.current = sanitizeCustomFieldsMap(c.customFields);
+      const nextName = c.name ?? draft.name ?? '';
+      const nextLink = c.linkUrl ?? draft.linkUrl ?? '';
+      const nextDescription = c.description ?? '';
+      const nextCustom = sanitizeCustomFieldsMap(c.customFields);
+      const nextRating = clampCardRating(c.rating);
+      const nextAnnot = sanitizeCardAnnotations(c.annotations);
+      setDraftName(nextName);
+      setDraftLink(nextLink);
+      setDescription(nextDescription);
+      setCustomFields(nextCustom);
+      customFieldsRef.current = nextCustom;
       if (annotationsSaveTimerRef.current == null) {
-        const nextAnnot = sanitizeCardAnnotations(c.annotations);
         annotationsRef.current = nextAnnot;
         setAnnotations(nextAnnot);
       }
-      setRating(clampCardRating(c.rating));
+      setRating(nextRating);
+      assignCommitted(c.id, {
+        name: nextName,
+        linkUrl: nextLink,
+        description: nextDescription,
+        rating: nextRating,
+        customFields: nextCustom,
+        annotations: nextAnnot
+      });
       cardCacheRef.current.set(c.id, c);
     } else {
       setDraftName('');
@@ -405,6 +440,7 @@ export default function CardDetailOverlay({
       annotationsRef.current = [];
       setAnnotations([]);
       setRating(0);
+      assignCommitted('', EMPTY_CARD_DETAIL_COMMITTED);
     }
     setCard(c);
     return c;
@@ -414,17 +450,30 @@ export default function CardDetailOverlay({
     const previousId = cardRef.current?.id;
     if (previousId && previousId !== c.id) flushPendingDetailFieldsRef.current(previousId);
     const draft = readCardDetailDraft(c.id);
-    setDraftName(c.name ?? draft.name ?? '');
-    setDraftLink(c.linkUrl ?? draft.linkUrl ?? '');
-    setDescription(c.description ?? '');
-    setCustomFields(sanitizeCustomFieldsMap(c.customFields));
-    customFieldsRef.current = sanitizeCustomFieldsMap(c.customFields);
+    const nextName = c.name ?? draft.name ?? '';
+    const nextLink = c.linkUrl ?? draft.linkUrl ?? '';
+    const nextDescription = c.description ?? '';
+    const nextCustom = sanitizeCustomFieldsMap(c.customFields);
+    const nextRating = clampCardRating(c.rating);
+    const nextAnnot = sanitizeCardAnnotations(c.annotations);
+    setDraftName(nextName);
+    setDraftLink(nextLink);
+    setDescription(nextDescription);
+    setCustomFields(nextCustom);
+    customFieldsRef.current = nextCustom;
     if (annotationsSaveTimerRef.current == null) {
-      const nextAnnot = sanitizeCardAnnotations(c.annotations);
       annotationsRef.current = nextAnnot;
       setAnnotations(nextAnnot);
     }
-    setRating(clampCardRating(c.rating));
+    setRating(nextRating);
+    assignCommitted(c.id, {
+      name: nextName,
+      linkUrl: nextLink,
+      description: nextDescription,
+      rating: nextRating,
+      customFields: nextCustom,
+      annotations: nextAnnot
+    });
     setCard(c);
     cardRef.current = c;
     const gridSize = readGridSize();
@@ -812,7 +861,7 @@ export default function CardDetailOverlay({
 
   useEffect(() => {
     return () => {
-      flushPendingDetailFieldsRef.current(cardIdRef.current);
+      flushPendingDetailFieldsRef.current(cardIdRef.current, false);
       if (descriptionSaveTimerRef.current) window.clearTimeout(descriptionSaveTimerRef.current);
       if (nameSaveTimerRef.current) window.clearTimeout(nameSaveTimerRef.current);
       if (linkSaveTimerRef.current) window.clearTimeout(linkSaveTimerRef.current);
@@ -823,6 +872,7 @@ export default function CardDetailOverlay({
         void updateCardPayload(lastAnnotationsCardIdRef.current, { annotations: annotationsRef.current });
       }
       if (copyAlertTimerRef.current) window.clearTimeout(copyAlertTimerRef.current);
+      editHistoryRef.current.clear();
     };
   }, []);
 
@@ -831,10 +881,11 @@ export default function CardDetailOverlay({
       if (descriptionSaveTimerRef.current) window.clearTimeout(descriptionSaveTimerRef.current);
       descriptionSaveTimerRef.current = window.setTimeout(() => {
         descriptionSaveTimerRef.current = null;
-        void updateCardPayload(cardId, { description: next }).then(() => reloadCard(cardId));
+        recordCommittedSave(cardId, { description: next });
+        void updateCardPayload(cardId, { description: next });
       }, DESCRIPTION_SAVE_MS);
     },
-    [cardId, reloadCard]
+    [cardId]
   );
 
   const fitDescriptionTextarea = useCallback((opts?: { animate?: boolean }) => {
@@ -912,10 +963,11 @@ export default function CardDetailOverlay({
       if (nameSaveTimerRef.current) window.clearTimeout(nameSaveTimerRef.current);
       nameSaveTimerRef.current = window.setTimeout(() => {
         nameSaveTimerRef.current = null;
-        void updateCardPayload(cardId, { name: next }).then(() => reloadCard(cardId));
+        recordCommittedSave(cardId, { name: next });
+        void updateCardPayload(cardId, { name: next });
       }, FIELD_SAVE_MS);
     },
-    [cardId, reloadCard]
+    [cardId]
   );
 
   const scheduleLinkSave = useCallback(
@@ -923,10 +975,11 @@ export default function CardDetailOverlay({
       if (linkSaveTimerRef.current) window.clearTimeout(linkSaveTimerRef.current);
       linkSaveTimerRef.current = window.setTimeout(() => {
         linkSaveTimerRef.current = null;
-        void updateCardPayload(cardId, { linkUrl: next }).then(() => reloadCard(cardId));
+        recordCommittedSave(cardId, { linkUrl: next });
+        void updateCardPayload(cardId, { linkUrl: next });
       }, FIELD_SAVE_MS);
     },
-    [cardId, reloadCard]
+    [cardId]
   );
 
   const scheduleCustomFieldsSave = useCallback(
@@ -934,10 +987,11 @@ export default function CardDetailOverlay({
       if (customFieldsSaveTimerRef.current) window.clearTimeout(customFieldsSaveTimerRef.current);
       customFieldsSaveTimerRef.current = window.setTimeout(() => {
         customFieldsSaveTimerRef.current = null;
-        void updateCardPayload(cardId, { customFields: customFieldsRef.current }).then(() => reloadCard(cardId));
+        recordCommittedSave(cardId, { customFields: customFieldsRef.current });
+        void updateCardPayload(cardId, { customFields: customFieldsRef.current });
       }, FIELD_SAVE_MS);
     },
-    [cardId, reloadCard]
+    [cardId]
   );
 
   const scheduleAnnotationsSave = useCallback(
@@ -975,25 +1029,19 @@ export default function CardDetailOverlay({
 
   const commitAnnotations = useCallback(
     (updater: (prev: CardAnnotationV1[]) => CardAnnotationV1[], options?: { recordUndo?: boolean }) => {
-      setAnnotations((prev) => {
-        if (options?.recordUndo !== false) {
-          annotationUndoRef.current.push(prev);
-          if (annotationUndoRef.current.length > 12) annotationUndoRef.current.shift();
-        }
-        const next = updater(prev);
-        annotationsRef.current = next;
-        scheduleAnnotationsSave(next);
-        return next;
-      });
+      const prev = annotationsRef.current;
+      const next = updater(prev);
+      annotationsRef.current = next;
+      if (options?.recordUndo !== false) {
+        recordCommittedSave(cardIdRef.current, { annotations: next });
+      } else if (committedCardIdRef.current === cardIdRef.current) {
+        committedRef.current = applyPatchToCommitted(committedRef.current, { annotations: next });
+      }
+      scheduleAnnotationsSave(next);
+      setAnnotations(next);
     },
     [scheduleAnnotationsSave]
   );
-
-  const undoAnnotation = useCallback(() => {
-    const snapshot = annotationUndoRef.current.pop();
-    if (!snapshot) return;
-    commitAnnotations(() => snapshot, { recordUndo: false });
-  }, [commitAnnotations]);
 
   const duplicateAnnotation = useCallback(
     (id: string) => {
@@ -1202,9 +1250,135 @@ export default function CardDetailOverlay({
     return () => window.removeEventListener('pointermove', onMove);
   }, [annotationComposer, commentMode, inTrash]);
 
+  const applyEditPatchLocal = useCallback((targetId: string, patch: CardDetailEditPatch) => {
+    const cached = cardCacheRef.current.get(targetId);
+    if (cached) {
+      const nextCached: CardRecord = { ...cached };
+      if (patch.name !== undefined) {
+        const trimmed = patch.name.trim();
+        if (trimmed) nextCached.name = trimmed;
+        else delete nextCached.name;
+      }
+      if (patch.linkUrl !== undefined) {
+        const trimmed = patch.linkUrl.trim();
+        if (trimmed) nextCached.linkUrl = trimmed;
+        else delete nextCached.linkUrl;
+      }
+      if (patch.description !== undefined) {
+        const trimmed = patch.description.trim();
+        if (trimmed) nextCached.description = trimmed;
+        else delete nextCached.description;
+      }
+      if (patch.customFields !== undefined) {
+        nextCached.customFields = cloneCustomFields(sanitizeCustomFieldsMap(patch.customFields));
+      }
+      if (patch.rating !== undefined) {
+        const rating = clampCardRating(patch.rating);
+        if (rating > 0) nextCached.rating = rating;
+        else delete nextCached.rating;
+      }
+      if (patch.annotations !== undefined) {
+        nextCached.annotations = cloneAnnotations(sanitizeCardAnnotations(patch.annotations));
+      }
+      cardCacheRef.current.set(targetId, nextCached);
+    }
+
+    if (cardIdRef.current !== targetId) return;
+    if (committedCardIdRef.current === targetId) {
+      committedRef.current = applyPatchToCommitted(committedRef.current, patch);
+    }
+    if (patch.name !== undefined) {
+      setDraftName(patch.name);
+      draftNameRef.current = patch.name;
+    }
+    if (patch.linkUrl !== undefined) {
+      setDraftLink(patch.linkUrl);
+      draftLinkRef.current = patch.linkUrl;
+    }
+    if (patch.description !== undefined) {
+      setDescription(patch.description);
+      descriptionRef.current = patch.description;
+    }
+    if (patch.customFields !== undefined) {
+      const next = cloneCustomFields(sanitizeCustomFieldsMap(patch.customFields));
+      customFieldsRef.current = next;
+      setCustomFields(next);
+    }
+    if (patch.rating !== undefined) {
+      setRating(clampCardRating(patch.rating));
+    }
+    if (patch.annotations !== undefined) {
+      const next = cloneAnnotations(sanitizeCardAnnotations(patch.annotations));
+      annotationsRef.current = next;
+      setAnnotations(next);
+    }
+    setCard((prev) => {
+      if (!prev || prev.id !== targetId) return prev;
+      return cardCacheRef.current.get(targetId) ?? prev;
+    });
+  }, []);
+
+  const discardPendingFieldEdits = useCallback(() => {
+    if (nameSaveTimerRef.current) {
+      window.clearTimeout(nameSaveTimerRef.current);
+      nameSaveTimerRef.current = null;
+    }
+    if (linkSaveTimerRef.current) {
+      window.clearTimeout(linkSaveTimerRef.current);
+      linkSaveTimerRef.current = null;
+    }
+    if (descriptionSaveTimerRef.current) {
+      window.clearTimeout(descriptionSaveTimerRef.current);
+      descriptionSaveTimerRef.current = null;
+    }
+    if (customFieldsSaveTimerRef.current) {
+      window.clearTimeout(customFieldsSaveTimerRef.current);
+      customFieldsSaveTimerRef.current = null;
+    }
+    const committed = committedRef.current;
+    setDraftName(committed.name);
+    draftNameRef.current = committed.name;
+    setDraftLink(committed.linkUrl);
+    draftLinkRef.current = committed.linkUrl;
+    setDescription(committed.description);
+    descriptionRef.current = committed.description;
+    const custom = cloneCustomFields(committed.customFields);
+    customFieldsRef.current = custom;
+    setCustomFields(custom);
+    setRating(committed.rating);
+  }, []);
+
+  const persistPendingAnnotations = useCallback(() => {
+    if (!annotationsSaveTimerRef.current) return;
+    window.clearTimeout(annotationsSaveTimerRef.current);
+    annotationsSaveTimerRef.current = null;
+    const annotCardId = lastAnnotationsCardIdRef.current;
+    if (annotCardId) {
+      void updateCardPayload(annotCardId, { annotations: annotationsRef.current });
+    }
+  }, []);
+
+  const runDetailHistory = useCallback(
+    (direction: 'undo' | 'redo') => {
+      if (direction === 'undo') {
+        flushPendingDetailFieldsRef.current(cardIdRef.current, true);
+      } else {
+        discardPendingFieldEdits();
+      }
+      persistPendingAnnotations();
+      const entry = direction === 'undo' ? editHistoryRef.current.undo() : editHistoryRef.current.redo();
+      if (!entry) return;
+      const patch = direction === 'undo' ? entry.before : entry.after;
+      applyEditPatchLocal(entry.cardId, patch);
+      void updateCardPayload(entry.cardId, patch);
+    },
+    [applyEditPatchLocal, discardPendingFieldEdits, persistPendingAnnotations]
+  );
+
   const applyRating = useCallback(
     (next: number) => {
       const value = clampCardRating(next);
+      recordCommittedSave(cardId, { rating: value });
       setRating(value);
       void updateCardPayload(cardId, { rating: value }).then(() => {
         // Пока шла запись, карточку могли переключить — не подменять открытую деталку.
@@ -1408,27 +1582,19 @@ export default function CardDetailOverlay({
     const clipboard = getCardSettingsClipboard();
     if (!card || !clipboard) return;
 
-    if (descriptionSaveTimerRef.current) {
-      window.clearTimeout(descriptionSaveTimerRef.current);
-      descriptionSaveTimerRef.current = null;
-    }
-    if (nameSaveTimerRef.current) {
-      window.clearTimeout(nameSaveTimerRef.current);
-      nameSaveTimerRef.current = null;
-    }
-    if (linkSaveTimerRef.current) {
-      window.clearTimeout(linkSaveTimerRef.current);
-      linkSaveTimerRef.current = null;
-    }
-    if (customFieldsSaveTimerRef.current) {
-      window.clearTimeout(customFieldsSaveTimerRef.current);
-      customFieldsSaveTimerRef.current = null;
-    }
+    discardPendingFieldEdits();
 
     const patch = buildCardSettingsApplyPatch(clipboard, {
       validTagIds: new Set(tagsIndex.keys()),
       validCollectionIds: new Set(collectionsById.keys())
     });
+
+    const historyPatch: CardDetailEditPatch = {};
+    if (patch.name !== undefined) historyPatch.name = patch.name;
+    if (patch.linkUrl !== undefined) historyPatch.linkUrl = patch.linkUrl;
+    if (patch.description !== undefined) historyPatch.description = patch.description;
+    if (patch.customFields !== undefined) historyPatch.customFields = patch.customFields;
+    recordCommittedSave(card.id, historyPatch);
 
     await updateCardPayload(card.id, patch);
     syncCardDetailDraftsFromPatch(patch, {
@@ -1448,7 +1614,7 @@ export default function CardDetailOverlay({
 
     await reloadCard(card.id);
     showCopyAlert('Настройки применены');
-  }, [card, tagsIndex, collectionsById, reloadCard, showCopyAlert]);
+  }, [card, tagsIndex, collectionsById, discardPendingFieldEdits, reloadCard, showCopyAlert]);
 
   useCardDetailVideoShortcuts({
     enabled: card?.type === 'video',
@@ -1502,6 +1668,18 @@ export default function CardDetailOverlay({
         return;
       }
 
+      if (!detailLayerOpen && matchesShortcut(e, 'detail.undo')) {
+        e.preventDefault();
+        runDetailHistory('undo');
+        return;
+      }
+
+      if (!detailLayerOpen && matchesShortcut(e, 'detail.redo')) {
+        e.preventDefault();
+        runDetailHistory('redo');
+        return;
+      }
+
       if (matchesShortcut(e, 'detail.commentMode') && !inTrash) {
         e.preventDefault();
         setCommentMode((prev) => !prev);
@@ -1522,11 +1700,6 @@ export default function CardDetailOverlay({
         if (matchesShortcut(e, 'detail.annotationOpen') && focusedAnnotationId) {
           e.preventDefault();
           handleSelectAnnotation(focusedAnnotationId);
-          return;
-        }
-        if (matchesShortcut(e, 'detail.annotationUndo')) {
-          e.preventDefault();
-          undoAnnotation();
           return;
         }
         if (matchesShortcut(e, 'detail.annotationDuplicate') && focusedAnnotationId) {
@@ -1554,7 +1727,7 @@ export default function CardDetailOverlay({
     annotations.length,
     neighborCardIds,
     openViewingCard,
-    undoAnnotation
+    runDetailHistory
   ]);
 
   const copyId = async () => {

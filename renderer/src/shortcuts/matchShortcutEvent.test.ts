@@ -37,10 +37,12 @@ describe('matchesShortcut', () => {
     const undo = keyEvent({ key: 'я', code: 'KeyZ', ctrlKey: true });
     expect(matchesShortcut(undo, 'viewer.undo')).toBe(true);
     expect(matchesShortcut(undo, 'moodboard.undo')).toBe(true);
+    expect(matchesShortcut(undo, 'detail.undo')).toBe(true);
 
     // Ctrl+н (KeyY) → redo
     const redo = keyEvent({ key: 'н', code: 'KeyY', ctrlKey: true });
     expect(matchesShortcut(redo, 'viewer.redo')).toBe(true);
+    expect(matchesShortcut(redo, 'detail.redo')).toBe(true);
   });
 
   it('matches navigation back with Alt+ArrowLeft', () => {
