@@ -415,6 +415,32 @@ contextBridge.exposeInMainWorld('arc', {
     ipcRenderer.on('arc:renderer-shortcut', fn);
     return () => ipcRenderer.removeListener('arc:renderer-shortcut', fn);
   },
+  onAppMenuAction: (
+    cb: (
+      action:
+        | { type: 'navigate'; path: string; deliveryId: number }
+        | { type: 'import-files'; paths: string[]; deliveryId: number }
+    ) => void
+  ) => {
+    const fn = (
+      _: unknown,
+      action:
+        | { type: 'navigate'; path: string; deliveryId: number }
+        | { type: 'import-files'; paths: string[]; deliveryId: number }
+    ) => {
+      cb(action);
+    };
+    ipcRenderer.on('arc:app-menu-action', fn);
+    return () => ipcRenderer.removeListener('arc:app-menu-action', fn);
+  },
+  takePendingAppMenuAction: () =>
+    ipcRenderer.invoke('arc:app-menu-take-pending') as Promise<
+      | { type: 'navigate'; path: string; deliveryId: number }
+      | { type: 'import-files'; paths: string[]; deliveryId: number }
+      | null
+    >,
+  showMainWindowFromMenu: () =>
+    ipcRenderer.invoke('arc:show-main-window-from-menu') as Promise<{ ok: boolean }>,
 
   getAppVersion: () => ipcRenderer.invoke('arc:get-app-version') as Promise<string>,
   getReleaseNotes: (version?: string) =>

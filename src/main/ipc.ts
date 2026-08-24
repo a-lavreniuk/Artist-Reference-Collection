@@ -158,6 +158,37 @@ function mediaPickerExtensions(): string[] {
   return [...merged].sort((a, b) => a.localeCompare(b));
 }
 
+function mediaOpenDialogOptions(): OpenDialogOptions {
+  const combined = mediaPickerExtensions();
+  return {
+    properties: ['openFile', 'multiSelections'],
+    filters: [
+      { name: 'Изображения и видео', extensions: combined },
+      {
+        name: 'Изображения',
+        extensions: [...IMAGE_EXT].map((x) => x.slice(1))
+      },
+      {
+        name: 'Видео',
+        extensions: [...VIDEO_EXT].map((x) => x.slice(1)).sort((a, b) => a.localeCompare(b))
+      },
+      { name: 'Все файлы', extensions: ['*'] }
+    ]
+  };
+}
+
+/** Диалог выбора файлов для импорта. Без привязки к окну — если главное окно скрыто (трей). */
+export async function pickMediaFilesForImport(options?: { attachToWindow?: boolean }): Promise<string[]> {
+  const dialogOptions = mediaOpenDialogOptions();
+  const attach = options?.attachToWindow !== false;
+  const res = attach
+    ? await showOpenDialogAttached(dialogOptions)
+    : await dialog.showOpenDialog(dialogOptions);
+  if (res.canceled) return [];
+  allowMediaStagingPaths(res.filePaths);
+  return res.filePaths;
+}
+
 export type ImportedMediaRow = {
   id: string;
   type: 'image' | 'video';
@@ -492,27 +523,7 @@ export function registerArcIpc(): void {
     return res.filePaths;
   });
 
-  ipcMain.handle('arc:pick-media-files', async () => {
-    const combined = mediaPickerExtensions();
-    const res = await showOpenDialogAttached({
-      properties: ['openFile', 'multiSelections'],
-      filters: [
-        { name: 'Изображения и видео', extensions: combined },
-        {
-          name: 'Изображения',
-          extensions: [...IMAGE_EXT].map((x) => x.slice(1))
-        },
-        {
-          name: 'Видео',
-          extensions: [...VIDEO_EXT].map((x) => x.slice(1)).sort((a, b) => a.localeCompare(b))
-        },
-        { name: 'Все файлы', extensions: ['*'] }
-      ]
-    });
-    if (res.canceled) return [];
-    allowMediaStagingPaths(res.filePaths);
-    return res.filePaths;
-  });
+  ipcMain.handle('arc:pick-media-files', async () => pickMediaFilesForImport({ attachToWindow: true }));
 
   ipcMain.handle('arc:classify-dropped-paths', async (_e, absolutePaths: unknown) => {
     if (!Array.isArray(absolutePaths) || !absolutePaths.every((x) => typeof x === 'string')) {

@@ -9,6 +9,7 @@ import SettingsNavbarPanelPage from './pages/SettingsNavbarPanelPage';
 import TagsPage from './pages/TagsPage';
 import DuplicatesPage from './pages/DuplicatesPage';
 import { useArcMoodboardLibraryDiag } from './debug/diagHook';
+import { useAppMenuActions } from './hooks/useAppMenuActions';
 
 const BoardPage = lazy(() => import('./pages/BoardPage'));
 const UiKitPage = lazy(() => import('./ui-kit/UiKitPage'));
@@ -62,6 +63,7 @@ function RouteFallback() {
 
 export default function App() {
   useArcMoodboardLibraryDiag();
+  useAppMenuActions();
 
   return (
     <OnboardingGate>

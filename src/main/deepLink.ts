@@ -1,6 +1,8 @@
 import { app } from 'electron';
 import path from 'path';
 
+import { parseAppMenuCommandFromArgv } from './appMenuCommandParse';
+import { runAppMenuCommand } from './appMenuCommands';
 import { showMainWindowFromUserAction } from './windowChrome';
 
 export const ARC_PROTOCOL = 'arc';
@@ -59,6 +61,11 @@ export function bindDeepLinkSingleInstance(): boolean {
   }
 
   app.on('second-instance', (_event, commandLine) => {
+    const menuCommand = parseAppMenuCommandFromArgv(commandLine);
+    if (menuCommand) {
+      void runAppMenuCommand(menuCommand);
+      return;
+    }
     handleDeepLink(extractDeepLinkFromArgv(commandLine));
     focusMainApplicationWindow();
   });

@@ -34,6 +34,8 @@ import { startImportApiServer, stopImportApiServer } from './importApi/importApi
 import { startMcpServer, stopMcpServer } from './mcp/mcpHost';
 import { registerMcpSetupIpc } from './mcp/mcpSetupClipboard';
 import { createAppTray, destroyAppTray } from './tray';
+import { consumeStartupAppMenuCommand, registerAppMenuIpc } from './appMenuCommands';
+import { isSilentStartupAppMenuCommand, parseAppMenuCommandFromArgv } from './appMenuCommandParse';
 import { bindFileDropGuards } from './fileDropGuards';
 import { bindRendererShortcuts } from './rendererShortcuts';
 import { applyStoredLaunchAtLogin, readAppPreferences, readAppPreferencesSync, registerAppPreferencesIpc, shouldStartHiddenInTray } from './appPreferences';
@@ -188,7 +190,10 @@ app.whenReady().then(async () => {
 
   const prefsEarly = await readAppPreferences();
   const needsSetupEarly = needsOnboardingSetup(readLibraryRootSync(), prefsEarly.onboardingSetupCompleted);
-  const startHiddenInTray = shouldStartHiddenInTray(prefsEarly, needsSetupEarly);
+  const startupMenuCommand = parseAppMenuCommandFromArgv(process.argv);
+  const startHiddenInTray =
+    shouldStartHiddenInTray(prefsEarly, needsSetupEarly) ||
+    isSilentStartupAppMenuCommand(startupMenuCommand);
   await applyStoredLaunchAtLogin();
 
   if (startHiddenInTray) {
@@ -228,6 +233,7 @@ app.whenReady().then(async () => {
   registerAppPreferencesIpc();
   registerMcpSetupIpc();
   registerWindowChromeIpc();
+  registerAppMenuIpc();
   registerScreenshotIpc();
   registerScreenshotPickerIpc();
   registerScreenshotWindowPickerIpc();
@@ -258,6 +264,7 @@ app.whenReady().then(async () => {
   createAppTray();
   initArcUpdater();
   consumePendingDeepLink();
+  consumeStartupAppMenuCommand();
 
   app.on('activate', () => {
     if (process.platform === 'darwin') {

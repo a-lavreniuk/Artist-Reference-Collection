@@ -1,34 +1,27 @@
-import { app, Menu, Tray } from 'electron';
+import { Menu, Tray } from 'electron';
 
-import { setAppQuitting, showMainWindowFromUserAction } from './windowChrome';
-
+import { applyOsAppMenus, buildAppMenuTemplate } from './appMenuCommands';
+import { showMainWindowFromUserAction } from './windowChrome';
 import { loadAppIconImage } from './appIcon';
 
 let tray: Tray | null = null;
+
+export function refreshAppTrayMenu(): void {
+  if (!tray) return;
+  tray.setContextMenu(Menu.buildFromTemplate(buildAppMenuTemplate()));
+}
+
+export function refreshAppMenuSurfaces(): void {
+  refreshAppTrayMenu();
+  applyOsAppMenus();
+}
 
 export function createAppTray(): Tray {
   const trayIcon = loadAppIconImage(16);
   tray = new Tray(trayIcon);
   tray.setToolTip('ARC');
-
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Открыть ARC',
-      click: () => {
-        showMainWindowFromUserAction();
-      }
-    },
-    { type: 'separator' },
-    {
-      label: 'Выход',
-      click: () => {
-        setAppQuitting();
-        app.quit();
-      }
-    }
-  ]);
-
-  tray.setContextMenu(contextMenu);
+  refreshAppTrayMenu();
+  applyOsAppMenus();
 
   tray.on('click', () => {
     showMainWindowFromUserAction();

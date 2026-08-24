@@ -735,6 +735,7 @@ export async function writeAppPreferences(patch: Partial<AppPreferencesV1>): Pro
     'screenshotRetina2x' in patch
   ) {
     registerScreenshotShortcut();
+    void import('./tray').then((m) => m.refreshAppMenuSurfaces());
   }
   if (
     'autoImportEnabled' in patch ||

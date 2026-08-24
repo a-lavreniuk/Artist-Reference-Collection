@@ -79,6 +79,10 @@ async function onScreenshotMode(mode: ScreenshotMode): Promise<void> {
   });
 }
 
+export function startAreaScreenshot(): void {
+  void onScreenshotMode('area');
+}
+
 export function registerScreenshotShortcuts(): void {
   unregisterScreenshotShortcuts();
 

@@ -209,6 +209,17 @@ export function showMainWindow(options?: ShowMainWindowOptions): void {
   win.focus();
 }
 
+export function hideMainWindow(): void {
+  const win = resolveTargetWindow();
+  if (!win || win.isDestroyed()) return;
+  win.hide();
+}
+
+export function isMainWindowVisible(): boolean {
+  const win = resolveTargetWindow();
+  return Boolean(win && !win.isDestroyed() && win.isVisible());
+}
+
 /** Показ окна по действию пользователя (Dock, трей, deep link) с учётом onboarding. */
 export function showMainWindowFromUserAction(): void {
   if (isScreenshotCaptureInFlight()) return;

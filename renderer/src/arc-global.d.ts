@@ -369,6 +369,19 @@ declare global {
       }) => Promise<{ ok: true; token: string } | { ok: false; error: string }>;
       onMaintenance: (cb: (locked: boolean, meta?: { silentUi?: boolean }) => void) => () => void;
       onRendererShortcut?: (cb: (id: string) => void) => () => void;
+      onAppMenuAction?: (
+        cb: (
+          action:
+            | { type: 'navigate'; path: string; deliveryId: number }
+            | { type: 'import-files'; paths: string[]; deliveryId: number }
+        ) => void
+      ) => () => void;
+      takePendingAppMenuAction?: () => Promise<
+        | { type: 'navigate'; path: string; deliveryId: number }
+        | { type: 'import-files'; paths: string[]; deliveryId: number }
+        | null
+      >;
+      showMainWindowFromMenu?: () => Promise<{ ok: boolean }>;
 
       getAppVersion: () => Promise<string>;
       getReleaseNotes: (version?: string) => Promise<{ buildDate: string; changes: string[] } | null>;

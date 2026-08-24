@@ -41,6 +41,10 @@ import { useImportDropzonePerimeterDash } from './useImportDropzonePerimeterDash
 import { bulkAddToCollection } from '../gallery/galleryBulkActions';
 import type { CollectionRecord } from '../../services/arcSchema';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import {
+  APP_MENU_IMPORT_FILES_EVENT,
+  takeStashedAppMenuImportPaths
+} from '../../hooks/useAppMenuActions';
 
 function isFileDragEvent(e: DragEvent): boolean {
   const dt = e.dataTransfer;
@@ -114,6 +118,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const emptyFolderResolverRef = useRef<(() => void) | null>(null);
   const importFlowResolverRef = useRef<(() => void) | null>(null);
   const overlayOpenedManuallyRef = useRef(false);
+  const pendingMenuImportRef = useRef<string[] | null>(null);
   const isDraggingFilesRef = useRef(false);
   const suppressFileDragRef = useRef(false);
   const ctaWrapRef = useRef<HTMLDivElement>(null);
@@ -635,6 +640,52 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     document.addEventListener('paste', onPaste, true);
     return () => document.removeEventListener('paste', onPaste, true);
   }, [enqueueJob, libraryOpen, location.pathname]);
+
+  const startMenuImport = useCallback(
+    (paths: string[]) => {
+      if (paths.length === 0) return;
+      if (!libraryOpen) {
+        pendingMenuImportRef.current = paths;
+        void window.arc?.showMainWindowFromMenu?.();
+        return;
+      }
+      pendingMenuImportRef.current = null;
+      enqueueJob({ kind: 'files', paths });
+    },
+    [enqueueJob, libraryOpen]
+  );
+
+  useEffect(() => {
+    const onMenuImport = (event: Event) => {
+      takeStashedAppMenuImportPaths();
+      const paths = (event as CustomEvent<string[]>).detail;
+      if (!Array.isArray(paths) || paths.length === 0) return;
+      startMenuImport(paths);
+    };
+    window.addEventListener(APP_MENU_IMPORT_FILES_EVENT, onMenuImport);
+    return () => window.removeEventListener(APP_MENU_IMPORT_FILES_EVENT, onMenuImport);
+  }, [startMenuImport]);
+
+  useEffect(() => {
+    const stashed = takeStashedAppMenuImportPaths();
+    if (stashed) pendingMenuImportRef.current = stashed;
+    const paths = pendingMenuImportRef.current;
+    if (!paths || !libraryOpen) return;
+    pendingMenuImportRef.current = null;
+    enqueueJob({ kind: 'files', paths });
+  }, [enqueueJob, libraryOpen]);
+
+  useEffect(() => {
+    const needsWindow =
+      phase === 'source-modal' ||
+      phase === 'duplicate-modal' ||
+      phase === 'folder-modal' ||
+      phase === 'failures-modal' ||
+      phase === 'cancel-keep-modal' ||
+      emptyFolderName != null;
+    if (!needsWindow) return;
+    void window.arc?.showMainWindowFromMenu?.();
+  }, [emptyFolderName, phase]);
 
   const closeDuplicateModal = useCallback(() => {
     setDuplicateConflicts([]);
