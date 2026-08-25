@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CollectionRecord } from '../../services/db';
@@ -20,8 +20,6 @@ type Props = {
   onSelectCollection: (collectionId: string) => void;
   onReorderCollection: (collectionId: string, insertIndex: number) => void;
   onAddCollection: () => void;
-  onAddSection: (parentId: string) => void;
-  onEditCollection: (collectionId: string) => void;
   onCollectionContextMenu?: (collectionId: string, event: React.MouseEvent) => void;
 };
 
@@ -36,14 +34,11 @@ export default function CollectionsPageSidebar({
   onSelectCollection,
   onReorderCollection,
   onAddCollection,
-  onAddSection,
-  onEditCollection,
   onCollectionContextMenu
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const skipSelectClickRef = useRef(false);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const handleReorder = useCallback(
     (id: string, insertIndex: number) => {
@@ -61,7 +56,7 @@ export default function CollectionsPageSidebar({
     if (rootRef.current) {
       void hydrateArcNavbarIcons(rootRef.current);
     }
-  }, [collections, selectedCollectionId, dragState, counts, collapsedIds, hoveredId]);
+  }, [collections, selectedCollectionId, dragState, counts, collapsedIds]);
 
   useLayoutEffect(() => {
     if (!dragState) return;
@@ -100,13 +95,8 @@ export default function CollectionsPageSidebar({
           data-collections-row={collection.id}
           data-sibling-group={options.siblingGroup}
           role="presentation"
-          onMouseEnter={() => setHoveredId(collection.id)}
-          onMouseLeave={() => setHoveredId((current) => (current === collection.id ? null : current))}
           onContextMenu={(event) => {
             if (dragState) return;
-            if (event.target instanceof Element && event.target.closest('.arc-tags-sidebar-row-edit')) {
-              return;
-            }
             onCollectionContextMenu?.(collection.id, event);
           }}
         >
@@ -125,15 +115,11 @@ export default function CollectionsPageSidebar({
               >
                 <span
                   className={`context-menu__item-icon tab-icon arc-icon-chevron ${collapsed ? 'arc-chevron-point-right' : 'arc-chevron-point-down'}`}
-                  data-arc-icon-size="s"
+                  data-arc-icon-size="m"
                   aria-hidden="true"
                 />
               </button>
-            ) : options.nested ? (
-              <span className="arc-collections-page-sidebar__nest-mark" aria-hidden="true" />
-            ) : (
-              <span className="arc-collections-page-sidebar__chevron-spacer" aria-hidden="true" />
-            )}
+            ) : null}
             <button
               type="button"
               className="arc-tags-sidebar-row-select"
@@ -172,37 +158,22 @@ export default function CollectionsPageSidebar({
             {!options.nested ? (
               <button
                 type="button"
-                className={`arc-collections-page-sidebar__add-section${hoveredId === collection.id ? ' is-visible' : ''}`}
-                aria-label={`Добавить раздел в «${collection.name}»`}
+                className="arc-collections-page-sidebar__add-section"
+                aria-label={`Действия с коллекцией «${collection.name}»`}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onAddSection(collection.id);
+                  onCollectionContextMenu?.(collection.id, e);
                 }}
               >
                 <span
-                  className="context-menu__item-icon tab-icon arc-icon-plus"
-                  data-arc-icon-size="s"
+                  className="context-menu__item-icon tab-icon arc-icon-plus-square"
+                  data-arc-icon-size="m"
                   aria-hidden="true"
                 />
               </button>
             ) : null}
-            <button
-              type="button"
-              className="arc-tags-sidebar-row-edit"
-              aria-label={`Редактировать «${collection.name}»`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onEditCollection(collection.id);
-              }}
-            >
-              <span
-                className="context-menu__item-icon tab-icon arc-icon-edit"
-                data-arc-icon-size="m"
-                aria-hidden="true"
-              />
-            </button>
           </div>
         </div>
         {!options.nested && children.length > 0 && !collapsed ? (

@@ -606,8 +606,6 @@ export default function CollectionsPage() {
           }}
           onReorderCollection={(id, insertIndex) => reorderCollectionToIndex(id, insertIndex)}
           onAddCollection={() => setCollectionModal({ mode: 'create' })}
-          onAddSection={(parentId) => setCollectionModal({ mode: 'create', parentId })}
-          onEditCollection={openEditCollection}
           onCollectionContextMenu={openCollectionContextMenu}
         />
 

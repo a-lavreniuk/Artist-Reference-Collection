@@ -1743,14 +1743,18 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
     justify-content: flex-start;
   }
 
+  .arc-collections-page-sidebar .arc-tags-sidebar-row-inner {
+    gap: var(--s-1);
+  }
+
   .arc-collections-page-sidebar__chevron,
   .arc-collections-page-sidebar__add-section {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--s-6);
-    height: var(--s-6);
+    width: var(--tab-icon-size);
+    height: var(--tab-icon-size);
     padding: 0;
     border: 0;
     background: transparent;
@@ -1758,37 +1762,33 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
     cursor: pointer;
   }
 
-  .arc-collections-page-sidebar__chevron-spacer,
-  .arc-collections-page-sidebar__nest-mark {
-    flex: 0 0 var(--s-6);
-    width: var(--s-6);
+  .arc-collections-page-sidebar__chevron .context-menu__item-icon,
+  .arc-collections-page-sidebar__add-section .context-menu__item-icon {
+    width: var(--tab-icon-size);
+    min-width: var(--tab-icon-size);
+    height: var(--tab-icon-size);
   }
 
-  .arc-collections-page-sidebar__add-section {
-    opacity: 0;
-  }
-
-  .arc-collections-page-sidebar__add-section.is-visible,
-  .arc-tags-sidebar-row:hover .arc-collections-page-sidebar__add-section,
-  .arc-tags-sidebar-row:focus-within .arc-collections-page-sidebar__add-section {
-    opacity: 1;
+  .arc-collections-page-sidebar__chevron:focus-visible,
+  .arc-collections-page-sidebar__add-section:focus-visible {
+    outline: 2px solid var(--input-border-focus);
+    outline-offset: -2px;
+    border-radius: var(--radius-s);
   }
 
   .arc-collections-page-sidebar__children {
     position: relative;
-    margin-left: var(--s-4);
-    padding-left: var(--s-3);
+    margin-left: var(--s-3);
+    padding: var(--s-1) 0 var(--s-1) var(--s-1);
   }
 
   .arc-collections-page-sidebar__children::before {
     content: '';
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: var(--s-1);
+    bottom: var(--s-1);
     left: 0;
-    border-left: 2px solid var(--panel-border);
-    background: transparent;
-    width: auto;
+    border-left: 1px solid var(--panel-border);
   }
 
   .arc-collections-page-sidebar__item--section .context-menu__item-label {
