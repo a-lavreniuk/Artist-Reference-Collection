@@ -107,6 +107,7 @@ export default function NavbarGalleryLayoutMenu({ disabled = false }: Props) {
         rows={rows}
         ariaLabel="Вид галереи"
         noDragClassName="arc-navbar-no-drag"
+        panelClassName="context-menu--unbounded"
       />
     </span>
   );

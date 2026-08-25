@@ -97,6 +97,7 @@ export default function NavbarMenu() {
         rows={rows}
         ariaLabel="Дополнительные разделы"
         noDragClassName="arc-navbar-no-drag"
+        panelClassName="context-menu--unbounded"
       />
     </span>
   );

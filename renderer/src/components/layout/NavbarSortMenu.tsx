@@ -103,6 +103,7 @@ export default function NavbarSortMenu({ disabled = false }: Props) {
       }
     }
     if (showShuffleSort) {
+      items.push({ type: 'separator', key: 'sort-shuffle-sep-before' });
       items.push({
         type: 'item',
         key: 'sort-shuffle',
