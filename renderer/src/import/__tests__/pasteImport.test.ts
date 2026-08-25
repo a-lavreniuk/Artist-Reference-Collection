@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { collectionIdFromPathname, droppedPathsFromClipboard } from '../pasteImport';
 
 describe('collectionIdFromPathname', () => {
-  it('reads id from a collection screen', () => {
-    expect(collectionIdFromPathname('/collections/abc-123')).toBe('abc-123');
+  it('reads section id from a section screen', () => {
+    expect(collectionIdFromPathname('/collections/abc/sections/sec-1')).toBe('sec-1');
   });
 
   it('returns null outside a collection screen', () => {

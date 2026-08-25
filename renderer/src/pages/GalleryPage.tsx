@@ -21,11 +21,13 @@ import MessageModal from '../components/layout/MessageModal';
 import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemoveFromMoodboardModal';
 
 import LibraryCollectionsStrip from '../components/collections/LibraryCollectionsStrip';
+import { collectionHref } from '../components/collections/collectionHref';
 
 import { useAppPreferences } from '../hooks/useAppPreferences';
 import { useGalleryCollectionsStrip } from '../hooks/useGalleryCollectionsStrip';
 
 import {
+  addCollection,
   getMoodboardCardIds,
   isCardOnBoard,
   deleteCollection,
@@ -229,7 +231,9 @@ export default function GalleryPage() {
   const resolveStripCollection = useCallback(
     (id: string) => {
       const collection = collectionStripItems.find((item) => item.collection.id === id)?.collection;
-      return collection ? { id: collection.id, name: collection.name } : null;
+      return collection
+        ? { id: collection.id, name: collection.name, parentId: collection.parentId }
+        : null;
     },
     [collectionStripItems]
   );
@@ -237,11 +241,20 @@ export default function GalleryPage() {
   const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
     useCollectionContextMenu({
       resolveCollection: resolveStripCollection,
-      onOpen: (id) => navigate(`/collections/${id}`),
+      canMoveSection: () => false,
+      canMergeSection: () => false,
+      onOpen: (id) => {
+        const collection = collectionStripItems.find((item) => item.collection.id === id)?.collection;
+        if (collection) navigate(collectionHref(collection));
+      },
       onEdit: openEditStripCollection,
       onDelete: async (id) => {
         await deleteCollection(id);
-      }
+      },
+      onAddSection: (parentId) => setStripCollectionModal({ mode: 'create', parentId }),
+      onDuplicate: () => {},
+      onMove: () => {},
+      onMerge: () => {}
     });
 
   useEffect(() => {
@@ -467,7 +480,13 @@ export default function GalleryPage() {
           state={stripCollectionModal}
           stats={null}
           onClose={() => setStripCollectionModal(null)}
-          onCreate={async () => {}}
+          onCreate={async (payload) => {
+            const created = await addCollection(payload.name, {
+              description: payload.description,
+              parentId: payload.parentId
+            });
+            navigate(collectionHref(created));
+          }}
           onSave={async (payload) => {
             await updateCollection(payload.collectionId, {
               name: payload.name,

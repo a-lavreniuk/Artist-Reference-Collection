@@ -73,7 +73,11 @@ function readMediaAggFromDb(libraryRoot: string): MediaAgg {
       .get() as { bytes: number } | undefined;
     const trashBytes = Number(trashRow?.bytes) || 0;
 
-    const colRow = db.prepare('SELECT COUNT(*) AS n FROM collections').get() as { n: number } | undefined;
+    const colRow = db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM collections WHERE parent_id IS NULL OR TRIM(parent_id) = ''`
+      )
+      .get() as { n: number } | undefined;
     const totalCollections = Number(colRow?.n) || 0;
 
     const tagRows = db

@@ -25,7 +25,16 @@ import { useCollectionContextMenu } from '../components/collections/useCollectio
 import CollectionSettingsModal, {
   type CollectionSettingsModalState
 } from '../components/collections/CollectionSettingsModal';
+import CollectionPickTargetModal from '../components/collections/CollectionPickTargetModal';
 import CollectionsPageSidebar from '../components/collections/CollectionsPageSidebar';
+import LibraryCollectionsStrip from '../components/collections/LibraryCollectionsStrip';
+import { collectionHref } from '../components/collections/collectionHref';
+import {
+  childSections,
+  collectionParentId,
+  isCollectionSection,
+  rootCollections
+} from '@arc-main-shared/collectionHierarchy';
 import {
   clampCollectionsSidebarWidth,
   readCollectionsSidebarWidth,
@@ -38,21 +47,29 @@ import { EmptyState } from '../components/empty-state';
 import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
 import { useOpenCardUrl } from '../search/openCardUrl';
+import { matchesShortcut } from '../shortcuts/matchShortcutEvent';
+import { isRendererShortcutBlocked } from '../shortcuts/shortcutGuards';
+import { showAppNotification } from '../services/notificationService';
 import { useGalleryMeta } from '../context/GalleryMetaContext';
 import { parseSearchCardId, parseSearchTagIds } from '../search/searchUrl';
 import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedEmptyState';
 import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
+import { TruncatedTextWithTooltip } from '../components/tooltip/TruncatedTextWithTooltip';
 import {
   ARC_COLLECTIONS_CHANGED_EVENT,
   addCollection,
   deleteCollection,
+  duplicateCollection,
   getAllCollections,
   getCollectionStats,
   getCollectionsSidebarMeta,
   getMoodboardCardIds,
   isCardOnBoard,
+  mergeCollectionInto,
+  moveCollectionToParent,
   reorderCollectionToIndex,
   updateCollection,
+  type CardRecord,
   type CollectionRecord,
   type CollectionStats
 } from '../services/db';
@@ -65,7 +82,10 @@ import { useLibraryConfigured } from '../hooks/useLibraryConfigured';
 export default function CollectionsPage() {
   const { pathname } = useLocation();
   const isCollectionsRoute = pathname.startsWith('/collections');
-  const { collectionId: routeCollectionId } = useParams<{ collectionId?: string }>();
+  const { collectionId: routeCollectionId, sectionId: routeSectionId } = useParams<{
+    collectionId?: string;
+    sectionId?: string;
+  }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { filters, sort, activeCategoryCount } = useGalleryFilters();
@@ -75,10 +95,13 @@ export default function CollectionsPage() {
 
   const [collections, setCollections] = useState<CollectionRecord[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [previews, setPreviews] = useState<Record<string, CardRecord[]>>({});
   const [collectionsMetaLoaded, setCollectionsMetaLoaded] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => readCollectionsSidebarWidth());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [collectionModal, setCollectionModal] = useState<CollectionSettingsModalState | null>(null);
   const [collectionModalStats, setCollectionModalStats] = useState<CollectionStats | null>(null);
+  const [pickTarget, setPickTarget] = useState<{ mode: 'move' | 'merge'; sourceId: string } | null>(null);
 
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
   const { tagsIndex, moodboardCardIds, refreshMoodboard } = useGalleryMeta();
@@ -94,11 +117,19 @@ export default function CollectionsPage() {
   const boardRef = useRef<HTMLDivElement | null>(null);
   sidebarWidthRef.current = sidebarWidth;
 
-  const activeCollectionId = routeCollectionId ?? null;
+  const activeCollectionId = routeSectionId ?? routeCollectionId ?? null;
   const activeCollection = useMemo(
     () => collections.find((c) => c.id === activeCollectionId) ?? null,
     [collections, activeCollectionId]
   );
+  const sectionStripItems = useMemo(() => {
+    if (!routeCollectionId || routeSectionId) return [];
+    return childSections(collections, routeCollectionId).map((section) => ({
+      collection: section,
+      count: counts[section.id] ?? 0,
+      previews: previews[section.id] ?? []
+    }));
+  }, [collections, counts, previews, routeCollectionId, routeSectionId]);
 
   const scopedFeedQuery = useMemo<GalleryFeedQuery>(
     () => ({
@@ -186,9 +217,10 @@ export default function CollectionsPage() {
   });
 
   const loadMeta = useCallback(async () => {
-    const meta = await getCollectionsSidebarMeta(0);
+    const meta = await getCollectionsSidebarMeta(4);
     setCollections(meta.collections);
     setCounts(meta.counts);
+    setPreviews(meta.previews);
     setCollectionsMetaLoaded(true);
     return meta.collections;
   }, []);
@@ -239,7 +271,7 @@ export default function CollectionsPage() {
     if (pageRef.current) {
       void hydrateArcNavbarIcons(pageRef.current);
     }
-  }, [collections, activeCollectionId, feed.cards.length, collectionModal, sidebarWidth]);
+  }, [collections, activeCollectionId, activeCollection?.name, feed.cards.length, collectionModal, sidebarWidth, sectionStripItems.length]);
 
   useEffect(() => {
     const scrollEl = pageRef.current?.querySelector('.arc-collections-page-main__scroll');
@@ -341,33 +373,128 @@ export default function CollectionsPage() {
 
   const handleDeleteCollection = useCallback(
     async (id: string) => {
+      const target = collections.find((c) => c.id === id);
+      const parentId = target ? collectionParentId(target) : null;
       await deleteCollection(id);
-      const remaining = (await getAllCollections()).filter((c) => c.id !== id);
-      if (remaining.length === 0) {
+      const remaining = await getAllCollections();
+      const roots = rootCollections(remaining);
+      if (roots.length === 0) {
         navigate('/collections', { replace: true });
       } else if (activeCollectionId === id) {
-        navigate(`/collections/${remaining[0].id}`, { replace: true });
+        if (parentId && remaining.some((c) => c.id === parentId)) {
+          navigate(`/collections/${parentId}`, { replace: true });
+        } else {
+          navigate(collectionHref(roots[0]), { replace: true });
+        }
       }
       await loadMeta();
     },
-    [activeCollectionId, loadMeta, navigate]
+    [activeCollectionId, collections, loadMeta, navigate]
   );
 
   const resolveCollection = useCallback(
     (id: string) => {
       const collection = collections.find((item) => item.id === id);
-      return collection ? { id: collection.id, name: collection.name } : null;
+      return collection
+        ? { id: collection.id, name: collection.name, parentId: collection.parentId }
+        : null;
     },
     [collections]
   );
 
+  const canMoveSection = useCallback(
+    (id: string) => {
+      const source = collections.find((item) => item.id === id);
+      if (!source || !isCollectionSection(source)) return false;
+      const currentParent = collectionParentId(source);
+      return rootCollections(collections).some((item) => item.id !== currentParent);
+    },
+    [collections]
+  );
+
+  const canMergeSection = useCallback(
+    (id: string) => {
+      const source = collections.find((item) => item.id === id);
+      if (!source || !isCollectionSection(source)) return false;
+      return collections.some((item) => isCollectionSection(item) && item.id !== id);
+    },
+    [collections]
+  );
+
+  const handleDuplicateSection = useCallback(
+    async (id: string) => {
+      try {
+        const copy = await duplicateCollection(id);
+        navigate(collectionHref(copy));
+      } catch (err) {
+        showAppNotification({
+          message: err instanceof Error ? err.message : 'Не удалось создать копию',
+          variant: 'danger'
+        });
+      }
+    },
+    [navigate]
+  );
+
+  const pickItems = useMemo(() => {
+    if (!pickTarget) return [];
+    const source = collections.find((item) => item.id === pickTarget.sourceId);
+    if (pickTarget.mode === 'move') {
+      const currentParent = source ? collectionParentId(source) : null;
+      return rootCollections(collections)
+        .filter((item) => item.id !== currentParent)
+        .map((item) => ({ id: item.id, name: item.name }));
+    }
+    const sourceParent = source ? collectionParentId(source) : null;
+    return collections
+      .filter((item) => isCollectionSection(item) && item.id !== pickTarget.sourceId)
+      .map((item) => {
+        const parent = collections.find((c) => c.id === collectionParentId(item));
+        const name =
+          parent && parent.id !== sourceParent ? `${parent.name} / ${item.name}` : item.name;
+        return { id: item.id, name };
+      });
+  }, [collections, pickTarget]);
+
   const { openCollectionContextMenu, contextMenuLayer: collectionContextMenuLayer } =
     useCollectionContextMenu({
       resolveCollection,
-      onOpen: (id) => navigate(`/collections/${id}`),
+      canMoveSection,
+      canMergeSection,
+      onOpen: (id) => {
+        const item = collections.find((c) => c.id === id);
+        if (item) navigate(collectionHref(item));
+      },
       onEdit: openEditCollection,
-      onDelete: handleDeleteCollection
+      onDelete: handleDeleteCollection,
+      onAddSection: (parentId) => setCollectionModal({ mode: 'create', parentId }),
+      onDuplicate: (id) => void handleDuplicateSection(id),
+      onMove: (id) => setPickTarget({ mode: 'move', sourceId: id }),
+      onMerge: (id) => setPickTarget({ mode: 'merge', sourceId: id })
     });
+
+  useEffect(() => {
+    if (!isCollectionsRoute) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isRendererShortcutBlocked(event)) return;
+      if (document.querySelector('.arc-modal-host')) return;
+      if (matchesShortcut(event, 'collections.create')) {
+        event.preventDefault();
+        setCollectionModal({ mode: 'create' });
+        return;
+      }
+      if (matchesShortcut(event, 'collections.createSection')) {
+        event.preventDefault();
+        const parentId = routeCollectionId ?? null;
+        if (!parentId) return;
+        const parent = collections.find((item) => item.id === parentId);
+        if (!parent || isCollectionSection(parent)) return;
+        setCollectionModal({ mode: 'create', parentId });
+      }
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [collections, isCollectionsRoute, routeCollectionId]);
 
   const collectionModalNode = collectionModal ? (
     <CollectionSettingsModal
@@ -375,8 +502,11 @@ export default function CollectionsPage() {
       stats={collectionModalStats}
       onClose={() => setCollectionModal(null)}
       onCreate={async (payload) => {
-        const created = await addCollection(payload.name, { description: payload.description });
-        navigate(`/collections/${created.id}`);
+        const created = await addCollection(payload.name, {
+          description: payload.description,
+          parentId: payload.parentId
+        });
+        navigate(collectionHref(created));
       }}
       onSave={async (payload) => {
         await updateCollection(payload.collectionId, {
@@ -385,13 +515,7 @@ export default function CollectionsPage() {
         });
       }}
       onDelete={async (id) => {
-        await deleteCollection(id);
-        const remaining = (await getAllCollections()).filter((c) => c.id !== id);
-        if (remaining.length === 0) {
-          navigate('/collections', { replace: true });
-        } else if (activeCollectionId === id) {
-          navigate(`/collections/${remaining[0].id}`, { replace: true });
-        }
+        await handleDeleteCollection(id);
       }}
     />
   ) : null;
@@ -405,11 +529,21 @@ export default function CollectionsPage() {
   }
 
   if (collectionsMetaLoaded && collections.length > 0 && !routeCollectionId) {
-    return <Navigate to={`/collections/${collections[0].id}`} replace />;
+    const firstRoot = rootCollections(collections)[0];
+    if (firstRoot) return <Navigate to={collectionHref(firstRoot)} replace />;
   }
 
-  if (collectionsMetaLoaded && collections.length > 0 && routeCollectionId && !activeCollection) {
-    return <Navigate to="/collections" replace />;
+  if (collectionsMetaLoaded && routeCollectionId) {
+    const parent = collections.find((c) => c.id === routeCollectionId);
+    if (!parent || isCollectionSection(parent)) {
+      return <Navigate to="/collections" replace />;
+    }
+    if (routeSectionId) {
+      const section = collections.find((c) => c.id === routeSectionId);
+      if (!section || collectionParentId(section) !== routeCollectionId) {
+        return <Navigate to={`/collections/${routeCollectionId}`} replace />;
+      }
+    }
   }
 
   if (collectionsMetaLoaded && collections.length === 0) {
@@ -453,9 +587,26 @@ export default function CollectionsPage() {
           collections={collectionsMetaLoaded ? collections : []}
           counts={collectionsMetaLoaded ? counts : {}}
           selectedCollectionId={activeCollectionId}
-          onSelectCollection={(id) => navigate(`/collections/${id}`)}
+          collapsedIds={collapsedIds}
+          onToggleCollapsed={(id) => {
+            setCollapsedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          }}
+          onCollapseAll={() =>
+            setCollapsedIds(new Set(rootCollections(collections).map((item) => item.id)))
+          }
+          onExpandAll={() => setCollapsedIds(new Set())}
+          onSelectCollection={(id) => {
+            const item = collections.find((c) => c.id === id);
+            if (item) navigate(collectionHref(item));
+          }}
           onReorderCollection={(id, insertIndex) => reorderCollectionToIndex(id, insertIndex)}
           onAddCollection={() => setCollectionModal({ mode: 'create' })}
+          onAddSection={(parentId) => setCollectionModal({ mode: 'create', parentId })}
           onEditCollection={openEditCollection}
           onCollectionContextMenu={openCollectionContextMenu}
         />
@@ -477,48 +628,77 @@ export default function CollectionsPage() {
           data-typo-tone="white"
         >
           <div className="arc-collections-page-main__scroll">
-            {emptyState ? (
-              <EmptyState
-                {...emptyState.copy}
-                fill
-                onPrimaryAction={emptyState.onPrimaryAction}
-                onSecondaryAction={emptyState.onSecondaryAction}
-              />
-            ) : (
-              <div className="arc-collections-page-main__scroll-pad">
-                {feed.booting && !isRemoteSearchFeed && !feed.shuffleReloading ? (
-                  <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
-                    <span className="loader" aria-hidden="true" />
-                  </div>
-                ) : null}
-
-                <div className="arc-gallery-page arc-collections-gallery">
-                  <GalleryBoard
-                    cards={feed.cards}
-                    srcMap={feed.srcMap}
-                    mediaTab="collections"
-                    variant="collections"
-                    scrollRootRef={scrollRootRef}
-                    boardRef={boardRef}
-                    loadingMore={feed.loading && feed.hasMore}
-                    busy={feed.booting || feed.loading || feed.shuffleReloading}
-                    revealResetKey={galleryRevealResetKey(scopedFeedQuery)}
-                    onOpenCard={openCard}
-                    moodboardCardIds={moodboardCardIds}
-                    onCardContextMenu={onCardContextMenu}
-                    isCardSelected={multiSelect.isSelected}
-                    onCardClick={multiSelect.handleCardClick}
-                    onOpenInNewWindow={multiSelect.openInNewWindowForCard}
-                    onCardPointerDown={multiSelect.handleCardPointerDown}
-                    onCardPointerMove={multiSelect.onCardPointerMove}
-                    onCardPointerUp={multiSelect.onCardPointerUp}
-                    onToggleMoodboard={handleToggleMoodboard}
-                    onFindSimilar={handleFindSimilar}
-                  />
-                  <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
+            <div className="arc-collections-page-main__scroll-pad">
+              {activeCollection ? (
+                <div className="arc-collections-page-title">
+                  <button
+                    type="button"
+                    className="arc-collections-page-title__button"
+                    onClick={() => openEditCollection(activeCollection.id)}
+                    aria-label={`Редактировать «${activeCollection.name}»`}
+                  >
+                    <TruncatedTextWithTooltip
+                      text={activeCollection.name}
+                      className="h1 arc-collections-page-title__text"
+                    />
+                  </button>
                 </div>
-              </div>
-            )}
+              ) : null}
+
+              {sectionStripItems.length > 0 ? (
+                <div className="arc-collections-page-sections">
+                  <LibraryCollectionsStrip
+                    items={sectionStripItems}
+                    mediaTab="collections"
+                    ariaLabel="Разделы"
+                    onCollectionContextMenu={openCollectionContextMenu}
+                  />
+                </div>
+              ) : null}
+
+              {emptyState ? (
+                <EmptyState
+                  {...emptyState.copy}
+                  fill
+                  onPrimaryAction={emptyState.onPrimaryAction}
+                  onSecondaryAction={emptyState.onSecondaryAction}
+                />
+              ) : (
+                <>
+                  {feed.booting && !isRemoteSearchFeed && !feed.shuffleReloading ? (
+                    <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
+                      <span className="loader" aria-hidden="true" />
+                    </div>
+                  ) : null}
+
+                  <div className="arc-gallery-page arc-collections-gallery">
+                    <GalleryBoard
+                      cards={feed.cards}
+                      srcMap={feed.srcMap}
+                      mediaTab="collections"
+                      variant="collections"
+                      scrollRootRef={scrollRootRef}
+                      boardRef={boardRef}
+                      loadingMore={feed.loading && feed.hasMore}
+                      busy={feed.booting || feed.loading || feed.shuffleReloading}
+                      revealResetKey={galleryRevealResetKey(scopedFeedQuery)}
+                      onOpenCard={openCard}
+                      moodboardCardIds={moodboardCardIds}
+                      onCardContextMenu={onCardContextMenu}
+                      isCardSelected={multiSelect.isSelected}
+                      onCardClick={multiSelect.handleCardClick}
+                      onOpenInNewWindow={multiSelect.openInNewWindowForCard}
+                      onCardPointerDown={multiSelect.handleCardPointerDown}
+                      onCardPointerMove={multiSelect.onCardPointerMove}
+                      onCardPointerUp={multiSelect.onCardPointerUp}
+                      onToggleMoodboard={handleToggleMoodboard}
+                      onFindSimilar={handleFindSimilar}
+                    />
+                    <div ref={sentinelRef} className="arc-gallery-sentinel" aria-hidden />
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </main>
       </div>
@@ -554,6 +734,44 @@ export default function CollectionsPage() {
 
       {cardContextMenuLayer}
       {collectionContextMenuLayer}
+
+      {pickTarget ? (
+        <CollectionPickTargetModal
+          title={pickTarget.mode === 'move' ? 'Переместить раздел' : 'Объединить разделы'}
+          confirmLabel={pickTarget.mode === 'move' ? 'Перенести' : 'Объединить'}
+          searchPlaceholder={
+            pickTarget.mode === 'move' ? 'Поиск по коллекциям' : 'Поиск по разделам'
+          }
+          emptyText={pickTarget.mode === 'move' ? 'Нет другой коллекции' : 'Нет другого раздела'}
+          items={pickItems}
+          onClose={() => setPickTarget(null)}
+          onConfirm={async (targetId) => {
+            const sourceId = pickTarget.sourceId;
+            try {
+              if (pickTarget.mode === 'move') {
+                await moveCollectionToParent(sourceId, targetId);
+                const moved = collections.find((item) => item.id === sourceId);
+                setPickTarget(null);
+                if (moved) {
+                  navigate(collectionHref({ ...moved, parentId: targetId }));
+                }
+              } else {
+                await mergeCollectionInto(sourceId, targetId);
+                const target = collections.find((item) => item.id === targetId);
+                setPickTarget(null);
+                if (activeCollectionId === sourceId && target) {
+                  navigate(collectionHref(target), { replace: true });
+                }
+              }
+            } catch (err) {
+              showAppNotification({
+                message: err instanceof Error ? err.message : 'Не удалось выполнить действие',
+                variant: 'danger'
+              });
+            }
+          }}
+        />
+      ) : null}
 
       {multiSelect.selectionBar}
       {multiSelect.collectionsModal}

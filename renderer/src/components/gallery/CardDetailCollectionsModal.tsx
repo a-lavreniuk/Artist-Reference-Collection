@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArcAnimatedModalHost } from '../../motion';
 import { useFloatingPanelGeometry } from '../../hooks/useFloatingPanelGeometry';
@@ -10,9 +10,10 @@ import {
   type CardRecord,
   type CollectionRecord
 } from '../../services/db';
+import { toggleCollectionOnCardIds } from '@arc-main-shared/collectionHierarchy';
 import CollectionSettingsModal from '../collections/CollectionSettingsModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import CollectionPickerRow from './CollectionPickerRow';
+import CollectionPickerTree, { collectionPickerTreeHasRows } from './CollectionPickerTree';
 
 const COLLECTIONS_PICKER_PANEL_ID = 'card-detail-collections-picker';
 /** Fallback when CSS size cannot be measured yet (matches --arc-collections-picker-size max). */
@@ -94,17 +95,10 @@ export default function CardDetailCollectionsModal({
     newCollectionOpen
   ]);
 
-  const filteredCols = useMemo(() => {
-    const q = colSearch.trim().toLowerCase();
-    return collections.filter((c) => !q || c.name.toLowerCase().includes(q));
-  }, [collections, colSearch]);
-
   const handleToggle = async (collectionId: string) => {
     if (pendingCollectionId) return;
     const prev = localSelectedCollectionIds;
-    const next = prev.includes(collectionId)
-      ? prev.filter((id) => id !== collectionId)
-      : [...prev, collectionId];
+    const next = toggleCollectionOnCardIds(prev, collectionId, collections);
     setPendingCollectionId(collectionId);
     setLocalSelectedCollectionIds(next);
     try {
@@ -117,7 +111,8 @@ export default function CardDetailCollectionsModal({
   };
 
   const showEmptyCatalog = collections.length === 0;
-  const showEmptySearch = !showEmptyCatalog && filteredCols.length === 0;
+  const showEmptySearch =
+    !showEmptyCatalog && !collectionPickerTreeHasRows(collections, colSearch);
 
   const picker = (
     <ArcAnimatedModalHost
@@ -181,19 +176,15 @@ export default function CardDetailCollectionsModal({
               ) : showEmptySearch ? (
                 <p className="text-s arc-card-detail-collections-picker__empty">Нет совпадений по запросу.</p>
               ) : (
-                <div className="arc-card-detail-collections-picker__list">
-                  {filteredCols.map((collection) => (
-                    <CollectionPickerRow
-                      key={collection.id}
-                      collection={collection}
-                      previews={collectionPreviews[collection.id] ?? []}
-                      count={collCounts[collection.id] ?? 0}
-                      selected={localSelectedCollectionIds.includes(collection.id)}
-                      disabled={pendingCollectionId !== null}
-                      onToggle={() => void handleToggle(collection.id)}
-                    />
-                  ))}
-                </div>
+                <CollectionPickerTree
+                  collections={collections}
+                  query={colSearch}
+                  previews={collectionPreviews}
+                  counts={collCounts}
+                  disabled={pendingCollectionId !== null}
+                  isSelected={(id) => localSelectedCollectionIds.includes(id)}
+                  onToggle={(id) => void handleToggle(id)}
+                />
               )}
             </div>
 

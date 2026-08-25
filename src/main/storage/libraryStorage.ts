@@ -108,6 +108,18 @@ import type {
   ListCardsParams,
   TagRow
 } from './types';
+import {
+  addCollectionToCardIds,
+  assertCollectionParentIsRoot,
+  collectionParentId,
+  descendantOrSelfIds,
+  isCollectionSection,
+  normalizeCardCollectionIds,
+  removeCollectionFromCardIds,
+  siblingNameTaken,
+  uniqueCopyName,
+  uniqueSiblingName
+} from '../shared/collectionHierarchy';
 
 export {
   backfillCardDimensions,
@@ -869,7 +881,10 @@ export async function updateCardInStorage(
     const activeId = getActiveLibraryEntry(readLibraryRootConfigSync())?.id ?? null;
     cardJson.tagIds = filterVisibleTagIds([...patch.tagIds], activeId);
   }
-  if (patch.collectionIds) cardJson.collectionIds = [...patch.collectionIds];
+  if (patch.collectionIds) {
+    const collections = listCollections(root);
+    cardJson.collectionIds = normalizeCardCollectionIds(patch.collectionIds, collections);
+  }
   if (patch.description !== undefined) {
     const trimmed = patch.description.trim();
     if (trimmed) cardJson.description = trimmed;
@@ -1603,6 +1618,9 @@ export function listCollections(libraryRoot: string): CollectionRow[] {
     .all()
     .map((r) => {
       const row = r as Record<string, unknown>;
+      const parentRaw = row.parent_id;
+      const parentId =
+        typeof parentRaw === 'string' && parentRaw.trim() ? parentRaw.trim() : undefined;
       return {
         id: String(row.id),
         name: String(row.name),
@@ -1610,50 +1628,189 @@ export function listCollections(libraryRoot: string): CollectionRow[] {
         sortIndex: typeof row.sort_index === 'number' ? row.sort_index : Number(row.sort_index) || 0,
         ...(typeof row.description === 'string' && row.description.trim()
           ? { description: row.description.trim() }
-          : {})
+          : {}),
+        ...(parentId ? { parentId } : {})
       };
     });
 }
 
 export function upsertCollection(libraryRoot: string, col: CollectionRow): void {
   const db = openLibraryDb(libraryRoot);
+  const existing = listCollections(libraryRoot);
+  const parentId = collectionParentId(col);
+  if (parentId) assertCollectionParentIsRoot(existing.filter((item) => item.id !== col.id).concat(col), parentId);
+  if (siblingNameTaken(existing, col.name, parentId, col.id)) {
+    throw new Error(parentId ? 'Раздел с таким названием уже есть' : 'Коллекция с таким названием уже есть');
+  }
   db.prepare(
-    `INSERT INTO collections (id, name, created_at, sort_index, description) VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO collections (id, name, created_at, sort_index, description, parent_id) VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        name=excluded.name,
        sort_index=excluded.sort_index,
-       description=excluded.description`
-  ).run(col.id, col.name, col.createdAt, col.sortIndex, col.description ?? null);
+       description=excluded.description,
+       parent_id=excluded.parent_id`
+  ).run(col.id, col.name, col.createdAt, col.sortIndex, col.description ?? null, parentId);
+}
+
+async function rewriteCardCollectionIds(
+  libraryRoot: string,
+  cardId: string,
+  nextIds: string[]
+): Promise<void> {
+  const cardJson = await readCardJson(libraryRoot, cardId);
+  if (!cardJson) return;
+  const prev = [...cardJson.collectionIds].sort().join('\0');
+  const next = [...nextIds].sort().join('\0');
+  if (prev === next) return;
+  await updateCardInStorage(libraryRoot, cardId, { collectionIds: nextIds });
+}
+
+function listCardIdsLinkedToCollections(libraryRoot: string, collectionIds: string[]): string[] {
+  if (collectionIds.length === 0) return [];
+  const db = openLibraryDb(libraryRoot);
+  const placeholders = collectionIds.map(() => '?').join(',');
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT card_id FROM card_collections WHERE collection_id IN (${placeholders})`
+    )
+    .all(...collectionIds) as Array<{ card_id: string }>;
+  return rows.map((row) => String(row.card_id));
 }
 
 export async function deleteCollectionFromDb(libraryRoot: string, id: string): Promise<void> {
   const root = path.resolve(libraryRoot);
-  const db = openLibraryDb(root);
-  const cardIds = db
-    .prepare('SELECT card_id FROM card_collections WHERE collection_id = ?')
-    .all(id)
-    .map((r) => String((r as { card_id: string }).card_id));
+  const collections = listCollections(root);
+  const target = collections.find((item) => item.id === id);
+  if (!target) return;
+  const removeIds = descendantOrSelfIds(collections, id);
+  const cardIds = listCardIdsLinkedToCollections(root, removeIds);
   for (const cardId of cardIds) {
     const cardJson = await readCardJson(root, cardId);
     if (!cardJson) continue;
-    cardJson.collectionIds = cardJson.collectionIds.filter((cid) => cid !== id);
-    await writeCardJson(root, cardJson);
+    const nextIds = removeIds.reduce(
+      (ids, collectionId) => removeCollectionFromCardIds(ids, collectionId, collections),
+      cardJson.collectionIds
+    );
+    await rewriteCardCollectionIds(root, cardId, nextIds);
   }
-  db.prepare('DELETE FROM card_collections WHERE collection_id = ?').run(id);
-  db.prepare('DELETE FROM collections WHERE id = ?').run(id);
+  const db = openLibraryDb(root);
+  const placeholders = removeIds.map(() => '?').join(',');
+  db.prepare(`DELETE FROM card_collections WHERE collection_id IN (${placeholders})`).run(...removeIds);
+  db.prepare(`DELETE FROM collections WHERE id IN (${placeholders})`).run(...removeIds);
+}
+
+export async function mergeCollectionInto(
+  libraryRoot: string,
+  sourceId: string,
+  targetId: string
+): Promise<void> {
+  if (sourceId === targetId) return;
+  const root = path.resolve(libraryRoot);
+  const collections = listCollections(root);
+  const source = collections.find((item) => item.id === sourceId);
+  const target = collections.find((item) => item.id === targetId);
+  if (!source || !target) throw new Error('Коллекция не найдена');
+  if (!isCollectionSection(source) || !isCollectionSection(target)) {
+    throw new Error('Сливать можно только разделы');
+  }
+  const cardIds = listCardIdsLinkedToCollections(root, [sourceId]);
+  for (const cardId of cardIds) {
+    const cardJson = await readCardJson(root, cardId);
+    if (!cardJson) continue;
+    let ids = addCollectionToCardIds(cardJson.collectionIds, targetId, collections);
+    ids = removeCollectionFromCardIds(ids, sourceId, collections);
+    await rewriteCardCollectionIds(root, cardId, ids);
+  }
+  await deleteCollectionFromDb(root, sourceId);
+}
+
+export async function duplicateCollection(libraryRoot: string, sourceId: string): Promise<CollectionRow> {
+  const root = path.resolve(libraryRoot);
+  const collections = listCollections(root);
+  const source = collections.find((item) => item.id === sourceId);
+  if (!source) throw new Error('Коллекция не найдена');
+  const parentId = collectionParentId(source);
+  const copy: CollectionRow = {
+    id: crypto.randomUUID(),
+    name: uniqueCopyName(collections, source.name, parentId),
+    createdAt: new Date().toISOString(),
+    sortIndex: source.sortIndex + 1,
+    ...(source.description ? { description: source.description } : {}),
+    ...(parentId ? { parentId } : {})
+  };
+  upsertCollection(root, copy);
+  const siblings = collections.filter(
+    (item) => collectionParentId(item) === parentId && item.id !== source.id
+  );
+  for (const sibling of siblings) {
+    if (sibling.sortIndex > source.sortIndex) {
+      upsertCollection(root, { ...sibling, sortIndex: sibling.sortIndex + 1 });
+    }
+  }
+  const cardIds = listCardIdsLinkedToCollections(root, [sourceId]);
+  const nextCollections = [...collections, copy];
+  for (const cardId of cardIds) {
+    const cardJson = await readCardJson(root, cardId);
+    if (!cardJson) continue;
+    await rewriteCardCollectionIds(
+      root,
+      cardId,
+      addCollectionToCardIds(cardJson.collectionIds, copy.id, nextCollections)
+    );
+  }
+  return copy;
+}
+
+export async function moveCollectionToParent(
+  libraryRoot: string,
+  sectionId: string,
+  newParentId: string
+): Promise<void> {
+  const root = path.resolve(libraryRoot);
+  const collections = listCollections(root);
+  const section = collections.find((item) => item.id === sectionId);
+  if (!section) throw new Error('Раздел не найден');
+  if (!isCollectionSection(section)) throw new Error('Переносить можно только раздел');
+  const oldParentId = collectionParentId(section);
+  if (!oldParentId) throw new Error('Раздел не найден');
+  if (oldParentId === newParentId) return;
+  assertCollectionParentIsRoot(collections, newParentId);
+  const moved: CollectionRow = {
+    ...section,
+    parentId: newParentId,
+    name: uniqueSiblingName(collections, section.name, newParentId, sectionId)
+  };
+  upsertCollection(root, moved);
+  const nextCollections = collections.map((item) => (item.id === sectionId ? moved : item));
+  const cardIds = listCardIdsLinkedToCollections(root, [sectionId]);
+  for (const cardId of cardIds) {
+    const cardJson = await readCardJson(root, cardId);
+    if (!cardJson) continue;
+    const stripped = cardJson.collectionIds.filter((id) => id !== oldParentId);
+    await rewriteCardCollectionIds(
+      root,
+      cardId,
+      normalizeCardCollectionIds(stripped, nextCollections)
+    );
+  }
 }
 
 export function getCollectionCardCounts(libraryRoot: string): Record<string, number> {
   const db = openLibraryDb(libraryRoot);
   const rows = db
     .prepare(
-      `SELECT cc.collection_id, COUNT(*) AS n FROM card_collections cc
-       INNER JOIN cards c ON c.id = cc.card_id AND COALESCE(c.is_deleted, 0) = 0
-       GROUP BY cc.collection_id`
+      `SELECT c.id AS collection_id,
+              COUNT(DISTINCT CASE WHEN COALESCE(card.is_deleted, 0) = 0 THEN cc.card_id END) AS n
+       FROM collections c
+       LEFT JOIN collections child ON child.parent_id = c.id
+       LEFT JOIN card_collections cc
+         ON cc.collection_id = c.id OR cc.collection_id = child.id
+       LEFT JOIN cards card ON card.id = cc.card_id
+       GROUP BY c.id`
     )
     .all() as Array<{ collection_id: string; n: number }>;
   const m: Record<string, number> = {};
-  for (const r of rows) m[r.collection_id] = r.n;
+  for (const r of rows) m[r.collection_id] = Number(r.n) || 0;
   return m;
 }
 
@@ -1671,13 +1828,17 @@ export function getCollectionPreviewSlicesFromDb(
   }
   const stmt = db.prepare(
     `SELECT c.* FROM cards c
-     INNER JOIN card_collections cc ON cc.card_id = c.id
-     WHERE cc.collection_id = ? AND COALESCE(c.is_deleted, 0) = 0
+     WHERE COALESCE(c.is_deleted, 0) = 0
+       AND c.id IN (
+         SELECT card_id FROM card_collections
+         WHERE collection_id = ?
+            OR collection_id IN (SELECT id FROM collections WHERE parent_id = ?)
+       )
      ORDER BY c.added_at DESC
      LIMIT ?`
   );
   for (const col of collections) {
-    const rows = stmt.all(col.id, limit) as Record<string, unknown>[];
+    const rows = stmt.all(col.id, col.id, limit) as Record<string, unknown>[];
     out[col.id] = indexCardRowsWithRelations(db, rows);
   }
   return out;
@@ -1691,12 +1852,13 @@ export function getCollectionStats(libraryRoot: string, collectionId: string): C
   if (!col) return null;
   const agg = db
     .prepare(
-      `SELECT COUNT(*) AS card_count, COALESCE(SUM(c.file_size), 0) AS total_size
+      `SELECT COUNT(DISTINCT c.id) AS card_count, COALESCE(SUM(c.file_size), 0) AS total_size
        FROM card_collections cc
        INNER JOIN cards c ON c.id = cc.card_id AND COALESCE(c.is_deleted, 0) = 0
-       WHERE cc.collection_id = ?`
+       WHERE cc.collection_id = ?
+          OR cc.collection_id IN (SELECT id FROM collections WHERE parent_id = ?)`
     )
-    .get(collectionId) as { card_count: number; total_size: number };
+    .get(collectionId, collectionId) as { card_count: number; total_size: number };
   const totalBytes = Number(agg?.total_size) || 0;
   return {
     cardCount: Number(agg?.card_count) || 0,

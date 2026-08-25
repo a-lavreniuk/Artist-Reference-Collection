@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CardRecord, CollectionRecord } from '../../services/db';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
+import { formatSectionCountLabel, isCollectionSection } from '@arc-main-shared/collectionHierarchy';
 import { useCardSectionMediaActive } from '../layout/cardSectionMedia';
 import {
   peekCardsSrcMap,
@@ -14,6 +15,7 @@ type Props = {
   collection: CollectionRecord;
   previews: CardRecord[];
   count: number;
+  sectionCount?: number;
   onOpen: () => void;
   onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   /** Должен совпадать с активной вкладкой CardSectionsShell (`?sect=` на media-server). */
@@ -24,6 +26,7 @@ export default function CollectionGalleryCard({
   collection,
   previews,
   count,
+  sectionCount = 0,
   onOpen,
   onContextMenu,
   mediaTab = 'gallery'
@@ -49,11 +52,12 @@ export default function CollectionGalleryCard({
     };
   }, [previews, collection.id, stripMediaActive, mediaTab]);
 
+  const kindLabel = isCollectionSection(collection) ? 'Раздел' : 'Коллекция';
   return (
     <button
       type="button"
       className="arc-gallery-collection-card"
-      aria-label={`Коллекция «${collection.name}», ${formatCardCountLabel(count)}`}
+      aria-label={`${kindLabel} «${collection.name}», ${formatCardCountLabel(count)}${sectionCount > 0 ? `, ${formatSectionCountLabel(sectionCount)}` : ''}`}
       onClick={onOpen}
       onContextMenu={onContextMenu}
     >
@@ -92,6 +96,7 @@ export default function CollectionGalleryCard({
         <span className="arc-gallery-collection-card__title">{collection.name}</span>
         <span className="arc-gallery-collection-card__count" aria-hidden="true">
           {count}
+          {sectionCount > 0 ? ` · ${formatSectionCountLabel(sectionCount)}` : ''}
         </span>
       </span>
     </button>

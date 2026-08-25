@@ -1728,9 +1728,101 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   padding-bottom: var(--s-4);
 }
 
-.arc-collections-page-sidebar__foot .context-menu__sep {
-  margin: 0;
-}
+  .arc-collections-page-sidebar__foot {
+    flex-shrink: 0;
+  }
+
+  .arc-collections-page-sidebar__foot-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding-bottom: var(--s-4);
+  }
+
+  .arc-collections-page-sidebar__collapse-all {
+    justify-content: flex-start;
+  }
+
+  .arc-collections-page-sidebar__chevron,
+  .arc-collections-page-sidebar__add-section {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--s-6);
+    height: var(--s-6);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .arc-collections-page-sidebar__chevron-spacer,
+  .arc-collections-page-sidebar__nest-mark {
+    flex: 0 0 var(--s-6);
+    width: var(--s-6);
+  }
+
+  .arc-collections-page-sidebar__add-section {
+    opacity: 0;
+  }
+
+  .arc-collections-page-sidebar__add-section.is-visible,
+  .arc-tags-sidebar-row:hover .arc-collections-page-sidebar__add-section,
+  .arc-tags-sidebar-row:focus-within .arc-collections-page-sidebar__add-section {
+    opacity: 1;
+  }
+
+  .arc-collections-page-sidebar__children {
+    position: relative;
+    margin-left: var(--s-4);
+    padding-left: var(--s-3);
+  }
+
+  .arc-collections-page-sidebar__children::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    border-left: 2px solid var(--panel-border);
+    background: transparent;
+    width: auto;
+  }
+
+  .arc-collections-page-sidebar__item--section .context-menu__item-label {
+    min-width: 0;
+  }
+
+  .arc-collections-page-title {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    margin: 0 0 var(--s-4);
+  }
+
+  .arc-collections-page-title__button {
+    min-width: 0;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .arc-collections-page-title__text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .arc-collections-page-sections {
+    margin-bottom: var(--s-4);
+  }
 
 .arc-collections-page-sidebar .context-menu__item {
   padding: 0;
@@ -2569,6 +2661,11 @@ body.arc-card-detail-open .arc-app-outlet {
 .arc-card-detail-collection-row--picker:disabled {
   cursor: default;
   opacity: 0.72;
+}
+
+.arc-card-detail-collection-row--picker.arc-card-detail-collection-row--nested {
+  margin-inline-start: var(--s-4);
+  width: calc(100% - var(--s-4));
 }
 
 .arc-card-detail-collection-name--picker {

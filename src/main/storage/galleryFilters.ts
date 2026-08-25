@@ -390,9 +390,13 @@ export function buildGalleryFilterWhere(
   const collectionId = ctx.collectionId?.trim() ?? '';
   if (collectionId) {
     wh.push(
-      `${alias}.id IN (SELECT card_id FROM card_collections WHERE collection_id = ?)`
+      `${alias}.id IN (
+        SELECT card_id FROM card_collections
+        WHERE collection_id = ?
+           OR collection_id IN (SELECT id FROM collections WHERE parent_id = ?)
+      )`
     );
-    binds.push(collectionId);
+    binds.push(collectionId, collectionId);
   }
 
   if (Array.isArray(ctx.moodboardCardIds)) {

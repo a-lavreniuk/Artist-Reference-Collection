@@ -127,7 +127,7 @@ export const MCP_TOOL_COPY = {
   arc_create_collection: {
     groupId: 'collections',
     label: 'Создать коллекцию',
-    description: `Создаёт новую коллекцию. ${MCP_CONFIRM_HINT}`
+    description: `Создаёт новую коллекцию. Передайте parentId, чтобы создать раздел внутри коллекции. ${MCP_CONFIRM_HINT}`
   },
   arc_update_collection: {
     groupId: 'collections',

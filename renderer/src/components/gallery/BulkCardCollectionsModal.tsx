@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArcAnimatedModalHost } from '../../motion';
 import { useFloatingPanelGeometry } from '../../hooks/useFloatingPanelGeometry';
@@ -10,10 +10,14 @@ import {
   type CardRecord,
   type CollectionRecord
 } from '../../services/db';
+import {
+  addCollectionToCardIds,
+  removeCollectionFromCardIds
+} from '@arc-main-shared/collectionHierarchy';
 import CollectionSettingsModal from '../collections/CollectionSettingsModal';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
-import CollectionPickerRow from './CollectionPickerRow';
-import { resolveBulkCollectionState } from './galleryBulkActions';
+import CollectionPickerTree, { collectionPickerTreeHasRows } from './CollectionPickerTree';
+import { resolveBulkCollectionState, type BulkCollectionState } from './galleryBulkActions';
 
 const BULK_COLLECTIONS_PICKER_PANEL_ID = 'bulk-card-collections-picker';
 const COLLECTIONS_PICKER_DEFAULT_SIZE = 560;
@@ -63,7 +67,8 @@ export default function BulkCardCollectionsModal({
   const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
   const [pendingCollectionId, setPendingCollectionId] = useState<string | null>(null);
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
-  const [localStates, setLocalStates] = useState<Record<string, 'none' | 'some' | 'all'>>({});
+  const [localStates, setLocalStates] = useState<Record<string, BulkCollectionState>>({});
+  const [localIdsByCard, setLocalIdsByCard] = useState<Record<string, string[]>>({});
 
   const reloadCatalog = async () => {
     const [cols, counts, previews] = await Promise.all([
@@ -74,9 +79,17 @@ export default function BulkCardCollectionsModal({
     setCollections(cols);
     setCollCounts(counts);
     setCollectionPreviews(previews);
-    const nextStates: Record<string, 'none' | 'some' | 'all'> = {};
+    const nextIds: Record<string, string[]> = {};
+    for (const cardId of cardIds) {
+      nextIds[cardId] = [...(cardsById.get(cardId)?.collectionIds ?? [])];
+    }
+    setLocalIdsByCard(nextIds);
+    const fakeMap = new Map(
+      cardIds.map((cardId) => [cardId, { collectionIds: nextIds[cardId] ?? [] }])
+    );
+    const nextStates: Record<string, BulkCollectionState> = {};
     for (const collection of cols) {
-      nextStates[collection.id] = resolveBulkCollectionState(cardIds, cardsById, collection.id);
+      nextStates[collection.id] = resolveBulkCollectionState(cardIds, fakeMap, collection.id);
     }
     setLocalStates(nextStates);
   };
@@ -99,29 +112,41 @@ export default function BulkCardCollectionsModal({
     newCollectionOpen
   ]);
 
-  const filteredCols = useMemo(() => {
-    const q = colSearch.trim().toLowerCase();
-    return collections.filter((c) => !q || c.name.toLowerCase().includes(q));
-  }, [collections, colSearch]);
-
   const handleToggle = async (collectionId: string) => {
     if (pendingCollectionId) return;
-    const prevState = localStates[collectionId] ?? 'none';
-    const nextSelected = prevState !== 'all';
-    const optimistic: 'none' | 'some' | 'all' = nextSelected ? 'all' : 'none';
+    const prevStates = localStates;
+    const prevIds = localIdsByCard;
+    const nextSelected = (localStates[collectionId] ?? 'none') !== 'all';
+    const nextIds: Record<string, string[]> = {};
+    for (const cardId of cardIds) {
+      const current = prevIds[cardId] ?? [];
+      nextIds[cardId] = nextSelected
+        ? addCollectionToCardIds(current, collectionId, collections)
+        : removeCollectionFromCardIds(current, collectionId, collections);
+    }
+    const fakeMap = new Map(
+      cardIds.map((cardId) => [cardId, { collectionIds: nextIds[cardId] ?? [] }])
+    );
+    const nextStates: Record<string, BulkCollectionState> = {};
+    for (const collection of collections) {
+      nextStates[collection.id] = resolveBulkCollectionState(cardIds, fakeMap, collection.id);
+    }
     setPendingCollectionId(collectionId);
-    setLocalStates((prev) => ({ ...prev, [collectionId]: optimistic }));
+    setLocalIdsByCard(nextIds);
+    setLocalStates(nextStates);
     try {
       await onToggleCollection(collectionId, nextSelected);
     } catch {
-      setLocalStates((prev) => ({ ...prev, [collectionId]: prevState }));
+      setLocalIdsByCard(prevIds);
+      setLocalStates(prevStates);
     } finally {
       setPendingCollectionId(null);
     }
   };
 
   const showEmptyCatalog = collections.length === 0;
-  const showEmptySearch = !showEmptyCatalog && filteredCols.length === 0;
+  const showEmptySearch =
+    !showEmptyCatalog && !collectionPickerTreeHasRows(collections, colSearch);
 
   const picker = (
     <ArcAnimatedModalHost
@@ -184,23 +209,16 @@ export default function BulkCardCollectionsModal({
               ) : showEmptySearch ? (
                 <p className="text-s arc-card-detail-collections-picker__empty">Нет совпадений по запросу.</p>
               ) : (
-                <div className="arc-card-detail-collections-picker__list">
-                  {filteredCols.map((collection) => {
-                    const state = localStates[collection.id] ?? 'none';
-                    return (
-                      <CollectionPickerRow
-                        key={collection.id}
-                        collection={collection}
-                        previews={collectionPreviews[collection.id] ?? []}
-                        count={collCounts[collection.id] ?? 0}
-                        selected={state === 'all'}
-                        indeterminate={state === 'some'}
-                        disabled={pendingCollectionId !== null}
-                        onToggle={() => void handleToggle(collection.id)}
-                      />
-                    );
-                  })}
-                </div>
+                <CollectionPickerTree
+                  collections={collections}
+                  query={colSearch}
+                  previews={collectionPreviews}
+                  counts={collCounts}
+                  disabled={pendingCollectionId !== null}
+                  isSelected={(id) => (localStates[id] ?? 'none') === 'all'}
+                  isIndeterminate={(id) => (localStates[id] ?? 'none') === 'some'}
+                  onToggle={(id) => void handleToggle(id)}
+                />
               )}
             </div>
 

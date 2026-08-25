@@ -24,6 +24,9 @@ import {
   softDeleteCardFromStorage,
   deleteCategoryFromDb,
   deleteCollectionFromDb,
+  duplicateCollection,
+  mergeCollectionInto,
+  moveCollectionToParent,
   deleteTagFromDb,
   ensureLibraryReady,
   isLibraryRootReady,
@@ -1018,6 +1021,36 @@ export function registerStorageIpc(
     const root = await readLibraryRoot();
     if (!root || typeof id !== 'string') return;
     await deleteCollectionFromDb(root, id);
+  });
+
+  ipcMain.handle('arc:storage-merge-collection', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    const data = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
+    const sourceId = typeof data.sourceId === 'string' ? data.sourceId : '';
+    const targetId = typeof data.targetId === 'string' ? data.targetId : '';
+    if (!sourceId || !targetId) throw new Error('Не переданы разделы для слияния');
+    await mergeCollectionInto(root, sourceId, targetId);
+  });
+
+  ipcMain.handle('arc:storage-duplicate-collection', async (_e, sourceId: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    if (typeof sourceId !== 'string' || !sourceId) throw new Error('Не передан раздел для копирования');
+    return duplicateCollection(root, sourceId);
+  });
+
+  ipcMain.handle('arc:storage-move-collection', async (_e, payload: unknown) => {
+    assertNotMaintenance();
+    const root = await readLibraryRoot();
+    if (!root) throw new Error('Библиотека не выбрана');
+    const data = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
+    const sectionId = typeof data.sectionId === 'string' ? data.sectionId : '';
+    const newParentId = typeof data.newParentId === 'string' ? data.newParentId : '';
+    if (!sectionId || !newParentId) throw new Error('Не переданы данные для переноса раздела');
+    await moveCollectionToParent(root, sectionId, newParentId);
   });
 
   ipcMain.handle('arc:storage-collection-counts', async () => {

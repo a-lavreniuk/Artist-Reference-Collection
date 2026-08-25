@@ -23,6 +23,7 @@ import type { CategoryRecord, NavbarMetrics, TagRecord } from './types';
 import type { CollectionRecord, CardRecord } from '../arcSchema';
 import { getAllCategories } from './categories';
 import { getAllCollections } from './collections';
+import { isCollectionSection } from '@arc-main-shared/collectionHierarchy';
 import { listAllCardsPaginated } from './listAllCardsPaginated';
 
 export async function isLibraryConfigured(): Promise<boolean> {
@@ -46,7 +47,7 @@ export async function getNavbarMetrics(): Promise<NavbarMetrics> {
       totalCards,
       imageCards,
       videoCards,
-      totalCollections: collections.length,
+      totalCollections: collections.filter((item) => !isCollectionSection(item)).length,
       moodboardCards: moodboard.moodboardCardIds.length,
       totalCategories: categories.length
     };
@@ -85,7 +86,7 @@ export async function getNavbarMetrics(): Promise<NavbarMetrics> {
     totalCards: cards.length,
     imageCards,
     videoCards,
-    totalCollections: collections.length,
+    totalCollections: collections.filter((item) => !isCollectionSection(item)).length,
     moodboardCards: moodboardIds.length,
     totalCategories: categories.length
   };

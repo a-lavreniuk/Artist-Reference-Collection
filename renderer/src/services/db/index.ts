@@ -62,7 +62,10 @@ export {
   renameCollection,
   reorderCollectionToIndex,
   getCollectionStats,
-  deleteCollection
+  deleteCollection,
+  mergeCollectionInto,
+  duplicateCollection,
+  moveCollectionToParent
 } from './collections';
 
 export {

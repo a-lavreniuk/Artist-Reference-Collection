@@ -47,6 +47,7 @@ import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import CardDetailCollectionStrip from './CardDetailCollectionStrip';
 import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodboardModal';
 import { clampCardRating } from '@arc-main-shared/cardRating';
+import { toggleCollectionOnCardIds } from '@arc-main-shared/collectionHierarchy';
 import type { CardRecord, CategoryRecord, TagRecord } from '../../services/db';
 import {
   getMoodboardCardIds,
@@ -1896,20 +1897,15 @@ export default function CardDetailOverlay({
     if (!card) return;
     const cardId = card.id;
     const wasIn = card.collectionIds.includes(collectionId);
-    await patchCardCollectionIds((ids) =>
-      ids.includes(collectionId) ? ids.filter((id) => id !== collectionId) : [...ids, collectionId]
-    );
+    const collections = await getAllCollections();
+    await patchCardCollectionIds((ids) => toggleCollectionOnCardIds(ids, collectionId, collections));
     notifyGalleryMutation({
       message: wasIn ? formatCollectionRemoveToast(1) : formatCollectionAddToast(1),
       undo: async () => {
         if (wasIn) {
           await undoCollectionRemove([cardId], collectionId)();
-          await patchCardCollectionIds((ids) =>
-            ids.includes(collectionId) ? ids : [...ids, collectionId]
-          );
         } else {
           await undoCollectionAdd([cardId], collectionId)();
-          await patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
         }
       },
       onAfterUndo: onDeleted

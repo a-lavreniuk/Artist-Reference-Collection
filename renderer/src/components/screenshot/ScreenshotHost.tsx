@@ -7,7 +7,7 @@ import {
   getCardById
 } from '../../services/db';
 import { getAppPreferencesSync } from '../../services/appPreferencesRuntime';
-import { showAppNotification } from '../../services/notificationService';
+import { toggleCollectionOnCardIds } from '@arc-main-shared/collectionHierarchy';
 
 type Props = {
   children: React.ReactNode;
@@ -58,9 +58,8 @@ export default function ScreenshotHost({ children }: Props) {
   const toggleCollection = useCallback(
     async (collectionId: string) => {
       if (!pickerCardId || !window.arc?.storageUpdateCard) return;
-      const next = collectionIds.includes(collectionId)
-        ? collectionIds.filter((id) => id !== collectionId)
-        : [...collectionIds, collectionId];
+      const collections = await getAllCollections();
+      const next = toggleCollectionOnCardIds(collectionIds, collectionId, collections);
       setCollectionIds(next);
       await window.arc.storageUpdateCard(pickerCardId, { collectionIds: next });
       window.dispatchEvent(new CustomEvent(ARC_CARDS_CHANGED_EVENT));

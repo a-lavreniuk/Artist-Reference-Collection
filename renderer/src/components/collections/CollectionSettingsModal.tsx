@@ -9,12 +9,13 @@ import { Tooltip } from '../tooltip/Tooltip';
 type TabId = 'name' | 'info';
 
 export type CollectionSettingsModalState =
-  | { mode: 'create' }
+  | { mode: 'create'; parentId?: string }
   | { mode: 'edit'; collection: CollectionRecord };
 
 type CreatePayload = {
   name: string;
   description?: string;
+  parentId?: string;
 };
 
 type EditPayload = {
@@ -65,6 +66,10 @@ export default function CollectionSettingsModal({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isEdit = state.mode === 'edit';
+  const isSection =
+    (state.mode === 'create' && Boolean(state.parentId)) ||
+    (state.mode === 'edit' && Boolean(state.collection.parentId));
+  const entityGenitive = isSection ? 'раздела' : 'коллекции';
   const hasDuplicateNameError = duplicateName;
 
   const committedBaseline = useMemo(() => {
@@ -115,7 +120,8 @@ export default function CollectionSettingsModal({
       if (state.mode === 'create') {
         await onCreate({
           name: trimmedName,
-          ...(descTrim ? { description: descTrim } : {})
+          ...(descTrim ? { description: descTrim } : {}),
+          ...(state.parentId ? { parentId: state.parentId } : {})
         });
       } else {
         await onSave({
@@ -187,7 +193,7 @@ export default function CollectionSettingsModal({
             data-btn-size="s"
             role="dialog"
             aria-modal="true"
-            aria-label={isEdit ? 'Настройки коллекции' : 'Новая коллекция'}
+            aria-label={isEdit ? (isSection ? 'Настройки раздела' : 'Настройки коллекции') : isSection ? 'Новый раздел' : 'Новая коллекция'}
             onClick={(e) => e.stopPropagation()}
           >
           <header className="arc-modal__header arc-modal__header--tabs">
@@ -208,7 +214,9 @@ export default function CollectionSettingsModal({
                 aria-labelledby="arc-collection-modal-tab-name"
               >
                 <div className="arc-modal__slot">
-                  <p className="arc-modal__slot-text">Придумайте название и описание для коллекции.</p>
+                  <p className="arc-modal__slot-text">
+                    Придумайте название и описание для {entityGenitive}.
+                  </p>
                 </div>
                 <div className="arc-modal__slot">
                   <label
@@ -326,6 +334,7 @@ export default function CollectionSettingsModal({
       {deleteConfirmOpen && isEdit ? (
         <ConfirmCollectionDeleteModal
           collectionName={state.collection.name}
+          isSection={isSection}
           onClose={() => setDeleteConfirmOpen(false)}
           onConfirm={async () => {
             await onDelete(state.collection.id);

@@ -76,6 +76,7 @@ export default function App() {
           <Route path="tags" element={<TagsPage />} />
           <Route path="collections" element={<CardSectionRoute />} />
           <Route path="collections/:collectionId" element={<CardSectionRoute />} />
+          <Route path="collections/:collectionId/sections/:sectionId" element={<CardSectionRoute />} />
           <Route path="moodboard" element={<CardSectionRoute />} />
           <Route path="board" element={<BoardPage />} />
           <Route path="statistics" element={<SettingsNavbarPanelPage panel="statistics" />} />

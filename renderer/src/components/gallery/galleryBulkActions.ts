@@ -1,6 +1,7 @@
 import type { CardRecord } from '../../services/db';
 import {
   addCardToMoodboard,
+  getAllCollections,
   getCardById,
   permanentDeleteCard,
   removeCardFromMoodboard,
@@ -8,6 +9,7 @@ import {
   softDeleteCard,
   updateCardPayload
 } from '../../services/db';
+import { addCollectionToCardIds, removeCollectionFromCardIds } from '@arc-main-shared/collectionHierarchy';
 import { showAppNotification } from '../../services/notificationService';
 
 export function libraryMapsFromCards(
@@ -125,13 +127,19 @@ export async function bulkAddToCollection(
   cardIds: readonly string[],
   collectionId: string
 ): Promise<string[]> {
+  const collections = await getAllCollections();
   const affected: string[] = [];
   for (const cardId of cardIds) {
     const card = await getCardById(cardId);
-    if (!card || card.collectionIds.includes(collectionId)) continue;
-    await updateCardPayload(cardId, {
-      collectionIds: [...card.collectionIds, collectionId]
-    });
+    if (!card) continue;
+    const nextIds = addCollectionToCardIds(card.collectionIds, collectionId, collections);
+    if (
+      nextIds.length === card.collectionIds.length &&
+      nextIds.every((id) => card.collectionIds.includes(id))
+    ) {
+      continue;
+    }
+    await updateCardPayload(cardId, { collectionIds: nextIds });
     affected.push(cardId);
   }
   return affected;
@@ -141,12 +149,13 @@ export async function bulkRemoveFromCollection(
   cardIds: readonly string[],
   collectionId: string
 ): Promise<string[]> {
+  const collections = await getAllCollections();
   const affected: string[] = [];
   for (const cardId of cardIds) {
     const card = await getCardById(cardId);
     if (!card || !card.collectionIds.includes(collectionId)) continue;
     await updateCardPayload(cardId, {
-      collectionIds: card.collectionIds.filter((id) => id !== collectionId)
+      collectionIds: removeCollectionFromCardIds(card.collectionIds, collectionId, collections)
     });
     affected.push(cardId);
   }

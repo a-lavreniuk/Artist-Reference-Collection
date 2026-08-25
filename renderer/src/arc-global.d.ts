@@ -268,6 +268,9 @@ declare global {
       storageListCollections: () => Promise<CollectionRecord[]>;
       storageUpsertCollection: (col: CollectionRecord) => Promise<void>;
       storageDeleteCollection: (id: string) => Promise<void>;
+      storageMergeCollection: (payload: { sourceId: string; targetId: string }) => Promise<void>;
+      storageDuplicateCollection: (sourceId: string) => Promise<CollectionRecord>;
+      storageMoveCollection: (payload: { sectionId: string; newParentId: string }) => Promise<void>;
       storageCollectionCounts: () => Promise<Record<string, number>>;
       storageCollectionPreviewSlices: (limit: number) => Promise<Record<string, CardRecord[]>>;
       storageCollectionsSidebar: (payload: {

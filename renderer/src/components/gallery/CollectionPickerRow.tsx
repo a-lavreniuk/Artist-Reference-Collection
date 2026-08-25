@@ -1,3 +1,4 @@
+import { isCollectionSection } from '@arc-main-shared/collectionHierarchy';
 import type { CardRecord, CollectionRecord } from '../../services/db';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 import ArcCheckbox from '../ui/ArcCheckbox';
@@ -9,6 +10,7 @@ type Props = {
   count: number;
   selected: boolean;
   indeterminate?: boolean;
+  nested?: boolean;
   disabled?: boolean;
   onToggle: () => void;
 };
@@ -19,16 +21,18 @@ export default function CollectionPickerRow({
   count,
   selected,
   indeterminate = false,
+  nested = false,
   disabled,
   onToggle
 }: Props) {
   const pressed = selected || indeterminate;
+  const entity = isCollectionSection(collection) ? 'раздел' : 'коллекцию';
   return (
     <button
       type="button"
-      className="arc-card-detail-collection-row arc-card-detail-collection-row--picker panel elevation-sunken"
+      className={`arc-card-detail-collection-row arc-card-detail-collection-row--picker panel elevation-sunken${nested ? ' arc-card-detail-collection-row--nested' : ''}`}
       aria-pressed={pressed}
-      aria-label={`${selected ? 'Убрать из' : 'Добавить в'} коллекцию «${collection.name}»`}
+      aria-label={`${selected ? 'Убрать из' : 'Добавить в'} ${entity} «${collection.name}»`}
       disabled={disabled}
       onClick={onToggle}
     >

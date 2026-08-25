@@ -12,6 +12,18 @@ import { newId, normalizeCardRecord, safeReadArray, safeWriteArray, sortCollecti
 import { notifyCardsChanged, notifyCollectionsChanged } from './events';
 import type { CollectionStats } from './types';
 import type { CardRecord } from '../arcSchema';
+import {
+  addCollectionToCardIds,
+  assertCollectionParentIsRoot,
+  collectionParentId,
+  descendantOrSelfIds,
+  isCollectionSection,
+  normalizeCardCollectionIds,
+  removeCollectionFromCardIds,
+  siblingNameTaken,
+  uniqueCopyName,
+  uniqueSiblingName
+} from '@arc-main-shared/collectionHierarchy';
 
 export async function getAllCollections(): Promise<CollectionRecord[]> {
   return sortCollections(await readCollectionsUnified());
@@ -48,24 +60,28 @@ export async function getCollectionById(id: string): Promise<CollectionRecord | 
 
 export async function addCollection(
   name: string,
-  extras?: { description?: string }
+  extras?: { description?: string; parentId?: string }
 ): Promise<CollectionRecord> {
   const trimmed = name.trim();
   if (!trimmed) {
     throw new Error('Название коллекции не может быть пустым');
   }
-  const existing = await getAllCollections();
-  if (existing.some((c) => c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
-    throw new Error('Коллекция с таким названием уже есть');
+  const existing = await readCollectionsUnified();
+  const parentId = extras?.parentId?.trim() || undefined;
+  if (parentId) assertCollectionParentIsRoot(existing, parentId);
+  if (siblingNameTaken(existing, trimmed, parentId ?? null)) {
+    throw new Error(parentId ? 'Раздел с таким названием уже есть' : 'Коллекция с таким названием уже есть');
   }
-  const maxSort = existing.reduce((m, c) => Math.max(m, c.sortIndex), -1);
+  const siblings = existing.filter((item) => collectionParentId(item) === (parentId ?? null));
+  const maxSort = siblings.reduce((m, c) => Math.max(m, c.sortIndex), -1);
   const desc = extras?.description?.trim();
   const created: CollectionRecord = {
     id: newId(),
     name: trimmed,
     createdAt: new Date().toISOString(),
     sortIndex: maxSort + 1,
-    ...(desc ? { description: desc } : {})
+    ...(desc ? { description: desc } : {}),
+    ...(parentId ? { parentId } : {})
   };
 
   await persistCollections([...existing, created]);
@@ -84,8 +100,10 @@ export async function updateCollection(
   if (patch.name !== undefined) {
     const trimmed = patch.name.trim();
     if (!trimmed) throw new Error('Название не может быть пустым');
-    if (list.some((c) => c.id !== collectionId && c.name.trim().toLowerCase() === trimmed.toLowerCase())) {
-      throw new Error('Коллекция с таким названием уже есть');
+    if (siblingNameTaken(list, trimmed, collectionParentId(current), collectionId)) {
+      throw new Error(
+        isCollectionSection(current) ? 'Раздел с таким названием уже есть' : 'Коллекция с таким названием уже есть'
+      );
     }
     name = trimmed;
   }
@@ -108,24 +126,30 @@ export async function renameCollection(collectionId: string, name: string): Prom
 }
 
 export async function reorderCollectionToIndex(id: string, insertIndex: number): Promise<void> {
-  const sorted = await getAllCollections();
-  const fromIndex = sorted.findIndex((c) => c.id === id);
+  const list = await readCollectionsUnified();
+  const item = list.find((c) => c.id === id);
+  if (!item) return;
+  const parentId = collectionParentId(item);
+  const siblings = list
+    .filter((c) => collectionParentId(c) === parentId)
+    .sort((a, b) => a.sortIndex - b.sortIndex || a.name.localeCompare(b.name, 'ru'));
+  const fromIndex = siblings.findIndex((c) => c.id === id);
   if (fromIndex < 0) return;
 
-  const clamped = Math.max(0, Math.min(insertIndex, sorted.length));
+  const clamped = Math.max(0, Math.min(insertIndex, siblings.length));
   if (clamped === fromIndex || clamped === fromIndex + 1) return;
 
-  const next = [...sorted];
-  const [item] = next.splice(fromIndex, 1);
+  const nextSiblings = [...siblings];
+  const [moved] = nextSiblings.splice(fromIndex, 1);
   const targetIndex = clamped > fromIndex ? clamped - 1 : clamped;
-  next.splice(targetIndex, 0, item);
+  nextSiblings.splice(targetIndex, 0, moved);
 
-  const idToSort = new Map(next.map((c, i) => [c.id, i]));
-  const list = (await readCollectionsUnified()).map((c) => ({
+  const idToSort = new Map(nextSiblings.map((c, i) => [c.id, i]));
+  const next = list.map((c) => ({
     ...c,
     sortIndex: idToSort.get(c.id) ?? c.sortIndex
   }));
-  await persistCollections(list);
+  await persistCollections(next);
 }
 
 export async function getCollectionStats(collectionId: string): Promise<CollectionStats> {
@@ -152,34 +176,151 @@ export async function getCollectionStats(collectionId: string): Promise<Collecti
   };
 }
 
+function rewriteLocalCardMemberships(removeIds: string[], collections: CollectionRecord[]): void {
+  const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
+    .map(normalizeCardRecord)
+    .filter((c): c is CardRecord => c !== null);
+  if (localCards.length === 0) return;
+  const next = localCards.map((c) => {
+    const nextIds = removeIds.reduce(
+      (ids, collectionId) => removeCollectionFromCardIds(ids, collectionId, collections),
+      c.collectionIds
+    );
+    return nextIds === c.collectionIds ? c : { ...c, collectionIds: nextIds };
+  });
+  safeWriteArray(STORAGE_KEYS.cards, next);
+}
+
 export async function deleteCollection(collectionId: string): Promise<void> {
-  const existingCols = await getAllCollections();
+  const existingCols = await readCollectionsUnified();
   const removed = existingCols.find((c) => c.id === collectionId);
   const b = await resolveBackend();
   if (b === 'file') {
     await storage.storageDeleteCollection(collectionId);
   } else {
-    await persistCollections(existingCols.filter((c) => c.id !== collectionId));
-    const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
-      .map(normalizeCardRecord)
-      .filter((c): c is CardRecord => c !== null);
-    if (localCards.length > 0) {
-      const next = localCards.map((c) =>
-        c.collectionIds.some((id) => id === collectionId)
-          ? { ...c, collectionIds: c.collectionIds.filter((id) => id !== collectionId) }
-          : c
-      );
-      safeWriteArray(STORAGE_KEYS.cards, next);
-    }
+    const removeIds = new Set(descendantOrSelfIds(existingCols, collectionId));
+    await persistCollections(existingCols.filter((c) => !removeIds.has(c.id)));
+    rewriteLocalCardMemberships([...removeIds], existingCols);
   }
   notifyCollectionsChanged();
   notifyCardsChanged();
   if (removed?.name) {
-    const entry = historyQuotedEntity('Удалена коллекция «', {
+    const label = isCollectionSection(removed) ? 'Удалён раздел «' : 'Удалена коллекция «';
+    const entry = historyQuotedEntity(label, {
       entityType: 'collection',
       id: collectionId,
       label: removed.name
     });
     void tryAppendLibraryHistory(entry.message, entry.segments);
   }
+}
+
+export async function mergeCollectionInto(sourceId: string, targetId: string): Promise<void> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    await storage.storageMergeCollection({ sourceId, targetId });
+    notifyCollectionsChanged();
+    notifyCardsChanged();
+    return;
+  }
+  const list = await readCollectionsUnified();
+  const source = list.find((c) => c.id === sourceId);
+  const target = list.find((c) => c.id === targetId);
+  if (!source || !target) throw new Error('Коллекция не найдена');
+  if (!isCollectionSection(source) || !isCollectionSection(target)) {
+    throw new Error('Сливать можно только разделы');
+  }
+  const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
+    .map(normalizeCardRecord)
+    .filter((c): c is CardRecord => c !== null);
+  if (localCards.length > 0) {
+    const next = localCards.map((c) => {
+      if (!c.collectionIds.includes(sourceId)) return c;
+      let ids = addCollectionToCardIds(c.collectionIds, targetId, list);
+      ids = removeCollectionFromCardIds(ids, sourceId, list);
+      return { ...c, collectionIds: ids };
+    });
+    safeWriteArray(STORAGE_KEYS.cards, next);
+  }
+  await persistCollections(list.filter((c) => c.id !== sourceId));
+  notifyCardsChanged();
+}
+
+export async function duplicateCollection(sourceId: string): Promise<CollectionRecord> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    const copy = await storage.storageDuplicateCollection(sourceId);
+    notifyCollectionsChanged();
+    notifyCardsChanged();
+    return copy;
+  }
+  const list = await readCollectionsUnified();
+  const source = list.find((c) => c.id === sourceId);
+  if (!source) throw new Error('Коллекция не найдена');
+  const parentId = collectionParentId(source);
+  const copy: CollectionRecord = {
+    id: newId(),
+    name: uniqueCopyName(list, source.name, parentId),
+    createdAt: new Date().toISOString(),
+    sortIndex: source.sortIndex + 1,
+    ...(source.description ? { description: source.description } : {}),
+    ...(parentId ? { parentId } : {})
+  };
+  const bumped = list.map((item) =>
+    collectionParentId(item) === parentId && item.sortIndex > source.sortIndex
+      ? { ...item, sortIndex: item.sortIndex + 1 }
+      : item
+  );
+  const nextList = [...bumped, copy];
+  await persistCollections(nextList);
+  const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
+    .map(normalizeCardRecord)
+    .filter((c): c is CardRecord => c !== null);
+  if (localCards.length > 0) {
+    const next = localCards.map((c) =>
+      c.collectionIds.includes(sourceId)
+        ? { ...c, collectionIds: addCollectionToCardIds(c.collectionIds, copy.id, nextList) }
+        : c
+    );
+    safeWriteArray(STORAGE_KEYS.cards, next);
+  }
+  notifyCardsChanged();
+  return copy;
+}
+
+export async function moveCollectionToParent(sectionId: string, newParentId: string): Promise<void> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    await storage.storageMoveCollection({ sectionId, newParentId });
+    notifyCollectionsChanged();
+    notifyCardsChanged();
+    return;
+  }
+  const list = await readCollectionsUnified();
+  const section = list.find((c) => c.id === sectionId);
+  if (!section) throw new Error('Раздел не найден');
+  if (!isCollectionSection(section)) throw new Error('Переносить можно только раздел');
+  const oldParentId = collectionParentId(section);
+  if (!oldParentId) throw new Error('Раздел не найден');
+  if (oldParentId === newParentId) return;
+  assertCollectionParentIsRoot(list, newParentId);
+  const moved: CollectionRecord = {
+    ...section,
+    parentId: newParentId,
+    name: uniqueSiblingName(list, section.name, newParentId, sectionId)
+  };
+  const nextList = list.map((item) => (item.id === sectionId ? moved : item));
+  await persistCollections(nextList);
+  const localCards = safeReadArray<unknown>(STORAGE_KEYS.cards)
+    .map(normalizeCardRecord)
+    .filter((c): c is CardRecord => c !== null);
+  if (localCards.length > 0) {
+    const next = localCards.map((c) => {
+      if (!c.collectionIds.includes(sectionId)) return c;
+      const stripped = c.collectionIds.filter((id) => id !== oldParentId);
+      return { ...c, collectionIds: normalizeCardCollectionIds(stripped, nextList) };
+    });
+    safeWriteArray(STORAGE_KEYS.cards, next);
+  }
+  notifyCardsChanged();
 }

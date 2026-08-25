@@ -1,6 +1,13 @@
 import { randomUUID } from 'crypto';
 
 import {
+  addCollectionToCardIds,
+  assertCollectionParentIsRoot,
+  collectionParentId,
+  removeCollectionFromCardIds,
+  siblingNameTaken
+} from '../shared/collectionHierarchy';
+import {
   deleteCollectionFromDb,
   getCardByIdFromDb,
   getCollectionPreviewSlicesFromDb,
@@ -17,27 +24,37 @@ function normalizeName(name: string): string {
   return trimmed;
 }
 
-function assertUniqueName(collections: CollectionRow[], name: string, exceptId?: string): void {
-  const lower = name.toLowerCase();
-  if (collections.some((c) => c.id !== exceptId && c.name.toLowerCase() === lower)) {
-    throw new Error('Коллекция с таким названием уже существует');
+function assertUniqueSiblingName(
+  collections: CollectionRow[],
+  name: string,
+  parentId: string | null,
+  exceptId?: string
+): void {
+  if (siblingNameTaken(collections, name, parentId, exceptId)) {
+    throw new Error(
+      parentId ? 'Раздел с таким названием уже есть' : 'Коллекция с таким названием уже есть'
+    );
   }
 }
 
 export function createCollectionRecord(
   libraryRoot: string,
-  input: { name: string; description?: string }
+  input: { name: string; description?: string; parentId?: string }
 ): CollectionRow {
   const name = normalizeName(input.name);
   const collections = listCollections(libraryRoot);
-  assertUniqueName(collections, name);
-  const maxSort = collections.reduce((m, c) => Math.max(m, c.sortIndex), -1);
+  const parentId = input.parentId?.trim() || undefined;
+  if (parentId) assertCollectionParentIsRoot(collections, parentId);
+  assertUniqueSiblingName(collections, name, parentId ?? null);
+  const siblings = collections.filter((item) => collectionParentId(item) === (parentId ?? null));
+  const maxSort = siblings.reduce((m, c) => Math.max(m, c.sortIndex), -1);
   const col: CollectionRow = {
     id: randomUUID(),
     name,
     createdAt: new Date().toISOString(),
     sortIndex: maxSort + 1,
-    ...(input.description?.trim() ? { description: input.description.trim() } : {})
+    ...(input.description?.trim() ? { description: input.description.trim() } : {}),
+    ...(parentId ? { parentId } : {})
   };
   upsertCollection(libraryRoot, col);
   return col;
@@ -45,11 +62,15 @@ export function createCollectionRecord(
 
 export function ensureCollectionRecord(
   libraryRoot: string,
-  input: { name: string; description?: string }
+  input: { name: string; description?: string; parentId?: string }
 ): { collection: CollectionRow; created: boolean } {
   const name = normalizeName(input.name);
   const collections = listCollections(libraryRoot);
-  const existing = collections.find((c) => c.name.toLowerCase() === name.toLowerCase());
+  const parentId = input.parentId?.trim() || undefined;
+  const existing = collections.find(
+    (c) =>
+      collectionParentId(c) === (parentId ?? null) && c.name.toLowerCase() === name.toLowerCase()
+  );
   if (existing) {
     return { collection: existing, created: false };
   }
@@ -67,7 +88,7 @@ export function updateCollectionRecord(
   const existing = collections.find((c) => c.id === input.collectionId);
   if (!existing) throw new Error('Коллекция не найдена');
   const name = input.name !== undefined ? normalizeName(input.name) : existing.name;
-  assertUniqueName(collections, name, existing.id);
+  assertUniqueSiblingName(collections, name, collectionParentId(existing), existing.id);
   const col: CollectionRow = {
     ...existing,
     name,
@@ -122,10 +143,11 @@ export async function addCardsToCollection(
   for (const cardId of cardIds) {
     const row = getCardByIdFromDb(libraryRoot, cardId);
     if (!row) continue;
-    if (row.collectionIds.includes(collectionId)) continue;
-    await updateCardInStorage(libraryRoot, cardId, {
-      collectionIds: [...row.collectionIds, collectionId]
-    });
+    const nextIds = addCollectionToCardIds(row.collectionIds, collectionId, collections);
+    if (nextIds.length === row.collectionIds.length && nextIds.every((id) => row.collectionIds.includes(id))) {
+      continue;
+    }
+    await updateCardInStorage(libraryRoot, cardId, { collectionIds: nextIds });
     updated.push(cardId);
   }
   return { updated };
@@ -136,13 +158,14 @@ export async function removeCardsFromCollection(
   collectionId: string,
   cardIds: string[]
 ): Promise<{ updated: string[] }> {
+  const collections = listCollections(libraryRoot);
   const updated: string[] = [];
   for (const cardId of cardIds) {
     const row = getCardByIdFromDb(libraryRoot, cardId);
     if (!row) continue;
     if (!row.collectionIds.includes(collectionId)) continue;
     await updateCardInStorage(libraryRoot, cardId, {
-      collectionIds: row.collectionIds.filter((id) => id !== collectionId)
+      collectionIds: removeCollectionFromCardIds(row.collectionIds, collectionId, collections)
     });
     updated.push(cardId);
   }

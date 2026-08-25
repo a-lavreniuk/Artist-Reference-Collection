@@ -2,21 +2,31 @@ import { useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CardRecord, CollectionRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+import type { MediaSectionTab } from '../gallery/galleryMediaCache';
 import CollectionGalleryCard from './CollectionGalleryCard';
+import { collectionHref } from './collectionHref';
 import { useHorizontalScrollStrip } from './useHorizontalScrollStrip';
 
 export type GalleryCollectionStripItem = {
   collection: CollectionRecord;
   count: number;
   previews: CardRecord[];
+  sectionCount?: number;
 };
 
 type Props = {
   items: GalleryCollectionStripItem[];
   onCollectionContextMenu?: (collectionId: string, event: React.MouseEvent) => void;
+  mediaTab?: MediaSectionTab;
+  ariaLabel?: string;
 };
 
-export default function LibraryCollectionsStrip({ items, onCollectionContextMenu }: Props) {
+export default function LibraryCollectionsStrip({
+  items,
+  onCollectionContextMenu,
+  mediaTab = 'gallery',
+  ariaLabel = 'Коллекции'
+}: Props) {
   const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
   const {
@@ -45,7 +55,7 @@ export default function LibraryCollectionsStrip({ items, onCollectionContextMenu
       data-btn-size="m"
       data-elevation="default"
       data-typo-tone="white"
-      aria-label="Коллекции"
+      aria-label={ariaLabel}
     >
       <div className="arc-gallery-collections-strip__viewport">
         <div
@@ -65,10 +75,11 @@ export default function LibraryCollectionsStrip({ items, onCollectionContextMenu
                 collection={item.collection}
                 previews={item.previews}
                 count={item.count}
-                mediaTab="gallery"
+                sectionCount={item.sectionCount}
+                mediaTab={mediaTab}
                 onOpen={() => {
                   if (shouldSuppressChildClick()) return;
-                  navigate(`/collections/${item.collection.id}`);
+                  navigate(collectionHref(item.collection));
                 }}
                 onContextMenu={(event) => {
                   onCollectionContextMenu?.(item.collection.id, event);

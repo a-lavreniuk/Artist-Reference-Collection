@@ -260,6 +260,12 @@ contextBridge.exposeInMainWorld('arc', {
   storageListCollections: () => ipcRenderer.invoke('arc:storage-list-collections'),
   storageUpsertCollection: (col: unknown) => ipcRenderer.invoke('arc:storage-upsert-collection', col),
   storageDeleteCollection: (id: string) => ipcRenderer.invoke('arc:storage-delete-collection', id),
+  storageMergeCollection: (payload: { sourceId: string; targetId: string }) =>
+    ipcRenderer.invoke('arc:storage-merge-collection', payload),
+  storageDuplicateCollection: (sourceId: string) =>
+    ipcRenderer.invoke('arc:storage-duplicate-collection', sourceId),
+  storageMoveCollection: (payload: { sectionId: string; newParentId: string }) =>
+    ipcRenderer.invoke('arc:storage-move-collection', payload),
   storageCollectionCounts: () => ipcRenderer.invoke('arc:storage-collection-counts'),
   storageCollectionPreviewSlices: (limit: number) =>
     ipcRenderer.invoke('arc:storage-collection-preview-slices', limit),

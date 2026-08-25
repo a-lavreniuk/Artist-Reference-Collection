@@ -39,6 +39,8 @@ export type ShortcutId =
   | 'gallery.gridMedium'
   | 'gallery.gridSmall'
   | 'gallery.openInNewWindow'
+  | 'collections.create'
+  | 'collections.createSection'
   | 'detail.previous'
   | 'detail.next'
   | 'detail.copySettings'
@@ -79,6 +81,7 @@ export type ShortcutGroupId =
   | 'navigation'
   | 'devtools'
   | 'gallery'
+  | 'collections'
   | 'moodboard'
   | 'detail'
   | 'video'
@@ -107,6 +110,7 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroupDefinition[] = [
   { id: 'navigation', title: 'Навигация' },
   { id: 'devtools', title: 'Разработка' },
   { id: 'gallery', title: 'Галерея' },
+  { id: 'collections', title: 'Коллекции' },
   { id: 'moodboard', title: 'Мудборд' },
   { id: 'detail', title: 'Деталка карточки' },
   { id: 'video', title: 'Видеоплеер' },
@@ -285,6 +289,22 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'gallery',
     label: 'Открыть в новом окне',
     defaultAccelerator: 'CommandOrControl+Shift+O',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'collections.create',
+    groupId: 'collections',
+    label: 'Новая коллекция',
+    defaultAccelerator: 'CommandOrControl+Shift+N',
+    scope: 'renderer',
+    settingsVisible: true
+  },
+  {
+    id: 'collections.createSection',
+    groupId: 'collections',
+    label: 'Новый раздел',
+    defaultAccelerator: 'CommandOrControl+Shift+S',
     scope: 'renderer',
     settingsVisible: true
   },

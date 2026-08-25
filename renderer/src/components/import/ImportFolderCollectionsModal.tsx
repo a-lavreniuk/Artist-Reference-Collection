@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { rootCollections } from '@arc-main-shared/collectionHierarchy';
 import { ArcAnimatedModalHost } from '../../motion';
 import type { CollectionNameConflictRule, FolderImportPlan, FolderImportTargetMode } from '../../import/folderImportPlan';
 import {
@@ -75,7 +76,7 @@ export default function ImportFolderCollectionsModal({ drop, onClose, onConfirm 
 
   const filteredCols = useMemo(() => {
     const q = colSearch.trim().toLowerCase();
-    return collections.filter((c) => !q || c.name.toLowerCase().includes(q));
+    return rootCollections(collections).filter((c) => !q || c.name.toLowerCase().includes(q));
   }, [collections, colSearch]);
 
   const canConfirm =

@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS collections (
   name TEXT NOT NULL,
   created_at TEXT NOT NULL,
   sort_index INTEGER NOT NULL DEFAULT 0,
-  description TEXT
+  description TEXT,
+  parent_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS card_tags (
@@ -184,6 +185,10 @@ function migrateLibraryDbSchema(db: Database.Database): void {
   if (!tableHasColumn(db, 'collections', 'description')) {
     db.exec('ALTER TABLE collections ADD COLUMN description TEXT');
   }
+  if (!tableHasColumn(db, 'collections', 'parent_id')) {
+    db.exec('ALTER TABLE collections ADD COLUMN parent_id TEXT');
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_collections_parent ON collections(parent_id)');
   if (addedCollectionSortIndex) {
     const rows = db.prepare('SELECT id FROM collections ORDER BY created_at ASC, name ASC').all() as Array<{
       id: string;

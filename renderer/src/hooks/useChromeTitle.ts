@@ -1,7 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { parseCollectionsPath } from '@arc-main-shared/collectionHierarchy';
 import { parseDetailCardId } from '../search/openCardUrl';
 import { libraryScopeLabel, parseLibraryScope } from '../search/libraryScopeUrl';
+import { ARC_COLLECTIONS_CHANGED_EVENT, getAllCollections, type CollectionRecord } from '../services/db';
 
 const SETTINGS_TITLES: Record<string, string> = {
   '/settings/general': 'Общие',
@@ -37,7 +39,22 @@ function shortCardLabel(cardId: string): string {
   return compact || cardId.slice(0, 8);
 }
 
-export function resolveChromeTitle(pathname: string, search: string): string {
+function collectionsChromeTitle(pathname: string, collections: CollectionRecord[]): string | null {
+  const parsed = parseCollectionsPath(pathname);
+  if (!parsed) return null;
+  const parent = collections.find((item) => item.id === parsed.collectionId);
+  if (!parent) return 'Коллекции';
+  if (!parsed.sectionId) return parent.name;
+  const section = collections.find((item) => item.id === parsed.sectionId);
+  if (!section) return parent.name;
+  return `${parent.name} / ${section.name}`;
+}
+
+export function resolveChromeTitle(
+  pathname: string,
+  search: string,
+  collections: CollectionRecord[] = []
+): string {
   const detailId = parseDetailCardId(new URLSearchParams(search));
   if (detailId) {
     return `Карточка +${shortCardLabel(detailId)}`;
@@ -54,6 +71,10 @@ export function resolveChromeTitle(pathname: string, search: string): string {
     return 'Настройки';
   }
 
+  if (pathname.startsWith('/collections')) {
+    return collectionsChromeTitle(pathname, collections) ?? 'Коллекции';
+  }
+
   for (const [path, title] of Object.entries(PAGE_TITLES)) {
     if (pathname === path || pathname.startsWith(`${path}/`)) {
       return title;
@@ -66,9 +87,25 @@ export function resolveChromeTitle(pathname: string, search: string): string {
 export function useChromeTitle(): string {
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const [collections, setCollections] = useState<CollectionRecord[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      void getAllCollections().then((list) => {
+        if (!cancelled) setCollections(list);
+      });
+    };
+    load();
+    window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, load);
+    };
+  }, []);
 
   return useMemo(
-    () => resolveChromeTitle(location.pathname, searchParams.toString()),
-    [location.pathname, searchParams]
+    () => resolveChromeTitle(location.pathname, searchParams.toString(), collections),
+    [location.pathname, searchParams, collections]
   );
 }

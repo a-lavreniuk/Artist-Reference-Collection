@@ -51,12 +51,13 @@ export function registerCollectionTools(ctx: McpRegisterContext): void {
       {
         description: desc('arc_create_collection'),
         inputSchema: {
-          name: z.string().describe('Название коллекции'),
-          description: z.string().optional()
+          name: z.string().describe('Название коллекции или раздела'),
+          description: z.string().optional(),
+          parentId: collectionIdSchema.optional().describe('ID коллекции — создать раздел внутри неё')
         }
       },
-      async ({ name, description }) =>
-        runMcpWrite(deps, (root) => createCollectionRecord(root, { name, description }))
+      async ({ name, description, parentId }) =>
+        runMcpWrite(deps, (root) => createCollectionRecord(root, { name, description, parentId }))
     );
   });
 

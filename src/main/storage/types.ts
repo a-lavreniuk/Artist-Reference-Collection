@@ -114,6 +114,8 @@ export type CollectionRow = {
   createdAt: string;
   sortIndex: number;
   description?: string;
+  /** NULL/undefined = коллекция; иначе id родительской коллекции (раздел). */
+  parentId?: string;
 };
 
 export type CollectionStatsRow = {

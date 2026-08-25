@@ -86,6 +86,8 @@ export type CollectionRecord = {
   createdAt: string;
   sortIndex: number;
   description?: string;
+  /** Нет значения = коллекция; иначе id родителя (раздел, глубина 1). */
+  parentId?: string;
 };
 
 /** Состояние доски мудборда (один глобальный мудборд на библиотеку). */

@@ -1,6 +1,10 @@
 import { normalizeHex } from '../../utils/colorPicker';
 import { normalizeCardRating } from '@arc-main-shared/cardRating';
-import { sanitizeCardAnnotations, sanitizeCustomFieldsMap } from '@arc-main-shared/detailCardTemplate';
+import { flattenCollectionTree } from '@arc-main-shared/collectionHierarchy';
+import {
+  sanitizeCardAnnotations,
+  sanitizeCustomFieldsMap
+} from '@arc-main-shared/detailCardTemplate';
 import type { CardRecord, CollectionRecord } from '../arcSchema';
 import type { CategoryRecord, CategoryWeight, TagRecord } from './types';
 
@@ -189,13 +193,15 @@ export function normalizeCollectionRecord(item: unknown, index = 0): CollectionR
   const createdAt = typeof r.createdAt === 'string' ? r.createdAt : new Date().toISOString();
   const sortIndex = typeof r.sortIndex === 'number' ? r.sortIndex : index;
   const description = typeof r.description === 'string' ? r.description.trim() : undefined;
+  const parentRaw = typeof r.parentId === 'string' ? r.parentId.trim() : '';
   if (!id) return null;
   return {
     id,
     name: name || 'Без названия',
     createdAt,
     sortIndex,
-    ...(description ? { description } : {})
+    ...(description ? { description } : {}),
+    ...(parentRaw ? { parentId: parentRaw } : {})
   };
 }
 
@@ -236,7 +242,7 @@ export function mapStorageTagToDb(tag: TagRecord): {
 }
 
 export function sortCollections(list: CollectionRecord[]): CollectionRecord[] {
-  return [...list].sort((a, b) => a.sortIndex - b.sortIndex || a.name.localeCompare(b.name, 'ru'));
+  return flattenCollectionTree(list);
 }
 
 export function cardHasAllTagIds(c: CardRecord, selectedTagIds: string[]): boolean {

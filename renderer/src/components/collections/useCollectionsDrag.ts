@@ -24,13 +24,15 @@ function resolveInsertIndex(clientY: number, rows: RowMetrics[]): number {
   return rows.length;
 }
 
-function collectRowMetrics(listEl: HTMLElement): RowMetrics[] {
-  const nodes = listEl.querySelectorAll<HTMLElement>('[data-collections-row]');
-  return Array.from(nodes).map((node) => ({
-    id: node.dataset.collectionsRow as string,
-    top: node.getBoundingClientRect().top,
-    height: node.getBoundingClientRect().height
-  }));
+function collectRowMetrics(listEl: HTMLElement, siblingGroup: string): RowMetrics[] {
+  const nodes = listEl.querySelectorAll<HTMLElement>('[data-collections-row][data-sibling-group]');
+  return Array.from(nodes)
+    .filter((node) => node.dataset.siblingGroup === siblingGroup)
+    .map((node) => ({
+      id: node.dataset.collectionsRow as string,
+      top: node.getBoundingClientRect().top,
+      height: node.getBoundingClientRect().height
+    }));
 }
 
 type StartDragArgs = {
@@ -40,6 +42,7 @@ type StartDragArgs = {
   handleEl: HTMLElement;
   rowEl: HTMLElement;
   listEl: HTMLElement;
+  siblingGroup: string;
 };
 
 export function useCollectionsDrag(onReorder: (id: string, insertIndex: number) => void) {
@@ -49,6 +52,7 @@ export function useCollectionsDrag(onReorder: (id: string, insertIndex: number) 
     label: string;
     count: number;
     listEl: HTMLElement;
+    siblingGroup: string;
     offsetX: number;
     offsetY: number;
     ghostWidth: number;
@@ -58,7 +62,7 @@ export function useCollectionsDrag(onReorder: (id: string, insertIndex: number) 
     (clientY: number) => {
       const active = dragRef.current;
       if (!active) return;
-      const rows = collectRowMetrics(active.listEl);
+      const rows = collectRowMetrics(active.listEl, active.siblingGroup);
       const insertIndex = resolveInsertIndex(clientY, rows);
       onReorder(active.id, insertIndex);
       dragRef.current = null;
@@ -75,7 +79,7 @@ export function useCollectionsDrag(onReorder: (id: string, insertIndex: number) 
     const onMove = (e: PointerEvent) => {
       const active = dragRef.current;
       if (!active) return;
-      const rows = collectRowMetrics(active.listEl);
+      const rows = collectRowMetrics(active.listEl, active.siblingGroup);
       const insertIndex = resolveInsertIndex(e.clientY, rows);
       setDragState({
         dragId: active.id,
@@ -115,13 +119,14 @@ export function useCollectionsDrag(onReorder: (id: string, insertIndex: number) 
       label: args.label,
       count: args.count,
       listEl: args.listEl,
+      siblingGroup: args.siblingGroup,
       offsetX: handleRect.left - rowRect.left + handleRect.width / 2,
       offsetY: handleRect.top - rowRect.top + handleRect.height / 2,
       ghostWidth: rowRect.width
     };
     setDragState({
       dragId: args.id,
-      insertIndex: collectRowMetrics(args.listEl).findIndex((r) => r.id === args.id),
+      insertIndex: collectRowMetrics(args.listEl, args.siblingGroup).findIndex((r) => r.id === args.id),
       ghostX: rowRect.left,
       ghostY: rowRect.top,
       ghostWidth: rowRect.width,

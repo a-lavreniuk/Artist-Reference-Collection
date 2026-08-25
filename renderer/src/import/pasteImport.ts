@@ -1,11 +1,12 @@
 import { isContextMenuOpen, isEditableTarget } from '../shortcuts/shortcutGuards';
 
-/** Коллекция открытого экрана `/collections/:id`, иначе null. */
+import { parseCollectionsPath } from '@arc-main-shared/collectionHierarchy';
+
+/** Коллекция или раздел открытого экрана `/collections/...`, иначе null. */
 export function collectionIdFromPathname(pathname: string): string | null {
-  const m = pathname.match(/^\/collections\/([^/?#]+)/);
-  if (!m) return null;
-  const id = decodeURIComponent(m[1] ?? '').trim();
-  return id || null;
+  const parsed = parseCollectionsPath(pathname);
+  if (!parsed) return null;
+  return parsed.sectionId ?? parsed.collectionId;
 }
 
 /** Пути из clipboard DataTransfer; при bitmap-вставке `files` часто отсутствует. */

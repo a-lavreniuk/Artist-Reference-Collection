@@ -1,6 +1,7 @@
 import type { CardRecord } from '../arcSchema';
 import { createEmptyMoodboardBoard } from '../arcSchema';
 import { clampCardRating } from '@arc-main-shared/cardRating';
+import { descendantOrSelfIds, normalizeCardCollectionIds } from '@arc-main-shared/collectionHierarchy';
 import { getDeleteCardsUseTrash } from '../../import/importDefaults';
 import * as storage from '../storageClient';
 import { listAllCardsPaginated } from './listAllCardsPaginated';
@@ -122,7 +123,12 @@ export async function listCardsInCollection(
       sort: params.sort
     });
   }
-  const sorted = (await listCardsSorted('all')).filter((c) => c.collectionIds.includes(collectionId));
+  const { getAllCollections } = await import('./collections');
+  const collections = await getAllCollections();
+  const matchIds = new Set(descendantOrSelfIds(collections, collectionId));
+  const sorted = (await listCardsSorted('all')).filter((c) =>
+    c.collectionIds.some((id) => matchIds.has(id))
+  );
   const tagIds = (params.selectedTagIds ?? []).filter((id) => id.trim().length > 0);
   let list = sorted.filter((c) => cardHasAllTagIds(c, tagIds));
   const cardExact = params.cardIdExact?.trim() ?? '';
@@ -149,11 +155,12 @@ export async function getCollectionCardCounts(): Promise<Record<string, number>>
     return storage.storageCollectionCounts();
   }
   const all = await listCardsSorted('all');
+  const { getAllCollections } = await import('./collections');
+  const cols = await getAllCollections();
   const m: Record<string, number> = {};
-  for (const c of all) {
-    for (const colId of c.collectionIds) {
-      m[colId] = (m[colId] ?? 0) + 1;
-    }
+  for (const col of cols) {
+    const matchIds = new Set(descendantOrSelfIds(cols, col.id));
+    m[col.id] = all.filter((c) => c.collectionIds.some((id) => matchIds.has(id))).length;
   }
   return m;
 }
@@ -168,13 +175,16 @@ export async function getCollectionPreviewSlices(limitPerCollection = 3): Promis
   const { getAllCollections } = await import('./collections');
   const cols = await getAllCollections();
   const out: Record<string, CardRecord[]> = {};
+  const matchByCol = new Map(cols.map((col) => [col.id, new Set(descendantOrSelfIds(cols, col.id))]));
   for (const col of cols) {
     out[col.id] = [];
   }
   for (const card of all) {
-    for (const colId of card.collectionIds) {
-      const bucket = out[colId];
-      if (bucket && bucket.length < limitPerCollection) {
+    for (const col of cols) {
+      const bucket = out[col.id];
+      const matchIds = matchByCol.get(col.id);
+      if (!bucket || !matchIds || bucket.length >= limitPerCollection) continue;
+      if (card.collectionIds.some((id) => matchIds.has(id))) {
         bucket.push(card);
       }
     }
@@ -316,12 +326,17 @@ export async function updateCardPayload(
     .map(normalizeCardRecord)
     .filter((c): c is CardRecord => c !== null);
   if (localCards.length > 0) {
+    const collections =
+      patch.collectionIds !== undefined ? (await import('./collections')).getAllCollections : null;
+    const cols = collections ? await collections() : [];
     const next = localCards.map((c) => {
       if (c.id !== cardId) return c;
       const updated: CardRecord = {
         ...c,
         ...(patch.tagIds ? { tagIds: [...patch.tagIds] } : {}),
-        ...(patch.collectionIds ? { collectionIds: [...patch.collectionIds] } : {})
+        ...(patch.collectionIds
+          ? { collectionIds: normalizeCardCollectionIds(patch.collectionIds, cols) }
+          : {})
       };
       if (patch.description !== undefined) {
         const trimmed = patch.description.trim();

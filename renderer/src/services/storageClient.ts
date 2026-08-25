@@ -225,6 +225,24 @@ export async function storageDeleteCollection(id: string): Promise<void> {
   return arc().storageDeleteCollection(id);
 }
 
+export async function storageMergeCollection(payload: {
+  sourceId: string;
+  targetId: string;
+}): Promise<void> {
+  return arc().storageMergeCollection(payload);
+}
+
+export async function storageDuplicateCollection(sourceId: string): Promise<CollectionRecord> {
+  return arc().storageDuplicateCollection(sourceId);
+}
+
+export async function storageMoveCollection(payload: {
+  sectionId: string;
+  newParentId: string;
+}): Promise<void> {
+  return arc().storageMoveCollection(payload);
+}
+
 export async function storageCollectionCounts(): Promise<Record<string, number>> {
   return arc().storageCollectionCounts();
 }
