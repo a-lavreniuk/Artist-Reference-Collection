@@ -46,6 +46,8 @@ import ConfirmRemoveFromMoodboardModal from '../components/moodboard/ConfirmRemo
 import { EmptyState } from '../components/empty-state';
 import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import { useResetGallerySearch } from '../hooks/useResetGallerySearch';
+import { useCollectionsMeta } from '../hooks/useCollectionsMeta';
+import { loadCollectionsMeta } from '../hooks/collectionsMetaStore';
 import { useOpenCardUrl } from '../search/openCardUrl';
 import { matchesShortcut } from '../shortcuts/matchShortcutEvent';
 import { isRendererShortcutBlocked } from '../shortcuts/shortcutGuards';
@@ -56,20 +58,17 @@ import { resolveGalleryFeedEmptyState } from '../components/gallery/galleryFeedE
 import { startFindSimilarSearch } from '../search/startVisualSimilarSearch';
 import { TruncatedTextWithTooltip } from '../components/tooltip/TruncatedTextWithTooltip';
 import {
-  ARC_COLLECTIONS_CHANGED_EVENT,
   addCollection,
   deleteCollection,
   duplicateCollection,
   getAllCollections,
   getCollectionStats,
-  getCollectionsSidebarMeta,
   getMoodboardCardIds,
   isCardOnBoard,
   mergeCollectionInto,
   moveCollectionToParent,
   reorderCollectionToIndex,
   updateCollection,
-  type CardRecord,
   type CollectionRecord,
   type CollectionStats
 } from '../services/db';
@@ -93,10 +92,9 @@ export default function CollectionsPage() {
   const cardIdExact = useMemo(() => parseSearchCardId(searchParams), [searchParams]);
   const { resetGallerySearch } = useResetGallerySearch();
 
-  const [collections, setCollections] = useState<CollectionRecord[]>([]);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [previews, setPreviews] = useState<Record<string, CardRecord[]>>({});
-  const [collectionsMetaLoaded, setCollectionsMetaLoaded] = useState(false);
+  const { collections, counts, previews, loaded: collectionsMetaLoaded } = useCollectionsMeta(
+    isCollectionsRoute
+  );
   const [sidebarWidth, setSidebarWidth] = useState(() => readCollectionsSidebarWidth());
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => new Set());
   const [collectionModal, setCollectionModal] = useState<CollectionSettingsModalState | null>(null);
@@ -216,49 +214,6 @@ export default function CollectionsPage() {
     loadMore: feed.loadMore
   });
 
-  const loadMeta = useCallback(async () => {
-    const meta = await getCollectionsSidebarMeta(4);
-    setCollections(meta.collections);
-    setCounts(meta.counts);
-    setPreviews(meta.previews);
-    setCollectionsMetaLoaded(true);
-    return meta.collections;
-  }, []);
-
-  useEffect(() => {
-    if (!isCollectionsRoute || !feed.feedSettled) return;
-    let idleId: number | undefined;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let cancelled = false;
-    const run = () => {
-      if (cancelled) return;
-      void loadMeta();
-    };
-    if (typeof window.requestIdleCallback === 'function') {
-      idleId = window.requestIdleCallback(run, { timeout: 4000 });
-    } else {
-      timeoutId = window.setTimeout(run, 800);
-    }
-    const onRefresh = () => void loadMeta();
-    const unsubCards = subscribeGalleryCardsChanged(onRefresh);
-    window.addEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onRefresh);
-    window.addEventListener('arc:library-changed', onRefresh);
-    window.addEventListener('storage', onRefresh);
-    return () => {
-      cancelled = true;
-      if (idleId !== undefined && typeof window.cancelIdleCallback === 'function') {
-        window.cancelIdleCallback(idleId);
-      }
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-      unsubCards();
-      window.removeEventListener(ARC_COLLECTIONS_CHANGED_EVENT, onRefresh);
-      window.removeEventListener('arc:library-changed', onRefresh);
-      window.removeEventListener('storage', onRefresh);
-    };
-  }, [feed.feedSettled, isCollectionsRoute, loadMeta]);
-
   useEffect(() => {
     const onResize = () => {
       setSidebarWidth((current) => clampCollectionsSidebarWidth(current));
@@ -271,7 +226,7 @@ export default function CollectionsPage() {
     if (pageRef.current) {
       void hydrateArcNavbarIcons(pageRef.current);
     }
-  }, [collections, activeCollectionId, activeCollection?.name, feed.cards.length, collectionModal, sidebarWidth, sectionStripItems.length]);
+  }, [collections, counts, activeCollectionId, activeCollection?.name, feed.cards.length, collectionModal, sidebarWidth, sectionStripItems.length]);
 
   useEffect(() => {
     const scrollEl = pageRef.current?.querySelector('.arc-collections-page-main__scroll');
@@ -387,9 +342,9 @@ export default function CollectionsPage() {
           navigate(collectionHref(roots[0]), { replace: true });
         }
       }
-      await loadMeta();
+      await loadCollectionsMeta({ force: true });
     },
-    [activeCollectionId, collections, loadMeta, navigate]
+    [activeCollectionId, collections, navigate]
   );
 
   const resolveCollection = useCallback(
@@ -569,6 +524,7 @@ export default function CollectionsPage() {
     feedError,
     hasSearchFilters,
     context: 'collection',
+    collectionKind: routeSectionId ? 'section' : 'collection',
     isRemoteSearch: isRemoteSearchFeed,
     onResetSearch: resetGallerySearch,
     onNavigateLibrary: () => navigate('/gallery'),
@@ -625,9 +581,9 @@ export default function CollectionsPage() {
           data-elevation="sunken"
           data-typo-tone="white"
         >
-          <div className="arc-collections-page-main__scroll">
-            <div className="arc-collections-page-main__scroll-pad">
-              {activeCollection ? (
+          {activeCollection ? (
+            <div className="arc-collections-page-main__fixed">
+              <div className="arc-collections-page-main__inset">
                 <div className="arc-collections-page-title">
                   <button
                     type="button"
@@ -638,13 +594,22 @@ export default function CollectionsPage() {
                     <TruncatedTextWithTooltip
                       text={activeCollection.name}
                       className="h1 arc-collections-page-title__text"
+                      wrapClassName="arc-truncated-tooltip-wrap arc-collections-page-title__name-wrap"
                     />
+                    <span className="h1 arc-collections-page-title__count">
+                      {counts[activeCollection.id] ?? 0}
+                    </span>
                   </button>
                 </div>
-              ) : null}
+              </div>
+              <div className="context-menu__sep" role="separator" aria-hidden="true" />
+            </div>
+          ) : null}
 
-              {sectionStripItems.length > 0 ? (
-                <div className="arc-collections-page-sections">
+          <div className="arc-collections-page-main__scroll">
+            {sectionStripItems.length > 0 ? (
+              <>
+                <div className="arc-collections-page-main__scroll-pad">
                   <LibraryCollectionsStrip
                     items={sectionStripItems}
                     mediaTab="collections"
@@ -652,12 +617,16 @@ export default function CollectionsPage() {
                     onCollectionContextMenu={openCollectionContextMenu}
                   />
                 </div>
-              ) : null}
+                <div className="context-menu__sep" role="separator" aria-hidden="true" />
+              </>
+            ) : null}
 
+            <div className="arc-collections-page-main__scroll-pad">
               {emptyState ? (
                 <EmptyState
                   {...emptyState.copy}
                   fill
+                  layout={emptyState.layout}
                   onPrimaryAction={emptyState.onPrimaryAction}
                   onSecondaryAction={emptyState.onSecondaryAction}
                 />

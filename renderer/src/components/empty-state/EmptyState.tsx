@@ -13,6 +13,8 @@ type Props = EmptyStateCopy & {
   className?: string;
   elevation?: 'default' | 'sunken';
   fill?: boolean;
+  /** Без собственного H1 и рамки: текст + ссылка в одной фразе. */
+  layout?: 'default' | 'inline';
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
   /** Иконка brand-кнопки (по умолчанию `arc-icon-plus`). */
@@ -46,12 +48,14 @@ export default function EmptyState({
   className = '',
   elevation = 'default',
   fill = false,
+  layout = 'default',
   onPrimaryAction,
   onSecondaryAction,
   primaryActionIconClass,
   children
 }: Props) {
   const actionsRef = useRef<HTMLDivElement>(null);
+  const inline = layout === 'inline';
 
   const primaryAction =
     primaryActionLabel && onPrimaryAction
@@ -68,10 +72,30 @@ export default function EmptyState({
       : null;
 
   useLayoutEffect(() => {
-    if (actionsRef.current) {
-      void hydrateArcNavbarIcons(actionsRef.current);
-    }
-  }, [primaryActionLabel, secondaryActionLabel, primaryActionIconClass]);
+    if (inline || !actionsRef.current) return;
+    void hydrateArcNavbarIcons(actionsRef.current);
+  }, [inline, primaryActionLabel, secondaryActionLabel, primaryActionIconClass]);
+
+  if (inline) {
+    return (
+      <div
+        className={`arc-empty-state arc-empty-state--inline${fill ? ' arc-empty-state--fill' : ''}${className ? ` ${className}` : ''}`}
+      >
+        <p className="text-m arc-empty-state__inline-copy">
+          {subtitle}
+          {primaryAction ? (
+            <>
+              {' '}
+              <button type="button" className="inline-link" onClick={primaryAction.onClick}>
+                {primaryAction.label}
+              </button>
+            </>
+          ) : null}
+        </p>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div

@@ -55,7 +55,13 @@ export const EMPTY_STATE_COPY = {
   },
   collectionEmpty: {
     title: 'В коллекции пока нет карточек',
-    subtitle: 'Добавьте карточки из библиотеки — они появятся здесь',
+    subtitle: 'В коллекции пока нет ни одной карточки. Добавьте карточки из библиотеки — они появятся здесь',
+    primaryActionLabel: 'Перейти в библиотеку',
+    primaryActionVariant: 'outline'
+  },
+  sectionEmpty: {
+    title: 'В разделе пока нет карточек',
+    subtitle: 'В разделе пока нет ни одной карточки. Добавьте карточки из библиотеки — они появятся здесь',
     primaryActionLabel: 'Перейти в библиотеку',
     primaryActionVariant: 'outline'
   },

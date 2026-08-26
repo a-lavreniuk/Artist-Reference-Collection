@@ -1114,15 +1114,19 @@ html[data-theme="light"] .arc-gallery-collection-card__pic--empty {
 .arc-gallery-collection-card__label {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: baseline;
   gap: var(--s-2);
   min-width: 0;
   width: 100%;
   white-space: nowrap;
 }
 
-.arc-gallery-collection-card__title {
+.arc-gallery-collection-card__title-wrap {
   flex: 0 1 auto;
+  min-width: 0;
+}
+
+.arc-gallery-collection-card__title {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1734,21 +1738,26 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
 
   .arc-collections-page-sidebar__foot-actions {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: var(--s-2);
     padding-bottom: var(--s-4);
   }
 
-  .arc-collections-page-sidebar__collapse-all {
-    justify-content: flex-start;
+  .arc-collections-page-sidebar__foot-actions .arc-tags-sidebar-add {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .arc-collections-page-sidebar__foot-actions > .arc-tooltip-wrapper {
+    flex: 0 0 auto;
   }
 
   .arc-collections-page-sidebar .arc-tags-sidebar-row-inner {
     gap: var(--s-1);
   }
 
-  .arc-collections-page-sidebar__chevron,
-  .arc-collections-page-sidebar__add-section {
+  .arc-collections-page-sidebar__chevron {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -1762,15 +1771,13 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
     cursor: pointer;
   }
 
-  .arc-collections-page-sidebar__chevron .context-menu__item-icon,
-  .arc-collections-page-sidebar__add-section .context-menu__item-icon {
+  .arc-collections-page-sidebar__chevron .context-menu__item-icon {
     width: var(--tab-icon-size);
     min-width: var(--tab-icon-size);
     height: var(--tab-icon-size);
   }
 
-  .arc-collections-page-sidebar__chevron:focus-visible,
-  .arc-collections-page-sidebar__add-section:focus-visible {
+  .arc-collections-page-sidebar__chevron:focus-visible {
     outline: 2px solid var(--input-border-focus);
     outline-offset: -2px;
     border-radius: var(--radius-s);
@@ -1799,10 +1806,14 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
     display: flex;
     align-items: center;
     min-width: 0;
-    margin: 0 0 var(--s-4);
+    margin: 0;
   }
 
   .arc-collections-page-title__button {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--s-2);
     min-width: 0;
     max-width: 100%;
     padding: 0;
@@ -1813,15 +1824,34 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
     text-align: left;
   }
 
+  .arc-collections-page-title__button:focus-visible {
+    outline: 2px solid var(--input-border-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-s);
+  }
+
+  .arc-collections-page-title__name-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   .arc-collections-page-title__text {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--typo-tone-primary);
+    transition: color var(--transition-fast);
   }
 
-  .arc-collections-page-sections {
-    margin-bottom: var(--s-4);
+  .arc-collections-page-title__button:hover .arc-collections-page-title__text,
+  .arc-collections-page-title__button:focus-visible .arc-collections-page-title__text {
+    color: var(--typo-tone-primary-hover);
+  }
+
+  .arc-collections-page-title__count {
+    flex: 0 0 auto;
+    color: var(--typo-tone-secondary);
   }
 
 .arc-collections-page-sidebar .context-menu__item {
@@ -1846,19 +1876,57 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   padding: 0;
 }
 
+.arc-collections-page-main__fixed {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.arc-collections-page-main__inset {
+  padding: var(--s-4) var(--s-4) 0;
+}
+
+.arc-collections-page-main .context-menu__sep {
+  width: 100%;
+  height: 1px;
+  margin: var(--s-4) 0;
+  padding: 0;
+  border: 0;
+  background: var(--panel-border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.arc-collections-page-main__fixed .context-menu__sep {
+  margin: var(--s-4) 0 0;
+}
+
 .arc-collections-page-main__scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
+.arc-collections-page-main__scroll > .context-menu__sep {
+  margin: 0;
+}
+
 .arc-collections-page-main__scroll-pad {
+  display: flex;
+  flex-direction: column;
   padding: var(--s-4);
   box-sizing: border-box;
-  min-height: 100%;
+}
+
+.arc-collections-page-main__scroll-pad:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .arc-collections-page-main__scroll::-webkit-scrollbar {
@@ -1959,6 +2027,35 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
   margin-top: var(--s-4);
 }
 
+.arc-empty-state--inline {
+  align-items: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+
+.arc-empty-state__inline-copy {
+  margin: 0;
+  color: var(--typo-tone-secondary);
+  max-width: 100%;
+}
+
+.arc-empty-state--inline .inline-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--typo-tone-primary);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.arc-empty-state--inline .inline-link:hover,
+.arc-empty-state--inline .inline-link:focus-visible {
+  color: var(--typo-tone-primary-hover);
+}
+
 /* Полноэкранный экран сбоя (ErrorBoundary) — только layout, контролы из EmptyState */
 .arc-error-screen {
   display: flex;
@@ -2029,13 +2126,17 @@ html[data-theme="light"] .arc-gallery-bottom-shade__tint {
 }
 
 .arc-tags-page-main__scroll > .arc-empty-state,
-.arc-collections-page-main__scroll > .arc-empty-state,
+.arc-collections-page-main__scroll-pad > .arc-empty-state,
 .arc-history-scroll > .arc-empty-state {
   margin: 0 auto;
   width: 100%;
   border: none;
   background: transparent;
   padding: var(--s-4);
+}
+
+.arc-collections-page-main__scroll-pad > .arc-empty-state {
+  padding: 0;
 }
 
 .arc-collections-page--solo-empty {

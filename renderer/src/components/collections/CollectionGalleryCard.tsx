@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CardRecord, CollectionRecord } from '../../services/db';
 import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 import { formatSectionCountLabel, isCollectionSection } from '@arc-main-shared/collectionHierarchy';
+import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import { useCardSectionMediaActive } from '../layout/cardSectionMedia';
 import {
   peekCardsSrcMap,
@@ -53,11 +54,17 @@ export default function CollectionGalleryCard({
   }, [previews, collection.id, stripMediaActive, mediaTab]);
 
   const kindLabel = isCollectionSection(collection) ? 'Раздел' : 'Коллекция';
+  const cardsLabel = count > 0 ? formatCardCountLabel(count) : null;
+  const sectionsLabel = sectionCount > 0 ? formatSectionCountLabel(sectionCount) : null;
+  const ariaParts = [`${kindLabel} «${collection.name}»`];
+  if (cardsLabel) ariaParts.push(cardsLabel);
+  if (sectionsLabel) ariaParts.push(sectionsLabel);
+
   return (
     <button
       type="button"
       className="arc-gallery-collection-card"
-      aria-label={`${kindLabel} «${collection.name}», ${formatCardCountLabel(count)}${sectionCount > 0 ? `, ${formatSectionCountLabel(sectionCount)}` : ''}`}
+      aria-label={ariaParts.join(', ')}
       onClick={onOpen}
       onContextMenu={onContextMenu}
     >
@@ -93,11 +100,21 @@ export default function CollectionGalleryCard({
         })}
       </span>
       <span className="text-l arc-gallery-collection-card__label">
-        <span className="arc-gallery-collection-card__title">{collection.name}</span>
-        <span className="arc-gallery-collection-card__count" aria-hidden="true">
-          {count}
-          {sectionCount > 0 ? ` · ${formatSectionCountLabel(sectionCount)}` : ''}
-        </span>
+        <TruncatedTextWithTooltip
+          text={collection.name}
+          className="arc-gallery-collection-card__title"
+          wrapClassName="arc-truncated-tooltip-wrap arc-gallery-collection-card__title-wrap"
+        />
+        {cardsLabel ? (
+          <span className="arc-gallery-collection-card__count" aria-hidden="true">
+            {cardsLabel}
+          </span>
+        ) : null}
+        {sectionsLabel ? (
+          <span className="arc-gallery-collection-card__count" aria-hidden="true">
+            {sectionsLabel}
+          </span>
+        ) : null}
       </span>
     </button>
   );

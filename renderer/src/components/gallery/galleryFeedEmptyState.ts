@@ -8,6 +8,7 @@ export type GalleryFeedEmptyStateResult = {
   copy: EmptyStateCopy;
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
+  layout?: 'default' | 'inline';
 };
 
 function isAiSetupError(message: string): boolean {
@@ -27,6 +28,8 @@ export function resolveGalleryFeedEmptyState(input: {
   /** Фильтр наличия меток (галерея). */
   tagPresence?: 'tagged' | 'untagged' | null;
   context: GalleryFeedEmptyContext;
+  /** Для context=collection: коллекция или раздел — разный empty-copy. */
+  collectionKind?: 'collection' | 'section';
   isRemoteSearch: boolean;
   isAiSearch?: boolean;
   onResetSearch: () => void;
@@ -46,6 +49,7 @@ export function resolveGalleryFeedEmptyState(input: {
     libraryScope = 'all',
     tagPresence = null,
     context,
+    collectionKind = 'collection',
     isRemoteSearch,
     isAiSearch = false,
     onResetSearch,
@@ -118,8 +122,10 @@ export function resolveGalleryFeedEmptyState(input: {
 
   if (context === 'collection') {
     return {
-      copy: EMPTY_STATE_COPY.collectionEmpty,
-      onPrimaryAction: onNavigateLibrary
+      copy:
+        collectionKind === 'section' ? EMPTY_STATE_COPY.sectionEmpty : EMPTY_STATE_COPY.collectionEmpty,
+      onPrimaryAction: onNavigateLibrary,
+      layout: 'inline'
     };
   }
 

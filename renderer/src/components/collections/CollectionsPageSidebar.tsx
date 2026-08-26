@@ -4,6 +4,7 @@ import { ContextMenuSeparator } from '../context-menu';
 import type { CollectionRecord } from '../../services/db';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { bindArcTagsSidebarRowPointerDown } from '../shared/arcTagsSidebarRowDragPointer';
+import { Tooltip } from '../tooltip/Tooltip';
 import { TruncatedTextWithTooltip } from '../tooltip/TruncatedTextWithTooltip';
 import CollectionsSidebarGhost from './CollectionsSidebarGhost';
 import { useCollectionsDrag } from './useCollectionsDrag';
@@ -155,25 +156,23 @@ export default function CollectionsPageSidebar({
               </span>
               <span className="context-menu__item-counter">{count}</span>
             </button>
-            {!options.nested ? (
-              <button
-                type="button"
-                className="arc-collections-page-sidebar__add-section"
-                aria-label={`Действия с коллекцией «${collection.name}»`}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onCollectionContextMenu?.(collection.id, e);
-                }}
-              >
-                <span
-                  className="context-menu__item-icon tab-icon arc-icon-plus-square"
-                  data-arc-icon-size="m"
-                  aria-hidden="true"
-                />
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="arc-tags-sidebar-row-edit"
+              aria-label={`Действия с «${collection.name}»`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onCollectionContextMenu?.(collection.id, e);
+              }}
+            >
+              <span
+                className="context-menu__item-icon tab-icon arc-icon-edit"
+                data-arc-icon-size="m"
+                aria-hidden="true"
+              />
+            </button>
           </div>
         </div>
         {!options.nested && children.length > 0 && !collapsed ? (
@@ -227,19 +226,25 @@ export default function CollectionsPageSidebar({
       <div className="arc-collections-page-sidebar__foot">
         <ContextMenuSeparator />
         <div className="arc-collections-page-sidebar__pad arc-collections-page-sidebar__foot-actions">
-          {hasAnySections ? (
-            <button
-              type="button"
-              className="btn btn-ghost btn-ds arc-collections-page-sidebar__collapse-all"
-              onClick={allCollapsed ? onExpandAll : onCollapseAll}
-            >
-              <span className="btn-ds__value">{allCollapsed ? 'Развернуть все' : 'Свернуть все'}</span>
-            </button>
-          ) : null}
           <button type="button" className="btn btn-outline btn-ds arc-tags-sidebar-add" onClick={onAddCollection}>
             <span className="btn-ds__value">Добавить коллекцию</span>
             <span className="btn-ds__icon arc-icon-folder-plus" aria-hidden="true" />
           </button>
+          {hasAnySections ? (
+            <Tooltip content={allCollapsed ? 'Развернуть все' : 'Свернуть все'} delay={500} position="top">
+              <button
+                type="button"
+                className="btn btn-outline btn-ds btn-icon-only"
+                aria-label={allCollapsed ? 'Развернуть все' : 'Свернуть все'}
+                onClick={allCollapsed ? onExpandAll : onCollapseAll}
+              >
+                <span
+                  className={`btn-icon-only__glyph ${allCollapsed ? 'arc-icon-chevrons-up-down' : 'arc-icon-chevrons-collapse'}`}
+                  aria-hidden="true"
+                />
+              </button>
+            </Tooltip>
+          ) : null}
         </div>
       </div>
 
