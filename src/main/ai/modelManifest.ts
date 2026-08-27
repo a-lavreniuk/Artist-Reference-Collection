@@ -4,11 +4,11 @@ import path from 'path';
 
 import type { ModelCatalogEntry, ModelRole } from './types';
 import { MODEL_ROLES } from './types';
-import { llamaModelsDir, modelsRootDir, transformersCacheDir } from './modelManager';
+import { llamaModelsDir, modelsRootDir, taggerModelsDir, transformersCacheDir } from './modelManager';
 
 export type ManifestFileEntry = {
   name: string;
-  role: 'weights' | 'mmproj';
+  role: 'weights' | 'mmproj' | 'labels';
   bytes: number;
   sha256?: string;
 };
@@ -93,9 +93,9 @@ export async function recordInstalledModel(
       files.push({ name: entry.hfId, role: 'weights', bytes: s.size });
     }
   } else {
-    const llamaDir = llamaModelsDir(userDataPath);
+    const dir = entry.stack === 'onnx' ? taggerModelsDir(userDataPath) : llamaModelsDir(userDataPath);
     for (const file of entry.files ?? []) {
-      const filePath = path.join(llamaDir, file.name);
+      const filePath = path.join(dir, file.name);
       if (!existsSync(filePath)) continue;
       const s = await stat(filePath);
       files.push({

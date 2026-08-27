@@ -35,6 +35,10 @@ export function llamaModelsDir(userDataPath: string): string {
   return path.join(modelsRootDir(userDataPath), 'llama');
 }
 
+export function taggerModelsDir(userDataPath: string): string {
+  return path.join(modelsRootDir(userDataPath), 'tagger');
+}
+
 export function getModelEntry(role: ModelRole): ModelCatalogEntry {
   return MODEL_CATALOG[role];
 }
@@ -83,15 +87,27 @@ async function transformersModelInstalled(userDataPath: string, entry: ModelCata
 }
 
 async function llamaModelInstalled(userDataPath: string, entry: ModelCatalogEntry): Promise<boolean> {
+  return catalogFilesInstalled(userDataPath, entry);
+}
+
+function catalogFilesDir(userDataPath: string, entry: ModelCatalogEntry): string {
+  return entry.stack === 'onnx' ? taggerModelsDir(userDataPath) : llamaModelsDir(userDataPath);
+}
+
+function minBytesForCatalogFile(role: string): number {
+  return role === 'labels' ? 256 : 1024 * 1024;
+}
+
+async function catalogFilesInstalled(userDataPath: string, entry: ModelCatalogEntry): Promise<boolean> {
   const files = catalogFiles(entry);
   if (files.length === 0) return false;
-  const dir = llamaModelsDir(userDataPath);
+  const dir = catalogFilesDir(userDataPath, entry);
   for (const file of files) {
     const filePath = path.join(dir, file.name);
     if (!existsSync(filePath)) return false;
     try {
       const s = await stat(filePath);
-      if (s.size <= 1024 * 1024) return false;
+      if (s.size <= minBytesForCatalogFile(file.role)) return false;
     } catch {
       return false;
     }
@@ -110,7 +126,7 @@ export async function hasModelArtifactsOnDisk(
   if (entry.stack === 'transformers') {
     return transformersModelInstalled(userDataPath, entry);
   }
-  return llamaModelInstalled(userDataPath, entry);
+  return catalogFilesInstalled(userDataPath, entry);
 }
 
 function resolveRole(roleOrId: ModelRole | AiModelId): ModelRole | null {
@@ -133,7 +149,7 @@ export async function isModelInstalled(
   if (entry.stack === 'transformers') {
     return transformersModelInstalled(userDataPath, entry);
   }
-  return llamaModelInstalled(userDataPath, entry);
+  return catalogFilesInstalled(userDataPath, entry);
 }
 
 export async function isSearchModelInstalled(
@@ -146,6 +162,7 @@ export async function isSearchModelInstalled(
 export async function ensureModelsDirs(userDataPath: string): Promise<void> {
   await mkdir(transformersCacheDir(userDataPath), { recursive: true });
   await mkdir(llamaModelsDir(userDataPath), { recursive: true });
+  await mkdir(taggerModelsDir(userDataPath), { recursive: true });
 }
 
 export async function deleteInstalledModel(
@@ -157,6 +174,10 @@ export async function deleteInstalledModel(
   const entry = getModelEntry(role);
   if (entry.stack === 'transformers') {
     await rm(transformersModelDir(userDataPath, entry), { recursive: true, force: true });
+    return;
+  }
+  if (entry.stack === 'onnx') {
+    await rm(taggerModelsDir(userDataPath), { recursive: true, force: true });
     return;
   }
   const files = catalogFiles(entry);
@@ -240,5 +261,6 @@ export function sanitizeModelRole(raw: unknown): ModelRole | null {
   if (raw === 'heavy') return 'caption';
   if (isSearchModelId(raw)) return SEARCH_ROLE_BY_ID[raw];
   if (raw === 'joycaption-beta-one') return 'caption';
+  if (raw === 'wd-swinv2-tagger-v3') return 'tagger';
   return null;
 }

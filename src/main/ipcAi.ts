@@ -72,7 +72,7 @@ import {
 import { allowMediaStagingPaths } from './media/mediaStagingTokens';
 import type { ListCardsParams } from './storage/types';
 import type { AiSearchResult, AiStatus, ModelRole, SearchModelId } from './ai/types';
-import { MODEL_CATALOG, MODEL_ROLES, SEARCH_MODEL_IDS, SEARCH_ROLE_BY_ID } from './ai/types';
+import { MODEL_CATALOG, MODEL_ROLES, SEARCH_MODEL_IDS, SEARCH_ROLE_BY_ID, usesLlamaStack } from './ai/types';
 import { readLibraryRootFromDisk } from './libraryRootConfig';
 import { getCardByIdFromDb, rowToCardRecord } from './storage/libraryStorage';
 import { ensureLibraryReady } from './storage/libraryStorage';
@@ -359,12 +359,19 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   };
 }
 
+function isRoleSupportedByHardware(
+  hardware: ReturnType<typeof detectHardware>,
+  role: ModelRole,
+  entry: ReturnType<typeof getModelEntry>
+): boolean {
+  if (role === 'tagger') return hardware.totalMemoryMb >= entry.minRamMb;
+  if (role === 'caption') return isTierSupported(hardware, 'heavy');
+  return isSearchModelSupported(hardware, entry.id as SearchModelId);
+}
+
 function toModelCard(role: ModelRole, hardware: ReturnType<typeof detectHardware>) {
   const entry = MODEL_CATALOG[role];
-  const supported =
-    role === 'caption'
-      ? isTierSupported(hardware, 'heavy')
-      : isSearchModelSupported(hardware, entry.id as SearchModelId);
+  const supported = isRoleSupportedByHardware(hardware, role, entry);
   return {
     role,
     modelId: entry.id,
@@ -394,6 +401,7 @@ export async function buildAiStatus(): Promise<AiStatus> {
     toModelCard(role, hardware)
   );
   const captionModelCard = toModelCard('caption', hardware);
+  const taggerModelCard = toModelCard('tagger', hardware);
   const activeSearchId = getActiveSearchModelId() ?? prefs.aiSearchModelId;
   const activeTier =
     activeSearchId === 'qwen3-vl-embedding-8b' || activeSearchId === 'qwen3-vl-embedding-2b'
@@ -410,6 +418,7 @@ export async function buildAiStatus(): Promise<AiStatus> {
     supportedTiers,
     searchModelCards,
     captionModelCard,
+    taggerModelCard,
     modelCards: [...searchModelCards, captionModelCard],
     resources: {
       threads: prefs.aiThreads,
@@ -470,7 +479,7 @@ export function registerAiIpc(): void {
     const role = resolveRoleFromPayload(payloadRaw);
     const hardware = detectHardware();
     const entry = getModelEntry(role);
-    if (role === 'caption' ? !isTierSupported(hardware, 'heavy') : !isSearchModelSupported(hardware, entry.id as SearchModelId)) {
+    if (!isRoleSupportedByHardware(hardware, role, entry)) {
       return { ok: false as const, error: 'Эта модель не поддерживается вашим оборудованием.' };
     }
 
@@ -485,10 +494,11 @@ export function registerAiIpc(): void {
     downloadBytesReceived = null;
     downloadBytesTotal = null;
 
-    const needsGguf = entry.stack !== 'transformers';
+    const needsLlama = usesLlamaStack(entry.stack);
+    const needsFileDownload = entry.stack !== 'transformers';
     const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
       const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
-      if (needsGguf) {
+      if (needsFileDownload) {
         broadcastDownloadProgress(role, info.percent, 'model', {
           received: info.bytesReceived,
           total: info.bytesTotal
@@ -505,19 +515,21 @@ export function registerAiIpc(): void {
     };
 
     try {
-      if (needsGguf) {
-        // CUDA offer is handled by Settings UI; ensure CPU (+ repair CUDA if already present).
-        if (!(await isLlamaRuntimeInstalled(userData, 'cpu'))) {
-          downloadPhase = 'runtime';
-          broadcastDownloadProgress(role, 0, 'runtime');
-          await ensureLlamaRuntime(userData, 'cpu', (percent) => broadcastDownloadProgress(role, percent, 'runtime'));
-        }
-        if (await hasCudaServerBinary(userData)) {
-          downloadPhase = 'runtime';
-          await ensureLlamaRuntime(userData, 'cuda', (percent) => {
-            const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
-            broadcastDownloadProgress(role, mapped, 'runtime');
-          });
+      if (needsFileDownload) {
+        if (needsLlama) {
+          // CUDA offer is handled by Settings UI; ensure CPU (+ repair CUDA if already present).
+          if (!(await isLlamaRuntimeInstalled(userData, 'cpu'))) {
+            downloadPhase = 'runtime';
+            broadcastDownloadProgress(role, 0, 'runtime');
+            await ensureLlamaRuntime(userData, 'cpu', (percent) => broadcastDownloadProgress(role, percent, 'runtime'));
+          }
+          if (await hasCudaServerBinary(userData)) {
+            downloadPhase = 'runtime';
+            await ensureLlamaRuntime(userData, 'cuda', (percent) => {
+              const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
+              broadcastDownloadProgress(role, mapped, 'runtime');
+            });
+          }
         }
         downloadPhase = 'model';
         broadcastDownloadProgress(role, 0, 'model');
@@ -527,9 +539,10 @@ export function registerAiIpc(): void {
         }
         await finalizeModelInstall(role, userData, entry, entry.id, {
           withHybridClip: false,
+          setActiveSearch: role !== 'tagger' && role !== 'caption',
           onComplete: () => scheduleIdleIndexing()
         });
-        if (role !== 'caption') scheduleEnsureJoyCaption(userData);
+        if (needsLlama && role !== 'caption') scheduleEnsureJoyCaption(userData);
         return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
       }
 
@@ -568,7 +581,7 @@ export function registerAiIpc(): void {
     const userData = app.getPath('userData');
     await deleteInstalledModel(userData, role);
     await clearRoleManifest(userData, role);
-    if (role !== 'search-clip') {
+    if (role !== 'search-clip' && usesLlamaStack(getModelEntry(role).stack)) {
       await deleteLlamaRuntimeIfUnused(userData);
     }
     await shutdownLlamaBridge();
@@ -582,7 +595,7 @@ export function registerAiIpc(): void {
 
   ipcMain.handle('arc:ai-set-active-model', async (_e, payloadRaw: unknown) => {
     const role = resolveRoleFromPayload(payloadRaw);
-    if (role === 'caption') {
+    if (role === 'caption' || role === 'tagger') {
       scheduleIdleIndexing();
       return buildAiStatus();
     }
@@ -651,7 +664,7 @@ export function registerAiIpc(): void {
 
     downloadingRole = role;
     downloadPercent = 0;
-    downloadPhase = entry.stack !== 'transformers' ? 'runtime' : null;
+    downloadPhase = usesLlamaStack(entry.stack) ? 'runtime' : null;
     downloadBytesReceived = null;
     downloadBytesTotal = null;
     broadcastDownloadProgress(role, 0, downloadPhase ?? 'model');
@@ -665,18 +678,20 @@ export function registerAiIpc(): void {
     };
 
     try {
-      if (entry.stack !== 'transformers') {
-        await ensureVisionRuntimeForUpdate(userData, role);
-        downloadPhase = 'model';
-        broadcastDownloadProgress(role, 0, 'model');
-        await downloadGgufModel(userData, entry, report);
-      } else {
+      if (entry.stack === 'transformers') {
         await downloadModelInWorker(
           role,
           modelsDir,
           { threads: prefs.aiThreads, gpuLayers: prefs.aiGpuLayers, maxRamMb: prefs.aiMaxRamMb },
           report
         );
+      } else {
+        if (usesLlamaStack(entry.stack)) {
+          await ensureVisionRuntimeForUpdate(userData, role);
+        }
+        downloadPhase = 'model';
+        broadcastDownloadProgress(role, 0, 'model');
+        await downloadGgufModel(userData, entry, report);
       }
 
       if (!(await hasModelArtifactsOnDisk(userData, role))) {

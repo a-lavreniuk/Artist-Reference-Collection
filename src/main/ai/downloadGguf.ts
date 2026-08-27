@@ -6,7 +6,7 @@ import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 
 import type { ModelCatalogEntry, ModelFileSpec } from './types';
-import { llamaModelsDir } from './modelManager';
+import { llamaModelsDir, taggerModelsDir } from './modelManager';
 
 export type DownloadProgressInfo = {
   percent: number;
@@ -17,6 +17,10 @@ export type DownloadProgressInfo = {
 function hfResolveUrl(hfId: string, filename: string, hfRevision?: string): string {
   const revision = hfRevision?.trim() || 'main';
   return `https://huggingface.co/${hfId}/resolve/${revision}/${encodeURIComponent(filename)}`;
+}
+
+function catalogDestDir(userDataPath: string, entry: ModelCatalogEntry): string {
+  return entry.stack === 'onnx' ? taggerModelsDir(userDataPath) : llamaModelsDir(userDataPath);
 }
 
 let activeAbort: AbortController | null = null;
@@ -68,8 +72,8 @@ function reportCombinedProgress(
   });
 }
 
-export async function downloadGgufFile(
-  userDataPath: string,
+export async function downloadHfFile(
+  destDir: string,
   hfId: string,
   filename: string,
   hfRevision: string | undefined,
@@ -77,9 +81,8 @@ export async function downloadGgufFile(
   progressOffset = 0,
   progressWeight = 1
 ): Promise<string> {
-  const dir = llamaModelsDir(userDataPath);
-  await mkdir(dir, { recursive: true });
-  const destPath = path.join(dir, filename);
+  await mkdir(destDir, { recursive: true });
+  const destPath = path.join(destDir, filename);
   const url = hfResolveUrl(hfId, filename, hfRevision);
 
   let existingBytes = 0;
@@ -98,7 +101,7 @@ export async function downloadGgufFile(
   if (!res.ok && res.status !== 206) {
     if (existingBytes > 0 && res.status === 416) {
       await rm(destPath, { force: true });
-      return downloadGgufFile(userDataPath, hfId, filename, hfRevision, onProgress, progressOffset, progressWeight);
+      return downloadHfFile(destDir, hfId, filename, hfRevision, onProgress, progressOffset, progressWeight);
     }
     throw new Error(`Не удалось скачать ${filename} (${res.status})`);
   }
@@ -168,6 +171,26 @@ export async function downloadGgufFile(
   return destPath;
 }
 
+export async function downloadGgufFile(
+  userDataPath: string,
+  hfId: string,
+  filename: string,
+  hfRevision: string | undefined,
+  onProgress?: (info: DownloadProgressInfo) => void,
+  progressOffset = 0,
+  progressWeight = 1
+): Promise<string> {
+  return downloadHfFile(
+    llamaModelsDir(userDataPath),
+    hfId,
+    filename,
+    hfRevision,
+    onProgress,
+    progressOffset,
+    progressWeight
+  );
+}
+
 function catalogFiles(entry: ModelCatalogEntry): ModelFileSpec[] {
   if (entry.files?.length) return entry.files;
   const files: ModelFileSpec[] = [];
@@ -183,21 +206,22 @@ export async function downloadGgufModel(
 ): Promise<string[]> {
   const files = catalogFiles(entry);
   if (files.length === 0) {
-    throw new Error('Для этой модели не указаны GGUF-файлы');
+    throw new Error('Для этой модели не указаны файлы');
   }
 
+  const destDir = catalogDestDir(userDataPath, entry);
   const destPaths: string[] = [];
   const weight = 100 / files.length;
   let combinedBytesTotal = 0;
-  for (const file of files) {
+  for (const _file of files) {
     combinedBytesTotal += entry.sizeMb * 1024 * 1024 * (1 / files.length);
   }
 
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
     const hfId = file.hfId ?? entry.hfId;
-    const dest = await downloadGgufFile(
-      userDataPath,
+    const dest = await downloadHfFile(
+      destDir,
       hfId,
       file.name,
       entry.hfRevision,

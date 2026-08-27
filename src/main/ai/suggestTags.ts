@@ -15,10 +15,11 @@ import { isModelInstalled } from './modelManager';
 import { generateJoyCaption } from './joyCaption';
 import { ensureLightClipForHybrid } from './aiEmbeddingService';
 import { embedTextInWorker, getModelsDir } from './aiWorkerBridge';
-import { prepareSearchQuery } from './queryPrep';
+import { prepareTagMatchText } from './queryPrep';
 import { resolveVisionFrames } from './visionFrames';
 import {
   AUTO_CREATED_CATEGORY_NAME,
+  AUTO_TAG_CREATE_GUARD_SIMILARITY,
   buildAutoTagPrompt,
   matchCandidatesExact,
   normalizeTagCandidate,
@@ -62,7 +63,7 @@ async function embedText(text: string, modelId: string, modelsDir: string): Prom
   const key = normalizeTagCandidate(text);
   const cached = textEmbedCache.get(key);
   if (cached) return cached;
-  const prepared = await prepareSearchQuery(text, modelsDir);
+  const prepared = await prepareTagMatchText(text, modelsDir);
   const vector = await embedTextInWorker(prepared, modelId);
   const arr = Float32Array.from(vector);
   textEmbedCache.set(key, arr);
@@ -285,7 +286,16 @@ export async function suggestTagsForCard(
     description: t.description
   }));
 
-  const exact = matchCandidatesExact(candidates, tags);
+  const modelsDir = getModelsDir();
+  const alternateNames = new Map<string, string[]>();
+  for (const candidate of candidates) {
+    const translated = await prepareTagMatchText(candidate, modelsDir);
+    if (normalizeTagCandidate(translated) !== normalizeTagCandidate(candidate)) {
+      alternateNames.set(candidate, [translated]);
+    }
+  }
+
+  const exact = matchCandidatesExact(candidates, tags, { alternateNames });
   const usedIds = new Set(exact.matched.map((m) => m.tagId));
   let embeddingMatches: SuggestTagsMatch[] = [];
   let stillUnmatched = exact.unmatched;
@@ -293,7 +303,6 @@ export async function suggestTagsForCard(
   if (tags.length > 0 && stillUnmatched.length > 0) {
     try {
       const modelId = await ensureLightClipForHybrid();
-      const modelsDir = getModelsDir();
       const embedResult = await matchCandidatesByEmbedding(stillUnmatched, tags, {
         minSimilarity: volume.minSimilarity,
         usedIds,
@@ -311,6 +320,22 @@ export async function suggestTagsForCard(
     options.allowCreate !== undefined
       ? options.allowCreate
       : prefs.aiAutoTagCatalogMode === 'reuse_create';
+
+  if (allowCreate && stillUnmatched.length > 0 && tags.length > 0) {
+    try {
+      const modelId = await ensureLightClipForHybrid();
+      const guardResult = await matchCandidatesByEmbedding(stillUnmatched, tags, {
+        minSimilarity: AUTO_TAG_CREATE_GUARD_SIMILARITY,
+        usedIds,
+        modelId,
+        modelsDir
+      });
+      embeddingMatches = [...embeddingMatches, ...guardResult.matched];
+      stillUnmatched = guardResult.unmatched;
+    } catch {
+      /* keep stillUnmatched for create or proposedNew */
+    }
+  }
 
   let createdMatches: SuggestTagsMatch[] = [];
   const remainingSlots = Math.max(0, volume.maxCandidates - exact.matched.length - embeddingMatches.length);

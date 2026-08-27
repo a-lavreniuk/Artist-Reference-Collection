@@ -85,7 +85,15 @@ let state: SessionState = {
 };
 
 function isVisionRole(role: string): boolean {
-  return role !== 'search-clip' && role !== 'light' && role !== 'clip-vit-base-patch32';
+  return (
+    role === 'caption' ||
+    role === 'heavy' ||
+    role === 'joycaption-beta-one' ||
+    role === 'search-embed-2b' ||
+    role === 'qwen3-vl-embedding-2b' ||
+    role === 'search-embed-8b' ||
+    role === 'qwen3-vl-embedding-8b'
+  );
 }
 
 function normalizeModelRef(ref: AiModelRef): string {
@@ -987,9 +995,9 @@ export async function testAiModel(ref: AiModelRef): Promise<void> {
   patchState({ busy: true, testingTier: tier });
   try {
     const res = await arc.aiTestModel(tier);
-    notifyAiAlert(res.message, res.ok ? 'success' : 'warning');
+    notifyAiAlert(res.message, res.ok ? 'success' : 'danger');
   } catch (err) {
-    notifyAiAlert(err instanceof Error ? err.message : 'Не удалось проверить модель.', 'warning');
+    notifyAiAlert(err instanceof Error ? err.message : 'Не удалось проверить модель.', 'danger');
   } finally {
     patchState({ busy: false, testingTier: null });
   }
@@ -1178,5 +1186,19 @@ export function isCaptionModelInstalled(status: AiStatus | null): boolean {
   return Boolean(
     status.models.find((m) => m.role === 'caption' || m.tier === 'heavy' || m.modelId === 'joycaption-beta-one')
       ?.installed
+  );
+}
+
+export function isTaggerModelInstalled(status: AiStatus | null): boolean {
+  if (!status) return false;
+  return Boolean(
+    status.models.find((m) => m.role === 'tagger' || m.modelId === 'wd-swinv2-tagger-v3')?.installed
+  );
+}
+
+export function isClipModelInstalled(status: AiStatus | null): boolean {
+  if (!status) return false;
+  return Boolean(
+    status.models.find((m) => m.role === 'search-clip' || m.modelId === 'clip-vit-base-patch32')?.installed
   );
 }

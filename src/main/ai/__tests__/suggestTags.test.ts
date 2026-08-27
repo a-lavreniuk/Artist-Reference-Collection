@@ -30,6 +30,29 @@ describe('suggestTags parse and match', () => {
     ]);
   });
 
+  it('strips category prefixes from JoyCaption doubled tags', () => {
+    expect(
+      parseTagCandidates(
+        'жанр: эротика, персонаж: красные волосы, стиль: цифровая иллюстрация, kemomimi-chan (naga u)'
+      )
+    ).toEqual(['эротика', 'красные волосы', 'цифровая иллюстрация', 'kemomimi-chan (naga u)']);
+    expect(parseTagCandidates('composition: center, mood: dark')).toEqual(['center', 'dark']);
+  });
+
+  it('exact-matches translated variants against English catalog tags', () => {
+    const alternateNames = new Map<string, string[]>([['фотография', ['photography']]]);
+    const { matched, unmatched } = matchCandidatesExact(
+      ['фотография', 'женщина'],
+      [
+        { id: 't1', name: 'photography' },
+        { id: 't2', name: 'female' }
+      ],
+      { alternateNames }
+    );
+    expect(matched.map((m) => m.tagId)).toEqual(['t1']);
+    expect(unmatched).toEqual(['женщина']);
+  });
+
   it('exact-matches catalog tags by name case-insensitively', () => {
     const { matched, unmatched } = matchCandidatesExact(
       ['Портрет', 'неизвестно', 'закат'],
@@ -40,6 +63,22 @@ describe('suggestTags parse and match', () => {
     );
     expect(matched.map((m) => m.tagId)).toEqual(['t1', 't2']);
     expect(unmatched).toEqual(['неизвестно']);
+  });
+
+  it('nameOnly skips fuzzy description match (WD English tags)', () => {
+    const { matched, unmatched } = matchCandidatesExact(
+      ['solo', 'simple background'],
+      [
+        {
+          id: 't1',
+          name: 'Портрет',
+          description: 'solo portrait on simple background'
+        }
+      ],
+      { nameOnly: true }
+    );
+    expect(matched).toHaveLength(0);
+    expect(unmatched).toEqual(['solo', 'simple background']);
   });
 
   it('exact-matches by short and long description phrases', () => {

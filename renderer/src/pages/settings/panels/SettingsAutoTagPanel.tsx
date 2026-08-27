@@ -25,10 +25,12 @@ export default function SettingsAutoTagPanel() {
     volume,
     onImport,
     createNew,
+    videoCaptionOnImport,
     setEnabled,
     setVolume,
     setOnImport,
-    setCreateNew
+    setCreateNew,
+    setVideoCaptionOnImport
   } = useSettingsAutoTag();
 
   return (
@@ -39,9 +41,9 @@ export default function SettingsAutoTagPanel() {
 
           {!heavyInstalled ? (
             <p className="text-m arc-settings-desc-block__text" data-typo-role="secondary">
-              Нужна установленная тяжёлая модель.{' '}
-              <Link to="/settings/ai-search" className="arc-integrity-section__link">
-                Открыть AI Поиск
+              Нужна установленная тяжёлая модель JoyCaption.{' '}
+              <Link to="/settings/ai-search?tab=tags" className="arc-integrity-section__link">
+                Открыть AI → Теги
               </Link>
             </p>
           ) : null}
@@ -76,7 +78,7 @@ export default function SettingsAutoTagPanel() {
                 <SettingsOptionCard
                   variant="toggle"
                   label="После импорта и индексации"
-                  description="Назначать подходящие метки после тяжёлой индексации изображений и после импорта видео"
+                  description="Назначать подходящие метки после индексации изображений и после импорта видео"
                   checked={onImport}
                   disabled={baseDisabled}
                   onCheckedChange={(on) => void setOnImport(on)}
@@ -92,6 +94,21 @@ export default function SettingsAutoTagPanel() {
               </div>
             </>
           ) : null}
+
+          <div className="arc-settings-ai-option-stack">
+            <SettingsOptionCard
+              variant="toggle"
+              label="AI описание видео после импорта"
+              description={
+                heavyInstalled
+                  ? 'После импорта видео — до трёх кадров и одно описание из суммы подписей JoyCaption'
+                  : 'После импорта видео — до трёх кадров и одно описание из суммы подписей JoyCaption. Для работы нужна установленная тяжёлая модель (Настройки → AI)'
+              }
+              checked={videoCaptionOnImport}
+              disabled={baseDisabled}
+              onCheckedChange={(on) => void setVideoCaptionOnImport(on)}
+            />
+          </div>
 
           {!window.arc && arcHint ? <div className="hint arc-settings-electron-hint">{arcHint}</div> : null}
         </div>

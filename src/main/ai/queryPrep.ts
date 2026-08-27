@@ -51,6 +51,21 @@ export function prepareSearchQueryRaw(raw: string): string {
   return raw.trim();
 }
 
+/** Для match меток: перевод кириллицы без CLIP-шаблона «a photo of …». */
+export async function prepareTagMatchText(text: string, modelsDir: string): Promise<string> {
+  let query = text.trim();
+  if (!query) return query;
+
+  if (hasCyrillic(query)) {
+    const translate = await loadRuEnTranslator(modelsDir);
+    if (translate) {
+      query = await translate(query);
+    }
+  }
+
+  return query.trim();
+}
+
 /** CLIP обучен на английских подписях — переводим кириллицу и добавляем prompt-шаблон. */
 export async function prepareSearchQuery(raw: string, modelsDir: string): Promise<string> {
   let query = raw.trim();

@@ -2081,11 +2081,15 @@ export default function CardDetailOverlay({
       }
       const createdNote =
         result.createdCount > 0 ? ` (новых в каталоге: ${result.createdCount})` : '';
+      const wdPreview =
+        result.candidates.length > 0
+          ? `. Модель: ${result.candidates.slice(0, 4).join(', ')}`
+          : '';
       setActionAlert({
         message:
           toAdd.length > 0
-            ? `Добавлено меток: ${toAdd.length}${createdNote}. Проверьте и при необходимости снимите лишние`
-            : `Подходящие метки уже были на карточке${createdNote}`,
+            ? `Добавлено меток: ${toAdd.length}${createdNote}${wdPreview}. Проверьте и при необходимости снимите лишние`
+            : `Подходящие метки уже были на карточке${createdNote}${wdPreview}`,
         variant: 'brand'
       });
       setTagsModalOpen(true);

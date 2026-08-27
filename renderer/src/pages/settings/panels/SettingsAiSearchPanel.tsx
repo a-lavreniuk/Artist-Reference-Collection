@@ -91,6 +91,7 @@ export default function SettingsAiSearchPanel() {
   } = useSettingsAi();
   const autoTag = useSettingsAutoTag();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [captionDownloadOwner, setCaptionDownloadOwner] = useState<'tags' | null>(null);
   const tab = parseAiSettingsTab(searchParams.get('tab'));
 
   const setTab = (next: AiSettingsTab) => {
@@ -104,8 +105,6 @@ export default function SettingsAiSearchPanel() {
       { replace: true }
     );
   };
-
-  const [captionDownloadingForTags, setCaptionDownloadingForTags] = useState(false);
 
   const isDownloading = isAiDownloading(snapshot);
   const cardProgress = resolveModelCardProgress(snapshot);
@@ -129,6 +128,7 @@ export default function SettingsAiSearchPanel() {
   const captionDownloading =
     isDownloading &&
     (downloadRole === 'caption' || downloadRole === 'heavy' || downloadRole === 'joycaption-beta-one');
+  const taggerDownloading = captionDownloading && captionDownloadOwner === 'tags';
   const searchDownloading = isDownloading && !captionDownloading;
 
   const resolveCardProgress = (downloading: boolean) => {
@@ -231,7 +231,6 @@ export default function SettingsAiSearchPanel() {
     );
   };
 
-  /** Временная плашка JoyCaption только на время скачивания (таб Теги). */
   const renderCaptionDownloadCard = () => {
     if (!status) return null;
     const card = status.captionModelCard;
@@ -245,7 +244,6 @@ export default function SettingsAiSearchPanel() {
             checked={false}
             disabled
             progress={resolveCardProgress(true)}
-            actions={renderDownloadActions()}
           />
         </div>
       </div>
@@ -262,14 +260,14 @@ export default function SettingsAiSearchPanel() {
       return;
     }
 
-    setCaptionDownloadingForTags(true);
+    setCaptionDownloadOwner('tags');
     try {
       const installed = await downloadModel('caption');
       if (installed) await autoTag.setEnabled(true);
     } catch {
-      // Ошибка уже показывается общей AI-сессией; режим остаётся выключенным.
+      /* ошибка показывается общей AI-сессией */
     } finally {
-      setCaptionDownloadingForTags(false);
+      setCaptionDownloadOwner(null);
     }
   };
 
@@ -480,21 +478,30 @@ export default function SettingsAiSearchPanel() {
                   <div className="arc-settings-ai-tab-block">
                     <p className="text-m arc-settings-desc-block__text">
                       Автотегирование анализирует изображение или кадры видео с помощью JoyCaption, сопоставляет
-                      результат с каталогом меток и при необходимости может создавать новые метки.
+                      результат с каталогом меток и при необходимости создаёт новые метки.
                     </p>
                     <SettingsToggleRow
                       label="Включить автотегирование"
-                      pressed={autoTag.enabled || captionDownloadingForTags}
+                      pressed={autoTag.enabled || captionDownloadOwner === 'tags'}
                       disabled={autoTag.enableDisabled || isDownloading}
                       onPressedChange={(on) => void handleAutoTagToggle(on)}
                     />
                   </div>
 
-                  {autoTag.enabled || captionDownloadingForTags ? (
+                  {autoTag.enabled || captionDownloadOwner === 'tags' ? (
                     <>
-                      {captionDownloadingForTags ? renderCaptionDownloadCard() : null}
+                      {captionDownloadOwner === 'tags' ||
+                      (taggerDownloading && captionDownloadOwner === null)
+                        ? renderCaptionDownloadCard()
+                        : null}
 
-                      {captionInstalled && !captionDownloading ? (
+                      {!captionInstalled && !taggerDownloading ? (
+                        <p className="text-m arc-settings-desc-block__text" data-typo-role="secondary">
+                          Для автотегов нужна модель JoyCaption — она же используется для AI-описаний при индексации.
+                        </p>
+                      ) : null}
+
+                      {captionInstalled && !taggerDownloading ? (
                         <>
                           <div className="arc-settings-ai-tab-block arc-settings-ai-slider-col">
                             <SectionLabel>Объём меток {autoTag.volume}%</SectionLabel>
@@ -537,6 +544,14 @@ export default function SettingsAiSearchPanel() {
                                 checked={autoTag.createNew}
                                 disabled={autoTag.baseDisabled}
                                 onCheckedChange={(on) => void autoTag.setCreateNew(on)}
+                              />
+                              <SettingsOptionCard
+                                variant="toggle"
+                                label="AI описание видео после импорта"
+                                description="После импорта видео — до трёх кадров и одно описание из суммы подписей JoyCaption"
+                                checked={autoTag.videoCaptionOnImport}
+                                disabled={autoTag.baseDisabled}
+                                onCheckedChange={(on) => void autoTag.setVideoCaptionOnImport(on)}
                               />
                             </div>
                           </div>

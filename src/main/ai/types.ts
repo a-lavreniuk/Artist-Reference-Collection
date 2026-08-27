@@ -1,7 +1,7 @@
 /** Shared AI semantic search types (main process + worker). */
 
-/** Catalog roles: three search models + one caption model. */
-export type ModelRole = 'search-clip' | 'search-embed-2b' | 'search-embed-8b' | 'caption';
+/** Catalog roles: three search models + caption + WD auto-tagger. */
+export type ModelRole = 'search-clip' | 'search-embed-2b' | 'search-embed-8b' | 'caption' | 'tagger';
 
 export type SearchModelId =
   | 'clip-vit-base-patch32'
@@ -10,7 +10,9 @@ export type SearchModelId =
 
 export type CaptionModelId = 'joycaption-beta-one';
 
-export type AiModelId = SearchModelId | CaptionModelId;
+export type TaggerModelId = 'wd-swinv2-tagger-v3';
+
+export type AiModelId = SearchModelId | CaptionModelId | TaggerModelId;
 
 /**
  * @deprecated Prefer ModelRole / SearchModelId. Kept for migration and a few legacy call sites.
@@ -18,14 +20,18 @@ export type AiModelId = SearchModelId | CaptionModelId;
  */
 export type ModelTier = 'light' | 'heavy';
 
-export type ModelStack = 'transformers' | 'llama-embed' | 'llama-caption';
+export type ModelStack = 'transformers' | 'llama-embed' | 'llama-caption' | 'onnx';
 
 export type ModelFileSpec = {
   name: string;
-  role: 'weights' | 'mmproj';
+  role: 'weights' | 'mmproj' | 'labels';
   /** Separate HF repo when mmproj lives outside main hfId */
   hfId?: string;
 };
+
+export function usesLlamaStack(stack: ModelStack): boolean {
+  return stack === 'llama-embed' || stack === 'llama-caption';
+}
 
 export type ModelCatalogEntry = {
   id: AiModelId;
@@ -60,7 +66,8 @@ export const MODEL_ROLES: ModelRole[] = [
   'search-clip',
   'search-embed-2b',
   'search-embed-8b',
-  'caption'
+  'caption',
+  'tagger'
 ];
 
 export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
@@ -124,7 +131,7 @@ export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
     catalogRevision: 1,
     label: 'JoyCaption',
     description:
-      'Описания изображений и автотегирование. Потребуется ~5.5 ГБ. Работает отдельно от модели поиска.',
+      'Описания изображений для поиска. Потребуется ~5.5 ГБ. Работает отдельно от автотегов.',
     sizeLabel: '~5.5 ГБ',
     sizeMb: 5500,
     minRamMb: 12288,
@@ -135,6 +142,23 @@ export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
         role: 'mmproj',
         hfId: 'concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf'
       }
+    ]
+  },
+  tagger: {
+    id: 'wd-swinv2-tagger-v3',
+    role: 'tagger',
+    stack: 'onnx',
+    hfId: 'SmilingWolf/wd-swinv2-tagger-v3',
+    catalogRevision: 1,
+    label: 'WD Tagger',
+    description:
+      'Быстрые метки по содержимому кадра (поза, одежда, композиция). Потребуется ~446 МБ, работает на CPU.',
+    sizeLabel: '~446 МБ',
+    sizeMb: 446,
+    minRamMb: 3072,
+    files: [
+      { name: 'model.onnx', role: 'weights' },
+      { name: 'selected_tags.csv', role: 'labels' }
     ]
   }
 };
@@ -237,6 +261,7 @@ export type AiStatus = {
   supportedTiers: ModelTier[];
   searchModelCards: AiModelCardInfo[];
   captionModelCard: AiModelCardInfo;
+  taggerModelCard: AiModelCardInfo;
   /** @deprecated combined cards — prefer searchModelCards + captionModelCard */
   modelCards: AiModelCardInfo[];
   resources: AiResourceSettings;

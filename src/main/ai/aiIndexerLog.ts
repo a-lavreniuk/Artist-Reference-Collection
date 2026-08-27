@@ -10,10 +10,16 @@ export type AiIndexLogPayload = {
 };
 
 function broadcastAiIndexLog(payload: AiIndexLogPayload): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send('arc:ai-index-log', payload);
+  try {
+    const getAllWindows = BrowserWindow?.getAllWindows;
+    if (typeof getAllWindows !== 'function') return;
+    for (const win of getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('arc:ai-index-log', payload);
+      }
     }
+  } catch {
+    /* worker / ELECTRON_RUN_AS_NODE — нет renderer для broadcast */
   }
 }
 

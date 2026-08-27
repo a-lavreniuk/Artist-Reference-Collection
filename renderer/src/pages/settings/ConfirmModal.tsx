@@ -8,9 +8,11 @@ type Props = {
   message: string;
   confirmLabel: string;
   cancelLabel?: string;
+  secondaryLabel?: string;
   confirmVariant?: 'primary' | 'danger';
   onConfirm: () => void;
   onCancel: () => void;
+  onSecondary?: () => void;
 };
 
 export default function ConfirmModal({
@@ -18,9 +20,11 @@ export default function ConfirmModal({
   message,
   confirmLabel,
   cancelLabel = 'Отмена',
+  secondaryLabel,
   confirmVariant = 'primary',
   onConfirm,
-  onCancel
+  onCancel,
+  onSecondary
 }: Props) {
   const hostRef = useRef<HTMLElement>(null);
 
@@ -62,6 +66,11 @@ export default function ConfirmModal({
             <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose}>
               <span className="btn-ds__value">{cancelLabel}</span>
             </button>
+            {secondaryLabel && onSecondary ? (
+              <button type="button" className="btn btn-secondary btn-ds btn-s" onClick={onSecondary}>
+                <span className="btn-ds__value">{secondaryLabel}</span>
+              </button>
+            ) : null}
             <button type="button" className={confirmClass} onClick={onConfirm}>
               <span className="btn-ds__value">{confirmLabel}</span>
             </button>

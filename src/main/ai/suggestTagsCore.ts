@@ -58,6 +58,35 @@ export function tagMatchTexts(tag: SuggestTagCatalogEntry): string[] {
   return texts;
 }
 
+/** Префиксы «категория:», которые JoyCaption иногда подставляет вместо плоских меток. */
+const AUTO_TAG_CATEGORY_PREFIXES = new Set([
+  'жанр',
+  'композиция',
+  'персонаж',
+  'стиль',
+  'объект',
+  'настроение',
+  'ракурс',
+  'техника',
+  'genre',
+  'composition',
+  'character',
+  'style',
+  'mood',
+  'subject',
+  'medium'
+]);
+
+/** Убирает «категория: значение» → «значение» для известных префиксов автотега. */
+export function stripCategoryPrefixFromTagCandidate(value: string): string {
+  const colonIdx = value.indexOf(':');
+  if (colonIdx <= 0) return value.trim();
+  const prefix = value.slice(0, colonIdx).trim().toLowerCase();
+  const rest = value.slice(colonIdx + 1).trim();
+  if (!rest || !AUTO_TAG_CATEGORY_PREFIXES.has(prefix)) return value.trim();
+  return rest;
+}
+
 /** Разбор ответа JoyCaption в список кандидатов-меток. */
 export function parseTagCandidates(raw: string): string[] {
   const text = raw.replace(/\r/g, '\n').trim();
@@ -66,11 +95,13 @@ export function parseTagCandidates(raw: string): string[] {
   const parts = text
     .split(/[\n,;•·|]+|(?:\s[-–—]\s)/)
     .map((p) =>
-      p
-        .replace(/^\s*[\d]+[.)]\s*/, '')
-        .replace(/^[-*•]\s*/, '')
-        .replace(/^["«]|["»]$/g, '')
-        .trim()
+      stripCategoryPrefixFromTagCandidate(
+        p
+          .replace(/^\s*[\d]+[.)]\s*/, '')
+          .replace(/^[-*•]\s*/, '')
+          .replace(/^["«]|["»]$/g, '')
+          .trim()
+      )
     )
     .filter(Boolean);
 
@@ -95,6 +126,9 @@ export function volumeParamsForAutoTag(volume: number): AutoTagVolumeParams {
   return { maxCandidates: 16, minSimilarity: 0.68, promptCount: 16 };
 }
 
+/** Порог CLIP перед созданием новой метки — ловит синонимы (woman ↔ female). */
+export const AUTO_TAG_CREATE_GUARD_SIMILARITY = 0.65;
+
 /** Позиции кадров для автотега видео (мс). До 3 кадров. */
 export function videoFrameOffsetsMs(durationMs: number | null): number[] {
   if (durationMs == null || !Number.isFinite(durationMs) || durationMs <= 0) {
@@ -111,9 +145,8 @@ export function videoFrameOffsetsMs(durationMs: number | null): number[] {
 export function buildAutoTagPrompt(promptCount: number): string {
   return (
     `Перечисли до ${promptCount} коротких меток на русском через запятую. ` +
-    `Темы: объект или персонаж, жанр, стиль / техника, настроение, композиция или ракурс. ` +
     `Только отдельные слова или короткие словосочетания (1–3 слова). ` +
-    `Без предложений, нумерации, кавычек и пояснений. ` +
+    `Без формата «категория: значение», без предложений, нумерации, кавычек и пояснений. ` +
     `Не дублируй синонимы и уточнения одного понятия ` +
     `(не пиши одновременно «портрет» и «женский портрет», «неон» и «неоновый свет»). ` +
     `Предпочитай привычные каталожные формулировки, а не редкие метафоры.`
@@ -134,7 +167,8 @@ function descriptionContainsCandidate(description: string, candidateNorm: string
 
 export function matchCandidatesExact(
   candidates: string[],
-  tags: SuggestTagCatalogEntry[]
+  tags: SuggestTagCatalogEntry[],
+  options: { nameOnly?: boolean; alternateNames?: Map<string, string[]> } = {}
 ): { matched: SuggestTagsMatch[]; unmatched: string[] } {
   const byName = new Map<string, SuggestTagCatalogEntry>();
   for (const tag of tags) {
@@ -146,33 +180,43 @@ export function matchCandidatesExact(
   const usedIds = new Set<string>();
 
   for (const candidate of candidates) {
-    const candNorm = normalizeTagCandidate(candidate);
-    const byExactName = byName.get(candNorm);
-    if (byExactName && !usedIds.has(byExactName.id)) {
-      usedIds.add(byExactName.id);
-      matched.push({ tagId: byExactName.id, name: byExactName.name, score: 1, via: 'exact' });
-      continue;
-    }
+    const variants = [candidate, ...(options.alternateNames?.get(candidate) ?? [])];
+    let matchedCandidate = false;
 
-    let hit: SuggestTagCatalogEntry | null = null;
-    for (const tag of tags) {
-      if (usedIds.has(tag.id)) continue;
-      for (const text of tagMatchTexts(tag)) {
-        const textNorm = normalizeTagCandidate(text);
-        if (textNorm === candNorm || descriptionContainsCandidate(text, candNorm)) {
-          hit = tag;
-          break;
-        }
+    for (const variant of variants) {
+      const candNorm = normalizeTagCandidate(variant);
+      const byExactName = byName.get(candNorm);
+      if (byExactName && !usedIds.has(byExactName.id)) {
+        usedIds.add(byExactName.id);
+        matched.push({ tagId: byExactName.id, name: byExactName.name, score: 1, via: 'exact' });
+        matchedCandidate = true;
+        break;
       }
-      if (hit) break;
+
+      if (options.nameOnly) continue;
+
+      let hit: SuggestTagCatalogEntry | null = null;
+      for (const tag of tags) {
+        if (usedIds.has(tag.id)) continue;
+        for (const text of tagMatchTexts(tag)) {
+          const textNorm = normalizeTagCandidate(text);
+          if (textNorm === candNorm || descriptionContainsCandidate(text, candNorm)) {
+            hit = tag;
+            break;
+          }
+        }
+        if (hit) break;
+      }
+
+      if (hit) {
+        usedIds.add(hit.id);
+        matched.push({ tagId: hit.id, name: hit.name, score: 0.95, via: 'exact' });
+        matchedCandidate = true;
+        break;
+      }
     }
 
-    if (hit) {
-      usedIds.add(hit.id);
-      matched.push({ tagId: hit.id, name: hit.name, score: 0.95, via: 'exact' });
-    } else {
-      unmatched.push(candidate);
-    }
+    if (!matchedCandidate) unmatched.push(candidate);
   }
 
   return { matched, unmatched };
