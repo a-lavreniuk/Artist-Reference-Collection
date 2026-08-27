@@ -47,7 +47,8 @@ import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import CardDetailCollectionStrip from './CardDetailCollectionStrip';
 import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodboardModal';
 import { clampCardRating } from '@arc-main-shared/cardRating';
-import { toggleCollectionOnCardIds } from '@arc-main-shared/collectionHierarchy';
+import { removeCollectionFromCardIds, toggleCollectionOnCardIds } from '@arc-main-shared/collectionHierarchy';
+import { collectionHref } from '../collections/collectionHref';
 import type { CardRecord, CategoryRecord, TagRecord } from '../../services/db';
 import {
   getMoodboardCardIds,
@@ -79,7 +80,6 @@ import {
   notifyRestoreWithUndo,
   notifyTrashWithUndo,
   undoCollectionAdd,
-  undoCollectionRemove,
   undoMoodboardAdd,
   undoMoodboardRemove
 } from './galleryUndoToast';
@@ -228,7 +228,9 @@ export default function CardDetailOverlay({
   const [thumbSrc, setThumbSrc] = useState<string | null>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [categoriesById, setCategoriesById] = useState<Map<string, CategoryRecord>>(new Map());
-  const [collectionsById, setCollectionsById] = useState<Map<string, string>>(new Map());
+  const [collectionsById, setCollectionsById] = useState<
+    Map<string, { name: string; parentId?: string }>
+  >(new Map());
   const [collCounts, setCollCounts] = useState<Record<string, number>>({});
   const [collectionPreviews, setCollectionPreviews] = useState<Record<string, CardRecord[]>>({});
   const [similar, setSimilar] = useState<CardRecord[]>([]);
@@ -694,8 +696,8 @@ export default function CardDetailOverlay({
       if (!cancelled) setCategoriesById(cm);
 
       const cols = await getAllCollections();
-      const colm = new Map<string, string>();
-      for (const col of cols) colm.set(col.id, col.name);
+      const colm = new Map<string, { name: string; parentId?: string }>();
+      for (const col of cols) colm.set(col.id, { name: col.name, parentId: col.parentId });
       if (!cancelled) setCollectionsById(colm);
 
       if (!cancelled) setCollCounts(await getCollectionCardCounts());
@@ -1484,11 +1486,15 @@ export default function CardDetailOverlay({
   const collectionsResolved = useMemo(() => {
     return (
       card?.collectionIds
-        .map((id) => ({
-          id,
-          name: collectionsById.get(id) ?? id,
-          count: collCounts[id] ?? 0
-        }))
+        .map((id) => {
+          const meta = collectionsById.get(id);
+          return {
+            id,
+            name: meta?.name ?? id,
+            parentId: meta?.parentId,
+            count: collCounts[id] ?? 0
+          };
+        })
         .filter((x) => x.name && x.count > 0) ?? []
     );
   }, [card?.collectionIds, collectionsById, collCounts]);
@@ -1803,6 +1809,21 @@ export default function CardDetailOverlay({
     return task;
   };
 
+  const restoreCardCollectionIds = (targetCardId: string, collectionIds: string[]): Promise<void> => {
+    const task = collectionPatchQueueRef.current.then(async () => {
+      await updateCardPayload(targetCardId, { collectionIds });
+      const current = cardRef.current;
+      if (current?.id !== targetCardId) return;
+      const nextCard = { ...current, collectionIds };
+      setCard(nextCard);
+      cardRef.current = nextCard;
+      setCollectionPreviews(await getCollectionPreviewSlices(1));
+      setCollCounts(await getCollectionCardCounts());
+    });
+    collectionPatchQueueRef.current = task.catch(() => undefined);
+    return task;
+  };
+
   const openTagSearch = useCallback(
     (tagIds: string | string[]) => {
       // Не вызывать onClose() отдельно — гонка с navigate(tag=), как у color search.
@@ -1863,9 +1884,9 @@ export default function CardDetailOverlay({
   };
 
   const openCollectionPage = useCallback(
-    (collectionId: string) => {
+    (item: { id: string; parentId?: string | null }) => {
       onClose();
-      navigate(`/collections/${collectionId}`);
+      navigate(collectionHref(item));
     },
     [navigate, onClose]
   );
@@ -1873,15 +1894,12 @@ export default function CardDetailOverlay({
   const removeCollection = async (collectionId: string) => {
     if (!card) return;
     const cardId = card.id;
-    await patchCardCollectionIds((ids) => ids.filter((id) => id !== collectionId));
+    const snapshot = card.collectionIds.slice();
+    const collections = await getAllCollections();
+    await patchCardCollectionIds((ids) => removeCollectionFromCardIds(ids, collectionId, collections));
     notifyGalleryMutation({
       message: formatCollectionRemoveToast(1),
-      undo: async () => {
-        await undoCollectionRemove([cardId], collectionId)();
-        await patchCardCollectionIds((ids) =>
-          ids.includes(collectionId) ? ids : [...ids, collectionId]
-        );
-      },
+      undo: () => restoreCardCollectionIds(cardId, snapshot),
       onAfterUndo: onDeleted
     });
   };
@@ -1897,17 +1915,12 @@ export default function CardDetailOverlay({
     if (!card) return;
     const cardId = card.id;
     const wasIn = card.collectionIds.includes(collectionId);
+    const snapshot = card.collectionIds.slice();
     const collections = await getAllCollections();
     await patchCardCollectionIds((ids) => toggleCollectionOnCardIds(ids, collectionId, collections));
     notifyGalleryMutation({
       message: wasIn ? formatCollectionRemoveToast(1) : formatCollectionAddToast(1),
-      undo: async () => {
-        if (wasIn) {
-          await undoCollectionRemove([cardId], collectionId)();
-        } else {
-          await undoCollectionAdd([cardId], collectionId)();
-        }
-      },
+      undo: () => restoreCardCollectionIds(cardId, snapshot),
       onAfterUndo: onDeleted
     });
   };
@@ -2704,11 +2717,11 @@ export default function CardDetailOverlay({
                         className="arc-card-detail-collection-row arc-card-detail-collection-row--navigable panel elevation-sunken"
                         role="button"
                         tabIndex={0}
-                        onClick={() => openCollectionPage(col.id)}
+                        onClick={() => openCollectionPage(col)}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            openCollectionPage(col.id);
+                            openCollectionPage(col);
                           }
                         }}
                       >
