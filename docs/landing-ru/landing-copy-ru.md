@@ -328,7 +328,13 @@ Telegram: https://t.me/arc_app
 
 Референсы для генерации: `/dlya-generacii`
 
-Политика обработки персональных данных: `[URL политики]`
+Политика обработки персональных данных: `/politika`
+
+Файлы cookie: `/cookies`
+
+Условия использования ARC: `/usloviya`
+
+Конфиденциальность приложения: `/politika-arc`
 
 **Платформы**
 
@@ -342,3 +348,4 @@ Windows сейчас. Mac позже.
 - Блок 1.1 оставить видимым текстом, не прятать.
 - FAQ — штатным блоком Tilda.
 - В футере главной — ссылки на опорную и пять аудиторий. Тексты: [landing-seo-ru.md](landing-seo-ru.md), `landing-for-*-ru.md`.
+- Правовые страницы не в шапке. Баннер cookie и чекбокс формы: [docs/legal/landing-consent-texts-ru.md](../legal/landing-consent-texts-ru.md).

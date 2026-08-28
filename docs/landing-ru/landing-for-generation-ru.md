@@ -80,4 +80,6 @@ ARC. Artist Reference Collection. Ранний доступ.
 
 **Для кого:** [дизайнеры](/dlya-dizajnerov) · [художники](/dlya-hudozhnikov) · [фотографы](/dlya-fotografov) · [иллюстраторы](/dlya-illyustratorov) · генерация
 
-Политика: `[URL политики]`. Windows сейчас. Mac позже.
+**Правовое:** [политика](/politika) · [cookie](/cookies) · [условия ARC](/usloviya) · [конфиденциальность приложения](/politika-arc)
+
+Windows сейчас. Mac позже.

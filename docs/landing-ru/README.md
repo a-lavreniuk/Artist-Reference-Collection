@@ -16,3 +16,5 @@
 | [landing-page-map-ru.md](landing-page-map-ru.md) | не публикуем | Карта сайта, сравнение, запреты |
 
 Ссылки в шапке главной: бета, база знаний, Telegram. Доп. страницы — из футера.
+
+Правовые тексты (политика сайта, cookie, условия и политика приложения): [docs/legal/](../legal/README.md). Слаги: `/politika`, `/cookies`, `/usloviya`, `/politika-arc`.
