@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { isPlainCardId } from '../storage/cardFolder';
 import {
   emptyGalleryAdvancedFilters,
   type GalleryAdvancedFilters
@@ -94,7 +95,10 @@ export const galleryAdvancedFiltersSchema = z
   .optional()
   .describe('Расширенные фильтры галереи (как в navbar)');
 
-export const cardIdSchema = z.string().describe('Идентификатор карточки');
+export const cardIdSchema = z
+  .string()
+  .refine(isPlainCardId, { message: 'Некорректный идентификатор карточки' })
+  .describe('Идентификатор карточки');
 
 export const tagIdsSchema = z.array(z.string()).describe('Список идентификаторов меток');
 

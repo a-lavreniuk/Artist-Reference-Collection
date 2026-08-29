@@ -5,13 +5,33 @@ import { atomicWriteJsonFile } from './atomicWrite';
 
 export const CARDS_DIR = 'cards';
 export const CARD_JSON_FILENAME = 'card.json';
+const MAX_CARD_ID_LENGTH = 128;
+
+/** id карточки — один сегмент пути: без разделителей и переходов вверх. */
+export function isPlainCardId(cardId: string): boolean {
+  if (typeof cardId !== 'string') return false;
+  if (cardId.length === 0 || cardId.length > MAX_CARD_ID_LENGTH) return false;
+  if (cardId === '.' || cardId === '..') return false;
+  if (/[\\/\0:]/.test(cardId)) return false;
+  return true;
+}
 
 export function cardDirRelative(cardId: string): string {
   return `${CARDS_DIR}/${cardId}`;
 }
 
 export function cardDirAbs(libraryRoot: string, cardId: string): string {
-  return path.join(libraryRoot, CARDS_DIR, cardId);
+  if (!isPlainCardId(cardId)) {
+    throw new Error('Некорректный идентификатор карточки');
+  }
+  const root = path.resolve(libraryRoot);
+  const cardsRoot = path.resolve(root, CARDS_DIR);
+  const dir = path.resolve(cardsRoot, cardId);
+  const rel = path.relative(cardsRoot, dir);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    throw new Error('Некорректный идентификатор карточки');
+  }
+  return dir;
 }
 
 export function cardJsonAbs(libraryRoot: string, cardId: string): string {

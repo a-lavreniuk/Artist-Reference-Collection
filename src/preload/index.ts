@@ -142,14 +142,10 @@ contextBridge.exposeInMainWorld('arc', {
   },
   storageEnsureReady: () =>
     ipcRenderer.invoke('arc:storage-ensure-ready') as Promise<{ ok: true } | { ok: false; error: string }>,
-  storageListCards: (params: unknown) => {
-    ipcRenderer.sendSync('arc:navigation-begin');
-    try {
-      return ipcRenderer.sendSync('arc:storage-list-cards-sync', params);
-    } finally {
-      ipcRenderer.sendSync('arc:navigation-end');
-    }
-  },
+  storageListCards: (params: unknown) => ipcRenderer.invoke('arc:storage-list-cards', params),
+  storageListCardIds: (params: unknown) => ipcRenderer.invoke('arc:storage-list-card-ids', params),
+  storageListCardsSharingTags: (payload: unknown) =>
+    ipcRenderer.invoke('arc:storage-list-cards-sharing-tags', payload),
   colorSearchCards: (params: unknown) => ipcRenderer.invoke('arc:color-search-cards', params),
   aiSimilarStageFile: (sourcePath: string) => ipcRenderer.invoke('arc:ai-similar-stage-file', sourcePath),
   aiSimilarSearchCards: (params: unknown) => ipcRenderer.invoke('arc:ai-similar-search-cards', params),

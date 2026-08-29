@@ -7,6 +7,7 @@ import { Readable } from 'stream';
 
 import type { ModelCatalogEntry, ModelFileSpec } from './types';
 import { llamaModelsDir, taggerModelsDir } from './modelManager';
+import { assertEnoughDiskSpace } from '../storage/diskSpace';
 
 export type DownloadProgressInfo = {
   percent: number;
@@ -93,6 +94,10 @@ export async function downloadHfFile(
     /* fresh download */
   }
 
+  if (activeAbort) {
+    throw new Error('Скачивание уже выполняется');
+  }
+
   activeAbort = new AbortController();
   const headers: Record<string, string> = {};
   if (existingBytes > 0) headers.Range = `bytes=${existingBytes}-`;
@@ -118,6 +123,9 @@ export async function downloadHfFile(
   } else if (existingBytes === 0) {
     total = contentLength;
   }
+
+  const remaining = Math.max(0, total - existingBytes);
+  await assertEnoughDiskSpace(destDir, remaining);
 
   let received = existingBytes;
   const append = existingBytes > 0 && res.status === 206;

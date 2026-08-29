@@ -44,6 +44,27 @@ function scorePalette(queryHex: string, palette: PaletteSwatch[]): number | null
   return scorePaletteMinDeltaE(queryHex, palette);
 }
 
+const COLOR_SEARCH_HYDRATE_CAP = 2500;
+const COLOR_SEARCH_HYDRATE_CHUNK = 400;
+
+function hydrateColorSearchRows(
+  db: ReturnType<typeof openLibraryDb>,
+  orderedIds: string[]
+): Record<string, unknown>[] {
+  const ids = orderedIds.slice(0, COLOR_SEARCH_HYDRATE_CAP);
+  if (ids.length === 0) return [];
+  const byId = new Map<string, Record<string, unknown>>();
+  for (let i = 0; i < ids.length; i += COLOR_SEARCH_HYDRATE_CHUNK) {
+    const part = ids.slice(i, i + COLOR_SEARCH_HYDRATE_CHUNK);
+    const placeholders = part.map(() => '?').join(',');
+    const full = db
+      .prepare(`SELECT c.* FROM cards c WHERE c.id IN (${placeholders})`)
+      .all(...part) as Record<string, unknown>[];
+    for (const row of full) byId.set(String(row.id), row);
+  }
+  return ids.map((id) => byId.get(id)).filter((r): r is Record<string, unknown> => Boolean(r));
+}
+
 export async function backfillPalettesBatch(libraryRoot: string, limit = 48): Promise<number> {
   const db = openLibraryDb(libraryRoot);
   const rows = db
@@ -147,7 +168,8 @@ export function searchCardsByColor(libraryRoot: string, params: ColorSearchParam
     );
 
     wh.push("(c.type = 'image' OR c.type = 'video')");
-    const sql = `SELECT c.* FROM cards c WHERE ${wh.join(' AND ')}`;
+    const sql = `SELECT c.id, c.palette_json, c.dominant_color, c.rating, c.added_at, c.file_size
+                 FROM cards c WHERE ${wh.join(' AND ')}`;
     const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
 
     const maxDeltaE = accuracyToMaxDeltaE(params.accuracy);
@@ -190,6 +212,6 @@ export function searchCardsByColor(libraryRoot: string, params: ColorSearchParam
       orderedRows = sorted.map((s) => s.row);
     }
 
-    return indexCardRowsFromDb(db, orderedRows);
+    return indexCardRowsFromDb(db, hydrateColorSearchRows(db, orderedRows.map((r) => String(r.id))));
   });
 }

@@ -4,6 +4,8 @@ import { markReactTreeCrashed } from './globalErrorHandlers';
 
 type Props = {
   children: ReactNode;
+  /** Не помечает всё дерево как упавшее — для вложенных зон (деталка). */
+  isolate?: boolean;
 };
 
 type State = {
@@ -14,13 +16,13 @@ export default class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
-    /* Раньше onerror→toast (setTimeout 0): помечаем до микрозадачи тоста. */
-    markReactTreeCrashed();
     return { error };
   }
 
   componentDidCatch(error: Error, _info: ErrorInfo): void {
-    markReactTreeCrashed();
+    if (!this.props.isolate) {
+      markReactTreeCrashed();
+    }
     if (import.meta.env.DEV) {
       console.error('[ErrorBoundary]', error);
     }
@@ -28,6 +30,9 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.error) {
+      if (!this.props.isolate) {
+        markReactTreeCrashed();
+      }
       return <ErrorScreen error={this.state.error} />;
     }
     return this.props.children;

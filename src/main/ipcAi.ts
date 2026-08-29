@@ -13,6 +13,7 @@ import {
   getActiveSearchModelId,
   getIndexStatus,
   getIndexerError,
+  isIndexingInFlight,
   pauseIndexing,
   queueCardsForIndexing,
   resumeIndexing,
@@ -483,6 +484,10 @@ export function registerAiIpc(): void {
       return { ok: false as const, error: 'Эта модель не поддерживается вашим оборудованием.' };
     }
 
+    if (downloadingRole) {
+      return { ok: false as const, error: 'Уже скачивается другая модель.' };
+    }
+
     const prefs = await readAppPreferences();
     const modelsDir = getModelsDir();
     const userData = app.getPath('userData');
@@ -761,7 +766,7 @@ export function registerAiIpc(): void {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       broadcast('arc:ai-error', { message, fallback: true });
-      throw err;
+      return [] as AiSearchResult[];
     }
   });
 
@@ -789,7 +794,7 @@ export function registerAiIpc(): void {
       moodboardCardIds = Array.isArray(p.moodboardCardIds) ? p.moodboardCardIds : null;
       scopeCardIds = Array.isArray(p.scopeCardIds) ? p.scopeCardIds : undefined;
       offset = typeof p.offset === 'number' ? Math.max(0, p.offset) : 0;
-      limit = typeof p.limit === 'number' ? Math.max(1, p.limit) : 50;
+      limit = typeof p.limit === 'number' ? Math.max(1, Math.min(100, p.limit)) : 50;
     }
 
     if (!query) return [];
@@ -808,13 +813,22 @@ export function registerAiIpc(): void {
       const searchResults = await runAiSearch(query);
       const scope = scopeCardIds && scopeCardIds.length > 0 ? new Set(scopeCardIds) : null;
       const moodboardSet = Array.isArray(moodboardCardIds) ? new Set(moodboardCardIds) : null;
-      const cards = [];
+      const hits: Array<{ cardId: string; score: number }> = [];
       for (const hit of searchResults) {
+        if (scope && !scope.has(hit.cardId)) continue;
+        if (moodboardSet && !moodboardSet.has(hit.cardId)) continue;
+        if (collectionId) {
+          const row = getCardByIdFromDb(root, hit.cardId);
+          if (!row || !row.collectionIds.includes(collectionId)) continue;
+        }
+        hits.push({ cardId: hit.cardId, score: hit.score });
+      }
+      return hits;
+    }).then((pageHits) => {
+      const cards = [];
+      for (const hit of pageHits as Array<{ cardId: string; score: number }>) {
         const row = getCardByIdFromDb(root, hit.cardId);
         if (!row) continue;
-        if (collectionId && !row.collectionIds.includes(collectionId)) continue;
-        if (moodboardSet && !moodboardSet.has(hit.cardId)) continue;
-        if (scope && !scope.has(hit.cardId)) continue;
         cards.push({ ...cardIndexToRenderer(rowToCardRecord(row)), aiScore: hit.score });
       }
       return cards;
@@ -822,6 +836,9 @@ export function registerAiIpc(): void {
   });
 
   ipcMain.handle('arc:ai-reindex', async () => {
+    if (isIndexingInFlight()) {
+      return { ok: true as const };
+    }
     void runFullReindex().catch((err) => {
       const message = err instanceof Error ? err.message : String(err);
       broadcast('arc:ai-error', { message, fallback: false });
@@ -990,13 +1007,13 @@ export function registerAiIpc(): void {
         modelId,
         strictness: prefs.aiSearchStrictness,
         offset: typeof p.offset === 'number' ? p.offset : 0,
-        limit: typeof p.limit === 'number' ? p.limit : 50
+        limit: Math.min(typeof p.limit === 'number' && p.limit > 0 ? Math.floor(p.limit) : 50, 100)
       });
       return rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       broadcast('arc:ai-error', { message, fallback: true });
-      throw err;
+      return [];
     }
   });
 }

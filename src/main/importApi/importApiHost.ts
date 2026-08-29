@@ -17,6 +17,7 @@ import { resolveImportMaxBytes, resolveImportMediaKind } from './importMediaKind
 import type { ImportApiHandlerDeps } from './types';
 import { downloadYoutubeToTempFile, isYoutubeUrl } from './youtubeDownload';
 import { requestHasValidLocalApiToken } from '../localApiAuth';
+import { isLocalHttpRateLimited } from '../localHttpRateLimit';
 
 let server: http.Server | null = null;
 
@@ -198,6 +199,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     return;
   }
 
+  if (isLocalHttpRateLimited()) {
+    sendJson(res, 429, { status: 'error', message: 'Too many requests' });
+    return;
+  }
+
   const secret = readAppPreferencesSync().localApiSecret?.trim() ?? '';
   if (!secret || !requestHasValidLocalApiToken(req, secret)) {
     sendJson(res, 401, { status: 'error', message: 'Unauthorized' });
@@ -268,7 +274,7 @@ export async function startImportApiServer(): Promise<void> {
 
     srv.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
-        console.warn(`[ARC Import API] Port ${ARC_IMPORT_API_PORT} is already in use`);
+        console.error(`[ARC Import API] Port ${ARC_IMPORT_API_PORT} is already in use`);
         resolve();
         return;
       }

@@ -12,3 +12,15 @@ export const LLAMA_IMAGE_MAX_TOKENS = 1024;
 
 /** MiB free target for --fit so mmproj compute buffer fits on GPU (not CPU). */
 export const LLAMA_FIT_TARGET_MIB = 2048;
+
+export function llamaCtxSizeForRam(maxRamMb: number, mode: 'embed' | 'chat'): number {
+  const ram = Math.max(512, maxRamMb);
+  const base = mode === 'embed' ? LLAMA_CTX_SIZE_EMBED : LLAMA_CTX_SIZE_CHAT;
+  if (ram >= 8192) return base;
+  if (ram >= 4096) return Math.min(base, mode === 'embed' ? 2048 : 4096);
+  return Math.min(base, mode === 'embed' ? 1024 : 2048);
+}
+
+export function llamaFitTargetMib(maxRamMb: number): number {
+  return Math.max(256, Math.min(LLAMA_FIT_TARGET_MIB, Math.round(maxRamMb * 0.4)));
+}

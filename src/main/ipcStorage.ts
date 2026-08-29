@@ -3,6 +3,8 @@ import path from 'path';
 import { readdir, stat, unlink } from 'fs/promises';
 import {
   captureNavigationEpoch,
+  beginNavigationEpoch,
+  endNavigationEpoch,
   enterListCardsHandler,
   exitListCardsHandler,
   isNavigationEpochStale,
@@ -41,6 +43,9 @@ import {
   insertCardMetadata,
   listAllTags,
   listCardsFromDb,
+  listCardIdsFromDb,
+  listCardIdsAroundFromDb,
+  listCardsSharingAnyTagIds,
   listCollections,
   listFilterPresets,
   listCategories,
@@ -82,7 +87,7 @@ import {
   setCachedGalleryFilterStats
 } from './storage/galleryFilterStatsCache';
 import { backfillPalettesBatch, searchCardsByColor } from './storage/colorSearch';
-import { readCardJson } from './storage/cardFolder';
+import { isPlainCardId, readCardJson } from './storage/cardFolder';
 import { getCardDisplayPaletteRows, normalizeHex } from './storage/palette';
 import {
   CARDS_DIR,
@@ -106,12 +111,14 @@ import {
 } from './storage/sharedTrash';
 
 const MAX_LIST_CARDS_SYNC_LIMIT = 500;
+const MAX_LIST_CARD_IDS_LIMIT = 10_000;
+const MAX_LIST_CARD_IDS_AROUND_RADIUS = 64;
 
-function sanitizeListCardsParams(params: unknown): ListCardsParams {
+function sanitizeListCardsParams(params: unknown, maxLimit = MAX_LIST_CARDS_SYNC_LIMIT): ListCardsParams {
   const p = params && typeof params === 'object' ? (params as Record<string, unknown>) : {};
   const offset = typeof p.offset === 'number' && p.offset >= 0 ? Math.floor(p.offset) : 0;
   const rawLimit = typeof p.limit === 'number' && p.limit > 0 ? Math.floor(p.limit) : 50;
-  const limit = Math.min(rawLimit, MAX_LIST_CARDS_SYNC_LIMIT);
+  const limit = Math.min(rawLimit, maxLimit);
   const libraryScope: LibraryScope =
     p.libraryScope === 'untagged' || p.libraryScope === 'trash' ? p.libraryScope : 'all';
   return {
@@ -133,6 +140,24 @@ function sanitizeListCardsParams(params: unknown): ListCardsParams {
     sort:
       p.sort && typeof p.sort === 'object' ? (p.sort as ListCardsParams['sort']) : undefined
   };
+}
+
+function sanitizeListCardIdsAround(params: unknown): { aroundCardId: string | null; radius: number } {
+  const p = params && typeof params === 'object' ? (params as Record<string, unknown>) : {};
+  const aroundCardId =
+    typeof p.aroundCardId === 'string' && isPlainCardId(p.aroundCardId) ? p.aroundCardId : null;
+  const rawRadius = typeof p.radius === 'number' && p.radius >= 0 ? Math.floor(p.radius) : 24;
+  const radius = Math.min(rawRadius, MAX_LIST_CARD_IDS_AROUND_RADIUS);
+  return { aroundCardId, radius };
+}
+
+function sliceIdsAroundCenter(ids: readonly string[], centerId: string, radius: number): string[] {
+  if (ids.length === 0) return [];
+  const i = ids.indexOf(centerId);
+  if (i < 0) return [...ids.slice(0, radius * 2 + 1)];
+  const from = Math.max(0, i - radius);
+  const to = Math.min(ids.length, i + radius + 1);
+  return [...ids.slice(from, to)];
 }
 
 let storageIpcRegistered = false;
@@ -187,6 +212,29 @@ function libraryMetaOf(lib: LibraryTrashSource): {
   libraryRoot: string;
 } {
   return { libraryId: lib.id, libraryName: lib.name, libraryRoot: lib.path };
+}
+
+function queryListCardIds(
+  root: string,
+  p: ListCardsParams,
+  aroundCardId: string | null,
+  radius: number
+): string[] {
+  if (p.libraryScope === 'trash') {
+    const libraries = containerLibraries(root);
+    syncMediaRootsFromLibraries(libraries);
+    if (aroundCardId) {
+      const ids = listSharedTrashCards(libraries, { ...p, offset: 0, limit: MAX_LIST_CARD_IDS_LIMIT }).map(
+        (row) => row.id
+      );
+      return sliceIdsAroundCenter(ids, aroundCardId, radius);
+    }
+    return listSharedTrashCards(libraries, p).map((row) => row.id);
+  }
+  if (aroundCardId) {
+    return listCardIdsAroundFromDb(root, p, aroundCardId, radius);
+  }
+  return listCardIdsFromDb(root, p);
 }
 
 function queryListCards(root: string, p: ListCardsParams): ReturnType<typeof cardIndexToRenderer>[] {
@@ -435,6 +483,41 @@ export function registerStorageIpc(
     });
   });
 
+  ipcMain.handle('arc:storage-list-cards', async (_e, params: unknown) => {
+    beginNavigationEpoch();
+    enterListCardsHandler();
+    try {
+      const p = sanitizeListCardsParams(params);
+      const root = readLibraryRootSync();
+      if (!root || !isLibraryRootReady(root)) return [];
+      return queryListCards(root, p);
+    } catch (err) {
+      console.error('[ARC] storage-list-cards', err instanceof Error ? err.message : err);
+      return [];
+    } finally {
+      exitListCardsHandler();
+      endNavigationEpoch();
+    }
+  });
+
+  ipcMain.handle('arc:storage-list-card-ids', async (_e, params: unknown) => {
+    beginNavigationEpoch();
+    enterListCardsHandler();
+    try {
+      const p = sanitizeListCardsParams(params, MAX_LIST_CARD_IDS_LIMIT);
+      const { aroundCardId, radius } = sanitizeListCardIdsAround(params);
+      const root = readLibraryRootSync();
+      if (!root || !isLibraryRootReady(root)) return [];
+      return queryListCardIds(root, p, aroundCardId, radius);
+    } catch (err) {
+      console.error('[ARC] storage-list-card-ids', err instanceof Error ? err.message : err);
+      return [];
+    } finally {
+      exitListCardsHandler();
+      endNavigationEpoch();
+    }
+  });
+
   ipcMain.on('arc:storage-list-cards-sync', (event, params: unknown) => {
     enterListCardsHandler();
     try {
@@ -445,6 +528,9 @@ export function registerStorageIpc(
         return;
       }
       event.returnValue = queryListCards(root, p);
+    } catch (err) {
+      console.error('[ARC] storage-list-cards-sync', err instanceof Error ? err.message : err);
+      event.returnValue = [];
     } finally {
       exitListCardsHandler();
     }
@@ -1232,9 +1318,23 @@ export function registerStorageIpc(
   ipcMain.handle('arc:delete-card-folder', async (_e, cardId: unknown) => {
     assertNotMaintenance();
     const root = await readLibraryRoot();
-    if (!root || typeof cardId !== 'string') return;
+    if (!root || typeof cardId !== 'string' || !isPlainCardId(cardId)) return;
     const { deleteCardFolder } = await import('./storage/cardFolder');
     await deleteCardFolder(root, cardId);
+  });
+
+  ipcMain.handle('arc:storage-list-cards-sharing-tags', async (_e, payload: unknown) => {
+    const root = await readLibraryRoot();
+    if (!root || !payload || typeof payload !== 'object') return [];
+    const p = payload as { tagIds?: unknown; excludeCardId?: unknown; limit?: unknown };
+    const tagIds = Array.isArray(p.tagIds)
+      ? p.tagIds.filter((x): x is string => typeof x === 'string')
+      : [];
+    const excludeCardId = typeof p.excludeCardId === 'string' ? p.excludeCardId : '';
+    const limit = typeof p.limit === 'number' ? p.limit : undefined;
+    return listCardsSharingAnyTagIds(root, { tagIds, excludeCardId, limit }).map((r) =>
+      cardIndexToRenderer(rowToCardRecord(r))
+    );
   });
 
   ipcMain.handle('arc:color-search-cards', async (_e, payload: unknown) => {
@@ -1260,7 +1360,10 @@ export function registerStorageIpc(
       sort: p.sort,
       scopeCardIds: scope,
       offset: typeof p.offset === 'number' ? p.offset : 0,
-      limit: typeof p.limit === 'number' ? p.limit : 50
+      limit: Math.min(
+        typeof p.limit === 'number' && p.limit > 0 ? Math.floor(p.limit) : 50,
+        MAX_LIST_CARDS_SYNC_LIMIT
+      )
     });
     return rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
   });

@@ -15,6 +15,8 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { app } from 'electron';
 
+import { readAppPreferencesSync } from '../appPreferences';
+import { localApiAuthHeaders } from '../localApiAuth';
 import { ARC_MCP_HOST, ARC_MCP_PATH, ARC_MCP_PORT, ARC_MCP_URL } from './constants';
 import { isMcpStdioArgv } from './mcpStdioArgv';
 
@@ -71,8 +73,18 @@ async function probeArcMcpHttp(timeoutMs = 2500): Promise<{ ok: true } | { ok: f
   });
 }
 
+function mcpStdioHttpRequestInit(): RequestInit | undefined {
+  const headers = localApiAuthHeaders(readAppPreferencesSync().mcpApiSecret ?? '');
+  if (Object.keys(headers).length === 0) return undefined;
+  return { headers };
+}
+
 async function connectHttpClient(): Promise<Client> {
-  const httpTransport = new StreamableHTTPClientTransport(new URL(ARC_MCP_URL));
+  const requestInit = mcpStdioHttpRequestInit();
+  const httpTransport = new StreamableHTTPClientTransport(
+    new URL(ARC_MCP_URL),
+    requestInit ? { requestInit } : undefined
+  );
   const client = new Client({ name: 'arc-mcp-stdio-bridge', version: app.getVersion() });
   await client.connect(httpTransport);
   return client;

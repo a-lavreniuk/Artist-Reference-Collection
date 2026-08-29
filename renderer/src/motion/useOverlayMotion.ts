@@ -168,6 +168,13 @@ export function useOverlayMotion<T extends HTMLElement>(
     prevOpenRef.current = false;
   }, [open, render, preset, durationToken]);
 
+  useEffect(() => {
+    return () => {
+      const el = ref.current;
+      if (el) ensureGsapSetup().killTweensOf(el);
+    };
+  }, []);
+
   return ref;
 }
 
@@ -285,6 +292,14 @@ export function useOverlayMotionPair(
     }
     prevOpenRef.current = false;
   }, [open, render, preset, backdropPreset, durationToken]);
+
+  useEffect(() => {
+    return () => {
+      const gsap = ensureGsapSetup();
+      if (panelRef.current) gsap.killTweensOf(panelRef.current);
+      if (backdropRef.current) gsap.killTweensOf(backdropRef.current);
+    };
+  }, []);
 
   return { panelRef, backdropRef, render };
 }

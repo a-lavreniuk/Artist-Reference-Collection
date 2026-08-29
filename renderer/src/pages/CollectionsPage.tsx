@@ -15,7 +15,7 @@ import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/ga
 import type { GalleryFeedQuery } from '../components/gallery/galleryQuery';
 import { DEFAULT_GALLERY_SORT, emptyGalleryAdvancedFilters } from '../components/gallery/galleryFilterTypes';
 import { listAllCardIdsForQuery } from '../components/gallery/gallerySelectAllIds';
-import { subscribeGalleryCardsChanged } from '../components/gallery/galleryFeedCardsChanged';
+import { useCardDetailNavIdWindow } from '../components/gallery/useCardDetailNavIdWindow';
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
 import { galleryRevealResetKey } from '../motion/galleryRevealEpoch';
@@ -164,26 +164,10 @@ export default function CollectionsPage() {
     }),
     [activeCollectionId]
   );
-  const [previewQueueCardIds, setPreviewQueueCardIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!activeCollectionId) {
-      setPreviewQueueCardIds([]);
-      return;
-    }
-    let cancelled = false;
-    const load = () => {
-      void listAllCardIdsForQuery(collectionQueueQuery).then((ids) => {
-        if (!cancelled) setPreviewQueueCardIds(ids);
-      });
-    };
-    load();
-    const unsubscribe = subscribeGalleryCardsChanged(load);
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [activeCollectionId, collectionQueueQuery]);
+  const previewQueueCardIds = useCardDetailNavIdWindow(
+    activeCollectionId ? collectionQueueQuery : null,
+    openCardId
+  );
 
   const detailNeighborCardIds = useMemo(
     () => (openCardId ? resolveCardFeedNeighbors(openCardId, previewQueueCardIds) : undefined),

@@ -32,7 +32,7 @@ import CardDetailCommentCursor from './CardDetailCommentCursor';
 import CardDetailAnnotationPeek from './CardDetailAnnotationPeek';
 import { clusterAnnotations } from './annotationCluster';
 import type { AnnotationDraftRect } from './CardDetailAnnotationLayer';
-import { loadCardsInOrder } from './cardDetailQueueCards';
+import { loadCardsInOrder, rememberCardInCache, sliceIdsAround } from './cardDetailQueueCards';
 import { getDetailQueueOpen, setDetailQueueOpen } from './cardDetailPreviewQueueSession';
 import CardInfoModal from './CardInfoModal';
 import RestoreTrashDestinationModal from './RestoreTrashDestinationModal';
@@ -142,7 +142,6 @@ import {
   type CardFeedNeighbors
 } from './cardFeedNeighbors';
 import { getShortcutById } from '../../shortcuts/shortcutRegistry';
-import { shortcutMenuLabel } from '../../shortcuts/shortcutLabels';
 import { openCardsInNewWindow, type CardViewerOpenContext } from '../../card-viewer/openCardsInNewWindow';
 import {
   applyDetailFieldType,
@@ -433,7 +432,7 @@ export default function CardDetailOverlay({
         customFields: nextCustom,
         annotations: nextAnnot
       });
-      cardCacheRef.current.set(c.id, c);
+      rememberCardInCache(cardCacheRef.current, c);
     } else {
       setDraftName('');
       setDraftLink('');
@@ -588,8 +587,6 @@ export default function CardDetailOverlay({
   const nextShortcut = getShortcutById('detail.next');
   const prevNavLabel = prevShortcut?.label ?? 'Предыдущая карточка';
   const nextNavLabel = nextShortcut?.label ?? 'Следующая карточка';
-  const prevNavHint = `${prevNavLabel} (${shortcutMenuLabel('detail.previous')})`;
-  const nextNavHint = `${nextNavLabel} (${shortcutMenuLabel('detail.next')})`;
 
   useEffect(() => {
     if (!canShowQueue || !previewQueueCardIds?.length) {
@@ -598,9 +595,9 @@ export default function CardDetailOverlay({
       return;
     }
     let cancelled = false;
-    void loadCardsInOrder(previewQueueCardIds).then((rows) => {
+    void loadCardsInOrder(sliceIdsAround(previewQueueCardIds, cardId)).then((rows) => {
       if (cancelled) return;
-      for (const row of rows) cardCacheRef.current.set(row.id, row);
+      for (const row of rows) rememberCardInCache(cardCacheRef.current, row);
       setQueueCards(rows);
       const peek = peekQueueThumbSrcMap(rows);
       setQueueSrcMap(peek);
@@ -611,7 +608,7 @@ export default function CardDetailOverlay({
     return () => {
       cancelled = true;
     };
-  }, [canShowQueue, previewQueueCardIds]);
+  }, [canShowQueue, previewQueueCardIds, cardId]);
 
   const toggleQueueOpen = useCallback(() => {
     setQueueOpen((prev) => {
@@ -674,7 +671,7 @@ export default function CardDetailOverlay({
         let cached = cardCacheRef.current.get(id);
         if (!cached) {
           cached = (await getCardById(id)) ?? undefined;
-          if (cached) cardCacheRef.current.set(cached.id, cached);
+          if (cached) rememberCardInCache(cardCacheRef.current, cached);
         }
         if (cancelled) return;
         if (cached?.type === 'image') images.push(cached);
@@ -1285,7 +1282,7 @@ export default function CardDetailOverlay({
       if (patch.annotations !== undefined) {
         nextCached.annotations = cloneAnnotations(sanitizeCardAnnotations(patch.annotations));
       }
-      cardCacheRef.current.set(targetId, nextCached);
+      rememberCardInCache(cardCacheRef.current, nextCached);
     }
 
     if (cardIdRef.current !== targetId) return;
@@ -1462,7 +1459,7 @@ export default function CardDetailOverlay({
   const tagsResolved = useMemo(() => {
     return (
       card?.tagIds
-        .map((id) => {
+        ?.map((id) => {
           const t = tagsIndex.get(id);
           if (!t) return null;
           const cat = categoriesById.get(t.categoryId);
@@ -1486,7 +1483,7 @@ export default function CardDetailOverlay({
   const collectionsResolved = useMemo(() => {
     return (
       card?.collectionIds
-        .map((id) => {
+        ?.map((id) => {
           const meta = collectionsById.get(id);
           return {
             id,
@@ -2290,46 +2287,38 @@ export default function CardDetailOverlay({
               {showNavButtons ? (
                 <>
                   <div className="arc-card-detail-preview-nav arc-card-detail-preview-nav--prev">
-                    <Tooltip content={prevNavHint} position="right">
-                      <span className={!neighborCardIds?.prev ? 'arc-tooltip-anchor-inline' : undefined}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-icon-only btn-ds btn-l"
-                          aria-label={prevNavLabel}
-                          disabled={!neighborCardIds?.prev}
-                          onClick={() => {
-                            if (neighborCardIds?.prev) openViewingCard(neighborCardIds.prev);
-                          }}
-                        >
-                          <span
-                            className="btn-icon-only__glyph arc-icon-chevron arc-chevron-point-left"
-                            data-arc-icon-size="m"
-                            aria-hidden="true"
-                          />
-                        </button>
-                      </span>
-                    </Tooltip>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-icon-only btn-ds btn-l"
+                      aria-label={prevNavLabel}
+                      disabled={!neighborCardIds?.prev}
+                      onClick={() => {
+                        if (neighborCardIds?.prev) openViewingCard(neighborCardIds.prev);
+                      }}
+                    >
+                      <span
+                        className="btn-icon-only__glyph arc-icon-chevron arc-chevron-point-left"
+                        data-arc-icon-size="m"
+                        aria-hidden="true"
+                      />
+                    </button>
                   </div>
                   <div className="arc-card-detail-preview-nav arc-card-detail-preview-nav--next">
-                    <Tooltip content={nextNavHint} position="left">
-                      <span className={!neighborCardIds?.next ? 'arc-tooltip-anchor-inline' : undefined}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-icon-only btn-ds btn-l"
-                          aria-label={nextNavLabel}
-                          disabled={!neighborCardIds?.next}
-                          onClick={() => {
-                            if (neighborCardIds?.next) openViewingCard(neighborCardIds.next);
-                          }}
-                        >
-                          <span
-                            className="btn-icon-only__glyph arc-icon-chevron arc-chevron-point-right"
-                            data-arc-icon-size="m"
-                            aria-hidden="true"
-                          />
-                        </button>
-                      </span>
-                    </Tooltip>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-icon-only btn-ds btn-l"
+                      aria-label={nextNavLabel}
+                      disabled={!neighborCardIds?.next}
+                      onClick={() => {
+                        if (neighborCardIds?.next) openViewingCard(neighborCardIds.next);
+                      }}
+                    >
+                      <span
+                        className="btn-icon-only__glyph arc-icon-chevron arc-chevron-point-right"
+                        data-arc-icon-size="m"
+                        aria-hidden="true"
+                      />
+                    </button>
                   </div>
                 </>
               ) : null}

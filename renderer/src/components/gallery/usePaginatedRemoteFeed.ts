@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CardRecord } from '../../services/db';
 import { readGridSize } from '../../layout/gridSizePreference';
-import { GALLERY_PAGE_INITIAL, GALLERY_PAGE_MORE } from './galleryQuery';
+import { GALLERY_MAX_CARDS_IN_MEMORY, GALLERY_PAGE_INITIAL, GALLERY_PAGE_MORE } from './galleryQuery';
 import { mergeCardsSrcMap, peekCardsSrcMap, preloadDecodedImages } from './galleryMediaCache';
 
 type FetchPage = (offset: number, limit: number) => Promise<CardRecord[]>;
@@ -22,11 +22,16 @@ export function usePaginatedRemoteFeed({ enabled, fetchPage, resetKey }: Options
   const [error, setError] = useState<string | null>(null);
   const seqRef = useRef(0);
   const srcMapRef = useRef<Record<string, string>>({});
+  const cardsRef = useRef<CardRecord[]>([]);
   const hadDataRef = useRef(false);
 
   useEffect(() => {
     srcMapRef.current = srcMap;
   }, [srcMap]);
+
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
 
   const applyChunk = useCallback(async (rows: CardRecord[], append: boolean, take: number, seq: number) => {
     if (seq !== seqRef.current) return;
@@ -37,12 +42,23 @@ export function usePaginatedRemoteFeed({ enabled, fetchPage, resetKey }: Options
     const base = append ? { ...srcMapRef.current, ...peek } : peek;
     const resolved = await mergeCardsSrcMap(rows, base, gridSize);
     if (seq !== seqRef.current) return;
-    setCards((prev) => (append ? [...prev, ...rows] : rows));
-    setSrcMap(resolved);
-    srcMapRef.current = resolved;
+    const mergedCards = append ? [...cardsRef.current, ...rows] : rows;
+    const trimmedCards =
+      mergedCards.length > GALLERY_MAX_CARDS_IN_MEMORY
+        ? mergedCards.slice(mergedCards.length - GALLERY_MAX_CARDS_IN_MEMORY)
+        : mergedCards;
+    const keepIds = new Set(trimmedCards.map((c) => c.id));
+    const trimmedSrc: Record<string, string> = {};
+    for (const id of keepIds) {
+      if (resolved[id]) trimmedSrc[id] = resolved[id];
+    }
+    cardsRef.current = trimmedCards;
+    setCards(trimmedCards);
+    setSrcMap(trimmedSrc);
+    srcMapRef.current = trimmedSrc;
     setOffset((prev) => (append ? prev + rows.length : rows.length));
     hadDataRef.current = true;
-    void preloadDecodedImages(Object.values(resolved));
+    void preloadDecodedImages(Object.values(trimmedSrc));
   }, []);
 
   const reloadFromStart = useCallback(async () => {

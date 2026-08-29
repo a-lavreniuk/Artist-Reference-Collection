@@ -14,13 +14,13 @@ import {
 import { ensureVisionSafeImagePath } from './indexVisionImage';
 import { logAiIndexer } from './aiIndexerLog';
 import {
-  LLAMA_CTX_SIZE_CHAT,
-  LLAMA_CTX_SIZE_EMBED,
-  LLAMA_FIT_TARGET_MIB,
   LLAMA_IMAGE_MAX_TOKENS,
   LLAMA_IMAGE_MIN_TOKENS,
-  LLAMA_PARALLEL_SLOTS
+  LLAMA_PARALLEL_SLOTS,
+  llamaCtxSizeForRam,
+  llamaFitTargetMib
 } from './llamaServerLimits';
+import { currentAiOpSignal } from './aiOpAbort';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -331,7 +331,7 @@ async function spawnLlamaServerProcess(
 
   const runtimeDir = path.dirname(binary);
   const usingCuda = isCudaRuntimeDir(runtimeDir, userDataPath);
-  const ctxSize = mode === 'embed' ? LLAMA_CTX_SIZE_EMBED : LLAMA_CTX_SIZE_CHAT;
+  const ctxSize = llamaCtxSizeForRam(resources.maxRamMb ?? 4096, mode);
   const requestedLayers = Math.max(0, resources.gpuLayers ?? 0);
   const wantGpuLayers = usingCuda && requestedLayers > 0;
   /**
@@ -382,7 +382,7 @@ async function spawnLlamaServerProcess(
       args.push('-ngl', String(gpuLayers));
     }
     // fit adjusts unset -ngl so LLM + mmproj both stay on GPU.
-    args.push('--fit', 'on', '--fit-target', String(LLAMA_FIT_TARGET_MIB));
+    args.push('--fit', 'on', '--fit-target', String(llamaFitTargetMib(resources.maxRamMb ?? 4096)));
   } else {
     args.push('-ngl', '0');
   }
@@ -554,22 +554,37 @@ export async function ensureLlamaServer(
 }
 
 export async function shutdownLlamaServer(): Promise<void> {
-  if (startingChild) {
-    try {
-      startingChild.kill();
-    } catch {
-      /* ignore */
-    }
-    startingChild = null;
+  const child = startingChild ?? serverSession?.process ?? null;
+  startingChild = null;
+  if (serverSession) {
+    serverSession = null;
+    serverConfigKey = null;
   }
-  if (!serverSession) return;
+  if (!child) return;
   try {
-    serverSession.process.kill();
+    child.kill();
   } catch {
     /* ignore */
   }
-  serverSession = null;
-  serverConfigKey = null;
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      child.off('exit', onExit);
+      resolve();
+    };
+    const onExit = () => done();
+    child.once('exit', onExit);
+    setTimeout(() => {
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        /* ignore */
+      }
+      done();
+    }, 2000);
+  });
 }
 
 async function imageToDataUrl(imagePath: string): Promise<string> {
@@ -636,14 +651,21 @@ async function fetchLlamaEndpoint(
   let networkAttempt = 0;
 
   while (networkAttempt < LLAMA_NETWORK_RETRY_ATTEMPTS) {
+    if (currentAiOpSignal()?.aborted) {
+      throw new Error('Индексация приостановлена');
+    }
     networkAttempt += 1;
     try {
       for (let attempt = 1; attempt <= MODEL_LOADING_RETRY_ATTEMPTS; attempt++) {
+        if (currentAiOpSignal()?.aborted) {
+          throw new Error('Индексация приостановлена');
+        }
         const res = await undiciFetch(url, {
           method: init.method,
           headers: init.headers as Record<string, string> | undefined,
           body: init.body as string | Buffer | undefined,
-          dispatcher: llamaFetchAgent
+          dispatcher: llamaFetchAgent,
+          signal: currentAiOpSignal()
         });
         if (res.ok) return res as unknown as Response;
         const body = await res.text();
@@ -658,6 +680,9 @@ async function fetchLlamaEndpoint(
       }
       throw new Error(`${label} failed: ${lastStatus} ${lastBody.slice(0, 200)}`);
     } catch (err) {
+      if (currentAiOpSignal()?.aborted || (err instanceof Error && err.message === 'Индексация приостановлена')) {
+        throw new Error('Индексация приостановлена');
+      }
       if (
         isTransientLlamaFetchError(err) &&
         networkAttempt < LLAMA_NETWORK_RETRY_ATTEMPTS

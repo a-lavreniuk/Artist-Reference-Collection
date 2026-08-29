@@ -30,6 +30,7 @@ import {
 
 import { registerArcMcpTools } from './registerTools';
 import { requestHasValidLocalApiToken } from '../localApiAuth';
+import { isLocalHttpRateLimited } from '../localHttpRateLimit';
 
 
 
@@ -255,6 +256,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 
   }
 
+  if (isLocalHttpRateLimited()) {
+    sendJson(res, 429, { status: 'error', message: 'Too many requests' });
+    return;
+  }
+
   const secret = readAppPreferencesSync().mcpApiSecret?.trim() ?? '';
   if (!secret || !requestHasValidLocalApiToken(req, secret)) {
     sendJson(res, 401, { status: 'error', message: 'Unauthorized' });
@@ -427,7 +433,7 @@ export async function startMcpServer(): Promise<void> {
 
       if (err.code === 'EADDRINUSE') {
 
-        console.warn(`[ARC MCP] Port ${ARC_MCP_PORT} is already in use`);
+        console.error(`[ARC MCP] Port ${ARC_MCP_PORT} is already in use`);
 
         resolve();
 

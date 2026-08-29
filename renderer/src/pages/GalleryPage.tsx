@@ -12,6 +12,7 @@ import { useGalleryFilters, useRegisterGalleryFeedScope } from '../components/ga
 
 import CardInspectModal from '../components/gallery/CardInspectModal';
 import { resolveCardFeedNeighbors } from '../components/gallery/cardFeedNeighbors';
+import { useCardDetailNavIdWindow } from '../components/gallery/useCardDetailNavIdWindow';
 
 import GalleryBottomShade from '../components/gallery/GalleryBottomShade';
 import ScrollToTopButton from '../components/layout/ScrollToTopButton';
@@ -139,9 +140,14 @@ export default function GalleryPage() {
   const { openCardId, openCard, closeCard } = useOpenCardUrl();
 
   const feedCardIds = useMemo(() => cards.map((card) => card.id), [cards]);
+  const navIdWindow = useCardDetailNavIdWindow(
+    ready && !isRemoteSearchFeed ? feedQuery : null,
+    openCardId
+  );
+  const viewerNavigationCardIds = navIdWindow.length > 0 ? navIdWindow : feedCardIds;
   const detailNeighborCardIds = useMemo(
-    () => (openCardId ? resolveCardFeedNeighbors(openCardId, feedCardIds) : undefined),
-    [feedCardIds, openCardId]
+    () => (openCardId ? resolveCardFeedNeighbors(openCardId, viewerNavigationCardIds) : undefined),
+    [viewerNavigationCardIds, openCardId]
   );
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -447,7 +453,7 @@ export default function GalleryPage() {
 
           neighborCardIds={detailNeighborCardIds}
 
-          viewerNavigationCardIds={feedCardIds}
+          viewerNavigationCardIds={viewerNavigationCardIds}
 
         />
 

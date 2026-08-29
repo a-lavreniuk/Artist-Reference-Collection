@@ -22,6 +22,11 @@ export type StorageListCardsParams = {
   sort?: GallerySortState;
 };
 
+export type StorageListCardIdsParams = StorageListCardsParams & {
+  aroundCardId?: string;
+  radius?: number;
+};
+
 function arc() {
   if (!window.arc) throw new Error('API недоступен');
   return window.arc;
@@ -43,6 +48,18 @@ export async function storageEnsureReady(): Promise<void> {
 
 export async function storageListCards(params: StorageListCardsParams): Promise<CardRecord[]> {
   return arc().storageListCards(params);
+}
+
+export async function storageListCardIds(params: StorageListCardIdsParams): Promise<string[]> {
+  return arc().storageListCardIds(params);
+}
+
+export async function storageListCardsSharingTags(
+  tagIds: string[],
+  excludeCardId: string,
+  limit = 800
+): Promise<CardRecord[]> {
+  return arc().storageListCardsSharingTags({ tagIds, excludeCardId, limit });
 }
 
 export async function storageGetCard(

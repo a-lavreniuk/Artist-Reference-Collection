@@ -42,6 +42,8 @@ import {
 } from './storage/libraryStorage';
 
 let ipcRegistered = false;
+let duplicateScanRunInFlight = false;
+const MAX_DUPLICATE_PAIRS_IPC = 2000;
 
 function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   return {
@@ -251,7 +253,7 @@ export function registerDuplicateIpc(
     if (resetSession) resetDuplicateScanSession();
 
     const pairs = await scanDuplicatePairs(root, thresholdPct);
-    return { pairs, thresholdPct };
+    return { pairs: pairs.slice(0, MAX_DUPLICATE_PAIRS_IPC), thresholdPct };
   });
 
   ipcMain.handle('arc:duplicate-session-skip-pair', async (_e, first: unknown, second: unknown) => {
@@ -346,6 +348,19 @@ export function registerDuplicateIpc(
   });
 
   ipcMain.handle('arc:duplicate-scan-run', async (event, payload: unknown) => {
+    if (duplicateScanRunInFlight) {
+      return {
+        pairs: [],
+        thresholdPct: 85,
+        scannedCards: 0,
+        totalCards: 0,
+        duplicatesFound: 0,
+        spaceSavedBytes: 0,
+        cancelled: false
+      };
+    }
+    duplicateScanRunInFlight = true;
+    try {
     const root = await readLibraryRoot();
     if (!root) {
       return {
@@ -386,7 +401,7 @@ export function registerDuplicateIpc(
     const startedAt = Date.now();
     const sender = event.sender;
     const result = await runDuplicateScan(libraries, thresholdPct, {
-      yieldToNavigation: false,
+      yieldToNavigation: true,
       intraSkippedByLibrary,
       crossSkipped,
       onProgress: ({ scannedCards, totalCards, duplicatesFound }) => {
@@ -404,7 +419,7 @@ export function registerDuplicateIpc(
     });
 
     return {
-      pairs: enrichPairsWithCards(result.pairs),
+      pairs: enrichPairsWithCards(result.pairs.slice(0, MAX_DUPLICATE_PAIRS_IPC)),
       thresholdPct,
       scannedCards: result.scannedCards,
       totalCards: result.totalCards,
@@ -412,6 +427,9 @@ export function registerDuplicateIpc(
       spaceSavedBytes: result.spaceSavedBytes,
       cancelled: result.cancelled
     };
+    } finally {
+      duplicateScanRunInFlight = false;
+    }
   });
 
   ipcMain.handle('arc:duplicate-scan-cancel', async () => {

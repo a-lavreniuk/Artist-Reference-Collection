@@ -4,6 +4,16 @@ import { timingSafeEqual } from 'crypto';
 /** Header for Import API and HTTP MCP (shared local secret). */
 export const ARC_LOCAL_TOKEN_HEADER = 'x-arc-local-token';
 
+/** Headers for local HTTP MCP / Import API clients. */
+export function localApiAuthHeaders(secret: string): Record<string, string> {
+  const token = secret.trim();
+  if (!token) return {};
+  return {
+    Authorization: `Bearer ${token}`,
+    [ARC_LOCAL_TOKEN_HEADER]: token
+  };
+}
+
 function readHeaderToken(req: IncomingMessage): string {
   const raw = req.headers[ARC_LOCAL_TOKEN_HEADER] ?? req.headers['authorization'];
   if (typeof raw === 'string') {

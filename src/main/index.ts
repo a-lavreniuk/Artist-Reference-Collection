@@ -12,6 +12,17 @@ import { runMcpStdioHost, silenceStdoutLogging } from './mcp/mcpStdioHost';
 
 configureAppProfile();
 
+function installMainProcessErrorHandlers(): void {
+  process.on('uncaughtException', (err) => {
+    console.error('[ARC] uncaughtException', err);
+  });
+  process.on('unhandledRejection', (reason) => {
+    console.error('[ARC] unhandledRejection', reason);
+  });
+}
+
+installMainProcessErrorHandlers();
+
 const mcpStdioMode = isMcpStdioArgv();
 if (mcpStdioMode) {
   silenceStdoutLogging();
@@ -75,6 +86,7 @@ import {
 } from './loadingSplash';
 import { initArcUpdater, registerArcUpdaterIpc } from './updater';
 import { registerAiIpc, scheduleIdleIndexing, shutdownAiWorker } from './ipcAi';
+import { shutdownLlamaBridge } from './ai/llamaCppBridge';
 import { ensureLibraryReady } from './storage/libraryStorage';
 import {
   clearSessionWindowSize,
@@ -296,23 +308,44 @@ if (!mcpStdioMode) {
     }
   });
 
-  app.on('will-quit', () => {
-    syncPendingHiddenAutostartMarker(readAppPreferencesSync());
-    void refreshLibrarySessionSnapshotFromDisk();
-    shutdownArcMediaServer();
-    clearMediaStagingTokens();
-    stopImportApiServer();
-    void stopMcpServer();
-    destroyAppTray();
-    unregisterDevToolsShortcuts();
-    unregisterScreenshotShortcuts();
-    unregisterFeedbackShortcut();
-    destroyScreenshotOverlay();
-    destroyScreenshotWindowPicker();
-    destroyColorEyedropper();
-    destroyCardViewerWindows();
-    destroyLoadingSplash();
-    shutdownAiWorker();
-    void import('./autoImportWatcher').then(({ stopAutoImportWatcher }) => stopAutoImportWatcher());
+  let quitCleanupStarted = false;
+  app.on('will-quit', (event) => {
+    if (quitCleanupStarted) return;
+    event.preventDefault();
+    quitCleanupStarted = true;
+    void (async () => {
+      try {
+        syncPendingHiddenAutostartMarker(readAppPreferencesSync());
+        await refreshLibrarySessionSnapshotFromDisk();
+        shutdownArcMediaServer();
+        clearMediaStagingTokens();
+        stopImportApiServer();
+        await stopMcpServer();
+        destroyAppTray();
+        unregisterDevToolsShortcuts();
+        unregisterScreenshotShortcuts();
+        unregisterFeedbackShortcut();
+        destroyScreenshotOverlay();
+        destroyScreenshotWindowPicker();
+        destroyColorEyedropper();
+        destroyCardViewerWindows();
+        destroyLoadingSplash();
+        shutdownAiWorker();
+        await Promise.race([
+          shutdownLlamaBridge(),
+          new Promise<void>((resolve) => {
+            setTimeout(resolve, 4000);
+          })
+        ]);
+        try {
+          const { stopAutoImportWatcher } = await import('./autoImportWatcher');
+          stopAutoImportWatcher();
+        } catch {
+          /* ignore */
+        }
+      } finally {
+        app.quit();
+      }
+    })();
   });
 }

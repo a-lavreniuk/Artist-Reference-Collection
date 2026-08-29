@@ -16,6 +16,7 @@ import {
 } from '../storage/cardEmbeddings';
 import { getLibraryDb, openLibraryDb } from '../storage/db';
 import { ensureLibraryReady } from '../storage/libraryStorage';
+import { abortAiOp, beginAiOpAbort } from './aiOpAbort';
 import {
   captionForHeavyIndex,
   embedHeavyHybridForIndex,
@@ -215,6 +216,10 @@ function listMissingForModel(
     return listCardsMissingHybridEmbedding(db, modelId, limit);
   }
   return listCardsMissingEmbedding(db, modelId, limit);
+}
+
+export function isIndexingInFlight(): boolean {
+  return indexRunning;
 }
 
 export async function getIndexStatus(): Promise<IndexStatus> {
@@ -455,6 +460,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
           currentCardProgress = 0;
           lastError = null;
           broadcastProgress(indexed, total, true);
+          beginAiOpAbort();
           const ok = await indexCardById(cardId);
           if (ok) {
             didWork = true;
@@ -555,6 +561,7 @@ export async function runFullReindex(): Promise<void> {
 
 export function pauseIndexing(): void {
   indexPaused = true;
+  abortAiOp();
 }
 
 export function resumeIndexing(): void {

@@ -62,6 +62,7 @@ async function writeLastSeenVersion(version: string): Promise<void> {
 }
 
 let pendingInstall = false;
+let updateDownloaded = false;
 /** Once GitHub check fails, stay on GitLab for this process (download uses same feed). */
 let usingGitlabFallback = false;
 
@@ -134,6 +135,7 @@ export function registerArcUpdaterIpc(): void {
   ipcMain.handle('arc:quit-and-install', () => {
     if (!app.isPackaged) return { ok: false as const };
     pendingInstall = true;
+    if (!updateDownloaded) return { ok: false as const };
     autoUpdater.quitAndInstall(false, true);
     return { ok: true as const };
   });
@@ -169,6 +171,7 @@ export function initArcUpdater(): void {
   });
 
   autoUpdater.on('update-downloaded', () => {
+    updateDownloaded = true;
     sendToRenderer('arc:update-downloaded', {});
     if (pendingInstall) {
       autoUpdater.quitAndInstall(false, true);

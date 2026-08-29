@@ -45,13 +45,25 @@ function mediaResponseHeaders(
   };
 }
 
+function pruneExpiredStaging(now = Date.now()): void {
+  for (const [token, entry] of stagingByToken) {
+    if (entry.expiresAt <= now) stagingByToken.delete(token);
+  }
+}
+
 function pipeReadStream(
+  req: http.IncomingMessage,
   res: http.ServerResponse,
   abs: string,
   start: number,
   end: number
 ): void {
   const stream = fs.createReadStream(abs, { start, end });
+  const stop = () => {
+    stream.destroy();
+  };
+  req.on('close', stop);
+  res.on('close', stop);
   stream.on('error', () => {
     if (!res.headersSent) reject(res, 500);
     else res.destroy();
@@ -88,7 +100,7 @@ function sendFile(
       res.end();
       return;
     }
-    pipeReadStream(res, abs, range.start, range.end);
+    pipeReadStream(req, res, abs, range.start, range.end);
     return;
   }
 
@@ -100,10 +112,11 @@ function sendFile(
     res.end();
     return;
   }
-  pipeReadStream(res, abs, 0, fileSize - 1);
+  pipeReadStream(req, res, abs, 0, fileSize - 1);
 }
 
 function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+  pruneExpiredStaging();
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     reject(res, 405);
     return;
@@ -180,6 +193,7 @@ process.parentPort.on('message', (event: { data: unknown }) => {
   if (!msg || typeof msg !== 'object' || !('type' in msg)) return;
 
   if (msg.type === 'staging-register') {
+    pruneExpiredStaging();
     if (typeof msg.token === 'string' && typeof msg.absPath === 'string' && typeof msg.expiresAt === 'number') {
       stagingByToken.set(msg.token, { absPath: msg.absPath, expiresAt: msg.expiresAt });
     }

@@ -134,6 +134,24 @@ declare global {
         advancedFilters?: GalleryAdvancedFilters;
         sort?: GallerySortState;
       }) => Promise<CardRecord[]>;
+      storageListCardIds: (params: {
+        offset: number;
+        limit: number;
+        libraryScope?: 'all' | 'untagged' | 'trash';
+        selectedTagIds?: string[];
+        cardIdExact?: string | null;
+        collectionId?: string | null;
+        moodboardCardIds?: string[] | null;
+        advancedFilters?: GalleryAdvancedFilters;
+        sort?: GallerySortState;
+        aroundCardId?: string;
+        radius?: number;
+      }) => Promise<string[]>;
+      storageListCardsSharingTags: (payload: {
+        tagIds: string[];
+        excludeCardId: string;
+        limit?: number;
+      }) => Promise<CardRecord[]>;
       storageGetCard: (
         cardIdOrPayload: string | { cardId: string; libraryId?: string }
       ) => Promise<CardRecord | null>;

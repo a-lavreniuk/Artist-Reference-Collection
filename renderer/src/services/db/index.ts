@@ -83,6 +83,7 @@ export {
 export {
   listCardsSorted,
   listCardsPage,
+  listCardIdsPage,
   listCardsInCollection,
   getCardById,
   getCollectionCardCounts,

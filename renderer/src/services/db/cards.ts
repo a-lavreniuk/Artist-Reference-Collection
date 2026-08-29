@@ -100,6 +100,74 @@ export async function listCardsPage(params: {
   return list.slice(params.offset, params.offset + params.limit);
 }
 
+const LOCAL_CARD_IDS_SCAN_CAP = 10_000;
+
+function sliceIdsAroundLocal(ids: readonly string[], centerId: string, radius: number): string[] {
+  if (ids.length === 0) return [];
+  const i = ids.indexOf(centerId);
+  if (i < 0) return [...ids.slice(0, radius * 2 + 1)];
+  const from = Math.max(0, i - radius);
+  const to = Math.min(ids.length, i + radius + 1);
+  return [...ids.slice(from, to)];
+}
+
+export async function listCardIdsPage(params: {
+  offset: number;
+  limit: number;
+  libraryScope?: import('../../search/libraryScopeUrl').LibraryScope;
+  selectedTagIds?: string[];
+  cardIdExact?: string | null;
+  collectionId?: string | null;
+  moodboardCardIds?: string[] | null;
+  advancedFilters?: import('../../components/gallery/galleryFilterTypes').GalleryAdvancedFilters;
+  sort?: import('../../components/gallery/galleryFilterTypes').GallerySortState;
+  aroundCardId?: string;
+  radius?: number;
+}): Promise<string[]> {
+  const b = await resolveBackend();
+  if (b === 'file') {
+    return storage.storageListCardIds({
+      offset: params.offset,
+      limit: params.limit,
+      libraryScope: params.libraryScope,
+      selectedTagIds: params.selectedTagIds,
+      cardIdExact: params.cardIdExact,
+      collectionId: params.collectionId,
+      moodboardCardIds: params.moodboardCardIds,
+      advancedFilters: params.advancedFilters,
+      sort: params.sort,
+      aroundCardId: params.aroundCardId,
+      radius: params.radius
+    });
+  }
+  if (params.aroundCardId) {
+    const cards = await listCardsPage({
+      offset: 0,
+      limit: LOCAL_CARD_IDS_SCAN_CAP,
+      libraryScope: params.libraryScope,
+      selectedTagIds: params.selectedTagIds,
+      cardIdExact: params.cardIdExact,
+      collectionId: params.collectionId,
+      moodboardCardIds: params.moodboardCardIds,
+      advancedFilters: params.advancedFilters,
+      sort: params.sort
+    });
+    return sliceIdsAroundLocal(cards.map((c) => c.id), params.aroundCardId, params.radius ?? 24);
+  }
+  const cards = await listCardsPage({
+    offset: params.offset,
+    limit: params.limit,
+    libraryScope: params.libraryScope,
+    selectedTagIds: params.selectedTagIds,
+    cardIdExact: params.cardIdExact,
+    collectionId: params.collectionId,
+    moodboardCardIds: params.moodboardCardIds,
+    advancedFilters: params.advancedFilters,
+    sort: params.sort
+  });
+  return cards.map((c) => c.id);
+}
+
 export async function listCardsInCollection(
   collectionId: string,
   params: {
@@ -249,7 +317,12 @@ export async function listSimilarCards(cardId: string, limit = 15): Promise<Card
   });
   if (!baseHasGateTier) return [];
 
-  const all = await listCardsSorted('all');
+  const b = await resolveBackend();
+  const candidates =
+    b === 'file'
+      ? await storage.storageListCardsSharingTags(base.tagIds, cardId, 800)
+      : (await listCardsSorted('all')).filter((c) => c.id !== cardId && c.type === 'image');
+
   const scored: Array<{
     c: CardRecord;
     scoreHigh: number;
@@ -257,7 +330,7 @@ export async function listSimilarCards(cardId: string, limit = 15): Promise<Card
     scoreLow: number;
   }> = [];
 
-  for (const c of all) {
+  for (const c of candidates) {
     if (c.id === cardId || c.type !== 'image') continue;
     const lex = scoreOverlapLex(base.tagIds, c.tagIds, categoryWeightByTag);
     if (!lex) continue;

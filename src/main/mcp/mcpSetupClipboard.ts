@@ -3,6 +3,7 @@ import path from 'path';
 import { ipcMain } from 'electron';
 
 import { readAppPreferencesSync } from '../appPreferences';
+import { localApiAuthHeaders } from '../localApiAuth';
 import { ARC_MCP_PORT, ARC_MCP_URL } from './constants';
 
 let mcpSetupIpcRegistered = false;
@@ -39,7 +40,7 @@ export function buildHttpMcpServerConfig(secret?: string): Record<string, unknow
   if (token) {
     // Cursor HTTP MCP: Authorization Bearer is the documented header form.
     // ARC also accepts x-arc-local-token (see localApiAuth).
-    config.headers = { Authorization: `Bearer ${token}` };
+    config.headers = localApiAuthHeaders(token);
   }
   return config;
 }

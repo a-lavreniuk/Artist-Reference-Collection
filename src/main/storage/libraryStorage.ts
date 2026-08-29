@@ -23,6 +23,7 @@ import {
   cardJsonExistsSync,
   copyOriginalToCard,
   deleteCardFolder,
+  isPlainCardId,
   moveOriginalToCard,
   readCardJson,
   thumbLRelPath,
@@ -700,7 +701,13 @@ export async function importMediaFile(
   }
 }
 
-function listCardsOnDb(db: Database.Database, params: ListCardsParams): CardIndexRow[] {
+const LIST_CARD_IDS_MAX = 10_000;
+const LIST_CARD_IDS_AROUND_RADIUS_MAX = 64;
+
+function listCardsFilterParts(
+  db: Database.Database,
+  params: ListCardsParams
+): { whereSql: string; orderSql: string; binds: unknown[] } {
   const sort = params.sort ?? DEFAULT_GALLERY_SORT;
   const filters = migrateGalleryAdvancedFiltersShape(params.advancedFilters ?? emptyGalleryAdvancedFilters());
   const template = readLibraryDetailTemplate(db);
@@ -719,29 +726,117 @@ function listCardsOnDb(db: Database.Database, params: ListCardsParams): CardInde
     'c',
     boundaries
   );
-
-  let sql = 'SELECT c.* FROM cards c';
-  if (wh.length) sql += ` WHERE ${wh.join(' AND ')}`;
-
+  const whereSql = wh.length ? ` WHERE ${wh.join(' AND ')}` : '';
   if (sort.field === 'shuffle') {
     ensureShuffleSqlFunctions(db);
     const shuffleSeed = sort.shuffleSeed ?? 0;
-    sql += ' ORDER BY arc_shuffle_key(c.id, ?) ASC LIMIT ? OFFSET ?';
-    binds.push(shuffleSeed, params.limit, params.offset);
-    const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
-    return indexCardRowsWithRelations(db, rows);
+    return {
+      whereSql,
+      orderSql: 'ORDER BY arc_shuffle_key(c.id, ?) ASC',
+      binds: [...binds, shuffleSeed]
+    };
   }
+  return {
+    whereSql,
+    orderSql: buildGallerySortSql(sort, 'c', template),
+    binds
+  };
+}
 
-  sql += ` ${buildGallerySortSql(sort, 'c', template)} LIMIT ? OFFSET ?`;
-  binds.push(params.limit, params.offset);
-
-  const rows = db.prepare(sql).all(...binds) as Record<string, unknown>[];
+function listCardsOnDb(db: Database.Database, params: ListCardsParams): CardIndexRow[] {
+  const { whereSql, orderSql, binds } = listCardsFilterParts(db, params);
+  const sql = `SELECT c.* FROM cards c${whereSql} ${orderSql} LIMIT ? OFFSET ?`;
+  const rows = db.prepare(sql).all(...binds, params.limit, params.offset) as Record<string, unknown>[];
   return indexCardRowsWithRelations(db, rows);
+}
+
+function listCardIdsOnDb(db: Database.Database, params: ListCardsParams): string[] {
+  const limit = Math.min(Math.max(0, Math.floor(params.limit)), LIST_CARD_IDS_MAX);
+  const offset = Math.max(0, Math.floor(params.offset));
+  if (limit === 0) return [];
+  const { whereSql, orderSql, binds } = listCardsFilterParts(db, params);
+  const sql = `SELECT c.id AS id FROM cards c${whereSql} ${orderSql} LIMIT ? OFFSET ?`;
+  const rows = db.prepare(sql).all(...binds, limit, offset) as Array<{ id: string }>;
+  return rows.map((row) => String(row.id));
+}
+
+function listCardIdsAroundOnDb(
+  db: Database.Database,
+  params: ListCardsParams,
+  centerId: string,
+  radius: number
+): string[] {
+  if (!isPlainCardId(centerId)) return [];
+  const r = Math.min(LIST_CARD_IDS_AROUND_RADIUS_MAX, Math.max(0, Math.floor(radius)));
+  const { whereSql, orderSql, binds } = listCardsFilterParts(db, params);
+  const sql = `
+    WITH ordered AS (
+      SELECT c.id AS id, ROW_NUMBER() OVER (${orderSql}) AS rn
+      FROM cards c
+      ${whereSql}
+    ),
+    center AS (
+      SELECT rn FROM ordered WHERE id = ?
+    )
+    SELECT o.id AS id
+    FROM ordered o
+    INNER JOIN center ON 1 = 1
+    WHERE o.rn BETWEEN center.rn - ? AND center.rn + ?
+    ORDER BY o.rn
+  `;
+  const rows = db.prepare(sql).all(...binds, centerId, r, r) as Array<{ id: string }>;
+  return rows.map((row) => String(row.id));
 }
 
 export function listCardsFromDb(libraryRoot: string, params: ListCardsParams): CardIndexRow[] {
   const db = openLibraryDb(libraryRoot);
   return listCardsOnDb(db, params);
+}
+
+/** Только id — без тегов, коллекций и полных строк. Для Ctrl+A и очереди деталки. */
+export function listCardIdsFromDb(libraryRoot: string, params: ListCardsParams): string[] {
+  const db = openLibraryDb(libraryRoot);
+  return listCardIdsOnDb(db, params);
+}
+
+/** Окно id вокруг карточки в том же порядке, что и лента. */
+export function listCardIdsAroundFromDb(
+  libraryRoot: string,
+  params: ListCardsParams,
+  centerId: string,
+  radius: number
+): string[] {
+  const db = openLibraryDb(libraryRoot);
+  return listCardIdsAroundOnDb(db, params, centerId, radius);
+}
+
+const SIMILAR_TAG_CANDIDATE_CAP = 800;
+
+/** Карточки, у которых есть хотя бы одна из меток — без полного скана библиотеки. */
+export function listCardsSharingAnyTagIds(
+  libraryRoot: string,
+  params: { tagIds: readonly string[]; excludeCardId: string; limit?: number }
+): CardIndexRow[] {
+  const tagIds = [...new Set(params.tagIds.filter((id) => isPlainCardId(id)))].slice(0, 64);
+  if (tagIds.length === 0 || !isPlainCardId(params.excludeCardId)) return [];
+  const limit = Math.min(
+    Math.max(1, Math.floor(params.limit ?? SIMILAR_TAG_CANDIDATE_CAP)),
+    SIMILAR_TAG_CANDIDATE_CAP
+  );
+  const db = openLibraryDb(libraryRoot);
+  const placeholders = tagIds.map(() => '?').join(',');
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT c.* FROM cards c
+       INNER JOIN card_tags ct ON ct.card_id = c.id
+       WHERE COALESCE(c.is_deleted, 0) = 0
+         AND c.type = 'image'
+         AND c.id != ?
+         AND ct.tag_id IN (${placeholders})
+       LIMIT ?`
+    )
+    .all(params.excludeCardId, ...tagIds, limit) as Record<string, unknown>[];
+  return indexCardRowsWithRelations(db, rows);
 }
 
 /** Список без переключения global `activeDb` — для корзины контейнера. */
@@ -1186,6 +1281,9 @@ export async function importExistingCardFolder(
 }
 
 export async function deleteCardFromStorage(libraryRoot: string, cardId: string): Promise<void> {
+  if (!isPlainCardId(cardId)) {
+    throw new Error('Некорректный идентификатор карточки');
+  }
   const root = path.resolve(libraryRoot);
   const db = await ensureLibraryReady(root);
   db.prepare('DELETE FROM cards WHERE id = ?').run(cardId);
@@ -1366,11 +1464,6 @@ export function removeTagIds(tagIds: readonly string[], removed: ReadonlySet<str
     next.push(id);
   }
   return next;
-}
-
-/** id карточки — один сегмент пути: без разделителей и переходов вверх. */
-function isPlainCardId(cardId: string): boolean {
-  return cardId.length > 0 && !/[\\/]/.test(cardId) && cardId !== '.' && cardId !== '..';
 }
 
 async function applyCardTagIds(
@@ -2240,61 +2333,85 @@ export function getCardsWithPhash(libraryRoot: string): Array<{ id: string; phas
 export async function rebuildIndexFromCardJson(libraryRoot: string): Promise<void> {
   const root = path.resolve(libraryRoot);
   const db = openLibraryDb(root);
-  db.exec('DELETE FROM card_tags; DELETE FROM card_collections; DELETE FROM cards;');
 
   const cardsDir = path.join(root, CARDS_DIR);
   let entries: string[];
   try {
     entries = await readdir(cardsDir);
   } catch {
-    return;
+    entries = [];
   }
 
+  type RebuildRow = {
+    cardJson: CardJsonV1;
+    cardIdNorm: string;
+    originalRel: string;
+    thumbS: string;
+    thumbM: string;
+    thumbL: string;
+    isDeleted: number;
+    packed: ReturnType<typeof serializeAnnotations>;
+  };
+  const prepared: RebuildRow[] = [];
   for (const cardId of entries) {
+    if (!isPlainCardId(cardId)) continue;
     const cardJson = await readCardJson(root, cardId);
     if (!cardJson) continue;
     const cardIdNorm = cardJson.id;
+    if (!isPlainCardId(cardIdNorm)) continue;
     const ext = cardJson.format ? `.${cardJson.format}` : path.extname(cardJson.originalFileName);
-    const originalRel = `cards/${cardIdNorm}/original${ext.startsWith('.') ? ext : `.${ext}`}`;
-    const thumbS = thumbSRelPath(cardIdNorm);
-    const thumbM = thumbMRelPath(cardIdNorm);
-    const thumbL = thumbLRelPath(cardIdNorm);
+    prepared.push({
+      cardJson,
+      cardIdNorm,
+      originalRel: `cards/${cardIdNorm}/original${ext.startsWith('.') ? ext : `.${ext}`}`,
+      thumbS: thumbSRelPath(cardIdNorm),
+      thumbM: thumbMRelPath(cardIdNorm),
+      thumbL: thumbLRelPath(cardIdNorm),
+      isDeleted: cardJson.deletedAt ? 1 : 0,
+      packed: serializeAnnotations(sanitizeCardAnnotations(cardJson.annotations ?? []))
+    });
+  }
 
-    const isDeleted = cardJson.deletedAt ? 1 : 0;
-    const packed = serializeAnnotations(sanitizeCardAnnotations(cardJson.annotations ?? []));
-    db.prepare(
-      `INSERT INTO cards (
+  const insertSql = `INSERT INTO cards (
         id, type, added_at, date_modified, format, width, height, file_size, dominant_color, phash_json,
         original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, description, rating, is_deleted, deleted_at,
         custom_fields_json, custom_fields_text, annotations_json, annotations_text
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      cardIdNorm,
-      cardJson.type,
-      cardJson.addedAt,
-      cardJson.dateModified ?? null,
-      cardJson.format ?? null,
-      cardJson.width ?? null,
-      cardJson.height ?? null,
-      cardJson.fileSize ?? null,
-      cardJson.dominantColorHex ?? null,
-      cardJson.phash ? JSON.stringify(cardJson.phash) : null,
-      originalRel,
-      thumbS,
-      thumbM,
-      thumbL,
-      cardJson.description ?? null,
-      clampCardRating(cardJson.rating),
-      isDeleted,
-      cardJson.deletedAt ?? null,
-      serializeCustomFieldsMap(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
-      customFieldsMapToSearchText(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
-      packed.json,
-      packed.text
-    );
-    syncCardRelations(db, cardIdNorm, cardJson.tagIds, cardJson.collectionIds);
-  }
-  recomputeTagUsage(db);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  const rebuild = db.transaction(() => {
+    db.exec('DELETE FROM card_tags; DELETE FROM card_collections; DELETE FROM cards;');
+    const insert = db.prepare(insertSql);
+    for (const row of prepared) {
+      const { cardJson, cardIdNorm, originalRel, thumbS, thumbM, thumbL, isDeleted, packed } = row;
+      insert.run(
+        cardIdNorm,
+        cardJson.type,
+        cardJson.addedAt,
+        cardJson.dateModified ?? null,
+        cardJson.format ?? null,
+        cardJson.width ?? null,
+        cardJson.height ?? null,
+        cardJson.fileSize ?? null,
+        cardJson.dominantColorHex ?? null,
+        cardJson.phash ? JSON.stringify(cardJson.phash) : null,
+        originalRel,
+        thumbS,
+        thumbM,
+        thumbL,
+        cardJson.description ?? null,
+        clampCardRating(cardJson.rating),
+        isDeleted,
+        cardJson.deletedAt ?? null,
+        serializeCustomFieldsMap(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
+        customFieldsMapToSearchText(sanitizeCustomFieldsMap(cardJson.customFields ?? {})),
+        packed.json,
+        packed.text
+      );
+      syncCardRelations(db, cardIdNorm, cardJson.tagIds, cardJson.collectionIds);
+    }
+    recomputeTagUsage(db);
+  });
+  rebuild();
 }
 
 export { rowToCardRecord, moveOriginalToCard, cardJsonExistsSync, indexDbPath, readAiCaptionFromDbRow };

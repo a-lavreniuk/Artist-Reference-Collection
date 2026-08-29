@@ -45,6 +45,8 @@ import { openCardInNewWindowFromScope, resolveFocusedGalleryCardId } from '../..
 import { useGalleryCardSelection } from './useGalleryCardSelection';
 import { useGalleryCardLongPress, useGalleryMarqueeSelection } from './useGalleryMarqueeSelection';
 import GalleryMarqueeOverlay from './GalleryMarqueeOverlay';
+import { SELECT_ALL_IDS_CAP } from './gallerySelectAllIds';
+import { showAppNotification } from '../../services/notificationService';
 
 type Options = {
   cards: CardRecord[];
@@ -326,6 +328,12 @@ export function useGalleryMultiSelect({
         const ids = await resolver();
         if (seq !== selectAllSeqRef.current) return;
         if (ids.length > 0) selection.selectAllIds(ids);
+        if (ids.length >= SELECT_ALL_IDS_CAP) {
+          showAppNotification({
+            message: `Выделено первые ${SELECT_ALL_IDS_CAP.toLocaleString('ru-RU')} карточек`,
+            variant: 'warning'
+          });
+        }
       } catch {
         // Дозапрос не удался — остаётся выделение по загруженным карточкам.
       }
