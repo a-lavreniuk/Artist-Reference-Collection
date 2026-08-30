@@ -44,7 +44,7 @@ export const EMPTY_STATE_COPY = {
   aiSearchNoResults: {
     title: 'Ничего не найдено',
     subtitle: 'Попробуйте другое описание или настройте точность поиска',
-    primaryActionLabel: 'Настройки AI',
+    primaryActionLabel: 'Умный поиск',
     primaryActionVariant: 'outline'
   },
   collectionsNone: {

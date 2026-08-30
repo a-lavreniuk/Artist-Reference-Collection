@@ -104,6 +104,10 @@ export type AppPreferencesV1 = {
   aiResourcePreset: number;
   aiSearchStrictness: number;
   aiAutoTagEnabled: boolean;
+  /** Пользователь явно поставил модель автотегов в этом разделе. */
+  aiAutoTagModelInstalled: boolean;
+  /** One-shot: флаг модели больше не наследуется от тумблера автотегов. */
+  aiAutoTagProductV2: boolean;
   aiAutoTagVolume: number;
   aiAutoTagCatalogMode: 'reuse' | 'reuse_create';
   aiAutoTagOnImport: boolean;
@@ -187,6 +191,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiResourcePreset: 50,
     aiSearchStrictness: 50,
     aiAutoTagEnabled: false,
+    aiAutoTagModelInstalled: false,
+    aiAutoTagProductV2: true,
     aiAutoTagVolume: 50,
     aiAutoTagCatalogMode: 'reuse',
     aiAutoTagOnImport: false,
@@ -412,6 +418,11 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         ? Math.max(0, Math.min(100, Math.round(raw.aiSearchStrictness / 5) * 5))
         : d.aiSearchStrictness,
     aiAutoTagEnabled: typeof raw.aiAutoTagEnabled === 'boolean' ? raw.aiAutoTagEnabled : d.aiAutoTagEnabled,
+    aiAutoTagModelInstalled:
+      typeof raw.aiAutoTagModelInstalled === 'boolean'
+        ? raw.aiAutoTagModelInstalled
+        : d.aiAutoTagModelInstalled,
+    aiAutoTagProductV2: raw.aiAutoTagProductV2 === true,
     aiAutoTagVolume:
       typeof raw.aiAutoTagVolume === 'number'
         ? Math.max(0, Math.min(100, Math.round(raw.aiAutoTagVolume / 5) * 5))
@@ -454,6 +465,12 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
     sanitized.aiCaptionEnabled = false;
     sanitized.aiCaptionOnDemandMigrated = true;
     sanitized.aiModelTier = 'light';
+  }
+
+  // One-shot: «включить автотеги» больше не означает «модель установлена».
+  if (!sanitized.aiAutoTagProductV2) {
+    sanitized.aiAutoTagModelInstalled = false;
+    sanitized.aiAutoTagProductV2 = true;
   }
 
   return sanitized;
@@ -609,6 +626,12 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   if ('aiAutoTagEnabled' in patch && typeof patch.aiAutoTagEnabled === 'boolean') {
     next.aiAutoTagEnabled = patch.aiAutoTagEnabled;
   }
+  if ('aiAutoTagModelInstalled' in patch && typeof patch.aiAutoTagModelInstalled === 'boolean') {
+    next.aiAutoTagModelInstalled = patch.aiAutoTagModelInstalled;
+  }
+  if ('aiAutoTagProductV2' in patch && typeof patch.aiAutoTagProductV2 === 'boolean') {
+    next.aiAutoTagProductV2 = patch.aiAutoTagProductV2;
+  }
   if ('aiAutoTagVolume' in patch && typeof patch.aiAutoTagVolume === 'number') {
     next.aiAutoTagVolume = Math.max(0, Math.min(100, Math.round(patch.aiAutoTagVolume / 5) * 5));
   }
@@ -666,11 +689,12 @@ export async function readAppPreferences(): Promise<AppPreferencesV1> {
   try {
     const raw = JSON.parse(await readFile(prefsPath(), 'utf8')) as Partial<AppPreferencesV1> & Record<string, unknown>;
     const hadMigrationFlag = typeof raw.aiCaptionOnDemandMigrated === 'boolean' && raw.aiCaptionOnDemandMigrated;
+    const hadAutoTagProductV2 = raw.aiAutoTagProductV2 === true;
     const needsMcpSecretPersist = !(
       typeof raw.mcpApiSecret === 'string' && raw.mcpApiSecret.trim().length >= 16
     );
     cached = sanitizeFromDisk(raw);
-    if (!hadMigrationFlag || needsMcpSecretPersist) {
+    if (!hadMigrationFlag || needsMcpSecretPersist || !hadAutoTagProductV2) {
       const filePath = prefsPath();
       await mkdir(path.dirname(filePath), { recursive: true });
       await writeFile(filePath, JSON.stringify(cached, null, 2), 'utf8');
@@ -686,11 +710,12 @@ export function readAppPreferencesSync(): AppPreferencesV1 {
   try {
     const raw = JSON.parse(fs.readFileSync(prefsPath(), 'utf8')) as Partial<AppPreferencesV1> & Record<string, unknown>;
     const hadMigrationFlag = typeof raw.aiCaptionOnDemandMigrated === 'boolean' && raw.aiCaptionOnDemandMigrated;
+    const hadAutoTagProductV2 = raw.aiAutoTagProductV2 === true;
     const needsMcpSecretPersist = !(
       typeof raw.mcpApiSecret === 'string' && raw.mcpApiSecret.trim().length >= 16
     );
     cached = sanitizeFromDisk(raw);
-    if (!hadMigrationFlag || needsMcpSecretPersist) {
+    if (!hadMigrationFlag || needsMcpSecretPersist || !hadAutoTagProductV2) {
       const filePath = prefsPath();
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, JSON.stringify(cached, null, 2), 'utf8');

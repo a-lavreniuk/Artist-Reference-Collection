@@ -1,7 +1,7 @@
 /** Shared AI semantic search types (main process + worker). */
 
-/** Catalog roles: three search models + caption + WD auto-tagger. */
-export type ModelRole = 'search-clip' | 'search-embed-2b' | 'search-embed-8b' | 'caption' | 'tagger';
+/** Catalog roles: three search models + caption (JoyCaption for descriptions / auto-tags). */
+export type ModelRole = 'search-clip' | 'search-embed-2b' | 'search-embed-8b' | 'caption';
 
 export type SearchModelId =
   | 'clip-vit-base-patch32'
@@ -10,9 +10,7 @@ export type SearchModelId =
 
 export type CaptionModelId = 'joycaption-beta-one';
 
-export type TaggerModelId = 'wd-swinv2-tagger-v3';
-
-export type AiModelId = SearchModelId | CaptionModelId | TaggerModelId;
+export type AiModelId = SearchModelId | CaptionModelId;
 
 /**
  * @deprecated Prefer ModelRole / SearchModelId. Kept for migration and a few legacy call sites.
@@ -20,11 +18,11 @@ export type AiModelId = SearchModelId | CaptionModelId | TaggerModelId;
  */
 export type ModelTier = 'light' | 'heavy';
 
-export type ModelStack = 'transformers' | 'llama-embed' | 'llama-caption' | 'onnx';
+export type ModelStack = 'transformers' | 'llama-embed' | 'llama-caption';
 
 export type ModelFileSpec = {
   name: string;
-  role: 'weights' | 'mmproj' | 'labels';
+  role: 'weights' | 'mmproj';
   /** Separate HF repo when mmproj lives outside main hfId */
   hfId?: string;
 };
@@ -66,8 +64,7 @@ export const MODEL_ROLES: ModelRole[] = [
   'search-clip',
   'search-embed-2b',
   'search-embed-8b',
-  'caption',
-  'tagger'
+  'caption'
 ];
 
 export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
@@ -80,7 +77,7 @@ export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
     catalogRevision: 1,
     label: 'Лёгкая',
     description:
-      'Быстрый поиск по содержимому изображений. Подходит для устройств без мощного GPU. Потребуется ~350 МБ.',
+      'Быстрый поиск по содержимому изображений. Подходит, если нет мощного GPU.',
     sizeLabel: '~350 МБ',
     sizeMb: 350,
     minRamMb: 2048,
@@ -94,7 +91,7 @@ export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
     catalogRevision: 1,
     label: 'Средняя',
     description:
-      'Продвинутый multimodal-поиск (Qwen3-VL-Embedding 2B). Лучше понимает смысл запроса. Потребуется ~2.3 ГБ.',
+      'Ищет по смыслу текста и картинки, а не только по внешнему сходству. Лучше понимает запрос и находит близкие референсы.',
     sizeLabel: '~2.3 ГБ',
     sizeMb: 2300,
     minRamMb: 8192,
@@ -112,7 +109,7 @@ export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
     catalogRevision: 1,
     label: 'Тяжёлая',
     description:
-      'Максимальное качество поиска (Qwen3-VL-Embedding 8B). Потребуется ~5.8 ГБ.',
+      'Максимальное качество поиска по сложным сценам. Лучше различает тонкие отличия между похожими кадрами.',
     sizeLabel: '~5.8 ГБ',
     sizeMb: 5800,
     minRamMb: 12288,
@@ -131,7 +128,7 @@ export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
     catalogRevision: 1,
     label: 'JoyCaption',
     description:
-      'Описания изображений для поиска. Потребуется ~5.5 ГБ. Работает отдельно от автотегов.',
+      'Анализирует изображение или кадры видео и предлагает метки из каталога. При необходимости создаёт новые метки.',
     sizeLabel: '~5.5 ГБ',
     sizeMb: 5500,
     minRamMb: 12288,
@@ -142,23 +139,6 @@ export const MODEL_CATALOG: Record<ModelRole, ModelCatalogEntry> = {
         role: 'mmproj',
         hfId: 'concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf'
       }
-    ]
-  },
-  tagger: {
-    id: 'wd-swinv2-tagger-v3',
-    role: 'tagger',
-    stack: 'onnx',
-    hfId: 'SmilingWolf/wd-swinv2-tagger-v3',
-    catalogRevision: 1,
-    label: 'WD Tagger',
-    description:
-      'Быстрые метки по содержимому кадра (поза, одежда, композиция). Потребуется ~446 МБ, работает на CPU.',
-    sizeLabel: '~446 МБ',
-    sizeMb: 446,
-    minRamMb: 3072,
-    files: [
-      { name: 'model.onnx', role: 'weights' },
-      { name: 'selected_tags.csv', role: 'labels' }
     ]
   }
 };
@@ -261,7 +241,6 @@ export type AiStatus = {
   supportedTiers: ModelTier[];
   searchModelCards: AiModelCardInfo[];
   captionModelCard: AiModelCardInfo;
-  taggerModelCard: AiModelCardInfo;
   /** @deprecated combined cards — prefer searchModelCards + captionModelCard */
   modelCards: AiModelCardInfo[];
   resources: AiResourceSettings;

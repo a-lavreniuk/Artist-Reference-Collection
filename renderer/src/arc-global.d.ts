@@ -58,6 +58,7 @@ export type ArcLibraryListItem = {
   path: string;
   active: boolean;
   cardCount?: number;
+  sizeBytes?: number;
 };
 
 export type AutoImportLibrarySettings = {
@@ -665,6 +666,7 @@ declare global {
       ) => Promise<import('./services/aiTypes').AiStatus>;
       onAiDownloadProgress?: (cb: (detail: {
         role?: string;
+        modelId?: string;
         tier?: string;
         percent: number;
         bytesReceived?: number;

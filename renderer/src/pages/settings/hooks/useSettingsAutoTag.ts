@@ -30,11 +30,11 @@ export function useSettingsAutoTag() {
   }, []);
 
   const captionInstalled = Boolean(
-    aiSnapshot.status?.models.find(
-      (m) => m.role === 'caption' || m.tier === 'heavy' || m.modelId === 'joycaption-beta-one'
-    )?.installed
+    aiSnapshot.status?.models.find((m) => m.role === 'caption' || m.modelId === 'joycaption-beta-one')
+      ?.installed
   );
-  const heavyInstalled = captionInstalled;
+  const captionProductInstalled = prefs?.aiAutoTagModelInstalled === true;
+  const heavyInstalled = captionProductInstalled;
 
   const baseDisabled = !ready || !libraryReady || !window.arc;
   const enableDisabled = baseDisabled;
@@ -55,11 +55,15 @@ export function useSettingsAutoTag() {
 
   const setEnabled = useCallback(
     async (next: boolean) => {
-      if (enableDisabled && next) return;
+      if (enableDisabled) return;
       await update({ aiAutoTagEnabled: next });
     },
     [enableDisabled, update]
   );
+
+  const markModelInstalled = useCallback(async () => {
+    await update({ aiAutoTagModelInstalled: true });
+  }, [update]);
 
   const setVolume = useCallback(
     async (next: number) => {
@@ -98,6 +102,8 @@ export function useSettingsAutoTag() {
     ready,
     libraryReady,
     heavyInstalled,
+    captionFilesInstalled: captionInstalled,
+    captionProductInstalled,
     baseDisabled,
     enableDisabled,
     enabled,
@@ -106,6 +112,7 @@ export function useSettingsAutoTag() {
     createNew,
     videoCaptionOnImport,
     setEnabled,
+    markModelInstalled,
     setVolume,
     setOnImport,
     setCreateNew,

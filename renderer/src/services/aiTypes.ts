@@ -1,4 +1,4 @@
-export type AiModelRole = 'search-clip' | 'search-embed-2b' | 'search-embed-8b' | 'caption' | 'tagger';
+export type AiModelRole = 'search-clip' | 'search-embed-2b' | 'search-embed-8b' | 'caption';
 export type AiSearchModelId =
   | 'clip-vit-base-patch32'
   | 'qwen3-vl-embedding-2b'
@@ -83,7 +83,6 @@ export type AiStatus = {
   supportedTiers: AiModelTier[];
   searchModelCards: AiModelCardInfo[];
   captionModelCard: AiModelCardInfo;
-  taggerModelCard: AiModelCardInfo;
   /** Combined search + caption cards */
   modelCards: AiModelCardInfo[];
   resources: { threads: number; gpuLayers: number; maxRamMb: number };

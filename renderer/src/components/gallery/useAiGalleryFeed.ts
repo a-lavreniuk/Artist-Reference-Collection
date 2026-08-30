@@ -43,7 +43,7 @@ export function useAiGalleryFeed(
       if (!arc?.aiSearchCards || !query) return [];
       const status = arc.aiGetStatus ? await arc.aiGetStatus() : null;
       if (status && !status.setupReady) {
-        throw new Error('Сначала установите модель в «Настройки → AI».');
+        throw new Error('Сначала установите модель в «Настройки → Умный поиск».');
       }
       setAiErrorOverride(null);
       const raw = await arc.aiSearchCards({ ...requestBase, offset, limit });

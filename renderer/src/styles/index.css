@@ -3852,7 +3852,7 @@ span.arc-card-detail-prop-row__label {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-2);
 }
 
 .arc-card-detail-collection-row {
@@ -3865,7 +3865,7 @@ span.arc-card-detail-prop-row__label {
 }
 
 .arc-card-detail-collection-row.panel.elevation-sunken {
-  background: var(--button-outline-default);
+  background: var(--panel-bg);
   border-color: var(--button-outline-border-default);
   transition: background-color var(--transition-fast);
 }
@@ -4536,13 +4536,10 @@ html[data-theme="light"] .arc-card-detail-video-controls[data-elevation="sunken"
 }
 
 .arc-card-detail-annot-item {
-  align-items: stretch;
-}
-
-.arc-card-detail-annot-item.is-active.panel.elevation-sunken,
-.arc-card-detail-annot-item.is-hovered.panel.elevation-sunken,
-.arc-card-detail-annot-item.is-focused.panel.elevation-sunken {
-  background: var(--button-outline-hover);
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .arc-card-detail-annot-item__text {
@@ -7237,6 +7234,15 @@ html[data-theme="light"] .arc-settings-ai-model-card__actions .btn-group-ds .btn
 .arc-settings-ai-status-head {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin: 0;
+}
+
+.arc-settings-ai-status-head__status {
+  display: flex;
+  flex-direction: row;
   align-items: baseline;
   gap: var(--s-2);
   margin: 0;
@@ -8968,6 +8974,214 @@ html[data-theme="light"] .arc-stats-disk-bar__segment--nonArc {
   .arc-stats-summary-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* InfoSplitCard — Tertiary surface (не panel / Background) */
+.arc-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--panel-border);
+  background: var(--input-fill-default);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+  min-width: 0;
+}
+
+.arc-info-card--interactive {
+  cursor: pointer;
+}
+
+.arc-info-card--interactive:hover,
+.arc-info-card--interactive:focus-within,
+.arc-info-card.is-highlighted {
+  background: var(--input-fill-hover);
+  border-color: var(--input-border-hover);
+}
+
+.arc-info-card.is-active {
+  border-color: var(--border-brand);
+}
+
+.arc-info-card.is-active:hover,
+.arc-info-card.is-active:focus-within,
+.arc-info-card.is-active.is-highlighted {
+  background: var(--input-fill-hover);
+  border-color: var(--border-brand);
+}
+
+.arc-info-card.is-disabled {
+  cursor: default;
+}
+
+.arc-info-card.is-disabled .arc-info-card__title,
+.arc-info-card.is-disabled .arc-info-card__description {
+  color: var(--typography-black-bg-primary-disabled);
+}
+
+.arc-info-card--interactive:focus-visible {
+  outline: 2px solid var(--input-border-focus);
+  outline-offset: 2px;
+}
+
+.arc-info-card__top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  min-width: 0;
+}
+
+.arc-info-card__top-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arc-info-card__title-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.arc-info-card__title {
+  margin: 0;
+  min-width: 0;
+  color: var(--text-elev-primary);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.arc-info-card__badge {
+  flex-shrink: 0;
+}
+
+.arc-info-card__badge.arc-ui-kit-scope {
+  display: inline-flex;
+}
+
+.arc-info-card__badge .btn {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* Чипы в info-карточках — только мета, без hover/active эффектов */
+.arc-info-card .chip,
+.arc-info-card .chip:hover,
+.arc-info-card .chip.state-hover,
+.arc-info-card .chip-active,
+.arc-info-card .chip-active:hover,
+.arc-info-card .chip-active.state-hover {
+  pointer-events: none;
+  cursor: default;
+  background: var(--tag-fill-default);
+  color: var(--tag-text-default);
+}
+
+.arc-info-card .chip .chip-count,
+.arc-info-card .chip:hover .chip-count,
+.arc-info-card .chip.state-hover .chip-count {
+  color: var(--tag-counter-default);
+}
+
+.arc-info-card__description {
+  margin: 0;
+  color: var(--text-elev-secondary);
+}
+
+.arc-info-card.is-disabled .arc-info-card__description {
+  color: var(--typography-black-bg-secondary-disabled, var(--typography-black-bg-primary-disabled));
+}
+
+.arc-info-card__aside {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.arc-info-card__aside .arc-card-detail-collection-stack-box {
+  --arc-collection-stack-h: 48px;
+  width: 80px;
+  height: 48px;
+}
+
+.arc-info-card__aside .arc-card-detail-collection-stack-layer--single {
+  width: 80px;
+  height: 48px;
+}
+
+.arc-info-card__mid {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-top: 1px solid var(--panel-border);
+  transition: border-color var(--transition-fast);
+}
+
+.arc-info-card--interactive:hover .arc-info-card__mid,
+.arc-info-card--interactive:focus-within .arc-info-card__mid,
+.arc-info-card.is-highlighted .arc-info-card__mid {
+  border-top-color: var(--input-border-hover);
+}
+
+.arc-info-card__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-top: 1px solid var(--panel-border);
+  transition: border-color var(--transition-fast);
+  min-width: 0;
+}
+
+.arc-info-card--interactive:hover .arc-info-card__footer,
+.arc-info-card--interactive:focus-within .arc-info-card__footer,
+.arc-info-card.is-highlighted .arc-info-card__footer {
+  border-top-color: var(--input-border-hover);
+}
+
+.arc-info-card__chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.arc-info-card__actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.arc-info-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.arc-settings-library-list.arc-info-card-list {
+  gap: var(--s-2);
 }
 
 /* Bug report widget — поверх модалок и оверлеев */

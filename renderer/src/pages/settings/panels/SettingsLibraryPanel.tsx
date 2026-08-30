@@ -1,28 +1,38 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import MessageModal from '../../../components/layout/MessageModal';
 import LibraryManageModal from '../LibraryManageModal';
 import CreateLibraryModal from '../../../components/onboarding/CreateLibraryModal';
 import SettingsSection from '../../../components/settings/SettingsSection';
 import SettingsSeparator from '../../../components/settings/SettingsSeparator';
+import { InfoSplitCard } from '../../../components/info-card';
 import { useSettingsLibraries } from '../hooks/useSettingsLibraries';
-import {
-  useSettingsLibraryDrag,
-  type SettingsLibraryDragState
-} from '../hooks/useSettingsLibraryDrag';
-import { TruncatedTextWithTooltip } from '../../../components/tooltip/TruncatedTextWithTooltip';
 import { hydrateArcNavbarIcons } from '../../../components/layout/navbarIconHydrate';
 import { ONBOARDING_DEFAULT_LIBRARY_NAME } from '../../../content/onboarding';
+import { formatCardCountLabel } from '../../../utils/formatCardCountLabel';
+import { invalidateLibraryCache, getNavbarMetrics } from '../../../services/db';
+
+/** Вес библиотеки в чипе — как у AI-моделей (Мб / Гб). */
+function formatLibraryWeight(bytes: number | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes) || bytes <= 0) return '0 Мб';
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1024) {
+    const rounded = mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10;
+    const label = Number.isInteger(rounded) ? String(rounded) : String(rounded).replace('.', ',');
+    return `${label} Мб`;
+  }
+  const gb = mb / 1024;
+  const rounded = gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10;
+  const label = Number.isInteger(rounded) ? String(rounded) : String(rounded).replace('.', ',');
+  return `${label} Гб`;
+}
 
 /**
  * Настройки → Библиотека (multi-library).
- * Блок 1 — путь контейнера; блок 2 — список библиотек с DnD-порядком.
- * Ритм: SettingsSection + SettingsSeparator, как в General.
- * DnD: механика как у списка фильтров (handle + ghost + insert line).
+ * Список: InfoSplitCard, клик переключает активную (brand-обводка), без DnD.
  */
 export default function SettingsLibraryPanel() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const switchingRef = useRef(false);
   const {
     libraries,
     containerName,
@@ -36,10 +46,8 @@ export default function SettingsLibraryPanel() {
     deleteLibrary,
     pickLibraryLocation,
     createLibrary,
-    reorderLibrary
+    refresh
   } = useSettingsLibraries();
-
-  const { dragState, startDrag } = useSettingsLibraryDrag(reorderLibrary);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState(ONBOARDING_DEFAULT_LIBRARY_NAME);
@@ -47,20 +55,9 @@ export default function SettingsLibraryPanel() {
   const [createEmptySubmitted, setCreateEmptySubmitted] = useState(false);
   const [createFieldError, setCreateFieldError] = useState(false);
 
-  const canReorder = libraries.length > 1;
-
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
-  }, [libraries, modal, createOpen, canReorder]);
-
-  useLayoutEffect(() => {
-    if (!dragState) return;
-    const ghost = document.querySelector('.arc-settings-library-row-ghost');
-    if (ghost instanceof HTMLElement) {
-      void hydrateArcNavbarIcons(ghost);
-    }
-    // Только при старте drag (смена dragId), не на каждом pointermove — иначе прыгают размеры SVG.
-  }, [dragState?.dragId]);
+  }, [libraries, modal, createOpen]);
 
   const canDelete = libraries.length > 1;
   const canCreate = Boolean(parentPath || libraries.length > 0);
@@ -95,13 +92,26 @@ export default function SettingsLibraryPanel() {
     }
   }, [createBusy, createLibrary, createName, setInfoModal]);
 
-  const dragFrom = dragState ? libraries.findIndex((l) => l.id === dragState.dragId) : -1;
-  const isNoOpInsert =
-    dragState != null &&
-    dragFrom >= 0 &&
-    (dragState.insertIndex === dragFrom || dragState.insertIndex === dragFrom + 1);
-  const showDropEnd =
-    dragState != null && dragState.insertIndex === libraries.length && !isNoOpInsert;
+  const switchLibrary = useCallback(
+    async (libraryId: string, isActive: boolean) => {
+      if (!window.arc?.switchActiveLibrary || switchingRef.current || busy || isActive) return;
+      switchingRef.current = true;
+      try {
+        const res = await window.arc.switchActiveLibrary(libraryId);
+        if (!res.ok) {
+          setInfoModal(res.error?.trim() || 'Не удалось переключить библиотеку');
+          return;
+        }
+        invalidateLibraryCache();
+        await getNavbarMetrics();
+        window.dispatchEvent(new CustomEvent('arc:library-changed'));
+        await refresh();
+      } finally {
+        switchingRef.current = false;
+      }
+    },
+    [busy, refresh, setInfoModal]
+  );
 
   return (
     <>
@@ -134,86 +144,46 @@ export default function SettingsLibraryPanel() {
           <SettingsSeparator />
 
           <SettingsSection title="Библиотеки">
-            <div
-              ref={listRef}
-              className={`arc-settings-library-list${showDropEnd ? ' is-drop-end' : ''}`}
-              role="list"
-            >
-              {libraries.map((lib, rowIndex) => {
-                const insertBefore =
-                  dragState != null && dragState.insertIndex === rowIndex && !isNoOpInsert;
-                const isDragging = dragState?.dragId === lib.id;
-                return (
-                  <div
-                    key={lib.id}
-                    role="listitem"
-                    data-settings-library-row={lib.id}
-                    className={`context-menu__item arc-settings-library-row${lib.active ? ' is-active' : ''}${isDragging ? ' is-dragging' : ''}${insertBefore ? ' is-drop-before' : ''}`}
+            <div className="arc-settings-library-list arc-info-card-list" role="list">
+              {libraries.map((lib) => (
+                <div key={lib.id} role="listitem">
+                  <InfoSplitCard
+                    interactive
+                    active={lib.active}
                     aria-current={lib.active ? 'true' : undefined}
-                  >
-                    <div className="context-menu__item-inner arc-settings-library-row__inner">
-                      {canReorder ? (
-                        <button
-                          type="button"
-                          className="arc-settings-library-row__handle"
-                          aria-label={`Переместить «${lib.name}»`}
-                          disabled={busy || !window.arc}
-                          onPointerDown={(e) => {
-                            if (e.button !== 0 || busy || !listRef.current) return;
-                            const handleEl = e.currentTarget;
-                            const rowEl = handleEl.closest('[data-settings-library-row]');
-                            if (!(rowEl instanceof HTMLElement)) return;
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleEl.setPointerCapture(e.pointerId);
-                            startDrag({
-                              id: lib.id,
-                              label: lib.name,
-                              active: lib.active,
-                              cardCount: lib.cardCount,
-                              handleEl,
-                              rowEl,
-                              listEl: listRef.current
-                            });
-                          }}
-                        >
-                          <span
-                            className="context-menu__item-icon tab-icon arc-icon-chevrons-up-down"
-                            data-arc-icon-size="m"
-                            aria-hidden="true"
-                          />
-                        </button>
-                      ) : null}
-                      <span className="context-menu__item-label-cluster">
-                        <TruncatedTextWithTooltip text={lib.name} className="context-menu__item-label" />
-                        {lib.active ? (
-                          <span
-                            className="context-menu__item-check tab-icon arc-icon-check"
-                            data-arc-icon-size="m"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                      </span>
-                      {lib.cardCount !== undefined ? (
-                        <span className="context-menu__item-counter">{lib.cardCount}</span>
-                      ) : null}
+                    aria-label={lib.name}
+                    title={lib.name}
+                    chips={
+                      <>
+                        <span className="chip">{formatCardCountLabel(lib.cardCount ?? 0)}</span>
+                        <span className="chip">{formatLibraryWeight(lib.sizeBytes)}</span>
+                      </>
+                    }
+                    actions={
                       <button
                         type="button"
-                        className="arc-settings-library-row__edit"
-                        aria-label={`Изменить «${lib.name}»`}
+                        className="btn btn-outline btn-ds"
                         disabled={busy || !window.arc}
-                        onClick={() => setModal({ mode: 'edit', library: lib })}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setModal({ mode: 'edit', library: lib });
+                        }}
                       >
-                        <span
-                          className="context-menu__item-icon tab-icon arc-icon-edit"
-                          data-arc-icon-size="m"
-                          aria-hidden="true"
-                        />
+                        <span className="btn-ds__value">Изменить</span>
                       </button>
-                    </div>
-                  </div>
-                );
-              })}
+                    }
+                    onClick={() => void switchLibrary(lib.id, lib.active)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        void switchLibrary(lib.id, lib.active);
+                      }
+                    }}
+                  />
+                </div>
+              ))}
             </div>
 
             <div className="arc-settings-action-row arc-settings-library-actions">
@@ -229,10 +199,6 @@ export default function SettingsLibraryPanel() {
           </SettingsSection>
         </div>
       </div>
-
-      {dragState
-        ? createPortal(<SettingsLibraryRowGhost dragState={dragState} />, document.body)
-        : null}
 
       {modal ? (
         <LibraryManageModal
@@ -267,41 +233,5 @@ export default function SettingsLibraryPanel() {
         <MessageModal title="Сообщение" message={infoModal} onClose={() => setInfoModal(null)} closeLabel="Понятно" />
       ) : null}
     </>
-  );
-}
-
-function SettingsLibraryRowGhost({ dragState }: { dragState: SettingsLibraryDragState }) {
-  return (
-    <div
-      className="arc-settings-library-row-ghost arc-ui-kit-scope"
-      data-btn-size="m"
-      style={{
-        width: dragState.ghostWidth,
-        transform: `translate(${dragState.ghostX}px, ${dragState.ghostY}px)`
-      }}
-      aria-hidden="true"
-    >
-      <div className="context-menu__item-inner arc-settings-library-row__inner is-ghost">
-        <span className="arc-settings-library-row__handle" aria-hidden="true">
-          <span
-            className="context-menu__item-icon tab-icon arc-icon-chevrons-up-down"
-            data-arc-icon-size="m"
-          />
-        </span>
-        <span className="context-menu__item-label-cluster">
-          <span className="context-menu__item-label">{dragState.label}</span>
-          {dragState.active ? (
-            <span
-              className="context-menu__item-check tab-icon arc-icon-check"
-              data-arc-icon-size="m"
-              aria-hidden="true"
-            />
-          ) : null}
-        </span>
-        {dragState.cardCount !== undefined ? (
-          <span className="context-menu__item-counter">{dragState.cardCount}</span>
-        ) : null}
-      </div>
-    </div>
   );
 }

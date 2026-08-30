@@ -21,7 +21,7 @@ export async function verifyHeavyGgufLoad(
       };
   const ggufPath = resolved.weightsPath;
   if (!ggufPath || !existsSync(ggufPath)) {
-    throw new Error('Файлы модели не найдены. Переустановите тяжёлую модель.');
+    throw new Error('Файлы модели автотегов не найдены. Установите её в Настройки → Автотеги.');
   }
 
   const { getLlama } = await importEsm<typeof import('node-llama-cpp')>('node-llama-cpp');

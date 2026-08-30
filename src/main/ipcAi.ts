@@ -14,6 +14,7 @@ import {
   getIndexStatus,
   getIndexerError,
   isIndexingInFlight,
+  isIndexingPaused,
   pauseIndexing,
   queueCardsForIndexing,
   resumeIndexing,
@@ -21,7 +22,8 @@ import {
   runFullReindex,
   scheduleIdleIndexing,
   scheduleReindexForActiveModel,
-  setActiveSearchModel
+  setActiveSearchModel,
+  waitForIndexingLoopIdle
 } from './ai/indexer';
 import {
   cancelModelDownloadInWorker,
@@ -41,9 +43,19 @@ import {
   isModelInstalled,
   listModelInstallStatuses,
   sanitizeModelRole,
-  sanitizeSearchModelId
+  sanitizeSearchModelId,
+  snapshotLlamaModelFiles
 } from './ai/modelManager';
-import { downloadGgufModel, cancelGgufDownload, pauseGgufDownload, resumeGgufDownload } from './ai/downloadGguf';
+import { logAiModel } from './ai/aiIndexerLog';
+import { shouldKeepSharedCaptionFiles } from './ai/captionShare';
+import { mapRuntimePercent, shouldAcceptDownloadProgress } from './ai/downloadProgressGate';
+import {
+  downloadGgufModel,
+  cancelGgufDownload,
+  pauseGgufDownload,
+  resumeGgufDownload,
+  isDownloadAbortError
+} from './ai/downloadGguf';
 import { verifyHeavyGgufLoad } from './ai/heavyModelVerify';
 import { runAiSearch } from './ai/aiSearchService';
 import { ensureLightClipForHybrid, isQwenSearchModel } from './ai/aiEmbeddingService';
@@ -86,14 +98,77 @@ import { openLibraryDb } from './storage/db';
 
 let ipcRegistered = false;
 let downloadingRole: ModelRole | null = null;
+let modelTestInFlight = false;
 let downloadPercent: number | null = null;
 let downloadPhase: 'runtime' | 'model' | 'finalize' | null = null;
+let lastEmittedPhase: 'runtime' | 'model' | 'finalize' | null = null;
 let downloadBytesReceived: number | null = null;
 let downloadBytesTotal: number | null = null;
+let lastProgressEmitAt = 0;
 
 function clampPercent(value: number | null | undefined): number | null {
   if (value == null || !Number.isFinite(value)) return null;
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function mapPercentToRange(percent: number, from: number, to: number): number {
+  const raw = clampPercent(percent) ?? 0;
+  return Math.round(from + (raw / 100) * (to - from));
+}
+
+function isQwenSearchRole(role: ModelRole): boolean {
+  return role === 'search-embed-2b' || role === 'search-embed-8b';
+}
+
+async function qwenShouldBundleCaption(userData: string, role: ModelRole): Promise<boolean> {
+  if (!isQwenSearchRole(role)) return false;
+  if (await isModelInstalled(userData, 'caption')) return false;
+  if (await hasModelArtifactsOnDisk(userData, 'caption')) return false;
+  return true;
+}
+
+async function logCaptionTrace(userData: string, reason: string, extra?: Record<string, unknown>): Promise<void> {
+  const prefs = await readAppPreferences();
+  const [onDisk, installed, qwen2, qwen8, disk] = await Promise.all([
+    hasModelArtifactsOnDisk(userData, 'caption'),
+    isModelInstalled(userData, 'caption'),
+    isModelInstalled(userData, 'search-embed-2b'),
+    isModelInstalled(userData, 'search-embed-8b'),
+    snapshotLlamaModelFiles(userData, 'caption')
+  ]);
+  logAiModel(reason, {
+    captionOnDisk: onDisk,
+    captionInManifest: installed,
+    aiAutoTagModelInstalled: prefs.aiAutoTagModelInstalled === true,
+    qwen2Installed: qwen2,
+    qwen8Installed: qwen8,
+    captionFiles: disk.files,
+    ...extra
+  });
+}
+
+function resetDownloadTracking(percent: number | null = null): void {
+  downloadPercent = percent;
+  downloadPhase = null;
+  lastEmittedPhase = null;
+  downloadBytesReceived = null;
+  downloadBytesTotal = null;
+  lastProgressEmitAt = 0;
+}
+
+function mapDownloadError(err: unknown): string {
+  if (isDownloadAbortError(err)) return 'Загрузка отменена';
+  return err instanceof Error ? err.message : String(err);
+}
+
+function downloadBusyError(): { ok: false; error: string } | null {
+  if (downloadingRole) {
+    return { ok: false as const, error: 'Уже скачивается другая модель.' };
+  }
+  if (modelTestInFlight) {
+    return { ok: false as const, error: 'Дождитесь окончания проверки модели.' };
+  }
+  return null;
 }
 
 function broadcast(channel: string, payload: unknown): void {
@@ -110,10 +185,29 @@ function broadcastDownloadProgress(
   phase: 'runtime' | 'model' | 'finalize',
   bytes?: { received?: number | null; total?: number | null }
 ): void {
-  downloadPercent = clampPercent(percent) ?? 0;
+  const nextPercent = clampPercent(percent) ?? 0;
+  const phaseChanged = lastEmittedPhase !== phase;
+  if (!shouldAcceptDownloadProgress(lastEmittedPhase, downloadPercent, phase, nextPercent)) {
+    if (bytes?.received != null && (downloadBytesReceived == null || bytes.received > downloadBytesReceived)) {
+      downloadBytesReceived = bytes.received;
+    }
+    if (bytes?.total != null) downloadBytesTotal = bytes.total;
+    return;
+  }
+  downloadPercent = nextPercent;
   downloadPhase = phase;
+  lastEmittedPhase = phase;
+  if (phaseChanged && bytes?.received == null) {
+    downloadBytesReceived = null;
+    downloadBytesTotal = null;
+  }
   if (bytes?.received != null) downloadBytesReceived = bytes.received;
   if (bytes?.total != null) downloadBytesTotal = bytes.total;
+  const now = Date.now();
+  const force =
+    lastProgressEmitAt === 0 || phaseChanged || downloadPercent >= 100;
+  if (!force && now - lastProgressEmitAt < 250) return;
+  lastProgressEmitAt = now;
   const entry = MODEL_CATALOG[role];
   broadcast('arc:ai-download-progress', {
     role,
@@ -141,9 +235,10 @@ function resolveRoleFromPayload(raw: unknown): ModelRole {
   return 'search-clip';
 }
 
-function createFinalizeProgress(role: ModelRole) {
+function createFinalizeProgress(role: ModelRole, silent = false) {
   let lastPercent = 0;
   const report = (percent: number): void => {
+    if (silent) return;
     const next = clampPercent(percent) ?? 0;
     if (next < lastPercent) return;
     lastPercent = next;
@@ -190,10 +285,11 @@ async function finalizeModelInstall(
   options?: {
     withHybridClip?: boolean;
     setActiveSearch?: boolean;
+    silentProgress?: boolean;
     onComplete?: () => void | Promise<void>;
   }
 ): Promise<void> {
-  const progress = createFinalizeProgress(role);
+  const progress = createFinalizeProgress(role, options?.silentProgress);
   let cursor = 0;
 
   if (options?.withHybridClip) {
@@ -235,87 +331,119 @@ async function finalizeModelInstall(
 }
 
 /**
- * After any search model install/update, ensure JoyCaption is on disk for hybrid search indexing.
+ * Файлы JoyCaption для hybrid-поиска Средней/Тяжёлой: тот же прогресс, роль карточки поиска не меняется.
  */
-async function downloadCaptionModelIfMissing(userData: string): Promise<void> {
-  if (await isModelInstalled(userData, 'caption')) return;
-  if (downloadingRole != null) return;
+async function downloadCaptionFilesIfNeeded(
+  userData: string,
+  ownerRole: ModelRole,
+  mapToUpperBand: boolean
+): Promise<void> {
+  if (await isModelInstalled(userData, 'caption')) {
+    logAiModel('JoyCaption для Qwen не нужна — уже в manifest', { ownerRole, mapToUpperBand });
+    return;
+  }
+  if (await hasModelArtifactsOnDisk(userData, 'caption')) {
+    logAiModel('JoyCaption для Qwen не качаем — файлы уже на диске', { ownerRole, mapToUpperBand });
+    return;
+  }
 
-  const role: ModelRole = 'caption';
   const hardware = detectHardware();
-  const entry = getModelEntry(role);
-  if (!isTierSupported(hardware, 'heavy')) return;
-
-  await ensureModelsDirs(userData);
-
-  downloadingRole = role;
-  downloadPercent = 0;
-  downloadPhase = 'runtime';
-  downloadBytesReceived = null;
-  downloadBytesTotal = null;
-  broadcastDownloadProgress(role, 0, 'runtime');
+  const captionEntry = getModelEntry('caption');
+  if (!isRoleSupportedByHardware(hardware, 'caption', captionEntry)) {
+    logAiModel('JoyCaption для Qwen пропущена — мало RAM', { ownerRole });
+    return;
+  }
+  logAiModel('JoyCaption качается вместе с моделью поиска', { ownerRole, mapToUpperBand });
 
   const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
     const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
-    broadcastDownloadProgress(role, info.percent, 'model', {
+    const percent = mapToUpperBand ? mapPercentToRange(info.percent, 50, 100) : (clampPercent(info.percent) ?? 0);
+    broadcastDownloadProgress(ownerRole, percent, 'model', {
       received: info.bytesReceived,
       total: info.bytesTotal
     });
   };
 
-  try {
-    if (!(await isLlamaRuntimeInstalled(userData, 'cpu'))) {
-      await ensureLlamaRuntime(userData, 'cpu', (percent) => broadcastDownloadProgress(role, percent, 'runtime'));
-    }
-    if (await hasCudaServerBinary(userData)) {
-      await ensureLlamaRuntime(userData, 'cuda', (percent) => {
-        const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
-        broadcastDownloadProgress(role, mapped, 'runtime');
-      });
-    }
-    downloadPhase = 'model';
-    broadcastDownloadProgress(role, 0, 'model');
-    await downloadGgufModel(userData, entry, report);
-    if (!(await hasModelArtifactsOnDisk(userData, role))) {
-      throw new Error('Файлы JoyCaption не найдены после загрузки.');
-    }
-    await finalizeModelInstall(role, userData, entry, entry.id, {
-      setActiveSearch: false,
-      onComplete: () => scheduleIdleIndexing()
-    });
-  } finally {
-    broadcastDownloadComplete(role);
-    downloadingRole = null;
-    downloadPercent = null;
-    downloadPhase = null;
-    downloadBytesReceived = null;
-    downloadBytesTotal = null;
+  if (mapToUpperBand) broadcastDownloadProgress(ownerRole, 50, 'model');
+  await downloadGgufModel(userData, captionEntry, report);
+  if (!(await hasModelArtifactsOnDisk(userData, 'caption'))) {
+    throw new Error('Файлы модели не найдены после загрузки. Попробуйте ещё раз.');
   }
 }
 
-function scheduleEnsureJoyCaption(userData: string): void {
-  setTimeout(() => {
-    void downloadCaptionModelIfMissing(userData).catch((err) => {
-      const message = err instanceof Error ? err.message : String(err);
-      broadcast('arc:ai-error', { message, fallback: true });
-    });
-  }, 0);
-}
-
-async function ensureVisionRuntimeForUpdate(userData: string, role: ModelRole): Promise<void> {
-  await ensureLlamaRuntime(userData, 'cpu', (percent) => {
-    const mapped = Math.round((clampPercent(percent) ?? 0) * 0.5);
-    broadcastDownloadProgress(role, mapped, 'runtime');
+async function finalizeCaptionIfPresent(userData: string): Promise<void> {
+  if (await isModelInstalled(userData, 'caption')) return;
+  if (!(await hasModelArtifactsOnDisk(userData, 'caption'))) return;
+  const entry = getModelEntry('caption');
+  await finalizeModelInstall('caption', userData, entry, entry.id, {
+    setActiveSearch: false,
+    silentProgress: true,
+    onComplete: () => scheduleIdleIndexing()
   });
-  // Repair CUDA (including missing cudart) whenever a CUDA server binary is present.
-  if (await hasCudaServerBinary(userData)) {
-    await ensureLlamaRuntime(userData, 'cuda', (percent) => {
-      const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
-      broadcastDownloadProgress(role, mapped, 'runtime');
-    });
-  } else {
-    broadcastDownloadProgress(role, 100, 'runtime');
+}
+
+async function qwenStillInstalled(userData: string, exceptRole?: ModelRole): Promise<boolean> {
+  for (const role of ['search-embed-2b', 'search-embed-8b'] as const) {
+    if (role === exceptRole) continue;
+    if (await isModelInstalled(userData, role)) return true;
   }
+  return false;
+}
+
+function mapModelFileLockError(err: unknown): Error {
+  const code = (err as NodeJS.ErrnoException)?.code;
+  if (code === 'EBUSY' || code === 'EPERM' || code === 'EACCES') {
+    return new Error('Файл модели занят. Дождитесь окончания индексации и удалите ещё раз.');
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+/** Останавливает llama-server до снятия GGUF: иначе Windows держит EBUSY. */
+async function withLlamaFilesUnlocked<T>(fn: () => Promise<T>): Promise<T> {
+  const alreadyPaused = isIndexingPaused();
+  cancelIdleIndexing();
+  pauseIndexing();
+  try {
+    await shutdownLlamaBridge();
+    await waitForIndexingLoopIdle();
+    return await fn();
+  } finally {
+    if (!alreadyPaused) resumeIndexing();
+  }
+}
+
+async function ensureVisionRuntimeProgress(
+  userData: string,
+  role: ModelRole,
+  alwaysEnsureCpu: boolean
+): Promise<void> {
+  const cpuMissing = !(await isLlamaRuntimeInstalled(userData, 'cpu'));
+  const runCpu = alwaysEnsureCpu || cpuMissing;
+  const runCuda = await hasCudaServerBinary(userData);
+  if (!runCpu && !runCuda) return;
+
+  if (runCpu) {
+    await ensureLlamaRuntime(userData, 'cpu', (percent, llamaBytes) => {
+      broadcastDownloadProgress(
+        role,
+        mapRuntimePercent(percent, runCuda ? 'lower' : 'full'),
+        'runtime',
+        llamaBytes
+      );
+    });
+  }
+  if (runCuda) {
+    await ensureLlamaRuntime(userData, 'cuda', (percent, llamaBytes) => {
+      broadcastDownloadProgress(
+        role,
+        mapRuntimePercent(percent, runCpu ? 'upper' : 'full'),
+        'runtime',
+        llamaBytes
+      );
+    });
+    return;
+  }
+  broadcastDownloadProgress(role, 100, 'runtime');
 }
 
 function applyResourcePreset(preset: number, hardware: ReturnType<typeof detectHardware>): {
@@ -365,7 +493,6 @@ function isRoleSupportedByHardware(
   role: ModelRole,
   entry: ReturnType<typeof getModelEntry>
 ): boolean {
-  if (role === 'tagger') return hardware.totalMemoryMb >= entry.minRamMb;
   if (role === 'caption') return isTierSupported(hardware, 'heavy');
   return isSearchModelSupported(hardware, entry.id as SearchModelId);
 }
@@ -402,7 +529,6 @@ export async function buildAiStatus(): Promise<AiStatus> {
     toModelCard(role, hardware)
   );
   const captionModelCard = toModelCard('caption', hardware);
-  const taggerModelCard = toModelCard('tagger', hardware);
   const activeSearchId = getActiveSearchModelId() ?? prefs.aiSearchModelId;
   const activeTier =
     activeSearchId === 'qwen3-vl-embedding-8b' || activeSearchId === 'qwen3-vl-embedding-2b'
@@ -419,7 +545,6 @@ export async function buildAiStatus(): Promise<AiStatus> {
     supportedTiers,
     searchModelCards,
     captionModelCard,
-    taggerModelCard,
     modelCards: [...searchModelCards, captionModelCard],
     resources: {
       threads: prefs.aiThreads,
@@ -465,8 +590,8 @@ export function registerAiIpc(): void {
     const userData = app.getPath('userData');
     await ensureModelsDirs(userData);
     try {
-      await ensureLlamaRuntime(userData, variant, (percent) => {
-        broadcastDownloadProgress(role, clampPercent(percent) ?? 0, 'runtime');
+      await ensureLlamaRuntime(userData, variant, (percent, llamaBytes) => {
+        broadcastDownloadProgress(role, clampPercent(percent) ?? 0, 'runtime', llamaBytes);
       });
       return { ok: true as const, variant };
     } catch (err) {
@@ -484,123 +609,179 @@ export function registerAiIpc(): void {
       return { ok: false as const, error: 'Эта модель не поддерживается вашим оборудованием.' };
     }
 
-    if (downloadingRole) {
-      return { ok: false as const, error: 'Уже скачивается другая модель.' };
-    }
-
-    const prefs = await readAppPreferences();
-    const modelsDir = getModelsDir();
-    const userData = app.getPath('userData');
-    await ensureModelsDirs(userData);
+    const busy = downloadBusyError();
+    if (busy) return busy;
 
     downloadingRole = role;
-    downloadPercent = 0;
-    downloadPhase = null;
-    downloadBytesReceived = null;
-    downloadBytesTotal = null;
+    resetDownloadTracking(0);
+    // Сброс зависшего abort/pause после ошибки предыдущей загрузки.
+    cancelGgufDownload();
 
-    const needsLlama = usesLlamaStack(entry.stack);
-    const needsFileDownload = entry.stack !== 'transformers';
-    const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
-      const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
-      if (needsFileDownload) {
-        broadcastDownloadProgress(role, info.percent, 'model', {
+    try {
+      const prefs = await readAppPreferences();
+      const modelsDir = getModelsDir();
+      const userData = app.getPath('userData');
+      await ensureModelsDirs(userData);
+
+      const needsLlama = usesLlamaStack(entry.stack);
+      const needsFileDownload = entry.stack !== 'transformers';
+      const bundleCaption = await qwenShouldBundleCaption(userData, role);
+      if (role === 'caption' || isQwenSearchRole(role)) {
+        await logCaptionTrace(userData, 'старт установки', {
+          role,
+          bundleCaption,
+          needsLlama
+        });
+      }
+      const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
+        const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
+        const percent = bundleCaption ? mapPercentToRange(info.percent, 0, 50) : (clampPercent(info.percent) ?? 0);
+        broadcastDownloadProgress(role, percent, 'model', {
           received: info.bytesReceived,
           total: info.bytesTotal
         });
-        return;
-      }
-      downloadPercent = clampPercent(info.percent) ?? 0;
-      if (info.bytesReceived != null) downloadBytesReceived = info.bytesReceived;
-      if (info.bytesTotal != null) downloadBytesTotal = info.bytesTotal;
-      broadcastDownloadProgress(role, downloadPercent, 'model', {
-        received: downloadBytesReceived,
-        total: downloadBytesTotal
-      });
-    };
+      };
 
-    try {
       if (needsFileDownload) {
         if (needsLlama) {
-          // CUDA offer is handled by Settings UI; ensure CPU (+ repair CUDA if already present).
-          if (!(await isLlamaRuntimeInstalled(userData, 'cpu'))) {
-            downloadPhase = 'runtime';
-            broadcastDownloadProgress(role, 0, 'runtime');
-            await ensureLlamaRuntime(userData, 'cpu', (percent) => broadcastDownloadProgress(role, percent, 'runtime'));
-          }
-          if (await hasCudaServerBinary(userData)) {
-            downloadPhase = 'runtime';
-            await ensureLlamaRuntime(userData, 'cuda', (percent) => {
-              const mapped = 50 + Math.round((clampPercent(percent) ?? 0) * 0.5);
-              broadcastDownloadProgress(role, mapped, 'runtime');
-            });
-          }
+          // CUDA offer is handled by Settings UI; ensure CPU if missing (+ repair CUDA if present).
+          const cpuReady = await isLlamaRuntimeInstalled(userData, 'cpu');
+          const cudaPresent = await hasCudaServerBinary(userData);
+          logAiModel('проверка runtime перед файлами', { role, cpuReady, cudaPresent });
+          await ensureVisionRuntimeProgress(userData, role, false);
         }
-        downloadPhase = 'model';
-        broadcastDownloadProgress(role, 0, 'model');
-        await downloadGgufModel(userData, entry, report);
+        const artifactsReady = await hasModelArtifactsOnDisk(userData, role);
+        if (artifactsReady) {
+          logAiModel('файлы модели уже на диске — HTTP-скачивание пропускаем', { role });
+          broadcastDownloadProgress(role, 100, 'model');
+        } else {
+          logAiModel('файлов модели нет — качаем GGUF', { role, modelId: entry.id });
+          broadcastDownloadProgress(role, 0, 'model');
+          await downloadGgufModel(userData, entry, report);
+        }
         if (!(await hasModelArtifactsOnDisk(userData, role))) {
           return { ok: false as const, error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.' };
         }
+        if (isQwenSearchRole(role)) {
+          await downloadCaptionFilesIfNeeded(userData, role, bundleCaption);
+        }
         await finalizeModelInstall(role, userData, entry, entry.id, {
           withHybridClip: false,
-          setActiveSearch: role !== 'tagger' && role !== 'caption',
+          setActiveSearch: role !== 'caption',
           onComplete: () => scheduleIdleIndexing()
         });
-        if (needsLlama && role !== 'caption') scheduleEnsureJoyCaption(userData);
+        if (role === 'caption') {
+          await writeAppPreferences({ aiAutoTagModelInstalled: true });
+        }
+        if (isQwenSearchRole(role)) {
+          await finalizeCaptionIfPresent(userData);
+        }
+        if (role === 'caption' || isQwenSearchRole(role)) {
+          await logCaptionTrace(userData, 'установка завершена', { role });
+        }
         return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
       }
 
-      downloadPhase = 'model';
-      broadcastDownloadProgress(role, 0, 'model');
-      const result = await downloadModelInWorker(
-        role,
-        modelsDir,
-        { threads: prefs.aiThreads, gpuLayers: prefs.aiGpuLayers, maxRamMb: prefs.aiMaxRamMb },
-        report
-      );
+      let result: { modelId: string };
+      if (await hasModelArtifactsOnDisk(userData, role)) {
+        broadcastDownloadProgress(role, 100, 'model');
+        result = { modelId: entry.id };
+      } else {
+        broadcastDownloadProgress(role, 0, 'model');
+        result = await downloadModelInWorker(
+          role,
+          modelsDir,
+          { threads: prefs.aiThreads, gpuLayers: prefs.aiGpuLayers, maxRamMb: prefs.aiMaxRamMb },
+          report
+        );
+      }
       if (!(await hasModelArtifactsOnDisk(userData, role))) {
         return { ok: false as const, error: 'Файлы модели не найдены после загрузки. Попробуйте ещё раз.' };
       }
       await finalizeModelInstall(role, userData, entry, result.modelId, {
         onComplete: () => scheduleIdleIndexing()
       });
-      if (role !== 'caption') scheduleEnsureJoyCaption(userData);
       return { ok: true as const, modelId: result.modelId, role, tier: entry.tier };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      broadcast('arc:ai-error', { message, fallback: role !== 'search-clip' });
+      const message = mapDownloadError(err);
       return { ok: false as const, error: message };
     } finally {
+      cancelGgufDownload();
       broadcastDownloadComplete(role);
       downloadingRole = null;
-      downloadPercent = null;
-      downloadPhase = null;
-      downloadBytesReceived = null;
-      downloadBytesTotal = null;
+      resetDownloadTracking();
     }
   });
 
   ipcMain.handle('arc:ai-delete-model', async (_e, payloadRaw: unknown) => {
     const role = resolveRoleFromPayload(payloadRaw);
     const userData = app.getPath('userData');
-    await deleteInstalledModel(userData, role);
-    await clearRoleManifest(userData, role);
-    if (role !== 'search-clip' && usesLlamaStack(getModelEntry(role).stack)) {
-      await deleteLlamaRuntimeIfUnused(userData);
+
+    if (downloadingRole || modelTestInFlight) {
+      throw new Error('Дождитесь окончания текущей операции.');
     }
-    await shutdownLlamaBridge();
-    const prefs = await readAppPreferences();
-    if (role !== 'caption' && prefs.aiSearchModelId === MODEL_CATALOG[role].id) {
-      setActiveSearchModel(null);
+
+    try {
+      if (role === 'caption') {
+        await logCaptionTrace(userData, 'удаление автотегов: до');
+        await writeAppPreferences({
+          aiAutoTagModelInstalled: false
+        });
+        const keepCaptionFiles = shouldKeepSharedCaptionFiles(await qwenStillInstalled(userData), false);
+        if (keepCaptionFiles) {
+          logAiModel('удаление автотегов: файлы оставлены — Qwen ещё установлен');
+          await logCaptionTrace(userData, 'удаление автотегов: после', { keptSharedFiles: true });
+          return buildAiStatus();
+        }
+        await withLlamaFilesUnlocked(async () => {
+          await deleteInstalledModel(userData, 'caption');
+          await clearRoleManifest(userData, 'caption');
+          await deleteLlamaRuntimeIfUnused(userData);
+        });
+        clearAiSearchCache();
+        await logCaptionTrace(userData, 'удаление автотегов: после', { keptSharedFiles: false });
+        return buildAiStatus();
+      }
+
+      const removeSearchModel = async () => {
+        await deleteInstalledModel(userData, role);
+        await clearRoleManifest(userData, role);
+
+        if (isQwenSearchRole(role)) {
+          const prefsAfter = await readAppPreferences();
+          const keepCaption = shouldKeepSharedCaptionFiles(
+            await qwenStillInstalled(userData),
+            prefsAfter.aiAutoTagModelInstalled === true
+          );
+          if (!keepCaption) {
+            await deleteInstalledModel(userData, 'caption');
+            await clearRoleManifest(userData, 'caption');
+          }
+        }
+
+        if (role !== 'search-clip' && usesLlamaStack(getModelEntry(role).stack)) {
+          await deleteLlamaRuntimeIfUnused(userData);
+        }
+      };
+      if (usesLlamaStack(getModelEntry(role).stack)) {
+        await withLlamaFilesUnlocked(removeSearchModel);
+      } else {
+        await removeSearchModel();
+      }
+      const prefs = await readAppPreferences();
+      if (prefs.aiSearchModelId === MODEL_CATALOG[role].id) {
+        setActiveSearchModel(null);
+      }
+      clearAiSearchCache();
+      return buildAiStatus();
+    } catch (err) {
+      throw mapModelFileLockError(err);
     }
-    clearAiSearchCache();
-    return buildAiStatus();
   });
 
   ipcMain.handle('arc:ai-set-active-model', async (_e, payloadRaw: unknown) => {
     const role = resolveRoleFromPayload(payloadRaw);
-    if (role === 'caption' || role === 'tagger') {
+    if (role === 'caption') {
       scheduleIdleIndexing();
       return buildAiStatus();
     }
@@ -629,11 +810,6 @@ export function registerAiIpc(): void {
   ipcMain.handle('arc:ai-cancel-download', async () => {
     cancelModelDownloadInWorker();
     cancelGgufDownload();
-    downloadingRole = null;
-    downloadPercent = null;
-    downloadPhase = null;
-    downloadBytesReceived = null;
-    downloadBytesTotal = null;
     return { ok: true as const };
   });
 
@@ -651,6 +827,8 @@ export function registerAiIpc(): void {
 
   ipcMain.handle('arc:ai-update-model', async (_e, payloadRaw: unknown) => {
     const role = resolveRoleFromPayload(payloadRaw);
+    const busy = downloadBusyError();
+    if (busy) return busy;
     const userData = app.getPath('userData');
     const entry = getModelEntry(role);
     const manifest = await readModelManifest(userData);
@@ -658,31 +836,38 @@ export function registerAiIpc(): void {
       return { ok: false as const, error: 'Обновление не требуется.' };
     }
 
+    const stillBusy = downloadBusyError();
+    if (stillBusy) return stillBusy;
+
     const oldModelId = manifest[role]?.modelId;
-    await deleteInstalledModel(userData, role);
-    await clearRoleManifest(userData, role);
-    await shutdownLlamaBridge();
-
-    const prefs = await readAppPreferences();
-    const modelsDir = getModelsDir();
-    await ensureModelsDirs(userData);
-
+    const alreadyPaused = isIndexingPaused();
+    cancelIdleIndexing();
+    pauseIndexing();
     downloadingRole = role;
-    downloadPercent = 0;
-    downloadPhase = usesLlamaStack(entry.stack) ? 'runtime' : null;
-    downloadBytesReceived = null;
-    downloadBytesTotal = null;
-    broadcastDownloadProgress(role, 0, downloadPhase ?? 'model');
-
-    const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
-      const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
-      broadcastDownloadProgress(role, info.percent, 'model', {
-        received: info.bytesReceived,
-        total: info.bytesTotal
-      });
-    };
+    resetDownloadTracking(0);
 
     try {
+      await shutdownLlamaBridge();
+      await waitForIndexingLoopIdle();
+      await deleteInstalledModel(userData, role);
+      await clearRoleManifest(userData, role);
+
+      const prefs = await readAppPreferences();
+      const modelsDir = getModelsDir();
+      await ensureModelsDirs(userData);
+      const bundleCaption = await qwenShouldBundleCaption(userData, role);
+
+      broadcastDownloadProgress(role, 0, usesLlamaStack(entry.stack) ? 'runtime' : 'model');
+
+      const report = (percentOrInfo: number | import('./ai/downloadGguf').DownloadProgressInfo) => {
+        const info = typeof percentOrInfo === 'number' ? { percent: percentOrInfo } : percentOrInfo;
+        const percent = bundleCaption ? mapPercentToRange(info.percent, 0, 50) : (clampPercent(info.percent) ?? 0);
+        broadcastDownloadProgress(role, percent, 'model', {
+          received: info.bytesReceived,
+          total: info.bytesTotal
+        });
+      };
+
       if (entry.stack === 'transformers') {
         await downloadModelInWorker(
           role,
@@ -692,15 +877,17 @@ export function registerAiIpc(): void {
         );
       } else {
         if (usesLlamaStack(entry.stack)) {
-          await ensureVisionRuntimeForUpdate(userData, role);
+          await ensureVisionRuntimeProgress(userData, role, true);
         }
-        downloadPhase = 'model';
         broadcastDownloadProgress(role, 0, 'model');
         await downloadGgufModel(userData, entry, report);
       }
 
       if (!(await hasModelArtifactsOnDisk(userData, role))) {
         return { ok: false as const, error: 'Файлы модели не найдены после обновления.' };
+      }
+      if (isQwenSearchRole(role)) {
+        await downloadCaptionFilesIfNeeded(userData, role, bundleCaption);
       }
 
       await finalizeModelInstall(role, userData, entry, entry.id, {
@@ -716,18 +903,22 @@ export function registerAiIpc(): void {
           else scheduleIdleIndexing();
         }
       });
-      if (role !== 'caption') scheduleEnsureJoyCaption(userData);
+      if (role === 'caption') {
+        await writeAppPreferences({ aiAutoTagModelInstalled: true });
+      }
+      if (isQwenSearchRole(role)) {
+        await finalizeCaptionIfPresent(userData);
+      }
       return { ok: true as const, modelId: entry.id, role, tier: entry.tier };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = mapDownloadError(err);
       return { ok: false as const, error: message };
     } finally {
+      cancelGgufDownload();
       broadcastDownloadComplete(role);
       downloadingRole = null;
-      downloadPercent = null;
-      downloadPhase = null;
-      downloadBytesReceived = null;
-      downloadBytesTotal = null;
+      resetDownloadTracking();
+      if (!alreadyPaused) resumeIndexing();
     }
   });
 
@@ -735,10 +926,17 @@ export function registerAiIpc(): void {
     const role = resolveRoleFromPayload(payloadRaw);
     const prefs = await readAppPreferences();
     const userData = app.getPath('userData');
-    if (!(await isModelInstalled(userData, role))) {
-      return { ok: false as const, message: 'Модель не установлена.' };
+    if (downloadingRole) {
+      return { ok: false as const, message: 'Дождитесь окончания скачивания.' };
     }
+    if (modelTestInFlight) {
+      return { ok: false as const, message: 'Проверка уже выполняется.' };
+    }
+    modelTestInFlight = true;
     try {
+      if (!(await isModelInstalled(userData, role))) {
+        return { ok: false as const, message: 'Модель не установлена.' };
+      }
       const resources = {
         threads: prefs.aiThreads,
         gpuLayers: prefs.aiGpuLayers,
@@ -755,6 +953,8 @@ export function registerAiIpc(): void {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { ok: false as const, message };
+    } finally {
+      modelTestInFlight = false;
     }
   });
 
@@ -967,7 +1167,7 @@ export function registerAiIpc(): void {
     const userData = app.getPath('userData');
     const modelId = sanitizeSearchModelId(prefs.aiSearchModelId);
     if (!(await isModelInstalled(userData, modelId))) {
-      throw new Error('Модель не установлена. Скачайте модель в настройках AI.');
+      throw new Error('Модель не установлена. Скачайте модель в Настройки → Умный поиск.');
     }
 
     const root = await readLibraryRootFromDisk();

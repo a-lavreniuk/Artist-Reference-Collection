@@ -188,13 +188,16 @@ export async function suggestTagsForCard(
   options: SuggestTagsOptions = {}
 ): Promise<SuggestTagsResult> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiSemanticSearchEnabled) {
-    return { ok: false, error: 'Включите AI Поиск в настройках.' };
-  }
   if (!prefs.aiAutoTagEnabled) {
     return {
       ok: false,
-      error: 'Включите автотегирование в Настройки → Автотегирование.'
+      error: 'Включите автотегирование в Настройки → Автотеги.'
+    };
+  }
+  if (!prefs.aiAutoTagModelInstalled) {
+    return {
+      ok: false,
+      error: 'Установите модель автотегов в Настройки → Автотеги.'
     };
   }
 
@@ -202,7 +205,7 @@ export async function suggestTagsForCard(
   if (!(await isModelInstalled(userData, 'caption'))) {
     return {
       ok: false,
-      error: 'Нужна тяжёлая модель (JoyCaption). Установите её в Настройки → AI Поиск.'
+      error: 'Для автотегов нужна JoyCaption. Установите её в Настройки → Автотеги.'
     };
   }
 
@@ -368,7 +371,7 @@ export async function suggestTagsForCard(
  */
 export async function applyAutoTagsAfterIndex(cardId: string): Promise<{ added: number; created: number } | null> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiAutoTagEnabled || !prefs.aiAutoTagOnImport) return null;
+  if (!prefs.aiAutoTagEnabled || !prefs.aiAutoTagOnImport || !prefs.aiAutoTagModelInstalled) return null;
   if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) return null;
 
   const result = await suggestTagsForCard(cardId);
@@ -397,7 +400,7 @@ export async function applyAutoTagsForImportedVideos(
 ): Promise<{ cards: number; tags: number; created: number }> {
   const prefs = await readAppPreferences();
   const empty = { cards: 0, tags: 0, created: 0 };
-  if (!prefs.aiAutoTagEnabled || !prefs.aiAutoTagOnImport) return empty;
+  if (!prefs.aiAutoTagEnabled || !prefs.aiAutoTagOnImport || !prefs.aiAutoTagModelInstalled) return empty;
   if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) return empty;
 
   const root = await readLibraryRootFromDisk();

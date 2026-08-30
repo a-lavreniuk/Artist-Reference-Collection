@@ -910,6 +910,24 @@ export function countCardsReadonly(
   return n ?? 0;
 }
 
+/** COUNT + SUM(file_size) в одном readonly-открытии БД (для list-libraries). */
+export function libraryCardsStatsReadonly(libraryRoot: string): { cardCount: number; sizeBytes: number } {
+  const stats = withLibraryDbReadonly(libraryRoot, (db) => {
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) AS n, COALESCE(SUM(file_size), 0) AS size_bytes
+         FROM cards
+         WHERE COALESCE(is_deleted, 0) = 0`
+      )
+      .get() as { n: number; size_bytes: number };
+    return {
+      cardCount: row.n ?? 0,
+      sizeBytes: typeof row.size_bytes === 'number' ? row.size_bytes : 0
+    };
+  });
+  return stats ?? { cardCount: 0, sizeBytes: 0 };
+}
+
 function countCardsOnDb(
   db: ReturnType<typeof openLibraryDb>,
   filter: 'all' | 'images' | 'videos',

@@ -8,6 +8,7 @@ import path from 'path';
 import type { AiResourceSettings, ModelRole, WorkerRequest, WorkerResponse } from './types';
 import { MODEL_CATALOG } from './types';
 import { prepareSearchQuery } from './queryPrep';
+import { createHfDownloadProgressAggregator } from './hfDownloadProgress';
 
 type EmbedFn = (input: string) => Promise<number[]>;
 type TensorLike = { data: Float32Array | Float32Array[] };
@@ -19,30 +20,10 @@ let embedImage: EmbedFn | null = null;
 let embedText: EmbedFn | null = null;
 let downloadAborted = false;
 let downloadPaused = false;
-let downloadPipelineStep = 0;
 const CLIP_ESTIMATED_BYTES = MODEL_CATALOG['search-clip'].sizeMb * 1024 * 1024;
 
 function post(msg: WorkerResponse): void {
   process.parentPort?.postMessage(msg);
-}
-
-function normalizeDownloadPercent(raw: number): number {
-  if (!Number.isFinite(raw)) return 0;
-  const ratio = raw > 1 ? raw / 100 : raw;
-  return Math.max(0, Math.min(100, Math.round(ratio * 100)));
-}
-
-function reportDownloadProgress(role: ModelRole, localPercent: number, pipelineIndex: number): void {
-  if (downloadPaused) return;
-  const combined = Math.round(((pipelineIndex + localPercent / 100) / 2) * 100);
-  const percent = Math.max(0, Math.min(100, combined));
-  post({
-    type: 'download-progress',
-    role,
-    percent,
-    bytesReceived: Math.round((percent / 100) * CLIP_ESTIMATED_BYTES),
-    bytesTotal: CLIP_ESTIMATED_BYTES
-  });
 }
 
 function tensorToVector(tensor: TensorLike): number[] {
@@ -65,11 +46,24 @@ async function loadClipEmbedders(
   env.allowRemoteModels = options.allowRemote;
   env.useBrowserCache = false;
 
-  downloadPipelineStep = 0;
-  const progressCallback = (progress: { progress?: number }) => {
+  const clipProgress = createHfDownloadProgressAggregator(CLIP_ESTIMATED_BYTES);
+  const progressCallback = (progress: {
+    status?: string;
+    file?: string;
+    name?: string;
+    progress?: number;
+    loaded?: number;
+    total?: number;
+  }) => {
     if (!options.allowRemote || downloadAborted || downloadPaused) return;
-    if (typeof progress.progress !== 'number') return;
-    reportDownloadProgress(role, normalizeDownloadPercent(progress.progress), downloadPipelineStep);
+    const result = clipProgress.ingest(progress);
+    post({
+      type: 'download-progress',
+      role,
+      percent: result.percent,
+      bytesReceived: result.bytesReceived,
+      bytesTotal: result.bytesTotal
+    });
   };
 
   const localOnly = !options.allowRemote;
@@ -80,7 +74,6 @@ async function loadClipEmbedders(
 
   const imagePipe = await pipeline('image-feature-extraction', hfId, modelOptions);
 
-  downloadPipelineStep = 1;
   const tokenizer = await AutoTokenizer.from_pretrained(hfId, modelOptions);
   const textModel = await CLIPTextModelWithProjection.from_pretrained(hfId, modelOptions);
   if (options.allowRemote) {

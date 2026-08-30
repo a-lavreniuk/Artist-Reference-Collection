@@ -28,8 +28,8 @@ describe('sanitizeModelRole', () => {
     expect(sanitizeModelRole('light')).toBe('search-clip');
     expect(sanitizeModelRole('search-embed-8b')).toBe('search-embed-8b');
     expect(sanitizeModelRole('qwen3-vl-embedding-2b')).toBe('search-embed-2b');
-    expect(sanitizeModelRole('tagger')).toBe('tagger');
-    expect(sanitizeModelRole('wd-swinv2-tagger-v3')).toBe('tagger');
+    expect(sanitizeModelRole('wd-swinv2-tagger-v3')).toBeNull();
+    expect(sanitizeModelRole('tagger')).toBeNull();
   });
 });
 

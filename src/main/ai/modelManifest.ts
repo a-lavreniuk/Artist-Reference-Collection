@@ -4,11 +4,11 @@ import path from 'path';
 
 import type { ModelCatalogEntry, ModelRole } from './types';
 import { MODEL_ROLES } from './types';
-import { llamaModelsDir, modelsRootDir, taggerModelsDir, transformersCacheDir } from './modelManager';
+import { llamaModelsDir, modelsRootDir, transformersCacheDir } from './modelManager';
 
 export type ManifestFileEntry = {
   name: string;
-  role: 'weights' | 'mmproj' | 'labels';
+  role: 'weights' | 'mmproj';
   bytes: number;
   sha256?: string;
 };
@@ -57,6 +57,8 @@ function migrateLegacyManifestKeys(raw: AiModelsManifest): AiModelsManifest {
   if (raw.heavy && !raw.caption) {
     next.caption = raw.heavy;
   }
+  // Drop abandoned WD Tagger role if present in older manifests.
+  delete (next as Record<string, unknown>).tagger;
   return next;
 }
 
@@ -93,7 +95,7 @@ export async function recordInstalledModel(
       files.push({ name: entry.hfId, role: 'weights', bytes: s.size });
     }
   } else {
-    const dir = entry.stack === 'onnx' ? taggerModelsDir(userDataPath) : llamaModelsDir(userDataPath);
+    const dir = llamaModelsDir(userDataPath);
     for (const file of entry.files ?? []) {
       const filePath = path.join(dir, file.name);
       if (!existsSync(filePath)) continue;

@@ -4,6 +4,7 @@ import { Datepicker } from '../components/datepicker';
 import Calendar, { type CalendarSelection } from '../components/calendar/Calendar';
 import SettingsOptionCard from '../components/settings/SettingsOptionCard';
 import AiModelCard from '../components/settings/AiModelCard';
+import { InfoSplitCard } from '../components/info-card';
 import { Tooltip } from '../components/tooltip/Tooltip';
 import { TagTooltipBody } from '../components/tooltip/TagTooltipBody';
 import { EMPTY_STATE_COPY } from '../content/emptyStates';
@@ -11,13 +12,14 @@ import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
 
 /**
  * Product patterns missing from static Controls section:
- * Empty State, Tooltip, Datepicker/Calendar, Sidebar row, Settings option/AI cards.
+ * Empty State, Tooltip, Datepicker/Calendar, Sidebar row, Settings option/AI cards, InfoSplitCard.
  */
 export default function UiKitProductPatternsDemo() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const [optA, setOptA] = useState(true);
   const [optB, setOptB] = useState(false);
   const [model, setModel] = useState(true);
+  const [infoActive, setInfoActive] = useState(true);
   const [dateValue, setDateValue] = useState<{ from: string; to?: string } | null>({
     from: '2025-06-12',
     to: '2025-06-18'
@@ -231,26 +233,68 @@ export default function UiKitProductPatternsDemo() {
       <hr className="separator" />
 
       <div className="inputs-group">
+        <div className="id-tag">EL-INFO-SPLIT-CARD-GROUP</div>
+        <h3 className="h3">Info split card</h3>
+        <div className="demo-row" style={{ alignItems: 'stretch', flexWrap: 'wrap' }}>
+          <div className="sample" style={{ flex: '1 1 280px' }}>
+            <div className="id-tag">EL-INFO-SPLIT-DEFAULT</div>
+            <InfoSplitCard
+              interactive
+              active={infoActive}
+              title="Библиотека по умолчанию"
+              chips={
+                <>
+                  <span className="chip">
+                    Карточек <span className="chip-count">12</span>
+                  </span>
+                  <span className="chip">1,2 Гб</span>
+                </>
+              }
+              actions={
+                <button type="button" className="btn btn-outline btn-ds">
+                  <span className="btn-ds__value">Изменить</span>
+                </button>
+              }
+              onClick={() => setInfoActive(true)}
+            />
+          </div>
+          <div className="sample" style={{ flex: '1 1 280px' }}>
+            <div className="id-tag">EL-INFO-SPLIT-HOVER</div>
+            <InfoSplitCard
+              interactive
+              highlighted
+              title="Наведите на соседнюю — здесь зафиксирован hover"
+              chips={<span className="chip">0 карточек</span>}
+              actions={
+                <button type="button" className="btn btn-outline btn-ds">
+                  <span className="btn-ds__value">Изменить</span>
+                </button>
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+      <hr className="separator" />
+
+      <div className="inputs-group">
         <div className="id-tag">EL-AI-MODEL-CARD-GROUP</div>
         <h3 className="h3">AI model card</h3>
         <div className="sample sample-wide" style={{ maxWidth: 420 }}>
           <div className="id-tag">EL-AI-MODEL-CARD</div>
           <AiModelCard
-            variant="radio"
-            label="Модель поиска"
-            description="Карточка модели с выбором и действиями"
-            checked={model}
-            onCheckedChange={setModel}
-            actions={
-              <div className="btn-group btn-group-ds" data-btn-size="s">
-                <button type="button" className="btn btn-secondary btn-ds">
-                  <span className="btn-ds__value">Обновить</span>
-                </button>
-                <button type="button" className="btn btn-outline btn-ds">
-                  <span className="btn-ds__value">Удалить</span>
-                </button>
-              </div>
-            }
+            title="Лёгкая модель"
+            description="Быстрый поиск по содержимому изображений. Подходит, если нет мощного GPU и нужен короткий цикл установки."
+            chips={[{ label: 'CLIP ViT-B/32' }, { label: '~350 МБ' }]}
+            selectable
+            selected={model}
+            recommended
+            onSelect={() => setModel(true)}
+            optionsRows={[
+              { type: 'item', key: 'test', label: 'Проверить' },
+              { type: 'item', key: 'reload', label: 'Перезагрузить' },
+              { type: 'item', key: 'delete', label: 'Удалить' }
+            ]}
           />
         </div>
       </div>

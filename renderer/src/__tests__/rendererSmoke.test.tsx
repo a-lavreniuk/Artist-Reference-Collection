@@ -12,6 +12,25 @@ import ToastAlert from '../components/alert/ToastAlert';
 import { ErrorBoundary, ErrorScreen } from '../components/error-boundary';
 import SearchPanelColorControls from '../components/layout/SearchPanelColorControls';
 import CardDetailPreviewOptionsBar from '../components/gallery/CardDetailPreviewOptionsBar';
+import SettingsAutoTagPanel from '../pages/settings/panels/SettingsAutoTagPanel';
+import SettingsAiSearchPanel from '../pages/settings/panels/SettingsAiSearchPanel';
+import { patchAiSettingsSnapshotForTests } from '../pages/settings/settingsAiSession';
+
+function withBrowserWindowStub(run: () => void): void {
+  const previous = (globalThis as { window?: unknown }).window;
+  (globalThis as { window: { arc: Record<string, never> } }).window = { arc: {} };
+  patchAiSettingsSnapshotForTests({ loading: false });
+  try {
+    run();
+  } finally {
+    patchAiSettingsSnapshotForTests({ loading: true });
+    if (previous === undefined) {
+      Reflect.deleteProperty(globalThis, 'window');
+    } else {
+      (globalThis as { window: unknown }).window = previous;
+    }
+  }
+}
 
 const stubCard: CardRecord = {
   id: 'smoke-card',
@@ -169,5 +188,78 @@ describe('renderer UI smoke', () => {
     expect(html).toContain('arc-icon-aspect-ratio');
     expect(html).toContain('arc-icon-actual-size');
     expect(html).toContain('aria-label="Уменьшить"');
+  });
+
+  it('SettingsAutoTagPanel renders without throw', () => {
+    withBrowserWindowStub(() => {
+      expect(() => renderToString(<SettingsAutoTagPanel />)).not.toThrow();
+    });
+  });
+
+  it('SettingsAiSearchPanel renders without throw', () => {
+    withBrowserWindowStub(() => {
+      patchAiSettingsSnapshotForTests({
+        loading: false,
+        status: {
+          enabled: true,
+          activeSearchModelId: null,
+          activeTier: 'light',
+          activeModelId: null,
+          hardware: {
+            platform: 'win32',
+            cpuCores: 8,
+            cpuModel: 'test',
+            cpuFrequencyGhz: 3,
+            totalMemoryMb: 16384,
+            hasGpu: false,
+            hasNvidiaGpu: false,
+            gpuName: null,
+            estimatedVramMb: null,
+            recommendedTier: 'light',
+            recommendedSearchModelId: 'clip-vit-base-patch32'
+          },
+          supportedSearchModelIds: ['clip-vit-base-patch32'],
+          supportedTiers: ['light'],
+          searchModelCards: [],
+          captionModelCard: {
+            role: 'caption',
+            modelId: 'joycaption-beta-one',
+            label: 'JoyCaption',
+            description: '',
+            sizeLabel: '',
+            minRamMb: 0,
+            supported: true
+          },
+          modelCards: [],
+          resources: { threads: 4, gpuLayers: 0, maxRamMb: 4096 },
+          resourcePreset: 50,
+          searchStrictness: 50,
+          autoTagEnabled: false,
+          autoTagVolume: 50,
+          autoTagCatalogMode: 'reuse',
+          autoTagOnImport: false,
+          index: {
+            indexed: 0,
+            total: 0,
+            running: false,
+            paused: false,
+            currentCardId: null,
+            currentCardProgress: null
+          },
+          models: [],
+          llamaRuntime: { cpuInstalled: false, cudaInstalled: false, release: '' },
+          download: null,
+          lastError: null,
+          setupReady: false
+        }
+      });
+      expect(() =>
+        renderToString(
+          <MemoryRouter>
+            <SettingsAiSearchPanel />
+          </MemoryRouter>
+        )
+      ).not.toThrow();
+    });
   });
 });

@@ -92,7 +92,13 @@ export function resolveLlamaServerBinaryFromUserData(
   return null;
 }
 
-async function downloadToFile(url: string, destPath: string, onProgress?: (percent: number) => void): Promise<void> {
+export type LlamaRuntimeProgressBytes = { received: number; total: number };
+
+async function downloadToFile(
+  url: string,
+  destPath: string,
+  onProgress?: (percent: number, bytes?: LlamaRuntimeProgressBytes) => void
+): Promise<void> {
   const res = await fetch(url);
   if (!res.ok || !res.body) {
     throw new Error(`Не удалось скачать среду vision (${res.status})`);
@@ -102,6 +108,7 @@ async function downloadToFile(url: string, destPath: string, onProgress?: (perce
   let received = 0;
   const reader = res.body.getReader();
   const fileStream = createWriteStream(destPath);
+  let lastProgressAt = 0;
 
   try {
     while (true) {
@@ -110,7 +117,11 @@ async function downloadToFile(url: string, destPath: string, onProgress?: (perce
       received += value.byteLength;
       fileStream.write(Buffer.from(value));
       if (total > 0 && onProgress) {
-        onProgress(Math.max(0, Math.min(100, Math.round((received / total) * 100))));
+        const now = Date.now();
+        if (now - lastProgressAt >= 200 || received >= total) {
+          lastProgressAt = now;
+          onProgress(Math.max(0, Math.min(100, Math.round((received / total) * 100))), { received, total });
+        }
       }
     }
   } finally {
@@ -241,7 +252,7 @@ export function isLlamaRuntimeReleaseCurrent(
 
 async function ensureCudaCudartLibs(
   userDataPath: string,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number, bytes?: LlamaRuntimeProgressBytes) => void
 ): Promise<void> {
   if (process.platform !== 'win32') return;
   if (hasCudaCudartLibs(userDataPath)) {
@@ -268,8 +279,8 @@ async function ensureCudaCudartLibs(
   await mkdir(tempDir, { recursive: true });
 
   try {
-    await downloadToFile(githubReleaseAssetUrl(cudart.archive), archivePath, (p) => {
-      onProgress?.(Math.max(0, Math.min(95, Math.round(p * 0.9))));
+    await downloadToFile(githubReleaseAssetUrl(cudart.archive), archivePath, (p, bytes) => {
+      onProgress?.(Math.max(0, Math.min(95, Math.round(p * 0.9))), bytes);
     });
     onProgress?.(92);
     await extractArchive(archivePath, extractDir, cudart.format);
@@ -287,7 +298,7 @@ async function ensureCudaCudartLibs(
 export async function ensureLlamaRuntime(
   userDataPath: string,
   variant: LlamaRuntimeVariant,
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number, bytes?: LlamaRuntimeProgressBytes) => void
 ): Promise<void> {
   if (variant === 'cuda' && process.platform !== 'win32') {
     throw new Error('CUDA-среда vision доступна только на Windows.');
@@ -340,8 +351,8 @@ export async function ensureLlamaRuntime(
 
   try {
     const serverProgressScale = variant === 'cuda' ? 0.55 : 1;
-    await downloadToFile(githubReleaseAssetUrl(asset.archive), archivePath, (p) => {
-      onProgress?.(Math.max(0, Math.min(90, Math.round(p * serverProgressScale))));
+    await downloadToFile(githubReleaseAssetUrl(asset.archive), archivePath, (p, bytes) => {
+      onProgress?.(Math.max(0, Math.min(90, Math.round(p * serverProgressScale))), bytes);
     });
     onProgress?.(variant === 'cuda' ? 52 : 90);
     await extractArchive(archivePath, extractDir, asset.format);
@@ -361,8 +372,8 @@ export async function ensureLlamaRuntime(
     }
 
     if (variant === 'cuda') {
-      await ensureCudaCudartLibs(userDataPath, (p) => {
-        onProgress?.(56 + Math.round((p / 100) * 42));
+      await ensureCudaCudartLibs(userDataPath, (p, bytes) => {
+        onProgress?.(56 + Math.round((p / 100) * 42), bytes);
       });
     }
 
@@ -383,8 +394,9 @@ export async function ensureLlamaRuntime(
 
 export async function deleteLlamaRuntimeIfUnused(userDataPath: string): Promise<void> {
   const { isModelInstalled } = await import('./modelManager');
-  const heavy = await isModelInstalled(userDataPath, 'caption');
-  if (heavy) return;
+  if (await isModelInstalled(userDataPath, 'caption')) return;
+  if (await isModelInstalled(userDataPath, 'search-embed-2b')) return;
+  if (await isModelInstalled(userDataPath, 'search-embed-8b')) return;
 
   await rm(llamaRuntimeRootDir(userDataPath), { recursive: true, force: true });
   const manifest = await readModelManifest(userDataPath);

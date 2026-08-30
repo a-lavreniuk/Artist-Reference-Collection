@@ -45,6 +45,7 @@ import { useGalleryCardContextMenu } from './useGalleryCardContextMenu';
 import CardDetailTagsModal from './CardDetailTagsModal';
 import CardDetailCollectionsModal from './CardDetailCollectionsModal';
 import CardDetailCollectionStrip from './CardDetailCollectionStrip';
+import { InfoSplitCard } from '../info-card';
 import ConfirmRemoveFromMoodboardModal from '../moodboard/ConfirmRemoveFromMoodboardModal';
 import { clampCardRating } from '@arc-main-shared/cardRating';
 import { removeCollectionFromCardIds, toggleCollectionOnCardIds } from '@arc-main-shared/collectionHierarchy';
@@ -118,7 +119,6 @@ import {
 import { measureCardDetailToolbarMinWidth } from './measureCardDetailToolbarMinWidth';
 import { getAppPreferences } from '../../services/appPreferences';
 import { useLibrarySettings } from '../../hooks/useLibrarySettings';
-import { formatCardCountLabel } from '../../utils/formatCardCountLabel';
 import { toOpenableLinkUrl } from '../../utils/linkInput';
 import CopyCardSettingsMenu from './CopyCardSettingsMenu';
 import {
@@ -620,15 +620,28 @@ export default function CardDetailOverlay({
 
   useEffect(() => {
     let cancelled = false;
-    void getAppPreferences().then((prefs) => {
-      if (!cancelled) {
-        setAutoTagEnabled(Boolean(prefs.aiAutoTagEnabled));
+    void (async () => {
+      const prefs = await getAppPreferences();
+      let captionOk = false;
+      try {
+        const status = window.arc?.aiGetStatus ? await window.arc.aiGetStatus() : null;
+        captionOk = Boolean(
+          status?.models.find((m) => m.role === 'caption' || m.modelId === 'joycaption-beta-one')
+            ?.installed
+        );
+      } catch {
+        captionOk = false;
       }
-    });
+      if (!cancelled) {
+        setAutoTagEnabled(
+          Boolean(prefs.aiAutoTagEnabled) && Boolean(prefs.aiAutoTagModelInstalled) && captionOk
+        );
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cardId]);
 
   useLayoutEffect(() => {
     if (panelRef.current) void hydrateArcNavbarIcons(panelRef.current);
@@ -1045,27 +1058,6 @@ export default function CardDetailOverlay({
     [scheduleAnnotationsSave]
   );
 
-  const duplicateAnnotation = useCallback(
-    (id: string) => {
-      const annot = annotations.find((item) => item.id === id);
-      if (!annot) return;
-      const copyId = newAnnotationId();
-      const copy: CardAnnotationV1 = {
-        ...annot,
-        id: copyId,
-        x: clampUnit(annot.x + 0.02),
-        y: clampUnit(annot.y + 0.02),
-        createdAt: new Date().toISOString()
-      };
-      commitAnnotations((prev) => [...prev, copy]);
-      setSparkleAnnotationId(copyId);
-      setFocusedAnnotationId(copyId);
-      setHoveredAnnotationId(copyId);
-      window.setTimeout(() => setSparkleAnnotationId((current) => (current === copyId ? null : current)), 600);
-    },
-    [annotations, commitAnnotations]
-  );
-
   const focusAnnotationByDelta = useCallback(
     (delta: number) => {
       if (!annotations.length) return;
@@ -1107,7 +1099,6 @@ export default function CardDetailOverlay({
       if (!annot) return;
       setPeekAnchorKey(null);
       setSelectedAnnotationId(id);
-      setFocusedAnnotationId(id);
       setComposerText(annot.text);
       setAnnotationComposer({ mode: 'edit', id });
       setAnnotationsOpen(true);
@@ -1138,12 +1129,19 @@ export default function CardDetailOverlay({
       commitAnnotations((prev) => prev.filter((item) => item.id !== id));
       if (selectedAnnotationId === id) setSelectedAnnotationId(null);
       if (hoveredAnnotationId === id) setHoveredAnnotationId(null);
+      if (focusedAnnotationId === id) setFocusedAnnotationId(null);
       if (annotationComposer?.mode === 'edit' && annotationComposer.id === id) {
         setAnnotationComposer(null);
         setComposerText('');
       }
     },
-    [annotationComposer, commitAnnotations, hoveredAnnotationId, selectedAnnotationId]
+    [
+      annotationComposer,
+      commitAnnotations,
+      focusedAnnotationId,
+      hoveredAnnotationId,
+      selectedAnnotationId
+    ]
   );
 
   const requestDeleteAnnotation = useCallback((id: string) => {
@@ -1169,7 +1167,6 @@ export default function CardDetailOverlay({
       commitAnnotations((prev) => [...prev, annot]);
       setSelectedAnnotationId(id);
       setSparkleAnnotationId(id);
-      setFocusedAnnotationId(id);
       window.setTimeout(() => setSparkleAnnotationId((current) => (current === id ? null : current)), 600);
     } else {
       const editId = composer.id;
@@ -1709,11 +1706,6 @@ export default function CardDetailOverlay({
           handleSelectAnnotation(focusedAnnotationId);
           return;
         }
-        if (matchesShortcut(e, 'detail.annotationDuplicate') && focusedAnnotationId) {
-          e.preventDefault();
-          duplicateAnnotation(focusedAnnotationId);
-          return;
-        }
         if (matchesShortcut(e, 'detail.annotationsVisible')) {
           e.preventDefault();
           setAnnotationsVisible((prev) => !prev);
@@ -1725,7 +1717,6 @@ export default function CardDetailOverlay({
   }, [
     applySettingsClipboard,
     detailLayerOpen,
-    duplicateAnnotation,
     focusAnnotationByDelta,
     focusedAnnotationId,
     handleCopySettings,
@@ -2069,7 +2060,10 @@ export default function CardDetailOverlay({
     try {
       const result = await window.arc.aiSuggestTags(card.id);
       if (!result.ok) {
-        setActionAlert({ message: result.error, variant: 'danger' });
+        setActionAlert({
+          message: result.error || 'Для автотегов нужна JoyCaption. Откройте Настройки → Автотеги.',
+          variant: 'danger'
+        });
         return;
       }
       if (result.tagIds.length === 0) {
@@ -2169,7 +2163,6 @@ export default function CardDetailOverlay({
 
   const composerAnchorId =
     annotationComposer?.mode === 'create' ? 'draft' : annotationComposer?.mode === 'edit' ? annotationComposer.id : null;
-  const activeAnnotationListId = annotationComposer?.mode === 'edit' ? annotationComposer.id : null;
   const draftRect = annotationComposer?.mode === 'create' ? annotationComposer.rect : null;
   const draftIndex = annotations.length + 1;
 
@@ -2621,7 +2614,6 @@ export default function CardDetailOverlay({
                 {annotationsVisible ? (
                   <CardDetailAnnotationsSection
                     annotations={annotations}
-                    activeId={activeAnnotationListId}
                     hoveredId={hoveredAnnotationId}
                     focusedId={focusedAnnotationId}
                     isVideo={card?.type === 'video'}
@@ -2629,7 +2621,6 @@ export default function CardDetailOverlay({
                     onSelect={handleSelectAnnotation}
                     onHover={setHoveredAnnotationId}
                     onDelete={requestDeleteAnnotation}
-                    onDuplicate={duplicateAnnotation}
                   />
                 ) : null}
               </CollapsibleSection>
@@ -2699,41 +2690,45 @@ export default function CardDetailOverlay({
                 footer={addRowButton('Добавить в коллекцию', 'arc-icon-collection', () => setCollectionsModalOpen(true))}
               >
                 {collectionsResolved.length > 0 && (
-                  <ul className="arc-card-detail-collections">
+                  <ul className="arc-card-detail-collections arc-info-card-list">
                     {collectionsResolved.map((col) => (
-                      <li
-                        key={col.id}
-                        className="arc-card-detail-collection-row arc-card-detail-collection-row--navigable panel elevation-sunken"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => openCollectionPage(col)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            openCollectionPage(col);
+                      <li key={col.id}>
+                        <InfoSplitCard
+                          interactive
+                          role="button"
+                          tabIndex={0}
+                          title={col.name}
+                          headerAside={
+                            <CardDetailCollectionStrip
+                              collectionId={col.id}
+                              previews={collectionPreviews[col.id] ?? []}
+                            />
                           }
-                        }}
-                      >
-                        <CardDetailCollectionStrip
-                          collectionId={col.id}
-                          previews={collectionPreviews[col.id] ?? []}
-                        />
-                        <div className="arc-card-detail-collection-main">
-                          <p className="text-l arc-card-detail-collection-name">{col.name}</p>
-                          <div className="arc-card-detail-collection-meta">
-                            <span className="text-s">{formatCardCountLabel(col.count)}</span>
+                          chips={
+                            <span className="chip">
+                              Карточек <span className="chip-count">{col.count}</span>
+                            </span>
+                          }
+                          actions={
                             <button
                               type="button"
-                              className="text-s arc-card-detail-collection-remove"
+                              className="btn btn-outline btn-ds"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void removeCollection(col.id);
                               }}
                             >
-                              Снять
+                              <span className="btn-ds__value">Снять</span>
                             </button>
-                          </div>
-                        </div>
+                          }
+                          onClick={() => openCollectionPage(col)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              openCollectionPage(col);
+                            }
+                          }}
+                        />
                       </li>
                     ))}
                   </ul>

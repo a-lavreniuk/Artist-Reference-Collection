@@ -135,6 +135,8 @@ export type AppPreferencesV1 = {
   aiResourcePreset: number;
   aiSearchStrictness: number;
   aiAutoTagEnabled: boolean;
+  aiAutoTagModelInstalled: boolean;
+  aiAutoTagProductV2: boolean;
   aiAutoTagVolume: number;
   aiAutoTagCatalogMode: 'reuse' | 'reuse_create';
   aiAutoTagOnImport: boolean;
@@ -205,6 +207,8 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     aiResourcePreset: 50,
     aiSearchStrictness: 50,
     aiAutoTagEnabled: false,
+    aiAutoTagModelInstalled: false,
+    aiAutoTagProductV2: true,
     aiAutoTagVolume: 50,
     aiAutoTagCatalogMode: 'reuse',
     aiAutoTagOnImport: false,
@@ -296,7 +300,7 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
   const d = defaultAppPreferences();
   if (!raw) return d;
 
-  return {
+  const next: AppPreferencesV1 = {
     ...d,
     ...raw,
     version: 1,
@@ -364,6 +368,11 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
         : d.aiCaptionOnDemandMigrated,
     aiAutoTagEnabled:
       typeof raw.aiAutoTagEnabled === 'boolean' ? raw.aiAutoTagEnabled : d.aiAutoTagEnabled,
+    aiAutoTagModelInstalled:
+      typeof raw.aiAutoTagModelInstalled === 'boolean'
+        ? raw.aiAutoTagModelInstalled
+        : d.aiAutoTagModelInstalled,
+    aiAutoTagProductV2: raw.aiAutoTagProductV2 === true,
     aiAutoTagVolume:
       typeof raw.aiAutoTagVolume === 'number'
         ? Math.max(0, Math.min(100, Math.round(raw.aiAutoTagVolume / 5) * 5))
@@ -383,6 +392,13 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
       (raw as { detailCardTemplate?: unknown }).detailCardTemplate ?? d.detailCardTemplate
     )
   };
+
+  if (!next.aiAutoTagProductV2) {
+    next.aiAutoTagModelInstalled = false;
+    next.aiAutoTagProductV2 = true;
+  }
+
+  return next;
 }
 
 export async function getAppPreferences(): Promise<AppPreferencesV1> {

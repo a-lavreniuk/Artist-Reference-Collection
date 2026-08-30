@@ -37,7 +37,7 @@ import { beginNavigationEpoch, endNavigationEpoch } from './ipcNavigationPriorit
 import { applyLibraryFolderIcon } from './libraryFolderIcon';
 import { isValidArcLibraryFolder } from './libraryValidate';
 import { getDefaultLibraryFolderName } from './appProfile';
-import { countCards, countCardsReadonly, ensureLibraryReady } from './storage/libraryStorage';
+import { countCards, ensureLibraryReady, libraryCardsStatsReadonly } from './storage/libraryStorage';
 import {
   updateLibrarySessionSnapshot,
   readLibraryRootConfigSync
@@ -285,14 +285,18 @@ export function registerArcIpc(): void {
     const items = listLibrariesFromConfig();
     const withCounts = items.map((item) => {
       let cardCount = 0;
+      let sizeBytes = 0;
       try {
         if (fs.existsSync(item.path)) {
-          cardCount = countCardsReadonly(item.path, 'all', 'all');
+          const stats = libraryCardsStatsReadonly(item.path);
+          cardCount = stats.cardCount;
+          sizeBytes = stats.sizeBytes;
         }
       } catch {
         cardCount = 0;
+        sizeBytes = 0;
       }
-      return { ...item, cardCount };
+      return { ...item, cardCount, sizeBytes };
     });
     return { ok: true as const, libraries: withCounts };
   });

@@ -43,6 +43,11 @@ export function logAiIndexer(message: string, detail?: Record<string, unknown>):
   emitAiIndexLog('log', message, detail);
 }
 
+/** Слежение за установкой / удалением моделей (JoyCaption, Qwen). Тот же канал, что у индексации. */
+export function logAiModel(message: string, detail?: Record<string, unknown>): void {
+  emitAiIndexLog('log', `модель: ${message}`, detail);
+}
+
 export function logAiIndexerWarn(message: string, detail?: Record<string, unknown>): void {
   emitAiIndexLog('warn', message, detail);
 }

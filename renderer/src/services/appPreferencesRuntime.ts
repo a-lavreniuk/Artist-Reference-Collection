@@ -190,6 +190,12 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('aiAutoTagEnabled' in patch && typeof patch.aiAutoTagEnabled === 'boolean') {
     next.aiAutoTagEnabled = patch.aiAutoTagEnabled;
   }
+  if ('aiAutoTagModelInstalled' in patch && typeof patch.aiAutoTagModelInstalled === 'boolean') {
+    next.aiAutoTagModelInstalled = patch.aiAutoTagModelInstalled;
+  }
+  if ('aiAutoTagProductV2' in patch && typeof patch.aiAutoTagProductV2 === 'boolean') {
+    next.aiAutoTagProductV2 = patch.aiAutoTagProductV2;
+  }
   if ('aiAutoTagVolume' in patch && typeof patch.aiAutoTagVolume === 'number') {
     next.aiAutoTagVolume = Math.max(0, Math.min(100, Math.round(patch.aiAutoTagVolume / 5) * 5));
   }
@@ -380,6 +386,12 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('aiAutoTagEnabled' in patch && typeof patch.aiAutoTagEnabled === 'boolean') {
     next.aiAutoTagEnabled = patch.aiAutoTagEnabled;
+  }
+  if ('aiAutoTagModelInstalled' in patch && typeof patch.aiAutoTagModelInstalled === 'boolean') {
+    next.aiAutoTagModelInstalled = patch.aiAutoTagModelInstalled;
+  }
+  if ('aiAutoTagProductV2' in patch && typeof patch.aiAutoTagProductV2 === 'boolean') {
+    next.aiAutoTagProductV2 = patch.aiAutoTagProductV2;
   }
   if ('aiAutoTagVolume' in patch && typeof patch.aiAutoTagVolume === 'number') {
     next.aiAutoTagVolume = Math.max(0, Math.min(100, Math.round(patch.aiAutoTagVolume / 5) * 5));

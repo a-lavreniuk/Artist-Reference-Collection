@@ -33,7 +33,7 @@ export async function runAiSearch(query: string): Promise<AiSearchResult[]> {
   const userData = app.getPath('userData');
   const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? getActiveSearchModelId());
   if (!(await isModelInstalled(userData, modelId))) {
-    throw new Error('Модель не установлена. Скачайте модель в настройках AI.');
+    throw new Error('Модель не установлена. Скачайте модель в Настройки → Умный поиск.');
   }
 
   const modelsDir = getModelsDir();

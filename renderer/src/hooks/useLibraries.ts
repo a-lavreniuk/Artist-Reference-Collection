@@ -6,6 +6,7 @@ export type LibraryListItem = {
   path: string;
   active: boolean;
   cardCount?: number;
+  sizeBytes?: number;
 };
 
 export function useLibraries() {

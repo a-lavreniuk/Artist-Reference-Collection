@@ -35,7 +35,8 @@ export function llamaModelsDir(userDataPath: string): string {
   return path.join(modelsRootDir(userDataPath), 'llama');
 }
 
-export function taggerModelsDir(userDataPath: string): string {
+/** Leftover WD Tagger folder from abandoned catalog role — remove on startup. */
+export function legacyTaggerModelsDir(userDataPath: string): string {
   return path.join(modelsRootDir(userDataPath), 'tagger');
 }
 
@@ -90,12 +91,42 @@ async function llamaModelInstalled(userDataPath: string, entry: ModelCatalogEntr
   return catalogFilesInstalled(userDataPath, entry);
 }
 
-function catalogFilesDir(userDataPath: string, entry: ModelCatalogEntry): string {
-  return entry.stack === 'onnx' ? taggerModelsDir(userDataPath) : llamaModelsDir(userDataPath);
+function catalogFilesDir(userDataPath: string, _entry: ModelCatalogEntry): string {
+  return llamaModelsDir(userDataPath);
 }
 
-function minBytesForCatalogFile(role: string): number {
-  return role === 'labels' ? 256 : 1024 * 1024;
+function minBytesForCatalogFile(_role: string): number {
+  return 1024 * 1024;
+}
+
+export type ModelDiskFileSnapshot = {
+  name: string;
+  exists: boolean;
+  sizeMb: number;
+};
+
+export async function snapshotLlamaModelFiles(
+  userDataPath: string,
+  role: ModelRole
+): Promise<{ allPresent: boolean; files: ModelDiskFileSnapshot[] }> {
+  const entry = getModelEntry(role);
+  const dir = llamaModelsDir(userDataPath);
+  const files: ModelDiskFileSnapshot[] = [];
+  for (const file of catalogFiles(entry)) {
+    const filePath = path.join(dir, file.name);
+    const exists = existsSync(filePath);
+    let sizeMb = 0;
+    if (exists) {
+      try {
+        sizeMb = Math.round(((await stat(filePath)).size / (1024 * 1024)) * 10) / 10;
+      } catch {
+        sizeMb = 0;
+      }
+    }
+    files.push({ name: file.name, exists, sizeMb });
+  }
+  const allPresent = files.length > 0 && files.every((f) => f.exists && f.sizeMb >= 1);
+  return { allPresent, files };
 }
 
 async function catalogFilesInstalled(userDataPath: string, entry: ModelCatalogEntry): Promise<boolean> {
@@ -162,7 +193,36 @@ export async function isSearchModelInstalled(
 export async function ensureModelsDirs(userDataPath: string): Promise<void> {
   await mkdir(transformersCacheDir(userDataPath), { recursive: true });
   await mkdir(llamaModelsDir(userDataPath), { recursive: true });
-  await mkdir(taggerModelsDir(userDataPath), { recursive: true });
+  const leftoverTagger = legacyTaggerModelsDir(userDataPath);
+  if (existsSync(leftoverTagger)) {
+    await rm(leftoverTagger, { recursive: true, force: true });
+  }
+}
+
+const FILE_LOCK_CODES = new Set(['EBUSY', 'EPERM', 'EACCES']);
+
+function isFileLockError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException)?.code;
+  return Boolean(code && FILE_LOCK_CODES.has(code));
+}
+
+async function rmWithLockRetry(
+  target: string,
+  options: { recursive?: boolean; force?: boolean },
+  attempts = 8
+): Promise<void> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await rm(target, options);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (!isFileLockError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 50 * (i + 1)));
+    }
+  }
+  throw lastErr;
 }
 
 export async function deleteInstalledModel(
@@ -173,16 +233,12 @@ export async function deleteInstalledModel(
   if (!role) return;
   const entry = getModelEntry(role);
   if (entry.stack === 'transformers') {
-    await rm(transformersModelDir(userDataPath, entry), { recursive: true, force: true });
-    return;
-  }
-  if (entry.stack === 'onnx') {
-    await rm(taggerModelsDir(userDataPath), { recursive: true, force: true });
+    await rmWithLockRetry(transformersModelDir(userDataPath, entry), { recursive: true, force: true });
     return;
   }
   const files = catalogFiles(entry);
   for (const file of files) {
-    await rm(path.join(llamaModelsDir(userDataPath), file.name), { force: true });
+    await rmWithLockRetry(path.join(llamaModelsDir(userDataPath), file.name), { force: true });
   }
 }
 
@@ -261,6 +317,5 @@ export function sanitizeModelRole(raw: unknown): ModelRole | null {
   if (raw === 'heavy') return 'caption';
   if (isSearchModelId(raw)) return SEARCH_ROLE_BY_ID[raw];
   if (raw === 'joycaption-beta-one') return 'caption';
-  if (raw === 'wd-swinv2-tagger-v3') return 'tagger';
   return null;
 }

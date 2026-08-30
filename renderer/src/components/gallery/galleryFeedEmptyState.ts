@@ -78,7 +78,7 @@ export function resolveGalleryFeedEmptyState(input: {
       return {
         copy: {
           ...copy,
-          primaryActionLabel: 'Настройки AI',
+          primaryActionLabel: 'Умный поиск',
           primaryActionVariant: 'outline',
           secondaryActionLabel: 'Сбросить фильтры',
           secondaryActionVariant: 'outline'

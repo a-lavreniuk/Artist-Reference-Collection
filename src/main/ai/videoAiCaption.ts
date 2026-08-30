@@ -56,15 +56,11 @@ export async function generateAndStoreVideoAiCaption(
   cardId: string
 ): Promise<{ ok: true; caption: string } | { ok: false; error: string }> {
   const prefs = await readAppPreferences();
-  if (!prefs.aiSemanticSearchEnabled) {
-    return { ok: false, error: 'Включите AI Поиск в настройках.' };
-  }
-
   const userData = app.getPath('userData');
   if (!(await isModelInstalled(userData, 'caption'))) {
     return {
       ok: false,
-      error: 'Нужна тяжёлая модель (JoyCaption). Установите её в Настройки → AI Поиск.'
+      error: 'Нужна модель автотегов (JoyCaption). Установите её в Настройки → Автотеги.'
     };
   }
 
@@ -131,7 +127,10 @@ export async function generateAndStoreVideoAiCaption(
 export async function applyVideoCaptionsAfterImport(cardIds: string[]): Promise<number> {
   const prefs = await readAppPreferences();
   const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
-  if (!searchOn || !isQwenSearchModel(prefs.aiSearchModelId)) return 0;
+  const qwenHybrid = searchOn && isQwenSearchModel(prefs.aiSearchModelId);
+  const userRequested =
+    prefs.aiAutoTagEnabled && prefs.aiAutoTagModelInstalled && prefs.aiVideoCaptionOnImport;
+  if (!qwenHybrid && !userRequested) return 0;
   if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) return 0;
 
   const root = await readLibraryRootFromDisk();

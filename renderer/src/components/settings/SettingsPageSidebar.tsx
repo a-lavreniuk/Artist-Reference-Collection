@@ -35,7 +35,8 @@ const ADVANCED_SECTIONS = [
     label: 'MCP сервер',
     iconClass: 'arc-icon-server'
   },
-  { key: 'ai', to: '/settings/ai', label: 'AI', iconClass: 'arc-icon-ai' }
+  { key: 'ai-search', to: '/settings/ai-search', label: 'Умный поиск', iconClass: 'arc-icon-ai' },
+  { key: 'auto-tag', to: '/settings/auto-tag', label: 'Автотеги', iconClass: 'arc-icon-tag' }
 ] as const;
 
 const UPDATES_SECTION = {

@@ -51,7 +51,6 @@ export type ShortcutId =
   | 'detail.annotationOpen'
   | 'detail.undo'
   | 'detail.redo'
-  | 'detail.annotationDuplicate'
   | 'detail.annotationsVisible'
   | 'detail.rating0'
   | 'detail.rating1'
@@ -457,14 +456,6 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
     groupId: 'detail',
     label: 'Вернуть',
     defaultAccelerator: ['CommandOrControl+Y', 'CommandOrControl+Shift+Z'],
-    scope: 'renderer',
-    settingsVisible: true
-  },
-  {
-    id: 'detail.annotationDuplicate',
-    groupId: 'detail',
-    label: 'Дублировать аннотацию',
-    defaultAccelerator: 'CommandOrControl+D',
     scope: 'renderer',
     settingsVisible: true
   },

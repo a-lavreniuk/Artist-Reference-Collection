@@ -711,7 +711,9 @@ contextBridge.exposeInMainWorld('arc', {
   },
   aiSetEnabled: (payload: Record<string, unknown>) => ipcRenderer.invoke('arc:ai-set-enabled', payload),
   onAiDownloadProgress: (cb: (detail: {
-    tier: string;
+    role?: string;
+    modelId?: string;
+    tier?: string;
     percent: number;
     bytesReceived?: number;
     bytesTotal?: number;
@@ -720,7 +722,9 @@ contextBridge.exposeInMainWorld('arc', {
     const fn = (
       _: unknown,
       payload: {
-        tier: string;
+        role?: string;
+        modelId?: string;
+        tier?: string;
         percent: number;
         bytesReceived?: number;
         bytesTotal?: number;

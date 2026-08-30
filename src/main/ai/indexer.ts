@@ -222,6 +222,14 @@ export function isIndexingInFlight(): boolean {
   return indexRunning;
 }
 
+export function isIndexingPaused(): boolean {
+  return indexPaused;
+}
+
+export async function waitForIndexingLoopIdle(): Promise<void> {
+  if (loopPromise) await loopPromise;
+}
+
 export async function getIndexStatus(): Promise<IndexStatus> {
   const opened = await openLibraryDbSafe();
   const prefs = await readAppPreferences();
@@ -258,7 +266,7 @@ async function ensureWorkerReady(): Promise<boolean> {
   const userData = app.getPath('userData');
   const modelId = sanitizeSearchModelId(prefs.aiSearchModelId);
   if (!(await isModelInstalled(userData, modelId))) {
-    lastError = 'Сначала скачайте модель поиска в настройках AI';
+    lastError = 'Сначала скачайте модель поиска в Настройки → Умный поиск';
     return false;
   }
 

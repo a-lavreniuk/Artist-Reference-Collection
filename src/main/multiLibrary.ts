@@ -21,6 +21,7 @@ import { applyLibraryFolderIcon } from './libraryFolderIcon';
 export type LibraryListItem = LibraryRegistryEntry & {
   active: boolean;
   cardCount?: number;
+  sizeBytes?: number;
 };
 
 export type MigrationStatus =

@@ -8,6 +8,11 @@ function notifyAiAlert(message: string, variant: ToastAlertVariant): void {
   showAppNotification({ message, variant });
 }
 
+export function logAiModelClient(message: string, detail?: Record<string, unknown>): void {
+  const suffix = detail && Object.keys(detail).length > 0 ? ` ${JSON.stringify(detail)}` : '';
+  console.log(`[ARC AI] модель: ${message}${suffix}`);
+}
+
 export type DownloadPhase = 'runtime' | 'model' | 'finalize' | null;
 export type AiSetupPhase = 'off' | 'analyzing' | 'models' | 'ready';
 export type AiDownloadOperation = 'install' | 'update' | null;
@@ -87,13 +92,36 @@ let state: SessionState = {
 function isVisionRole(role: string): boolean {
   return (
     role === 'caption' ||
-    role === 'heavy' ||
     role === 'joycaption-beta-one' ||
     role === 'search-embed-2b' ||
     role === 'qwen3-vl-embedding-2b' ||
     role === 'search-embed-8b' ||
     role === 'qwen3-vl-embedding-8b'
   );
+}
+
+/** Автотеги / JoyCaption. `heavy` — уровень поиска Qwen 8b и catalog tier caption; не считаем его автотегами. */
+export function isCaptionModelRef(role: string | null | undefined): boolean {
+  return role === 'caption' || role === 'joycaption-beta-one';
+}
+
+/** Identity of an in-flight download: prefer role / modelId, never catalog `tier: heavy`. */
+export function resolveProgressModelRef(payload: {
+  role?: string | null;
+  modelId?: string | null;
+  tier?: string | null;
+}): string | null {
+  if (payload.role) return payload.role;
+  if (payload.modelId) return payload.modelId;
+  if (payload.tier === 'light') return 'search-clip';
+  if (payload.tier === 'medium') return 'search-embed-2b';
+  if (payload.tier === 'heavy') return null;
+  return payload.tier ?? null;
+}
+
+function isBenignDownloadError(message: string | undefined): boolean {
+  if (!message) return false;
+  return /отменен|отменён|abort/i.test(message);
 }
 
 function normalizeModelRef(ref: AiModelRef): string {
@@ -148,9 +176,25 @@ export function getAiSettingsSnapshot(): AiSettingsSnapshot {
   return cachedSnapshot;
 }
 
+/** Только для smoke/unit: выставить loading/status без IPC. */
+export function patchAiSettingsSnapshotForTests(partial: Partial<SessionState>): void {
+  patchState(partial);
+}
+
 export function clampPercent(value: number | null | undefined): number | null {
   if (value == null || !Number.isFinite(value)) return null;
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+/** Внутри одной фазы процент только растёт — файлы CLIP не сбрасывают шкалу на 0. */
+export function holdMonotonicDownloadPercent(
+  previous: number | null,
+  next: number | null,
+  samePhase: boolean
+): number | null {
+  if (next == null) return previous;
+  if (!samePhase || previous == null) return next;
+  return Math.max(previous, next);
 }
 
 export function isAiDownloading(snapshot: {
@@ -161,7 +205,7 @@ export function isAiDownloading(snapshot: {
   return Boolean(
     snapshot.downloadTier ||
       snapshot.status?.download?.role ||
-      snapshot.status?.download?.tier ||
+      snapshot.status?.download?.modelId ||
       snapshot.status?.models.some((m) => m.downloading) ||
       (snapshot.busy && snapshot.downloadTier)
   );
@@ -183,7 +227,7 @@ export function getEffectiveDownload(
   }
   if (snapshot.status?.download) {
     return {
-      tier: snapshot.status.download.role ?? snapshot.status.download.tier ?? null,
+      tier: resolveProgressModelRef(snapshot.status.download),
       percent: snapshot.status.download.percent,
       phase: snapshot.status.download.phase
     };
@@ -206,19 +250,43 @@ function formatMb(bytes: number): string {
   return mb.toFixed(1).replace('.', ',');
 }
 
+export type DownloadSpeedSample = { at: number; bytes: number };
+
+/** Окно ≥0.4 с: частые IPC-чанки не должны сбрасывать замер, иначе скорость никогда не появится. */
+export function advanceDownloadSpeed(input: {
+  sample: DownloadSpeedSample | null;
+  speedMbps: number | null;
+  now: number;
+  bytesReceived: number;
+  minIntervalSec?: number;
+}): { sample: DownloadSpeedSample; speedMbps: number | null } {
+  const minIntervalSec = input.minIntervalSec ?? 0.4;
+  if (!input.sample) {
+    return { sample: { at: input.now, bytes: input.bytesReceived }, speedMbps: input.speedMbps };
+  }
+  const dt = (input.now - input.sample.at) / 1000;
+  const db = input.bytesReceived - input.sample.bytes;
+  if (db < 0) {
+    return { sample: { at: input.now, bytes: input.bytesReceived }, speedMbps: input.speedMbps };
+  }
+  if (dt < minIntervalSec) {
+    return { sample: input.sample, speedMbps: input.speedMbps };
+  }
+  const mbps = db / (1024 * 1024) / dt;
+  const speedMbps = input.speedMbps == null ? mbps : input.speedMbps * 0.65 + mbps * 0.35;
+  return { sample: { at: input.now, bytes: input.bytesReceived }, speedMbps };
+}
+
 function updateDownloadSpeed(bytesReceived: number | null | undefined): void {
   if (bytesReceived == null || !Number.isFinite(bytesReceived)) return;
-  const now = Date.now();
-  if (lastDownloadSpeedSample) {
-    const dt = (now - lastDownloadSpeedSample.at) / 1000;
-    const db = bytesReceived - lastDownloadSpeedSample.bytes;
-    if (dt > 0.4 && db >= 0) {
-      const mbps = db / (1024 * 1024) / dt;
-      smoothedDownloadSpeedMbps =
-        smoothedDownloadSpeedMbps == null ? mbps : smoothedDownloadSpeedMbps * 0.65 + mbps * 0.35;
-    }
-  }
-  lastDownloadSpeedSample = { at: now, bytes: bytesReceived };
+  const next = advanceDownloadSpeed({
+    sample: lastDownloadSpeedSample,
+    speedMbps: smoothedDownloadSpeedMbps,
+    now: Date.now(),
+    bytesReceived
+  });
+  lastDownloadSpeedSample = next.sample;
+  smoothedDownloadSpeedMbps = next.speedMbps;
 }
 
 export function formatDownloadSubtitle(snapshot: ReturnType<typeof getAiSettingsSnapshot>): string | null {
@@ -230,6 +298,25 @@ export function formatDownloadSubtitle(snapshot: ReturnType<typeof getAiSettings
     return `${totalPart} (${smoothedDownloadSpeedMbps.toFixed(1).replace('.', ',')} Мб/с)`;
   }
   return totalPart;
+}
+
+/** Значение скорости для карточки модели: «512 Кб/с». */
+export function formatDownloadSpeedLabel(
+  mbps: number | null | undefined,
+  opts?: { paused?: boolean; phase?: DownloadPhase }
+): string | null {
+  if (opts?.paused) return null;
+  if (opts?.phase === 'runtime' || opts?.phase === 'finalize') return null;
+  if (mbps == null || !Number.isFinite(mbps) || mbps <= 0) return null;
+  const kbPerSec = mbps * 1024;
+  if (kbPerSec < 1) return null;
+  if (kbPerSec < 1024) {
+    return `${Math.round(kbPerSec)} Кб/с`;
+  }
+  const mbPerSec = kbPerSec / 1024;
+  const mbText =
+    mbPerSec >= 10 ? String(Math.round(mbPerSec)) : mbPerSec.toFixed(1).replace('.', ',');
+  return `${mbText} Мб/с`;
 }
 
 export function resolveDownloadPercent(snapshot: ReturnType<typeof getAiSettingsSnapshot>): number {
@@ -251,7 +338,7 @@ export function modelCardProgressTitle(phase: DownloadPhase, paused: boolean): s
  */
 export function resolveModelCardProgress(
   snapshot: ReturnType<typeof getAiSettingsSnapshot>
-): { title: string; percent: number } | null {
+): { title: string; percent: number; speedLabel: string | null } | null {
   if (snapshot.testingTier) return null;
   const download = getEffectiveDownload(snapshot);
   if (!download.tier && !isAiDownloading(snapshot)) return null;
@@ -262,7 +349,11 @@ export function resolveModelCardProgress(
   });
   return {
     title: modelCardProgressTitle(download.phase, snapshot.downloadPaused),
-    percent: ui.overallPercent
+    percent: ui.overallPercent,
+    speedLabel: formatDownloadSpeedLabel(smoothedDownloadSpeedMbps, {
+      paused: snapshot.downloadPaused,
+      phase: download.phase
+    })
   };
 }
 
@@ -608,10 +699,15 @@ function applyAiStatusFromServer(status: AiStatus): Partial<SessionState> {
   const localActive = Boolean(state.busy || state.downloadTier);
 
   if (status.download && localActive) {
+    const samePhase = status.download.phase === state.downloadPhase;
     return {
       status,
-      downloadTier: status.download.role ?? status.download.tier ?? null,
-      downloadPercent: status.download.percent,
+      downloadTier: resolveProgressModelRef(status.download),
+      downloadPercent: holdMonotonicDownloadPercent(
+        state.downloadPercent,
+        status.download.percent,
+        samePhase
+      ),
       downloadPhase: status.download.phase
     };
   }
@@ -756,7 +852,7 @@ async function downloadLlamaRuntime(
   if (!arc?.aiDownloadLlamaRuntime) {
     return { ok: false, error: 'Загрузка среды vision недоступна.' };
   }
-  patchState({ downloadPhase: 'runtime' });
+  patchState({ downloadPhase: 'runtime', downloadReserveRuntimeBand: true });
   syncDownloadPoll();
   const res = await arc.aiDownloadLlamaRuntime({ variant, role: tier, tier });
   if (!res.ok) return { ok: false, error: res.error };
@@ -764,6 +860,7 @@ async function downloadLlamaRuntime(
 }
 
 async function offerCudaRuntimeIfNeeded(tier: string): Promise<{ ok: boolean; error?: string }> {
+  if (isCaptionModelRef(tier)) return { ok: true };
   const arc = window.arc;
   // Refresh GPU flags before deciding on CUDA offer (nvidia-smi / deep detect).
   if (arc?.aiDetectHardware) {
@@ -792,7 +889,6 @@ async function downloadVisionModel(tier: string): Promise<{ ok: boolean; error?:
   const runtimeRes = await offerCudaRuntimeIfNeeded(tier);
   if (!runtimeRes.ok) return runtimeRes;
 
-  patchState({ downloadPhase: 'model', downloadPercent: 0 });
   const res = await arc.aiDownloadModel(tier);
   if (!res.ok) return { ok: false, error: res.error };
   return { ok: true };
@@ -807,25 +903,27 @@ export function initAiSettingsSession(): void {
 
   arc.onAiDownloadProgress?.((payload) => {
     const { percent, phase, bytesReceived, bytesTotal } = payload;
-    const role =
-      (payload as { role?: string }).role ??
-      (payload as { tier?: string }).tier ??
-      null;
+    const role = resolveProgressModelRef(payload);
+    const phaseChanged = phase != null && phase !== state.downloadPhase;
+    if (phaseChanged) {
+      lastDownloadSpeedSample = null;
+      smoothedDownloadSpeedMbps = null;
+    }
     // Progress from main can arrive before renderer sets busy/downloadTier.
     updateDownloadSpeed(bytesReceived);
+    const nextPercent = holdMonotonicDownloadPercent(
+      state.downloadPercent,
+      clampPercent(percent),
+      !phaseChanged
+    );
     patchState({
       busy: true,
       downloadTier: role,
-      downloadPercent: clampPercent(percent),
+      downloadPercent: nextPercent,
       downloadPhase: phase ?? state.downloadPhase ?? 'model',
-      downloadBytesReceived: bytesReceived ?? state.downloadBytesReceived,
-      downloadBytesTotal: bytesTotal ?? state.downloadBytesTotal,
-      ...(phase === 'runtime' &&
-      percent != null &&
-      Number.isFinite(percent) &&
-      percent < 100
-        ? { downloadReserveRuntimeBand: true }
-        : {})
+      downloadBytesReceived: bytesReceived ?? (phaseChanged ? null : state.downloadBytesReceived),
+      downloadBytesTotal: bytesTotal ?? (phaseChanged ? null : state.downloadBytesTotal),
+      ...(phase === 'runtime' ? { downloadReserveRuntimeBand: true } : {})
     });
     syncDownloadPoll();
   });
@@ -903,6 +1001,16 @@ export async function downloadAiModel(ref: AiModelRef): Promise<boolean> {
   const tier = normalizeModelRef(ref);
   let installed = false;
 
+  if (state.testingTier) {
+    notifyAiAlert('Дождитесь окончания проверки модели.', 'warning');
+    return false;
+  }
+  if (isAiDownloading(state) || state.downloadOperation) {
+    notifyAiAlert('Дождитесь окончания скачивания.', 'warning');
+    return false;
+  }
+  logAiModelClient('renderer: запрошена установка', { tier });
+
   patchState({
     busy: true,
     downloadTier: tier,
@@ -927,13 +1035,18 @@ export async function downloadAiModel(ref: AiModelRef): Promise<boolean> {
     }
 
     if (!ok) {
-      notifyAiAlert(error || 'Не удалось скачать модель.', 'warning');
+      if (!isBenignDownloadError(error)) {
+        notifyAiAlert(error || 'Не удалось скачать модель.', 'warning');
+      }
     } else {
       installed = true;
       patchState({
         ...clearDownloadUiState()
       });
       notifyAiAlert('Модель установлена.', 'success');
+      if (isCaptionModelRef(tier)) {
+        void patchAppPreferences({ aiAutoTagModelInstalled: true });
+      }
       if (
         tier === 'search-clip' ||
         tier === 'light' ||
@@ -976,12 +1089,27 @@ export async function deleteAiModel(ref: AiModelRef): Promise<void> {
   if (!arc?.aiDeleteModel) return;
   const tier = normalizeModelRef(ref);
 
+  if (isAiDownloading(state) || state.downloadOperation) {
+    notifyAiAlert('Дождитесь окончания скачивания.', 'warning');
+    return;
+  }
+  if (state.busy) {
+    notifyAiAlert('Дождитесь окончания текущей операции.', 'warning');
+    return;
+  }
+
+  logAiModelClient('renderer: запрошено удаление', { tier });
   patchState({ busy: true });
   try {
     const next = (await arc.aiDeleteModel(tier)) as AiStatus;
     patchState({ status: next });
+    if (isCaptionModelRef(tier)) {
+      await patchAppPreferences({ aiAutoTagModelInstalled: false });
+    }
     notifyAiAlert('Модель удалена.', 'info');
     dispatchAiSetupChanged();
+  } catch (err) {
+    notifyAiAlert(err instanceof Error ? err.message : 'Не удалось удалить модель.', 'warning');
   } finally {
     patchState({ busy: false });
   }
@@ -992,14 +1120,23 @@ export async function testAiModel(ref: AiModelRef): Promise<void> {
   if (!arc?.aiTestModel) return;
   const tier = normalizeModelRef(ref);
 
-  patchState({ busy: true, testingTier: tier });
+  if (isAiDownloading(state) || state.downloadOperation) {
+    notifyAiAlert('Дождитесь окончания скачивания.', 'warning');
+    return;
+  }
+  if (state.testingTier) {
+    notifyAiAlert('Проверка уже выполняется.', 'warning');
+    return;
+  }
+
+  patchState({ testingTier: tier });
   try {
     const res = await arc.aiTestModel(tier);
     notifyAiAlert(res.message, res.ok ? 'success' : 'danger');
   } catch (err) {
     notifyAiAlert(err instanceof Error ? err.message : 'Не удалось проверить модель.', 'danger');
   } finally {
-    patchState({ busy: false, testingTier: null });
+    patchState({ testingTier: null });
   }
 }
 
@@ -1099,6 +1236,15 @@ export async function updateAiModel(ref: AiModelRef): Promise<void> {
   if (!arc?.aiUpdateModel) return;
   const tier = normalizeModelRef(ref);
 
+  if (state.testingTier) {
+    notifyAiAlert('Дождитесь окончания проверки модели.', 'warning');
+    return;
+  }
+  if (isAiDownloading(state) || state.downloadOperation) {
+    notifyAiAlert('Дождитесь окончания скачивания.', 'warning');
+    return;
+  }
+
   patchState({
     busy: true,
     downloadTier: tier,
@@ -1115,7 +1261,6 @@ export async function updateAiModel(ref: AiModelRef): Promise<void> {
       if (!runtimeRes.ok) {
         res = runtimeRes;
       } else {
-        patchState({ downloadPhase: 'model', downloadPercent: 0 });
         const updateRes = await arc.aiUpdateModel(tier);
         res = updateRes.ok ? { ok: true } : { ok: false, error: updateRes.error };
       }
@@ -1125,7 +1270,9 @@ export async function updateAiModel(ref: AiModelRef): Promise<void> {
     }
 
     if (!res.ok) {
-      notifyAiAlert(res.error || 'Не удалось обновить модель.', 'warning');
+      if (!isBenignDownloadError(res.error)) {
+        notifyAiAlert(res.error || 'Не удалось обновить модель.', 'warning');
+      }
     } else {
       patchState({
         ...clearDownloadUiState()
@@ -1184,15 +1331,7 @@ export function isActiveModelInstalled(status: AiStatus | null): boolean {
 export function isCaptionModelInstalled(status: AiStatus | null): boolean {
   if (!status) return false;
   return Boolean(
-    status.models.find((m) => m.role === 'caption' || m.tier === 'heavy' || m.modelId === 'joycaption-beta-one')
-      ?.installed
-  );
-}
-
-export function isTaggerModelInstalled(status: AiStatus | null): boolean {
-  if (!status) return false;
-  return Boolean(
-    status.models.find((m) => m.role === 'tagger' || m.modelId === 'wd-swinv2-tagger-v3')?.installed
+    status.models.find((m) => m.role === 'caption' || m.modelId === 'joycaption-beta-one')?.installed
   );
 }
 

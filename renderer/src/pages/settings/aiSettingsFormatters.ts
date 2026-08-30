@@ -1,7 +1,15 @@
-import type { AiHardwareInfo, AiModelCardInfo, AiSearchModelId, AiStatus } from '../../services/aiTypes';
+import type { AiHardwareInfo, AiModelCardInfo, AiStatus } from '../../services/aiTypes';
 
 export const AI_INTRO_TEXT =
-  'AI в ARC работает локально и не отправляет материалы в облако. Поиск, описания и автотеги включаются независимо, а общие лимиты ресурсов помогают контролировать нагрузку на CPU, GPU и память.';
+  'AI работает локально. Модели сопоставляют запрос с карточками.';
+
+export const AUTO_TAG_INTRO_TEXT =
+  'Автотегирование анализирует изображение или кадры видео, сопоставляет результат с каталогом меток и при необходимости создаёт новые метки.';
+
+/** Текст карточки модели автотегов: только про метки, без размера и без связи с поиском. */
+export const AUTO_TAG_MODEL_DESCRIPTION =
+  'Анализирует изображение или кадры видео и предлагает метки из каталога. При необходимости создаёт новые метки.';
+
 export function formatRamGb(mb: number): string {
   if (mb >= 1024) {
     const gb = mb / 1024;
@@ -42,27 +50,42 @@ export function formatGpuLabel(hardware: AiHardwareInfo): string {
   return hardware.gpuName;
 }
 
-export type SearchLevelLabel = 'Лёгкая' | 'Средняя' | 'Тяжёлая';
+export type SearchLevelLabel = 'Лёгкая модель' | 'Средняя модель' | 'Тяжёлая модель';
 
 export function searchLevelShortLabel(level: 'light' | 'medium' | 'heavy' | undefined): SearchLevelLabel {
-  if (level === 'medium') return 'Средняя';
-  if (level === 'heavy') return 'Тяжёлая';
-  return 'Лёгкая';
+  if (level === 'medium') return 'Средняя модель';
+  if (level === 'heavy') return 'Тяжёлая модель';
+  return 'Лёгкая модель';
 }
 
-export function modelCardTitle(
+export function modelCardTitle(card: AiModelCardInfo): string {
+  return searchLevelShortLabel(card.searchLevel);
+}
+
+export function searchModelChipLabel(modelId: string): string {
+  if (modelId === 'qwen3-vl-embedding-2b') return 'Qwen3-VL-Embedding 2B';
+  if (modelId === 'qwen3-vl-embedding-8b') return 'Qwen3-VL-Embedding 8B';
+  return 'CLIP ViT-B/32';
+}
+
+/** Причина недоступности: GPU → VRAM → RAM (как пороги в hardware.ts). */
+export function searchModelUnavailableReason(
   card: AiModelCardInfo,
-  recommendedSearchModelId: AiSearchModelId | undefined
-): string {
-  const levelLabel = searchLevelShortLabel(card.searchLevel);
-  if (!card.supported) return `${levelLabel}. Режим недоступен`;
-  if (recommendedSearchModelId && card.modelId === recommendedSearchModelId) {
-    return `${levelLabel}. Рекомендуется`;
-  }
-  return levelLabel;
+  hardware: AiHardwareInfo
+): string | null {
+  if (card.supported) return null;
+  if (card.modelId === 'clip-vit-base-patch32') return null;
+
+  const needRam = card.modelId === 'qwen3-vl-embedding-8b' ? 12288 : 8192;
+  const needVram = card.modelId === 'qwen3-vl-embedding-8b' ? 10000 : 4000;
+
+  if (hardware.estimatedVramMb == null) return 'Нужен GPU';
+  if (hardware.estimatedVramMb < needVram) return 'Мало VRAM';
+  if (hardware.totalMemoryMb < needRam) return 'Мало RAM';
+  return 'Нужен GPU';
 }
 
-/** @deprecated Prefer searchLevelShortLabel / modelCardTitle with recommendedSearchModelId */
+/** @deprecated Prefer searchLevelShortLabel / modelCardTitle */
 export function tierShortLabel(tier: 'light' | 'heavy'): 'Лёгкая' | 'Тяжёлая' {
   return tier === 'heavy' ? 'Тяжёлая' : 'Лёгкая';
 }

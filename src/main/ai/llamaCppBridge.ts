@@ -325,7 +325,7 @@ async function spawnLlamaServerProcess(
   const binary = resolveLlamaServerBinary(userDataPath, preferCuda);
   if (!binary) {
     throw new Error(
-      'llama-server не найден. Переустановите тяжёлую модель в настройках AI Поиска.'
+      'llama-server не найден. Переустановите модель в Настройки → Умный поиск.'
     );
   }
 
