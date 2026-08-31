@@ -224,9 +224,13 @@ function AiModelCard({
     unavailable
   ]);
 
+  const searchSelected = selected && showRadio;
+
   return (
     <InfoSplitCard
       interactive={selectable && showRadio && !downloading && !unavailable}
+      active={searchSelected}
+      aria-current={searchSelected ? 'true' : undefined}
       disabled={disabled && !downloading}
       title={title}
       description={description}

@@ -17,6 +17,8 @@ import {
 import { getLibraryDb, openLibraryDb } from '../storage/db';
 import { ensureLibraryReady } from '../storage/libraryStorage';
 import { abortAiOp, beginAiOpAbort } from './aiOpAbort';
+import { shouldRegenerateSearchCaption } from './captionReuse';
+import { isIndexPauseError } from './indexPauseError';
 import {
   captionForHeavyIndex,
   embedHeavyHybridForIndex,
@@ -297,7 +299,15 @@ async function ensureWorkerReady(): Promise<boolean> {
   }
 }
 
-export async function indexCardById(cardId: string): Promise<boolean> {
+type IndexingLoopOptions = {
+  refreshCaptions?: boolean;
+  skipAutoTags?: boolean;
+};
+
+export async function indexCardById(
+  cardId: string,
+  options?: { refreshCaption?: boolean }
+): Promise<boolean> {
   const prefs = await readAppPreferences();
   const searchOn = prefs.aiSearchEnabled || prefs.aiSemanticSearchEnabled;
   if (!searchOn) {
@@ -328,39 +338,46 @@ export async function indexCardById(cardId: string): Promise<boolean> {
 
     let caption = '';
     if (buildSearchCaption) {
-      indexStage = 'captions';
-      if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) {
-        throw new Error('Модель описания (JoyCaption) не установлена');
-      }
-      const onHeavyStatus = (message: string) => {
-        logAiIndexer(message, { cardId });
-        heavyLoadProgress = Math.min(45, heavyLoadProgress + 2);
-        setCurrentCardProgress(heavyLoadProgress);
-      };
-      caption = await captionForHeavyIndex(imagePath, onHeavyStatus);
-      setCurrentCardProgress(48);
-
-      // Qwen hybrid: second JoyCaption pass extracts on-image UI text into ai_caption.
-      try {
-        logAiIndexer('Извлечение видимого текста', { cardId, searchModelId });
-        const onVisibleStatus = (message: string) => {
+      const existingCaption = (getCardAiCaption(db, cardId) ?? '').trim();
+      if (!shouldRegenerateSearchCaption(existingCaption, options?.refreshCaption === true)) {
+        caption = existingCaption;
+        logAiIndexer('Описание уже есть — JoyCaption пропускаем', { cardId });
+        setCurrentCardProgress(55);
+      } else {
+        indexStage = 'captions';
+        if (!(await isModelInstalled(app.getPath('userData'), 'caption'))) {
+          throw new Error('Модель описания (JoyCaption) не установлена');
+        }
+        const onHeavyStatus = (message: string) => {
           logAiIndexer(message, { cardId });
-          heavyLoadProgress = Math.min(54, Math.max(heavyLoadProgress, 48) + 1);
+          heavyLoadProgress = Math.min(45, heavyLoadProgress + 2);
           setCurrentCardProgress(heavyLoadProgress);
         };
-        const visibleText = await extractVisibleTextFromImage(imagePath, onVisibleStatus);
-        caption = mergeCaptionWithVisibleText(caption, visibleText);
-      } catch (err) {
-        logAiIndexerWarn('Не удалось извлечь видимый текст — продолжаем с описанием', {
-          cardId,
-          error: err instanceof Error ? err.message : String(err)
-        });
-      }
+        caption = await captionForHeavyIndex(imagePath, onHeavyStatus);
+        setCurrentCardProgress(48);
 
-      setCurrentCardProgress(55);
-      const liveDb = requireLibraryDb(opened.root);
-      upsertCardAiCaption(liveDb, cardId, caption);
-      upsertCardAiCaptionFts(liveDb, cardId, caption);
+        // Qwen hybrid: second JoyCaption pass extracts on-image UI text into ai_caption.
+        try {
+          logAiIndexer('Извлечение видимого текста', { cardId, searchModelId });
+          const onVisibleStatus = (message: string) => {
+            logAiIndexer(message, { cardId });
+            heavyLoadProgress = Math.min(54, Math.max(heavyLoadProgress, 48) + 1);
+            setCurrentCardProgress(heavyLoadProgress);
+          };
+          const visibleText = await extractVisibleTextFromImage(imagePath, onVisibleStatus);
+          caption = mergeCaptionWithVisibleText(caption, visibleText);
+        } catch (err) {
+          logAiIndexerWarn('Не удалось извлечь видимый текст — продолжаем с описанием', {
+            cardId,
+            error: err instanceof Error ? err.message : String(err)
+          });
+        }
+
+        setCurrentCardProgress(55);
+        const liveDb = requireLibraryDb(opened.root);
+        upsertCardAiCaption(liveDb, cardId, caption);
+        upsertCardAiCaptionFts(liveDb, cardId, caption);
+      }
     } else {
       caption = getCardAiCaption(db, cardId) ?? '';
     }
@@ -405,7 +422,10 @@ export async function indexCardById(cardId: string): Promise<boolean> {
   }
 }
 
-async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
+async function runIndexingLoop(
+  extraCardIds: string[] = [],
+  options?: IndexingLoopOptions
+): Promise<void> {
   if (loopPromise) {
     if (extraCardIds.length > 0) {
       pendingCardIds.push(...extraCardIds);
@@ -416,6 +436,9 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
   if (extraCardIds.length > 0) {
     pendingCardIds.push(...extraCardIds);
   }
+
+  const refreshCaptions = options?.refreshCaptions === true;
+  const skipAutoTags = options?.skipAutoTags === true;
 
   loopPromise = (async () => {
     if (indexRunning) return;
@@ -450,7 +473,9 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
         modelId,
         indexed,
         total,
-        searchCaption: needsSearchCaption(modelId)
+        searchCaption: needsSearchCaption(modelId),
+        refreshCaptions,
+        skipAutoTags
       });
       broadcastProgress(indexed, total);
 
@@ -469,24 +494,29 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
           lastError = null;
           broadcastProgress(indexed, total, true);
           beginAiOpAbort();
-          const ok = await indexCardById(cardId);
+          const ok = await indexCardById(cardId, { refreshCaption: refreshCaptions });
           if (ok) {
             didWork = true;
-            try {
-              const { applyAutoTagsAfterIndex } = await import('./suggestTags');
-              const auto = await applyAutoTagsAfterIndex(cardId);
-              if (auto && (auto.added > 0 || auto.created > 0)) {
-                indexStage = 'tags';
-                autoTagCards += auto.added > 0 ? 1 : 0;
-                autoTagTags += auto.added;
-                autoTagCreated += auto.created;
+            if (!skipAutoTags) {
+              try {
+                const { applyAutoTagsAfterIndex } = await import('./suggestTags');
+                const auto = await applyAutoTagsAfterIndex(cardId);
+                if (auto && (auto.added > 0 || auto.created > 0)) {
+                  indexStage = 'tags';
+                  autoTagCards += auto.added > 0 ? 1 : 0;
+                  autoTagTags += auto.added;
+                  autoTagCreated += auto.created;
+                }
+              } catch (err) {
+                logAiIndexerWarn('Автотегирование после индексации не выполнено', {
+                  cardId,
+                  error: err instanceof Error ? err.message : String(err)
+                });
               }
-            } catch (err) {
-              logAiIndexerWarn('Автотегирование после индексации не выполнено', {
-                cardId,
-                error: err instanceof Error ? err.message : String(err)
-              });
             }
+          } else if (isIndexPauseError(lastError)) {
+            pendingCardIds.unshift(cardId);
+            logAiIndexer('Карточка отложена — индексация приостановлена', { cardId });
           } else {
             skippedCardIds.add(cardId);
             logAiIndexerWarn('Карточка пропущена до конца сессии индексации', {
@@ -528,7 +558,7 @@ async function runIndexingLoop(extraCardIds: string[] = []): Promise<void> {
       broadcastProgress(lastIndexed, lastTotal, false);
       loopPromise = null;
       if (pendingCardIds.length > 0 && !indexPaused) {
-        void runIndexingLoop();
+        void runIndexingLoop([], { refreshCaptions, skipAutoTags });
       }
     }
   })();
@@ -563,8 +593,9 @@ export async function runFullReindex(): Promise<void> {
   const modelId = sanitizeSearchModelId(prefs.aiSearchModelId ?? activeSearchModelId);
   deleteEmbeddingsForModel(db, modelId);
   clearAiSearchCache();
+  logAiIndexer('Полная переиндексация активной модели', { modelId });
 
-  await runIndexingLoop();
+  await runIndexingLoop([], { refreshCaptions: true, skipAutoTags: true });
 }
 
 export function pauseIndexing(): void {

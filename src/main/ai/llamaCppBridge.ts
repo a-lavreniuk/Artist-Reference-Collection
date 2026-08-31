@@ -21,6 +21,7 @@ import {
   llamaFitTargetMib
 } from './llamaServerLimits';
 import { currentAiOpSignal } from './aiOpAbort';
+import { INDEX_PAUSE_ERROR, isIndexPauseError } from './indexPauseError';
 import { existsSync } from 'fs';
 import path from 'path';
 
@@ -67,6 +68,8 @@ let ensureInflight: { logicalKey: string; promise: Promise<ServerSession> } | nu
  * instead of restarting CUDA on every card.
  */
 const cudaLoadFailedLogicalKeys = new Set<string>();
+const cudaFailStreak = new Map<string, number>();
+const CUDA_FAIL_GIVE_UP = 2;
 
 const JOYCAPTION_INDEX_PROMPT =
   'Напиши описательную подпись к этому изображению на русском языке. Опиши предмет, цвета, композицию, стиль и настроение одним связным абзацем.';
@@ -112,6 +115,11 @@ export function buildLlamaServerConfigKey(
   gpuLayers: number
 ): string {
   return `${buildLlamaServerLogicalKey(weightsPath, mmprojPath, mode)}::${gpuLayers}`;
+}
+
+/** Session key must match spawn: any GPU offload is 999, CPU is 0. gpuLayers=128 must not restart the server. */
+export function llamaServerOffloadKey(wantGpu: boolean): number {
+  return wantGpu ? 999 : 0;
 }
 
 export function isLlamaModelLoadingResponse(status: number, body: string): boolean {
@@ -345,8 +353,7 @@ async function spawnLlamaServerProcess(
     weightsPath,
     mmprojPath,
     mode,
-    // Session key: treat fit/auto as 999 so we don't thrash restarts.
-    wantGpuLayers ? 999 : 0
+    llamaServerOffloadKey(wantGpuLayers)
   );
   const port = await getFreePort();
   logAiIndexer('Запуск llama-server', {
@@ -483,10 +490,13 @@ export async function ensureLlamaServer(
   const logicalKey = buildLlamaServerLogicalKey(weightsPath, mmprojPath, mode);
   const wantGpu =
     (resources.gpuLayers ?? 0) > 0 && !cudaLoadFailedLogicalKeys.has(logicalKey);
-  // Match spawnLlamaServerProcess: modest positive gpuLayers → full offload (999).
-  const effectiveGpuLayers = wantGpu ? ((resources.gpuLayers ?? 0) < 99 ? 999 : (resources.gpuLayers ?? 0)) : 0;
-  const preferredKey = buildLlamaServerConfigKey(weightsPath, mmprojPath, mode, effectiveGpuLayers);
-  const cpuKey = buildLlamaServerConfigKey(weightsPath, mmprojPath, mode, 0);
+  const preferredKey = buildLlamaServerConfigKey(
+    weightsPath,
+    mmprojPath,
+    mode,
+    llamaServerOffloadKey(wantGpu)
+  );
+  const cpuKey = buildLlamaServerConfigKey(weightsPath, mmprojPath, mode, llamaServerOffloadKey(false));
 
   if (isServerAlive(serverSession)) {
     if (serverConfigKey === preferredKey) return serverSession;
@@ -522,14 +532,21 @@ export async function ensureLlamaServer(
         !wantGpu,
         hooks
       );
-      if (wantGpu) cudaLoadFailedLogicalKeys.delete(logicalKey);
+      if (wantGpu) {
+        cudaLoadFailedLogicalKeys.delete(logicalKey);
+        cudaFailStreak.delete(logicalKey);
+      }
       return session;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (wantGpu && isRecoverableCudaLoadFailure(message)) {
-        logAiIndexer('CUDA load failed, falling back to CPU', { error: message });
+        const streak = (cudaFailStreak.get(logicalKey) ?? 0) + 1;
+        cudaFailStreak.set(logicalKey, streak);
+        if (streak >= CUDA_FAIL_GIVE_UP) {
+          cudaLoadFailedLogicalKeys.add(logicalKey);
+        }
+        logAiIndexer('CUDA load failed, falling back to CPU', { error: message, streak });
         hooks?.onStatus?.('CUDA недоступна, запуск на CPU…');
-        cudaLoadFailedLogicalKeys.add(logicalKey);
         await shutdownLlamaServer();
         return spawnLlamaServerProcess(
           userDataPath,
@@ -652,13 +669,13 @@ async function fetchLlamaEndpoint(
 
   while (networkAttempt < LLAMA_NETWORK_RETRY_ATTEMPTS) {
     if (currentAiOpSignal()?.aborted) {
-      throw new Error('Индексация приостановлена');
+      throw new Error(INDEX_PAUSE_ERROR);
     }
     networkAttempt += 1;
     try {
       for (let attempt = 1; attempt <= MODEL_LOADING_RETRY_ATTEMPTS; attempt++) {
         if (currentAiOpSignal()?.aborted) {
-          throw new Error('Индексация приостановлена');
+          throw new Error(INDEX_PAUSE_ERROR);
         }
         const res = await undiciFetch(url, {
           method: init.method,
@@ -680,8 +697,8 @@ async function fetchLlamaEndpoint(
       }
       throw new Error(`${label} failed: ${lastStatus} ${lastBody.slice(0, 200)}`);
     } catch (err) {
-      if (currentAiOpSignal()?.aborted || (err instanceof Error && err.message === 'Индексация приостановлена')) {
-        throw new Error('Индексация приостановлена');
+      if (currentAiOpSignal()?.aborted || (err instanceof Error && isIndexPauseError(err.message))) {
+        throw new Error(INDEX_PAUSE_ERROR);
       }
       if (
         isTransientLlamaFetchError(err) &&

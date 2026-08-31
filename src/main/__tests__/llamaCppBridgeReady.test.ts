@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLlamaServerConfigKey,
   buildLlamaServerLogicalKey,
+  llamaServerOffloadKey,
   buildMultimodalEmbeddingInput,
   extractEmbeddingVector,
   formatLlamaServerExitError,
@@ -23,6 +24,14 @@ describe('llama server readiness helpers', () => {
       '/m.gguf::/mm.gguf::embed'
     );
     expect(buildLlamaServerConfigKey('/m.gguf', null, 'chat', 20)).toBe('/m.gguf::::chat::20');
+  });
+
+  it('uses the same offload key for gpuLayers 128 and spawn (999)', () => {
+    expect(llamaServerOffloadKey(true)).toBe(999);
+    expect(llamaServerOffloadKey(false)).toBe(0);
+    expect(buildLlamaServerConfigKey('/m.gguf', '/mm.gguf', 'chat', llamaServerOffloadKey(true))).toBe(
+      buildLlamaServerConfigKey('/m.gguf', '/mm.gguf', 'chat', 999)
+    );
   });
 
   it('formats CUDA vs CPU crash messages differently', () => {

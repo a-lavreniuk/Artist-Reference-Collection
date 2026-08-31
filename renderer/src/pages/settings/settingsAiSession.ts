@@ -1151,7 +1151,7 @@ export async function setActiveAiModel(ref: AiModelRef): Promise<void> {
     patchState({ status: next });
     dispatchAiSetupChanged();
     if (previous && next.activeSearchModelId && previous !== next.activeSearchModelId) {
-      notifyAiAlert('Модель переключена. Запущена переиндексация библиотеки.', 'info');
+      notifyAiAlert('Модель переключена. Индексация продолжится для карточек без индекса этой модели.', 'info');
     }
   } finally {
     patchState({ busy: false });
@@ -1277,7 +1277,7 @@ export async function updateAiModel(ref: AiModelRef): Promise<void> {
       patchState({
         ...clearDownloadUiState()
       });
-      notifyAiAlert('Модель обновлена. Запущена переиндексация.', 'success');
+      notifyAiAlert('Модель обновлена. Индекс библиотеки сохранён.', 'success');
     }
   } finally {
     patchState({

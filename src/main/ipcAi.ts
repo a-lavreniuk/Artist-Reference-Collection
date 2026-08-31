@@ -21,7 +21,6 @@ import {
   resetWorkerReadyState,
   runFullReindex,
   scheduleIdleIndexing,
-  scheduleReindexForActiveModel,
   setActiveSearchModel,
   waitForIndexingLoopIdle
 } from './ai/indexer';
@@ -89,11 +88,7 @@ import { MODEL_CATALOG, MODEL_ROLES, SEARCH_MODEL_IDS, SEARCH_ROLE_BY_ID, usesLl
 import { readLibraryRootFromDisk } from './libraryRootConfig';
 import { getCardByIdFromDb, rowToCardRecord } from './storage/libraryStorage';
 import { ensureLibraryReady } from './storage/libraryStorage';
-import {
-  countEmbeddingsForModel,
-  countHybridEmbeddingsForModel,
-  deleteEmbeddingsForModel
-} from './storage/cardEmbeddings';
+import { countEmbeddingsForModel, countHybridEmbeddingsForModel } from './storage/cardEmbeddings';
 import { openLibraryDb } from './storage/db';
 
 let ipcRegistered = false;
@@ -312,16 +307,18 @@ async function finalizeModelInstall(
   cursor = recordEnd;
 
   await progress.run(cursor, cursor + 12, async () => {
-    if (role !== 'caption') {
-      if (options?.setActiveSearch !== false && SEARCH_MODEL_IDS.includes(entry.id as SearchModelId)) {
-        await writeAppPreferences({
-          aiSearchModelId: entry.id as SearchModelId,
-          aiSearchEnabled: true,
-          aiSemanticSearchEnabled: true
-        });
-        setActiveSearchModel(entry.id as SearchModelId);
-      }
-    }
+    if (role === 'caption') return;
+    if (!SEARCH_MODEL_IDS.includes(entry.id as SearchModelId)) return;
+    if (options?.setActiveSearch === false) return;
+    const prefs = await readAppPreferences();
+    const hasActive = Boolean(prefs.aiSearchModelId);
+    if (hasActive && options?.setActiveSearch !== true) return;
+    await writeAppPreferences({
+      aiSearchModelId: entry.id as SearchModelId,
+      aiSearchEnabled: true,
+      aiSemanticSearchEnabled: true
+    });
+    setActiveSearchModel(entry.id as SearchModelId);
   });
   cursor += 12;
 
@@ -667,7 +664,6 @@ export function registerAiIpc(): void {
         }
         await finalizeModelInstall(role, userData, entry, entry.id, {
           withHybridClip: false,
-          setActiveSearch: role !== 'caption',
           onComplete: () => scheduleIdleIndexing()
         });
         if (role === 'caption') {
@@ -790,8 +786,6 @@ export function registerAiIpc(): void {
       throw new Error('Модель не установлена');
     }
     const modelId = MODEL_CATALOG[role].id as SearchModelId;
-    const prefs = await readAppPreferences();
-    const previous = prefs.aiSearchModelId;
     await writeAppPreferences({
       aiSearchModelId: modelId,
       aiSearchEnabled: true,
@@ -799,11 +793,7 @@ export function registerAiIpc(): void {
     });
     setActiveSearchModel(modelId);
     clearAiSearchCache();
-    if (previous !== modelId) {
-      scheduleReindexForActiveModel();
-    } else {
-      scheduleIdleIndexing();
-    }
+    scheduleIdleIndexing();
     return buildAiStatus();
   });
 
@@ -839,7 +829,6 @@ export function registerAiIpc(): void {
     const stillBusy = downloadBusyError();
     if (stillBusy) return stillBusy;
 
-    const oldModelId = manifest[role]?.modelId;
     const alreadyPaused = isIndexingPaused();
     cancelIdleIndexing();
     pauseIndexing();
@@ -892,15 +881,8 @@ export function registerAiIpc(): void {
 
       await finalizeModelInstall(role, userData, entry, entry.id, {
         onComplete: async () => {
-          const root = await readLibraryRootFromDisk();
-          if (root && oldModelId && oldModelId !== entry.id) {
-            await ensureLibraryReady(root);
-            const db = openLibraryDb(root);
-            deleteEmbeddingsForModel(db, oldModelId);
-          }
           clearAiSearchCache();
-          if (role !== 'caption') scheduleReindexForActiveModel();
-          else scheduleIdleIndexing();
+          scheduleIdleIndexing();
         }
       });
       if (role === 'caption') {
