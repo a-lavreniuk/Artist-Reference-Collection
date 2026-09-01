@@ -19,15 +19,22 @@ import {
   SYSTEM_FILENAME
 } from '../libraryFilenames';
 import {
-  cardDirAbs,
   cardJsonExistsSync,
+  cardTempAbs,
   copyOriginalToCard,
   deleteCardFolder,
+  ensureCardDir,
+  ensureCardMetaDir,
+  framesDirAbs,
+  framesRelPath,
   isPlainCardId,
   moveOriginalToCard,
   readCardJson,
+  thumbLAbs,
   thumbLRelPath,
+  thumbMAbs,
   thumbMRelPath,
+  thumbSAbs,
   thumbSRelPath,
   writeCardJson,
   CARDS_DIR
@@ -41,6 +48,7 @@ import {
   withLibraryDbReadonly
 } from './db';
 import { ensureLibraryMetaDirLayout } from './libraryMetaLayout';
+import { ensureCardMetaLayout, relocateCardFolderToMetaLayout } from './cardMetaLayout';
 import { pruneLegacyTimestampedMetadataBackups } from './metadataBackup';
 import { isExpiredDeletedAt } from './trashRetention';
 import { removeEmptyLegacyMediaDir } from './libraryCleanup';
@@ -456,6 +464,11 @@ async function ensureLibraryReadyInner(root: string): Promise<Database.Database>
   }
 
   await ensureLibraryMetaDirLayout(root);
+  try {
+    await ensureCardMetaLayout(root);
+  } catch (err) {
+    console.error('[ARC] card Meta layout migrate:', err);
+  }
 
   try {
     const { migrateChildCatalogsToShared } = await import('./migrateChildCatalogsToShared');
@@ -562,12 +575,12 @@ export async function importMediaFile(
   const fileCreatedAt =
     Number.isFinite(birthMs) && birthMs > 0 ? new Date(birthMs).toISOString() : st.mtime.toISOString();
   const cardId = id;
-  const dir = cardDirAbs(root, cardId);
-  await mkdir(dir, { recursive: true });
+  await ensureCardDir(root, cardId);
+  await ensureCardMetaDir(root, cardId);
 
-  const thumbSAbs = path.join(dir, 'thumb_s.webp');
-  const thumbMAbs = path.join(dir, 'thumb_m.webp');
-  const thumbLAbs = path.join(dir, 'thumb_l.webp');
+  const sAbs = thumbSAbs(root, cardId);
+  const mAbs = thumbMAbs(root, cardId);
+  const lAbs = thumbLAbs(root, cardId);
 
   try {
     const { originalAbs, originalRel } = await copyOriginalToCard(root, cardId, resolved, ext);
@@ -581,17 +594,17 @@ export async function importMediaFile(
     let videoHeight: number | undefined;
 
     if (type === 'image') {
-      const thumbRes = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
+      const thumbRes = await generateImageThumbnails(originalAbs, sAbs, mAbs, lAbs, true);
       dominantColorHex = thumbRes.dominantColorHex;
       paletteJson = JSON.stringify(thumbRes.palette);
       width = thumbRes.width || undefined;
       height = thumbRes.height || undefined;
       phash = thumbRes.phash;
     } else {
-      const frameTmp = path.join(dir, '_frame.jpg');
+      const frameTmp = cardTempAbs(root, cardId, '_frame.jpg');
       try {
         await extractVideoFrameToJpeg(originalAbs, frameTmp);
-        const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
+        const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, sAbs, mAbs, lAbs);
         dominantColorHex = thumbRes.dominantColorHex;
         paletteJson = JSON.stringify(thumbRes.palette);
         width = thumbRes.width || undefined;
@@ -1256,12 +1269,13 @@ export async function importExistingCardFolder(
   const ext = cardJson.format
     ? `.${cardJson.format}`
     : path.extname(cardJson.originalFileName);
+  await relocateCardFolderToMetaLayout(root, cardId);
   const originalRel =
     sourceRow?.originalRel ??
     `cards/${cardId}/original${ext.startsWith('.') ? ext : `.${ext}`}`;
-  const thumbS = sourceRow?.thumbSRel ?? thumbSRelPath(cardId);
-  const thumbM = sourceRow?.thumbMRel ?? thumbMRelPath(cardId);
-  const thumbL = sourceRow?.thumbLRel ?? thumbLRelPath(cardId);
+  const thumbS = thumbSRelPath(cardId);
+  const thumbM = thumbMRelPath(cardId);
+  const thumbL = thumbLRelPath(cardId);
 
   db.prepare(
     `INSERT INTO cards (
@@ -2034,18 +2048,18 @@ export async function setVideoPreviewFrame(
     }
   }
 
-  const dir = cardDirAbs(root, cardId);
+  await ensureCardMetaDir(root, cardId);
   const originalAbs = path.join(root, row.originalRel.replace(/\//g, path.sep));
-  const thumbSAbs = path.join(dir, 'thumb_s.webp');
-  const thumbMAbs = path.join(dir, 'thumb_m.webp');
-  const thumbLAbs = path.join(dir, 'thumb_l.webp');
-  const frameTmp = path.join(dir, '_preview_frame.jpg');
+  const sAbs = thumbSAbs(root, cardId);
+  const mAbs = thumbMAbs(root, cardId);
+  const lAbs = thumbLAbs(root, cardId);
+  const frameTmp = cardTempAbs(root, cardId, '_preview_frame.jpg');
 
   try {
     await extractVideoFrameToJpeg(originalAbs, frameTmp, {
       atMs: clampedMs > 0 ? clampedMs : undefined
     });
-    const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
+    const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, sAbs, mAbs, lAbs);
     const modified = new Date().toISOString();
 
     cardJson.previewFrameMs = clampedMs;
@@ -2113,15 +2127,14 @@ export async function saveVideoFrameToCardFolder(
   if (!row?.originalRel) throw new Error('Карточка не найдена');
 
   const { clampedMs, originalAbs } = await clampVideoFrameMs(root, cardId, cardJson, row, frameMs);
-  const framesDir = path.join(cardDirAbs(root, cardId), 'frames');
+  const framesDir = framesDirAbs(root, cardId);
   await mkdir(framesDir, { recursive: true });
   const fileName = `frame-${clampedMs}.png`;
   const outputAbs = path.join(framesDir, fileName);
   await extractVideoFrameToPng(originalAbs, outputAbs, {
     atMs: clampedMs > 0 ? clampedMs : undefined
   });
-  const relativePath = `${CARDS_DIR}/${cardId}/frames/${fileName}`;
-  return { relativePath };
+  return { relativePath: framesRelPath(cardId, fileName) };
 }
 
 export async function copyVideoFrameToClipboard(
@@ -2138,7 +2151,8 @@ export async function copyVideoFrameToClipboard(
   if (!row?.originalRel) throw new Error('Карточка не найдена');
 
   const { clampedMs, originalAbs } = await clampVideoFrameMs(root, cardId, cardJson, row, frameMs);
-  const frameTmp = path.join(cardDirAbs(root, cardId), `_clipboard_frame_${process.pid}.png`);
+  await ensureCardMetaDir(root, cardId);
+  const frameTmp = cardTempAbs(root, cardId, `_clipboard_frame_${process.pid}.png`);
   try {
     await extractVideoFrameToPng(originalAbs, frameTmp, {
       atMs: clampedMs > 0 ? clampedMs : undefined
@@ -2166,7 +2180,6 @@ export async function replaceCardOriginalFromFile(
 
   const resolved = path.resolve(sourceAbs);
   const ext = path.extname(resolved);
-  const dir = cardDirAbs(root, cardId);
 
   const row = db.prepare('SELECT original_rel FROM cards WHERE id = ?').get(cardId) as
     | { original_rel: string }
@@ -2180,10 +2193,11 @@ export async function replaceCardOriginalFromFile(
     }
   }
 
-  const thumbSAbs = path.join(dir, 'thumb_s.webp');
-  const thumbMAbs = path.join(dir, 'thumb_m.webp');
-  const thumbLAbs = path.join(dir, 'thumb_l.webp');
-  for (const thumb of [thumbSAbs, thumbMAbs, thumbLAbs]) {
+  await ensureCardMetaDir(root, cardId);
+  const sAbs = thumbSAbs(root, cardId);
+  const mAbs = thumbMAbs(root, cardId);
+  const lAbs = thumbLAbs(root, cardId);
+  for (const thumb of [sAbs, mAbs, lAbs]) {
     try {
       await unlink(thumb);
     } catch {
@@ -2193,7 +2207,7 @@ export async function replaceCardOriginalFromFile(
 
   const st = await stat(resolved);
   const { originalAbs, originalRel } = await copyOriginalToCard(root, cardId, resolved, ext);
-  const thumbRes = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
+  const thumbRes = await generateImageThumbnails(originalAbs, sAbs, mAbs, lAbs, true);
 
   const modified = new Date().toISOString();
   cardJson.format = ext.slice(1).toLowerCase();

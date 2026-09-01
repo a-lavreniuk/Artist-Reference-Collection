@@ -47,7 +47,8 @@ export function cardThumbRel(
 }
 
 /** Совпадает с main/toFileUrlHelper — URL для индексных путей без IPC. */
-const LIBRARY_CARD_MEDIA_REL = /^cards\/[^/]+\/(?:thumb_[sml]|original)\.[a-z0-9]+$/i;
+const LIBRARY_CARD_MEDIA_REL =
+  /^cards\/[^/]+\/(?:original\.[a-z0-9]+|(?:Meta\/)?thumb_[sml]\.[a-z0-9]+)$/i;
 
 /** LRU-кэш URL превью; верхняя граница ~2× лимита карточек в памяти галереи. */
 const MAX_MEDIA_URL_CACHE_ENTRIES = 1024;

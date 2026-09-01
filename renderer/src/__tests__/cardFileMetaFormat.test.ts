@@ -9,7 +9,7 @@ describe('buildCardInfoSections', () => {
       type: 'image',
       addedAt: '2026-01-01T00:00:00.000Z',
       originalRelativePath: 'cards/1/original.jpg',
-      thumbRelativePath: 'cards/1/thumb_s.webp',
+      thumbRelativePath: 'cards/1/Meta/thumb_s.webp',
       tagIds: [],
       collectionIds: [],
       format: 'jpg',
@@ -38,7 +38,7 @@ describe('buildCardInfoSections', () => {
       type: 'image',
       addedAt: '2026-01-01T00:00:00.000Z',
       originalRelativePath: 'cards/1/original.jpg',
-      thumbRelativePath: 'cards/1/thumb_s.webp',
+      thumbRelativePath: 'cards/1/Meta/thumb_s.webp',
       tagIds: [],
       collectionIds: [],
       libraryName: 'Референсы'

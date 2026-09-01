@@ -8,7 +8,7 @@ function videoCard(format = 'mp4'): CardRecord {
     type: 'video',
     addedAt: '2026-01-01T00:00:00.000Z',
     originalRelativePath: 'cards/v1/original.mp4',
-    thumbRelativePath: 'cards/v1/thumb_s.webp',
+    thumbRelativePath: 'cards/v1/Meta/thumb_s.webp',
     tagIds: [],
     collectionIds: [],
     format

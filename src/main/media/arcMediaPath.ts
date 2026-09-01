@@ -1,9 +1,9 @@
 import path from 'path';
 import { isVideoExt } from '../ffmpeg';
 
-/** Пути из индекса БД (cards/…/thumb_* | original.*). */
+/** Пути из индекса БД (cards/…/original.* | cards/…/Meta/thumb_* | legacy thumb_*). */
 export const LIBRARY_CARD_MEDIA_REL =
-  /^cards\/[^/]+\/(?:thumb_[sml]|original)\.[a-z0-9]+$/i;
+  /^cards\/[^/]+\/(?:original\.[a-z0-9]+|(?:Meta\/)?thumb_[sml]\.[a-z0-9]+)$/i;
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif']);
 

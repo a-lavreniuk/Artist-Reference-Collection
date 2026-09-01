@@ -87,7 +87,7 @@ describe.skipIf(!sqliteOk)('collection parent_id schema', () => {
 
       db.prepare(
         `INSERT INTO cards (id, type, added_at, original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, is_deleted)
-         VALUES ('card-1', 'image', ?, 'cards/card-1/original.jpg', 'cards/card-1/thumb_s.webp', 'cards/card-1/thumb_m.webp', 'cards/card-1/thumb_l.webp', 0)`
+         VALUES ('card-1', 'image', ?, 'cards/card-1/original.jpg', 'cards/card-1/Meta/thumb_s.webp', 'cards/card-1/Meta/thumb_m.webp', 'cards/card-1/Meta/thumb_l.webp', 0)`
       ).run(new Date().toISOString());
       db.prepare(`INSERT INTO card_collections (card_id, collection_id) VALUES ('card-1', 's1')`).run();
 

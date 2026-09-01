@@ -160,6 +160,8 @@ export type ArcSystemV1 = {
   duplicateSimilarityThresholdPct: number;
   /** Версия пайплайна thumb_s/thumb_m; см. THUMB_GENERATION_VERSION. */
   thumbGenerationVersion?: number;
+  /** 1 = служебные файлы карточки в cards/{id}/Meta/. */
+  cardMetaLayoutVersion?: number;
 };
 
 export type ArcMoodboardV1 = {

@@ -4,10 +4,15 @@ import { libraryMetaDirAbs, resolveLegacyMetadataAbsPath } from '../libraryFilen
 import {
   cardDirAbs,
   cardJsonExistsSync,
+  cardTempAbs,
+  ensureCardMetaDir,
   moveOriginalToCard,
   readCardJson,
+  thumbLAbs,
   thumbLRelPath,
+  thumbMAbs,
   thumbMRelPath,
+  thumbSAbs,
   thumbSRelPath,
   writeCardJson,
   CARDS_DIR
@@ -203,9 +208,10 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
 
     const dir = cardDirAbs(root, card.id);
     await mkdir(dir, { recursive: true });
-    const thumbSAbs = path.join(dir, 'thumb_s.webp');
-    const thumbMAbs = path.join(dir, 'thumb_m.webp');
-    const thumbLAbs = path.join(dir, 'thumb_l.webp');
+    await ensureCardMetaDir(root, card.id);
+    const sAbs = thumbSAbs(root, card.id);
+    const mAbs = thumbMAbs(root, card.id);
+    const lAbs = thumbLAbs(root, card.id);
 
     const { originalAbs, originalRel } = await moveOriginalToCard(root, card.id, origAbs, ext);
 
@@ -217,16 +223,16 @@ export async function migrateLegacyLibrary(root: string, onProgress?: MigrationP
     let videoHeight: number | undefined;
 
     if (card.type === 'image' || isImageExt(ext)) {
-      const res = await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, true);
+      const res = await generateImageThumbnails(originalAbs, sAbs, mAbs, lAbs, true);
       dominantColorHex = res.dominantColorHex;
       width = res.width || width;
       height = res.height || height;
       phash = res.phash;
     } else if (isVideoExt(ext)) {
-      const frameTmp = path.join(dir, '_frame.jpg');
+      const frameTmp = cardTempAbs(root, card.id, '_frame.jpg');
       try {
         await extractVideoFrameToJpeg(originalAbs, frameTmp);
-        const res = await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
+        const res = await generateVideoThumbnailsFromFrame(frameTmp, sAbs, mAbs, lAbs);
         dominantColorHex = res.dominantColorHex;
         width = res.width || width;
         height = res.height || height;

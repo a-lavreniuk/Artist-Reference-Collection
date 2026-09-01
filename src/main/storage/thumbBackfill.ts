@@ -1,10 +1,14 @@
 import path from 'path';
 import { THUMB_GENERATION_VERSION } from '../shared/thumbConstants';
 import {
-  cardDirAbs,
+  cardTempAbs,
+  ensureCardMetaDir,
   readCardJson,
+  thumbLAbs,
   thumbLRelPath,
+  thumbMAbs,
   thumbMRelPath,
+  thumbSAbs,
   thumbSRelPath,
   writeCardJson
 } from './cardFolder';
@@ -51,25 +55,25 @@ export async function backfillThumbGeneration(
     if (isNavigationEpochStale(navSnap)) break;
     await waitForNavigationIpc();
 
-    const dir = cardDirAbs(root, row.id);
-    const thumbSAbs = path.join(dir, 'thumb_s.webp');
-    const thumbMAbs = path.join(dir, 'thumb_m.webp');
-    const thumbLAbs = path.join(dir, 'thumb_l.webp');
+    await ensureCardMetaDir(root, row.id);
+    const sAbs = thumbSAbs(root, row.id);
+    const mAbs = thumbMAbs(root, row.id);
+    const lAbs = thumbLAbs(root, row.id);
     const originalAbs = path.join(root, row.original_rel.replace(/\//g, path.sep));
 
     try {
       if (row.type === 'image') {
-        await generateImageThumbnails(originalAbs, thumbSAbs, thumbMAbs, thumbLAbs, false);
+        await generateImageThumbnails(originalAbs, sAbs, mAbs, lAbs, false);
       } else {
         const cardJson = await readCardJson(root, row.id);
         const previewFrameMs =
           cardJson?.previewFrameMs && cardJson.previewFrameMs > 0 ? cardJson.previewFrameMs : undefined;
-        const frameTmp = path.join(dir, '_thumb_backfill_frame.jpg');
+        const frameTmp = cardTempAbs(root, row.id, '_thumb_backfill_frame.jpg');
         try {
           await extractVideoFrameToJpeg(originalAbs, frameTmp, {
             atMs: previewFrameMs
           });
-          const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, thumbSAbs, thumbMAbs, thumbLAbs);
+          const thumbRes = await generateVideoThumbnailsFromFrame(frameTmp, sAbs, mAbs, lAbs);
           if (cardJson && previewFrameMs != null) {
             cardJson.width = thumbRes.width || cardJson.width;
             cardJson.height = thumbRes.height || cardJson.height;

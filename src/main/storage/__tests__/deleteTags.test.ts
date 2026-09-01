@@ -76,7 +76,7 @@ function seedLibrary(cardTags: Record<string, string[]>): void {
     for (const tagId of tagIds) {
       db.prepare('INSERT INTO card_tags (card_id, tag_id) VALUES (?, ?)').run(cardId, tagId);
     }
-    const dir = path.join(LIB_PATH(), 'cards', cardId);
+    const dir = path.join(LIB_PATH(), 'cards', cardId, 'Meta');
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(
       path.join(dir, 'card.json'),
@@ -89,7 +89,7 @@ function seedLibrary(cardTags: Record<string, string[]>): void {
 }
 
 function readCardTagIds(cardId: string): string[] {
-  const raw = fs.readFileSync(path.join(LIB_PATH(), 'cards', cardId, 'card.json'), 'utf8');
+  const raw = fs.readFileSync(path.join(LIB_PATH(), 'cards', cardId, 'Meta', 'card.json'), 'utf8');
   return (JSON.parse(raw) as { tagIds: string[] }).tagIds;
 }
 

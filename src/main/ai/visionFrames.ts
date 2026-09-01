@@ -3,7 +3,7 @@ import { unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
 import { openLibraryDb } from '../storage/db';
-import { cardDirAbs, thumbLRelPath } from '../storage/cardFolder';
+import { cardTempAbs, ensureCardMetaDir, thumbLRelPath } from '../storage/cardFolder';
 import { extractVideoFrameToJpeg, probeVideoDurationMs } from '../ffmpeg';
 import { videoFrameOffsetsMs } from './suggestTagsCore';
 
@@ -46,13 +46,13 @@ export async function resolveVisionFrames(
     return { error: 'Доступно только для изображений и видео.' };
   }
 
-  const dir = cardDirAbs(libraryRoot, cardId);
+  await ensureCardMetaDir(libraryRoot, cardId);
   const tempPaths: string[] = [];
   const durationMs = await probeVideoDurationMs(originalAbs);
   const offsets = videoFrameOffsetsMs(durationMs);
 
   for (const atMs of offsets) {
-    const framePath = path.join(dir, `${tempPrefix}_${atMs}.jpg`);
+    const framePath = cardTempAbs(libraryRoot, cardId, `${tempPrefix}_${atMs}.jpg`);
     try {
       await extractVideoFrameToJpeg(originalAbs, framePath, { atMs });
       if (existsSync(framePath)) tempPaths.push(framePath);

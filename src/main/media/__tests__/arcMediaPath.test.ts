@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveMediaAbsFromParams } from '../arcMediaPath';
+import { LIBRARY_CARD_MEDIA_REL, resolveMediaAbsFromParams } from '../arcMediaPath';
+
+describe('LIBRARY_CARD_MEDIA_REL', () => {
+  it('matches original and Meta thumbs, plus legacy thumbs', () => {
+    expect(LIBRARY_CARD_MEDIA_REL.test('cards/abc/original.jpg')).toBe(true);
+    expect(LIBRARY_CARD_MEDIA_REL.test('cards/abc/Meta/thumb_s.webp')).toBe(true);
+    expect(LIBRARY_CARD_MEDIA_REL.test('cards/abc/Meta/thumb_m.webp')).toBe(true);
+    expect(LIBRARY_CARD_MEDIA_REL.test('cards/abc/Meta/thumb_l.webp')).toBe(true);
+    expect(LIBRARY_CARD_MEDIA_REL.test('cards/abc/thumb_s.webp')).toBe(true);
+    expect(LIBRARY_CARD_MEDIA_REL.test('cards/abc/Meta/card.json')).toBe(false);
+    expect(LIBRARY_CARD_MEDIA_REL.test('cards/abc/Meta/frames/frame-0.png')).toBe(false);
+  });
+});
 
 describe('resolveMediaAbsFromParams', () => {
   const libraryRoot = 'C:\\Library';
@@ -11,12 +23,12 @@ describe('resolveMediaAbsFromParams', () => {
   it('resolves library rel paths inside root', () => {
     const abs = resolveMediaAbsFromParams(
       libraryRoot,
-      'cards/abc/thumb_s.jpg',
+      'cards/abc/Meta/thumb_s.webp',
       null,
       staging
     );
     expect(abs).toBeTruthy();
-    expect(abs!.replace(/\\/g, '/')).toContain('cards/abc/thumb_s.jpg');
+    expect(abs!.replace(/\\/g, '/')).toContain('cards/abc/Meta/thumb_s.webp');
   });
 
   it('resolves staging token instead of raw abs', () => {
@@ -35,19 +47,19 @@ describe('resolveMediaAbsFromParams', () => {
     ]);
     const abs = resolveMediaAbsFromParams(
       'C:\\LibA',
-      'cards/xyz/thumb_s.jpg',
+      'cards/xyz/Meta/thumb_s.webp',
       null,
       staging,
       { libraryId: 'lib-b', rootsByLibraryId: roots }
     );
     expect(abs).toBeTruthy();
-    expect(abs!.replace(/\\/g, '/')).toContain('LibB/cards/xyz/thumb_s.jpg');
+    expect(abs!.replace(/\\/g, '/')).toContain('LibB/cards/xyz/Meta/thumb_s.webp');
   });
 
   it('rejects unknown library id in lib param', () => {
     const roots = new Map([['lib-a', 'C:\\LibA']]);
     expect(
-      resolveMediaAbsFromParams('C:\\LibA', 'cards/xyz/thumb_s.jpg', null, staging, {
+      resolveMediaAbsFromParams('C:\\LibA', 'cards/xyz/Meta/thumb_s.webp', null, staging, {
         libraryId: 'missing',
         rootsByLibraryId: roots
       })

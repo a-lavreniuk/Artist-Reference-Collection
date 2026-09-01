@@ -16,10 +16,10 @@ function cardStub(overrides: Partial<CardRecord> = {}): CardRecord {
     type: 'image',
     addedAt: '2026-01-01T00:00:00.000Z',
     originalRelativePath: 'cards/card-1/original.jpg',
-    thumbRelativePath: 'cards/card-1/thumb_s.webp',
-    thumbSRelativePath: 'cards/card-1/thumb_s.webp',
-    thumbMRelativePath: 'cards/card-1/thumb_m.webp',
-    thumbLRelativePath: 'cards/card-1/thumb_l.webp',
+    thumbRelativePath: 'cards/card-1/Meta/thumb_s.webp',
+    thumbSRelativePath: 'cards/card-1/Meta/thumb_s.webp',
+    thumbMRelativePath: 'cards/card-1/Meta/thumb_m.webp',
+    thumbLRelativePath: 'cards/card-1/Meta/thumb_l.webp',
     tagIds: [],
     collectionIds: [],
     ...overrides
@@ -47,11 +47,11 @@ describe('galleryMediaCache origin + sect', () => {
     const getOrigin = window.arc.getMediaServerOrigin as ReturnType<typeof vi.fn>;
     getOrigin.mockReturnValueOnce(null);
 
-    const before = buildLibraryMediaUrl('cards/card-1/thumb_m.webp', 'gallery');
+    const before = buildLibraryMediaUrl('cards/card-1/Meta/thumb_m.webp', 'gallery');
     expect(before).toContain('arc-media://localhost');
 
     getOrigin.mockReturnValue('http://127.0.0.1:12345');
-    const after = buildLibraryMediaUrl('cards/card-1/thumb_m.webp', 'gallery');
+    const after = buildLibraryMediaUrl('cards/card-1/Meta/thumb_m.webp', 'gallery');
     expect(after).toContain('http://127.0.0.1:12345');
     expect(after).not.toContain('arc-media://localhost');
   });

@@ -35,13 +35,17 @@ export async function readSystem(libraryRoot: string): Promise<ArcSystemV1> {
     const j = JSON.parse(raw) as Partial<ArcSystemV1>;
     const pct = j.duplicateSimilarityThresholdPct;
     const thumbGen = j.thumbGenerationVersion;
+    const metaLayout = j.cardMetaLayoutVersion;
     return {
       version: 1,
       schemaVersion: j.schemaVersion ?? STORAGE_SCHEMA_VERSION,
       appVersion: j.appVersion,
       duplicateSimilarityThresholdPct:
         typeof pct === 'number' && Number.isFinite(pct) ? Math.min(100, Math.max(50, pct)) : 85,
-      ...(typeof thumbGen === 'number' && Number.isFinite(thumbGen) ? { thumbGenerationVersion: thumbGen } : {})
+      ...(typeof thumbGen === 'number' && Number.isFinite(thumbGen) ? { thumbGenerationVersion: thumbGen } : {}),
+      ...(typeof metaLayout === 'number' && Number.isFinite(metaLayout)
+        ? { cardMetaLayoutVersion: metaLayout }
+        : {})
     };
   } catch {
     return defaultSystem();

@@ -73,9 +73,9 @@ async function seedCard(
     cardId,
     addedAt,
     `cards/${cardId}/original.jpg`,
-    `cards/${cardId}/thumb_s.webp`,
-    `cards/${cardId}/thumb_m.webp`,
-    `cards/${cardId}/thumb_l.webp`,
+    `cards/${cardId}/Meta/thumb_s.webp`,
+    `cards/${cardId}/Meta/thumb_m.webp`,
+    `cards/${cardId}/Meta/thumb_l.webp`,
     deleted ? 1 : 0,
     deletedAt
   );
