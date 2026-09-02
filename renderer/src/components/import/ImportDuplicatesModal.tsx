@@ -6,6 +6,8 @@ import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { cardPreviewRel, formatFileMeta } from '../duplicates/duplicateCompareUtils';
 import type { IncomingFileMeta } from '../duplicates/duplicateCompareTypes';
+import { bulkAddToCollection } from '../gallery/galleryBulkActions';
+import type { DuplicateResolveKind } from '../../import/importDuplicateCancelSummary';
 
 export type ImportDuplicateConflict = {
   path: string;
@@ -15,12 +17,10 @@ export type ImportDuplicateConflict = {
   existingCard: CardRecord | null;
 };
 
-import { bulkAddToCollection } from '../gallery/galleryBulkActions';
-
 type Props = {
   conflicts: ImportDuplicateConflict[];
   index: number;
-  onResolved: () => void;
+  onResolved: (kind: DuplicateResolveKind) => void;
   onClose: () => void;
   assignToCollectionId?: string;
 };
@@ -94,7 +94,7 @@ export default function ImportDuplicatesModal({
     try {
       await window.arc.replaceCardOriginal(conflict.existingCardId, conflict.path);
       await assignImported(conflict.existingCardId);
-      onResolved();
+      onResolved('replace');
     } finally {
       setBusy(false);
     }
@@ -102,7 +102,7 @@ export default function ImportDuplicatesModal({
 
   const handleKeepExisting = () => {
     if (busy) return;
-    void assignImported(conflict.existingCardId).finally(onResolved);
+    void assignImported(conflict.existingCardId).finally(() => onResolved('keep-existing'));
   };
 
   const handleKeepBoth = async () => {
@@ -114,8 +114,10 @@ export default function ImportDuplicatesModal({
       if (first?.ok) {
         await addSkippedDuplicatePair(conflict.existingCardId, first.row.id);
         await assignImported(first.row.id);
+        onResolved('keep-both');
+      } else {
+        onResolved('keep-existing');
       }
-      onResolved();
     } finally {
       setBusy(false);
     }
@@ -151,13 +153,13 @@ export default function ImportDuplicatesModal({
               <span className="arc-duplicates-import-modal__count">{conflicts.length}</span>
             </div>
             <p className="arc-duplicates-import-modal__subtitle">
-              При замене перезапишется исходный файл, настройки останутся без изменений
+              Закрытие окна пропустит оставшиеся конфликты. Уже добавленные файлы останутся в библиотеке
             </p>
           </div>
           <button
             type="button"
             className="arc-modal__close"
-            aria-label="Закрыть"
+            aria-label="Не добавлять оставшиеся"
             disabled={busy}
             onClick={() => onClose()}
           >
@@ -225,7 +227,7 @@ export default function ImportDuplicatesModal({
           </span>
           <div className="arc-modal__footer-right">
             <button type="button" className="btn btn-outline btn-ds" disabled={busy} onClick={() => onClose()}>
-              <span className="btn-ds__value">Отмена</span>
+              <span className="btn-ds__value">Не добавлять оставшиеся</span>
             </button>
           </div>
         </footer>

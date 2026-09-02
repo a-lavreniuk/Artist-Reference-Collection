@@ -27,6 +27,13 @@ import {
   SINGLE_FOLDER_IMPORT_PLAN
 } from '../../import/folderImportPlan';
 import { showAppNotification } from '../../services/notificationService';
+import {
+  applyDuplicateResolve,
+  duplicateCancelToastMessage,
+  emptyDuplicateSessionCounts,
+  summarizeDuplicateCancel,
+  type DuplicateResolveKind
+} from '../../import/importDuplicateCancelSummary';
 import SourceFilesModal from './SourceFilesModal';
 import ImportDuplicatesModal, { type ImportDuplicateConflict } from './ImportDuplicatesModal';
 import ImportFolderCollectionsModal, {
@@ -69,6 +76,19 @@ const SUPPRESSED_NATIVE_MEDIA_DRAG_ROOTS = [
   '.arc-card-detail-overlay',
   '.arc-gallery-collections-strip'
 ] as const;
+
+function notifyGalleryAfterImportUi(): void {
+  const fire = () => {
+    window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+  };
+  if (typeof requestAnimationFrame !== 'function') {
+    fire();
+    return;
+  }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(fire);
+  });
+}
 
 function isSuppressedNativeMediaDragTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -129,6 +149,9 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const cancelRequestedRef = useRef(false);
   const modalBlockingRef = useRef(false);
   const phaseRef = useRef<ImportPhase>('idle');
+  const duplicateSessionRef = useRef(emptyDuplicateSessionCounts());
+  const duplicateIndexRef = useRef(0);
+  const duplicateConflictsRef = useRef<ImportDuplicateConflict[]>([]);
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -275,7 +298,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
             n > 0 ? `Импорт отменён: добавлено ${n} ${word}` : 'Импорт отменён'
           );
           if (n > 0) {
-            window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+            notifyGalleryAfterImportUi();
             showAppNotification({
               message: `Добавлено ${n} ${word} до отмены`,
               variant: 'warning',
@@ -296,22 +319,16 @@ export default function ImportHost({ children }: { children: ReactNode }) {
 
         if (conflicts.length > 0) {
           setProgress(null);
+          duplicateSessionRef.current = {
+            ...emptyDuplicateSessionCounts(),
+            cleanAdded: successes.length
+          };
+          duplicateConflictsRef.current = conflicts;
+          duplicateIndexRef.current = 0;
           setDuplicateConflicts(conflicts);
           setDuplicateIndex(0);
           setDuplicateAssignCollectionId(assignCollectionIdRef.current ?? undefined);
           setPhase('duplicate-modal');
-
-          if (successes.length > 0) {
-            const n = successes.length;
-            const word = pluralFilesRu(n);
-            void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
-            window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
-            showAppNotification({
-              message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`,
-              variant: 'success',
-              prefKey: 'notifyFilesAdded'
-            });
-          }
           await waitForImportFlow();
           return;
         }
@@ -330,7 +347,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
             void window.arc.appendHistoryLine(`Импорт ${n} ${word}`);
           }
           if (n > 0) {
-            window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+            notifyGalleryAfterImportUi();
           }
         }
 
@@ -687,7 +704,10 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     void window.arc?.showMainWindowFromMenu?.();
   }, [emptyFolderName, phase]);
 
-  const closeDuplicateModal = useCallback(() => {
+  const resetDuplicateModal = useCallback(() => {
+    duplicateSessionRef.current = emptyDuplicateSessionCounts();
+    duplicateConflictsRef.current = [];
+    duplicateIndexRef.current = 0;
     setDuplicateConflicts([]);
     setDuplicateIndex(0);
     setDuplicateAssignCollectionId(undefined);
@@ -695,17 +715,50 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     resolveImportFlow();
   }, [resolveImportFlow]);
 
-  const onDuplicateResolved = useCallback(() => {
-    if (duplicateIndex + 1 < duplicateConflicts.length) {
-      setDuplicateIndex((i) => i + 1);
-    } else {
-      window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
-      setDuplicateConflicts([]);
-      setDuplicateIndex(0);
-      setPhase('idle');
-      resolveImportFlow();
-    }
-  }, [duplicateIndex, duplicateConflicts.length, resolveImportFlow]);
+  const notifyCleanImportSuccess = useCallback((n: number) => {
+    if (n <= 0) return;
+    const word = pluralFilesRu(n);
+    void window.arc?.appendHistoryLine(`Импорт ${n} ${word}`);
+    showAppNotification({
+      message: n === 1 ? 'Файл успешно добавлен' : `Добавлено ${n} ${word}`,
+      variant: 'success',
+      prefKey: 'notifyFilesAdded'
+    });
+  }, []);
+
+  const closeDuplicateModal = useCallback(() => {
+    const remaining = duplicateConflictsRef.current.length - duplicateIndexRef.current;
+    const { added, notAdded } = summarizeDuplicateCancel({
+      ...duplicateSessionRef.current,
+      remaining: Math.max(0, remaining)
+    });
+    const message = duplicateCancelToastMessage(added, notAdded);
+    void window.arc?.appendHistoryLine(message);
+    showAppNotification({
+      message,
+      variant: 'warning',
+      prefKey: 'notifyFilesAdded'
+    });
+    resetDuplicateModal();
+    if (added > 0) notifyGalleryAfterImportUi();
+  }, [resetDuplicateModal]);
+
+  const onDuplicateResolved = useCallback(
+    (kind: DuplicateResolveKind) => {
+      applyDuplicateResolve(duplicateSessionRef.current, kind);
+      const nextIndex = duplicateIndexRef.current + 1;
+      if (nextIndex < duplicateConflictsRef.current.length) {
+        duplicateIndexRef.current = nextIndex;
+        setDuplicateIndex(nextIndex);
+        return;
+      }
+      const cleanAdded = duplicateSessionRef.current.cleanAdded;
+      resetDuplicateModal();
+      notifyCleanImportSuccess(cleanAdded);
+      notifyGalleryAfterImportUi();
+    },
+    [notifyCleanImportSuccess, resetDuplicateModal]
+  );
 
   const clearFileDrag = useCallback(() => {
     isDraggingFilesRef.current = false;
@@ -858,7 +911,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         /* ignore single delete errors */
       }
     }
-    window.dispatchEvent(new Event(ARC_CARDS_CHANGED_EVENT));
+    notifyGalleryAfterImportUi();
   };
 
   const contextValue = useMemo(() => ({ openImportPicker }), [openImportPicker]);

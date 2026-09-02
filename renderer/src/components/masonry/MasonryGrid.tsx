@@ -147,8 +147,7 @@ export default function MasonryGrid({
     }
 
     const newEntering = new Set<string>();
-    const wasAppend = !needsFull && prevIdsRef.current.length > 0;
-    if (wasAppend) {
+    if (prevIdsRef.current.length > 0) {
       for (const id of ids) {
         if (!knownIdsRef.current.has(id) && !id.startsWith(SKELETON_PREFIX)) {
           newEntering.add(id);
