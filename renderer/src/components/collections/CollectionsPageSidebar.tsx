@@ -154,25 +154,59 @@ export default function CollectionsPageSidebar({
                   className="context-menu__item-label"
                 />
               </span>
-              <span className="context-menu__item-counter">{count}</span>
             </button>
-            <button
-              type="button"
-              className="arc-tags-sidebar-row-edit"
-              aria-label={`Действия с «${collection.name}»`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onCollectionContextMenu?.(collection.id, e);
+            <Tooltip
+              content="Редактировать"
+              delay={500}
+              position="top"
+              className="arc-tags-sidebar-row-edit-wrap"
+            >
+              <button
+                type="button"
+                className="arc-tags-sidebar-row-edit"
+                aria-label={`Редактировать «${collection.name}»`}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCollectionContextMenu?.(collection.id, e);
+                }}
+              >
+                <span
+                  className="context-menu__item-icon tab-icon arc-icon-edit"
+                  data-arc-icon-size="m"
+                  aria-hidden="true"
+                />
+              </button>
+            </Tooltip>
+            <span
+              className="context-menu__item-counter arc-tags-sidebar-row-counter"
+              onPointerDown={(e) =>
+                bindArcTagsSidebarRowPointerDown({
+                  e,
+                  listEl: listRef.current,
+                  rowSelector: '[data-collections-row]',
+                  id: collection.id,
+                  label: collection.name,
+                  count,
+                  onStartDrag: (args) =>
+                    startDrag({
+                      ...args,
+                      siblingGroup: options.siblingGroup
+                    }),
+                  skipClickRef: skipSelectClickRef
+                })
+              }
+              onClick={() => {
+                if (skipSelectClickRef.current) {
+                  skipSelectClickRef.current = false;
+                  return;
+                }
+                onSelectCollection(collection.id);
               }}
             >
-              <span
-                className="context-menu__item-icon tab-icon arc-icon-edit"
-                data-arc-icon-size="m"
-                aria-hidden="true"
-              />
-            </button>
+              {count}
+            </span>
           </div>
         </div>
         {!options.nested && children.length > 0 && !collapsed ? (

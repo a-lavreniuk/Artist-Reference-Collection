@@ -12,7 +12,7 @@ export type ArcTagsSidebarRowDragStartArgs = {
 };
 
 type BindArgs = {
-  e: ReactPointerEvent<HTMLButtonElement>;
+  e: ReactPointerEvent<HTMLElement>;
   listEl: HTMLElement | null;
   rowSelector: string;
   id: string;

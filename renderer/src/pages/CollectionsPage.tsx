@@ -206,6 +206,16 @@ export default function CollectionsPage() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  useEffect(() => {
+    if (!routeSectionId || !routeCollectionId) return;
+    setCollapsedIds((prev) => {
+      if (!prev.has(routeCollectionId)) return prev;
+      const next = new Set(prev);
+      next.delete(routeCollectionId);
+      return next;
+    });
+  }, [routeSectionId, routeCollectionId]);
+
   useLayoutEffect(() => {
     if (pageRef.current) {
       void hydrateArcNavbarIcons(pageRef.current);

@@ -175,24 +175,55 @@ export default function TagsPageSidebar({
                           </Tooltip>
                         ) : null}
                       </span>
-                      <span className="context-menu__item-counter">{count}</span>
                     </button>
-                    <button
-                      type="button"
-                      className="arc-tags-sidebar-row-edit"
-                      aria-label={`Редактировать «${category.name}»`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onEditCategory(category.id);
+                    <Tooltip
+                      content="Редактировать"
+                      delay={500}
+                      position="top"
+                      className="arc-tags-sidebar-row-edit-wrap"
+                    >
+                      <button
+                        type="button"
+                        className="arc-tags-sidebar-row-edit"
+                        aria-label={`Редактировать «${category.name}»`}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onEditCategory(category.id);
+                        }}
+                      >
+                        <span
+                          className="context-menu__item-icon tab-icon arc-icon-edit"
+                          data-arc-icon-size="m"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </Tooltip>
+                    <span
+                      className="context-menu__item-counter arc-tags-sidebar-row-counter"
+                      onPointerDown={(e) =>
+                        bindArcTagsSidebarRowPointerDown({
+                          e,
+                          listEl: listRef.current,
+                          rowSelector: '[data-tags-category-row]',
+                          id: category.id,
+                          label: category.name,
+                          count,
+                          onStartDrag: startDrag,
+                          skipClickRef: skipSelectClickRef
+                        })
+                      }
+                      onClick={() => {
+                        if (skipSelectClickRef.current) {
+                          skipSelectClickRef.current = false;
+                          return;
+                        }
+                        onSelectCategory(category.id);
                       }}
                     >
-                      <span
-                        className="context-menu__item-icon tab-icon arc-icon-edit"
-                        data-arc-icon-size="m"
-                        aria-hidden="true"
-                      />
-                    </button>
+                      {count}
+                    </span>
                   </div>
                 </div>
               </TagCategoryDropSurface>

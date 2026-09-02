@@ -384,14 +384,25 @@ html[data-theme="light"] .arc-app-outlet {
   opacity: 0.45;
 }
 
+.arc-tags-sidebar-row .arc-tooltip-wrapper.arc-tags-sidebar-row-edit-wrap {
+  display: none;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.arc-tags-sidebar-row:hover .arc-tooltip-wrapper.arc-tags-sidebar-row-edit-wrap {
+  display: inline-flex;
+  align-items: stretch;
+}
+
 .arc-tags-sidebar-row-edit {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   align-self: stretch;
-  width: 24px;
-  min-width: 24px;
+  width: var(--tab-icon-size);
+  min-width: var(--tab-icon-size);
   margin: 0;
   padding: 0;
   border: 0;
@@ -460,10 +471,19 @@ html[data-theme="light"] .arc-app-outlet {
   min-width: 0;
 }
 
+.arc-tags-sidebar-row-inner > .context-menu__item-counter,
 .arc-tags-sidebar-row-select .context-menu__item-counter {
   flex: 0 0 auto;
-  margin-left: auto;
   color: var(--menu-row-counter-default);
+}
+
+.arc-tags-sidebar-row-counter {
+  cursor: grab;
+  user-select: none;
+}
+
+.arc-tags-sidebar-row.is-dragging .arc-tags-sidebar-row-counter {
+  cursor: grabbing;
 }
 
 .arc-tags-sidebar-row-ghost {
