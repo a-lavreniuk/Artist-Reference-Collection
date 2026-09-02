@@ -1,3 +1,4 @@
+import { ARC_LIBRARY_SCOPE_PARAM } from './libraryScopeUrl';
 import {
   ARC_SEARCH_QUERY_AI,
   ARC_SEARCH_QUERY_CARD,
@@ -17,5 +18,12 @@ export function clearGallerySearchParams(prev: URLSearchParams): URLSearchParams
   next.delete(ARC_SEARCH_QUERY_COLOR_TOL);
   next.delete(ARC_SEARCH_QUERY_SIMILAR);
   next.delete(ARC_SEARCH_QUERY_SIMILAR_CROP);
+  return next;
+}
+
+/** Сброс empty state: поиск + выход из корзины / legacy «Без меток» (lib). Не для navbar-крестика. */
+export function resetGalleryToDefaultLibraryParams(prev: URLSearchParams): URLSearchParams {
+  const next = clearGallerySearchParams(prev);
+  next.delete(ARC_LIBRARY_SCOPE_PARAM);
   return next;
 }

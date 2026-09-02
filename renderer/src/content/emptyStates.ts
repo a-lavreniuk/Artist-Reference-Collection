@@ -31,7 +31,7 @@ export const EMPTY_STATE_COPY = {
   },
   searchNoResults: {
     title: 'Ничего не найдено',
-    subtitle: 'Измените фильтры или сбросьте метки',
+    subtitle: 'Измените фильтры или сбросьте их',
     primaryActionLabel: 'Сбросить фильтры',
     primaryActionVariant: 'outline'
   },

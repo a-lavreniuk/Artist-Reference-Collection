@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGalleryFilters } from '../components/gallery/GalleryFilterContext';
-import { clearGallerySearchParams } from '../search/clearGallerySearch';
+import { resetGalleryToDefaultLibraryParams } from '../search/clearGallerySearch';
 import { parseSearchAiQuery, parseSearchCardId, parseSearchTagIds, parseSearchColorHex, parseSearchSimilarRef } from '../search/searchUrl';
 import { clearSimilarUploadPath } from '../search/similarSearchSession';
 
@@ -24,7 +24,7 @@ export function useResetGallerySearch() {
   const resetGallerySearch = useCallback(() => {
     clearFilters();
     clearSimilarUploadPath();
-    setSearchParams(clearGallerySearchParams(searchParams), { replace: true });
+    setSearchParams(resetGalleryToDefaultLibraryParams(searchParams), { replace: true });
   }, [clearFilters, searchParams, setSearchParams]);
 
   return { resetGallerySearch, hasActiveGallerySearch, hasUrlSearch, activeCategoryCount };
