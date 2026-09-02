@@ -55,14 +55,21 @@ export function resolveChromeTitle(
   search: string,
   collections: CollectionRecord[] = []
 ): string {
-  const detailId = parseDetailCardId(new URLSearchParams(search));
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const detailId = parseDetailCardId(params);
+  const isGallery = pathname === '/gallery' || pathname.startsWith('/gallery');
+  const galleryScope = isGallery ? parseLibraryScope(params) : null;
+
   if (detailId) {
-    return `Карточка +${shortCardLabel(detailId)}`;
+    const cardTitle = `Карточка +${shortCardLabel(detailId)}`;
+    if (galleryScope === 'trash') {
+      return `${libraryScopeLabel('trash')} / ${cardTitle}`;
+    }
+    return cardTitle;
   }
 
-  if (pathname === '/gallery' || pathname.startsWith('/gallery')) {
-    const scope = parseLibraryScope(new URLSearchParams(search));
-    return libraryScopeLabel(scope);
+  if (isGallery) {
+    return libraryScopeLabel(galleryScope ?? 'all');
   }
 
   if (pathname.startsWith('/settings')) {

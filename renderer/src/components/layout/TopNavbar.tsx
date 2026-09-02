@@ -8,7 +8,6 @@ import NavbarMenu from './NavbarMenu';
 import NavbarSearch from './NavbarSearch';
 import NavbarShade from './NavbarShade';
 import NavbarSortMenu from './NavbarSortMenu';
-import NavbarTrashActions from './NavbarTrashActions';
 import { hydrateArcNavbarIcons } from './navbarIconHydrate';
 import { beginManualSectionNavigation } from '../../search/sectionNavigation';
 import { parseDetailCardId, stripOpenCardFromParams } from '../../search/openCardUrl';
@@ -157,7 +156,6 @@ export default function TopNavbar() {
                 <NavbarGalleryLayoutMenu disabled={maintenanceLocked} />
               </div>
             ) : null}
-            <NavbarTrashActions disabled={maintenanceLocked} />
             <button
               type="button"
               className="btn btn-brand btn-ds btn-m"

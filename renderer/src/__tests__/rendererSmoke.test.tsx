@@ -15,6 +15,7 @@ import CardDetailPreviewOptionsBar from '../components/gallery/CardDetailPreview
 import SettingsAutoTagPanel from '../pages/settings/panels/SettingsAutoTagPanel';
 import SettingsAiSearchPanel from '../pages/settings/panels/SettingsAiSearchPanel';
 import { patchAiSettingsSnapshotForTests } from '../pages/settings/settingsAiSession';
+import GalleryTrashHeader from '../components/gallery/GalleryTrashHeader';
 
 function withBrowserWindowStub(run: () => void): void {
   const previous = (globalThis as { window?: unknown }).window;
@@ -57,6 +58,18 @@ const stubVideoCard: CardRecord = {
 };
 
 describe('renderer UI smoke', () => {
+  it('GalleryTrashHeader renders without throw', () => {
+    withBrowserWindowStub(() => {
+      expect(() =>
+        renderToString(
+          <MemoryRouter initialEntries={['/gallery?lib=trash']}>
+            <GalleryTrashHeader />
+          </MemoryRouter>
+        )
+      ).not.toThrow();
+    });
+  });
+
   it('MasonryGrid renders without throw', () => {
     expect(() =>
       renderToString(<MasonryGrid items={[]} renderItem={() => null} />)

@@ -935,6 +935,56 @@ button.color-swatch-inline:disabled {
   min-height: 0;
 }
 
+.arc-gallery-trash-header {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin-left: calc(var(--s-4) * -1);
+  margin-right: calc(var(--s-4) * -1);
+  padding: 0 var(--s-4);
+  box-sizing: border-box;
+}
+
+.arc-gallery-trash-header__row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-gallery-trash-header__title {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.arc-gallery-trash-header__label {
+  margin: 0;
+  min-width: 0;
+  color: var(--typo-tone-primary);
+}
+
+.arc-gallery-trash-header__count {
+  flex: 0 0 auto;
+  color: var(--typo-tone-secondary);
+}
+
+.arc-gallery-trash-header .context-menu__sep {
+  width: auto;
+  height: 1px;
+  margin: var(--s-4) calc(var(--s-4) * -1);
+  padding: 0;
+  border: 0;
+  background: var(--panel-border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
 /* Коллекции на экране библиотеки (Figma 838-7582, карточка 715-1990) */
 .arc-gallery-collections-block {
   display: flex;

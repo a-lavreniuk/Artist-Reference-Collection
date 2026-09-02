@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 
 import GalleryBoard from '../components/gallery/GalleryBoard';
+import GalleryTrashHeader from '../components/gallery/GalleryTrashHeader';
 
 import { useGalleryFeedSentinel } from '../components/gallery/useGalleryFeedSentinel';
 import { useScopedGalleryFeed } from '../components/gallery/useScopedGalleryFeed';
@@ -358,6 +359,7 @@ export default function GalleryPage() {
   return (
 
     <div className="arc-gallery-page" data-interface-tour-anchor="gallery-page">
+      <GalleryTrashHeader />
       {booting && !isRemoteSearchFeed && !shuffleReloading ? (
 
         <div className="arc-gallery-boot panel elevation-default" role="status" aria-live="polite">
