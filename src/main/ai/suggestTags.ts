@@ -127,7 +127,8 @@ export function ensureAutoCreatedCategory(libraryRoot: string) {
     name: AUTO_CREATED_CATEGORY_NAME,
     colorHex: '#64748B',
     weight: 'low',
-    description: 'Метки, созданные автоматически. Можно перенести в свои категории.'
+    description: 'Метки, созданные автоматически. Можно перенести в свои категории.',
+    allowReservedName: true
   });
 }
 
@@ -158,7 +159,11 @@ function createTagsFromCandidates(
     }
 
     try {
-      const tag = createTag(libraryRoot, { categoryId: category.id, name: name.trim() });
+      const tag = createTag(libraryRoot, {
+        categoryId: category.id,
+        name: name.trim(),
+        allowAutoCreatedCategory: true
+      });
       usedIds.add(tag.id);
       created.push({ tagId: tag.id, name: tag.name, score: 0.55, via: 'created' });
       clearAutoTagNameEmbedCache();

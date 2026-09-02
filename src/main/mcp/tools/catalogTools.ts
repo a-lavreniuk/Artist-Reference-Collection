@@ -8,6 +8,7 @@ import {
   listTagsByCategory
 } from '../../storage/libraryStorage';
 import { notifyRendererTagCatalogChanged } from '../notifyRenderer';
+import { assertCanMutateCategory } from '../../shared/autoCreatedTagsCategory';
 import {
   createCategory,
   createTag,
@@ -90,6 +91,9 @@ export function registerCatalogTools(ctx: McpRegisterContext): void {
       },
       async ({ categoryId }) =>
         runMcpWrite(deps, async (root) => {
+          const current = listCategories(root).find((category) => category.id === categoryId);
+          if (!current) throw new Error('Категория не найдена');
+          assertCanMutateCategory({ currentName: current.name });
           await deleteCategoryFromDb(root, categoryId);
           notifyRendererTagCatalogChanged();
           return { categoryId, deleted: true };

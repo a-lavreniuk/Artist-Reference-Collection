@@ -2,6 +2,7 @@ import { type MutableRefObject, useCallback, useLayoutEffect, useRef } from 'rea
 import { createPortal } from 'react-dom';
 import { ContextMenuSeparator } from '../context-menu';
 import type { CategoryRecord, TagRecord } from '../../services/db';
+import { isAutoCreatedCategoryName } from '@arc-main-shared/autoCreatedTagsCategory';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import { bindArcTagsSidebarRowPointerDown } from '../shared/arcTagsSidebarRowDragPointer';
 import { Tooltip } from '../tooltip/Tooltip';
@@ -113,6 +114,7 @@ export default function TagsPageSidebar({
             const isDragging = dragState?.dragId === category.id;
             const insertBefore =
               dragState != null && dragState.insertIndex === rowIndex && !isNoOpInsert;
+            const settingsLocked = isAutoCreatedCategoryName(category.name);
 
             return (
               <TagCategoryDropSurface
@@ -121,6 +123,7 @@ export default function TagsPageSidebar({
                 draggingTagIds={draggingTagIds}
                 draggingTagIdsRef={draggingTagIdsRef}
                 allTags={allTags}
+                dropDisabled={settingsLocked}
                 onTagDrop={onTagDrop}
                 className={`arc-tags-sidebar-row-drop${insertBefore ? ' is-drop-before' : ''}`}
               >
@@ -176,6 +179,7 @@ export default function TagsPageSidebar({
                         ) : null}
                       </span>
                     </button>
+                    {settingsLocked ? null : (
                     <Tooltip
                       content="Редактировать"
                       delay={500}
@@ -200,6 +204,7 @@ export default function TagsPageSidebar({
                         />
                       </button>
                     </Tooltip>
+                    )}
                     <span
                       className="context-menu__item-counter arc-tags-sidebar-row-counter"
                       onPointerDown={(e) =>

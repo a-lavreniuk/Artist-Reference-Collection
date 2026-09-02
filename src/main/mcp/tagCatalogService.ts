@@ -1,6 +1,11 @@
 import { randomUUID } from 'crypto';
 
 import {
+  assertCanCreateCategoryName,
+  assertCanMutateCategory,
+  assertCanWriteTagToCategory
+} from '../shared/autoCreatedTagsCategory';
+import {
   listAllTags,
   listCategories,
   upsertCategory,
@@ -32,6 +37,7 @@ export type CreateCategoryInput = {
   colorHex?: string;
   weight?: CategoryWeight;
   description?: string;
+  allowReservedName?: boolean;
 };
 
 export type UpdateCategoryInput = {
@@ -46,6 +52,7 @@ export type CreateTagInput = {
   categoryId: string;
   name: string;
   description?: string;
+  allowAutoCreatedCategory?: boolean;
 };
 
 export type UpdateTagInput = {
@@ -53,6 +60,7 @@ export type UpdateTagInput = {
   name?: string;
   categoryId?: string;
   description?: string;
+  allowAutoCreatedCategory?: boolean;
 };
 
 export function createCategory(libraryRoot: string, input: CreateCategoryInput): CategoryRow {
@@ -60,6 +68,7 @@ export function createCategory(libraryRoot: string, input: CreateCategoryInput):
   if (!trimmed) {
     throw new Error('Название категории не может быть пустым');
   }
+  assertCanCreateCategoryName(trimmed, input.allowReservedName);
   const hex = normalizeHex(input.colorHex ?? '#EAB308') ?? '#EAB308';
   const weight = sanitizeWeight(input.weight);
   const desc = input.description?.trim();
@@ -88,6 +97,7 @@ export function updateCategoryRecord(libraryRoot: string, input: UpdateCategoryI
   if (!current) {
     throw new Error('Категория не найдена');
   }
+  assertCanMutateCategory({ currentName: current.name, nextName: input.name });
 
   let name = current.name;
   if (input.name !== undefined) {
@@ -138,9 +148,15 @@ export function createTag(libraryRoot: string, input: CreateTagInput): TagRow {
   if (!trimmed) {
     throw new Error('Название метки не может быть пустым');
   }
-  if (!listCategories(libraryRoot).some((c) => c.id === input.categoryId)) {
+  const categories = listCategories(libraryRoot);
+  if (!categories.some((c) => c.id === input.categoryId)) {
     throw new Error('Категория не найдена');
   }
+  assertCanWriteTagToCategory({
+    categories,
+    targetCategoryId: input.categoryId,
+    allowAutoCreated: input.allowAutoCreatedCategory
+  });
   const tags = listAllTags(libraryRoot);
   if (tags.some((t) => normalizeNameForCompare(t.name) === normalizeNameForCompare(trimmed))) {
     throw new Error('Метка с таким названием уже есть');
@@ -166,9 +182,16 @@ export function updateTagRecord(libraryRoot: string, input: UpdateTagInput): Tag
   }
 
   const categoryId = input.categoryId ?? current.categoryId;
-  if (!listCategories(libraryRoot).some((c) => c.id === categoryId)) {
+  const categories = listCategories(libraryRoot);
+  if (!categories.some((c) => c.id === categoryId)) {
     throw new Error('Категория не найдена');
   }
+  assertCanWriteTagToCategory({
+    categories,
+    targetCategoryId: categoryId,
+    previousCategoryId: current.categoryId,
+    allowAutoCreated: input.allowAutoCreatedCategory
+  });
 
   let name = current.name;
   if (input.name !== undefined) {

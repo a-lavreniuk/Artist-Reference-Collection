@@ -27,6 +27,8 @@ type Props = {
   onTagDragEnd: () => void;
   onTagDrop: (tagIds: string[], targetCategoryId: string) => Promise<void>;
   onEditCategory: () => void;
+  allowAddTag?: boolean;
+  categorySettingsLocked?: boolean;
 };
 
 export default function TagsCategorySection({
@@ -48,7 +50,9 @@ export default function TagsCategorySection({
   onTagDragStart,
   onTagDragEnd,
   onTagDrop,
-  onEditCategory
+  onEditCategory,
+  allowAddTag = true,
+  categorySettingsLocked = false
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -82,6 +86,7 @@ export default function TagsCategorySection({
           onDragEnd={onTagDragEnd}
         />
       ))}
+      {allowAddTag ? (
       <span
         className="arc-ui-kit-scope"
         data-elevation="sunken"
@@ -99,6 +104,7 @@ export default function TagsCategorySection({
           </button>
         </Tooltip>
       </span>
+      ) : null}
     </div>
   );
 
@@ -106,6 +112,23 @@ export default function TagsCategorySection({
     <section ref={rootRef} className="arc-tags-category-section" aria-labelledby={`arc-tags-cat-${category.id}`}>
       <div className="arc-tags-category-section__header">
         <h2 className="h2 arc-tags-category-section__title" id={`arc-tags-cat-${category.id}`}>
+          {categorySettingsLocked ? (
+            <span className="arc-tags-category-section__name-btn arc-tags-category-section__name-static">
+              <TruncatedTextWithTooltip
+                text={category.name}
+                className="arc-tags-category-section__name"
+              />
+              {category.visibleInActive === false ? (
+                <Tooltip content="Скрыта в этой библиотеке" position="top" delay={500}>
+                  <span
+                    className="tab-icon arc-icon-eye-off arc-tags-category-section__hidden"
+                    data-arc-icon-size="m"
+                    aria-label="Скрыта в этой библиотеке"
+                  />
+                </Tooltip>
+              ) : null}
+            </span>
+          ) : (
           <button
             type="button"
             className="arc-tags-category-section__name-btn"
@@ -125,6 +148,7 @@ export default function TagsCategorySection({
               </Tooltip>
             ) : null}
           </button>
+          )}
           <span className="arc-tags-category-section__count">{tags.length}</span>
         </h2>
         <div className="arc-tags-category-section__actions">
@@ -157,7 +181,7 @@ export default function TagsCategorySection({
         style={open ? undefined : { height: 0, overflow: 'hidden', opacity: 0 }}
         aria-hidden={!open}
       >
-        {mainDropEnabled ? (
+        {mainDropEnabled && !categorySettingsLocked ? (
           <TagCategoryDropSurface
             className="arc-tags-category-section__drop"
             categoryId={category.id}

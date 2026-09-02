@@ -26,6 +26,11 @@ import {
   filterSidebarCategories,
   normalizeSearchQuery
 } from './tagPickerFilter';
+import {
+  firstManualTagCategoryId,
+  isAutoCreatedCategoryName,
+  shouldHideAutoCreatedCategory
+} from '@arc-main-shared/autoCreatedTagsCategory';
 
 const TAGS_PICKER_MIN_WIDTH = 690;
 const TAGS_PICKER_MIN_HEIGHT = 400;
@@ -143,15 +148,31 @@ export default function TagPickerPanel({
 
   const searchQ = normalizeSearchQuery(tagSearch);
 
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter(
+        (category) => !shouldHideAutoCreatedCategory(category.name, (tagsByCat[category.id] ?? []).length)
+      ),
+    [categories, tagsByCat]
+  );
+
   const sidebarCategories = useMemo(
-    () => filterSidebarCategories(categories, tagsByCat, searchQ, selectedCategoryId),
-    [categories, tagsByCat, searchQ, selectedCategoryId]
+    () => filterSidebarCategories(visibleCategories, tagsByCat, searchQ, selectedCategoryId),
+    [visibleCategories, tagsByCat, searchQ, selectedCategoryId]
   );
 
   const tagGroups = useMemo(
-    () => buildTagPickerGroups(categories, tagsByCat, searchQ, selectedCategoryId),
-    [categories, tagsByCat, searchQ, selectedCategoryId]
+    () => buildTagPickerGroups(visibleCategories, tagsByCat, searchQ, selectedCategoryId),
+    [visibleCategories, tagsByCat, searchQ, selectedCategoryId]
   );
+
+  useEffect(() => {
+    if (!selectedCategoryId) return;
+    if (visibleCategories.some((category) => category.id === selectedCategoryId)) return;
+    setSelectedCategoryId(null);
+  }, [selectedCategoryId, visibleCategories]);
+
+  const canCreateManualTag = Boolean(firstManualTagCategoryId(categories, selectedCategoryId));
 
   const showEmptyCatalog = catalogReady && categories.length === 0;
   const totalTagCount = useMemo(
@@ -167,13 +188,13 @@ export default function TagPickerPanel({
   };
 
   const openCreateFromSearch = () => {
-    const categoryId = selectedCategoryId ?? categories[0]?.id;
+    const categoryId = firstManualTagCategoryId(categories, selectedCategoryId);
     if (!categoryId) return;
     openCreateTag(categoryId, tagSearch.trim());
   };
 
   const openCreateFirstTag = () => {
-    const categoryId = selectedCategoryId ?? categories[0]?.id;
+    const categoryId = firstManualTagCategoryId(categories, selectedCategoryId);
     if (!categoryId) return;
     openCreateTag(categoryId);
   };
@@ -310,16 +331,20 @@ export default function TagPickerPanel({
             ) : showEmptyTags ? (
               <div className="arc-add-tags-picker__empty arc-add-tags-picker__group-inset">
                 <p className="text-m arc-add-tags-picker__empty-text">Меток пока нет.</p>
+                {canCreateManualTag ? (
                 <button type="button" className="btn btn-outline btn-ds" onClick={openCreateFirstTag}>
                   <span className="btn-ds__value">Создать метку</span>
                 </button>
+                ) : null}
               </div>
             ) : showEmptyCreate ? (
               <div className="arc-add-tags-picker__empty arc-add-tags-picker__group-inset">
                 <p className="text-m arc-add-tags-picker__empty-text">Нет совпадений по запросу.</p>
+                {canCreateManualTag ? (
                 <button type="button" className="btn btn-outline btn-ds" onClick={openCreateFromSearch}>
                   <span className="btn-ds__value">Создать метку</span>
                 </button>
+                ) : null}
               </div>
             ) : (
               tagGroups.map(({ cat, tags }, index) => (
@@ -335,6 +360,7 @@ export default function TagPickerPanel({
                   </div>
                   <div className="tags-row arc-add-tag-chips--with-add">
                     {tags.map((t) => renderTagChip(t, cat))}
+                    {isAutoCreatedCategoryName(cat.name) ? null : (
                     <div className="arc-ui-kit-scope" data-elevation="sunken" data-typo-tone="white" data-btn-size="s">
                       <Tooltip content="Новая метка" position="top">
                         <button
@@ -347,6 +373,7 @@ export default function TagPickerPanel({
                         </button>
                       </Tooltip>
                     </div>
+                    )}
                   </div>
                   </div>
                 </div>

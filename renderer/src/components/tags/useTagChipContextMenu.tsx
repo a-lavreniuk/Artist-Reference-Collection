@@ -4,6 +4,7 @@ import { useContextMenuAtPointer } from '../../hooks/useContextMenuAtPointer';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
 import TagMoveCategoryModal from './TagMoveCategoryModal';
 import type { CategoryRecord, TagRecord } from '../../services/db';
+import { categoriesForManualTagTarget } from '@arc-main-shared/autoCreatedTagsCategory';
 import { buildTagChipContextMenuRows } from './buildTagChipContextMenuRows';
 
 type Props = {
@@ -143,7 +144,7 @@ export function useTagChipContextMenu({
 
       {moveTagIds && moveTagIds.length > 0 ? (
         <TagMoveCategoryModal
-          categories={categories}
+          categories={categoriesForManualTagTarget(categories)}
           selectedCount={moveTagIds.length}
           onClose={closeMove}
           onCreateCategory={

@@ -7,6 +7,7 @@ type Props = {
   draggingTagIds: ReadonlySet<string> | null;
   draggingTagIdsRef?: MutableRefObject<ReadonlySet<string> | null>;
   allTags: TagRecord[];
+  dropDisabled?: boolean;
   onTagDrop: (tagIds: string[], targetCategoryId: string) => void | Promise<void>;
   className?: string;
   children: ReactNode;
@@ -20,6 +21,7 @@ export default function TagCategoryDropSurface({
   draggingTagIds,
   draggingTagIdsRef,
   allTags,
+  dropDisabled = false,
   onTagDrop,
   className = '',
   children
@@ -34,7 +36,7 @@ export default function TagCategoryDropSurface({
   };
 
   const handleTagDragOver = (e: React.DragEvent) => {
-    if (!isTagDragEvent(e.dataTransfer)) {
+    if (dropDisabled || !isTagDragEvent(e.dataTransfer)) {
       return;
     }
     e.preventDefault();
@@ -76,7 +78,7 @@ export default function TagCategoryDropSurface({
   };
 
   const handleTagDrop = (e: React.DragEvent) => {
-    if (!isTagDragEvent(e.dataTransfer)) {
+    if (dropDisabled || !isTagDragEvent(e.dataTransfer)) {
       return;
     }
     e.preventDefault();
@@ -107,7 +109,7 @@ export default function TagCategoryDropSurface({
     <div
       className={`${className}${isDropHighlight ? ' arc-category-panel-tags--drop-target' : ''}`.trim()}
       onDragOverCapture={(e) => {
-        if (isTagDragEvent(e.dataTransfer)) {
+        if (!dropDisabled && isTagDragEvent(e.dataTransfer)) {
           e.preventDefault();
         }
       }}

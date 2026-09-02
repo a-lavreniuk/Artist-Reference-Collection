@@ -23,7 +23,11 @@ export function buildTagCategoryContextMenuRows(actions: {
   onOpen: () => void;
   onRename: () => void;
   onDelete: () => void;
+  settingsLocked?: boolean;
 }): ContextMenuRow[] {
+  if (actions.settingsLocked) {
+    return [itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen)];
+  }
   return [
     itemRow('open', 'Открыть', 'arc-icon-eye', actions.onOpen),
     itemRow('rename', 'Переименовать', 'arc-icon-edit', actions.onRename),

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CategoryRecord, TagRecord } from '../../services/db';
+import { categoriesForManualTagTarget } from '@arc-main-shared/autoCreatedTagsCategory';
 import { ArcAnimatedModalHost } from '../../motion';
 import { ContextMenu, type ContextMenuRow } from '../context-menu';
 import ConfirmDeleteTagModal from '../layout/ConfirmDeleteTagModal';
@@ -143,11 +144,26 @@ export default function TagSettingsModal({
     isDirty
   ]);
 
-  const selectedCategory = categories.find((c) => c.id === categoryId) ?? categories[0];
+  const pickerCategories = useMemo(
+    () =>
+      categoriesForManualTagTarget(
+        categories,
+        state.mode === 'edit' ? state.tag.categoryId : null
+      ),
+    [categories, state]
+  );
+
+  useEffect(() => {
+    if (pickerCategories.some((c) => c.id === categoryId)) return;
+    const next = pickerCategories[0]?.id;
+    if (next) setCategoryId(next);
+  }, [pickerCategories, categoryId]);
+
+  const selectedCategory = pickerCategories.find((c) => c.id === categoryId) ?? pickerCategories[0];
 
   const categoryMenuRows = useMemo<ContextMenuRow[]>(
     () =>
-      categories.map((c) => ({
+      pickerCategories.map((c) => ({
         type: 'item' as const,
         key: c.id,
         label: c.name,
@@ -157,7 +173,7 @@ export default function TagSettingsModal({
           setCategoryMenuOpen(false);
         }
       })),
-    [categories, categoryId]
+    [pickerCategories, categoryId]
   );
 
   const onPickFile = async (fileList: FileList | null) => {
@@ -210,10 +226,15 @@ export default function TagSettingsModal({
     setError(null);
     const descTrim = description.trim();
     const imgPayload = tooltipImageDataUrl;
+    const targetCategoryId = selectedCategory?.id ?? categoryId;
+    if (!targetCategoryId) {
+      setIsSaving(false);
+      return;
+    }
     try {
       if (state.mode === 'create') {
         await onCreate({
-          categoryId,
+          categoryId: targetCategoryId,
           name: trimmedName,
           ...(descTrim ? { description: descTrim } : {}),
           ...(imgPayload ? { tooltipImageDataUrl: imgPayload } : {})
@@ -221,7 +242,7 @@ export default function TagSettingsModal({
       } else {
         await onSave({
           tagId: state.tag.id,
-          categoryId,
+          categoryId: targetCategoryId,
           name: trimmedName,
           description: descTrim,
           tooltipImageDataUrl: imgPayload

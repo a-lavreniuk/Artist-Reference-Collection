@@ -7,6 +7,7 @@ import { buildTagCategoryContextMenuRows } from './buildTagCategoryContextMenuRo
 type CategoryRef = {
   id: string;
   name: string;
+  settingsLocked?: boolean;
 };
 
 type Props = {
@@ -42,9 +43,10 @@ export function useTagCategoryContextMenu({ resolveCategory, onOpen, onEdit, onD
     return buildTagCategoryContextMenuRows({
       onOpen: () => onOpen(id),
       onRename: () => onEdit(id),
-      onDelete: () => setDeleteCategoryId(id)
+      onDelete: () => setDeleteCategoryId(id),
+      settingsLocked: resolveCategory(id)?.settingsLocked
     });
-  }, [menuCategoryId, onEdit, onOpen]);
+  }, [menuCategoryId, onEdit, onOpen, resolveCategory]);
 
   const contextMenuLayer = (
     <>

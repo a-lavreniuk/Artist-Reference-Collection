@@ -559,6 +559,10 @@ html[data-theme="light"] .arc-app-outlet {
   cursor: pointer;
 }
 
+.arc-tags-category-section__name-static {
+  cursor: default;
+}
+
 .arc-tags-category-section__name-btn:focus-visible {
   outline: 2px solid var(--input-border-focus);
   outline-offset: 2px;
@@ -578,6 +582,10 @@ html[data-theme="light"] .arc-app-outlet {
 
 .arc-tags-category-section__name-btn:hover .arc-tags-category-section__name {
   color: var(--typo-tone-primary-hover);
+}
+
+.arc-tags-category-section__name-static:hover .arc-tags-category-section__name {
+  color: var(--typo-tone-primary);
 }
 
 .arc-tags-category-section__actions {

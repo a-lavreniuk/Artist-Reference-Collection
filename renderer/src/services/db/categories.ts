@@ -1,3 +1,8 @@
+import {
+  assertCanCreateCategoryName,
+  assertCanMutateCategory,
+  assertCanWriteTagToCategory
+} from '@arc-main-shared/autoCreatedTagsCategory';
 import { normalizeHex } from '../../utils/colorPicker';
 import * as storage from '../storageClient';
 import {
@@ -51,6 +56,7 @@ export async function addCategory(
   if (!trimmed) {
     throw new Error('Название категории не может быть пустым');
   }
+  assertCanCreateCategoryName(trimmed);
   const hex = normalizeHex(colorHex) ?? '#EAB308';
   const weight = extras?.weight ?? 'neutral';
   const desc = extras?.description?.trim();
@@ -101,6 +107,10 @@ export async function updateCategoryName(id: string, name: string): Promise<void
     throw new Error('Название не может быть пустым');
   }
   const list = await readCategoriesUnified();
+  const currentNamed = list.find((c) => c.id === id);
+  if (currentNamed) {
+    assertCanMutateCategory({ currentName: currentNamed.name, nextName: trimmed });
+  }
   if (list.some((c) => c.id !== id && normalizeNameForCompare(c.name) === normalizeNameForCompare(trimmed))) {
     throw new Error('Категория с таким названием уже есть');
   }
@@ -114,12 +124,16 @@ export async function updateCategoryColorHex(id: string, colorHex: string): Prom
     throw new Error('Некорректный цвет');
   }
   const list = await readCategoriesUnified();
+  const currentColor = list.find((c) => c.id === id);
+  if (currentColor) assertCanMutateCategory({ currentName: currentColor.name });
   await persistCategories(list.map((c) => (c.id === id ? { ...c, colorHex: hex } : c)));
   notifyCategoriesChanged();
 }
 
 export async function updateCategoryWeight(id: string, weight: CategoryWeight): Promise<void> {
   const list = await readCategoriesUnified();
+  const currentWeight = list.find((c) => c.id === id);
+  if (currentWeight) assertCanMutateCategory({ currentName: currentWeight.name });
   await persistCategories(list.map((c) => (c.id === id ? { ...c, weight } : c)));
   notifyCategoriesChanged();
 }
@@ -127,6 +141,8 @@ export async function updateCategoryWeight(id: string, weight: CategoryWeight): 
 export async function updateCategoryDescription(id: string, description: string): Promise<void> {
   const desc = description.trim();
   const list = await readCategoriesUnified();
+  const currentDesc = list.find((c) => c.id === id);
+  if (currentDesc) assertCanMutateCategory({ currentName: currentDesc.name });
   await persistCategories(
     list.map((c) => {
       if (c.id !== id) return c;
@@ -153,6 +169,7 @@ export async function updateCategory(
   const list = await readCategoriesUnified();
   const current = list.find((c) => c.id === id);
   if (!current) return;
+  assertCanMutateCategory({ currentName: current.name, nextName: patch.name });
 
   let name = current.name;
   if (patch.name !== undefined) {
@@ -309,6 +326,8 @@ export async function reorderCategoryToIndex(id: string, insertIndex: number): P
 }
 
 export async function deleteCategory(id: string): Promise<void> {
+  const current = (await readCategoriesUnified()).find((c) => c.id === id);
+  if (current) assertCanMutateCategory({ currentName: current.name });
   const tags = (await readTagsUnified()).filter((t) => t.categoryId !== id);
   await persistTags(tags);
   await persistCategories((await readCategoriesUnified()).filter((c) => c.id !== id));
@@ -331,9 +350,11 @@ export async function addTag(
   if (!trimmed) {
     throw new Error('Название метки не может быть пустым');
   }
-  if (!(await readCategoriesUnified()).some((c) => c.id === categoryId)) {
+  const categories = await readCategoriesUnified();
+  if (!categories.some((c) => c.id === categoryId)) {
     throw new Error('Категория не найдена');
   }
+  assertCanWriteTagToCategory({ categories, targetCategoryId: categoryId });
   const tags = await readTagsUnified();
   const dup = tags.some((t) => normalizeNameForCompare(t.name) === normalizeNameForCompare(trimmed));
   if (dup) {
@@ -367,9 +388,15 @@ export async function updateTag(
   if (!tag) {
     throw new Error('Метка не найдена');
   }
-  if (!(await readCategoriesUnified()).some((c) => c.id === patch.categoryId)) {
+  const categories = await readCategoriesUnified();
+  if (!categories.some((c) => c.id === patch.categoryId)) {
     throw new Error('Категория не найдена');
   }
+  assertCanWriteTagToCategory({
+    categories,
+    targetCategoryId: patch.categoryId,
+    previousCategoryId: tag.categoryId
+  });
   const trimmed = patch.name.trim();
   if (!trimmed) {
     throw new Error('Название метки не может быть пустым');
@@ -603,7 +630,11 @@ export async function undoDeleteTags(undo: TagDeleteUndo): Promise<void> {
   notifyCardsChanged();
 }
 
-export async function moveTagToCategory(tagId: string, targetCategoryId: string): Promise<void> {
+export async function moveTagToCategory(
+  tagId: string,
+  targetCategoryId: string,
+  options?: { allowAutoCreatedTarget?: boolean }
+): Promise<void> {
   const categories = await readCategoriesUnified();
   if (!categories.some((c) => c.id === targetCategoryId)) {
     throw new Error('Категория не найдена');
@@ -613,6 +644,12 @@ export async function moveTagToCategory(tagId: string, targetCategoryId: string)
   if (!tag) {
     throw new Error('Метка не найдена');
   }
+  assertCanWriteTagToCategory({
+    categories,
+    targetCategoryId,
+    previousCategoryId: tag.categoryId,
+    allowAutoCreated: options?.allowAutoCreatedTarget
+  });
   if (tag.categoryId === targetCategoryId) {
     return;
   }

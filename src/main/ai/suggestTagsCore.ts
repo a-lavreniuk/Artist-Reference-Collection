@@ -153,7 +153,7 @@ export function buildAutoTagPrompt(promptCount: number): string {
   );
 }
 
-export const AUTO_CREATED_CATEGORY_NAME = 'Автоматически созданные метки';
+export { AUTO_CREATED_CATEGORY_NAME } from '../shared/autoCreatedTagsCategory';
 
 
 function descriptionContainsCandidate(description: string, candidateNorm: string): boolean {

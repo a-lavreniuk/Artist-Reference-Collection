@@ -49,6 +49,7 @@ import {
   type StartColorSearchDetail
 } from '../../../search/startColorSearch';
 import { addTag } from '../../../services/db';
+import { firstManualTagCategoryId } from '@arc-main-shared/autoCreatedTagsCategory';
 import { showAppNotification } from '../../../services/notificationService';
 import TagSettingsModal, { type TagSettingsModalState } from '../../tags/TagSettingsModal';
 import { NavbarSearchContextProvider } from './NavbarSearchContext';
@@ -160,10 +161,11 @@ export function NavbarSearchProvider({
 
   const openCreateTagModal = useCallback(
     async (initialName: string) => {
-      let categoryId = categories[0]?.id;
+      let list = categories;
+      let categoryId = firstManualTagCategoryId(list);
       if (!categoryId) {
-        const loaded = await loadIndex();
-        categoryId = loaded[0]?.id;
+        list = await loadIndex();
+        categoryId = firstManualTagCategoryId(list);
       }
       if (!categoryId) return;
       // Закрываем search до открытия модалки: её lifecycle не должен зависеть от панели.

@@ -53,6 +53,10 @@ import {
   type TagRecord
 } from '../services/db';
 import { startTagSearch } from '../search/startTagSearch';
+import {
+  isAutoCreatedCategoryName,
+  shouldHideAutoCreatedCategory
+} from '@arc-main-shared/autoCreatedTagsCategory';
 
 export default function TagsPage() {
   const navigate = useNavigate();
@@ -221,14 +225,22 @@ export default function TagsPage() {
     };
   }, [draggingTagIds]);
 
+  const visibleCategories = useMemo(
+    () =>
+      categories.filter(
+        (category) => !shouldHideAutoCreatedCategory(category.name, (tagsByCategory[category.id] ?? []).length)
+      ),
+    [categories, tagsByCategory]
+  );
+
   const sidebarCategories = useMemo(
-    () => filterSidebarCategories(categories, tagsByCategory, searchQ, selectedCategoryId),
-    [categories, tagsByCategory, searchQ, selectedCategoryId]
+    () => filterSidebarCategories(visibleCategories, tagsByCategory, searchQ, selectedCategoryId),
+    [visibleCategories, tagsByCategory, searchQ, selectedCategoryId]
   );
 
   const mainSections = useMemo(
-    () => buildTagPickerGroups(categories, tagsByCategory, searchQ, selectedCategoryId),
-    [categories, tagsByCategory, searchQ, selectedCategoryId]
+    () => buildTagPickerGroups(visibleCategories, tagsByCategory, searchQ, selectedCategoryId),
+    [visibleCategories, tagsByCategory, searchQ, selectedCategoryId]
   );
 
   const orderedTagIds = useMemo(
@@ -267,6 +279,12 @@ export default function TagsPage() {
     setDraggingTagIds(null);
   };
 
+  useEffect(() => {
+    if (!selectedCategoryId) return;
+    if (visibleCategories.some((category) => category.id === selectedCategoryId)) return;
+    setSelectedCategoryId(null);
+  }, [selectedCategoryId, visibleCategories]);
+
   const handleMoveTagsToCategory = useCallback(
     async (tagIds: string[], categoryId: string, knownCategoryName?: string) => {
       // Метки, которые уже лежат в целевой категории, не участвуют в отмене.
@@ -275,7 +293,15 @@ export default function TagsPage() {
         .filter((tag): tag is TagRecord => tag !== undefined && tag.categoryId !== categoryId)
         .map((tag) => ({ id: tag.id, categoryId: tag.categoryId }));
 
-      await moveTagsToCategory(tagIds, categoryId, moveTagToCategory);
+      try {
+        await moveTagsToCategory(tagIds, categoryId, moveTagToCategory);
+      } catch (err) {
+        showAppNotification({
+          message: err instanceof Error ? err.message : 'Не удалось перенести метки',
+          variant: 'danger'
+        });
+        return;
+      }
       tagMultiSelect.clearSelection();
       if (moved.length === 0) return;
 
@@ -287,7 +313,7 @@ export default function TagsPage() {
         undo: async () => {
           try {
             for (const tag of moved) {
-              await moveTagToCategory(tag.id, tag.categoryId);
+              await moveTagToCategory(tag.id, tag.categoryId, { allowAutoCreatedTarget: true });
             }
             await load();
           } catch {
@@ -413,7 +439,9 @@ export default function TagsPage() {
   const openEditCategory = useCallback(
     (categoryId: string) => {
       const cat = categories.find((c) => c.id === categoryId);
-      if (cat) setCategoryModal({ mode: 'edit', category: cat });
+      if (cat && !isAutoCreatedCategoryName(cat.name)) {
+        setCategoryModal({ mode: 'edit', category: cat });
+      }
     },
     [categories]
   );
@@ -421,7 +449,12 @@ export default function TagsPage() {
   const resolveCategory = useCallback(
     (categoryId: string) => {
       const category = categories.find((c) => c.id === categoryId);
-      return category ? { id: category.id, name: category.name } : null;
+      if (!category) return null;
+      return {
+        id: category.id,
+        name: category.name,
+        settingsLocked: isAutoCreatedCategoryName(category.name)
+      };
     },
     [categories]
   );
@@ -622,6 +655,8 @@ export default function TagsPage() {
                     onTagDragEnd={handleTagDragEnd}
                     onTagDrop={handleTagDrop}
                     onEditCategory={() => openEditCategory(cat.id)}
+                    allowAddTag={!isAutoCreatedCategoryName(cat.name)}
+                    categorySettingsLocked={isAutoCreatedCategoryName(cat.name)}
                   />
                   </div>
                 </div>

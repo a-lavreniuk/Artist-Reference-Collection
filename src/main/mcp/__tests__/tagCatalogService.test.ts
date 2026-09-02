@@ -96,4 +96,40 @@ describe('tagCatalogService', () => {
     expect(upsertTag).toHaveBeenCalledWith(ROOT, created);
     expect(notifyRendererTagCatalogChanged).toHaveBeenCalled();
   });
+
+  it('createTag rejects auto-created category without allow flag', () => {
+    listCategories.mockReturnValue([
+      {
+        id: 'auto',
+        name: 'Автоматически созданные метки',
+        colorHex: '#64748B',
+        weight: 'low',
+        sortIndex: 0,
+        createdAt: '2026-01-01T00:00:00.000Z'
+      }
+    ]);
+    expect(() => createTag(ROOT, { categoryId: 'auto', name: 'Неон' })).toThrow(
+      'В эту категорию нельзя добавлять метки вручную'
+    );
+  });
+
+  it('createTag allows auto-created category with flag', () => {
+    listCategories.mockReturnValue([
+      {
+        id: 'auto',
+        name: 'Автоматически созданные метки',
+        colorHex: '#64748B',
+        weight: 'low',
+        sortIndex: 0,
+        createdAt: '2026-01-01T00:00:00.000Z'
+      }
+    ]);
+    const created = createTag(ROOT, {
+      categoryId: 'auto',
+      name: 'Неон',
+      allowAutoCreatedCategory: true
+    });
+    expect(created.categoryId).toBe('auto');
+    expect(upsertTag).toHaveBeenCalled();
+  });
 });
