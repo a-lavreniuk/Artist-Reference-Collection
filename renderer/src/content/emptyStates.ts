@@ -9,8 +9,8 @@ export type EmptyStateCopy = {
 
 export const EMPTY_STATE_COPY = {
   libraryEmpty: {
-    title: 'Вы ещё не добавили ни одной карточки',
-    subtitle: 'Пока здесь пусто. Перетащите файлы в это окно или нажмите на кнопку',
+    title: 'Библиотека пока пуста',
+    subtitle: 'Добавьте первый файл: перетащите его в окно или нажмите «Добавить файлы»',
     primaryActionLabel: 'Добавить файлы',
     primaryActionVariant: 'brand'
   },
@@ -22,16 +22,17 @@ export const EMPTY_STATE_COPY = {
   },
   libraryUntagged: {
     title: 'Все карточки уже с метками',
-    subtitle: 'Так держать! У всех ваших карточек проставлены метки'
+    subtitle: 'Так держать! Не забудьте разобрать карточки без меток, если они появятся',
+    primaryActionLabel: 'Открыть библиотеку',
+    primaryActionVariant: 'outline'
   },
   libraryTrashEmpty: {
     title: 'Корзина пуста',
-    subtitle:
-      'Удалённые карточки появятся здесь — их можно восстановить или удалить навсегда. Есть настройка удаления карточек минуя корзину'
+    subtitle: 'Удалённые карточки появятся здесь — их можно восстановить или удалить навсегда'
   },
   searchNoResults: {
     title: 'Ничего не найдено',
-    subtitle: 'Измените фильтры или сбросьте их',
+    subtitle: 'Измените фильтры или вернитесь в обычную библиотеку',
     primaryActionLabel: 'Сбросить фильтры',
     primaryActionVariant: 'outline'
   },
@@ -55,31 +56,32 @@ export const EMPTY_STATE_COPY = {
   },
   collectionEmpty: {
     title: 'В коллекции пока нет карточек',
-    subtitle: 'В коллекции пока нет ни одной карточки. Добавьте карточки из библиотеки — они появятся здесь',
+    subtitle: 'Добавьте карточки из библиотеки — они появятся здесь автоматически',
     primaryActionLabel: 'Перейти в библиотеку',
     primaryActionVariant: 'outline'
   },
   sectionEmpty: {
     title: 'В разделе пока нет карточек',
-    subtitle: 'В разделе пока нет ни одной карточки. Добавьте карточки из библиотеки — они появятся здесь',
+    subtitle: 'Добавьте карточки из библиотеки — они появятся здесь автоматически',
     primaryActionLabel: 'Перейти в библиотеку',
     primaryActionVariant: 'outline'
   },
   moodboardEmpty: {
     title: 'В мудборде пока нет карточек',
-    subtitle: 'Добавляйте карточки из библиотеки — и собирайте референсы в одном месте',
+    subtitle:
+      'Добавьте карточку из библиотеки — нажмите на неё или ПКМ и выберите «Добавить в мудборд»',
     primaryActionLabel: 'Перейти в библиотеку',
     primaryActionVariant: 'outline'
   },
   tagsNone: {
     title: 'Вы ещё не добавили ни одной метки',
-    subtitle: 'Используйте категории и метки, чтобы значительно упростить процесс поиска карточек',
+    subtitle: 'Используйте категории и метки, чтобы упростить поиск карточек',
     primaryActionLabel: 'Добавить категорию',
     primaryActionVariant: 'brand'
   },
   categoryTagsEmpty: {
     title: 'В этой категории пока нет меток',
-    subtitle: 'Добавьте метку — так проще находить нужные карточки',
+    subtitle: 'Создайте метку, чтобы находить нужные карточки быстрее',
     primaryActionLabel: 'Добавить метку',
     primaryActionVariant: 'brand'
   },

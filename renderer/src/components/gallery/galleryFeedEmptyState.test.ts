@@ -33,7 +33,21 @@ describe('resolveGalleryFeedEmptyState collection copy', () => {
       onNavigateLibrary: vi.fn()
     });
     expect(result?.copy).toBe(EMPTY_STATE_COPY.sectionEmpty);
-    expect(result?.copy.subtitle).toContain('разделе');
+    expect(result?.copy.subtitle).toContain('библиотеки');
     expect(result?.layout).toBe('inline');
+  });
+
+  it('uses library untagged copy with reset action', () => {
+    const onResetSearch = vi.fn();
+    const result = resolveGalleryFeedEmptyState({
+      ...base,
+      context: 'gallery',
+      tagPresence: 'untagged',
+      onResetSearch
+    });
+    expect(result?.copy).toBe(EMPTY_STATE_COPY.libraryUntagged);
+    expect(result?.copy.primaryActionLabel).toBe('Открыть библиотеку');
+    result?.onPrimaryAction?.();
+    expect(onResetSearch).toHaveBeenCalledOnce();
   });
 });

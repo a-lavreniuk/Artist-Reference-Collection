@@ -109,7 +109,10 @@ export function resolveGalleryFeedEmptyState(input: {
 
   if (context === 'gallery') {
     if (tagPresence === 'untagged' || libraryScope === 'untagged') {
-      return { copy: EMPTY_STATE_COPY.libraryUntagged };
+      return {
+        copy: EMPTY_STATE_COPY.libraryUntagged,
+        onPrimaryAction: onResetSearch
+      };
     }
     if (libraryScope === 'trash') {
       return { copy: EMPTY_STATE_COPY.libraryTrashEmpty };
