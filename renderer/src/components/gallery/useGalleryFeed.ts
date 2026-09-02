@@ -5,6 +5,7 @@ import { subscribeGalleryCardsChanged } from './galleryFeedCardsChanged';
 import { notifyGalleryFeedSettledOnce } from './galleryFeedSettled';
 import {
   buildGalleryQueryKey,
+  buildGalleryQueryKeyWithoutSort,
   GALLERY_MAX_CARDS_IN_MEMORY,
   GALLERY_PAGE_INITIAL,
   GALLERY_PAGE_MORE,
@@ -157,6 +158,18 @@ export function useGalleryFeed(
     prefetchRef.current = null;
     prefetchInFlightRef.current = false;
   }, []);
+
+  const clearFeedDisplay = useCallback(() => {
+    setCards([]);
+    setSrcMap({});
+    setOffset(0);
+    setHasMore(true);
+    cardsRef.current = [];
+    srcMapRef.current = {};
+    offsetRef.current = 0;
+    hasMoreRef.current = true;
+    invalidatePrefetch();
+  }, [invalidatePrefetch]);
 
   useEffect(() => {
     if (feedActive) return;
@@ -337,15 +350,7 @@ export function useGalleryFeed(
     async (options?: { showBoot?: boolean; clearDisplay?: boolean }) => {
       const seq = ++loadSeqRef.current;
       if (options?.clearDisplay) {
-        setCards([]);
-        setSrcMap({});
-        setOffset(0);
-        setHasMore(true);
-        cardsRef.current = [];
-        srcMapRef.current = {};
-        offsetRef.current = 0;
-        hasMoreRef.current = true;
-        invalidatePrefetch();
+        clearFeedDisplay();
       }
       if (options?.showBoot) setBooting(true);
       setLoading(true);
@@ -358,7 +363,7 @@ export function useGalleryFeed(
         }
       }
     },
-    [fetchPage, invalidatePrefetch]
+    [clearFeedDisplay, fetchPage]
   );
 
   useEffect(() => {
@@ -408,6 +413,27 @@ export function useGalleryFeed(
       return;
     }
 
+    const sameSetChange =
+      cardsRef.current.length > 0 &&
+      buildGalleryQueryKeyWithoutSort(prevQuery) ===
+        buildGalleryQueryKeyWithoutSort(queryRef.current);
+
+    if (sameSetChange) {
+      const seq = ++loadSeqRef.current;
+      setLoading(true);
+      void (async () => {
+        try {
+          await fetchPage(0, false, seq);
+        } finally {
+          if (seq === loadSeqRef.current) {
+            setLoading(false);
+          }
+        }
+      })();
+      return;
+    }
+
+    clearFeedDisplay();
     const seq = ++loadSeqRef.current;
     setBooting(true);
     setLoading(true);
@@ -432,7 +458,16 @@ export function useGalleryFeed(
         }
       }
     })();
-  }, [applySnapshot, feedActive, fetchPage, libraryReady, mediaTab, queryKey, setShuffleReloading]);
+  }, [
+    applySnapshot,
+    clearFeedDisplay,
+    feedActive,
+    fetchPage,
+    libraryReady,
+    mediaTab,
+    queryKey,
+    setShuffleReloading
+  ]);
 
   useEffect(() => {
     if (!feedActive || !libraryReady || !staleAfterCardsChangedRef.current) return;
