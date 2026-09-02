@@ -414,7 +414,7 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
   {
     id: 'detail.commentMode',
     groupId: 'detail',
-    label: 'Редактирование меток',
+    label: 'Режим аннотаций',
     defaultAccelerator: 'C',
     scope: 'renderer',
     settingsVisible: true
@@ -462,7 +462,7 @@ export const SHORTCUTS: readonly ShortcutDefinition[] = [
   {
     id: 'detail.annotationsVisible',
     groupId: 'detail',
-    label: 'Показать или скрыть метки',
+    label: 'Показать или скрыть аннотации',
     defaultAccelerator: 'H',
     scope: 'renderer',
     settingsVisible: true

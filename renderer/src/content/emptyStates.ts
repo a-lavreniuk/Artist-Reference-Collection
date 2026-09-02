@@ -127,7 +127,7 @@ export const EMPTY_STATE_COPY = {
   },
   cardDetailAnnotationsEmpty: {
     title: 'Аннотаций пока нет',
-    subtitle: 'Включите режим комментария и выделите область на превью'
+    subtitle: 'Включите режим аннотаций и выделите область на превью'
   },
   statsLowTagsEmpty: {
     title: 'Нет малоиспользуемых меток',
