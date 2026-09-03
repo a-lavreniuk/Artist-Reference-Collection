@@ -294,6 +294,7 @@ declare global {
       storageCollectionPreviewSlices: (limit: number) => Promise<Record<string, CardRecord[]>>;
       storageCollectionsSidebar: (payload: {
         previewLimit?: number;
+        advancedFilters?: GalleryAdvancedFilters;
       }) => Promise<{
         collections: CollectionRecord[];
         counts: Record<string, number>;

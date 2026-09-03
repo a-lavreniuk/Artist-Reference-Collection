@@ -19,8 +19,10 @@ vi.mock('../../libraryRootConfig', () => {
 });
 
 import { closeLibraryDb, openLibraryDb } from '../db';
+import { emptyGalleryAdvancedFilters } from '../../shared/galleryFilterCore';
 import {
   getCollectionCardCounts,
+  getCollectionCountsAndPreviewsFiltered,
   listCollections,
   upsertCollection
 } from '../libraryStorage';
@@ -95,6 +97,58 @@ describe.skipIf(!sqliteOk)('collection parent_id schema', () => {
       expect(counts.c1).toBe(1);
       expect(counts.s1).toBe(1);
       expect(listCollections(tmpRoot).map((c) => c.id).sort()).toEqual(['c1', 's1']);
+    } finally {
+      await rm(tmpRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('counts collections with advanced filters and hides unmatched', async () => {
+    await mkdir(tmpRoot, { recursive: true });
+    try {
+      const db = openLibraryDb(tmpRoot);
+      upsertCollection(tmpRoot, {
+        id: 'c1',
+        name: 'Без меток',
+        createdAt: new Date().toISOString(),
+        sortIndex: 0
+      });
+      upsertCollection(tmpRoot, {
+        id: 'c2',
+        name: 'С меткой',
+        createdAt: new Date().toISOString(),
+        sortIndex: 1
+      });
+      const added = new Date().toISOString();
+      db.prepare(
+        `INSERT INTO cards (id, type, added_at, original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, is_deleted)
+         VALUES ('card-u', 'image', ?, 'cards/card-u/original.jpg', 'cards/card-u/Meta/thumb_s.webp', 'cards/card-u/Meta/thumb_m.webp', 'cards/card-u/Meta/thumb_l.webp', 0)`
+      ).run(added);
+      db.prepare(
+        `INSERT INTO cards (id, type, added_at, original_rel, thumb_s_rel, thumb_m_rel, thumb_l_rel, is_deleted)
+         VALUES ('card-t', 'image', ?, 'cards/card-t/original.jpg', 'cards/card-t/Meta/thumb_s.webp', 'cards/card-t/Meta/thumb_m.webp', 'cards/card-t/Meta/thumb_l.webp', 0)`
+      ).run(added);
+      db.prepare(`INSERT INTO card_collections (card_id, collection_id) VALUES ('card-u', 'c1')`).run();
+      db.prepare(`INSERT INTO card_collections (card_id, collection_id) VALUES ('card-t', 'c2')`).run();
+      db.prepare(`INSERT INTO card_tags (card_id, tag_id) VALUES ('card-t', 'tag-1')`).run();
+
+      const untagged = getCollectionCountsAndPreviewsFiltered(
+        tmpRoot,
+        { ...emptyGalleryAdvancedFilters(), tagPresence: 'untagged' },
+        0
+      );
+      expect(untagged.counts.c1).toBe(1);
+      expect(untagged.counts.c2).toBe(0);
+
+      const tagged = getCollectionCountsAndPreviewsFiltered(
+        tmpRoot,
+        { ...emptyGalleryAdvancedFilters(), tagPresence: 'tagged' },
+        0
+      );
+      expect(tagged.counts.c1).toBe(0);
+      expect(tagged.counts.c2).toBe(1);
+
+      expect(getCollectionCardCounts(tmpRoot).c1).toBe(1);
+      expect(getCollectionCardCounts(tmpRoot).c2).toBe(1);
     } finally {
       await rm(tmpRoot, { recursive: true, force: true });
     }

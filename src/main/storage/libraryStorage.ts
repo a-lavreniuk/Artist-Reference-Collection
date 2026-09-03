@@ -96,9 +96,11 @@ import {
   type DetailCardTemplateV1
 } from '../shared/detailCardTemplate';
 import {
+  countActiveFilterCategories,
   migrateGalleryAdvancedFiltersShape,
   omitCustomFieldFromFilters,
   omitCustomFieldFromSort,
+  type GalleryAdvancedFilters,
   type GalleryFilterLayoutState
 } from '../shared/galleryFilterCore';
 import type {
@@ -1967,6 +1969,82 @@ export function getCollectionPreviewSlicesFromDb(
     out[col.id] = indexCardRowsWithRelations(db, rows);
   }
   return out;
+}
+
+function collectionFilterParts(
+  db: Database.Database,
+  advancedFilters: GalleryAdvancedFilters
+): { matchSql: string; binds: unknown[] } {
+  const filters = migrateGalleryAdvancedFiltersShape(advancedFilters);
+  const template = readLibraryDetailTemplate(db);
+  const boundaries = getGalleryFilterBoundaries(db, filters);
+  const { wh, binds } = buildGalleryFilterWhere(
+    {
+      libraryScope: 'all',
+      selectedTagIds: [],
+      cardIdExact: null,
+      collectionId: null,
+      filters,
+      sort: DEFAULT_GALLERY_SORT,
+      template
+    },
+    'c',
+    boundaries
+  );
+  return {
+    matchSql: wh.length ? wh.join(' AND ') : 'c.id IS NOT NULL',
+    binds
+  };
+}
+
+/** Счётчики и превью коллекций с учётом advanced-фильтров галереи (без поисковой выдачи). */
+export function getCollectionCountsAndPreviewsFiltered(
+  libraryRoot: string,
+  advancedFilters: unknown,
+  previewLimit: number
+): { counts: Record<string, number>; previews: Record<string, CardIndexRow[]> } {
+  const db = openLibraryDb(libraryRoot);
+  const filters = migrateGalleryAdvancedFiltersShape(advancedFilters);
+  const { matchSql, binds } = collectionFilterParts(db, filters);
+  const countRows = db
+    .prepare(
+      `SELECT root.id AS collection_id,
+              COUNT(DISTINCT CASE WHEN ${matchSql} THEN c.id END) AS n
+       FROM collections root
+       LEFT JOIN collections child ON child.parent_id = root.id
+       LEFT JOIN card_collections cc
+         ON cc.collection_id = root.id OR cc.collection_id = child.id
+       LEFT JOIN cards c ON c.id = cc.card_id
+       GROUP BY root.id`
+    )
+    .all(...binds) as Array<{ collection_id: string; n: number }>;
+  const counts: Record<string, number> = {};
+  for (const r of countRows) counts[r.collection_id] = Number(r.n) || 0;
+
+  const collections = db.prepare('SELECT id FROM collections').all() as Array<{ id: string }>;
+  const limit = Math.max(0, Math.min(previewLimit, 20));
+  const previews: Record<string, CardIndexRow[]> = {};
+  for (const col of collections) {
+    previews[col.id] = [];
+  }
+  if (limit > 0) {
+    for (const col of collections) {
+      if ((counts[col.id] ?? 0) === 0) continue;
+      previews[col.id] = listCardsOnDb(db, {
+        offset: 0,
+        limit,
+        libraryScope: 'all',
+        collectionId: col.id,
+        advancedFilters: filters,
+        sort: DEFAULT_GALLERY_SORT
+      });
+    }
+  }
+  return { counts, previews };
+}
+
+export function collectionsSidebarUsesFilters(advancedFilters: unknown): boolean {
+  return countActiveFilterCategories(migrateGalleryAdvancedFiltersShape(advancedFilters)) > 0;
 }
 
 export function getCollectionStats(libraryRoot: string, collectionId: string): CollectionStatsRow | null {

@@ -265,7 +265,7 @@ contextBridge.exposeInMainWorld('arc', {
   storageCollectionCounts: () => ipcRenderer.invoke('arc:storage-collection-counts'),
   storageCollectionPreviewSlices: (limit: number) =>
     ipcRenderer.invoke('arc:storage-collection-preview-slices', limit),
-  storageCollectionsSidebar: (payload: { previewLimit?: number }) =>
+  storageCollectionsSidebar: (payload: { previewLimit?: number; advancedFilters?: unknown }) =>
     ipcRenderer.invoke('arc:storage-collections-sidebar', payload),
   storageCollectionStats: (collectionId: string) =>
     ipcRenderer.invoke('arc:storage-collection-stats', collectionId),

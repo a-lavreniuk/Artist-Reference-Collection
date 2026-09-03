@@ -17,6 +17,7 @@ export type GalleryCollectionStripItem = {
 type Props = {
   items: GalleryCollectionStripItem[];
   onCollectionContextMenu?: (collectionId: string, event: React.MouseEvent) => void;
+  onOpenCollection?: (collection: CollectionRecord) => void;
   mediaTab?: MediaSectionTab;
   ariaLabel?: string;
 };
@@ -24,6 +25,7 @@ type Props = {
 export default function LibraryCollectionsStrip({
   items,
   onCollectionContextMenu,
+  onOpenCollection,
   mediaTab = 'gallery',
   ariaLabel = 'Коллекции'
 }: Props) {
@@ -79,6 +81,10 @@ export default function LibraryCollectionsStrip({
                 mediaTab={mediaTab}
                 onOpen={() => {
                   if (shouldSuppressChildClick()) return;
+                  if (onOpenCollection) {
+                    onOpenCollection(item.collection);
+                    return;
+                  }
                   navigate(collectionHref(item.collection));
                 }}
                 onContextMenu={(event) => {

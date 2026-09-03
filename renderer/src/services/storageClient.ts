@@ -272,6 +272,7 @@ export async function storageCollectionPreviewSlices(
 
 export async function storageCollectionsSidebar(payload: {
   previewLimit?: number;
+  advancedFilters?: GalleryAdvancedFilters;
 }): Promise<{
   collections: CollectionRecord[];
   counts: Record<string, number>;

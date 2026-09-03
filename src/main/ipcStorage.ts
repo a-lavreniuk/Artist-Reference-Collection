@@ -35,6 +35,8 @@ import {
   getCardByIdFromDb,
   getCardsWithPhash,
   getCollectionCardCounts,
+  getCollectionCountsAndPreviewsFiltered,
+  collectionsSidebarUsesFilters,
   getCollectionPreviewSlicesFromDb,
   getCollectionStats,
   getMoodboardData,
@@ -1171,7 +1173,19 @@ export function registerStorageIpc(
         ? (payload as { previewLimit?: unknown }).previewLimit
         : 0;
     const previewLimit = typeof previewLimitRaw === 'number' && previewLimitRaw > 0 ? previewLimitRaw : 0;
+    const advancedFilters =
+      payload && typeof payload === 'object' && 'advancedFilters' in payload
+        ? (payload as { advancedFilters?: unknown }).advancedFilters
+        : undefined;
     const collections = listCollections(root);
+    if (collectionsSidebarUsesFilters(advancedFilters)) {
+      const filtered = getCollectionCountsAndPreviewsFiltered(root, advancedFilters, previewLimit);
+      const previews: Record<string, ReturnType<typeof cardIndexToRenderer>[]> = {};
+      for (const [colId, rows] of Object.entries(filtered.previews)) {
+        previews[colId] = rows.map((r) => cardIndexToRenderer(rowToCardRecord(r)));
+      }
+      return { collections, counts: filtered.counts, previews };
+    }
     const counts = getCollectionCardCounts(root);
     let previews: Record<string, ReturnType<typeof cardIndexToRenderer>[]> = {};
     if (previewLimit > 0) {

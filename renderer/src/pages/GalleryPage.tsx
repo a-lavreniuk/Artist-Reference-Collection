@@ -62,6 +62,8 @@ import { useCollectionContextMenu } from '../components/collections/useCollectio
 import CollectionSettingsModal, {
   type CollectionSettingsModalState
 } from '../components/collections/CollectionSettingsModal';
+import { writeGalleryFiltersSortTab } from '../components/gallery/galleryFilterPersistence';
+import { countActiveFilterCategories } from '../components/gallery/galleryFilterTypes';
 
 
 
@@ -218,14 +220,25 @@ export default function GalleryPage() {
     ready &&
     prefs?.galleryCollectionsStripEnabled !== false &&
     feedQuery.libraryScope === 'all' &&
-    !hasSearchFilters;
+    !hasUrlSearch;
 
   const { items: collectionStripItems } = useGalleryCollectionsStrip(
     stripDataEnabled,
-    prefs?.galleryCollectionsSortMode ?? 'chrono'
+    prefs?.galleryCollectionsSortMode ?? 'chrono',
+    filters
   );
 
   const showCollectionsStrip = stripDataEnabled && collectionStripItems.length > 0;
+
+  const openStripCollection = useCallback(
+    (collection: { id: string; parentId?: string }) => {
+      if (countActiveFilterCategories(filters) > 0) {
+        writeGalleryFiltersSortTab('collections', { filters, sort });
+      }
+      navigate(collectionHref(collection));
+    },
+    [filters, sort, navigate]
+  );
 
   const openEditStripCollection = useCallback(
     (id: string) => {
@@ -252,7 +265,7 @@ export default function GalleryPage() {
       canMergeSection: () => false,
       onOpen: (id) => {
         const collection = collectionStripItems.find((item) => item.collection.id === id)?.collection;
-        if (collection) navigate(collectionHref(collection));
+        if (collection) openStripCollection(collection);
       },
       onEdit: openEditStripCollection,
       onDelete: async (id) => {
@@ -375,6 +388,7 @@ export default function GalleryPage() {
           <LibraryCollectionsStrip
             items={collectionStripItems}
             onCollectionContextMenu={openCollectionContextMenu}
+            onOpenCollection={openStripCollection}
           />
           <div className="arc-gallery-collections-separator" role="separator" aria-hidden="true">
             <hr className="arc-gallery-collections-separator__rule" />
