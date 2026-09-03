@@ -137,7 +137,6 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const assignCollectionIdRef = useRef<string | null>(null);
   const emptyFolderResolverRef = useRef<(() => void) | null>(null);
   const importFlowResolverRef = useRef<(() => void) | null>(null);
-  const overlayOpenedManuallyRef = useRef(false);
   const pendingMenuImportRef = useRef<string[] | null>(null);
   const isDraggingFilesRef = useRef(false);
   const suppressFileDragRef = useRef(false);
@@ -254,8 +253,6 @@ export default function ImportHost({ children }: { children: ReactNode }) {
       setImportBusy(true);
       setPhase('importing');
       setProgress({ current: 0, total: paths.length, etaMs: null, cancelling: cancelRequestedRef.current });
-      overlayOpenedManuallyRef.current = false;
-
       const unsub =
         window.arc.onImportFilesProgress?.((p) => {
           setProgress({
@@ -667,9 +664,9 @@ export default function ImportHost({ children }: { children: ReactNode }) {
         return;
       }
       pendingMenuImportRef.current = null;
-      enqueueJob({ kind: 'files', paths });
+      void handleDroppedPaths(paths);
     },
-    [enqueueJob, libraryOpen]
+    [handleDroppedPaths, libraryOpen]
   );
 
   useEffect(() => {
@@ -689,8 +686,8 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     const paths = pendingMenuImportRef.current;
     if (!paths || !libraryOpen) return;
     pendingMenuImportRef.current = null;
-    enqueueJob({ kind: 'files', paths });
-  }, [enqueueJob, libraryOpen]);
+    void handleDroppedPaths(paths);
+  }, [handleDroppedPaths, libraryOpen]);
 
   useEffect(() => {
     const needsWindow =
@@ -763,9 +760,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
   const clearFileDrag = useCallback(() => {
     isDraggingFilesRef.current = false;
     setIsDraggingFiles(false);
-    if (!overlayOpenedManuallyRef.current) {
-      setPhase((p) => (p === 'overlay' ? 'idle' : p));
-    }
+    setPhase((p) => (p === 'overlay' ? 'idle' : p));
   }, []);
 
   useEffect(() => {
@@ -835,36 +830,23 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     };
   }, [clearFileDrag, emptyFolderName, importBusy, libraryOpen]);
 
-  const openImportPicker = useCallback(() => {
-    if (!libraryOpen || importBusy) return;
-    if (modalBlockingRef.current) return;
-    overlayOpenedManuallyRef.current = true;
-    setPhase('overlay');
-  }, [importBusy, libraryOpen]);
-
   const pickFiles = useCallback(async () => {
-    if (!window.arc || !libraryOpen) return;
+    if (!window.arc || !libraryOpen || importBusy) return;
+    if (modalBlockingRef.current) return;
     try {
       const pick =
         typeof window.arc.pickMediaFiles === 'function'
           ? window.arc.pickMediaFiles
           : window.arc.pickImageFiles;
       const paths = await pick.call(window.arc);
-      overlayOpenedManuallyRef.current = false;
-      if (!paths.length) {
-        setPhase((p) => (p === 'overlay' ? 'idle' : p));
-        return;
-      }
-      setPhase((p) => (p === 'overlay' ? 'idle' : p));
-      enqueueJob({ kind: 'files', paths });
+      if (!paths.length) return;
+      await handleDroppedPaths(paths);
     } catch {
-      overlayOpenedManuallyRef.current = false;
-      setPhase((p) => (p === 'overlay' ? 'idle' : p));
+      /* dialog closed or IPC error */
     }
-  }, [enqueueJob, libraryOpen]);
+  }, [handleDroppedPaths, importBusy, libraryOpen]);
 
   const closeOverlay = useCallback(() => {
-    overlayOpenedManuallyRef.current = false;
     isDraggingFilesRef.current = false;
     setPhase('idle');
     setIsDraggingFiles(false);
@@ -914,7 +896,7 @@ export default function ImportHost({ children }: { children: ReactNode }) {
     notifyGalleryAfterImportUi();
   };
 
-  const contextValue = useMemo(() => ({ openImportPicker }), [openImportPicker]);
+  const contextValue = useMemo(() => ({ openImportPicker: pickFiles }), [pickFiles]);
 
   const showOverlay = (phase === 'overlay' || isDraggingFiles) && !importBusy;
   const dropzoneActive = isDraggingFiles;

@@ -4,6 +4,7 @@ import fs from 'fs';
 import { copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'fs/promises';
 import path from 'path';
 import { isVideoExt, VIDEO_EXT } from './ffmpeg';
+import { mediaOpenDialogProperties } from './mediaOpenDialogProperties';
 import {
   getArcMediaServerOrigin,
   setActiveMediaTabAndSync,
@@ -161,7 +162,7 @@ function mediaPickerExtensions(): string[] {
 function mediaOpenDialogOptions(): OpenDialogOptions {
   const combined = mediaPickerExtensions();
   return {
-    properties: ['openFile', 'multiSelections'],
+    properties: mediaOpenDialogProperties(),
     filters: [
       { name: 'Изображения и видео', extensions: combined },
       {
