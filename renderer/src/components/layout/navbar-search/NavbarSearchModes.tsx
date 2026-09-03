@@ -30,9 +30,9 @@ export default function NavbarSearchModes({
     >
       {MODES.map((item) => {
         const meta = SEARCH_MODE_META[item];
-        const active = !unavailable && mode === item;
         const needsAi = item === 'ai' || item === 'similar';
         const unavailable = needsAi && !aiModesReady;
+        const active = !unavailable && mode === item;
         const hint = unavailable ? (meta.unavailableHint ?? null) : null;
         const label = hint ?? meta.label;
 
