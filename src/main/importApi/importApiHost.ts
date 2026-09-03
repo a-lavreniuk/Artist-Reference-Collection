@@ -12,6 +12,7 @@ import { refreshLibrarySessionSnapshotFromDisk } from '../librarySessionSnapshot
 import { notifyRendererExtensionImport } from './notifyRenderer';
 import { ARC_IMPORT_API_HOST, ARC_IMPORT_API_PORT, MAX_IMPORT_BODY_BYTES } from './constants';
 import { handleAppInfo, handleCollectionEnsure, handleItemAdd } from './importApiHandlers';
+import { mediaOptionsForHttpExtensionImport } from './httpExtensionImport';
 import { downloadUrlToTempFile } from './importFromRemote';
 import { resolveImportMaxBytes, resolveImportMediaKind } from './importMediaKind';
 import type { ImportApiHandlerDeps } from './types';
@@ -151,10 +152,11 @@ function buildDeps(): ImportApiHandlerDeps {
           }
         }
 
-        const result = await importMediaFile(libraryRoot, tempPath, {
-          linkUrl: website,
-          name
-        });
+        const result = await importMediaFile(
+          libraryRoot,
+          tempPath,
+          mediaOptionsForHttpExtensionImport({ name, website })
+        );
         if (!result.ok) {
           return { ok: false, error: result.error };
         }

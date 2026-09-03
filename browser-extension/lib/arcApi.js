@@ -101,13 +101,12 @@ export async function checkArc() {
 }
 
 /**
+ * Card name / page URL are not sent: HTTP import does not fill card fields.
  * @param {{ url: string, fallbackUrl?: string, mediaKind?: 'image' | 'video', website?: string, pageTitle?: string, name?: string, collectionId?: string, quiet?: boolean }} payload
  */
 export async function importItem(payload) {
   const body = {
-    url: payload.url,
-    website: payload.website,
-    pageTitle: payload.pageTitle
+    url: payload.url
   };
 
   if (payload.fallbackUrl?.trim()) {
@@ -115,9 +114,6 @@ export async function importItem(payload) {
   }
   if (payload.mediaKind === 'video' || payload.mediaKind === 'image') {
     body.mediaKind = payload.mediaKind;
-  }
-  if (payload.name?.trim()) {
-    body.name = payload.name.trim();
   }
   if (payload.collectionId?.trim()) {
     body.collectionId = payload.collectionId.trim();

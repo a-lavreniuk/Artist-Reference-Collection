@@ -90,7 +90,7 @@ Test video pin: `https://ru.pinterest.com/pin/675821487865257612/`
 |-------|-----|
 | `http://localhost:41595/api/v2/` | `http://127.0.0.1:47896/api/v1/` |
 | `GET /app/info` | `GET /api/v1/app/info` |
-| `POST /item/add` (`url`, …) | `POST /api/v1/item/add` (`url`, `website`, `pageTitle`) |
+| `POST /item/add` (`url`, …) | `POST /api/v1/item/add` (`url`; card name/link are not written) |
 | No queue when app closed | Queue in `chrome.storage.local` |
 
 ## API
@@ -119,17 +119,15 @@ Request:
 ```json
 {
   "url": "https://cdn.example/photo.jpg",
-  "website": "https://example.com/page",
-  "pageTitle": "Page title",
-  "name": "Optional explicit card name",
   "mediaKind": "image",
-  "fallbackUrl": "https://cdn.example/thumb.jpg"
+  "fallbackUrl": "https://cdn.example/thumb.jpg",
+  "collectionId": "optional-collection-id"
 }
 ```
 
 - `mediaKind`: `"image"` | `"video"` — явный тип; для видео `fallbackUrl` игнорируется при ошибке primary
-- `website` → card `linkUrl`
-- `name` (если передано расширением) или `pageTitle` (+ optional prefix from ARC Settings) → card `name`
+- HTTP-импорт из расширения **не заполняет** поля карточки (`name`, `linkUrl`, description, custom fields). `website` / `pageTitle` / `name` в теле запроса игнорируются (в том числе из старой очереди расширения)
+- MCP `arc_import_item` по-прежнему может передать `name` и `website`
 - **503** if no library is open in ARC
 - **403** if Import API is disabled in Settings → **Расширение браузера**
 
@@ -160,7 +158,7 @@ Browsers cannot start arbitrary `.exe` files directly — only via a registered 
 ## Manual checklist
 
 1. **API** — with ARC running: `curl http://127.0.0.1:47896/api/v1/app/info` returns `"status":"success"`.
-2. **Context menu** — right-click an image → **Add to library** → card appears in ARC with `linkUrl` = page URL.
+2. **Context menu** — right-click an image → **Add to library** → card appears in ARC; name/link/description stay empty.
 3. **Alt + ПКМ** — Alt + right-click on an image → same result.
 4. **Hover save** — hover an image → click **ARC** badge → card appears in the gallery immediately.
 5. **ARC offline** — quit ARC, save images → status **Queued**; start ARC → queue drains automatically (or reopen popup).
