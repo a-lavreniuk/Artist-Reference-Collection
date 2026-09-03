@@ -56,7 +56,10 @@ export async function reconcileLibraryRootConfig(): Promise<void> {
     onboardingSetupCompleted: false,
     onboardingSetupStep: 0,
     onboardingTourCompleted: false,
-    onboardingTourStep: 0
+    onboardingTourStep: 0,
+    onboardingRestTourPending: false,
+    onboardingRestTourOfferDismissed: false,
+    onboardingRestTourStarted: false
   });
 }
 

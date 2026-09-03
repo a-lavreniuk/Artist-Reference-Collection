@@ -10,7 +10,7 @@
 
 import { ONBOARDING_KNOWLEDGE_BASE_URL } from './onboarding';
 
-export type InterfaceTourPlacement = 'top' | 'bottom' | 'left' | 'right';
+export type InterfaceTourPlacement = 'top' | 'bottom' | 'left' | 'right' | 'center';
 
 export type InterfaceTourStep = {
   id: string;
@@ -34,6 +34,29 @@ export const INTERFACE_TOUR_SKIP_LABEL = 'Пропустить';
 export const INTERFACE_TOUR_BACK_LABEL = 'Вернуться';
 export const INTERFACE_TOUR_CONTINUE_LABEL = 'Продолжить';
 export const INTERFACE_TOUR_FINISH_LABEL = 'Готово';
+export const INTERFACE_TOUR_LATER_LABEL = 'Позже';
+
+export const INTERFACE_TOUR_REST_OFFER_BODY =
+  'В\u00A0библиотеке уже есть карточки. Дальше — как открыть материал и\u00A0какие поля и\u00A0действия есть в\u00A0просмотре';
+
+export type InterfaceTourSegment = 'chrome' | 'rest' | 'full';
+
+export const INTERFACE_TOUR_CARD_STEP_IDS = [
+  'card_open',
+  'card_fields',
+  'card_actions'
+] as const;
+
+export const INTERFACE_TOUR_OVERLAY_STEP_IDS = ['card_fields', 'card_actions'] as const;
+
+export const INTERFACE_TOUR_TRAILING_STEP_IDS = ['bug_report'] as const;
+
+const CARD_STEP_ID_SET = new Set<string>(INTERFACE_TOUR_CARD_STEP_IDS);
+const OVERLAY_STEP_ID_SET = new Set<string>(INTERFACE_TOUR_OVERLAY_STEP_IDS);
+const REST_STEP_ID_SET = new Set<string>([
+  ...INTERFACE_TOUR_CARD_STEP_IDS,
+  ...INTERFACE_TOUR_TRAILING_STEP_IDS
+]);
 
 export const INTERFACE_TOUR_SETTINGS = {
   sectionTitle: 'Знакомство с интерфейсом',
@@ -46,25 +69,15 @@ export const INTERFACE_TOUR_SETTINGS = {
 
 export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
   {
-    id: 'bug_report',
-    catalogIds: ['A6'],
-    route: '/gallery',
-    anchorId: 'bug-report-widget',
-    fallbackAnchorId: 'navbar-menu',
-    placement: 'left',
-    body:
-      'Если у\u00A0вас возникла проблема, вы\u00A0можете сообщить о\u00A0ней через плавающую кнопку или меню. Это поможет вам отправить баг или пожелание, связанное с\u00A0ARC',
-    enabled: true
-  },
-  {
     id: 'main_tabs',
     catalogIds: ['B1', 'B2', 'B3'],
     route: '/gallery',
-    anchorId: 'navbar-library-split',
-    fallbackAnchorId: 'main-tabs',
+    anchorId: 'navbar-nav',
+    fallbackAnchorId: 'navbar-library-split',
+    fallbackAnchorIds: ['main-tabs'],
     placement: 'bottom',
     body:
-      'Слева — кнопка библиотеки: по тексту открывается архив карточек, по шеврону — выбор или создание библиотеки. Рядом табы «Коллекции», «Мудборд» и «Доска»',
+      'Здесь находятся основные разделы ARC: «Библиотеки», «Коллекции», «Мудборд» и\u00A0«Доска». Можно создать несколько библиотек — для\u00A0этого нажмите на\u00A0правую часть кнопки со\u00A0стрелкой',
     enabled: true
   },
   {
@@ -74,7 +87,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     anchorId: 'navbar-search',
     placement: 'bottom',
     body:
-      'В центре панели — поиск с\u00A0режимами: метки, AI-семантика, доминирующий цвет и похожие изображения; переключайте иконками слева от поля',
+      'Поиск работает в\u00A0четырёх режимах: по\u00A0меткам, семантический, по\u00A0доминирующему цвету и\u00A0по\u00A0похожему изображению. По\u00A0умолчанию доступны поиск по\u00A0меткам и\u00A0цвету. Для\u00A0остальных режимов потребуется настроить умный поиск',
     enabled: true
   },
   {
@@ -84,7 +97,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     anchorId: 'navbar-sort-filters',
     placement: 'bottom',
     body:
-      '«Сортировка» и «Фильтры» задают порядок карточек в сетке и сужают выборку по формату, дате, описанию и другим параметрам',
+      '«Сортировка» меняет порядок карточек в\u00A0сетке, а\u00A0«Фильтры» сужают выборку по\u00A0формату, дате, описанию и\u00A0другим параметрам',
     enabled: true
   },
   {
@@ -94,7 +107,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     anchorId: 'navbar-add',
     placement: 'bottom',
     body:
-      '«Добавить» открывает импорт файлов и папок. Материалы можно также просто перетащить прямо в\u00A0окно ARC',
+      'Кнопка «Добавить» открывает импорт файлов и\u00A0папок. Материалы также можно просто перетащить в\u00A0окно ARC',
     enabled: true
   },
   {
@@ -104,7 +117,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     anchorId: 'navbar-menu',
     placement: 'bottom',
     body:
-      'В «Меню» можно найти другие разделы, а\u00A0также выбрать тему оформления и сменить размер сетки',
+      'В\u00A0«Меню» находятся дополнительные разделы, например «Настройки» и\u00A0«Поиск дублей». Здесь же можно выбрать тему оформления',
     enabled: true
   },
   {
@@ -112,9 +125,11 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     catalogIds: ['G1'],
     route: '/gallery',
     anchorId: 'gallery-grid',
-    placement: 'top',
+    placement: 'center',
     body:
-      'Сетка показывает превью материалов библиотеки; щелчок по карточке открывает просмотр в полном размере',
+      'Сетка показывает превью материалов библиотеки. Нажмите на\u00A0карточку, чтобы открыть её в\u00A0полном размере',
+    bodyEmptyLibrary:
+      'Пока библиотека пуста — здесь появятся превью после импорта. Добавить файлы можно кнопкой «Добавить» или просто перетащить их в\u00A0окно ARC',
     enabled: true
   },
   {
@@ -125,7 +140,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     fallbackAnchorId: 'collections-page',
     placement: 'right',
     body:
-      'В «Коллекциях» материалы группируют по задачам: список слева, «Добавить коллекцию» создаёт новую подборку',
+      'Здесь отображаются карточки, сгруппированные в\u00A0коллекции. Слева находится список коллекций, а\u00A0внизу — кнопка создания новой. Внутри коллекции можно создавать разделы для\u00A0более глубокой каталогизации контента',
     enabled: true
   },
   {
@@ -134,9 +149,9 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     route: '/moodboard',
     anchorId: 'moodboard-page',
     fallbackAnchorId: 'main-tab-moodboard',
-    placement: 'bottom',
+    placement: 'center',
     body:
-      '«Мудборд» собирает карточки из библиотеки в одну визуальную подборку под проект или сцену',
+      '«Мудборд» собирает карточки из\u00A0библиотеки в\u00A0одну визуальную подборку для\u00A0проекта, задачи или конкретной сцены',
     enabled: true
   },
   {
@@ -147,7 +162,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     fallbackAnchorId: 'tags-page',
     placement: 'right',
     body:
-      '«Категории и метки» — основа системы организации: слева список категорий и возможность добавлять новые',
+      '«Категории и\u00A0метки» — основа системы организации материалов. Слева находится список категорий, где можно создавать новые. Метки существуют только внутри категорий. Для\u00A0каждой метки можно задать цвет и\u00A0вес — это влияет на\u00A0её приоритет в\u00A0поисковой выдаче',
     enabled: true
   },
   {
@@ -160,7 +175,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     placement: 'right',
     body:
       'У категории настраиваются название, вес, цвет и описание — это определяет порядок и акцент меток в интерфейсе',
-    enabled: true
+    enabled: false
   },
   {
     id: 'card_open',
@@ -171,7 +186,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     fallbackAnchorIds: ['gallery-page'],
     placement: 'right',
     body:
-      'Карточку открывают из сетки; в оверлее — превью в полном размере и все действия с файлом',
+      'Нажмите на\u00A0карточку в\u00A0сетке, чтобы открыть детальный просмотр. Здесь доступны полноразмерное превью и\u00A0настройки данных карточки',
     bodyEmptyLibrary:
       'Пока в библиотеке нет карточек, добавьте файлы — затем откройте любую карточку в этой сетке двойным щелчком',
     enabled: true
@@ -185,9 +200,9 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     fallbackAnchorIds: ['gallery-page'],
     placement: 'left',
     body:
-      'Поля «Имя», «Ссылка» и «Описание» хранят подпись и контекст; «Открыть ссылку» ведёт к источнику в браузере',
+      'В\u00A0панели «Детали» можно изменить имя, ссылку и\u00A0описание, добавить оценку и\u00A0цвета. Ниже находятся аннотации, метки и\u00A0коллекции',
     bodyEmptyLibrary:
-      'После первого импорта здесь можно задать имя, ссылку и описание материала',
+      'После первого импорта в\u00A0панели «Детали» появятся имя, ссылка, описание, оценка и\u00A0цвета',
     enabled: true
   },
   {
@@ -202,7 +217,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
       '«Похожие изображения» находят карточки с близкой палитрой и композицией — удобно для поиска референсов в том же ключе',
     bodyEmptyLibrary:
       'Когда в библиотеке появятся карточки, блок покажет визуально близкие материалы',
-    enabled: true
+    enabled: false
   },
   {
     id: 'card_actions',
@@ -213,9 +228,20 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     fallbackAnchorIds: ['gallery-page'],
     placement: 'bottom',
     body:
-      'В шапке оверлея — мудборд, копирование настроек, папка с файлом, информация, ID и удаление в корзину или навсегда',
+      'В\u00A0шапке доступны дополнительные действия: добавить карточку в\u00A0мудборд, скопировать настройки, открыть папку с\u00A0исходником, посмотреть информацию и\u00A0скопировать ID карточки для\u00A0быстрого поиска',
     bodyEmptyLibrary:
       'Эти действия доступны для каждой карточки после импорта',
+    enabled: true
+  },
+  {
+    id: 'bug_report',
+    catalogIds: ['A6'],
+    route: '/gallery',
+    anchorId: 'bug-report-widget',
+    fallbackAnchorId: 'navbar-menu',
+    placement: 'left',
+    body:
+      'Если возникла проблема, сообщите о\u00A0ней через плавающую кнопку или меню. Так вы сможете отправить сообщение об\u00A0ошибке или поделиться предложением по\u00A0улучшению ARC',
     enabled: true
   },
   {
@@ -227,7 +253,7 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     placement: 'top',
     body:
       '«Статистика» показывает, сколько карточек, меток и коллекций в библиотеке и сколько места они занимают на диске',
-    enabled: true
+    enabled: false
   },
   {
     id: 'history',
@@ -238,12 +264,63 @@ export const INTERFACE_TOUR_STEPS: readonly InterfaceTourStep[] = [
     placement: 'top',
     body:
       '«История» сохраняет действия — импорт, правки меток и удаления; период можно сменить в верхней панели',
-    enabled: true
+    enabled: false
   }
 ] as const;
 
+export const INTERFACE_TOUR_THANKS_STEP: InterfaceTourStep = {
+  id: 'thanks',
+  catalogIds: [],
+  route: '/gallery',
+  anchorId: 'gallery-page',
+  fallbackAnchorId: 'gallery-grid',
+  fallbackAnchorIds: ['navbar-menu'],
+  placement: 'center',
+  body:
+    'Спасибо, что пользуетесь ARC. Если захотите пройти знакомство ещё раз, его всегда можно запустить в\u00A0разделе «Настройки»',
+  enabled: true
+};
+
 export const ENABLED_INTERFACE_TOUR_STEPS = INTERFACE_TOUR_STEPS.filter((step) => step.enabled);
 
-export function formatInterfaceTourProgress(stepIndex: number, total = ENABLED_INTERFACE_TOUR_STEPS.length): string {
+export function isCardTourStep(step: Pick<InterfaceTourStep, 'id'>): boolean {
+  return CARD_STEP_ID_SET.has(step.id);
+}
+
+export function needsCardOverlayTourStep(step: Pick<InterfaceTourStep, 'id'>): boolean {
+  return OVERLAY_STEP_ID_SET.has(step.id);
+}
+
+export function isRestTourStep(step: Pick<InterfaceTourStep, 'id'>): boolean {
+  return REST_STEP_ID_SET.has(step.id);
+}
+
+export function stepsForSegment(
+  segment: InterfaceTourSegment,
+  options?: { includeThanks?: boolean }
+): InterfaceTourStep[] {
+  let steps: InterfaceTourStep[];
+  if (segment === 'full') steps = [...ENABLED_INTERFACE_TOUR_STEPS];
+  else if (segment === 'chrome') steps = ENABLED_INTERFACE_TOUR_STEPS.filter((step) => !isRestTourStep(step));
+  else steps = ENABLED_INTERFACE_TOUR_STEPS.filter((step) => isRestTourStep(step));
+  if (options?.includeThanks && segment !== 'chrome') {
+    steps = [...steps, INTERFACE_TOUR_THANKS_STEP];
+  }
+  return steps;
+}
+
+export function shouldIncludeThanksStep(args: {
+  replay: boolean;
+  segment: InterfaceTourSegment;
+}): boolean {
+  if (args.replay) return false;
+  return args.segment === 'full' || args.segment === 'rest';
+}
+
+export function resolveAutoStartSegment(hasCards: boolean): InterfaceTourSegment {
+  return hasCards ? 'full' : 'chrome';
+}
+
+export function formatInterfaceTourProgress(stepIndex: number, total: number): string {
   return `${stepIndex + 1} из ${total}`;
 }

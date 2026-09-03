@@ -6427,7 +6427,44 @@ html.arc-onboarding-page,
   position: fixed;
   inset: 0;
   z-index: 10080;
+  overflow: hidden;
   pointer-events: none;
+}
+
+.arc-interface-tour-spotlight {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.arc-interface-tour-spotlight--dim {
+  background: color-mix(in srgb, var(--gray-1000) 80%, transparent);
+}
+
+.arc-interface-tour-host .arc-interface-tour-spotlight__shade {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  color: color-mix(in srgb, var(--gray-1000) 80%, transparent);
+}
+
+.arc-interface-tour-spotlight__hole {
+  position: fixed;
+  z-index: 1;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  pointer-events: auto;
 }
 
 .arc-interface-tour-host .context-menu-backdrop {
@@ -6437,13 +6474,15 @@ html.arc-onboarding-page,
 
 .arc-interface-tour-modal {
   position: fixed;
-  z-index: 1;
+  z-index: 2;
   margin: 0;
   pointer-events: auto;
 }
 
 .arc-navbar-sort-filters-anchor {
-  display: contents;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
 }
 
 .arc-settings-interface-tour-actions {

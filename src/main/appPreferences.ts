@@ -56,6 +56,9 @@ export type AppPreferencesV1 = {
   onboardingSetupStep: OnboardingSetupStep;
   onboardingTourCompleted: boolean;
   onboardingTourStep: OnboardingTourStep;
+  onboardingRestTourPending: boolean;
+  onboardingRestTourOfferDismissed: boolean;
+  onboardingRestTourStarted: boolean;
   launchAtLogin: boolean;
   launchAtLoginHidden: boolean;
   closeToTrayOnWindowClose: boolean;
@@ -153,6 +156,9 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     onboardingSetupStep: 0,
     onboardingTourCompleted: false,
     onboardingTourStep: 0,
+    onboardingRestTourPending: false,
+    onboardingRestTourOfferDismissed: false,
+    onboardingRestTourStarted: false,
     launchAtLogin: false,
     launchAtLoginHidden: false,
     closeToTrayOnWindowClose: true,
@@ -452,6 +458,18 @@ function sanitizeFromDisk(raw: Partial<AppPreferencesV1> & Record<string, unknow
         ? raw.onboardingTourCompleted
         : d.onboardingTourCompleted,
     onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep),
+    onboardingRestTourPending:
+      typeof raw.onboardingRestTourPending === 'boolean'
+        ? raw.onboardingRestTourPending
+        : d.onboardingRestTourPending,
+    onboardingRestTourOfferDismissed:
+      typeof raw.onboardingRestTourOfferDismissed === 'boolean'
+        ? raw.onboardingRestTourOfferDismissed
+        : d.onboardingRestTourOfferDismissed,
+    onboardingRestTourStarted:
+      typeof raw.onboardingRestTourStarted === 'boolean'
+        ? raw.onboardingRestTourStarted
+        : d.onboardingRestTourStarted,
     videoAutoplay: typeof raw.videoAutoplay === 'boolean' ? raw.videoAutoplay : d.videoAutoplay,
     detailCardTemplate: sanitizeDetailCardTemplate(raw.detailCardTemplate ?? d.detailCardTemplate)
   };
@@ -673,6 +691,15 @@ function applyPatch(current: AppPreferencesV1, patch: Partial<AppPreferencesV1>)
   }
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
+  }
+  if ('onboardingRestTourPending' in patch && typeof patch.onboardingRestTourPending === 'boolean') {
+    next.onboardingRestTourPending = patch.onboardingRestTourPending;
+  }
+  if ('onboardingRestTourOfferDismissed' in patch && typeof patch.onboardingRestTourOfferDismissed === 'boolean') {
+    next.onboardingRestTourOfferDismissed = patch.onboardingRestTourOfferDismissed;
+  }
+  if ('onboardingRestTourStarted' in patch && typeof patch.onboardingRestTourStarted === 'boolean') {
+    next.onboardingRestTourStarted = patch.onboardingRestTourStarted;
   }
   if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
     next.videoAutoplay = patch.videoAutoplay;

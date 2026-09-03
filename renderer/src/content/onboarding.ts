@@ -1,5 +1,4 @@
-export const ONBOARDING_KNOWLEDGE_BASE_URL =
-  'https://arc-knowledge.tilda.ws/tdocs/arc-knowledge-base-9dc2pv4zdf18e47';
+export const ONBOARDING_KNOWLEDGE_BASE_URL = 'https://arc-app.gitbook.io/arc-app-docs/';
 
 function onboardingAsset(file: string): string {
   const base = import.meta.env.BASE_URL ?? './';

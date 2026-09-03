@@ -95,6 +95,12 @@ export type AppPreferencesV1 = {
   onboardingSetupStep: OnboardingSetupStep;
   onboardingTourCompleted: boolean;
   onboardingTourStep: OnboardingTourStep;
+  /** Chrome-тур пройден, шаги деталки / статистики ещё впереди. */
+  onboardingRestTourPending: boolean;
+  /** Пользователь нажал «Позже» на предложении продолжить. */
+  onboardingRestTourOfferDismissed: boolean;
+  /** Пользователь уже начал отложенную часть тура. */
+  onboardingRestTourStarted: boolean;
   launchAtLogin: boolean;
   launchAtLoginHidden: boolean;
   closeToTrayOnWindowClose: boolean;
@@ -169,6 +175,9 @@ export function defaultAppPreferences(): AppPreferencesV1 {
     onboardingSetupStep: 0,
     onboardingTourCompleted: false,
     onboardingTourStep: 0,
+    onboardingRestTourPending: false,
+    onboardingRestTourOfferDismissed: false,
+    onboardingRestTourStarted: false,
     launchAtLogin: false,
     launchAtLoginHidden: false,
     closeToTrayOnWindowClose: true,
@@ -333,6 +342,18 @@ export function coerceAppPreferences(raw: Partial<AppPreferencesV1> | null | und
         ? raw.onboardingTourCompleted
         : d.onboardingTourCompleted,
     onboardingTourStep: sanitizeOnboardingTourStep(raw.onboardingTourStep ?? d.onboardingTourStep),
+    onboardingRestTourPending:
+      typeof raw.onboardingRestTourPending === 'boolean'
+        ? raw.onboardingRestTourPending
+        : d.onboardingRestTourPending,
+    onboardingRestTourOfferDismissed:
+      typeof raw.onboardingRestTourOfferDismissed === 'boolean'
+        ? raw.onboardingRestTourOfferDismissed
+        : d.onboardingRestTourOfferDismissed,
+    onboardingRestTourStarted:
+      typeof raw.onboardingRestTourStarted === 'boolean'
+        ? raw.onboardingRestTourStarted
+        : d.onboardingRestTourStarted,
     importApiEnabled:
       typeof raw.importApiEnabled === 'boolean' ? raw.importApiEnabled : d.importApiEnabled,
     importApiPrefixEnabled:

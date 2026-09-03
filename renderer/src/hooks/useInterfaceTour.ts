@@ -1,11 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  ENABLED_INTERFACE_TOUR_STEPS,
+  INTERFACE_TOUR_REST_OFFER_BODY,
+  isCardTourStep,
+  needsCardOverlayTourStep,
+  resolveAutoStartSegment,
+  shouldIncludeThanksStep,
+  stepsForSegment,
+  type InterfaceTourSegment,
   type InterfaceTourStep
 } from '../content/onboardingTour';
+import {
+  restPrefsAfterChromePause,
+  restPrefsAfterContinueOffer,
+  restPrefsAfterFullFinish,
+  restPrefsAfterLater,
+  shouldAutoStartChromeOrFull,
+  shouldResumeRestTour,
+  shouldShowRestTourOffer
+} from '../content/interfaceTourSession';
 import { useOpenCardUrl } from '../search/openCardUrl';
 import { getNavbarMetrics, listCardsPage } from '../services/db';
+import { ARC_CARDS_CHANGED_EVENT } from '../services/db/events';
 import { patchAppPreferences, getAppPreferencesSync } from '../services/appPreferencesRuntime';
 import { useAppPreferences } from './useAppPreferences';
 import {
@@ -21,15 +37,8 @@ import {
 } from '../components/onboarding/interfaceTourEvents';
 import { getManualSectionNavigationEpoch } from '../search/sectionNavigation';
 
-const CARD_STEP_FIRST_INDEX = 11;
-const CARD_STEP_LAST_INDEX = 14;
-const STATS_STEP_INDEX = 15;
-
-function resolveStepBody(step: InterfaceTourStep, stepIndex: number, libraryHasCards: boolean): string {
-  const isCardStep = stepIndex >= CARD_STEP_FIRST_INDEX && stepIndex <= CARD_STEP_LAST_INDEX;
-  if (isCardStep && !libraryHasCards && step.bodyEmptyLibrary) {
-    return step.bodyEmptyLibrary;
-  }
+function resolveStepBody(step: InterfaceTourStep, libraryHasCards: boolean): string {
+  if (!libraryHasCards && step.bodyEmptyLibrary) return step.bodyEmptyLibrary;
   return step.body;
 }
 
@@ -40,6 +49,18 @@ function pageRouteMarkerIds(step: InterfaceTourStep): string[] {
 function pathnameMatchesRoute(pathname: string, route: string): boolean {
   return pathname.startsWith(route);
 }
+
+const OFFER_STEP: InterfaceTourStep = {
+  id: 'rest_offer',
+  catalogIds: [],
+  route: '/gallery',
+  anchorId: 'gallery-first-card',
+  fallbackAnchorId: 'gallery-grid',
+  fallbackAnchorIds: ['gallery-page'],
+  placement: 'top',
+  body: INTERFACE_TOUR_REST_OFFER_BODY,
+  enabled: true
+};
 
 export function useInterfaceTour() {
   const navigate = useNavigate();
@@ -70,22 +91,18 @@ export function useInterfaceTour() {
 
   const getPathname = useCallback<PathnameReader>(() => locationRef.current.pathname, []);
 
-  const tryAutoStartTour = useCallback(() => {
-    const currentPrefs = getAppPreferencesSync();
-    if (!currentPrefs.onboardingSetupCompleted || currentPrefs.onboardingTourCompleted) return false;
-    autoStartedRef.current = true;
-    userOverrodeTourRouteRef.current = false;
-    routeSyncRequestedRef.current = true;
-    setStepIndex(currentPrefs.onboardingTourStep);
-    setActive(true);
-    return true;
-  }, []);
-
   const [active, setActive] = useState(false);
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [segment, setSegment] = useState<InterfaceTourSegment>('chrome');
   const [stepIndex, setStepIndex] = useState(0);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [preparing, setPreparing] = useState(false);
-  const [libraryHasCards, setLibraryHasCards] = useState(true);
+  const [libraryHasCards, setLibraryHasCards] = useState(false);
+  const [includeThanks, setIncludeThanks] = useState(false);
+  const autoStartInFlightRef = useRef(false);
+
+  const steps = stepsForSegment(segment, { includeThanks });
+  const step = offerOpen ? OFFER_STEP : steps[stepIndex];
 
   const navigateToTourRoute = useCallback((route: string) => {
     tourCardIdRef.current = null;
@@ -93,7 +110,7 @@ export function useInterfaceTour() {
     navigateRef.current({ pathname: route, search: '' }, { replace: true });
   }, []);
 
-  const finishTour = useCallback(async () => {
+  const closeTourUi = useCallback(() => {
     tourCardIdRef.current = null;
     openingTourCardRef.current = false;
     routeSyncRequestedRef.current = false;
@@ -101,24 +118,101 @@ export function useInterfaceTour() {
       closeCardRef.current();
     }
     setActive(false);
+    setOfferOpen(false);
     setAnchorEl(null);
     setPreparing(false);
-    await patchAppPreferences({ onboardingTourCompleted: true, onboardingTourStep: 0 });
   }, []);
 
+  const finishTour = useCallback(async () => {
+    closeTourUi();
+    await patchAppPreferences({
+      onboardingTourStep: 0,
+      ...restPrefsAfterFullFinish()
+    });
+  }, [closeTourUi]);
+
+  const pauseAfterChrome = useCallback(async () => {
+    closeTourUi();
+    await patchAppPreferences({
+      onboardingTourStep: 0,
+      ...restPrefsAfterChromePause()
+    });
+  }, [closeTourUi]);
+
   const skipTour = useCallback(() => {
+    if (segment === 'chrome') {
+      void pauseAfterChrome();
+      return;
+    }
     void finishTour();
-  }, [finishTour]);
+  }, [finishTour, pauseAfterChrome, segment]);
+
+  const startTour = useCallback(
+    (nextSegment: InterfaceTourSegment, nextStepIndex: number, replay = false) => {
+      const nextIncludeThanks = shouldIncludeThanksStep({ replay, segment: nextSegment });
+      const maxIndex = Math.max(0, stepsForSegment(nextSegment, { includeThanks: nextIncludeThanks }).length - 1);
+      const safeIndex = Math.min(Math.max(0, nextStepIndex), maxIndex);
+      autoStartedRef.current = true;
+      userOverrodeTourRouteRef.current = false;
+      routeSyncRequestedRef.current = true;
+      manualSectionNavEpochRef.current = getManualSectionNavigationEpoch();
+      setOfferOpen(false);
+      setIncludeThanks(nextIncludeThanks);
+      setSegment(nextSegment);
+      setStepIndex(safeIndex);
+      setActive(true);
+    },
+    []
+  );
+
+  const tryAutoStartTour = useCallback(async () => {
+    const currentPrefs = getAppPreferencesSync();
+    if (!currentPrefs.onboardingSetupCompleted) return false;
+    if (autoStartedRef.current || autoStartInFlightRef.current) return false;
+
+    autoStartInFlightRef.current = true;
+    try {
+      const metrics = await getNavbarMetrics();
+      const hasCards = (metrics?.totalCards ?? 0) > 0;
+      setLibraryHasCards(hasCards);
+
+      if (shouldResumeRestTour(currentPrefs, hasCards)) {
+        startTour('rest', currentPrefs.onboardingTourStep);
+        return true;
+      }
+
+      if (!shouldAutoStartChromeOrFull(currentPrefs)) return false;
+      startTour(resolveAutoStartSegment(hasCards), currentPrefs.onboardingTourStep);
+      return true;
+    } finally {
+      autoStartInFlightRef.current = false;
+    }
+  }, [startTour]);
+
+  const dismissRestOffer = useCallback(() => {
+    setOfferOpen(false);
+    setAnchorEl(null);
+    setPreparing(false);
+    void patchAppPreferences(restPrefsAfterLater());
+  }, []);
+
+  const continueRestOffer = useCallback(() => {
+    void patchAppPreferences({
+      onboardingTourStep: 0,
+      ...restPrefsAfterContinueOffer()
+    });
+    startTour('rest', 0);
+  }, [startTour]);
 
   useEffect(() => {
     if (!ready || !prefs || autoStartedRef.current) return;
-    tryAutoStartTour();
+    void tryAutoStartTour();
   }, [prefs, ready, tryAutoStartTour]);
 
   useEffect(() => {
     const onSetupCompleted = () => {
       if (autoStartedRef.current) return;
-      tryAutoStartTour();
+      void tryAutoStartTour();
     };
     window.addEventListener(ARC_INTERFACE_TOUR_SETUP_COMPLETED_EVENT, onSetupCompleted);
     return () => window.removeEventListener(ARC_INTERFACE_TOUR_SETUP_COMPLETED_EVENT, onSetupCompleted);
@@ -130,33 +224,68 @@ export function useInterfaceTour() {
       openingTourCardRef.current = false;
       userOverrodeTourRouteRef.current = false;
       routeSyncRequestedRef.current = true;
-      // Sync epoch: вход в Настройки уже поднял manualSectionNavEpoch.
-      // Без синхронизации prepare-effect считает это «ручным уходом» и сбрасывает автонавигацию на /gallery.
       manualSectionNavEpochRef.current = getManualSectionNavigationEpoch();
       if (openCardIdRef.current) {
         closeCardRef.current();
       }
-      void patchAppPreferences({ onboardingTourCompleted: false, onboardingTourStep: 0 });
-      setStepIndex(0);
-      setActive(true);
+      void (async () => {
+        const metrics = await getNavbarMetrics();
+        const hasCards = (metrics?.totalCards ?? 0) > 0;
+        setLibraryHasCards(hasCards);
+        await patchAppPreferences({
+          onboardingTourCompleted: false,
+          onboardingTourStep: 0,
+          onboardingRestTourPending: false,
+          onboardingRestTourOfferDismissed: false,
+          onboardingRestTourStarted: false
+        });
+        startTour(resolveAutoStartSegment(hasCards), 0, true);
+      })();
     };
     window.addEventListener(ARC_INTERFACE_TOUR_REPLAY_EVENT, onReplay);
     return () => window.removeEventListener(ARC_INTERFACE_TOUR_REPLAY_EVENT, onReplay);
+  }, [startTour]);
+
+  useEffect(() => {
+    const refreshCards = () => {
+      void getNavbarMetrics().then((metrics) => {
+        setLibraryHasCards((metrics?.totalCards ?? 0) > 0);
+      });
+    };
+    refreshCards();
+    window.addEventListener(ARC_CARDS_CHANGED_EVENT, refreshCards);
+    return () => window.removeEventListener(ARC_CARDS_CHANGED_EVENT, refreshCards);
   }, []);
 
   useEffect(() => {
-    if (!active) {
+    if (!ready || !prefs || active) return;
+    if (!shouldShowRestTourOffer(prefs, libraryHasCards, active)) {
+      if (!prefs.onboardingRestTourPending || prefs.onboardingRestTourOfferDismissed) {
+        setOfferOpen(false);
+      }
+      return;
+    }
+    setOfferOpen(true);
+    routeSyncRequestedRef.current = true;
+    userOverrodeTourRouteRef.current = false;
+    manualSectionNavEpochRef.current = getManualSectionNavigationEpoch();
+  }, [active, libraryHasCards, prefs, ready]);
+
+  useEffect(() => {
+    const preparingOfferOrStep = active || offerOpen;
+    if (!preparingOfferOrStep) {
       setPreparing(false);
       setAnchorEl(null);
       openingTourCardRef.current = false;
       return;
     }
 
-    const step = ENABLED_INTERFACE_TOUR_STEPS[stepIndex];
-    if (!step) return;
+    const currentStep = offerOpen ? OFFER_STEP : stepsForSegment(segment, { includeThanks })[stepIndex];
+    if (!currentStep) return;
 
     const pathname = resolveActivePathname(getPathname);
-    const isCardStep = stepIndex >= CARD_STEP_FIRST_INDEX && stepIndex <= CARD_STEP_LAST_INDEX;
+    const isCardStep = isCardTourStep(currentStep);
+    const needsOverlay = needsCardOverlayTourStep(currentStep);
     const manualSectionNavEpoch = getManualSectionNavigationEpoch();
     if (manualSectionNavEpoch !== manualSectionNavEpochRef.current) {
       manualSectionNavEpochRef.current = manualSectionNavEpoch;
@@ -169,7 +298,10 @@ export function useInterfaceTour() {
       return;
     }
 
-    if (stepIndex >= STATS_STEP_INDEX && openCardId) {
+    if (
+      (currentStep.id === 'card_open' || currentStep.id === 'bug_report' || currentStep.id === 'thanks') &&
+      openCardId
+    ) {
       setPreparing(true);
       setAnchorEl(null);
       tourCardIdRef.current = null;
@@ -178,7 +310,7 @@ export function useInterfaceTour() {
       return;
     }
 
-    if (!pathnameMatchesRoute(pathname, step.route)) {
+    if (!pathnameMatchesRoute(pathname, currentStep.route)) {
       if (!routeSyncRequestedRef.current || userOverrodeTourRouteRef.current) {
         prepareGenerationRef.current += 1;
         openingTourCardRef.current = false;
@@ -189,7 +321,7 @@ export function useInterfaceTour() {
       }
       setPreparing(true);
       setAnchorEl(null);
-      navigateToTourRoute(step.route);
+      navigateToTourRoute(currentStep.route);
       return;
     }
 
@@ -205,11 +337,11 @@ export function useInterfaceTour() {
       try {
         if (generation !== prepareGenerationRef.current) return;
 
-        await waitForRouteCommit(step.route, pageRouteMarkerIds(step), 12000, getPathname);
+        await waitForRouteCommit(currentStep.route, pageRouteMarkerIds(currentStep), 12000, getPathname);
         if (generation !== prepareGenerationRef.current) return;
 
-        let hasCards = true;
-        if (isCardStep) {
+        let hasCards = libraryHasCards;
+        if (isCardStep || offerOpen) {
           const metrics = await getNavbarMetrics();
           hasCards = (metrics?.totalCards ?? 0) > 0;
           if (generation === prepareGenerationRef.current) {
@@ -219,14 +351,14 @@ export function useInterfaceTour() {
 
         if (generation !== prepareGenerationRef.current) return;
 
-        if (isCardStep && hasCards) {
-          if (!pathnameMatchesRoute(resolveActivePathname(getPathname), step.route)) {
+        if (needsOverlay && hasCards) {
+          if (!pathnameMatchesRoute(resolveActivePathname(getPathname), currentStep.route)) {
             if (!routeSyncRequestedRef.current || userOverrodeTourRouteRef.current) return;
-            navigateToTourRoute(step.route);
+            navigateToTourRoute(currentStep.route);
             return;
           }
 
-          await waitForRouteCommit(step.route, ['gallery-grid', 'gallery-page'], 12000, getPathname);
+          await waitForRouteCommit(currentStep.route, ['gallery-grid', 'gallery-page'], 12000, getPathname);
           if (generation !== prepareGenerationRef.current) return;
 
           if (!openCardIdRef.current && !tourCardIdRef.current && !openingTourCardRef.current) {
@@ -261,11 +393,11 @@ export function useInterfaceTour() {
         if (generation !== prepareGenerationRef.current) return;
 
         const resolved = await waitForInterfaceTourAnchor(
-          step.anchorId,
-          step.fallbackAnchorId,
+          currentStep.anchorId,
+          currentStep.fallbackAnchorId,
           12000,
-          step.fallbackAnchorIds,
-          { routePrefix: step.route, getPathname }
+          currentStep.fallbackAnchorIds,
+          { routePrefix: currentStep.route, getPathname }
         );
         if (generation !== prepareGenerationRef.current) return;
 
@@ -287,10 +419,14 @@ export function useInterfaceTour() {
     active,
     closeCard,
     getPathname,
+    includeThanks,
+    libraryHasCards,
     location.pathname,
     location.search,
     navigateToTourRoute,
+    offerOpen,
     openCardId,
+    segment,
     stepIndex
   ]);
 
@@ -306,7 +442,12 @@ export function useInterfaceTour() {
   }, []);
 
   const goForward = useCallback(() => {
-    if (stepIndex >= ENABLED_INTERFACE_TOUR_STEPS.length - 1) {
+    const currentSteps = stepsForSegment(segment, { includeThanks });
+    if (stepIndex >= currentSteps.length - 1) {
+      if (segment === 'chrome') {
+        void pauseAfterChrome();
+        return;
+      }
       void finishTour();
       return;
     }
@@ -316,32 +457,41 @@ export function useInterfaceTour() {
     const next = stepIndex + 1;
     setStepIndex(next);
     void patchAppPreferences({ onboardingTourStep: next });
-  }, [finishTour, stepIndex]);
+  }, [finishTour, includeThanks, pauseAfterChrome, segment, stepIndex]);
 
-  const step = ENABLED_INTERFACE_TOUR_STEPS[stepIndex];
-  const body = step ? resolveStepBody(step, stepIndex, libraryHasCards) : '';
-  const visible = active && !preparing && Boolean(anchorEl) && Boolean(step);
+  const body = offerOpen
+    ? INTERFACE_TOUR_REST_OFFER_BODY
+    : step
+      ? resolveStepBody(step, libraryHasCards)
+      : '';
+  const visible = (active || offerOpen) && !preparing && Boolean(anchorEl) && Boolean(step);
 
   useEffect(() => {
-    if (!active || visible) return;
+    if ((active || offerOpen) && visible) return;
+    if (!active && !offerOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') skipTour();
+      if (event.key === 'Escape') {
+        if (offerOpen) dismissRestOffer();
+        else skipTour();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [active, skipTour, visible]);
+  }, [active, dismissRestOffer, offerOpen, skipTour, visible]);
 
   return {
     visible,
+    variant: offerOpen ? ('offer' as const) : ('step' as const),
+    spotlight: step?.id !== 'thanks',
     stepIndex,
-    totalSteps: ENABLED_INTERFACE_TOUR_STEPS.length,
+    totalSteps: steps.length,
     body,
     placement: step?.placement ?? 'bottom',
     anchorEl,
-    canGoBack: stepIndex > 0,
-    isLastStep: stepIndex >= ENABLED_INTERFACE_TOUR_STEPS.length - 1,
-    skipTour,
+    canGoBack: !offerOpen && stepIndex > 0,
+    isLastStep: !offerOpen && stepIndex >= steps.length - 1,
+    skipTour: offerOpen ? dismissRestOffer : skipTour,
     goBack,
-    goForward
+    goForward: offerOpen ? continueRestOffer : goForward
   };
 }

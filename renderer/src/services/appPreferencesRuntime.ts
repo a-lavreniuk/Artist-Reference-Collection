@@ -238,6 +238,15 @@ function normalizePatch(patch: Partial<AppPreferencesV1>, current: AppPreference
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
   }
+  if ('onboardingRestTourPending' in patch && typeof patch.onboardingRestTourPending === 'boolean') {
+    next.onboardingRestTourPending = patch.onboardingRestTourPending;
+  }
+  if ('onboardingRestTourOfferDismissed' in patch && typeof patch.onboardingRestTourOfferDismissed === 'boolean') {
+    next.onboardingRestTourOfferDismissed = patch.onboardingRestTourOfferDismissed;
+  }
+  if ('onboardingRestTourStarted' in patch && typeof patch.onboardingRestTourStarted === 'boolean') {
+    next.onboardingRestTourStarted = patch.onboardingRestTourStarted;
+  }
   if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
     next.videoAutoplay = patch.videoAutoplay;
   }
@@ -434,6 +443,15 @@ function applyPatchLocal(current: AppPreferencesV1, patch: Partial<AppPreference
   }
   if ('onboardingTourStep' in patch) {
     next.onboardingTourStep = sanitizeOnboardingTourStep(patch.onboardingTourStep);
+  }
+  if ('onboardingRestTourPending' in patch && typeof patch.onboardingRestTourPending === 'boolean') {
+    next.onboardingRestTourPending = patch.onboardingRestTourPending;
+  }
+  if ('onboardingRestTourOfferDismissed' in patch && typeof patch.onboardingRestTourOfferDismissed === 'boolean') {
+    next.onboardingRestTourOfferDismissed = patch.onboardingRestTourOfferDismissed;
+  }
+  if ('onboardingRestTourStarted' in patch && typeof patch.onboardingRestTourStarted === 'boolean') {
+    next.onboardingRestTourStarted = patch.onboardingRestTourStarted;
   }
   if ('videoAutoplay' in patch && typeof patch.videoAutoplay === 'boolean') {
     next.videoAutoplay = patch.videoAutoplay;

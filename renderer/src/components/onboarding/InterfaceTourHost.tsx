@@ -7,6 +7,8 @@ export default function InterfaceTourHost() {
   return (
     <InterfaceTourModal
       open={tour.visible}
+      variant={tour.variant}
+      spotlight={tour.spotlight}
       stepIndex={tour.stepIndex}
       totalSteps={tour.totalSteps}
       body={tour.body}

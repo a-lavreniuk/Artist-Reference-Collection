@@ -64,13 +64,19 @@ export function useOnboardingSetup(onComplete: () => void) {
           prefs.onboardingSetupStep !== 0 ||
           prefs.onboardingSetupCompleted ||
           prefs.onboardingTourCompleted ||
-          prefs.onboardingTourStep !== 0
+          prefs.onboardingTourStep !== 0 ||
+          prefs.onboardingRestTourPending ||
+          prefs.onboardingRestTourOfferDismissed ||
+          prefs.onboardingRestTourStarted
         ) {
           await patchAppPreferences({
             onboardingSetupStep: 0,
             onboardingSetupCompleted: false,
             onboardingTourCompleted: false,
-            onboardingTourStep: 0
+            onboardingTourStep: 0,
+            onboardingRestTourPending: false,
+            onboardingRestTourOfferDismissed: false,
+            onboardingRestTourStarted: false
           });
         }
         setStep(0);
@@ -128,7 +134,10 @@ export function useOnboardingSetup(onComplete: () => void) {
       onboardingSetupCompleted: true,
       onboardingSetupStep: 2,
       onboardingTourCompleted: false,
-      onboardingTourStep: 0
+      onboardingTourStep: 0,
+      onboardingRestTourPending: false,
+      onboardingRestTourOfferDismissed: false,
+      onboardingRestTourStarted: false
     });
     invalidateLibraryCache();
     await getNavbarMetrics();

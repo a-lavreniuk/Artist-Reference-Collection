@@ -14,6 +14,8 @@ export type AnchoredTourLayout = {
 
 function flipOrder(preferred: InterfaceTourPlacement): InterfaceTourPlacement[] {
   switch (preferred) {
+    case 'center':
+      return ['center'];
     case 'top':
       return ['top', 'bottom', 'right', 'left'];
     case 'bottom':
@@ -27,6 +29,20 @@ function flipOrder(preferred: InterfaceTourPlacement): InterfaceTourPlacement[] 
   }
 }
 
+export function computeCenteredTourPosition(
+  modalWidth: number,
+  modalHeight: number,
+  viewport: { width: number; height: number },
+  margin = VIEW_MARGIN
+): { top: number; left: number } {
+  const maxLeft = Math.max(margin, viewport.width - modalWidth - margin);
+  const maxTop = Math.max(margin, viewport.height - modalHeight - margin);
+  return {
+    top: Math.max(margin, Math.min((viewport.height - modalHeight) / 2, maxTop)),
+    left: Math.max(margin, Math.min((viewport.width - modalWidth) / 2, maxLeft))
+  };
+}
+
 function placeAt(
   anchorRect: DOMRect,
   modalWidth: number,
@@ -35,6 +51,11 @@ function placeAt(
   gap = ANCHOR_GAP
 ): { top: number; left: number } {
   switch (placement) {
+    case 'center':
+      return computeCenteredTourPosition(modalWidth, modalHeight, {
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
     case 'top':
       return {
         top: anchorRect.top - modalHeight - gap,

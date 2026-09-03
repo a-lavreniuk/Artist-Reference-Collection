@@ -113,7 +113,7 @@ export default function TopNavbar() {
           className="arc-navbar-islands arc-navbar-no-drag arc-ui-kit-scope"
           data-btn-size="m"
         >
-          <div className="arc-navbar-island arc-navbar-island--nav">
+          <div className="arc-navbar-island arc-navbar-island--nav" data-interface-tour-anchor="navbar-nav">
             <NavbarLibrarySwitcher
               disabled={maintenanceLocked}
               isGalleryActive={highlightedTab === 'gallery'}
