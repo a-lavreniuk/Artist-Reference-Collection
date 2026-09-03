@@ -15,7 +15,7 @@ export type ScrollFadeState = {
 export type NavbarSearchContextValue = {
   searchMode: NavbarSearchMode;
   setSearchMode: Dispatch<SetStateAction<NavbarSearchMode>>;
-  aiNavbarModesVisible: boolean;
+  aiNavbarModesReady: boolean;
   draft: string;
   setDraft: Dispatch<SetStateAction<string>>;
   panelOpen: boolean;

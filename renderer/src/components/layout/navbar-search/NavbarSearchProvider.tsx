@@ -38,7 +38,7 @@ import {
   type NavbarSearchMode,
   writeNavbarSearchMode
 } from '../../../search/navbarSearchMode';
-import { useAiNavbarModesVisible } from '../../../hooks/useAiNavbarModesVisible';
+import { useAiNavbarModesReady } from '../../../hooks/useAiNavbarModesVisible';
 import { useAppPreferences } from '../../../hooks/useAppPreferences';
 import {
   COLOR_SEARCH_PRESETS,
@@ -100,7 +100,7 @@ export function NavbarSearchProvider({
   const similarRefFromUrl = useMemo(() => parseSearchSimilarRef(searchParams), [searchParams]);
 
   const [searchMode, setSearchMode] = useState<NavbarSearchMode>(() => readNavbarSearchMode());
-  const aiNavbarModesVisible = useAiNavbarModesVisible();
+  const { ready: aiNavbarModesReady, resolved: aiNavbarModesResolved } = useAiNavbarModesReady();
   const [draft, setDraft] = useState('');
   const [panelOpen, setPanelOpen] = useState(false);
   const [fieldError, setFieldError] = useState(false);
@@ -213,33 +213,30 @@ export function NavbarSearchProvider({
     hasValue,
     searchIslandWidePinned,
     searchMode,
-    aiNavbarModesVisible,
     getSearchIsland,
     measureRef
   });
 
-  const aiNavbarModesVisibleRef = useRef(aiNavbarModesVisible);
-
   useEffect(() => {
-    const wasVisible = aiNavbarModesVisibleRef.current;
-    aiNavbarModesVisibleRef.current = aiNavbarModesVisible;
-    if (!wasVisible || aiNavbarModesVisible) return;
+    if (!aiNavbarModesResolved || aiNavbarModesReady) return;
 
+    const modeIsAi = searchMode === 'ai' || searchMode === 'similar';
     const hasAiOrSimilar =
       Boolean(parseSearchAiQuery(searchParams)) || Boolean(parseSearchSimilarRef(searchParams));
-    if (!hasAiOrSimilar) return;
+    if (!modeIsAi && !hasAiOrSimilar) return;
     setSearchMode('tags');
     writeNavbarSearchMode('tags');
     clearSimilarUploadPath();
     setSearchParams(clearGallerySearchParams(searchParams), { replace: true });
-  }, [aiNavbarModesVisible, searchParams, setSearchParams]);
+  }, [aiNavbarModesReady, aiNavbarModesResolved, searchMode, searchParams, setSearchParams]);
 
   useEffect(() => {
+    if (!aiNavbarModesReady) return;
     if (similarRefFromUrl && searchMode !== 'similar') {
       setSearchMode('similar');
       writeNavbarSearchMode('similar');
     }
-  }, [similarRefFromUrl, searchMode]);
+  }, [aiNavbarModesReady, similarRefFromUrl, searchMode]);
 
   // Только когда color= только что появился в URL — не откатывать ручной уход из режима «Цвет».
   const prevColorHexRef = useRef<string | null>(null);
@@ -569,7 +566,7 @@ export function NavbarSearchProvider({
     panelOpen,
     searchMode,
     displayColorHex,
-    aiNavbarModesVisible
+    aiNavbarModesReady
   ]);
 
   const selectRecentCard = useCallback(
@@ -602,7 +599,7 @@ export function NavbarSearchProvider({
   const contextValue: NavbarSearchContextValue = {
     searchMode,
     setSearchMode,
-    aiNavbarModesVisible,
+    aiNavbarModesReady,
     draft,
     setDraft,
     panelOpen,

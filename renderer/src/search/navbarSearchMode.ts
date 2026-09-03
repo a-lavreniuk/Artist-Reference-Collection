@@ -34,6 +34,7 @@ export const SEARCH_MODE_META: Record<
     placeholder: string;
     iconClass: string;
     enabled: boolean;
+    unavailableHint?: string;
   }
 > = {
   tags: {
@@ -46,12 +47,13 @@ export const SEARCH_MODE_META: Record<
   },
   ai: {
     label: 'AI Семантика',
-    panelTitle: 'AI поиск',
+    panelTitle: 'Семантический поиск',
     panelHint:
       'Опишите, что ищите, например: «Чёрная кошка». Однако поиск может допускать ошибки…',
     placeholder: 'Поисковый запрос',
     iconClass: 'arc-icon-ai',
-    enabled: true
+    enabled: true,
+    unavailableHint: 'Семантический поиск доступен после настройки умного поиска'
   },
   color: {
     label: 'По цвету',
@@ -67,7 +69,8 @@ export const SEARCH_MODE_META: Record<
     panelHint: 'Загрузите изображение или выберите карточку из недавних просмотров',
     placeholder: 'Выберите файл для поиска совпадений…',
     iconClass: 'arc-icon-image',
-    enabled: true
+    enabled: true,
+    unavailableHint: 'Поиск по совпадениям доступен после настройки умного поиска'
   }
 };
 

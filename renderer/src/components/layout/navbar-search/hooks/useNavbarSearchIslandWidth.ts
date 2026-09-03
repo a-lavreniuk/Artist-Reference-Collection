@@ -13,7 +13,6 @@ type UseNavbarSearchIslandWidthOptions = {
   hasValue: boolean;
   searchIslandWidePinned: boolean;
   searchMode: string;
-  aiNavbarModesVisible: boolean;
   getSearchIsland: () => HTMLElement | null;
   measureRef: RefObject<HTMLSpanElement | null>;
 };
@@ -23,7 +22,6 @@ export function useNavbarSearchIslandWidth({
   hasValue,
   searchIslandWidePinned,
   searchMode,
-  aiNavbarModesVisible,
   getSearchIsland,
   measureRef
 }: UseNavbarSearchIslandWidthOptions) {
@@ -64,7 +62,7 @@ export function useNavbarSearchIslandWidth({
     const modesEl = island.querySelector('.arc-navbar-search-modes');
     if (modesEl) ro.observe(modesEl);
     return () => ro.disconnect();
-  }, [panelOpen, hasValue, searchIslandWidePinned, searchMode, aiNavbarModesVisible, getSearchIsland, measureRef]);
+  }, [panelOpen, hasValue, searchIslandWidePinned, searchMode, getSearchIsland, measureRef]);
 
   return collapsedWidth;
 }

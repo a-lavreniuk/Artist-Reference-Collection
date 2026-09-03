@@ -1,19 +1,24 @@
+import { Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SEARCH_MODE_META, type NavbarSearchMode } from '../../../search/navbarSearchMode';
+import { Tooltip } from '../../tooltip/Tooltip';
 
 type NavbarSearchModesProps = {
   mode: NavbarSearchMode;
-  aiSearchEnabled: boolean;
+  aiModesReady: boolean;
   onModeChange: (mode: NavbarSearchMode) => void;
 };
 
 const MODES: NavbarSearchMode[] = ['tags', 'ai', 'color', 'similar'];
+const AI_SETTINGS_PATH = '/settings/ai-search';
 
 /** Figma 822:8875 — icon-tab M, без групповой рамки */
-export default function NavbarSearchModes({ mode, aiSearchEnabled, onModeChange }: NavbarSearchModesProps) {
-  const visibleModes = MODES.filter((item) => {
-    if (item === 'ai' || item === 'similar') return aiSearchEnabled;
-    return true;
-  });
+export default function NavbarSearchModes({
+  mode,
+  aiModesReady,
+  onModeChange
+}: NavbarSearchModesProps) {
+  const navigate = useNavigate();
 
   return (
     <div
@@ -23,19 +28,27 @@ export default function NavbarSearchModes({ mode, aiSearchEnabled, onModeChange 
       data-arc-icon-size="m"
       data-btn-size="m"
     >
-      {visibleModes.map((item) => {
+      {MODES.map((item) => {
         const meta = SEARCH_MODE_META[item];
-        const active = mode === item;
-        return (
+        const active = !unavailable && mode === item;
+        const needsAi = item === 'ai' || item === 'similar';
+        const unavailable = needsAi && !aiModesReady;
+        const hint = unavailable ? (meta.unavailableHint ?? null) : null;
+        const label = hint ?? meta.label;
+
+        const button = (
           <button
-            key={item}
             type="button"
             role="tab"
             className={`tab-button tab-icon-only${active ? ' is-active' : ''}`}
             aria-selected={active}
-            aria-label={meta.enabled ? meta.label : `${meta.label} — в разработке`}
-            disabled={!meta.enabled}
+            aria-label={label}
+            aria-disabled={unavailable || undefined}
             onClick={() => {
+              if (unavailable) {
+                navigate(AI_SETTINGS_PATH);
+                return;
+              }
               if (!meta.enabled) return;
               // Режим и URL обновляет handleModeChange; не вызываем writeNavbarSearchMode
               // заранее — иначе эффект sync по URL может откатить клик (особенно из «Цвет»).
@@ -44,6 +57,16 @@ export default function NavbarSearchModes({ mode, aiSearchEnabled, onModeChange 
           >
             <span className={`tab-icon ${meta.iconClass}`} data-arc-icon-size="m" aria-hidden="true" />
           </button>
+        );
+
+        if (!hint) {
+          return <Fragment key={item}>{button}</Fragment>;
+        }
+
+        return (
+          <Tooltip key={item} content={hint} delay={500} position="top" as="span">
+            <span className="arc-tooltip-anchor-inline">{button}</span>
+          </Tooltip>
         );
       })}
     </div>

@@ -18,7 +18,7 @@ export default function NavbarSearchBar() {
         <div className="arc-navbar-search-row">
           <NavbarSearchModes
             mode={ctx.searchMode}
-            aiSearchEnabled={ctx.aiNavbarModesVisible}
+            aiModesReady={ctx.aiNavbarModesReady}
             onModeChange={ctx.handleModeChange}
           />
           <div

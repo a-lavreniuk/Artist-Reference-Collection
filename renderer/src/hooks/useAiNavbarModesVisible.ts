@@ -2,21 +2,32 @@ import { useCallback, useEffect, useState } from 'react';
 import { ARC_AI_SETUP_CHANGED_EVENT } from '../search/aiSearchEvents';
 import { useAppPreferences } from './useAppPreferences';
 
+export type AiNavbarModesReady = {
+  /** Модель установлена и умный поиск включён — режимы AI / Похожие рабочие. */
+  ready: boolean;
+  setupReady: boolean;
+  /** Prefs и aiGetStatus уже известны; до этого не сбрасывать URL. */
+  resolved: boolean;
+};
+
 /**
- * Вкладки AI / Похожие в navbar — только при включённом AI-поиске и установленной модели.
+ * Готовность вкладок AI / Похожие в navbar.
+ * Сами вкладки всегда видны; этот флаг говорит, можно ли ими пользоваться.
  *
  * Не добавляйте location.pathname в зависимости refresh: aiGetStatus на main вызывает
  * detectHardware(); частый вызов при навигации блокирует sendSync list-cards (~1.6 с на Windows).
  * Обновлять статус — только при prefs, focus и событиях установки модели.
  */
-export function useAiNavbarModesVisible(): boolean {
+export function useAiNavbarModesReady(): AiNavbarModesReady {
   const { prefs, ready: prefsReady } = useAppPreferences();
   const [setupReady, setSetupReady] = useState(false);
+  const [statusFetched, setStatusFetched] = useState(false);
 
   const refresh = useCallback(async () => {
     const arc = window.arc;
     if (!arc?.aiGetStatus) {
       setSetupReady(false);
+      setStatusFetched(true);
       return;
     }
     try {
@@ -24,6 +35,8 @@ export function useAiNavbarModesVisible(): boolean {
       setSetupReady(Boolean(status.setupReady));
     } catch {
       setSetupReady(false);
+    } finally {
+      setStatusFetched(true);
     }
   }, []);
 
@@ -49,5 +62,9 @@ export function useAiNavbarModesVisible(): boolean {
     };
   }, [refresh]);
 
-  return prefsReady && setupReady;
+  const prefsSearchEnabled = Boolean(prefs?.aiSearchEnabled || prefs?.aiSemanticSearchEnabled);
+  const resolved = prefsReady && statusFetched;
+  const ready = resolved && setupReady && prefsSearchEnabled;
+
+  return { ready, setupReady, resolved };
 }

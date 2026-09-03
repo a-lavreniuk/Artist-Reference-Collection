@@ -16,6 +16,7 @@ import SettingsAutoTagPanel from '../pages/settings/panels/SettingsAutoTagPanel'
 import SettingsAiSearchPanel from '../pages/settings/panels/SettingsAiSearchPanel';
 import { patchAiSettingsSnapshotForTests } from '../pages/settings/settingsAiSession';
 import GalleryTrashHeader from '../components/gallery/GalleryTrashHeader';
+import NavbarSearchModes from '../components/layout/navbar-search/NavbarSearchModes';
 
 function withBrowserWindowStub(run: () => void): void {
   const previous = (globalThis as { window?: unknown }).window;
@@ -273,6 +274,25 @@ describe('renderer UI smoke', () => {
           </MemoryRouter>
         )
       ).not.toThrow();
+    });
+  });
+
+  it('NavbarSearchModes renders all four tabs when AI is not ready', () => {
+    withBrowserWindowStub(() => {
+      const html = renderToString(
+        <MemoryRouter>
+          <NavbarSearchModes
+            mode="tags"
+            aiModesReady={false}
+            onModeChange={() => undefined}
+          />
+        </MemoryRouter>
+      );
+      expect(html).toContain('aria-label="Режим поиска"');
+      expect(html).toContain('Семантический поиск доступен после настройки умного поиска');
+      expect(html).toContain('Поиск по совпадениям доступен после настройки умного поиска');
+      expect(html).toContain('aria-disabled="true"');
+      expect(html).not.toContain('в разработке');
     });
   });
 });

@@ -864,21 +864,21 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   color: var(--tab-inactive-counter-default);
 }
 
-.tab-button:hover:not(:disabled):not(.is-active) .tab-counter,
-.tab-button:focus-visible:not(:disabled):not(.is-active) .tab-counter,
-.tab-button.state-hover:not(:disabled):not(.is-active) .tab-counter,
-.tab-button.state-focus:not(:disabled):not(.is-active) .tab-counter {
+.tab-button:hover:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-counter,
+.tab-button:focus-visible:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-counter,
+.tab-button.state-hover:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-counter,
+.tab-button.state-focus:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-counter {
   color: var(--tab-inactive-counter-hover);
 }
 
 .tab-button.is-active .tab-counter,
-.tab-button.is-active:focus-visible:not(:disabled) .tab-counter,
-.tab-button.is-active.state-focus:not(:disabled) .tab-counter {
+.tab-button.is-active:focus-visible:not(:disabled):not([aria-disabled='true']) .tab-counter,
+.tab-button.is-active.state-focus:not(:disabled):not([aria-disabled='true']) .tab-counter {
   color: var(--tab-active-counter-default);
 }
 
-.tab-button.is-active:hover:not(:disabled) .tab-counter,
-.tab-button.is-active.state-hover:not(:disabled) .tab-counter {
+.tab-button.is-active:hover:not(:disabled):not([aria-disabled='true']) .tab-counter,
+.tab-button.is-active.state-hover:not(:disabled):not([aria-disabled='true']) .tab-counter {
   color: var(--tab-active-counter-hover);
 }
 
@@ -886,37 +886,40 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   color: var(--tab-inactive-icon-default);
 }
 
-.tab-button:hover:not(:disabled):not(.is-active) .tab-icon,
-.tab-button:focus-visible:not(:disabled):not(.is-active) .tab-icon,
-.tab-button.state-hover:not(:disabled):not(.is-active) .tab-icon,
-.tab-button.state-focus:not(:disabled):not(.is-active) .tab-icon {
+.tab-button:hover:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-icon,
+.tab-button:focus-visible:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-icon,
+.tab-button.state-hover:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-icon,
+.tab-button.state-focus:not(:disabled):not([aria-disabled='true']):not(.is-active) .tab-icon {
   color: var(--tab-inactive-icon-hover);
 }
 
 .tab-button.is-active .tab-icon,
-.tab-button.is-active:hover:not(:disabled) .tab-icon,
-.tab-button.is-active:focus-visible:not(:disabled) .tab-icon,
-.tab-button.is-active.state-hover:not(:disabled) .tab-icon,
-.tab-button.is-active.state-focus:not(:disabled) .tab-icon {
+.tab-button.is-active:hover:not(:disabled):not([aria-disabled='true']) .tab-icon,
+.tab-button.is-active:focus-visible:not(:disabled):not([aria-disabled='true']) .tab-icon,
+.tab-button.is-active.state-hover:not(:disabled):not([aria-disabled='true']) .tab-icon,
+.tab-button.is-active.state-focus:not(:disabled):not([aria-disabled='true']) .tab-icon {
   color: var(--tab-active-icon-default);
 }
 
-.tab-button.is-active:hover:not(:disabled) .tab-icon,
-.tab-button.is-active.state-hover:not(:disabled) .tab-icon {
+.tab-button.is-active:hover:not(:disabled):not([aria-disabled='true']) .tab-icon,
+.tab-button.is-active.state-hover:not(:disabled):not([aria-disabled='true']) .tab-icon {
   color: var(--tab-active-icon-hover);
 }
 
-.tab-button:disabled {
+.tab-button:disabled,
+.tab-button[aria-disabled='true'] {
   background: var(--tab-inactive-fill-disabled);
   color: var(--tab-inactive-value-disabled);
   cursor: not-allowed;
 }
 
-.tab-button:disabled .tab-counter {
+.tab-button:disabled .tab-counter,
+.tab-button[aria-disabled='true'] .tab-counter {
   color: var(--tab-inactive-counter-disabled);
 }
 
-.tab-button:disabled .tab-icon {
+.tab-button:disabled .tab-icon,
+.tab-button[aria-disabled='true'] .tab-icon {
   color: var(--tab-inactive-icon-disabled);
 }
 
@@ -969,8 +972,8 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   opacity: 1;
 }
 
-.tab-button:hover:not(.is-active):not(:disabled),
-.tab-button.state-hover:not(.is-active):not(:disabled) {
+.tab-button:hover:not(.is-active):not(:disabled):not([aria-disabled='true']),
+.tab-button.state-hover:not(.is-active):not(:disabled):not([aria-disabled='true']) {
   background: var(--tab-inactive-fill-hover);
   color: var(--tab-inactive-value-hover);
 }
@@ -980,8 +983,8 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   color: var(--tab-active-value-default);
 }
 
-.tab-button.is-active:hover:not(:disabled),
-.tab-button.is-active.state-hover:not(:disabled) {
+.tab-button.is-active:hover:not(:disabled):not([aria-disabled='true']),
+.tab-button.is-active.state-hover:not(:disabled):not([aria-disabled='true']) {
   background: var(--tab-active-fill-hover);
   color: var(--tab-active-value-hover);
 }
@@ -994,14 +997,14 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
   z-index: 2;
 }
 
-.tabs .tab-button:focus-visible:not(.is-active):not(:disabled),
-.tabs .tab-button.state-focus:not(.is-active):not(:disabled) {
+.tabs .tab-button:focus-visible:not(.is-active):not(:disabled):not([aria-disabled='true']),
+.tabs .tab-button.state-focus:not(.is-active):not(:disabled):not([aria-disabled='true']) {
   background: var(--tab-inactive-fill-focus);
   color: var(--tab-inactive-value-focus);
 }
 
-.tabs .tab-button.is-active:focus-visible:not(:disabled),
-.tabs .tab-button.is-active.state-focus:not(:disabled) {
+.tabs .tab-button.is-active:focus-visible:not(:disabled):not([aria-disabled='true']),
+.tabs .tab-button.is-active.state-focus:not(:disabled):not([aria-disabled='true']) {
   background: var(--tab-active-fill-focus);
   color: var(--tab-active-value-focus);
 }
