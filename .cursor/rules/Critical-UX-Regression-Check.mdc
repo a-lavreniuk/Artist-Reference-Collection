@@ -37,6 +37,8 @@ npm test
 - GSAP: вход/выход overlay **только при смене `open`**; при `open=true` не `killTweensOf` без повторного enter.
 - После закрытия деталки `.arc-app-outlet` не остаётся с `opacity: 0` / `pointer-events: none`.
 - Нет удалённых import React-хуков при оставшихся вызовах → белый экран / пустая галерея.
+- Нет чтения `const`/`let` до объявления (TDZ: `Cannot access '…' before initialization`) — белый экран. Типично в `.map()` navbar: флаг `unavailable` нельзя использовать в `active` выше по блоку.
+- Chrome navbar/search (`NavbarSearch*`): после правок **реально** запустить `verify:renderer-ui` (smoke монтирует `NavbarSearchModes`). Добавить тест недостаточно: падение chrome валит всё приложение.
 - Не ставить GSAP `opacity: 0` на контейнер с CSS `transform` для центрирования.
 
 ## 4. Открытие деталки

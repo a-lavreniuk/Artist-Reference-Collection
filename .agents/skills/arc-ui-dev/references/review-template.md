@@ -40,6 +40,8 @@
 - [ ] Tooltip: delay, viewport, `pointer-events: none`
 - [ ] Context menu: backdrop, Escape, 250px
 - [ ] Electron: выделение текста и ввод не сломаны
+- [ ] Нет TDZ: `const`/`let` не используются до объявления (иначе `ReferenceError` и белый экран; критично для navbar/layout)
+- [ ] Правки navbar/поиска/layout — `verify:renderer-ui` реально прогнан, не только «тест добавлен»
 
 ### Формы
 

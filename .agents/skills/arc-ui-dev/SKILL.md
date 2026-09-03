@@ -123,6 +123,8 @@ Skill для разработки и ревью UI в репозитории **A
 - [ ] Внутренний скролл panel/sidebar/modal: `Scroll-clip-ARC.mdc` (overflow без padding; sep flush)
 - [ ] Нет title= на кнопках вместо Tooltip
 - [ ] Нет hint-error под полем при field-level валидации
+- [ ] `const`/`let` не читаются до своей строки объявления (TDZ → `ReferenceError`, белый экран). В `.map()` navbar/layout сначала флаги (`needsAi`, `unavailable`), потом `active` / JSX
+- [ ] Правки chrome (navbar, поиск, layout): реально запустить `npm run verify:renderer-ui`. Smoke монтирует `NavbarSearchModes`. Добавить тест ≠ прогнать его; падение chrome валит всё приложение
 - [ ] Отчёт: что изменилось в UI → технические детали → сверка с макетом
 ```
 
