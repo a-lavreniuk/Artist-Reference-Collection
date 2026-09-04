@@ -1,12 +1,19 @@
 import { useLayoutEffect, useRef } from 'react';
+import { LIBRARY_FOLDER_EXISTS_ERROR } from '@arc-main-shared/libraryNameCopy';
 import { ArcAnimatedModalHost } from '../../motion';
 import FloatingModalPanel from '../layout/FloatingModalPanel';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
+
+const FOLDER_EXISTS_ERROR_ID = 'create-library-folder-exists-error';
 
 type Props = {
   folderName: string;
   busy: boolean;
   emptySubmitted: boolean;
+  /** Невалидное имя (формат) — красная обводка. */
+  fieldError?: boolean;
+  /** Имя занято папкой на диске — обводка + текст под полем. */
+  duplicateFolderError?: boolean;
   onFolderNameChange: (value: string) => void;
   onClose: () => void;
   onSubmit: () => void;
@@ -18,17 +25,20 @@ export default function CreateLibraryModal({
   folderName,
   busy,
   emptySubmitted,
+  fieldError = false,
+  duplicateFolderError = false,
   onFolderNameChange,
   onClose,
   onSubmit,
   inContainer = false
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const nameInvalid = emptySubmitted && !folderName.trim();
+  const nameInvalid =
+    (emptySubmitted && !folderName.trim()) || fieldError || duplicateFolderError;
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
-  }, [folderName, busy, emptySubmitted]);
+  }, [folderName, busy, emptySubmitted, fieldError, duplicateFolderError]);
 
   return (
     <ArcAnimatedModalHost onClose={onClose}>
@@ -80,6 +90,7 @@ export default function CreateLibraryModal({
                 value={folderName}
                 autoFocus
                 aria-invalid={nameInvalid || undefined}
+                aria-describedby={duplicateFolderError ? FOLDER_EXISTS_ERROR_ID : undefined}
                 disabled={busy}
                 onChange={(event) => onFolderNameChange(event.target.value)}
                 onKeyDown={(event) => {
@@ -101,6 +112,11 @@ export default function CreateLibraryModal({
                 }}
               />
             </label>
+            {duplicateFolderError ? (
+              <p className="text-s hint hint-error" id={FOLDER_EXISTS_ERROR_ID} role="alert">
+                {LIBRARY_FOLDER_EXISTS_ERROR}
+              </p>
+            ) : null}
           </div>
         </div>
         <footer className="arc-modal__footer arc-modal__footer--actions-2">

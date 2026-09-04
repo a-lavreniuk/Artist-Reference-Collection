@@ -8,6 +8,7 @@ import { InfoSplitCard } from '../../../components/info-card';
 import { useSettingsLibraries } from '../hooks/useSettingsLibraries';
 import { hydrateArcNavbarIcons } from '../../../components/layout/navbarIconHydrate';
 import { ONBOARDING_DEFAULT_LIBRARY_NAME } from '../../../content/onboarding';
+import { isLibraryFolderExistsError } from '@arc-main-shared/libraryNameCopy';
 import { formatCardCountLabel } from '../../../utils/formatCardCountLabel';
 import { invalidateLibraryCache, getNavbarMetrics } from '../../../services/db';
 
@@ -54,6 +55,7 @@ export default function SettingsLibraryPanel() {
   const [createBusy, setCreateBusy] = useState(false);
   const [createEmptySubmitted, setCreateEmptySubmitted] = useState(false);
   const [createFieldError, setCreateFieldError] = useState(false);
+  const [createDuplicateFolder, setCreateDuplicateFolder] = useState(false);
 
   useLayoutEffect(() => {
     if (rootRef.current) void hydrateArcNavbarIcons(rootRef.current);
@@ -66,6 +68,7 @@ export default function SettingsLibraryPanel() {
     setCreateName(ONBOARDING_DEFAULT_LIBRARY_NAME);
     setCreateEmptySubmitted(false);
     setCreateFieldError(false);
+    setCreateDuplicateFolder(false);
     setCreateOpen(true);
   }, []);
 
@@ -79,14 +82,23 @@ export default function SettingsLibraryPanel() {
     }
     setCreateBusy(true);
     setCreateFieldError(false);
+    setCreateDuplicateFolder(false);
     try {
       const res = await createLibrary(name);
       if (!res.ok) {
-        if (res.fieldError) setCreateFieldError(true);
-        else setInfoModal(res.error?.trim() || 'Не удалось создать библиотеку');
+        if (isLibraryFolderExistsError(res.error)) {
+          setCreateDuplicateFolder(true);
+          setCreateFieldError(true);
+        } else if (res.fieldError) {
+          setCreateFieldError(true);
+        } else {
+          setInfoModal(res.error?.trim() || 'Не удалось создать библиотеку');
+        }
         return;
       }
       setCreateOpen(false);
+    } catch (err) {
+      setInfoModal(err instanceof Error ? err.message : 'Не удалось создать библиотеку');
     } finally {
       setCreateBusy(false);
     }
@@ -215,11 +227,14 @@ export default function SettingsLibraryPanel() {
         <CreateLibraryModal
           folderName={createName}
           busy={createBusy}
-          emptySubmitted={createEmptySubmitted || createFieldError}
+          emptySubmitted={createEmptySubmitted}
+          fieldError={createFieldError}
+          duplicateFolderError={createDuplicateFolder}
           onFolderNameChange={(value) => {
             setCreateName(value);
             setCreateEmptySubmitted(false);
             setCreateFieldError(false);
+            setCreateDuplicateFolder(false);
           }}
           onClose={() => {
             if (!createBusy) setCreateOpen(false);

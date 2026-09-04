@@ -105,6 +105,8 @@ export default function OnboardingLibraryScreen({ revealed = true, animateEnter 
           folderName={libraryModal.state.folderName}
           busy={libraryModal.state.busy}
           emptySubmitted={libraryModal.state.emptySubmitted}
+          fieldError={libraryModal.state.fieldError}
+          duplicateFolderError={libraryModal.state.duplicateFolderError}
           onFolderNameChange={libraryModal.setFolderName}
           onClose={libraryModal.closeModal}
           onSubmit={() => void libraryModal.submit()}
