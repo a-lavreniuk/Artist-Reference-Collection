@@ -1,4 +1,5 @@
 import type { CardRecord } from '../../services/arcSchema';
+import type { DetailCardTemplateV1 } from '@arc-main-shared/detailCardTemplate';
 import { EMPTY_STATE_COPY } from '../../content/emptyStates';
 import { EmptyState } from '../empty-state';
 import type { DuplicatesCompareMode } from './duplicateCompareTypes';
@@ -16,6 +17,8 @@ type Props = {
   libraryRootB: string | null;
   libraryNameA?: string | null;
   libraryNameB?: string | null;
+  templateA?: DetailCardTemplateV1 | null;
+  templateB?: DetailCardTemplateV1 | null;
   crossLibrary: boolean;
   busy: boolean;
   queueComplete?: boolean;
@@ -38,6 +41,8 @@ export default function DuplicatesResultsView({
   libraryRootB,
   libraryNameA,
   libraryNameB,
+  templateA,
+  templateB,
   crossLibrary,
   busy,
   queueComplete = false,
@@ -75,24 +80,24 @@ export default function DuplicatesResultsView({
             <div className="arc-duplicates-panel arc-duplicates-panel--image">
               <div className="arc-duplicates-side">
                 {urlA ? <img className="arc-duplicates-side__img" src={urlA} alt="" draggable={false} /> : null}
-                <DuplicatesMetaOverlay
-                  card={cardA}
-                  libraryRootAbs={libraryRootA}
-                  libraryName={libraryNameA}
-                  align="left"
-                />
               </div>
+              <DuplicatesMetaOverlay
+                card={cardA}
+                libraryRootAbs={libraryRootA}
+                libraryName={libraryNameA}
+                align="left"
+              />
             </div>
             <div className="arc-duplicates-panel arc-duplicates-panel--image">
               <div className="arc-duplicates-side">
                 {urlB ? <img className="arc-duplicates-side__img" src={urlB} alt="" draggable={false} /> : null}
-                <DuplicatesMetaOverlay
-                  card={cardB}
-                  libraryRootAbs={libraryRootB}
-                  libraryName={libraryNameB}
-                  align="right"
-                />
               </div>
+              <DuplicatesMetaOverlay
+                card={cardB}
+                libraryRootAbs={libraryRootB}
+                libraryName={libraryNameB}
+                align="right"
+              />
             </div>
           </>
         ) : null}
@@ -120,6 +125,8 @@ export default function DuplicatesResultsView({
             libraryRootB={libraryRootB}
             libraryNameA={libraryNameA}
             libraryNameB={libraryNameB}
+            templateA={templateA}
+            templateB={templateB}
           />
         ) : null}
       </div>

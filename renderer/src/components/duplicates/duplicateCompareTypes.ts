@@ -1,4 +1,5 @@
 import type { CardRecord } from '../../services/arcSchema';
+import type { DetailCardTemplateV1 } from '@arc-main-shared/detailCardTemplate';
 
 export type DuplicatesCompareMode = 'sideBySide' | 'overlay' | 'metadata';
 
@@ -38,6 +39,8 @@ export type ScannedDuplicatePair = {
   previewAbsB?: string | null;
   cardA: CardRecord | null;
   cardB: CardRecord | null;
+  detailTemplateA?: DetailCardTemplateV1;
+  detailTemplateB?: DetailCardTemplateV1;
 };
 
 export function isCrossLibraryPair(pair: Pick<ScannedDuplicatePair, 'libraryIdA' | 'libraryIdB'>): boolean {

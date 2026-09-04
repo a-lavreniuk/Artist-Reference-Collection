@@ -1,7 +1,8 @@
 const STORAGE_KEY = 'arc-duplicates-sidebar-width-v1';
 
 export const DUPLICATES_SIDEBAR_WIDTH_DEFAULT = 400;
-export const DUPLICATES_SIDEBAR_WIDTH_MIN = 320;
+/** Ниже этого «Похожесть 100%» в плашке пары обрезается (превью 56px × 2 + отступы). */
+export const DUPLICATES_SIDEBAR_WIDTH_MIN = 400;
 
 export function getDuplicatesSidebarWidthBounds(): { min: number; max: number } {
   const min = DUPLICATES_SIDEBAR_WIDTH_MIN;

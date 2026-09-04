@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import DuplicatesReadyState, { type DuplicatesScanScopeMode } from '../components/duplicates/DuplicatesReadyState';
+import DuplicatesReadyState from '../components/duplicates/DuplicatesReadyState';
 import DuplicatesSidebar from '../components/duplicates/DuplicatesSidebar';
 import DuplicatesResultsView from '../components/duplicates/DuplicatesResultsView';
 import ConfirmDuplicateTrashModal from '../components/duplicates/ConfirmDuplicateTrashModal';
@@ -23,6 +23,7 @@ import {
 } from '../services/db';
 import { useLibraries } from '../hooks/useLibraries';
 import { requestDestructiveConfirm } from '../services/destructiveConfirm';
+import { EMPTY_STATE_COPY } from '../content/emptyStates';
 import { showAppNotification } from '../services/notificationService';
 
 type Phase = 'ready' | 'scanning' | 'results';
@@ -76,7 +77,6 @@ export default function DuplicatesPage() {
   const [phase, setPhase] = useState<Phase>('ready');
   const [threshold, setThreshold] = useState(85);
   const [busy, setBusy] = useState(false);
-  const [noResultsNotice, setNoResultsNotice] = useState(false);
 
   const [pairs, setPairs] = useState<ScannedDuplicatePair[]>([]);
   const [statuses, setStatuses] = useState<Record<string, DuplicatePairStatus>>({});
@@ -91,7 +91,6 @@ export default function DuplicatesPage() {
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   const [urlA, setUrlA] = useState<string | null>(null);
   const [urlB, setUrlB] = useState<string | null>(null);
-  const [scopeMode, setScopeMode] = useState<DuplicatesScanScopeMode>('current');
   const [selectedLibraryIds, setSelectedLibraryIds] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<{ side: 'a' | 'b' } | null>(null);
 
@@ -120,7 +119,6 @@ export default function DuplicatesPage() {
       setThumbUrls({});
       setUrlA(null);
       setUrlB(null);
-      setNoResultsNotice(false);
       setScannedCards(0);
       setSpaceSavedBytes(0);
       setProgress({ scannedCards: 0, totalCards: 0, duplicatesFound: 0, etaMs: null });
@@ -130,10 +128,13 @@ export default function DuplicatesPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedLibraryIds.length > 0) return;
     if (libraries.length === 0) return;
-    setSelectedLibraryIds(libraries.map((lib) => lib.id));
-  }, [libraries, selectedLibraryIds.length]);
+    setSelectedLibraryIds((prev) => {
+      const validIds = new Set(libraries.map((lib) => lib.id));
+      const kept = prev.filter((id) => validIds.has(id));
+      return kept.length === prev.length ? prev : kept;
+    });
+  }, [libraries]);
 
   useEffect(() => {
     const onResize = () => {
@@ -194,7 +195,7 @@ export default function DuplicatesPage() {
     async (resetSession: boolean) => {
       const arc = window.arc;
       if (!arc?.runDuplicateScan) return;
-      setNoResultsNotice(false);
+      if (libraries.length > 1 && selectedLibraryIds.length === 0) return;
       setProgress({ scannedCards: 0, totalCards: 0, duplicatesFound: 0, etaMs: null });
       setPhase('scanning');
 
@@ -206,12 +207,12 @@ export default function DuplicatesPage() {
       const began = await arc.maintenanceBegin?.({ silentUi: true });
       const lockToken = began && 'token' in began ? began.token : undefined;
       try {
+        const allSelected = libraries.length > 1 && selectedLibraryIds.length === libraries.length;
         const scope =
           libraries.length > 1
-            ? {
-                mode: scopeMode,
-                libraryIds: scopeMode === 'ids' ? selectedLibraryIds : undefined
-              }
+            ? allSelected
+              ? { mode: 'all' as const }
+              : { mode: 'ids' as const, libraryIds: selectedLibraryIds }
             : { mode: 'current' as const };
         const res = await arc.runDuplicateScan({ thresholdPct: threshold, resetSession, scope });
         if (res.cancelled) {
@@ -219,7 +220,11 @@ export default function DuplicatesPage() {
           return;
         }
         if (res.pairs.length === 0) {
-          setNoResultsNotice(true);
+          const copy = EMPTY_STATE_COPY.duplicatesNoResults;
+          showAppNotification({
+            message: `${copy.title}. ${copy.subtitle}`,
+            variant: 'success'
+          });
           setPhase('ready');
           return;
         }
@@ -234,7 +239,7 @@ export default function DuplicatesPage() {
         if (lockToken) await arc.maintenanceEnd?.(lockToken);
       }
     },
-    [threshold, applyResults, libraries.length, scopeMode, selectedLibraryIds]
+    [threshold, applyResults, libraries.length, selectedLibraryIds]
   );
 
   const cancelScan = useCallback(() => {
@@ -386,19 +391,6 @@ export default function DuplicatesPage() {
       );
     });
 
-  const dismissPair = useCallback((index: number) => {
-    setPairs((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      setSelectedIndex((sel) => {
-        if (next.length === 0) return 0;
-        if (index < sel) return sel - 1;
-        if (index === sel) return Math.min(sel, next.length - 1);
-        return sel;
-      });
-      return next;
-    });
-  }, []);
-
   const onThresholdChange = useCallback((value: number) => {
     setThreshold(value);
     void setDuplicateSimilarityThresholdPct(value);
@@ -406,7 +398,6 @@ export default function DuplicatesPage() {
 
   const resetToReady = useCallback(() => {
     setPhase('ready');
-    setNoResultsNotice(false);
     setPairs([]);
     setStatuses({});
     setSelectedIndex(0);
@@ -447,15 +438,10 @@ export default function DuplicatesPage() {
           onScan={() => void startScan(true)}
           onCancelScan={cancelScan}
           scanning={phase === 'scanning'}
-          noResultsNotice={noResultsNotice}
           progress={phase === 'scanning' ? progress : null}
           libraries={libraries}
-          scopeMode={scopeMode}
-          onScopeModeChange={setScopeMode}
           selectedLibraryIds={selectedLibraryIds}
-          onToggleLibraryId={(id) =>
-            setSelectedLibraryIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-          }
+          onSelectedLibraryIdsChange={setSelectedLibraryIds}
         />
       ) : null}
 
@@ -472,7 +458,6 @@ export default function DuplicatesPage() {
             thumbUrls={thumbUrls}
             selectedIndex={selectedIndex}
             onSelectPair={setSelectedIndex}
-            onDismissPair={dismissPair}
             onRescan={resetToReady}
           />
 
@@ -497,6 +482,8 @@ export default function DuplicatesPage() {
             libraryRootB={currentPair?.libraryRootB ?? libraryRootAbs}
             libraryNameA={currentPair?.libraryNameA}
             libraryNameB={currentPair?.libraryNameB}
+            templateA={currentPair?.detailTemplateA}
+            templateB={currentPair?.detailTemplateB}
             crossLibrary={currentPair ? isCrossLibraryPair(currentPair) : false}
             busy={busy}
             queueComplete={queueComplete}

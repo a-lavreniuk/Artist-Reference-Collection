@@ -10,6 +10,7 @@ type Props = {
   focusedId: string | null;
   isVideo: boolean;
   readOnly?: boolean;
+  compact?: boolean;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
   onDelete: (id: string) => void;
@@ -25,6 +26,7 @@ export default function CardDetailAnnotationsSection({
   focusedId,
   isVideo,
   readOnly = false,
+  compact = false,
   onSelect,
   onHover,
   onDelete
@@ -51,6 +53,7 @@ export default function CardDetailAnnotationsSection({
           <li key={annot.id} className="arc-card-detail-annot-item" data-annot-item="">
             <InfoSplitCard
               interactive={!readOnly}
+              compact={compact}
               highlighted={highlighted}
               className={[
                 hoveredId === annot.id ? 'is-hovered' : '',

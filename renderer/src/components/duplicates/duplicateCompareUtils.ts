@@ -3,6 +3,23 @@ import { cardSizeToBytes } from '../../utils/cardSizeToBytes';
 import { formatBytes } from '../../utils/formatBytes';
 import type { DuplicateCompareSide, IncomingFileMeta } from './duplicateCompareTypes';
 
+/** Подпись библиотек в списке пар: «A / B», одно имя если обе стороны из одной. */
+export function formatPairLibraryNames(
+  nameA?: string | null,
+  nameB?: string | null,
+  libraryIdA?: string | null,
+  libraryIdB?: string | null
+): string | null {
+  const a = nameA?.trim() || '';
+  const b = nameB?.trim() || '';
+  if (!a && !b) return null;
+  const sameLibrary =
+    Boolean(libraryIdA && libraryIdB && libraryIdA === libraryIdB) || (a && b && a === b);
+  if (sameLibrary) return a || b;
+  if (a && b) return `${a} / ${b}`;
+  return a || b;
+}
+
 export function toDisplayPath(rootAbs: string | null, relativeOrAbs: string): string {
   if (/^[a-zA-Z]:\\/.test(relativeOrAbs) || relativeOrAbs.startsWith('/')) {
     return relativeOrAbs.replace(/\//g, '\\');

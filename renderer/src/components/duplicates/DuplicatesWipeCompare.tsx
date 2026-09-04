@@ -62,25 +62,41 @@ export default function DuplicatesWipeCompare({
       data-btn-size="l"
       data-elevation="default"
     >
-      <div
-        ref={viewportRef}
-        className="arc-duplicates-wipe"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={stop}
-        onPointerCancel={stop}
-      >
-        {urlB ? <img className="arc-duplicates-wipe__img" src={urlB} alt="" draggable={false} /> : null}
-        {urlA ? (
-          <img
-            className="arc-duplicates-wipe__img arc-duplicates-wipe__img--top"
-            src={urlA}
-            alt=""
-            draggable={false}
-            style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
-          />
-        ) : null}
+      <div className="arc-duplicates-wipe-stage">
+        <div
+          ref={viewportRef}
+          className="arc-duplicates-wipe"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={stop}
+          onPointerCancel={stop}
+        >
+          {urlB ? <img className="arc-duplicates-wipe__img" src={urlB} alt="" draggable={false} /> : null}
+          {urlA ? (
+            <img
+              className="arc-duplicates-wipe__img arc-duplicates-wipe__img--top"
+              src={urlA}
+              alt=""
+              draggable={false}
+              style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+            />
+          ) : null}
+        </div>
 
+        <div className="arc-duplicates-wipe__split" style={{ left: `${pos}%` }}>
+          <div className="arc-duplicates-wipe__divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="btn btn-brand btn-icon-only btn-ds arc-duplicates-wipe__handle"
+            tabIndex={-1}
+            aria-label="Сравнить изображения"
+          >
+            <span className="btn-icon-only__glyph arc-icon-arrow-left-right" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      <div className="arc-duplicates-wipe__meta">
         <DuplicatesMetaOverlay
           card={cardA}
           libraryRootAbs={libraryRootA}
@@ -93,18 +109,6 @@ export default function DuplicatesWipeCompare({
           libraryName={libraryNameB}
           align="right"
         />
-      </div>
-
-      <div className="arc-duplicates-wipe__split" style={{ left: `${pos}%` }}>
-        <div className="arc-duplicates-wipe__divider" aria-hidden="true" />
-        <button
-          type="button"
-          className="btn btn-brand btn-icon-only btn-ds arc-duplicates-wipe__handle"
-          tabIndex={-1}
-          aria-label="Сравнить изображения"
-        >
-          <span className="btn-icon-only__glyph arc-icon-arrow-left-right" aria-hidden="true" />
-        </button>
       </div>
     </div>
   );

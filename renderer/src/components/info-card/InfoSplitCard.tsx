@@ -15,6 +15,11 @@ export type InfoSplitCardProps = {
   active?: boolean;
   /** Подсветка как hover (аннотация selected / hovered / focused). */
   highlighted?: boolean;
+  /**
+   * Компактная плашка без внутреннего разделителя (Figma 2381:31942 / 2381:32088).
+   * Заголовок и чипы в одном блоке с общим отступом.
+   */
+  compact?: boolean;
   interactive?: boolean;
   disabled?: boolean;
   className?: string;
@@ -42,6 +47,7 @@ function InfoSplitCard({
   actions,
   active = false,
   highlighted = false,
+  compact = false,
   interactive = false,
   disabled = false,
   className = '',
@@ -59,6 +65,7 @@ function InfoSplitCard({
     interactive ? 'arc-info-card--interactive' : '',
     active ? 'is-active' : '',
     highlighted ? 'is-highlighted' : '',
+    compact ? 'arc-info-card--compact' : '',
     disabled ? 'is-disabled' : '',
     className
   ]

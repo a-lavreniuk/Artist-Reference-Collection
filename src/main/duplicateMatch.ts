@@ -64,7 +64,7 @@ export function duplicateSimilarityHint(pct: number): string {
   if (v >= 95) return 'Почти точные копии и полные совпадения';
   if (v >= 85) return 'Сильно похожие изображения, возможны ложные срабатывания';
   if (v >= 70) return 'Расширенный поиск похожих изображений';
-  return 'Максимально широкий поиск, больше шума';
+  return 'Максимально широкий поиск, больше ложных результатов';
 }
 
 export type QualityMetrics = {

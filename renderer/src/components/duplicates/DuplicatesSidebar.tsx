@@ -3,6 +3,7 @@ import { formatBytes } from '../../utils/formatBytes';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import type { DuplicatePairStatus, DuplicatesCompareMode, ScannedDuplicatePair } from './duplicateCompareTypes';
 import { scannedPairKey } from './duplicateCompareTypes';
+import { formatPairLibraryNames } from './duplicateCompareUtils';
 
 type Props = {
   scannedCards: number;
@@ -15,7 +16,6 @@ type Props = {
   thumbUrls: Record<string, string>;
   selectedIndex: number;
   onSelectPair: (index: number) => void;
-  onDismissPair: (index: number) => void;
   onRescan: () => void;
 };
 
@@ -118,7 +118,6 @@ export default function DuplicatesSidebar({
   thumbUrls,
   selectedIndex,
   onSelectPair,
-  onDismissPair,
   onRescan
 }: Props) {
   const rootRef = useRef<HTMLElement>(null);
@@ -183,6 +182,12 @@ export default function DuplicatesSidebar({
           const resolved = status !== 'queued';
           const urlA = thumbUrlForSide(pair, 'a', thumbUrls);
           const urlB = thumbUrlForSide(pair, 'b', thumbUrls);
+          const libs = formatPairLibraryNames(
+            pair.libraryNameA,
+            pair.libraryNameB,
+            pair.libraryIdA,
+            pair.libraryIdB
+          );
           return (
             <div
               key={key}
@@ -208,27 +213,10 @@ export default function DuplicatesSidebar({
                 </span>
               </div>
               <div className="arc-duplicates-row__body">
-                <p className="text-m arc-duplicates-row__sim">{Math.round(pair.similarity)}% Похожесть</p>
-                {pair.libraryNameA || pair.libraryNameB ? (
-                  <p className="text-s arc-duplicates-row__libs">
-                    {[pair.libraryNameA, pair.libraryNameB].filter(Boolean).join(' · ')}
-                  </p>
-                ) : null}
+                <p className="text-m arc-duplicates-row__sim">Похожесть {Math.round(pair.similarity)}%</p>
+                {libs ? <p className="text-s arc-duplicates-row__libs">{libs}</p> : null}
                 <StatusLabel status={status} />
               </div>
-              <button
-                type="button"
-                className="btn btn-ghost btn-icon-only btn-ds arc-ui-kit-scope arc-duplicates-row__dismiss"
-                data-btn-size="s"
-                data-elevation="sunken"
-                aria-label="Убрать пару из списка"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDismissPair(index);
-                }}
-              >
-                <span className="btn-icon-only__glyph arc-icon-close" aria-hidden="true" />
-              </button>
             </div>
           );
         })}

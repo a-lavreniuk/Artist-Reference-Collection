@@ -24,6 +24,13 @@ import { allowMediaStagingPaths } from './media/mediaStagingTokens';
 import { listLibrariesFromConfig } from './multiLibrary';
 import { withPreservedActiveDb } from './storage/db';
 import {
+  parseJsonColumn,
+  sanitizeCardAnnotations,
+  sanitizeCustomFieldsMap,
+  defaultDetailCardTemplate,
+  type DetailCardTemplateV1
+} from './shared/detailCardTemplate';
+import {
   addCrossSkippedPair,
   loadCrossSkippedPairKeys,
   resolveContainerPathForDuplicates
@@ -34,6 +41,7 @@ import {
   ensureLibraryReady,
   getCardByIdFromDb,
   getCardByIdIsolated,
+  getLibraryDetailTemplateFromDb,
   listSkippedDuplicatePairsReadonly,
   mergeDuplicateCards,
   replaceCardOriginalFromFile,
@@ -68,7 +76,9 @@ function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
     aiCaption: row.aiCaption,
     name: row.name,
     linkUrl: row.linkUrl,
-    durationMs: row.durationMs
+    durationMs: row.durationMs,
+    customFields: sanitizeCustomFieldsMap(parseJsonColumn(row.customFieldsJson, {})),
+    annotations: sanitizeCardAnnotations(parseJsonColumn(row.annotationsJson, []))
   };
 }
 
@@ -79,6 +89,19 @@ function previewAbsForRow(root: string, row: ReturnType<typeof rowToCardRecord>)
 
 function enrichPairsWithCards(pairs: DuplicatePairDto[]) {
   const staging: string[] = [];
+  const templateByRoot = new Map<string, DetailCardTemplateV1>();
+  const templateFor = (root: string): DetailCardTemplateV1 => {
+    const cached = templateByRoot.get(root);
+    if (cached) return cached;
+    let next: DetailCardTemplateV1;
+    try {
+      next = getLibraryDetailTemplateFromDb(root);
+    } catch {
+      next = defaultDetailCardTemplate();
+    }
+    templateByRoot.set(root, next);
+    return next;
+  };
   const enriched = pairs.map((pair) => {
     const rootA = pair.libraryRootA;
     const rootB = pair.libraryRootB;
@@ -97,7 +120,9 @@ function enrichPairsWithCards(pairs: DuplicatePairDto[]) {
       previewAbsA,
       previewAbsB,
       cardA: recA ? cardIndexToRenderer(recA) : null,
-      cardB: recB ? cardIndexToRenderer(recB) : null
+      cardB: recB ? cardIndexToRenderer(recB) : null,
+      detailTemplateA: templateFor(rootA),
+      detailTemplateB: templateFor(rootB)
     };
   });
   allowMediaStagingPaths(staging);
