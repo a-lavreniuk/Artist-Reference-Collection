@@ -23,6 +23,8 @@ export default function ConfirmDuplicateTrashModal({ libraryName, onClose, onCon
     try {
       await onConfirm();
       onClose();
+    } catch {
+      /* Keep the dialog open so the user can retry after an IPC failure. */
     } finally {
       setBusy(false);
     }

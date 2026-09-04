@@ -41,6 +41,10 @@ export type ScannedDuplicatePair = {
   cardB: CardRecord | null;
   detailTemplateA?: DetailCardTemplateV1;
   detailTemplateB?: DetailCardTemplateV1;
+  catalogCategories?: import('../../services/db').CategoryRecord[];
+  catalogTags?: import('../../services/db').TagRecord[];
+  collectionsA?: import('../../services/arcSchema').CollectionRecord[];
+  collectionsB?: import('../../services/arcSchema').CollectionRecord[];
 };
 
 export function isCrossLibraryPair(pair: Pick<ScannedDuplicatePair, 'libraryIdA' | 'libraryIdB'>): boolean {

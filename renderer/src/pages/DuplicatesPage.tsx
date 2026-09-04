@@ -95,6 +95,7 @@ export default function DuplicatesPage() {
   const [pendingDelete, setPendingDelete] = useState<{ side: 'a' | 'b' } | null>(null);
 
   const alertHandledRef = useRef(false);
+  const scanInFlightRef = useRef(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => readDuplicatesSidebarWidth());
   const splitDragRef = useRef<{ startX: number; startW: number } | null>(null);
   const sidebarWidthRef = useRef(sidebarWidth);
@@ -195,7 +196,9 @@ export default function DuplicatesPage() {
     async (resetSession: boolean) => {
       const arc = window.arc;
       if (!arc?.runDuplicateScan) return;
+      if (scanInFlightRef.current) return;
       if (libraries.length > 1 && selectedLibraryIds.length === 0) return;
+      scanInFlightRef.current = true;
       setProgress({ scannedCards: 0, totalCards: 0, duplicatesFound: 0, etaMs: null });
       setPhase('scanning');
 
@@ -215,6 +218,10 @@ export default function DuplicatesPage() {
               : { mode: 'ids' as const, libraryIds: selectedLibraryIds }
             : { mode: 'current' as const };
         const res = await arc.runDuplicateScan({ thresholdPct: threshold, resetSession, scope });
+        if (res.busy) {
+          setPhase('ready');
+          return;
+        }
         if (res.cancelled) {
           setPhase('ready');
           return;
@@ -235,6 +242,7 @@ export default function DuplicatesPage() {
       } catch {
         setPhase('ready');
       } finally {
+        scanInFlightRef.current = false;
         unsub();
         if (lockToken) await arc.maintenanceEnd?.(lockToken);
       }
@@ -318,6 +326,7 @@ export default function DuplicatesPage() {
           message: err instanceof Error ? err.message : 'Не удалось выполнить действие',
           variant: 'danger'
         });
+        throw err;
       } finally {
         setBusy(false);
       }
@@ -484,6 +493,10 @@ export default function DuplicatesPage() {
             libraryNameB={currentPair?.libraryNameB}
             templateA={currentPair?.detailTemplateA}
             templateB={currentPair?.detailTemplateB}
+            catalogCategories={currentPair?.catalogCategories}
+            catalogTags={currentPair?.catalogTags}
+            collectionsA={currentPair?.collectionsA}
+            collectionsB={currentPair?.collectionsB}
             crossLibrary={currentPair ? isCrossLibraryPair(currentPair) : false}
             busy={busy}
             queueComplete={queueComplete}

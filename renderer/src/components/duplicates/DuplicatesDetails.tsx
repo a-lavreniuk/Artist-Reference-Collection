@@ -37,6 +37,10 @@ type Props = {
   libraryNameB?: string | null;
   templateA?: DetailCardTemplateV1 | null;
   templateB?: DetailCardTemplateV1 | null;
+  catalogCategories?: CategoryRecord[];
+  catalogTags?: TagRecord[];
+  collectionsA?: CollectionRecord[];
+  collectionsB?: CollectionRecord[];
 };
 
 export type DuplicatesDetailSectionKey = 'details' | 'properties' | 'tags' | 'annotations' | 'collections';
@@ -511,11 +515,20 @@ export function DuplicatesDetailsPanels({
   libraryNameA,
   libraryNameB,
   templateA,
-  templateB
+  templateB,
+  catalogCategories,
+  catalogTags,
+  collectionsA,
+  collectionsB
 }: Props) {
   const resolvedTemplateA = templateA ?? defaultDetailCardTemplate();
   const resolvedTemplateB = templateB ?? defaultDetailCardTemplate();
-  const { categories, tagsByCategory, collectionsById } = useDuplicatePairDetails(cardA, cardB);
+  const { categories, tagsByCategory, collectionsById } = useDuplicatePairDetails(cardA, cardB, {
+    categories: catalogCategories,
+    tags: catalogTags,
+    collectionsA,
+    collectionsB
+  });
   const visibleKeys = useMemo(
     () =>
       visibleDetailSectionsForPair(cardA, resolvedTemplateA, cardB, resolvedTemplateB),

@@ -521,6 +521,10 @@ declare global {
           previewAbsB?: string | null;
           cardA: import('./services/arcSchema').CardRecord | null;
           cardB: import('./services/arcSchema').CardRecord | null;
+          catalogCategories?: import('./services/db').CategoryRecord[];
+          catalogTags?: import('./services/db').TagRecord[];
+          collectionsA?: import('./services/arcSchema').CollectionRecord[];
+          collectionsB?: import('./services/arcSchema').CollectionRecord[];
         }>;
         thresholdPct: number;
         scannedCards: number;
@@ -528,6 +532,7 @@ declare global {
         duplicatesFound: number;
         spaceSavedBytes: number;
         cancelled: boolean;
+        busy?: boolean;
       }>;
       cancelDuplicateScan?: () => Promise<{ ok: true }>;
       onDuplicateScanProgress?: (

@@ -19,6 +19,10 @@ type Props = {
   libraryNameB?: string | null;
   templateA?: DetailCardTemplateV1 | null;
   templateB?: DetailCardTemplateV1 | null;
+  catalogCategories?: import('../../services/db').CategoryRecord[];
+  catalogTags?: import('../../services/db').TagRecord[];
+  collectionsA?: import('../../services/arcSchema').CollectionRecord[];
+  collectionsB?: import('../../services/arcSchema').CollectionRecord[];
   crossLibrary: boolean;
   busy: boolean;
   queueComplete?: boolean;
@@ -43,6 +47,10 @@ export default function DuplicatesResultsView({
   libraryNameB,
   templateA,
   templateB,
+  catalogCategories,
+  catalogTags,
+  collectionsA,
+  collectionsB,
   crossLibrary,
   busy,
   queueComplete = false,
@@ -127,6 +135,10 @@ export default function DuplicatesResultsView({
             libraryNameB={libraryNameB}
             templateA={templateA}
             templateB={templateB}
+            catalogCategories={catalogCategories}
+            catalogTags={catalogTags}
+            collectionsA={collectionsA}
+            collectionsB={collectionsB}
           />
         ) : null}
       </div>

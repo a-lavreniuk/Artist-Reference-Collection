@@ -288,7 +288,17 @@ contextBridge.exposeInMainWorld('arc', {
     thresholdPct?: number;
     resetSession?: boolean;
     scope?: { mode: 'current' | 'all' | 'ids'; libraryIds?: string[] };
-  }) => ipcRenderer.invoke('arc:duplicate-scan-run', payload ?? {}),
+  }) =>
+    ipcRenderer.invoke('arc:duplicate-scan-run', payload ?? {}) as Promise<{
+      pairs: unknown[];
+      thresholdPct: number;
+      scannedCards: number;
+      totalCards: number;
+      duplicatesFound: number;
+      spaceSavedBytes: number;
+      cancelled: boolean;
+      busy?: boolean;
+    }>,
   cancelDuplicateScan: () => ipcRenderer.invoke('arc:duplicate-scan-cancel'),
   onDuplicateScanProgress: (
     cb: (p: { scannedCards: number; totalCards: number; duplicatesFound: number; etaMs: number | null }) => void

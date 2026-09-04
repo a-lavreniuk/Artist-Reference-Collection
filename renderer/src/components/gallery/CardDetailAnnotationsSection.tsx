@@ -61,8 +61,8 @@ export default function CardDetailAnnotationsSection({
               ]
                 .filter(Boolean)
                 .join(' ')}
-              role="button"
-              tabIndex={0}
+              role={readOnly ? undefined : 'button'}
+              tabIndex={readOnly ? undefined : 0}
               title={annot.text.trim() || 'Без текста'}
               chips={
                 <>

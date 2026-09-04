@@ -42,6 +42,9 @@ import {
   getCardByIdFromDb,
   getCardByIdIsolated,
   getLibraryDetailTemplateFromDb,
+  listAllTags,
+  listCategories,
+  listCollections,
   listSkippedDuplicatePairsReadonly,
   mergeDuplicateCards,
   replaceCardOriginalFromFile,
@@ -52,6 +55,19 @@ import {
 let ipcRegistered = false;
 let duplicateScanRunInFlight = false;
 const MAX_DUPLICATE_PAIRS_IPC = 2000;
+
+export function duplicateScanEmptyResult(extra?: { cancelled?: boolean; busy?: boolean; thresholdPct?: number }) {
+  return {
+    pairs: [] as ReturnType<typeof enrichPairsWithCards>,
+    thresholdPct: extra?.thresholdPct ?? 85,
+    scannedCards: 0,
+    totalCards: 0,
+    duplicatesFound: 0,
+    spaceSavedBytes: 0,
+    cancelled: extra?.cancelled === true,
+    busy: extra?.busy === true
+  };
+}
 
 function cardIndexToRenderer(row: ReturnType<typeof rowToCardRecord>) {
   return {
@@ -87,9 +103,35 @@ function previewAbsForRow(root: string, row: ReturnType<typeof rowToCardRecord>)
   return path.join(root, rel.replace(/\//g, path.sep));
 }
 
+function collectionsForRoot(
+  root: string,
+  cache: Map<string, ReturnType<typeof listCollections>>
+): ReturnType<typeof listCollections> {
+  const cached = cache.get(root);
+  if (cached) return cached;
+  let next: ReturnType<typeof listCollections> = [];
+  try {
+    next = listCollections(root);
+  } catch {
+    next = [];
+  }
+  cache.set(root, next);
+  return next;
+}
+
 function enrichPairsWithCards(pairs: DuplicatePairDto[]) {
   const staging: string[] = [];
   const templateByRoot = new Map<string, DetailCardTemplateV1>();
+  const collectionsByRoot = new Map<string, ReturnType<typeof listCollections>>();
+  const catalogCategories = listCategories();
+  const catalogTags = listAllTags().map((tag) => ({
+    id: tag.id,
+    categoryId: tag.categoryId,
+    name: tag.name,
+    usageCount: tag.usageCount,
+    ...(tag.description ? { description: tag.description } : {}),
+    ...(tag.tooltipImage ? { tooltipImageDataUrl: tag.tooltipImage } : {})
+  }));
   const templateFor = (root: string): DetailCardTemplateV1 => {
     const cached = templateByRoot.get(root);
     if (cached) return cached;
@@ -122,7 +164,11 @@ function enrichPairsWithCards(pairs: DuplicatePairDto[]) {
       cardA: recA ? cardIndexToRenderer(recA) : null,
       cardB: recB ? cardIndexToRenderer(recB) : null,
       detailTemplateA: templateFor(rootA),
-      detailTemplateB: templateFor(rootB)
+      detailTemplateB: templateFor(rootB),
+      catalogCategories,
+      catalogTags,
+      collectionsA: collectionsForRoot(rootA, collectionsByRoot),
+      collectionsB: collectionsForRoot(rootB, collectionsByRoot)
     };
   });
   allowMediaStagingPaths(staging);
@@ -374,29 +420,13 @@ export function registerDuplicateIpc(
 
   ipcMain.handle('arc:duplicate-scan-run', async (event, payload: unknown) => {
     if (duplicateScanRunInFlight) {
-      return {
-        pairs: [],
-        thresholdPct: 85,
-        scannedCards: 0,
-        totalCards: 0,
-        duplicatesFound: 0,
-        spaceSavedBytes: 0,
-        cancelled: false
-      };
+      return duplicateScanEmptyResult({ busy: true });
     }
     duplicateScanRunInFlight = true;
     try {
     const root = await readLibraryRoot();
     if (!root) {
-      return {
-        pairs: [],
-        thresholdPct: 85,
-        scannedCards: 0,
-        totalCards: 0,
-        duplicatesFound: 0,
-        spaceSavedBytes: 0,
-        cancelled: false
-      };
+      return duplicateScanEmptyResult();
     }
     await ensureLibraryReady(root);
 
@@ -450,7 +480,8 @@ export function registerDuplicateIpc(
       totalCards: result.totalCards,
       duplicatesFound: result.pairs.length,
       spaceSavedBytes: result.spaceSavedBytes,
-      cancelled: result.cancelled
+      cancelled: result.cancelled,
+      busy: false
     };
     } finally {
       duplicateScanRunInFlight = false;
