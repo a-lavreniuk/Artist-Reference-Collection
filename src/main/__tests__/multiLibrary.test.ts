@@ -40,6 +40,7 @@ import {
   switchActiveLibrary
 } from '../multiLibrary';
 import { LIBRARY_CONTAINER_FOLDER_NAME } from '../libraryContainer';
+import { LIBRARY_FOLDER_EXISTS_ERROR } from '../shared/libraryNameCopy';
 import {
   replaceLibraryRootConfig,
   readLibraryRootConfigSync,
@@ -346,6 +347,25 @@ describe('multiLibrary manage', () => {
 
     const listed = listLibrariesFromConfig();
     expect(listed.map((l) => l.id)).toEqual([first.library.id, second.library.id]);
+  });
+
+  it('refuses create when a non-ARC folder already occupies the name', async () => {
+    const parentHint = path.join(tmpRoot, 'ForeignFolder');
+    fs.mkdirSync(parentHint, { recursive: true });
+
+    const first = await createLibraryInContainer('Альфа', parentHint);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+
+    const container = path.join(parentHint, LIBRARY_CONTAINER_FOLDER_NAME);
+    fs.mkdirSync(path.join(container, 'Чужая'));
+
+    const res = await createLibraryInContainer('Чужая', parentHint);
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.fieldError).toBe(true);
+    expect(res.error).toBe(LIBRARY_FOLDER_EXISTS_ERROR);
+    expect(listLibrariesFromConfig()).toHaveLength(1);
   });
 
   it('reorderLibraries changes display order without switching active', async () => {

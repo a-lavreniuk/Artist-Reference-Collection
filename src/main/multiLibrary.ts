@@ -2,7 +2,7 @@ import fs from 'fs';
 import { mkdir, readdir, rename, rm, stat } from 'fs/promises';
 import path from 'path';
 import { LIBRARY_CONTAINER_FOLDER_NAME, isLibraryContainerFolderName } from './libraryContainer';
-import { validateLibraryName } from './libraryNameValidation';
+import { LIBRARY_FOLDER_EXISTS_ERROR, validateLibraryName } from './libraryNameValidation';
 import { isValidArcLibraryFolder } from './libraryValidate';
 import {
   buildConfigWithActive,
@@ -481,15 +481,15 @@ export async function createLibraryInContainer(
   await ensureDir(parentPath);
   const libPath = path.join(parentPath, validated.name);
   if (await pathExists(libPath)) {
-    return { ok: false, error: 'Библиотека с таким именем уже есть', fieldError: true };
+    return { ok: false, error: LIBRARY_FOLDER_EXISTS_ERROR, fieldError: true };
   }
-  await ensureDir(libPath);
 
   // Подтянуть с диска уже существующие библиотеки, если реестр пуст или устарел.
   const existing = await mergeRegistryWithDisk(parentPath, cfg);
   if (existing.some((l) => l.name.toLowerCase() === validated.name.toLowerCase())) {
-    return { ok: false, error: 'Библиотека с таким именем уже есть', fieldError: true };
+    return { ok: false, error: LIBRARY_FOLDER_EXISTS_ERROR, fieldError: true };
   }
+  await ensureDir(libPath);
 
   const entry = newLibraryEntry(validated.name, libPath);
   const nextLibs = [...existing, entry];

@@ -6,6 +6,7 @@ import MessageModal from './MessageModal';
 import { useLibraries } from '../../hooks/useLibraries';
 import { getNavbarMetrics, invalidateLibraryCache } from '../../services/db';
 import { ONBOARDING_DEFAULT_LIBRARY_NAME } from '../../content/onboarding';
+import { isLibraryFolderExistsError } from '@arc-main-shared/libraryNameCopy';
 
 const LIBRARY_LABEL_MAX_CHARS = 16;
 
@@ -37,6 +38,7 @@ export default function NavbarLibrarySwitcher({
   const [createBusy, setCreateBusy] = useState(false);
   const [createEmptySubmitted, setCreateEmptySubmitted] = useState(false);
   const [createFieldError, setCreateFieldError] = useState(false);
+  const [createDuplicateFolder, setCreateDuplicateFolder] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const switchingRef = useRef(false);
 
@@ -107,6 +109,7 @@ export default function NavbarLibrarySwitcher({
     setCreateName(ONBOARDING_DEFAULT_LIBRARY_NAME);
     setCreateEmptySubmitted(false);
     setCreateFieldError(false);
+    setCreateDuplicateFolder(false);
     setCreateOpen(true);
   }, []);
 
@@ -120,15 +123,24 @@ export default function NavbarLibrarySwitcher({
     }
     setCreateBusy(true);
     setCreateFieldError(false);
+    setCreateDuplicateFolder(false);
     try {
       const res = await window.arc.createLibraryInContainer({ name });
       if (!res.ok) {
-        if (res.fieldError) setCreateFieldError(true);
-        else setErrorMessage(res.error?.trim() || 'Не удалось создать библиотеку');
+        if (isLibraryFolderExistsError(res.error)) {
+          setCreateDuplicateFolder(true);
+          setCreateFieldError(true);
+        } else if (res.fieldError) {
+          setCreateFieldError(true);
+        } else {
+          setErrorMessage(res.error?.trim() || 'Не удалось создать библиотеку');
+        }
         return;
       }
       setCreateOpen(false);
       await applyLibrarySwitch();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Не удалось создать библиотеку');
     } finally {
       setCreateBusy(false);
     }
@@ -214,11 +226,14 @@ export default function NavbarLibrarySwitcher({
         <CreateLibraryModal
           folderName={createName}
           busy={createBusy}
-          emptySubmitted={createEmptySubmitted || createFieldError}
+          emptySubmitted={createEmptySubmitted}
+          fieldError={createFieldError}
+          duplicateFolderError={createDuplicateFolder}
           onFolderNameChange={(value) => {
             setCreateName(value);
             setCreateEmptySubmitted(false);
             setCreateFieldError(false);
+            setCreateDuplicateFolder(false);
           }}
           onClose={() => {
             if (!createBusy) setCreateOpen(false);

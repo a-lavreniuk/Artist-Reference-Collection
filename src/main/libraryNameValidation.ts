@@ -1,5 +1,10 @@
 /** Валидация имени дочерней библиотеки (имя папки на диске). */
 
+export {
+  LIBRARY_FOLDER_EXISTS_ERROR,
+  isLibraryFolderExistsError
+} from './shared/libraryNameCopy';
+
 const WINDOWS_RESERVED = new Set([
   'CON',
   'PRN',
