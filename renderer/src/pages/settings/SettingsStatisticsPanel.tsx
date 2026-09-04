@@ -203,8 +203,6 @@ export default function SettingsStatisticsPanel() {
     return acc;
   }, {});
 
-  const showAllLibrariesHint = statsScope === 'all' && libraries.length > 1;
-
   const summaryStats: SummaryItem[] = [
     { id: 'total-cards', label: 'Карточек', value: metrics?.totalCards ?? 0, icon: 'card' },
     { id: 'image-count', label: 'Изображений', value: metrics?.imageCards ?? 0, icon: 'image' },
@@ -230,13 +228,6 @@ export default function SettingsStatisticsPanel() {
           </section>
         ))}
       </div>
-
-      {showAllLibrariesHint ? (
-        <p className="text-s hint arc-stats-library-hint">
-          Сводка по контейнеру «Библиотека ARC»: суммарные счётчики по всем библиотекам и общий занимаемый объём
-          папки. Метки — полный каталог; счётчики использования — сумма по всем библиотекам.
-        </p>
-      ) : null}
 
       <StatisticsDiskUsagePanel model={diskModel} />
 
