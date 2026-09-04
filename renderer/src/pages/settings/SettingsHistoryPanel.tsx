@@ -60,6 +60,8 @@ function HistoryEntriesList({ entries }: { entries: HistoryEntry[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLLIElement>(null);
   const [rowHeight, setRowHeight] = useState(HISTORY_ROW_ESTIMATE_PX);
+  const rowHeightRef = useRef(rowHeight);
+  rowHeightRef.current = rowHeight;
   const [range, setRange] = useState(() =>
     entries.length > HISTORY_VIRTUALIZE_AFTER
       ? historyVisibleRange(entries.length, 0, 800, HISTORY_ROW_ESTIMATE_PX, HISTORY_OVERSCAN)
@@ -89,7 +91,7 @@ function HistoryEntriesList({ entries }: { entries: HistoryEntry[] }) {
         entries.length,
         root.scrollTop,
         root.clientHeight,
-        rowHeight,
+        rowHeightRef.current,
         HISTORY_OVERSCAN
       );
       setRange((prev) => (prev.start === next.start && prev.end === next.end ? prev : next));
@@ -102,7 +104,7 @@ function HistoryEntriesList({ entries }: { entries: HistoryEntry[] }) {
       root.removeEventListener('scroll', update);
       ro.disconnect();
     };
-  }, [entries.length, rowHeight, virtualize]);
+  }, [entries.length, virtualize]);
 
   const sliceStart = virtualize ? range.start : 0;
   const sliceEnd = virtualize ? range.end : entries.length;
