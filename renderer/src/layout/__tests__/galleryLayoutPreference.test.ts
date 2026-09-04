@@ -20,7 +20,7 @@ describe('galleryLayoutPreference', () => {
     vi.unstubAllGlobals();
   });
 
-  function stubDom() {
+  function stubDom(dispatchEvent: () => boolean = () => true) {
     vi.stubGlobal('window', {
       localStorage: {
         getItem: (key: string) => store.get(key) ?? null,
@@ -31,7 +31,7 @@ describe('galleryLayoutPreference', () => {
           store.delete(key);
         }
       },
-      dispatchEvent: () => true
+      dispatchEvent
     });
     vi.stubGlobal('document', {
       body: {
@@ -71,6 +71,15 @@ describe('galleryLayoutPreference', () => {
     stubDom();
     applyGalleryLayoutToDocument('masonry');
     expect(bodyDataset.galleryLayout).toBe('masonry');
+  });
+
+  it('does not notify listeners when the mode is already selected', () => {
+    const dispatchEvent = vi.fn(() => true);
+    stubDom(dispatchEvent);
+    writeGalleryLayoutMode('grid');
+    dispatchEvent.mockClear();
+    writeGalleryLayoutMode('grid');
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 });
 

@@ -20,7 +20,6 @@ export default function CardDetailPreviewQueue({ cards, activeCardId, srcMap, on
     onPointerDown,
     onPointerMove,
     onPointerEnd,
-    onWheel,
     shouldSuppressChildClick
   } = useHorizontalScrollStrip();
 
@@ -50,7 +49,6 @@ export default function CardDetailPreviewQueue({ cards, activeCardId, srcMap, on
         onPointerUp={onPointerEnd}
         onPointerCancel={onPointerEnd}
         onLostPointerCapture={onPointerEnd}
-        onWheel={onWheel}
       >
         <div className="arc-card-detail-queue__track">
           {cards.map((card) => {

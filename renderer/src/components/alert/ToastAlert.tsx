@@ -6,22 +6,7 @@ import { useOverlayMotion } from '../../motion';
 /** Как в UI-kit (`setTimeout(..., 6400)`). */
 const ARC_UI_KIT_ALERT_AUTO_DISMISS_MS = 6400;
 
-/** Кнопка action в том же семантическом цвете, что и alert (классы из UI-Kit). */
-function btnClassForAlertVariant(variant: AlertVariant): string {
-  switch (variant) {
-    case 'success':
-      return 'btn-success';
-    case 'danger':
-      return 'btn-danger';
-    case 'brand':
-      return 'btn-brand';
-    case 'warning':
-    case 'info':
-    default:
-      // В UI-Kit нет btn-warning / btn-info — brand как ближайший filled.
-      return 'btn-brand';
-  }
-}
+/** Action в тосте — outline; цвет обводки задаёт `.alert-*` в UI-Kit. */
 
 type Props = {
   message: string;
@@ -63,7 +48,6 @@ export default function ToastAlert({
   onCloseRef.current = onClose;
   const lastSoundKeyRef = useRef<string | null>(null);
   const shouldListenEscape = listenEscape ?? !embedded;
-  const actionBtnClass = btnClassForAlertVariant(variant);
 
   const alertRef = useOverlayMotion<HTMLDivElement>(!closing, {
     preset: 'fade-slide-up',
@@ -126,7 +110,7 @@ export default function ToastAlert({
         <span className="arc-ui-kit-scope demo-alert__action-wrap" data-btn-size="s">
           <button
             type="button"
-            className={`btn ${actionBtnClass} btn-ds demo-alert__action`}
+            className="btn btn-outline btn-ds demo-alert__action"
             onClick={(e) => {
               e.stopPropagation();
               onAction();

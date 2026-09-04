@@ -36,7 +36,11 @@ function smallThumbRel(card: ScannedDuplicatePair['cardA']): string | null {
   return card.thumbSRelativePath ?? card.thumbRelativePath ?? card.thumbMRelativePath ?? card.originalRelativePath;
 }
 
-function mediaPathForCard(root: string | null | undefined, abs: string | null | undefined, card: ScannedDuplicatePair['cardA']): string | null {
+function mediaPathForCard(
+  root: string | null | undefined,
+  abs: string | null | undefined,
+  card: ScannedDuplicatePair['cardA']
+): string | null {
   if (abs) return abs;
   if (!card) return null;
   const rel = cardPreviewRel(card);
@@ -44,6 +48,25 @@ function mediaPathForCard(root: string | null | undefined, abs: string | null | 
   if (!root) return rel;
   const trimmedRoot = root.replace(/[\\/]+$/, '');
   return `${trimmedRoot}/${rel.replace(/\\/g, '/')}`;
+}
+
+function originalPathForCard(
+  root: string | null | undefined,
+  card: ScannedDuplicatePair['cardA']
+): string | null {
+  if (!card?.originalRelativePath) return null;
+  if (!root) return card.originalRelativePath;
+  const trimmedRoot = root.replace(/[\\/]+$/, '');
+  return `${trimmedRoot}/${card.originalRelativePath.replace(/\\/g, '/')}`;
+}
+
+function compareMediaPath(
+  root: string | null | undefined,
+  abs: string | null | undefined,
+  card: ScannedDuplicatePair['cardA']
+): string | null {
+  if (card?.type === 'video') return mediaPathForCard(root, abs, card);
+  return originalPathForCard(root, card);
 }
 
 export default function DuplicatesPage() {
@@ -236,8 +259,16 @@ export default function DuplicatesPage() {
         setUrlB(null);
         return;
       }
-      const aPath = mediaPathForCard(currentPair.libraryRootA ?? libraryRootAbs, currentPair.previewAbsA, currentPair.cardA);
-      const bPath = mediaPathForCard(currentPair.libraryRootB ?? libraryRootAbs, currentPair.previewAbsB, currentPair.cardB);
+      const aPath = compareMediaPath(
+        currentPair.libraryRootA ?? libraryRootAbs,
+        currentPair.previewAbsA,
+        currentPair.cardA
+      );
+      const bPath = compareMediaPath(
+        currentPair.libraryRootB ?? libraryRootAbs,
+        currentPair.previewAbsB,
+        currentPair.cardB
+      );
       const a = aPath ? await arc.toFileUrl(aPath) : null;
       const b = bPath ? await arc.toFileUrl(bPath) : null;
       if (cancelled) return;

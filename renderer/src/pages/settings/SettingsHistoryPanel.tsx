@@ -73,14 +73,17 @@ function HistoryEntriesList({ entries }: { entries: HistoryEntry[] }) {
     if (!el) return;
     const h = Math.ceil(el.getBoundingClientRect().height);
     if (h > 0 && Math.abs(h - rowHeight) > 1) setRowHeight(h);
-  }, [virtualize, range.start, entries, rowHeight]);
+  }, [virtualize, range.start, entries.length, rowHeight]);
 
   useEffect(() => {
     const root = scrollRef.current;
-    if (!virtualize || !root) {
-      setRange({ start: 0, end: entries.length });
+    if (!virtualize) {
+      setRange((prev) =>
+        prev.start === 0 && prev.end === entries.length ? prev : { start: 0, end: entries.length }
+      );
       return;
     }
+    if (!root) return;
     const update = () => {
       const next = historyVisibleRange(
         entries.length,
@@ -189,54 +192,63 @@ export default function SettingsHistoryPanel() {
   const isJournalEmpty = entries.length === 0;
   const isFilterEmpty = !isJournalEmpty && filtered.length === 0;
 
-  if (loading) {
-    return <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main" />;
-  }
-
-  if (isJournalEmpty) {
-    return (
-      <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main">
-        <div className="arc-history-empty-host">
-          <EmptyState {...EMPTY_STATE_COPY.historyEmpty} fill />
+  const header = (
+    <div className="arc-page-section-header arc-ui-kit-scope" data-btn-size="m">
+      <div className="arc-page-section-header__row">
+        <h1 className="h1 arc-page-section-header__title">История</h1>
+        <div className="arc-page-section-header__controls">
+          <div className="tabs arc-history-tabs" role="tablist" aria-label="Период истории">
+            {FILTER_TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`tab-button${filter === t.key ? ' is-active' : ''}`}
+                role="tab"
+                aria-selected={filter === t.key}
+                onClick={() => setFilter(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn btn-danger btn-ds"
+            disabled={isJournalEmpty}
+            onClick={() => setClearOpen(true)}
+          >
+            <span className="btn-ds__value">Очистить</span>
+          </button>
         </div>
       </div>
-    );
+      <div className="context-menu__sep" role="separator" aria-hidden="true" />
+    </div>
+  );
+
+  if (loading) {
+    return <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main" />;
   }
 
   return (
     <>
       <div className="arc-settings-stack arc-history-screen" data-interface-tour-anchor="history-main">
-        <section className="panel elevation-sunken arc-history-container" aria-label="История действий">
-          <div className="arc-history-toolbar">
-            <div className="tabs arc-history-tabs" role="tablist" aria-label="Период истории">
-              {FILTER_TABS.map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  className={`tab-button${filter === t.key ? ' is-active' : ''}`}
-                  role="tab"
-                  aria-selected={filter === t.key}
-                  onClick={() => setFilter(t.key)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <button type="button" className="btn btn-danger btn-ds" onClick={() => setClearOpen(true)}>
-              <span className="btn-ds__value">Очистить</span>
-            </button>
+        {header}
+
+        {isJournalEmpty ? (
+          <div className="arc-history-empty-host">
+            <EmptyState {...EMPTY_STATE_COPY.historyEmpty} fill />
           </div>
-
-          <div className="arc-history-fullbleed-sep" role="separator" />
-
-          {isFilterEmpty ? (
-            <div className="arc-history-scroll">
-              <EmptyState {...EMPTY_STATE_COPY.historyFilterEmpty} fill />
-            </div>
-          ) : (
-            <HistoryEntriesList key={filter} entries={filtered} />
-          )}
-        </section>
+        ) : (
+          <section className="panel elevation-sunken arc-history-container" aria-label="История действий">
+            {isFilterEmpty ? (
+              <div className="arc-history-scroll">
+                <EmptyState {...EMPTY_STATE_COPY.historyFilterEmpty} fill />
+              </div>
+            ) : (
+              <HistoryEntriesList key={filter} entries={filtered} />
+            )}
+          </section>
+        )}
       </div>
 
       {clearOpen ? (

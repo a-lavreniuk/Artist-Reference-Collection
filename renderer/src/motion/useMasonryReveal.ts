@@ -6,8 +6,6 @@ import { getPrefersReducedMotion } from './prefersReducedMotion';
 
 const revealedIdsGlobal = new Set<string>();
 
-/** Сколько карточек на первом экране идут с поочерёдным stagger. */
-const FIRST_SCREEN_STAGGER_CAP = 20;
 const MAX_REF_RETRIES = 8;
 const REVEAL_FROM = { opacity: 0, y: 10, scale: 0.98 };
 const REVEAL_TO = { opacity: 1, y: 0, scale: 1 };
@@ -246,9 +244,7 @@ export function useMasonryReveal({
       };
 
       if (initialEnter.length > 0) {
-        const sorted = sortByLayout(initialEnter, currentLayouts);
-        playEnter(sorted.slice(0, FIRST_SCREEN_STAGGER_CAP), stagger);
-        playEnter(sorted.slice(FIRST_SCREEN_STAGGER_CAP), false);
+        playEnter(initialEnter, stagger);
       }
 
       const pendingInitial = [...currentVisible].filter(
@@ -269,8 +265,9 @@ export function useMasonryReveal({
         batchDoneRef.current = true;
       }
 
-      playEnter(appendEnter, stagger);
-      playEnter(scrollEnter, false);
+      /* Догрузка скроллом — сразу видимы, без fade. */
+      appendEnter.forEach((el) => markRevealed(gsap, el, animatingRef.current));
+      scrollEnter.forEach((el) => markRevealed(gsap, el, animatingRef.current));
 
       armRevealFallback();
     };

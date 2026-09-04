@@ -122,11 +122,17 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
       setDownloadPercent(null);
     });
 
+    const unsubCancelled = arc.onUpdateDownloadCancelled?.(() => {
+      setUpdatePhase('prompt');
+      setDownloadPercent(null);
+    });
+
     return () => {
       unsubAvailable();
       unsubProgress?.();
       unsubDownloaded?.();
       unsubError?.();
+      unsubCancelled?.();
     };
   }, [tryFlushPendingUpdate]);
 
@@ -152,6 +158,12 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const handleCancelDownload = useCallback(async () => {
+    await window.arc?.cancelUpdateDownload?.();
+    setUpdatePhase('prompt');
+    setDownloadPercent(null);
+  }, []);
+
   return (
     <>
       {children}
@@ -169,6 +181,7 @@ export function AppUpdateProvider({ children }: { children: ReactNode }) {
           downloadPercent={downloadPercent}
           onUpdate={handleUpdate}
           onLater={handleLater}
+          onCancelDownload={() => void handleCancelDownload()}
         />
       ) : null}
     </>

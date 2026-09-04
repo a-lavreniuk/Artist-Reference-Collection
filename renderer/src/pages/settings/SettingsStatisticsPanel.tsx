@@ -9,7 +9,7 @@ import {
   type TagRecord
 } from '../../services/db';
 import { EmptyState } from '../../components/empty-state';
-import { StatisticsDiskUsagePanel } from '../../components/statistics';
+import { StatisticsDiskUsagePanel, StatsLibraryScopeSwitch } from '../../components/statistics';
 import StatisticsPanelHead from '../../components/statistics/StatisticsPanelHead';
 import TagSettingsModal, { type TagSettingsModalState } from '../../components/tags/TagSettingsModal';
 import { EMPTY_STATE_COPY } from '../../content/emptyStates';
@@ -216,31 +216,7 @@ export default function SettingsStatisticsPanel() {
 
   return (
     <div className="arc-stats-dashboard" data-interface-tour-anchor="statistics-main">
-      {libraries.length > 1 ? (
-        <div className="tabs arc-stats-library-tabs arc-ui-kit-scope" data-btn-size="m" role="tablist" aria-label="Библиотеки">
-          <button
-            type="button"
-            role="tab"
-            className={`tab-button${statsScope === 'all' ? ' is-active' : ''}`}
-            aria-selected={statsScope === 'all'}
-            onClick={() => setStatsScope('all')}
-          >
-            <span className="tab-button__label">Все библиотеки</span>
-          </button>
-          {libraries.map((lib) => (
-            <button
-              key={lib.id}
-              type="button"
-              role="tab"
-              className={`tab-button${statsScope === lib.id ? ' is-active' : ''}`}
-              aria-selected={statsScope === lib.id}
-              onClick={() => setStatsScope(lib.id)}
-            >
-              <span className="tab-button__label">{lib.name}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <StatsLibraryScopeSwitch libraries={libraries} statsScope={statsScope} onChange={setStatsScope} />
 
       <div className="arc-stats-summary-grid">
         {summaryStats.map((item) => (

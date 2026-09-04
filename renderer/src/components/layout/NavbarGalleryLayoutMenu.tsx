@@ -38,15 +38,15 @@ export default function NavbarGalleryLayoutMenu({ disabled = false }: Props) {
   const [open, setOpen] = useState(false);
   const [layoutMode, setLayoutMode] = useGalleryLayoutMode();
   const [gridSize, setGridSize] = useGridSize();
-  const sizeDisabled = layoutMode === 'list';
+  const sizeHidden = layoutMode === 'list';
 
   useLayoutEffect(() => {
     const el = scopeRef.current ?? anchorRef.current;
     if (el) void hydrateArcNavbarIcons(el);
   }, [open, layoutMode, gridSize]);
 
-  const rows = useMemo<ContextMenuRow[]>(
-    () => [
+  const rows = useMemo<ContextMenuRow[]>(() => {
+    const layoutRows: ContextMenuRow[] = [
       { type: 'header', key: 'layout-title', label: 'Вид' },
       ...LAYOUT_OPTIONS.map((opt) => ({
         type: 'item' as const,
@@ -55,8 +55,15 @@ export default function NavbarGalleryLayoutMenu({ disabled = false }: Props) {
         iconClass: opt.iconClass,
         selected: layoutMode === opt.key,
         closeOnSelect: false,
-        onSelect: () => setLayoutMode(opt.key)
-      })),
+        onSelect: () => {
+          if (layoutMode === opt.key) return;
+          setLayoutMode(opt.key);
+        }
+      }))
+    ];
+    if (sizeHidden) return layoutRows;
+    return [
+      ...layoutRows,
       { type: 'separator', key: 'sep-size' },
       { type: 'header', key: 'grid-size-title', label: 'Размер сетки' },
       ...GRID_OPTIONS.map((opt) => ({
@@ -65,16 +72,14 @@ export default function NavbarGalleryLayoutMenu({ disabled = false }: Props) {
         label: opt.label,
         iconClass: opt.iconClass,
         selected: gridSize === opt.key,
-        disabled: sizeDisabled,
         closeOnSelect: false,
         onSelect: () => {
-          if (sizeDisabled) return;
+          if (gridSize === opt.key) return;
           setGridSize(opt.key);
         }
       }))
-    ],
-    [gridSize, layoutMode, setGridSize, setLayoutMode, sizeDisabled]
-  );
+    ];
+  }, [gridSize, layoutMode, setGridSize, setLayoutMode, sizeHidden]);
 
   const button = (
     <button

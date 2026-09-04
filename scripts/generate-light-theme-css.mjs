@@ -151,21 +151,30 @@ const ALERT_MAPPINGS = [
   { css: '--alert-info-text', figma: 'Typography/White Bg/Primary/Default' },
   { css: '--alert-info-close', figma: 'Icons/White Bg/Default' },
   { css: '--alert-brand-bg', figma: 'Background/Brand/Default' },
+  { css: '--alert-brand-border', figma: 'Border/Brand' },
   { css: '--alert-brand-text', figma: 'Typography/Brand/Primary/Default' },
   { css: '--alert-brand-close', figma: 'Icons/Brand/Default' },
 ];
 
-/** Dark / Default: Information pill uses light Primary surface (Figma Alert 52:2131). */
+/** Dark: Alert 52:2131 (живые значения Figma, Default elevation). */
 const ALERT_DARK_OVERRIDES = {
+  '--alert-danger-bg': 'var(--red-900)',
+  '--alert-danger-border': 'var(--red-850)',
+  '--alert-danger-text': 'var(--red-550)',
+  '--alert-success-bg': 'var(--green-900)',
+  '--alert-success-border': 'var(--green-850)',
+  '--alert-success-text': 'var(--green-550)',
+  '--alert-warning-bg': 'var(--yellow-900)',
+  '--alert-warning-border': 'var(--yellow-850)',
+  '--alert-warning-text': 'var(--yellow-550)',
   '--alert-info-bg': 'var(--gray-50)',
   '--alert-info-border': 'var(--gray-100)',
   '--alert-info-text': 'var(--gray-950)',
   '--alert-info-close': 'var(--gray-550)',
   '--alert-brand-bg': 'var(--brand-450)',
+  '--alert-brand-border': 'var(--brand-750)',
   '--alert-brand-text': 'var(--brand-950)',
   '--alert-brand-close': 'var(--brand-750)',
-  '--alert-success-border': 'var(--green-850)',
-  '--alert-warning-border': 'var(--yellow-850)',
 };
 
 const ALERT_LIGHT_OVERRIDES = {

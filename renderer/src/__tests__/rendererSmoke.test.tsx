@@ -127,8 +127,7 @@ describe('renderer UI smoke', () => {
     expect(html).toContain('Что-то пошло не так');
     expect(html).toContain('Перезагрузить');
     expect(html).toContain('Сообщить о проблеме');
-    expect(html).toContain('Подробности');
-    expect(html).toContain('Скопировать подробности');
+    expect(html).toContain('Скопировать в буфер');
     expect(html).toContain('smoke-crash');
   });
 

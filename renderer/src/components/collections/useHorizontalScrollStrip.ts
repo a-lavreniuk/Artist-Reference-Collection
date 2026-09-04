@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 type DragState = {
   pointerId: number;
@@ -9,9 +9,11 @@ type DragState = {
 
 type Options = {
   scrollStepPx?: number;
+  /** pan — вертикальное колесо двигает полосу; prevent — колесо глушится, страница не скроллится. */
+  wheelMode?: 'pan' | 'prevent';
 };
 
-export function useHorizontalScrollStrip({ scrollStepPx = 280 }: Options = {}) {
+export function useHorizontalScrollStrip({ scrollStepPx = 280, wheelMode = 'pan' }: Options = {}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
@@ -112,16 +114,25 @@ export function useHorizontalScrollStrip({ scrollStepPx = 280 }: Options = {}) {
     updateEdges();
   }, [updateEdges]);
 
-  const onWheel = useCallback((e: ReactWheelEvent<HTMLDivElement>) => {
+  useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-    const max = Math.max(0, el.scrollWidth - el.clientWidth);
-    if (max <= 0) return;
-    e.preventDefault();
-    el.scrollLeft += e.deltaY;
-    updateEdges();
-  }, [updateEdges]);
+    const onWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      if (wheelMode === 'prevent') return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaX;
+        updateEdges();
+        return;
+      }
+      const max = Math.max(0, el.scrollWidth - el.clientWidth);
+      if (max <= 0) return;
+      el.scrollLeft += e.deltaY;
+      updateEdges();
+    };
+    el.addEventListener('wheel', onWheelNative, { passive: false });
+    return () => el.removeEventListener('wheel', onWheelNative);
+  }, [updateEdges, wheelMode]);
 
   const shouldSuppressChildClick = useCallback(() => suppressClickRef.current, []);
 
@@ -134,7 +145,6 @@ export function useHorizontalScrollStrip({ scrollStepPx = 280 }: Options = {}) {
     onPointerDown,
     onPointerMove,
     onPointerEnd,
-    onWheel,
     shouldSuppressChildClick,
     updateEdges
   };

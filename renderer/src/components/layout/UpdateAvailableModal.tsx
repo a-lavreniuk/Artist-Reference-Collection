@@ -11,6 +11,7 @@ type Props = {
   downloadPercent: number | null;
   onUpdate: () => void;
   onLater: () => void;
+  onCancelDownload: () => void;
 };
 
 export default function UpdateAvailableModal({
@@ -18,10 +19,10 @@ export default function UpdateAvailableModal({
   phase,
   downloadPercent,
   onUpdate,
-  onLater
+  onLater,
+  onCancelDownload
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const busy = phase === 'downloading' || phase === 'installing';
 
   useLayoutEffect(() => {
     if (hostRef.current) void hydrateArcNavbarIcons(hostRef.current);
@@ -37,7 +38,7 @@ export default function UpdateAvailableModal({
         : `Доступна новая версия ${version}. Нажмите «Обновить» — загрузка и перезапуск произойдут автоматически.`;
 
   return (
-    <ArcAnimatedModalHost onClose={onLater} closeDisabled={busy}>
+    <ArcAnimatedModalHost onClose={onLater} closeDisabled={phase !== 'prompt'}>
       {({ requestClose }) => (
         <FloatingModalPanel
           ref={hostRef}
@@ -55,8 +56,8 @@ export default function UpdateAvailableModal({
             <h3 className="arc-modal__title" id="arcUpdateModalTitle">
               Обновление ARC
             </h3>
-            {phase === 'prompt' ? (
-              <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
+            {phase === 'prompt' || phase === 'downloading' ? (
+              <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={phase === 'downloading' ? onCancelDownload : requestClose}>
                 <span className="tab-icon arc-icon-close" aria-hidden="true" />
               </button>
             ) : null}
@@ -75,10 +76,16 @@ export default function UpdateAvailableModal({
                 <span className="btn-ds__value">Обновить</span>
               </button>
             </footer>
+          ) : phase === 'downloading' ? (
+            <footer className="arc-modal__footer arc-modal__footer--actions-1">
+              <button type="button" className="btn btn-outline btn-ds btn-s" onClick={onCancelDownload}>
+                <span className="btn-ds__value">Отменить</span>
+              </button>
+            </footer>
           ) : (
             <footer className="arc-modal__footer arc-modal__footer--actions-1">
               <button type="button" className="btn btn-brand btn-ds btn-s" disabled>
-                <span className="btn-ds__value">{busy ? 'Подождите…' : 'Обновить'}</span>
+                <span className="btn-ds__value">Подождите…</span>
               </button>
             </footer>
           )}

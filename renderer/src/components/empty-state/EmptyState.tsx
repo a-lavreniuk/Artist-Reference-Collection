@@ -19,13 +19,15 @@ type Props = EmptyStateCopy & {
   onSecondaryAction?: () => void;
   /** Иконка brand-кнопки (по умолчанию `arc-icon-plus`). */
   primaryActionIconClass?: string;
+  /** Иконка outline-кнопки; без значения иконки нет. */
+  secondaryActionIconClass?: string;
   children?: ReactNode;
 };
 
 function EmptyStateActionButton({ action }: { action: EmptyStateAction }) {
   const variantClass = action.variant === 'brand' ? 'btn-brand' : 'btn-outline';
   /* Inline SVG (hydrate), не CSS-mask: у stroke-иконок с рамкой mask даёт разрывы. */
-  const iconClass = action.iconClass ?? 'arc-icon-plus';
+  const iconClass = action.iconClass ?? (action.variant === 'brand' ? 'arc-icon-plus' : undefined);
   return (
     <button
       type="button"
@@ -33,7 +35,7 @@ function EmptyStateActionButton({ action }: { action: EmptyStateAction }) {
       onClick={action.onClick}
     >
       <span className="btn-ds__value">{action.label}</span>
-      {action.variant === 'brand' ? <span className={`btn-ds__icon ${iconClass}`} aria-hidden="true" /> : null}
+      {iconClass ? <span className={`btn-ds__icon ${iconClass}`} aria-hidden="true" /> : null}
     </button>
   );
 }
@@ -52,6 +54,7 @@ export default function EmptyState({
   onPrimaryAction,
   onSecondaryAction,
   primaryActionIconClass,
+  secondaryActionIconClass,
   children
 }: Props) {
   const actionsRef = useRef<HTMLDivElement>(null);
@@ -68,13 +71,18 @@ export default function EmptyState({
       : null;
   const secondaryAction =
     secondaryActionLabel && onSecondaryAction
-      ? { label: secondaryActionLabel, variant: secondaryActionVariant, onClick: onSecondaryAction }
+      ? {
+          label: secondaryActionLabel,
+          variant: secondaryActionVariant,
+          iconClass: secondaryActionIconClass,
+          onClick: onSecondaryAction
+        }
       : null;
 
   useLayoutEffect(() => {
     if (inline || !actionsRef.current) return;
     void hydrateArcNavbarIcons(actionsRef.current);
-  }, [inline, primaryActionLabel, secondaryActionLabel, primaryActionIconClass]);
+  }, [inline, primaryActionLabel, secondaryActionLabel, primaryActionIconClass, secondaryActionIconClass]);
 
   if (inline) {
     return (

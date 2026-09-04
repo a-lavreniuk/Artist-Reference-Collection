@@ -465,7 +465,10 @@ contextBridge.exposeInMainWorld('arc', {
       | { ok: true; updateInfo: unknown }
       | { ok: false; reason?: string }
     >,
-  downloadUpdate: () => ipcRenderer.invoke('arc:download-update') as Promise<{ ok: boolean }>,
+  downloadUpdate: () =>
+    ipcRenderer.invoke('arc:download-update') as Promise<{ ok: boolean; cancelled?: boolean }>,
+  cancelUpdateDownload: () =>
+    ipcRenderer.invoke('arc:cancel-update-download') as Promise<{ ok: boolean }>,
   quitAndInstall: () => ipcRenderer.invoke('arc:quit-and-install') as Promise<{ ok: boolean }>,
   windowMinimizeToTray: () =>
     ipcRenderer.invoke('arc:window-minimize-to-tray') as Promise<{ ok: boolean }>,
@@ -639,6 +642,11 @@ contextBridge.exposeInMainWorld('arc', {
     const fn = (_: unknown, payload: { message: string }) => cb(payload);
     ipcRenderer.on('arc:update-error', fn);
     return () => ipcRenderer.removeListener('arc:update-error', fn);
+  },
+  onUpdateDownloadCancelled: (cb: () => void) => {
+    const fn = () => cb();
+    ipcRenderer.on('arc:update-download-cancelled', fn);
+    return () => ipcRenderer.removeListener('arc:update-download-cancelled', fn);
   },
 
   aiGetStatus: () => ipcRenderer.invoke('arc:ai-get-status'),

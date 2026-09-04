@@ -29,6 +29,7 @@ export function applyGalleryLayoutToDocument(mode: GalleryLayoutMode): void {
 
 export function writeGalleryLayoutMode(mode: GalleryLayoutMode): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
+  if (readGalleryLayoutMode() === mode) return;
   window.localStorage.setItem(GALLERY_LAYOUT_STORAGE_KEY, mode);
   applyGalleryLayoutToDocument(mode);
   window.dispatchEvent(new CustomEvent(ARC_GALLERY_LAYOUT_CHANGED_EVENT, { detail: { mode } }));
@@ -63,9 +64,10 @@ export function useGalleryLayoutMode(): [GalleryLayoutMode, (mode: GalleryLayout
   }, []);
 
   const setGalleryLayoutMode = useCallback((next: GalleryLayoutMode) => {
+    if (next === mode) return;
     writeGalleryLayoutMode(next);
     setMode(next);
-  }, []);
+  }, [mode]);
 
   return [mode, setGalleryLayoutMode];
 }

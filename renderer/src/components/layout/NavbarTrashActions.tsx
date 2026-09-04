@@ -17,12 +17,11 @@ export default function NavbarTrashActions({ disabled = false }: Props) {
     <>
       <button
         type="button"
-        className="btn btn-ghost btn-ds btn-m"
+        className="btn btn-danger btn-ds btn-m"
         aria-label={LABEL}
         disabled={disabled}
         onClick={() => setConfirmOpen(true)}
       >
-        <span className="btn-ds__icon arc-icon-broom" aria-hidden="true" />
         <span className="btn-ds__value">{LABEL}</span>
       </button>
       {confirmOpen ? (

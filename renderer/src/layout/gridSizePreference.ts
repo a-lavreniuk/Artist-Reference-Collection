@@ -29,6 +29,7 @@ export function applyGridSizeToDocument(size: GridSize): void {
 
 export function writeGridSize(size: GridSize): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
+  if (readGridSize() === size) return;
   window.localStorage.setItem(GRID_SIZE_STORAGE_KEY, size);
   applyGridSizeToDocument(size);
   window.dispatchEvent(new CustomEvent(ARC_GRID_SIZE_CHANGED_EVENT, { detail: { size } }));
@@ -63,9 +64,10 @@ export function useGridSize(): [GridSize, (size: GridSize) => void] {
   }, []);
 
   const setGridSize = useCallback((next: GridSize) => {
+    if (next === size) return;
     writeGridSize(next);
     setSize(next);
-  }, []);
+  }, [size]);
 
   return [size, setGridSize];
 }

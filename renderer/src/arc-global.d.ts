@@ -418,7 +418,8 @@ declare global {
         | { ok: true; updateInfo: unknown }
         | { ok: false; reason?: string }
       >;
-      downloadUpdate: () => Promise<{ ok: boolean }>;
+      downloadUpdate: () => Promise<{ ok: boolean; cancelled?: boolean }>;
+      cancelUpdateDownload?: () => Promise<{ ok: boolean }>;
       quitAndInstall: () => Promise<{ ok: boolean }>;
       windowMinimizeToTray: () => Promise<{ ok: boolean }>;
       windowToggleMaximize: () => Promise<{ ok: boolean; maximized?: boolean }>;
@@ -576,6 +577,7 @@ declare global {
       onUpdateDownloadProgress?: (cb: (detail: { percent: number }) => void) => () => void;
       onUpdateDownloaded?: (cb: () => void) => () => void;
       onUpdateError?: (cb: (detail: { message: string }) => void) => () => void;
+      onUpdateDownloadCancelled?: (cb: () => void) => () => void;
 
       aiGetStatus?: () => Promise<import('./services/aiTypes').AiStatus>;
       aiGetIndexStatus?: () => Promise<import('./services/aiTypes').AiIndexStatus>;

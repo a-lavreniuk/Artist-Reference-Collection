@@ -96,11 +96,16 @@ export function useSettingsUpdates() {
         variant: 'warning'
       });
     });
+    const unsubCancelled = arc.onUpdateDownloadCancelled?.(() => {
+      setCheckState('updateAvailable');
+      setDownloadPercent(null);
+    });
 
     return () => {
       unsubProgress?.();
       unsubDownloaded?.();
       unsubError?.();
+      unsubCancelled?.();
     };
   }, []);
 
@@ -153,8 +158,16 @@ export function useSettingsUpdates() {
     if (!res?.ok) {
       setCheckState('updateAvailable');
       setDownloadPercent(null);
-      showAppNotification({ message: 'Не удалось загрузить обновление.', variant: 'warning' });
+      if (!res?.cancelled) {
+        showAppNotification({ message: 'Не удалось загрузить обновление.', variant: 'warning' });
+      }
     }
+  }, []);
+
+  const cancelUpdate = useCallback(async () => {
+    await window.arc?.cancelUpdateDownload?.();
+    setCheckState('updateAvailable');
+    setDownloadPercent(null);
   }, []);
 
   const checking = checkState === 'checking';
@@ -172,6 +185,7 @@ export function useSettingsUpdates() {
     downloadPercent,
     checkUpdates,
     startUpdate,
+    cancelUpdate,
     checking,
     updateBusy
   };

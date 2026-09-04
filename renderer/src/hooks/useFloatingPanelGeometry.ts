@@ -125,6 +125,7 @@ export function useFloatingPanelGeometry(options: UseFloatingPanelGeometryOption
   const rectRef = useRef<PanelRect | null>(null);
   const dragRef = useRef<DragMode | null>(null);
   const cursorRef = useRef<string>('');
+  const userMovedRef = useRef(Boolean(readFloatingPanelSession(panelId)));
   const [ready, setReady] = useState(false);
 
   const persist = useCallback(
@@ -198,6 +199,24 @@ export function useFloatingPanelGeometry(options: UseFloatingPanelGeometryOption
     measureCssSize
   ]);
 
+  useLayoutEffect(() => {
+    if (resizable) return;
+    const el = panelRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    const recenterIfNeeded = () => {
+      if (userMovedRef.current) return;
+      const measured = measureCssSize();
+      const centered = centerPanelInViewport(measured, viewportSize(), insets);
+      applyRect(centered, false);
+    };
+
+    const ro = new ResizeObserver(() => recenterIfNeeded());
+    ro.observe(el);
+    recenterIfNeeded();
+    return () => ro.disconnect();
+  }, [applyRect, insets, measureCssSize, panelId, resizable, ready]);
+
   useEffect(() => {
     const onResize = () => {
       const current = rectRef.current;
@@ -242,6 +261,7 @@ export function useFloatingPanelGeometry(options: UseFloatingPanelGeometryOption
   const finishDrag = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
       if (!dragRef.current) return;
+      userMovedRef.current = true;
       dragRef.current = null;
       try {
         event.currentTarget.releasePointerCapture(event.pointerId);

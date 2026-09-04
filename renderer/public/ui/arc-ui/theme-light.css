@@ -52,23 +52,24 @@ html[data-theme="light"] {
 
 /* Alert semantic tokens — Dark / Default elevation */
 :root {
-  --alert-danger-bg: var(--red-850);
-  --alert-danger-border: var(--red-800);
-  --alert-danger-text: var(--red-500);
+  --alert-danger-bg: var(--red-900);
+  --alert-danger-border: var(--red-850);
+  --alert-danger-text: var(--red-550);
   --alert-danger-close: var(--red-700);
-  --alert-success-bg: var(--green-850);
+  --alert-success-bg: var(--green-900);
   --alert-success-border: var(--green-850);
-  --alert-success-text: var(--green-500);
+  --alert-success-text: var(--green-550);
   --alert-success-close: var(--green-700);
-  --alert-warning-bg: var(--yellow-850);
+  --alert-warning-bg: var(--yellow-900);
   --alert-warning-border: var(--yellow-850);
-  --alert-warning-text: var(--yellow-500);
+  --alert-warning-text: var(--yellow-550);
   --alert-warning-close: var(--yellow-700);
   --alert-info-bg: var(--gray-50);
   --alert-info-border: var(--gray-100);
   --alert-info-text: var(--gray-950);
   --alert-info-close: var(--gray-550);
   --alert-brand-bg: var(--brand-450);
+  --alert-brand-border: var(--brand-750);
   --alert-brand-text: var(--brand-950);
   --alert-brand-close: var(--brand-750);
 }
@@ -92,6 +93,7 @@ html[data-theme="light"] {
   --alert-info-text: var(--gray-250);
   --alert-info-close: var(--gray-500);
   --alert-brand-bg: var(--brand-400);
+  --alert-brand-border: transparent;
   --alert-brand-text: var(--gray-950);
   --alert-brand-close: var(--brand-700);
 }
@@ -183,8 +185,8 @@ html[data-theme="light"] .arc-ui-kit-scope[data-elevation="sunken"] {
   --button-ghost-hover: var(--gray-100);
   --button-outline-border-default: var(--gray-100);
   --button-outline-border-disabled: var(--gray-100);
-  --button-outline-border-hover: var(--gray-150);
-  --button-outline-default: transparent;
+  --button-outline-border-hover: var(--gray-100);
+  --button-outline-default: var(--panel-bg);
   --button-outline-disabled: var(--panel-bg);
   --button-outline-hover: var(--gray-100);
   --button-success-border-default: var(--green-300);
@@ -409,8 +411,8 @@ html[data-theme="light"] .arc-ui-kit-scope[data-elevation="default"] {
   --button-ghost-hover: var(--gray-100);
   --button-outline-border-default: var(--gray-100);
   --button-outline-border-disabled: var(--gray-100);
-  --button-outline-border-hover: var(--gray-150);
-  --button-outline-default: transparent;
+  --button-outline-border-hover: var(--gray-100);
+  --button-outline-default: var(--panel-bg);
   --button-outline-disabled: var(--panel-bg);
   --button-outline-hover: var(--gray-100);
   --button-success-border-default: var(--green-300);
@@ -636,8 +638,8 @@ html[data-theme="light"] .arc-ui-kit-scope[data-elevation="raised"] {
   --button-ghost-hover: var(--gray-100);
   --button-outline-border-default: var(--gray-150);
   --button-outline-border-disabled: var(--gray-150);
-  --button-outline-border-hover: var(--gray-200);
-  --button-outline-default: transparent;
+  --button-outline-border-hover: var(--gray-150);
+  --button-outline-default: var(--panel-bg);
   --button-outline-disabled: var(--panel-bg);
   --button-outline-hover: var(--gray-100);
   --button-success-border-default: var(--green-350);

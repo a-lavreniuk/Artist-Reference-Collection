@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
+import { CancellationToken } from 'builder-util-runtime';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
@@ -63,6 +64,7 @@ async function writeLastSeenVersion(version: string): Promise<void> {
 
 let pendingInstall = false;
 let updateDownloaded = false;
+let downloadToken: CancellationToken | null = null;
 /** Once GitHub check fails, stay on GitLab for this process (download uses same feed). */
 let usingGitlabFallback = false;
 
@@ -81,6 +83,13 @@ async function checkForUpdatesWithFallback(): Promise<Awaited<ReturnType<typeof 
     switchToGitlabFeed();
     return await autoUpdater.checkForUpdates();
   }
+}
+
+function isCancelledDownload(err: unknown): boolean {
+  if (downloadToken?.cancelled) return true;
+  if (!err || typeof err !== 'object') return false;
+  const name = 'name' in err ? String((err as { name?: unknown }).name) : '';
+  return name === 'CancellationError';
 }
 
 export function registerArcUpdaterIpc(): void {
@@ -123,13 +132,28 @@ export function registerArcUpdaterIpc(): void {
 
   ipcMain.handle('arc:download-update', async () => {
     if (!app.isPackaged) return { ok: false as const };
+    downloadToken?.cancel();
+    const token = new CancellationToken();
+    downloadToken = token;
     try {
-      await autoUpdater.downloadUpdate();
+      await autoUpdater.downloadUpdate(token);
       return { ok: true as const };
     } catch (err) {
+      if (isCancelledDownload(err)) {
+        sendToRenderer('arc:update-download-cancelled', {});
+        return { ok: false as const, cancelled: true as const };
+      }
       console.error('[updater] downloadUpdate failed', err);
       return { ok: false as const };
+    } finally {
+      if (downloadToken === token) downloadToken = null;
     }
+  });
+
+  ipcMain.handle('arc:cancel-update-download', () => {
+    if (!app.isPackaged) return { ok: false as const };
+    downloadToken?.cancel();
+    return { ok: true as const };
   });
 
   ipcMain.handle('arc:quit-and-install', () => {
@@ -179,6 +203,10 @@ export function initArcUpdater(): void {
   });
 
   autoUpdater.on('error', (err) => {
+    if (isCancelledDownload(err)) {
+      sendToRenderer('arc:update-download-cancelled', {});
+      return;
+    }
     console.error('[updater]', err);
     sendToRenderer('arc:update-error', { message: String(err?.message ?? err) });
   });

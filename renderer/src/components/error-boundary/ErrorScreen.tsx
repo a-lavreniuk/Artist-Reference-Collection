@@ -18,18 +18,18 @@ type Props = {
 };
 
 /**
- * Полноэкранный экран сбоя: EmptyState + сворачиваемые подробности.
+ * Полноэкранный экран сбоя: EmptyState + лог (Figma 2380:15816).
  * Свой NotificationHost — AppLayout уже размонтирован.
  */
 export default function ErrorScreen({ error }: Props) {
   const copy = EMPTY_STATE_COPY.appCrash;
   const details = formatErrorDetails(error);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle');
-  const copyButtonRef = useRef<HTMLButtonElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (copyButtonRef.current) {
-      void hydrateArcNavbarIcons(copyButtonRef.current);
+    if (screenRef.current) {
+      void hydrateArcNavbarIcons(screenRef.current);
     }
   }, [copyState]);
 
@@ -47,15 +47,16 @@ export default function ErrorScreen({ error }: Props) {
       ? 'Скопировано'
       : copyState === 'failed'
         ? 'Не удалось скопировать'
-        : 'Скопировать подробности';
+        : 'Скопировать в буфер';
 
   return (
     <NotificationHost>
-      <div className="arc-error-screen" role="alert" aria-live="assertive">
+      <div ref={screenRef} className="arc-error-screen" role="alert" aria-live="assertive">
         <EmptyState
           {...copy}
           fill
           primaryActionIconClass="arc-icon-refresh"
+          secondaryActionIconClass="arc-icon-bug"
           onPrimaryAction={() => {
             window.location.reload();
           }}
@@ -63,25 +64,26 @@ export default function ErrorScreen({ error }: Props) {
             void openBugReportForm();
           }}
         >
-          <details className="arc-error-screen__details">
-            <summary className="arc-error-screen__details-summary">
-              <span className="arc-error-screen__details-summary-label">Подробности</span>
-              <button
-                ref={copyButtonRef}
-                type="button"
-                className="btn btn-outline btn-ds btn-s arc-error-screen__copy"
-                aria-label="Скопировать подробности ошибки в буфер обмена"
-                onClick={(event) => {
-                  event.preventDefault();
-                  void handleCopyDetails();
-                }}
-              >
-                <span className="btn-ds__value">{copyLabel}</span>
-                <span className="btn-ds__icon arc-icon-copy" aria-hidden="true" />
-              </button>
-            </summary>
-            <pre className="text-code-s arc-error-screen__details-body">{details}</pre>
-          </details>
+          <div className="arc-error-screen__log arc-ui-kit-scope" data-btn-size="s" data-input-size="m">
+            <label className="field arc-error-screen__log-field">
+              <textarea
+                className="input textarea arc-error-screen__log-input"
+                value={details}
+                readOnly
+                aria-label="Подробности ошибки"
+              />
+            </label>
+            <button
+              type="button"
+              className="btn btn-outline btn-ds btn-s arc-error-screen__copy"
+              aria-label="Скопировать подробности ошибки в буфер обмена"
+              onClick={() => {
+                void handleCopyDetails();
+              }}
+            >
+              <span className="btn-ds__value">{copyLabel}</span>
+            </button>
+          </div>
         </EmptyState>
       </div>
     </NotificationHost>

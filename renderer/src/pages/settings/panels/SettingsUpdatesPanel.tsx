@@ -16,6 +16,7 @@ export default function SettingsUpdatesPanel() {
     downloadPercent,
     checkUpdates,
     startUpdate,
+    cancelUpdate,
     checking,
     updateBusy
   } = useSettingsUpdates();
@@ -66,7 +67,15 @@ export default function SettingsUpdatesPanel() {
                 ) : null}
 
                 <div className="arc-settings-updates-actions__buttons">
-                  {showUpdateActions ? (
+                  {checkState === 'downloading' ? (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-ds"
+                      onClick={() => void cancelUpdate()}
+                    >
+                      <span className="btn-ds__value">Отменить</span>
+                    </button>
+                  ) : showUpdateActions ? (
                     <button
                       type="button"
                       className="btn btn-brand btn-ds"

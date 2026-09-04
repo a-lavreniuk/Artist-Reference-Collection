@@ -1903,7 +1903,7 @@ button.input {
 }
 
 .context-menu__scroll {
-  max-height: calc(var(--btn-h, 32px) * 8);
+  max-height: calc(var(--btn-h, 32px) * 14);
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
@@ -2593,6 +2593,122 @@ button.input {
 .demo-alert-host .alert-brand .demo-alert__close:hover,
 .demo-alert-stack .alert-brand .demo-alert__close:hover {
   color: var(--alert-brand-close);
+}
+
+/* Action в тосте (Figma 52:2131): fill Background, stroke Border, text Typography Primary. */
+.demo-alert-host .alert .demo-alert__action.btn-outline,
+.demo-alert-stack .alert .demo-alert__action.btn-outline {
+  background: transparent;
+}
+
+.demo-alert-host .alert-success .demo-alert__action.btn-outline,
+.demo-alert-stack .alert-success .demo-alert__action.btn-outline {
+  background: var(--alert-success-bg);
+  border-color: var(--alert-success-border);
+}
+
+.demo-alert-host .alert-success .demo-alert__action.btn-outline .btn-ds__value,
+.demo-alert-stack .alert-success .demo-alert__action.btn-outline .btn-ds__value {
+  color: var(--alert-success-text);
+}
+
+.demo-alert-host .alert-success .demo-alert__action.btn-outline:hover:not(:disabled),
+.demo-alert-stack .alert-success .demo-alert__action.btn-outline:hover:not(:disabled) {
+  background: var(--alert-success-bg);
+  border-color: var(--alert-success-text);
+}
+
+.demo-alert-host .alert-success .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value,
+.demo-alert-stack .alert-success .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value {
+  color: var(--alert-success-text);
+}
+
+.demo-alert-host .alert-danger .demo-alert__action.btn-outline,
+.demo-alert-stack .alert-danger .demo-alert__action.btn-outline {
+  background: var(--alert-danger-bg);
+  border-color: var(--alert-danger-border);
+}
+
+.demo-alert-host .alert-danger .demo-alert__action.btn-outline .btn-ds__value,
+.demo-alert-stack .alert-danger .demo-alert__action.btn-outline .btn-ds__value {
+  color: var(--alert-danger-text);
+}
+
+.demo-alert-host .alert-danger .demo-alert__action.btn-outline:hover:not(:disabled),
+.demo-alert-stack .alert-danger .demo-alert__action.btn-outline:hover:not(:disabled) {
+  background: var(--alert-danger-bg);
+  border-color: var(--alert-danger-text);
+}
+
+.demo-alert-host .alert-danger .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value,
+.demo-alert-stack .alert-danger .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value {
+  color: var(--alert-danger-text);
+}
+
+.demo-alert-host .alert-warning .demo-alert__action.btn-outline,
+.demo-alert-stack .alert-warning .demo-alert__action.btn-outline {
+  background: var(--alert-warning-bg);
+  border-color: var(--alert-warning-border);
+}
+
+.demo-alert-host .alert-warning .demo-alert__action.btn-outline .btn-ds__value,
+.demo-alert-stack .alert-warning .demo-alert__action.btn-outline .btn-ds__value {
+  color: var(--alert-warning-text);
+}
+
+.demo-alert-host .alert-warning .demo-alert__action.btn-outline:hover:not(:disabled),
+.demo-alert-stack .alert-warning .demo-alert__action.btn-outline:hover:not(:disabled) {
+  background: var(--alert-warning-bg);
+  border-color: var(--alert-warning-text);
+}
+
+.demo-alert-host .alert-warning .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value,
+.demo-alert-stack .alert-warning .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value {
+  color: var(--alert-warning-text);
+}
+
+.demo-alert-host .alert-info .demo-alert__action.btn-outline,
+.demo-alert-stack .alert-info .demo-alert__action.btn-outline {
+  background: transparent;
+  border-color: var(--alert-info-border);
+}
+
+.demo-alert-host .alert-info .demo-alert__action.btn-outline .btn-ds__value,
+.demo-alert-stack .alert-info .demo-alert__action.btn-outline .btn-ds__value {
+  color: var(--alert-info-text);
+}
+
+.demo-alert-host .alert-info .demo-alert__action.btn-outline:hover:not(:disabled),
+.demo-alert-stack .alert-info .demo-alert__action.btn-outline:hover:not(:disabled) {
+  background: transparent;
+  border-color: var(--alert-info-text);
+}
+
+.demo-alert-host .alert-info .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value,
+.demo-alert-stack .alert-info .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value {
+  color: var(--alert-info-text);
+}
+
+.demo-alert-host .alert-brand .demo-alert__action.btn-outline,
+.demo-alert-stack .alert-brand .demo-alert__action.btn-outline {
+  background: var(--alert-brand-bg);
+  border-color: var(--alert-brand-border);
+}
+
+.demo-alert-host .alert-brand .demo-alert__action.btn-outline .btn-ds__value,
+.demo-alert-stack .alert-brand .demo-alert__action.btn-outline .btn-ds__value {
+  color: var(--alert-brand-text);
+}
+
+.demo-alert-host .alert-brand .demo-alert__action.btn-outline:hover:not(:disabled),
+.demo-alert-stack .alert-brand .demo-alert__action.btn-outline:hover:not(:disabled) {
+  background: var(--alert-brand-bg);
+  border-color: var(--alert-brand-text);
+}
+
+.demo-alert-host .alert-brand .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value,
+.demo-alert-stack .alert-brand .demo-alert__action.btn-outline:hover:not(:disabled) .btn-ds__value {
+  color: var(--alert-brand-text);
 }
 
 .demo-alert__close:focus-visible {
