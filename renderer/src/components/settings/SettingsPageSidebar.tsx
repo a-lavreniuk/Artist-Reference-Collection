@@ -4,24 +4,24 @@ import { ContextMenuSeparator } from '../context-menu';
 import { hydrateArcNavbarIcons } from '../layout/navbarIconHydrate';
 import SettingsSidebarNavItem from './SettingsSidebarNavItem';
 
-const PRODUCT_SECTIONS = [
+const APP_SECTIONS = [
   { key: 'general', to: '/settings/general', label: 'Общие', iconClass: 'arc-icon-options' },
+  { key: 'shortcuts', to: '/settings/shortcuts', label: 'Горячие клавиши', iconClass: 'arc-icon-keyboard' },
+  { key: 'notifications', to: '/settings/notifications', label: 'Уведомления', iconClass: 'arc-icon-notifications' }
+] as const;
+
+const LIBRARY_SECTIONS = [
+  { key: 'library', to: '/settings/library', label: 'Библиотека', iconClass: 'arc-icon-folder' },
   {
     key: 'detail-template',
     to: '/settings/detail-template',
     label: 'Шаблон деталки',
     iconClass: 'arc-icon-layout-template'
-  },
+  }
+] as const;
+
+const IMPORT_SECTIONS = [
   { key: 'screenshots', to: '/settings/screenshots', label: 'Скриншоты', iconClass: 'arc-icon-screenshot' },
-  { key: 'notifications', to: '/settings/notifications', label: 'Уведомления', iconClass: 'arc-icon-notifications' },
-  { key: 'shortcuts', to: '/settings/shortcuts', label: 'Горячие клавиши', iconClass: 'arc-icon-keyboard' }
-] as const;
-
-const LIBRARY_SECTIONS = [
-  { key: 'library', to: '/settings/library', label: 'Библиотека', iconClass: 'arc-icon-folder' }
-] as const;
-
-const ADVANCED_SECTIONS = [
   { key: 'auto-import', to: '/settings/auto-import', label: 'Автоимпорт', iconClass: 'arc-icon-autoimport' },
   {
     key: 'browser-extension',
@@ -34,7 +34,10 @@ const ADVANCED_SECTIONS = [
     to: '/settings/mcp-server',
     label: 'MCP сервер',
     iconClass: 'arc-icon-server'
-  },
+  }
+] as const;
+
+const SMART_SECTIONS = [
   { key: 'ai-search', to: '/settings/ai-search', label: 'Умный поиск', iconClass: 'arc-icon-ai' },
   { key: 'auto-tag', to: '/settings/auto-tag', label: 'Автотеги', iconClass: 'arc-icon-tag' }
 ] as const;
@@ -68,7 +71,7 @@ export default function SettingsPageSidebar() {
     >
       <div className="arc-settings-page-sidebar__scroll context-menu__list">
         <div className="arc-settings-page-sidebar__pad arc-settings-page-sidebar__pad--head">
-          {PRODUCT_SECTIONS.map((item) => (
+          {APP_SECTIONS.map((item) => (
             <SettingsSidebarNavItem key={item.key} to={item.to} label={item.label} iconClass={item.iconClass} />
           ))}
         </div>
@@ -84,7 +87,15 @@ export default function SettingsPageSidebar() {
         <ContextMenuSeparator />
 
         <div className="arc-settings-page-sidebar__pad">
-          {ADVANCED_SECTIONS.map((item) => (
+          {IMPORT_SECTIONS.map((item) => (
+            <SettingsSidebarNavItem key={item.key} to={item.to} label={item.label} iconClass={item.iconClass} />
+          ))}
+        </div>
+
+        <ContextMenuSeparator />
+
+        <div className="arc-settings-page-sidebar__pad">
+          {SMART_SECTIONS.map((item) => (
             <SettingsSidebarNavItem key={item.key} to={item.to} label={item.label} iconClass={item.iconClass} />
           ))}
         </div>
