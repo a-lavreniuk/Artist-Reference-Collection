@@ -140,6 +140,26 @@ export function setDisplayPctAtCenter(
   return setScaleAtCenter(stage, natural, viewport, fitScale, nextScale);
 }
 
+/**
+ * Keep the user's zoom relative to fit when the stage size changes.
+ * Percent must be measured against the previous fit scale: using the new fit
+ * treats a still-fitted image as zoomed-in and crops it after a shrink.
+ */
+export function viewportAfterStageResize(
+  previousFitScale: number,
+  nextStage: StageSize,
+  natural: NaturalSize,
+  current: ViewportPan
+): ViewportPan {
+  const nextFitScale = computeFitScale(nextStage, natural);
+  if (previousFitScale <= 0 || nextFitScale <= 0) {
+    return normalizeViewport(nextStage, natural, current, nextFitScale);
+  }
+  const displayPct = scaleToDisplayPct(current.scale, previousFitScale);
+  const next = setDisplayPctAtCenter(nextStage, natural, current, nextFitScale, displayPct);
+  return normalizeViewport(nextStage, natural, next, nextFitScale);
+}
+
 export function clampPan(
   panX: number,
   panY: number,

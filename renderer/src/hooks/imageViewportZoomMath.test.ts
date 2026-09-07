@@ -12,6 +12,7 @@ import {
   scaleToDisplayPct,
   setDisplayPctAtCenter,
   setScaleAtCenter,
+  viewportAfterStageResize,
   viewportAtActualSize,
   zoomAtPoint,
   zoomSliderValueToDisplayPct
@@ -137,5 +138,39 @@ describe('imageViewportZoomMath', () => {
     const normalized = normalizeViewport(stage, natural, zoomed, fitScale);
     expect(normalized.scale).toBeGreaterThan(fitScale);
     expect(Math.abs(normalized.panX) + Math.abs(normalized.panY)).toBeGreaterThan(0);
+  });
+
+  it('stays fitted when the stage shrinks or grows while at fit', () => {
+    const startStage = { width: 800, height: 600 };
+    const shrunkStage = { width: 400, height: 600 };
+    const grownStage = { width: 1200, height: 600 };
+    const prevFit = computeFitScale(startStage, natural);
+    const fitted = { scale: prevFit, panX: 0, panY: 0 };
+
+    const afterShrink = viewportAfterStageResize(prevFit, shrunkStage, natural, fitted);
+    expect(isViewportAtFit(afterShrink, computeFitScale(shrunkStage, natural))).toBe(true);
+
+    const afterGrow = viewportAfterStageResize(prevFit, grownStage, natural, fitted);
+    expect(isViewportAtFit(afterGrow, computeFitScale(grownStage, natural))).toBe(true);
+  });
+
+  it('keeps zoom percent relative to fit when the stage resizes', () => {
+    const startStage = { width: 800, height: 600 };
+    const nextStage = { width: 400, height: 600 };
+    const prevFit = computeFitScale(startStage, natural);
+    const zoomed = setDisplayPctAtCenter(startStage, natural, { scale: prevFit, panX: 0, panY: 0 }, prevFit, 200);
+    const after = viewportAfterStageResize(prevFit, nextStage, natural, zoomed);
+    expect(scaleToDisplayPct(after.scale, computeFitScale(nextStage, natural))).toBe(200);
+  });
+
+  it('does not treat a fitted image as zoomed when measuring against the new fit', () => {
+    const startStage = { width: 800, height: 600 };
+    const nextStage = { width: 400, height: 600 };
+    const prevFit = computeFitScale(startStage, natural);
+    const nextFit = computeFitScale(nextStage, natural);
+    const fitted = { scale: prevFit, panX: 0, panY: 0 };
+    const buggyPct = scaleToDisplayPct(fitted.scale, nextFit);
+    expect(buggyPct).toBeGreaterThan(DISPLAY_SCALE_PCT_MIN);
+    expect(scaleToDisplayPct(fitted.scale, prevFit)).toBe(DISPLAY_SCALE_PCT_MIN);
   });
 });

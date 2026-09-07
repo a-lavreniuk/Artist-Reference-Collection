@@ -17,6 +17,7 @@ import {
   scaleToDisplayPct,
   setDisplayPctAtCenter,
   setScaleAtCenter,
+  viewportAfterStageResize,
   viewportAtActualSize,
   zoomAtPoint,
   type NaturalSize,
@@ -52,6 +53,8 @@ export function useImageViewportZoom(resetKey: string) {
   const panDragRef = useRef<PanDragState | null>(null);
   const pinchRef = useRef<PinchState | null>(null);
   const activePointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const prevFitScaleRef = useRef(1);
+  const prevNaturalRef = useRef<NaturalSize>(EMPTY_NATURAL);
 
   const fitScale = useMemo(
     () => computeFitScale(stageSize, naturalSize),
@@ -98,23 +101,29 @@ export function useImageViewportZoom(resetKey: string) {
     panDragRef.current = null;
     pinchRef.current = null;
     activePointersRef.current.clear();
+    prevNaturalRef.current = EMPTY_NATURAL;
+    prevFitScaleRef.current = 1;
   }, [resetKey]);
 
   useLayoutEffect(() => {
     if (naturalSize.width <= 0 || naturalSize.height <= 0) return;
-    setViewport({ scale: fitScale, panX: 0, panY: 0 });
-    // fitScale from this render matches the new natural size; stage resize is handled below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset to fit only when the image size arrives
-  }, [naturalSize.height, naturalSize.width]);
 
-  useEffect(() => {
-    if (naturalSize.width <= 0 || naturalSize.height <= 0 || stageSize.width <= 0) return;
-    setViewport((current) => {
-      const displayPct = scaleToDisplayPct(current.scale, computeFitScale(stageSize, naturalSize));
-      const next = setDisplayPctAtCenter(stageSize, naturalSize, current, fitScale, displayPct);
-      return normalizeViewport(stageSize, naturalSize, next, fitScale);
-    });
-  }, [fitScale, naturalSize.height, naturalSize.width, stageSize.height, stageSize.width]);
+    const naturalChanged =
+      prevNaturalRef.current.width !== naturalSize.width ||
+      prevNaturalRef.current.height !== naturalSize.height;
+
+    if (naturalChanged || stageSize.width <= 0) {
+      setViewport({ scale: fitScale, panX: 0, panY: 0 });
+    } else {
+      const previousFitScale = prevFitScaleRef.current;
+      setViewport((current) =>
+        viewportAfterStageResize(previousFitScale, stageSize, naturalSize, current)
+      );
+    }
+
+    prevNaturalRef.current = naturalSize;
+    prevFitScaleRef.current = fitScale;
+  }, [fitScale, naturalSize, stageSize.height, stageSize.width]);
 
   useEffect(() => {
     const el = stageRef.current;
