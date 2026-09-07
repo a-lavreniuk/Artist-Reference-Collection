@@ -1,5 +1,59 @@
-# Добро пожаловать в ARC Knowledge Base
+# ARC — база знаний
 
-Персональный офлайн-менеджер визуальных референсов для дизайнеров. Добро пожаловать в базу знаний **Artist Reference Collection** (ARC) — справочник для тех, кто пользуется приложением и помогает его проверять. Здесь собраны не внутренние технические спецификации для разработчиков, а понятные описания экранов, сценариев и механик: от первой установки до тонкостей поиска, фильтров и резервного копирования. Базу можно читать последовательно, как небольшую книгу, или открывать нужную тему по ситуации — когда столкнулись с конкретным экраном или вопросом. Если вы только знакомитесь с ARC, логично начать с раздела **«О проекте»** и статей в **«Первые шаги»**. Бета-тестерам предназначен блок **«Для тестеров»** — чек-листы, матрица функционала и сценарные прогоны для сборки **0.1.4**.
+ARC (Artist Reference Collection) — локальный менеджер визуальных референсов. Эта база знаний предназначена для пользователей приложения: здесь описано, как импортировать материалы, организовывать библиотеку, искать нужные изображения и настраивать ARC.
 
-<table data-view="cards"><thead><tr><th></th><th></th><th></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead><tbody><tr><td><h4><i class="fa-circle-info" style="color:$primary;">:circle-info:</i></h4></td><td><strong>О проекте</strong></td><td>Зачем существует ARC, кому подходит и какие идеи лежат в основе продукта.</td><td><a href="rukovodstvo-po-prilozheniyu/user-guide/basics/">basics</a></td></tr><tr><td><h4><i class="fa-shoe-prints" style="color:$primary;">:shoe-prints:</i></h4></td><td><strong>Первые шаги</strong></td><td>Обзор окна, навбар, вкладки, меню и первый импорт.</td><td><a href="rukovodstvo-po-prilozheniyu/user-guide/getting-started/">getting-started</a></td></tr><tr><td><h4><i class="fa-book-open" style="color:$primary;">:book-open:</i></h4></td><td><strong>Руководство по приложению</strong></td><td>Библиотека, организация, поиск, фильтры, карточки и настройки.</td><td><a href="rukovodstvo-po-prilozheniyu/user-guide/">user-guide</a></td></tr><tr><td><h4><i class="fa-flask" style="color:$primary;">:flask:</i></h4></td><td><strong>Для тестеров</strong></td><td>Чек-листы, матрица функционала и сценарные прогоны для сборки 0.1.4.</td><td><a href="rukovodstvo-po-prilozheniyu/user-guide/testers-developers/">testers-developers</a></td></tr><tr><td><h4><i class="fa-palette" style="color:$primary;">:palette:</i></h4></td><td><strong>Дизайн система</strong></td><td>Токены, типографика и правила дизайн-системы ARC-2.</td><td><a href="/broken/pages/t81FFVEUYtJjTF8KRJvA">Broken link</a></td></tr></tbody></table>
+Документация построена вокруг реальных задач. Если вам нужно выполнить конкретное действие, используйте «Быстрый старт». Если нужно разобраться в принципах работы функции, переходите к соответствующему разделу руководства.
+
+## Быстрый старт
+
+**Я впервые запускаю ARC** → Начало работы
+
+**Мне нужно добавить изображения или видео** → [Добавление файлов](rukovodstvo-po-prilozheniyu/user-guide/collecting/add-files.md)
+
+**Мне нужно сохранить референс из браузера** → [Браузерное расширение](rukovodstvo-po-prilozheniyu/user-guide/collecting/brauzernoe-rasshirenie.md)
+
+**Мне нужно автоматически импортировать файлы из папки** → [Автоматический импорт](rukovodstvo-po-prilozheniyu/user-guide/collecting/avtomaticheskii-import.md)
+
+**Мне нужно организовать материалы по проектам или темам** → [Коллекции и разделы](rukovodstvo-po-prilozheniyu/user-guide/organization/collections.md)
+
+**Мне нужно присвоить материалам признаки** → [Метки](rukovodstvo-po-prilozheniyu/user-guide/organization/tags-categories.md)
+
+**Мне нужно добавить собственные поля** → [Пользовательские поля](rukovodstvo-po-prilozheniyu/user-guide/organization/custom-fields.md)
+
+**Мне нужно найти материал по названию, метке или другим свойствам** → [Поиск без AI](rukovodstvo-po-prilozheniyu/user-guide/search/without-ai.md)
+
+**Мне нужно найти изображение по описанию** → [AI Семантика](rukovodstvo-po-prilozheniyu/user-guide/search/ai-poisk/ai-semantic.md)
+
+**Мне нужно найти визуально похожие изображения** → [Похожие изображения](rukovodstvo-po-prilozheniyu/user-guide/search/ai-poisk/similar-images.md)
+
+**Мне нужно настроить условия отбора** → Фильтры
+
+**Мне нужно разобраться с повторяющимися материалами** → [Дубликаты](rukovodstvo-po-prilozheniyu/user-guide/search/duplicates.md)
+
+**Мне нужно изменить поведение ARC** → Настройки
+
+**Мне нужно понять, где находится исходный файл** → [Работа с файлами](rukovodstvo-po-prilozheniyu/user-guide/viewing/file-actions.md)
+
+**У меня возникла проблема** → [Сообщить о проблеме](rukovodstvo-po-prilozheniyu/user-guide/spravka/report-problem.md)
+
+## Руководство по ARC
+
+* Основы — модель ARC и основные термины.
+* Начало работы — установка, библиотека, первый импорт и AI-поиск.
+* Сбор материалов — все основные способы добавления материалов.
+* Организация — карточки, коллекции, метки, поля и шаблоны.
+* Поиск — обычный поиск, AI-поиск, фильтры и дубликаты.
+* Просмотр — просмотр изображений и видео, детали и работа с файлами.
+* Настройки — параметры приложения и отдельных функций.
+* [Дополнительные возможности](rukovodstvo-po-prilozheniyu/user-guide/dopolnitelnye-vozmozhnosti.md) — функции, не входящие в основной рабочий цикл.
+* Справка — проблемы, FAQ и информация о приложении.
+
+## Для тестеров и разработчиков
+
+Технические материалы находятся отдельно от пользовательского руководства: Для тестеров и разработчиков.
+
+## Как пользоваться документацией
+
+Названия элементов интерфейса приведены в соответствии с ARC. Если действие требует предварительной настройки, например установки AI-модели или создания библиотеки, это указано непосредственно в инструкции.
+
+Скриншоты в тексте обозначаются как `[скриншот: описание]`. Они являются частью подготовки документации и будут заменяться фактическими изображениями интерфейса по мере подготовки иллюстраций.

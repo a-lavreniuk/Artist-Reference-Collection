@@ -1,8 +1,6 @@
 # Table of contents
 
-* [Добро пожаловать в ARC Knowledge Base](README.md)
-
-## Первые шаги
+* [ARC — база знаний](README.md)
 
 ## Руководство по приложению
 
@@ -76,15 +74,3 @@
     * [Известные проблемы](rukovodstvo-po-prilozheniyu/user-guide/testers-developers/known-issues.md)
     * [Сообщение о багах](rukovodstvo-po-prilozheniyu/user-guide/testers-developers/bug-reporting.md)
     * [Чек-листы тестирования](rukovodstvo-po-prilozheniyu/user-guide/testers-developers/test-checklists.md)
-
-## Для тестеров
-
-* [Сценарные прогоны](testers/scenario-runs.md)
-* [Матрица функционала](testers/feature-matrix/README.md)
-  * [Матрица: окно и навигация](testers/feature-matrix/window-navigation.md)
-  * [Матрица: библиотека и карточки](testers/feature-matrix/library-cards.md)
-  * [Матрица: организация](testers/feature-matrix/organization.md)
-  * [Матрица: поиск, фильтры, сортировка](testers/feature-matrix/search-filters-sort.md)
-  * [Матрица: настройки](testers/feature-matrix/settings.md)
-  * [Матрица: импорт и интеграции](testers/feature-matrix/import-integrations.md)
-  * [Матрица: система и сервис](testers/feature-matrix/system-service.md)
