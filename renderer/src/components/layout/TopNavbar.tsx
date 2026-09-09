@@ -120,7 +120,7 @@ export default function TopNavbar() {
               onPrimaryClick={() => handleMainTabClick('/gallery')}
             />
             <div className="tabs arc-navbar-main-tabs" role="tablist" aria-label="Основная навигация" data-interface-tour-anchor="main-tabs">
-              {MAIN_NAV_TABS.filter((tab) => tab.key !== 'gallery').map((tab) => {
+              {MAIN_NAV_TABS.filter((tab) => tab.key !== 'gallery' && tab.key !== 'board').map((tab) => {
                 const isActive = tab.key === highlightedTab;
                 return (
                   <button
