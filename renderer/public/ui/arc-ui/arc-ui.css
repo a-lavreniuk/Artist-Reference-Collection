@@ -469,6 +469,7 @@ body[data-typo-role="secondary"][data-typo-state="disabled"],
   line-height: var(--typo-h2-line);
   font-weight: var(--typo-h2-weight);
   color: var(--text-elev-primary);
+  text-wrap: balance;
 }
 
 .panel > .h2 {
@@ -480,6 +481,7 @@ body[data-typo-role="secondary"][data-typo-state="disabled"],
   font-size: var(--typo-h1-size);
   line-height: var(--typo-h1-line);
   font-weight: var(--typo-h1-weight);
+  text-wrap: balance;
 }
 
 .subtitle {
@@ -524,6 +526,7 @@ body[data-typo-role="secondary"][data-typo-state="disabled"],
   line-height: var(--typo-h3-line);
   font-weight: var(--typo-h3-weight);
   color: var(--text-elev-primary);
+  text-wrap: balance;
 }
 
 .text-m {
@@ -860,6 +863,10 @@ body[data-elevation="raised"] #typographyScope[data-typo-tone="information"],
 }
 
 /* Counter: secondary on inactive; brand secondary on active (Figma 32:884). */
+.tab-counter {
+  font-variant-numeric: tabular-nums;
+}
+
 .tab-button .tab-counter {
   color: var(--tab-inactive-counter-default);
 }
@@ -1267,6 +1274,7 @@ body[data-input-size="s"],
   line-height: var(--btn-line-height);
   font-weight: var(--btn-font-weight, var(--typo-p-m-weight));
   opacity: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .btn-ds__icon {
@@ -2056,6 +2064,10 @@ button.input {
   font-weight: var(--typo-p-s-weight);
 }
 
+.context-menu__item-counter {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Фильтры: label+check слева, counter (и icon при наличии) справа */
 .context-menu__item-inner:has(.context-menu__item-counter) .context-menu__item-label-cluster:has(
     .context-menu__item-check
@@ -2759,6 +2771,7 @@ button.input {
 
 .chip-count {
   color: var(--tag-counter-default);
+  font-variant-numeric: tabular-nums;
 }
 
 .chip:hover .chip-count,

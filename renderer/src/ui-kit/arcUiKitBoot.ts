@@ -2,6 +2,7 @@
 /** Generated from renderer/public/ui/arc-ui/arc-ui.html — demo logic scoped to .arc-ui-kit-scope. Regenerate: node scripts/gen-ui-kit-boot.mjs */
 
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
+import { playModalHostEnter, playModalHostExit, playToastEnter } from '../motion/playModalHostMotion';
 
 const arcUiKitGlyphHydrators = new WeakMap<HTMLElement, () => Promise<unknown>>();
 
@@ -358,16 +359,26 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           pendingCloseTrigger = trigger || null;
           confirmHost.hidden = false;
           confirmHost.setAttribute("aria-hidden", "false");
+          var confirmDialog = confirmHost.querySelector(".arc-modal") || confirmHost;
+          if (typeof playModalHostEnter === "function") playModalHostEnter(confirmDialog);
           if (confirmStayBtn) confirmStayBtn.focus();
           return true;
         }
 
         function hideUnsavedConfirm() {
           if (!confirmHost) return;
-          confirmHost.hidden = true;
-          confirmHost.setAttribute("aria-hidden", "true");
-          pendingCloseHost = null;
-          pendingCloseTrigger = null;
+          function finishHideConfirm() {
+            confirmHost.hidden = true;
+            confirmHost.setAttribute("aria-hidden", "true");
+            pendingCloseHost = null;
+            pendingCloseTrigger = null;
+          }
+          var confirmDialog = confirmHost.querySelector(".arc-modal") || confirmHost;
+          if (typeof playModalHostExit === "function") {
+            playModalHostExit(confirmDialog, finishHideConfirm);
+            return;
+          }
+          finishHideConfirm();
         }
 
         function openArcModal(hostId, trigger) {
@@ -379,6 +390,8 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           });
           host.hidden = false;
           host.setAttribute("aria-hidden", "false");
+          var openDialog = host.querySelector(".arc-modal") || host;
+          if (typeof playModalHostEnter === "function") playModalHostEnter(openDialog);
           activeHost = host;
           lastTrigger = trigger || null;
           if (!modalCommittedState.has(hostId)) {
@@ -403,15 +416,23 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
           if (!closingHost) return;
           const saved = closingHost.getAttribute("data-arc-modal-saved") === "true";
           closingHost.removeAttribute("data-arc-modal-saved");
-          closingHost.hidden = true;
-          closingHost.setAttribute("aria-hidden", "true");
-          const t = triggerOverride || lastTrigger;
-          document.dispatchEvent(new CustomEvent("arc-modal:close", { detail: { host: closingHost, trigger: t || null, saved: saved } }));
-          activeHost = null;
-          lastTrigger = null;
-          if (t && typeof t.focus === "function") {
-            t.focus();
+          function finishClose() {
+            closingHost.hidden = true;
+            closingHost.setAttribute("aria-hidden", "true");
+            const t = triggerOverride || lastTrigger;
+            document.dispatchEvent(new CustomEvent("arc-modal:close", { detail: { host: closingHost, trigger: t || null, saved: saved } }));
+            activeHost = null;
+            lastTrigger = null;
+            if (t && typeof t.focus === "function") {
+              t.focus();
+            }
           }
+          var closeDialog = closingHost.querySelector(".arc-modal") || closingHost;
+          if (typeof playModalHostExit === "function") {
+            playModalHostExit(closeDialog, finishClose);
+            return;
+          }
+          finishClose();
         }
 
         scope.querySelectorAll("[data-arc-modal-open]").forEach(function (btn) {
@@ -787,6 +808,7 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
             }, docOpts);
           }
           host.appendChild(alertNode);
+          if (typeof playToastEnter === "function") playToastEnter(alertNode);
           closeTimer = window.setTimeout(closeAlert, 6400);
         }
 
@@ -1145,11 +1167,21 @@ export function mountArcUiKitDemo(scope: HTMLElement, options?: { signal?: Abort
         function openModal() {
           host.hidden = false;
           host.setAttribute("aria-hidden", "false");
+          var dateDialog = host.querySelector(".arc-modal") || host;
+          if (typeof playModalHostEnter === "function") playModalHostEnter(dateDialog);
         }
 
         function closeModal() {
-          host.hidden = true;
-          host.setAttribute("aria-hidden", "true");
+          function finishDateClose() {
+            host.hidden = true;
+            host.setAttribute("aria-hidden", "true");
+          }
+          var dateDialog = host.querySelector(".arc-modal") || host;
+          if (typeof playModalHostExit === "function") {
+            playModalHostExit(dateDialog, finishDateClose);
+            return;
+          }
+          finishDateClose();
         }
 
         input.addEventListener("input", syncDatepickerValueState, docOpts);

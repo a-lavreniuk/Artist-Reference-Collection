@@ -13,4 +13,11 @@ export { default as ArcAnimatedModalHost } from './ArcAnimatedModalHost';
 export { useMountOverlayMotion } from './useMountOverlayMotion';
 export { useCountUp, useDiskBarMotion } from './useStatsMotion';
 export { useFilterOptionsListMotion } from './useFilterOptionsListMotion';
-export { playModalHostEnter, playModalHostExit, playMenuPanelEnter, playToastEnter } from './playModalHostMotion';
+export {
+  playModalHostEnter,
+  playModalHostEnterWhenVisible,
+  playModalHostExit,
+  playMenuPanelEnter,
+  playToastEnter,
+  resolveModalMotionTarget
+} from './playModalHostMotion';

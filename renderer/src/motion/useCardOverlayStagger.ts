@@ -1,12 +1,11 @@
 import { useLayoutEffect, useRef } from 'react';
 import { ensureGsapSetup } from './gsapSetup';
-import { arcMotionTokens } from './arcMotionTokens';
+import { arcMotionTokens, motionDuration } from './arcMotionTokens';
 import { getPrefersReducedMotion } from './prefersReducedMotion';
 
 /** Card overlay 2.0 (Figma 829:7274): enter stagger — timeline first, then badge/time/actions. */
-const CARD_OVERLAY_ENTER_DURATION_S = 0.3;
-const CARD_OVERLAY_INITIAL_DELAY_S = 0.15;
-const CARD_OVERLAY_STAGGER_S = 0.15;
+const CARD_OVERLAY_INITIAL_DELAY_S = arcMotionTokens.fast;
+const CARD_OVERLAY_STAGGER_S = arcMotionTokens.fast;
 
 /** Video timeline first; then badges (rating, format), time, actions (DOM order within each group). */
 const OVERLAY_STAGGER_ORDER = [
@@ -43,7 +42,8 @@ export function useCardOverlayStagger(
 
     const gsap = ensureGsapSetup();
     const reduced = getPrefersReducedMotion();
-    const duration = reduced ? 0 : CARD_OVERLAY_ENTER_DURATION_S;
+    const enterDuration = motionDuration('slow', reduced);
+    const exitDuration = motionDuration('fast', reduced);
 
     if (active && !wasActive.current) {
       if (reduced) {
@@ -54,7 +54,7 @@ export function useCardOverlayStagger(
         gsap.to(elements, {
           opacity: 1,
           y: 0,
-          duration,
+          duration: enterDuration,
           delay: CARD_OVERLAY_INITIAL_DELAY_S,
           ease: arcMotionTokens.ease,
           stagger: CARD_OVERLAY_STAGGER_S,
@@ -67,7 +67,7 @@ export function useCardOverlayStagger(
         gsap.to(elements, {
           opacity: 0,
           y: 4,
-          duration: duration * 0.6,
+          duration: exitDuration,
           ease: arcMotionTokens.ease,
           overwrite: 'auto'
         });

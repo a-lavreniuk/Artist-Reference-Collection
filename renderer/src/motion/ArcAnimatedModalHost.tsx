@@ -18,7 +18,7 @@ export default function ArcAnimatedModalHost({
   hostClassName = '',
   children
 }: Props) {
-  const { hostRef, requestClose: requestCloseBase, render } = useMountOverlayMotion(onClose);
+  const { hostRef, requestClose: requestCloseBase, render, closing } = useMountOverlayMotion(onClose);
 
   const requestClose = useCallback(() => {
     if (closeDisabled) return;
@@ -42,6 +42,7 @@ export default function ArcAnimatedModalHost({
       ref={hostRef as React.RefObject<HTMLDivElement>}
       className={rootClass}
       aria-hidden="false"
+      data-closing={closing ? 'true' : undefined}
       style={{ willChange: 'opacity, transform' }}
       onClick={(event) => {
         if (event.target === event.currentTarget) requestClose();

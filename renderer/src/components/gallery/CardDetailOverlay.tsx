@@ -96,7 +96,8 @@ import {
   ensureGsapSetup,
   getPrefersReducedMotion,
   motionDuration,
-  useOverlayMotionPair
+  useOverlayMotionPair,
+  ArcAnimatedModalHost
 } from '../../motion';
 import {
   mergeCardsSrcMap,
@@ -835,6 +836,7 @@ export default function CardDetailOverlay({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (isContextMenuOpen()) return;
+      if (document.querySelector('.arc-modal-host:not([data-closing="true"])')) return;
       if (pendingTagSearchIdsRef.current.length > 0) {
         setPendingTagSearchIds([]);
         return;
@@ -2761,120 +2763,118 @@ export default function CardDetailOverlay({
       </div>
 
       {confirmDelete ? (
-        <div
+        <ArcAnimatedModalHost
+          onClose={() => setConfirmDelete(false)}
           className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-          aria-hidden="false"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setConfirmDelete(false);
-          }}
         >
-          <section
-            className="arc-modal"
-            data-elevation="raised"
-            data-input-size="s"
-            data-btn-size="s"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="arcCardDeleteTitle"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="arc-modal__header arc-modal__header--title">
-              <h3 className="arc-modal__title" id="arcCardDeleteTitle">
-                Удалить карточку?
-              </h3>
-              <button
-                type="button"
-                className="arc-modal__close"
-                aria-label="Закрыть"
-                onClick={() => setConfirmDelete(false)}
-              >
-                <span className="tab-icon arc-icon-close" aria-hidden="true" />
-              </button>
-            </header>
-            <div className="arc-modal__body">
-              <div className="arc-modal__slot">
-                <p className="arc-modal__slot-text">Карточка переместится в корзину. Её можно будет восстановить позже.</p>
-              </div>
-            </div>
-            <footer className="arc-modal__footer arc-modal__footer--actions-3">
-              <button type="button" className="btn btn-danger btn-ds btn-s" onClick={() => void handleSoftDelete()} disabled={busy}>
-                <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить'}</span>
-              </button>
-              <div className="arc-modal__footer-right">
+          {({ requestClose }) => (
+            <section
+              className="arc-modal"
+              data-elevation="raised"
+              data-input-size="s"
+              data-btn-size="s"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="arcCardDeleteTitle"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="arc-modal__header arc-modal__header--title">
+                <h3 className="arc-modal__title" id="arcCardDeleteTitle">
+                  Удалить карточку?
+                </h3>
                 <button
                   type="button"
-                  className="btn btn-outline btn-ds btn-s"
-                  onClick={() => setConfirmDelete(false)}
-                  disabled={busy}
+                  className="arc-modal__close"
+                  aria-label="Закрыть"
+                  onClick={requestClose}
                 >
-                  <span className="btn-ds__value">Отмена</span>
+                  <span className="tab-icon arc-icon-close" aria-hidden="true" />
                 </button>
+              </header>
+              <div className="arc-modal__body">
+                <div className="arc-modal__slot">
+                  <p className="arc-modal__slot-text">Карточка переместится в корзину. Её можно будет восстановить позже.</p>
+                </div>
               </div>
-            </footer>
-          </section>
-        </div>
+              <footer className="arc-modal__footer arc-modal__footer--actions-3">
+                <button type="button" className="btn btn-danger btn-ds btn-s" onClick={() => void handleSoftDelete()} disabled={busy}>
+                  <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить'}</span>
+                </button>
+                <div className="arc-modal__footer-right">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-ds btn-s"
+                    onClick={requestClose}
+                    disabled={busy}
+                  >
+                    <span className="btn-ds__value">Отмена</span>
+                  </button>
+                </div>
+              </footer>
+            </section>
+          )}
+        </ArcAnimatedModalHost>
       ) : null}
 
       {confirmPermanentDelete ? (
-        <div
+        <ArcAnimatedModalHost
+          onClose={() => setConfirmPermanentDelete(false)}
           className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-          aria-hidden="false"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setConfirmPermanentDelete(false);
-          }}
         >
-          <section
-            className="arc-modal"
-            data-elevation="raised"
-            data-input-size="s"
-            data-btn-size="s"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="arcCardPermanentDeleteTitle"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="arc-modal__header arc-modal__header--title">
-              <h3 className="arc-modal__title" id="arcCardPermanentDeleteTitle">
-                Удалить навсегда?
-              </h3>
-              <button
-                type="button"
-                className="arc-modal__close"
-                aria-label="Закрыть"
-                onClick={() => setConfirmPermanentDelete(false)}
-              >
-                <span className="tab-icon arc-icon-close" aria-hidden="true" />
-              </button>
-            </header>
-            <div className="arc-modal__body">
-              <div className="arc-modal__slot">
-                <p className="arc-modal__slot-text">
-                  Карточка и все файлы будут удалены без возможности восстановления.
-                </p>
-              </div>
-            </div>
-            <footer className="arc-modal__footer arc-modal__footer--actions-3">
-              <button
-                type="button"
-                className="btn btn-danger btn-ds btn-s"
-                onClick={() => void handlePermanentDelete()}
-                disabled={busy}
-              >
-                <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить навсегда'}</span>
-              </button>
-              <div className="arc-modal__footer-right">
+          {({ requestClose }) => (
+            <section
+              className="arc-modal"
+              data-elevation="raised"
+              data-input-size="s"
+              data-btn-size="s"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="arcCardPermanentDeleteTitle"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="arc-modal__header arc-modal__header--title">
+                <h3 className="arc-modal__title" id="arcCardPermanentDeleteTitle">
+                  Удалить навсегда?
+                </h3>
                 <button
                   type="button"
-                  className="btn btn-outline btn-ds btn-s"
-                  onClick={() => setConfirmPermanentDelete(false)}
+                  className="arc-modal__close"
+                  aria-label="Закрыть"
+                  onClick={requestClose}
+                >
+                  <span className="tab-icon arc-icon-close" aria-hidden="true" />
+                </button>
+              </header>
+              <div className="arc-modal__body">
+                <div className="arc-modal__slot">
+                  <p className="arc-modal__slot-text">
+                    Карточка и все файлы будут удалены без возможности восстановления.
+                  </p>
+                </div>
+              </div>
+              <footer className="arc-modal__footer arc-modal__footer--actions-3">
+                <button
+                  type="button"
+                  className="btn btn-danger btn-ds btn-s"
+                  onClick={() => void handlePermanentDelete()}
                   disabled={busy}
                 >
-                  <span className="btn-ds__value">Отмена</span>
+                  <span className="btn-ds__value">{busy ? 'Удаление…' : 'Удалить навсегда'}</span>
                 </button>
-              </div>
-            </footer>
-          </section>
-        </div>
+                <div className="arc-modal__footer-right">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-ds btn-s"
+                    onClick={requestClose}
+                    disabled={busy}
+                  >
+                    <span className="btn-ds__value">Отмена</span>
+                  </button>
+                </div>
+              </footer>
+            </section>
+          )}
+        </ArcAnimatedModalHost>
       ) : null}
 
       {restoreDestinationOpen && card ? (
@@ -2952,201 +2952,171 @@ export default function CardDetailOverlay({
       ) : null}
 
       {pendingDeleteFieldId ? (
-        <div
+        <ArcAnimatedModalHost
+          onClose={() => setPendingDeleteFieldId(null)}
           className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-          aria-hidden="false"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setPendingDeleteFieldId(null);
-          }}
         >
-          <section
-            className="arc-modal"
-            data-elevation="raised"
-            data-input-size="s"
-            data-btn-size="s"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="arcCardDeleteFieldTitle"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="arc-modal__header arc-modal__header--title">
-              <h3 className="arc-modal__title" id="arcCardDeleteFieldTitle">
-                Удалить поле?
-              </h3>
-              <button
-                type="button"
-                className="arc-modal__close"
-                aria-label="Закрыть"
-                onClick={() => setPendingDeleteFieldId(null)}
-              >
-                <span className="tab-icon arc-icon-close" aria-hidden="true" />
-              </button>
-            </header>
-            <div className="arc-modal__body">
-              <div className="arc-modal__slot">
-                <p className="arc-modal__slot-text">
-                  Поле «{pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках этой библиотеки.
-                </p>
+          {({ requestClose }) => (
+            <section
+              className="arc-modal"
+              data-elevation="raised"
+              data-input-size="s"
+              data-btn-size="s"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="arcCardDeleteFieldTitle"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="arc-modal__header arc-modal__header--title">
+                <h3 className="arc-modal__title" id="arcCardDeleteFieldTitle">
+                  Удалить поле?
+                </h3>
+                <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
+                  <span className="tab-icon arc-icon-close" aria-hidden="true" />
+                </button>
+              </header>
+              <div className="arc-modal__body">
+                <div className="arc-modal__slot">
+                  <p className="arc-modal__slot-text">
+                    Поле «{pendingDeleteLabel}» будет удалено из шаблона, а его значения сотрутся на всех карточках этой библиотеки.
+                  </p>
+                </div>
               </div>
-            </div>
-            <footer className="arc-modal__footer arc-modal__footer--actions-2">
-              <button
-                type="button"
-                className="btn btn-outline btn-ds btn-s"
-                onClick={() => setPendingDeleteFieldId(null)}
-              >
-                <span className="btn-ds__value">Отмена</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger btn-ds btn-s"
-                onClick={() => {
-                  const fieldId = pendingDeleteFieldId;
-                  setPendingDeleteFieldId(null);
-                  void (async () => {
-                    await wipeCustomFieldValues(fieldId);
-                    const nextFields = detailTemplate.fields.filter((field) => field.id !== fieldId);
-                    await updateLibrarySettings({ detailCardTemplate: { version: 1, fields: nextFields } });
-                  })();
-                }}
-              >
-                <span className="btn-ds__value">Удалить</span>
-              </button>
-            </footer>
-          </section>
-        </div>
+              <footer className="arc-modal__footer arc-modal__footer--actions-2">
+                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose}>
+                  <span className="btn-ds__value">Отмена</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-ds btn-s"
+                  onClick={() => {
+                    const fieldId = pendingDeleteFieldId;
+                    setPendingDeleteFieldId(null);
+                    void (async () => {
+                      await wipeCustomFieldValues(fieldId);
+                      const nextFields = detailTemplate.fields.filter((field) => field.id !== fieldId);
+                      await updateLibrarySettings({ detailCardTemplate: { version: 1, fields: nextFields } });
+                    })();
+                  }}
+                >
+                  <span className="btn-ds__value">Удалить</span>
+                </button>
+              </footer>
+            </section>
+          )}
+        </ArcAnimatedModalHost>
       ) : null}
 
       {pendingTypeChange ? (
-        <div
+        <ArcAnimatedModalHost
+          onClose={() => setPendingTypeChange(null)}
           className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-          aria-hidden="false"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setPendingTypeChange(null);
-          }}
         >
-          <section
-            className="arc-modal"
-            data-elevation="raised"
-            data-input-size="s"
-            data-btn-size="s"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="arcCardChangeFieldTypeTitle"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="arc-modal__header arc-modal__header--title">
-              <h3 className="arc-modal__title" id="arcCardChangeFieldTypeTitle">
-                Сменить тип поля?
-              </h3>
-              <button
-                type="button"
-                className="arc-modal__close"
-                aria-label="Закрыть"
-                onClick={() => setPendingTypeChange(null)}
-              >
-                <span className="tab-icon arc-icon-close" aria-hidden="true" />
-              </button>
-            </header>
-            <div className="arc-modal__body">
-              <div className="arc-modal__slot">
-                <p className="arc-modal__slot-text">
-                  Тип поля «{pendingTypeLabel}» станет «{CUSTOM_FIELD_TYPE_LABELS[pendingTypeChange.type]}».
-                  Значения поля сотрутся на всех карточках этой библиотеки.
-                </p>
+          {({ requestClose }) => (
+            <section
+              className="arc-modal"
+              data-elevation="raised"
+              data-input-size="s"
+              data-btn-size="s"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="arcCardChangeFieldTypeTitle"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="arc-modal__header arc-modal__header--title">
+                <h3 className="arc-modal__title" id="arcCardChangeFieldTypeTitle">
+                  Сменить тип поля?
+                </h3>
+                <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
+                  <span className="tab-icon arc-icon-close" aria-hidden="true" />
+                </button>
+              </header>
+              <div className="arc-modal__body">
+                <div className="arc-modal__slot">
+                  <p className="arc-modal__slot-text">
+                    Тип поля «{pendingTypeLabel}» станет «{CUSTOM_FIELD_TYPE_LABELS[pendingTypeChange.type]}».
+                    Значения поля сотрутся на всех карточках этой библиотеки.
+                  </p>
+                </div>
               </div>
-            </div>
-            <footer className="arc-modal__footer arc-modal__footer--actions-2">
-              <button
-                type="button"
-                className="btn btn-outline btn-ds btn-s"
-                onClick={() => setPendingTypeChange(null)}
-              >
-                <span className="btn-ds__value">Отмена</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger btn-ds btn-s"
-                onClick={() => {
-                  const { fieldId, type } = pendingTypeChange;
-                  setPendingTypeChange(null);
-                  void (async () => {
-                    await wipeCustomFieldValues(fieldId);
-                    await updateLibrarySettings({
-                      detailCardTemplate: applyDetailFieldType(detailTemplate, fieldId, type)
-                    });
-                  })();
-                }}
-              >
-                <span className="btn-ds__value">Сменить тип</span>
-              </button>
-            </footer>
-          </section>
-        </div>
+              <footer className="arc-modal__footer arc-modal__footer--actions-2">
+                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose}>
+                  <span className="btn-ds__value">Отмена</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-ds btn-s"
+                  onClick={() => {
+                    const { fieldId, type } = pendingTypeChange;
+                    setPendingTypeChange(null);
+                    void (async () => {
+                      await wipeCustomFieldValues(fieldId);
+                      await updateLibrarySettings({
+                        detailCardTemplate: applyDetailFieldType(detailTemplate, fieldId, type)
+                      });
+                    })();
+                  }}
+                >
+                  <span className="btn-ds__value">Сменить тип</span>
+                </button>
+              </footer>
+            </section>
+          )}
+        </ArcAnimatedModalHost>
       ) : null}
 
       {pendingDeleteAnnotationId ? (
-        <div
+        <ArcAnimatedModalHost
+          onClose={() => setPendingDeleteAnnotationId(null)}
           className="arc-modal-host arc-modal-host--nested arc-modal-host--card-detail-nested"
-          aria-hidden="false"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setPendingDeleteAnnotationId(null);
-          }}
         >
-          <section
-            className="arc-modal"
-            data-elevation="raised"
-            data-input-size="s"
-            data-btn-size="s"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="arcCardDeleteAnnotationTitle"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="arc-modal__header arc-modal__header--title">
-              <h3 className="arc-modal__title" id="arcCardDeleteAnnotationTitle">
-                Удалить аннотацию?
-              </h3>
-              <button
-                type="button"
-                className="arc-modal__close"
-                aria-label="Закрыть"
-                onClick={() => setPendingDeleteAnnotationId(null)}
-              >
-                <span className="tab-icon arc-icon-close" aria-hidden="true" />
-              </button>
-            </header>
-            <div className="arc-modal__body">
-              <div className="arc-modal__slot">
-                <p className="arc-modal__slot-text">
-                  {pendingDeleteAnnotationIndex > 0
-                    ? `Аннотация #${pendingDeleteAnnotationIndex} будет удалена без возможности восстановления.`
-                    : 'Аннотация будет удалена без возможности восстановления.'}
-                </p>
+          {({ requestClose }) => (
+            <section
+              className="arc-modal"
+              data-elevation="raised"
+              data-input-size="s"
+              data-btn-size="s"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="arcCardDeleteAnnotationTitle"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <header className="arc-modal__header arc-modal__header--title">
+                <h3 className="arc-modal__title" id="arcCardDeleteAnnotationTitle">
+                  Удалить аннотацию?
+                </h3>
+                <button type="button" className="arc-modal__close" aria-label="Закрыть" onClick={requestClose}>
+                  <span className="tab-icon arc-icon-close" aria-hidden="true" />
+                </button>
+              </header>
+              <div className="arc-modal__body">
+                <div className="arc-modal__slot">
+                  <p className="arc-modal__slot-text">
+                    {pendingDeleteAnnotationIndex > 0
+                      ? `Аннотация #${pendingDeleteAnnotationIndex} будет удалена без возможности восстановления.`
+                      : 'Аннотация будет удалена без возможности восстановления.'}
+                  </p>
+                </div>
               </div>
-            </div>
-            <footer className="arc-modal__footer arc-modal__footer--actions-2">
-              <button
-                type="button"
-                className="btn btn-outline btn-ds btn-s"
-                onClick={() => setPendingDeleteAnnotationId(null)}
-              >
-                <span className="btn-ds__value">Отмена</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger btn-ds btn-s"
-                onClick={() => {
-                  const id = pendingDeleteAnnotationId;
-                  setPendingDeleteAnnotationId(null);
-                  if (id) deleteAnnotation(id);
-                }}
-              >
-                <span className="btn-ds__value">Удалить</span>
-              </button>
-            </footer>
-          </section>
-        </div>
+              <footer className="arc-modal__footer arc-modal__footer--actions-2">
+                <button type="button" className="btn btn-outline btn-ds btn-s" onClick={requestClose}>
+                  <span className="btn-ds__value">Отмена</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-ds btn-s"
+                  onClick={() => {
+                    const id = pendingDeleteAnnotationId;
+                    setPendingDeleteAnnotationId(null);
+                    if (id) deleteAnnotation(id);
+                  }}
+                >
+                  <span className="btn-ds__value">Удалить</span>
+                </button>
+              </footer>
+            </section>
+          )}
+        </ArcAnimatedModalHost>
       ) : null}
 
       {copyAlertMessage ? (

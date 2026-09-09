@@ -8,42 +8,68 @@ import { overlayMotionFrom } from './overlayMotionPresets';
 
 
 
-/** Enter tween for `.arc-modal-host` (React + UI-Kit). */
+/** Prefer the modal card — scaling the full-screen host is almost invisible. */
+export function resolveModalMotionTarget(host: HTMLElement): HTMLElement {
+  return host.querySelector<HTMLElement>('.arc-modal') ?? host;
+}
 
-export function playModalHostEnter(host: HTMLElement): void {
-
+/** Enter tween for the modal card (fade + scale 0.98). */
+export function playModalHostEnter(target: HTMLElement): void {
   const gsap = ensureGsapSetup();
-
   const reduced = getPrefersReducedMotion();
-
   const duration = motionDuration('base', reduced);
-
   const from = overlayMotionFrom('fade-scale');
 
-
-
-  gsap.killTweensOf(host);
-
+  gsap.killTweensOf(target);
   if (reduced) {
-
-    gsap.set(host, { opacity: 1, scale: 1 });
-
+    gsap.set(target, { opacity: 1, scale: 1 });
     return;
-
   }
 
+  gsap.set(target, from);
+  gsap.to(target, {
+    opacity: 1,
+    scale: 1,
+    duration,
+    ease: arcMotionTokens.ease,
+    overwrite: true
+  });
+}
 
+/**
+ * Floating panels start with `visibility: hidden` until geometry is ready.
+ * Hold the enter-from pose, then play when the card is visible.
+ */
+export function playModalHostEnterWhenVisible(host: HTMLElement): () => void {
+  const gsap = ensureGsapSetup();
+  const from = overlayMotionFrom('fade-scale');
+  let played = false;
 
-  gsap.fromTo(
+  const tryPlay = (): boolean => {
+    if (played) return true;
+    const target = resolveModalMotionTarget(host);
+    if (target.style.visibility === 'hidden') {
+      gsap.set(target, from);
+      return false;
+    }
+    played = true;
+    playModalHostEnter(target);
+    return true;
+  };
 
-    host,
+  if (tryPlay()) return () => undefined;
 
-    from,
+  const observer = new MutationObserver(() => {
+    if (tryPlay()) observer.disconnect();
+  });
+  observer.observe(host, {
+    attributes: true,
+    subtree: true,
+    childList: true,
+    attributeFilter: ['style']
+  });
 
-    { opacity: 1, scale: 1, duration, ease: arcMotionTokens.ease, overwrite: true }
-
-  );
-
+  return () => observer.disconnect();
 }
 
 
@@ -185,15 +211,9 @@ export function playToastEnter(alert: HTMLElement): void {
 
 
 
-  gsap.fromTo(
+  gsap.set(alert, { opacity: 0, y: 8 });
 
-    alert,
-
-    { opacity: 0, y: 8 },
-
-    { opacity: 1, y: 0, duration, ease: arcMotionTokens.ease, overwrite: true }
-
-  );
+  gsap.to(alert, { opacity: 1, y: 0, duration, ease: arcMotionTokens.ease, overwrite: true });
 
 }
 

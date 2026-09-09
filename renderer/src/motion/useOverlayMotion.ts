@@ -53,16 +53,13 @@ function runOverlayEntrance(
   }
 
   gsap.killTweensOf(el);
-  gsap.fromTo(
-    el,
-    from,
-    {
-      ...overlayMotionRest(),
-      duration,
-      ease: arcMotionTokens.ease,
-      overwrite: true
-    }
-  );
+  gsap.set(el, from);
+  gsap.to(el, {
+    ...overlayMotionRest(),
+    duration,
+    ease: arcMotionTokens.ease,
+    overwrite: true
+  });
 }
 
 function runOverlayExit(

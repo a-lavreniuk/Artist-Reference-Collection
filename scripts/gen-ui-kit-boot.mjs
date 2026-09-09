@@ -60,6 +60,7 @@ const header = `// @ts-nocheck
 /** Generated from renderer/public/ui/arc-ui/arc-ui.html — demo logic scoped to .arc-ui-kit-scope. Regenerate: node scripts/gen-ui-kit-boot.mjs */
 
 import { hydrateArcNavbarIcons } from '../components/layout/navbarIconHydrate';
+import { playModalHostEnter, playModalHostExit, playToastEnter } from '../motion/playModalHostMotion';
 
 const arcUiKitGlyphHydrators = new WeakMap<HTMLElement, () => Promise<unknown>>();
 
